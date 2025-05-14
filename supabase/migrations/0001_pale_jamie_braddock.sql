@@ -1,0 +1,1 @@
+ALTER TABLE "scraping_jobs" ALTER COLUMN "keywords" DROP NOT NULL;
