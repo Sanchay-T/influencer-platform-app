@@ -1,0 +1,28 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Background Jobs & Queueing (QStash)
+
+**Applies to:** `app/api/qstash/**`, `lib/queue/**`
+
+## Publishing Jobs
+- Use `qstash.publishJSON({ url, body, retries, delay })`.
+- Always specify `retries` (<=3) and `notifyOnFailure: true`.
+- Use absolute URL; construct via environment aware base URL logic.
+
+## Processing Callbacks
+- Verify signature using `Receiver` and `QSTASH_*_SIGNING_KEY` env vars.
+- Read request body **once** with `await req.text()` then JSON.parse.
+- Guard against missing `jobId`; return `400` if absent.
+- Update `updatedAt` on every progress write to avoid stalled detection.
+- Respect `TIMEOUT_MINUTES` and mark jobs as `timeout` if exceeded.
+
+## Error Handling
+- On external failure (Apify, fetch), set `status: 'error'`, fill `error` column, and **do not throw**.
+- QStash will retry according to `retries`; ensure idempotency.
+
+## Monitoring
+- Use `/api/qstash/process-results` to poll progress every 30 s.
+- Front-end polls `/api/scraping/tiktok?jobId=…` until `status === 'completed'`.

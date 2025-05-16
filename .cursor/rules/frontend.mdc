@@ -1,0 +1,42 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Front-end Standards – UI & Components
+
+**Applies to:** `app/**/*.tsx?`, `app/components/**`, `app/layout/**`
+
+## Styling & UI
+- Use **Tailwind** utility classes for styling; avoid inline `style` props.
+- Use **Radix UI Primitives** for accessible base components and **lucide-react** for icons.
+- Animate via **Framer Motion**; keep animations subtle (<300 ms).
+
+## Component Structure
+1. `export const ComponentName = (props: Props) => { … }`
+2. Sub-components declared *inside* the same file only if not reused elsewhere.
+3. Types/interfaces at top, helpers at bottom.
+4. Co-locate tests (`ComponentName.test.tsx`) next to component.
+
+## React & Next.js
+- Prefer **Server Components**; mark interactive clients with `"use client"`.
+- Data-fetching uses `fetch` or DB access in Server Components; **no Supabase client on the browser**.
+- Use `next/navigation` hooks (`useRouter`, `useSearchParams`) only inside client components.
+- Wrap async boundaries with `<Suspense>` and provide a skeleton loader.
+
+## State Management
+- Local state: `useState`, `useReducer`.
+- URL state: `nuqs` or `next/navigation` search params.
+- Avoid global state libraries unless justified; Context is fine for small scopes.
+
+## Accessibility
+- All interactive elements must be keyboard accessible.
+- Provide `aria-*` labels where Radix primitives don't already.
+
+## Performance
+- Use `React.lazy` to code-split heavy components.
+- Add `loading="lazy"` to all images via `<Image>` component.
+
+## Don'ts
+- Don't import server-only utilities (`lib/db`, `fs`, `dotenv`) in client code.
+- Don't use `any`.
