@@ -209,59 +209,75 @@ const SearchResults = ({ searchData }) => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {currentCreators.map((creator, index) => (
-              <TableRow key={index}>
-                <TableCell>
-                  <Avatar className="w-10 h-10">
-                    <AvatarImage 
-                      src={creator.creator?.avatarUrl} 
-                      alt={creator.creator?.name}
-                      onError={(e) => handleImageError(e, creator.creator?.name)}
-                    />
-                    <AvatarFallback>
-                      <User className="h-4 w-4" />
-                    </AvatarFallback>
-                  </Avatar>
-                </TableCell>
-                <TableCell>{creator.creator?.name || 'N/A'}</TableCell>
-                <TableCell>{(creator.creator?.followers || 0).toLocaleString()}</TableCell>
-                <TableCell>{formatDate(creator.createTime)}</TableCell>
-                <TableCell>
-                  <div className="max-w-[200px] truncate" title={creator.video?.description || 'No description'}>
-                    {creator.video?.description || 'No description'}
-                  </div>
-                </TableCell>
-                <TableCell>{(creator.video?.statistics?.likes || 0).toLocaleString()}</TableCell>
-                <TableCell>{(creator.video?.statistics?.comments || 0).toLocaleString()}</TableCell>
-                <TableCell>{(creator.video?.statistics?.shares || 0).toLocaleString()}</TableCell>
-                <TableCell>
-                  <div className="flex flex-wrap gap-1 max-w-[200px]">
-                    {creator.hashtags?.slice(0, 3).map((tag, i) => (
-                      <Badge key={i} variant="secondary" className="text-xs whitespace-nowrap">
-                        #{tag}
-                      </Badge>
-                    ))}
-                    {creator.hashtags?.length > 3 && (
-                      <Badge variant="outline" className="text-xs">
-                        +{creator.hashtags.length - 3}
-                      </Badge>
+            {currentCreators.map((creator, index) => {
+              if (index === 0) console.log('Creator sample', creator); // TEMP log first row
+              const avatarUrl =
+                creator.creator?.avatarUrl ||
+                creator.creator?.profile_pic_url ||
+                creator.creator?.profilePicUrl ||
+                creator.profile_pic_url ||
+                creator.profilePicUrl ||
+                '';
+              const proxiedUrl = avatarUrl ? `/api/proxy/image?url=${encodeURIComponent(avatarUrl)}` : '';
+
+              return (
+                <TableRow key={index}>
+                  <TableCell>
+                    <Avatar className="w-10 h-10">
+                      <AvatarImage
+                        src={proxiedUrl}
+                        alt={creator.creator?.name}
+                        onLoad={() => console.log('Avatar loaded', proxiedUrl)}
+                        onError={(e) => {
+                          console.warn('Avatar failed', proxiedUrl);
+                          handleImageError(e, creator.creator?.name);
+                        }}
+                      />
+                      <AvatarFallback>
+                        <User className="h-4 w-4" />
+                      </AvatarFallback>
+                    </Avatar>
+                  </TableCell>
+                  <TableCell>{creator.creator?.name || 'N/A'}</TableCell>
+                  <TableCell>{(creator.creator?.followers || 0).toLocaleString()}</TableCell>
+                  <TableCell>{formatDate(creator.createTime)}</TableCell>
+                  <TableCell>
+                    <div className="max-w-[200px] truncate" title={creator.video?.description || 'No description'}>
+                      {creator.video?.description || 'No description'}
+                    </div>
+                  </TableCell>
+                  <TableCell>{(creator.video?.statistics?.likes || 0).toLocaleString()}</TableCell>
+                  <TableCell>{(creator.video?.statistics?.comments || 0).toLocaleString()}</TableCell>
+                  <TableCell>{(creator.video?.statistics?.shares || 0).toLocaleString()}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1 max-w-[200px]">
+                      {creator.hashtags?.slice(0, 3).map((tag, i) => (
+                        <Badge key={i} variant="secondary" className="text-xs whitespace-nowrap">
+                          #{tag}
+                        </Badge>
+                      ))}
+                      {creator.hashtags?.length > 3 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{creator.hashtags.length - 3}
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {creator.video?.url && (
+                      <a 
+                        href={creator.video.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline"
+                      >
+                        View
+                      </a>
                     )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {creator.video?.url && (
-                    <a 
-                      href={creator.video.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
-                    >
-                      View
-                    </a>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>

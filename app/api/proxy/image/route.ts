@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import sharp from 'sharp';
 
 export async function GET(request: Request) {
   try {
@@ -11,10 +12,21 @@ export async function GET(request: Request) {
 
     const response = await fetch(imageUrl);
     const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore – Buffer typing mismatch workaround
+    let buffer = Buffer.from(arrayBuffer as any);
 
-    // Get the content type from the original response
-    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    let contentType = response.headers.get('content-type') || 'image/jpeg';
+
+    // Convert HEIC to JPEG if necessary
+    if (contentType === 'image/heic' || imageUrl.endsWith('.heic')) {
+      try {
+        buffer = await sharp(buffer).jpeg().toBuffer();
+        contentType = 'image/jpeg';
+      } catch (err) {
+        console.error('Error converting HEIC to JPEG', err);
+      }
+    }
 
     return new NextResponse(buffer, {
       headers: {
