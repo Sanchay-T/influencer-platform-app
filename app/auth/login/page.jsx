@@ -8,6 +8,7 @@ import { useState, useEffect } from "react"
 import { createClient } from "@/app/lib/supabase"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { Loader2 } from "lucide-react"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -20,6 +21,9 @@ export default function LoginPage() {
   useEffect(() => {
     // This will only run on the client after hydration is complete
     console.log('🖥️ [CLIENT] Login page mounted');
+    
+    // Prefetch dashboard to speed up redirect after login
+    router.prefetch('/');
     
     return () => {
       console.log('🖥️ [CLIENT] Login page unmounted');
@@ -57,13 +61,11 @@ export default function LoginPage() {
       
       console.log('🔄 [CLIENT] Redirecting to homepage');
       router.push('/')
-      router.refresh()
     } catch (error) {
       console.error('🚫 [CLIENT] Login failed:', error.message);
       setError(error.message)
-    } finally {
-      console.log(`${error ? '❌' : '✅'} [CLIENT] Login attempt completed`);
-      setLoading(false)
+      console.log('❌ [CLIENT] Login attempt completed');
+      setLoading(false);
     }
   }
 
@@ -114,12 +116,16 @@ export default function LoginPage() {
               </div>
             )}
 
-            <Button 
-              type="submit" 
-              className="w-full"
+            <Button
+              type="submit"
+              className="w-full flex items-center justify-center"
               disabled={loading}
             >
-              {loading ? "Loading..." : "Sign in"}
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                'Sign in'
+              )}
             </Button>
 
             <div className="text-center text-sm text-muted-foreground">
