@@ -60,7 +60,8 @@ export default function LoginPage() {
       });
       
       console.log('🔄 [CLIENT] Redirecting to homepage');
-      router.push('/')
+      router.push('/');
+      router.refresh();
     } catch (error) {
       console.error('🚫 [CLIENT] Login failed:', error.message);
       setError(error.message)
