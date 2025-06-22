@@ -7,6 +7,7 @@ import { Receiver } from "@upstash/qstash"
 import { Resend } from 'resend'
 import CampaignFinishedEmail from '@/components/email-template'
 import { createClient } from '@supabase/supabase-js'
+import { processYouTubeJob } from '@/lib/platforms/youtube/handler'
 
 // Global parameter to limit API calls for testing
 const MAX_API_CALLS_FOR_TESTING = 1; // Back to 1 for testing
@@ -718,8 +719,32 @@ export async function POST(req: Request) {
         // For this flow, an API error for the job means the job processing fails.
         throw apiError; // Re-throw to be caught by the main try-catch of the POST handler for the qstash message
       }
+    } 
+    // CÓDIGO PARA YOUTUBE
+    else if (job.platform === 'YouTube') {
+      console.log('🎬 Processing YouTube job for keywords:', job.keywords);
+      
+      try {
+        const result = await processYouTubeJob(job, jobId);
+        return NextResponse.json(result);
+      } catch (youtubeError: any) {
+        console.error('❌ Error processing YouTube job:', youtubeError);
+        
+        // Ensure job status is updated on error
+        const currentJob = await db.query.scrapingJobs.findFirst({ where: eq(scrapingJobs.id, jobId) });
+        if (currentJob && currentJob.status !== 'error') {
+          await db.update(scrapingJobs).set({ 
+            status: 'error', 
+            error: youtubeError.message || 'Unknown YouTube processing error', 
+            completedAt: new Date(), 
+            updatedAt: new Date() 
+          }).where(eq(scrapingJobs.id, jobId));
+        }
+        
+        throw youtubeError;
+      }
     } else {
-      // Si no es ni Instagram ni TikTok
+      // Si no es ninguna plataforma soportada
       console.error('❌ Plataforma no soportada:', job.platform);
       return NextResponse.json({ error: `Unsupported platform: ${job.platform}` }, { status: 400 });
     }

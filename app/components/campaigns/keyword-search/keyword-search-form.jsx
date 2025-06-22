@@ -56,8 +56,8 @@ export default function KeywordSearchForm({ onSubmit }) {
     e.preventDefault();
     setIsLoading(true);
     
-    if (!selectedPlatforms.includes("tiktok")) {
-      toast.error("Por favor selecciona TikTok para la demo");
+    if (!selectedPlatforms.includes("tiktok") && !selectedPlatforms.includes("youtube")) {
+      toast.error("Please select at least one platform (TikTok or YouTube)");
       setIsLoading(false);
       return;
     }
@@ -95,6 +95,13 @@ export default function KeywordSearchForm({ onSubmit }) {
                   onCheckedChange={() => handlePlatformChange("tiktok")}
                 />
                 <span className="ml-2">TikTok</span>
+              </div>
+              <div className="flex items-center">
+                <Checkbox
+                  checked={selectedPlatforms.includes("youtube")}
+                  onCheckedChange={() => handlePlatformChange("youtube")}
+                />
+                <span className="ml-2">YouTube</span>
               </div>
             </div>
           </div>

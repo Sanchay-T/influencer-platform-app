@@ -39,7 +39,12 @@ const SearchResults = ({ searchData }) => {
   useEffect(() => {
     const fetchResults = async () => {
       try {
-        const response = await fetch(`/api/scraping/tiktok?jobId=${searchData.jobId}`);
+        // Determine API endpoint based on platform
+        const apiEndpoint = searchData.selectedPlatform === 'youtube' ? 
+          '/api/scraping/youtube' : 
+          '/api/scraping/tiktok';
+        
+        const response = await fetch(`${apiEndpoint}?jobId=${searchData.jobId}`);
         const data = await response.json();
 
         if (data.error) {
@@ -80,7 +85,11 @@ const SearchResults = ({ searchData }) => {
               setIsLoading(false);
             } else {
               // Si no hay creadores, intentar una última vez
-              fetch(`/api/scraping/tiktok?jobId=${searchData.jobId}`)
+              const apiEndpoint = searchData.selectedPlatform === 'youtube' ? 
+                '/api/scraping/youtube' : 
+                '/api/scraping/tiktok';
+              
+              fetch(`${apiEndpoint}?jobId=${searchData.jobId}`)
                 .then(response => response.json())
                 .then(result => {
                   const foundCreators = result.results?.reduce((acc, res) => {

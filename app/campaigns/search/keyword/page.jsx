@@ -102,10 +102,20 @@ export default function KeywordSearch() {
       console.log('📤 [KEYWORD-SEARCH-PAGE] Submitting search with:', {
         campaignId,
         keywords,
-        targetResults: searchData.creatorsCount
+        targetResults: searchData.creatorsCount,
+        platforms: searchData.platforms
       });
 
-      const response = await fetch('/api/scraping/tiktok', {
+      // Determine API endpoint based on selected platform
+      // For now, we'll handle one platform at a time - prioritize the first selected platform
+      let apiEndpoint = '/api/scraping/tiktok'; // Default to TikTok
+      if (searchData.platforms.includes('youtube')) {
+        apiEndpoint = '/api/scraping/youtube';
+      }
+
+      console.log('🌐 [KEYWORD-SEARCH-PAGE] Using API endpoint:', apiEndpoint);
+
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -131,7 +141,8 @@ export default function KeywordSearch() {
       setSearchData(prev => ({ 
         ...prev, 
         keywords,
-        jobId: data.jobId 
+        jobId: data.jobId,
+        selectedPlatform: searchData.platforms.includes('youtube') ? 'youtube' : 'tiktok'
       }));
       setStep(3);
       console.log('🔄 [KEYWORD-SEARCH-PAGE] Moving to step 3 (results)');
