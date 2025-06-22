@@ -615,8 +615,8 @@ export async function POST(req: Request) {
               creator: {
                 name: author.nickname || author.unique_id || 'Unknown Creator',
                 followers: author.follower_count || 0,
-                avatarUrl: author.avatar_medium?.url_list?.[0] || '',
-                profilePicUrl: author.avatar_medium?.url_list?.[0] || ''
+                avatarUrl: (author.avatar_medium?.url_list?.[0] || '').replace('.heic', '.jpeg'),
+                profilePicUrl: (author.avatar_medium?.url_list?.[0] || '').replace('.heic', '.jpeg')
               },
               // Frontend expects: creator.video?.description, etc.
               video: {

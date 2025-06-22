@@ -18,14 +18,11 @@ export async function GET(request: Request) {
 
     let contentType = response.headers.get('content-type') || 'image/jpeg';
 
-    // Convert HEIC to JPEG if necessary
+    // Skip HEIC conversion - modern browsers support HEIC
+    // Just proxy the original image without conversion
     if (contentType === 'image/heic' || imageUrl.endsWith('.heic')) {
-      try {
-        buffer = await sharp(buffer).jpeg().toBuffer();
-        contentType = 'image/jpeg';
-      } catch (err) {
-        console.error('Error converting HEIC to JPEG', err);
-      }
+      console.log('Proxying HEIC image without conversion:', imageUrl);
+      // Keep original buffer and contentType
     }
 
     return new NextResponse(buffer, {
