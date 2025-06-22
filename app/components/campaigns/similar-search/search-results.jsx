@@ -153,11 +153,6 @@ export default function SimilarSearchResults({ searchData }) {
     return pageNumbers;
   };
 
-  // Función para manejar errores de carga de imagen
-  const handleImageError = (e, username) => {
-    console.log(`Error loading image for ${username}:`, e);
-    e.target.style.display = 'none';
-  };
 
   return (
     <div className="space-y-4">
