@@ -57,6 +57,9 @@ const SearchResults = ({ searchData }) => {
           return [...acc, ...(result.creators || [])];
         }, []) || [];
 
+        console.log('🔍 [DEBUG] Raw API response:', data);
+        console.log('🔍 [DEBUG] All creators combined:', allCreators);
+
         if (allCreators.length > 0) {
           setCreators(allCreators);
           setIsLoading(false);
@@ -179,7 +182,12 @@ const SearchResults = ({ searchData }) => {
 
   // Format duration from seconds to MM:SS or HH:MM:SS
   const formatDuration = (seconds) => {
-    if (!seconds || seconds === 0) return 'N/A';
+    console.log('🔍 [DEBUG] formatDuration called with:', seconds, typeof seconds);
+    
+    if (!seconds || seconds === 0) {
+      console.log('🔍 [DEBUG] Returning N/A for seconds:', seconds);
+      return 'N/A';
+    }
     
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -231,7 +239,12 @@ const SearchResults = ({ searchData }) => {
           </TableHeader>
           <TableBody>
             {currentCreators.map((creator, index) => {
-              if (index === 0) console.log('Creator sample', creator); // TEMP log first row
+              if (index === 0) {
+                console.log('🔍 [DEBUG] Creator sample:', creator);
+                console.log('🔍 [DEBUG] lengthSeconds:', creator.lengthSeconds);
+                console.log('🔍 [DEBUG] video.statistics.views:', creator.video?.statistics?.views);
+                console.log('🔍 [DEBUG] createTime:', creator.createTime);
+              }
               const avatarUrl =
                 creator.creator?.avatarUrl ||
                 creator.creator?.profile_pic_url ||

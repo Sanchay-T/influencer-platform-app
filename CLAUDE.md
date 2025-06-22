@@ -515,6 +515,423 @@ vercel dev
 # QStash can reach vercel dev URLs
 ```
 
+## YouTube Implementation (Complete Integration)
+
+### 1. Modular Platform Architecture
+
+YouTube integration follows a clean modular approach with completely separate platform handlers:
+
+```
+lib/platforms/youtube/
+├── types.ts           # YouTube-specific TypeScript interfaces
+├── api.ts            # YouTube API calls (keyword & hashtag search)
+├── transformer.ts    # YouTube data transformation to common format
+└── handler.ts        # YouTube background processing logic
+```
+
+### 2. YouTube API Integration
+
+#### API Endpoints Used
+- **Keyword Search**: `https://api.scrapecreators.com/v1/youtube/search`
+- **Hashtag Search**: `https://api.scrapecreators.com/v1/youtube/search/hashtag`
+
+#### YouTube API Response Structure
+```javascript
+{
+  "videos": [
+    {
+      "type": "video",
+      "id": "BzSzwqb-OEE",
+      "url": "https://www.youtube.com/watch?v=BzSzwqb-OEE",
+      "title": "NF - RUNNING (Audio)",
+      "thumbnail": "https://i.ytimg.com/vi/BzSzwqb-OEE/hq720.jpg",
+      "channel": {
+        "id": "UCoRR6OLuIZ2-5VxtnQIaN2w",
+        "title": "NFrealmusic",
+        "thumbnail": "https://yt3.ggpht.com/..."
+      },
+      "viewCountText": "14,860,541 views",
+      "viewCountInt": 14860541,
+      "publishedTimeText": "2 years ago",
+      "publishedTime": "2023-05-28T17:08:46.499Z",
+      "lengthText": "4:14",
+      "lengthSeconds": 254
+    }
+  ]
+}
+```
+
+### 3. Complete Backend Implementation
+
+#### YouTube API Endpoint (`/app/api/scraping/youtube/route.ts`)
+```javascript
+export async function POST(req: Request) {
+  // 1. Authenticate user via Supabase
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  // 2. Parse and validate request
+  const { keywords, targetResults, campaignId } = await req.json();
+  
+  // 3. Create YouTube scraping job
+  const [job] = await db.insert(scrapingJobs).values({
+    userId: user.id,
+    keywords: sanitizedKeywords,
+    targetResults,
+    status: 'pending',
+    platform: 'YouTube', // YouTube platform identifier
+    campaignId,
+    processedRuns: 0,
+    processedResults: 0,
+    cursor: 0,
+    timeoutAt: new Date(Date.now() + 60 * 60 * 1000)
+  }).returning();
+
+  // 4. Publish to QStash for background processing
+  const result = await qstash.publishJSON({
+    url: `${siteUrl}/api/qstash/process-scraping`,
+    body: { jobId: job.id },
+    retries: 3,
+    notifyOnFailure: true
+  });
+
+  return NextResponse.json({
+    message: 'YouTube scraping job started successfully',
+    jobId: job.id,
+    qstashMessageId: result.messageId
+  });
+}
+
+export async function GET(req: Request) {
+  // Same job status polling logic as TikTok
+  const { searchParams } = new URL(req.url);
+  const jobId = searchParams.get('jobId');
+  
+  const job = await db.query.scrapingJobs.findFirst({
+    where: eq(scrapingJobs.id, jobId),
+    with: { results: true }
+  });
+
+  return NextResponse.json({
+    status: job.status,
+    processedResults: job.processedResults,
+    targetResults: job.targetResults,
+    results: job.results,
+    progress: parseFloat(job.progress || '0')
+  });
+}
+```
+
+#### QStash Background Processing Integration
+```javascript
+// In /app/api/qstash/process-scraping/route.ts
+import { processYouTubeJob } from '@/lib/platforms/youtube/handler';
+
+// Added YouTube case without modifying existing TikTok logic
+else if (job.platform === 'YouTube') {
+  console.log('🎬 Processing YouTube job for keywords:', job.keywords);
+  
+  try {
+    const result = await processYouTubeJob(job, jobId);
+    return NextResponse.json(result);
+  } catch (youtubeError) {
+    // Error handling and job status updates
+    await db.update(scrapingJobs).set({ 
+      status: 'error', 
+      error: youtubeError.message,
+      completedAt: new Date()
+    }).where(eq(scrapingJobs.id, jobId));
+    
+    throw youtubeError;
+  }
+}
+```
+
+### 4. YouTube Background Processing Logic
+
+#### YouTube Handler (`/lib/platforms/youtube/handler.ts`)
+```javascript
+export async function processYouTubeJob(job: any, jobId: string) {
+  // Same testing limits as TikTok
+  const MAX_API_CALLS_FOR_TESTING = 1;
+  
+  // Check testing limits
+  const currentRuns = job.processedRuns || 0;
+  if (currentRuns >= MAX_API_CALLS_FOR_TESTING) {
+    await db.update(scrapingJobs).set({ 
+      status: 'completed',
+      error: `Test limit reached: Maximum ${MAX_API_CALLS_FOR_TESTING} API calls made`
+    }).where(eq(scrapingJobs.id, jobId));
+    return { status: 'completed' };
+  }
+
+  // Update job to processing
+  await db.update(scrapingJobs).set({ 
+    status: 'processing',
+    startedAt: new Date()
+  }).where(eq(scrapingJobs.id, jobId));
+
+  // Call YouTube API
+  const searchParams = {
+    keywords: job.keywords,
+    mode: 'keyword'
+  };
+  
+  const youtubeResponse = await searchYouTube(searchParams);
+  
+  // Transform and save results
+  const creators = transformYouTubeVideos(youtubeResponse.videos, job.keywords);
+  
+  await db.insert(scrapingResults).values({
+    jobId: job.id,
+    creators: creators,
+    createdAt: new Date()
+  });
+
+  // Update completion status
+  const newProcessedRuns = currentRuns + 1;
+  if (newProcessedRuns >= MAX_API_CALLS_FOR_TESTING) {
+    await db.update(scrapingJobs).set({ 
+      status: 'completed',
+      processedRuns: newProcessedRuns,
+      processedResults: creators.length,
+      progress: '100'
+    }).where(eq(scrapingJobs.id, jobId));
+    
+    return { status: 'completed', processedRuns: newProcessedRuns };
+  }
+  
+  // Schedule next API call if needed
+  await qstash.publishJSON({
+    url: `${baseUrl}/api/qstash/process-scraping`,
+    body: { jobId: job.id },
+    delay: '2s'
+  });
+  
+  return { status: 'processing', processedRuns: newProcessedRuns };
+}
+```
+
+### 5. YouTube Data Transformation
+
+#### YouTube to Common Format Transformation
+```javascript
+// lib/platforms/youtube/transformer.ts
+export function transformYouTubeVideo(video, keywords = []) {
+  // Extract hashtags from title and description
+  const titleHashtags = extractHashtags(video.title || '');
+  const descriptionHashtags = extractHashtags(video.description || '');
+  const allHashtags = [...new Set([...titleHashtags, ...descriptionHashtags])];
+  
+  return {
+    // Frontend expects: creator.creator?.name
+    creator: {
+      name: video.channel?.title || 'Unknown Channel',
+      followers: 0, // Not available in YouTube search API
+      avatarUrl: video.channel?.thumbnail || '',
+      profilePicUrl: video.channel?.thumbnail || ''
+    },
+    // Frontend expects: creator.video?.description, etc.
+    video: {
+      description: video.title || 'No title',
+      url: video.url || '',
+      statistics: {
+        likes: 0, // Not available in YouTube search API
+        comments: 0, // Not available in YouTube search API
+        shares: 0, // Not available in YouTube search API
+        views: video.viewCountInt || 0 // ✅ Available
+      }
+    },
+    // Frontend expects: creator.hashtags
+    hashtags: allHashtags,
+    // Metadata
+    createTime: Math.floor(new Date(video.publishedTime).getTime() / 1000),
+    platform: 'YouTube',
+    keywords: keywords,
+    // YouTube-specific fields
+    publishedTime: video.publishedTime || '',
+    lengthSeconds: video.lengthSeconds || 0,
+    channelId: video.channel?.id || ''
+  };
+}
+```
+
+### 6. Frontend Integration
+
+#### Platform Selection Update
+```javascript
+// app/components/campaigns/keyword-search/keyword-search-form.jsx
+<div className="flex space-x-4">
+  <div className="flex items-center">
+    <Checkbox
+      checked={selectedPlatforms.includes("tiktok")}
+      onCheckedChange={() => handlePlatformChange("tiktok")}
+    />
+    <span className="ml-2">TikTok</span>
+  </div>
+  <div className="flex items-center">
+    <Checkbox
+      checked={selectedPlatforms.includes("youtube")}
+      onCheckedChange={() => handlePlatformChange("youtube")}
+    />
+    <span className="ml-2">YouTube</span>
+  </div>
+</div>
+```
+
+#### Dynamic API Routing
+```javascript
+// app/campaigns/search/keyword/page.jsx
+const handleKeywordsSubmit = async (keywords) => {
+  // Determine API endpoint based on selected platform
+  let apiEndpoint = '/api/scraping/tiktok'; // Default
+  if (searchData.platforms.includes('youtube')) {
+    apiEndpoint = '/api/scraping/youtube';
+  }
+
+  const response = await fetch(apiEndpoint, {
+    method: 'POST',
+    body: JSON.stringify({
+      campaignId: campaignId,
+      keywords: keywords,
+      targetResults: searchData.creatorsCount
+    }),
+  });
+  
+  setSearchData(prev => ({ 
+    ...prev, 
+    keywords,
+    jobId: data.jobId,
+    selectedPlatform: searchData.platforms.includes('youtube') ? 'youtube' : 'tiktok'
+  }));
+};
+```
+
+#### Optimized Results Display
+```javascript
+// app/components/campaigns/keyword-search/search-results.jsx
+// Updated table structure for YouTube data
+<TableHeader>
+  <TableRow>
+    <TableHead>Profile</TableHead>
+    <TableHead>Creator Name</TableHead>
+    <TableHead>Date</TableHead>
+    <TableHead>Video Title</TableHead>
+    <TableHead>Views</TableHead>
+    <TableHead>Duration</TableHead>
+    <TableHead>Link</TableHead>
+  </TableRow>
+</TableHeader>
+
+// Dynamic API endpoint selection
+const fetchResults = async () => {
+  const apiEndpoint = searchData.selectedPlatform === 'youtube' ? 
+    '/api/scraping/youtube' : 
+    '/api/scraping/tiktok';
+  
+  const response = await fetch(`${apiEndpoint}?jobId=${searchData.jobId}`);
+  // Process results...
+};
+
+// Duration formatting
+const formatDuration = (seconds) => {
+  if (!seconds) return 'N/A';
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = seconds % 60;
+  
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  } else {
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  }
+};
+```
+
+### 7. Data Availability Comparison
+
+#### YouTube vs TikTok Data Availability
+```javascript
+// YouTube available data
+{
+  creator: { 
+    name: "✅ Channel title", 
+    avatarUrl: "✅ Channel thumbnail",
+    followers: "❌ Not available in search API"
+  },
+  video: { 
+    description: "✅ Video title",
+    url: "✅ Video URL",
+    statistics: {
+      views: "✅ View count",
+      likes: "❌ Not available in search API",
+      comments: "❌ Not available in search API", 
+      shares: "❌ Not available in search API"
+    }
+  },
+  publishedTime: "✅ Upload date",
+  lengthSeconds: "✅ Video duration",
+  hashtags: "⚠️ Only if present in title/description"
+}
+
+// TikTok available data  
+{
+  creator: { 
+    name: "✅ Creator nickname",
+    avatarUrl: "✅ Profile picture", 
+    followers: "✅ Follower count"
+  },
+  video: { 
+    description: "✅ Video description",
+    url: "✅ Share URL",
+    statistics: {
+      views: "✅ Play count",
+      likes: "✅ Like count", 
+      comments: "✅ Comment count",
+      shares: "✅ Share count"
+    }
+  },
+  hashtags: "✅ Extracted hashtags",
+  createTime: "✅ Creation timestamp"
+}
+```
+
+### 8. Environment Configuration
+
+```bash
+# YouTube API Configuration
+SCRAPECREATORS_API_KEY=xxx  # Same key as TikTok
+# YouTube endpoints are hardcoded in api.ts:
+# - https://api.scrapecreators.com/v1/youtube/search
+# - https://api.scrapecreators.com/v1/youtube/search/hashtag
+
+# Same QStash and database configuration as TikTok
+QSTASH_TOKEN=xxx
+DATABASE_URL=xxx
+```
+
+### 9. Testing Configuration
+
+```javascript
+// Same testing limits as TikTok
+const MAX_API_CALLS_FOR_TESTING = 1;
+
+// Local development with ngrok
+NEXT_PUBLIC_SITE_URL=https://your-ngrok-url.ngrok-free.app
+
+// Same QStash callback pattern
+${siteUrl}/api/qstash/process-scraping
+```
+
+### 10. Key Implementation Benefits
+
+1. **Zero Impact on TikTok**: All existing TikTok logic remains completely untouched
+2. **Modular Architecture**: YouTube handler is completely self-contained in `lib/platforms/youtube/`
+3. **Same Testing Flow**: Identical 1 API call limit and local development experience
+4. **Reusable Components**: Frontend components work for both platforms with dynamic routing
+5. **Optimized Data Display**: Table shows only relevant YouTube data (removed irrelevant columns)
+6. **Same Background Processing**: Uses identical QStash pattern as TikTok
+
 ## Implementation Guide for Other Platforms (Instagram)
 
 ### 1. Database Changes
@@ -583,6 +1000,15 @@ async function processInstagramJob(job, jobId) {
   creator: { name, followers, profilePicUrl },
   post: { caption, statistics: { likes, comments } },
   tags: []
+}
+
+// YouTube format
+{
+  creator: { name, avatarUrl }, // No followers available
+  video: { description, statistics: { views } }, // Only views available
+  hashtags: [], // Extracted from title if present
+  lengthSeconds: 254, // Video duration
+  publishedTime: "2023-05-28T17:08:46.499Z"
 }
 ```
 
