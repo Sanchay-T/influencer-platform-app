@@ -22,19 +22,86 @@ export async function GET(request: Request) {
     console.log('🔍 [IMAGE-PROXY] Detected format:', isHeic ? 'HEIC/HEIF' : 'Other');
 
     console.log('📡 [IMAGE-PROXY] Fetching image from source...');
-    const response = await fetch(imageUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      }
-    });
+    
+    // Enhanced headers to bypass CDN restrictions
+    const fetchHeaders = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache'
+    };
+
+    // Add specific headers for TikTok CDN
+    if (imageUrl.includes('tiktokcdn')) {
+      fetchHeaders['Referer'] = 'https://www.tiktok.com/';
+      fetchHeaders['Origin'] = 'https://www.tiktok.com';
+      fetchHeaders['Sec-Fetch-Dest'] = 'image';
+      fetchHeaders['Sec-Fetch-Mode'] = 'no-cors';
+      fetchHeaders['Sec-Fetch-Site'] = 'cross-site';
+      console.log('🎯 [IMAGE-PROXY] Using TikTok-specific headers');
+    }
+
+    let response = await fetch(imageUrl, { headers: fetchHeaders });
+    let fetchStrategy = 'initial';
 
     const fetchTime = Date.now() - startTime;
     console.log('📊 [IMAGE-PROXY] Fetch completed in', fetchTime + 'ms');
     console.log('📡 [IMAGE-PROXY] Fetch status:', response.status, response.statusText);
 
+    // Retry logic for 403 Forbidden errors
+    if (response.status === 403) {
+      console.log('🔄 [IMAGE-PROXY] Got 403 Forbidden, trying alternative approaches...');
+      
+      // Strategy 1: Try without referrer headers (some CDNs block specific referrers)
+      console.log('🔄 [IMAGE-PROXY] Retry 1: Removing referrer headers...');
+      const noReferrerHeaders = { ...fetchHeaders };
+      delete noReferrerHeaders['Referer'];
+      delete noReferrerHeaders['Origin'];
+      
+      response = await fetch(imageUrl, { headers: noReferrerHeaders });
+      console.log('📡 [IMAGE-PROXY] Retry 1 status:', response.status, response.statusText);
+      
+      if (response.ok) {
+        fetchStrategy = 'no-referrer';
+      } else if (response.status === 403 && imageUrl.includes('tiktokcdn')) {
+        // Strategy 2: Try removing URL parameters that might trigger restrictions
+        console.log('🔄 [IMAGE-PROXY] Retry 2: Simplifying TikTok URL...');
+        const simplifiedUrl = imageUrl.split('?')[0]; // Remove all query parameters
+        console.log('🔗 [IMAGE-PROXY] Simplified URL:', simplifiedUrl);
+        
+        response = await fetch(simplifiedUrl, { headers: noReferrerHeaders });
+        console.log('📡 [IMAGE-PROXY] Retry 2 status:', response.status, response.statusText);
+        
+        if (response.ok) {
+          fetchStrategy = 'simplified-url';
+        } else if (response.status === 403) {
+          // Strategy 3: Try with minimal headers (like a simple curl request)
+          console.log('🔄 [IMAGE-PROXY] Retry 3: Using minimal headers...');
+          const minimalHeaders = {
+            'User-Agent': 'curl/7.68.0',
+            'Accept': '*/*'
+          };
+          
+          response = await fetch(simplifiedUrl, { headers: minimalHeaders });
+          console.log('📡 [IMAGE-PROXY] Retry 3 status:', response.status, response.statusText);
+          
+          if (response.ok) {
+            fetchStrategy = 'minimal-headers';
+          }
+        }
+      }
+    } else if (response.ok) {
+      fetchStrategy = 'initial-success';
+    }
+
     if (!response.ok) {
-      console.error('❌ [IMAGE-PROXY] Failed to fetch image:', response.status, response.statusText);
-      return new NextResponse('Failed to fetch image', { status: response.status });
+      console.error('❌ [IMAGE-PROXY] All fetch attempts failed:', response.status, response.statusText);
+      console.error('📍 [IMAGE-PROXY] Final URL attempted:', imageUrl);
+      return new NextResponse(`Failed to fetch image: ${response.status} ${response.statusText}`, { 
+        status: response.status 
+      });
     }
 
     const arrayBuffer = await response.arrayBuffer();
@@ -149,6 +216,8 @@ export async function GET(request: Request) {
         'X-Image-Proxy-Time': totalTime.toString(),
         'X-Image-Proxy-Source': conversionMethod,
         'X-Image-Original-Format': isHeic ? 'heic' : 'other',
+        'X-Image-Fetch-Strategy': fetchStrategy,
+        'X-Image-Final-Status': response.status.toString(),
       },
     });
   } catch (error) {
