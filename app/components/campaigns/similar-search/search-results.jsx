@@ -42,8 +42,45 @@ export default function SimilarSearchResults({ searchData }) {
   };
 
   const getProxiedImageUrl = (originalUrl) => {
-    if (!originalUrl) return '';
-    return `/api/proxy/image?url=${encodeURIComponent(originalUrl)}`;
+    if (!originalUrl) {
+      console.log('🖼️ [BROWSER-IMAGE] No image URL provided');
+      return '';
+    }
+    const proxiedUrl = `/api/proxy/image?url=${encodeURIComponent(originalUrl)}`;
+    console.log('🖼️ [BROWSER-IMAGE] Generating proxied URL:');
+    console.log('  📍 Original:', originalUrl);
+    console.log('  🔗 Proxied:', proxiedUrl);
+    return proxiedUrl;
+  };
+
+  // Enhanced image loading handlers with comprehensive logging
+  const handleImageLoad = (e, username) => {
+    const img = e.target;
+    console.log('✅ [BROWSER-IMAGE] Image loaded successfully for', username);
+    console.log('  📏 Natural size:', img.naturalWidth + 'x' + img.naturalHeight);
+    console.log('  📐 Display size:', img.width + 'x' + img.height);
+    console.log('  🔗 Loaded URL:', img.src);
+    console.log('  ⏱️ Load time: ~' + (Date.now() - parseInt(img.dataset.startTime || '0')) + 'ms');
+  };
+
+  const handleImageError = (e, username, originalUrl) => {
+    const img = e.target;
+    console.error('❌ [BROWSER-IMAGE] Image failed to load for', username);
+    console.error('  🔗 Failed URL:', img.src);
+    console.error('  📍 Original URL:', originalUrl);
+    console.error('  ⏱️ Time to failure:', (Date.now() - parseInt(img.dataset.startTime || '0')) + 'ms');
+    console.error('  📊 Image element:', img);
+    
+    // Hide broken image
+    img.style.display = 'none';
+  };
+
+  const handleImageStart = (e, username) => {
+    const img = e.target;
+    img.dataset.startTime = Date.now().toString();
+    console.log('🚀 [BROWSER-IMAGE] Starting image load for', username);
+    console.log('  🔗 Loading URL:', img.src);
+    console.log('  🕐 Start time:', new Date().toISOString());
   };
 
   // If still loading, show progress component
@@ -157,14 +194,22 @@ export default function SimilarSearchResults({ searchData }) {
           </TableHeader>
           <TableBody>
             {currentItems.map((creator) => {
+              const imageUrl = getProxiedImageUrl(creator.profile_pic_url);
               return (
                 <TableRow key={creator.id}>
                   <TableCell>
                     <Avatar className="w-10 h-10">
                       <AvatarImage 
-                        src={getProxiedImageUrl(creator.profile_pic_url)} 
+                        src={imageUrl}
                         alt={creator.username}
-                        onError={(e) => handleImageError(e, creator.username)}
+                        onLoad={(e) => handleImageLoad(e, creator.username)}
+                        onError={(e) => handleImageError(e, creator.username, creator.profile_pic_url)}
+                        onLoadStart={(e) => handleImageStart(e, creator.username)}
+                        style={{ 
+                          maxWidth: '100%', 
+                          height: 'auto',
+                          backgroundColor: '#f3f4f6' // Light gray background while loading
+                        }}
                       />
                       <AvatarFallback>
                         <User className="h-4 w-4" />

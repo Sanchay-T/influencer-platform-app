@@ -194,10 +194,34 @@ const SearchResults = ({ searchData }) => {
     }
   };
 
-  // Función para manejar errores de carga de imagen
-  const handleImageError = (e, username) => {
-    console.log(`Error loading image for ${username}:`, e);
-    e.target.style.display = 'none';
+  // Enhanced image loading handlers with comprehensive logging
+  const handleImageLoad = (e, username) => {
+    const img = e.target;
+    console.log('✅ [BROWSER-IMAGE] Image loaded successfully for', username);
+    console.log('  📏 Natural size:', img.naturalWidth + 'x' + img.naturalHeight);
+    console.log('  📐 Display size:', img.width + 'x' + img.height);
+    console.log('  🔗 Loaded URL:', img.src);
+    console.log('  ⏱️ Load time: ~' + (Date.now() - parseInt(img.dataset.startTime || '0')) + 'ms');
+  };
+
+  const handleImageError = (e, username, originalUrl) => {
+    const img = e.target;
+    console.error('❌ [BROWSER-IMAGE] Image failed to load for', username);
+    console.error('  🔗 Failed URL:', img.src);
+    console.error('  📍 Original URL:', originalUrl);
+    console.error('  ⏱️ Time to failure:', (Date.now() - parseInt(img.dataset.startTime || '0')) + 'ms');
+    console.error('  📊 Image element:', img);
+    
+    // Hide broken image
+    img.style.display = 'none';
+  };
+
+  const handleImageStart = (e, username) => {
+    const img = e.target;
+    img.dataset.startTime = Date.now().toString();
+    console.log('🚀 [BROWSER-IMAGE] Starting image load for', username);
+    console.log('  🔗 Loading URL:', img.src);
+    console.log('  🕐 Start time:', new Date().toISOString());
   };
 
   return (
@@ -249,10 +273,13 @@ const SearchResults = ({ searchData }) => {
                       <AvatarImage
                         src={proxiedUrl}
                         alt={creator.creator?.name}
-                        onLoad={() => console.log('Avatar loaded', proxiedUrl)}
-                        onError={(e) => {
-                          console.warn('Avatar failed', proxiedUrl);
-                          handleImageError(e, creator.creator?.name);
+                        onLoad={(e) => handleImageLoad(e, creator.creator?.name)}
+                        onError={(e) => handleImageError(e, creator.creator?.name, creator.creator?.profilePicUrl || creator.creator?.avatarUrl)}
+                        onLoadStart={(e) => handleImageStart(e, creator.creator?.name)}
+                        style={{ 
+                          maxWidth: '100%', 
+                          height: 'auto',
+                          backgroundColor: '#f3f4f6' // Light gray background while loading
                         }}
                       />
                       <AvatarFallback>
