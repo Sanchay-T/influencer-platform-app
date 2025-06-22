@@ -177,6 +177,21 @@ const SearchResults = ({ searchData }) => {
     return new Date(timestamp * 1000).toLocaleDateString();
   };
 
+  // Format duration from seconds to MM:SS or HH:MM:SS
+  const formatDuration = (seconds) => {
+    if (!seconds || seconds === 0) return 'N/A';
+    
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
+    
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    } else {
+      return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
+  };
+
   // Función para manejar errores de carga de imagen
   const handleImageError = (e, username) => {
     console.log(`Error loading image for ${username}:`, e);
@@ -207,13 +222,10 @@ const SearchResults = ({ searchData }) => {
             <TableRow>
               <TableHead>Profile</TableHead>
               <TableHead>Creator Name</TableHead>
-              <TableHead>Followers</TableHead>
               <TableHead>Date</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead>Likes</TableHead>
-              <TableHead>Comments</TableHead>
-              <TableHead>Shares</TableHead>
-              <TableHead>Hashtags</TableHead>
+              <TableHead>Video Title</TableHead>
+              <TableHead>Views</TableHead>
+              <TableHead>Duration</TableHead>
               <TableHead>Link</TableHead>
             </TableRow>
           </TableHeader>
@@ -248,30 +260,14 @@ const SearchResults = ({ searchData }) => {
                     </Avatar>
                   </TableCell>
                   <TableCell>{creator.creator?.name || 'N/A'}</TableCell>
-                  <TableCell>{(creator.creator?.followers || 0).toLocaleString()}</TableCell>
                   <TableCell>{formatDate(creator.createTime)}</TableCell>
                   <TableCell>
-                    <div className="max-w-[200px] truncate" title={creator.video?.description || 'No description'}>
-                      {creator.video?.description || 'No description'}
+                    <div className="max-w-[300px] truncate" title={creator.video?.description || 'No title'}>
+                      {creator.video?.description || 'No title'}
                     </div>
                   </TableCell>
-                  <TableCell>{(creator.video?.statistics?.likes || 0).toLocaleString()}</TableCell>
-                  <TableCell>{(creator.video?.statistics?.comments || 0).toLocaleString()}</TableCell>
-                  <TableCell>{(creator.video?.statistics?.shares || 0).toLocaleString()}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1 max-w-[200px]">
-                      {creator.hashtags?.slice(0, 3).map((tag, i) => (
-                        <Badge key={i} variant="secondary" className="text-xs whitespace-nowrap">
-                          #{tag}
-                        </Badge>
-                      ))}
-                      {creator.hashtags?.length > 3 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{creator.hashtags.length - 3}
-                        </Badge>
-                      )}
-                    </div>
-                  </TableCell>
+                  <TableCell>{(creator.video?.statistics?.views || 0).toLocaleString()}</TableCell>
+                  <TableCell>{formatDuration(creator.lengthSeconds || 0)}</TableCell>
                   <TableCell>
                     {creator.video?.url && (
                       <a 
