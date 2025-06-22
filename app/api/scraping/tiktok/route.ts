@@ -38,6 +38,9 @@ interface ScrapeCreatorsResponse {
 
 const TIMEOUT_MINUTES = 60;
 
+// Global parameter to limit API calls for testing
+const MAX_API_CALLS_FOR_TESTING = 2;
+
 // Inicializar el receptor de QStash
 const receiver = new Receiver({
     currentSigningKey: process.env.QSTASH_CURRENT_SIGNING_KEY!,
@@ -205,9 +208,18 @@ export async function POST(req: Request) {
             console.log('📋 Detalles del job:', JSON.stringify(job, null, 2));
 
             console.log('🔍 Paso 9: Encolando procesamiento en QStash');
+            
+            // Determine the correct URL for QStash callback
+            const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL || 'https://influencerplatform.vercel.app';
+            const qstashCallbackUrl = `${siteUrl}/api/qstash/process-scraping`;
+            
+            console.log('🌐 [DIAGNOSTIC] Site URL from env:', process.env.NEXT_PUBLIC_SITE_URL);
+            console.log('🌐 [DIAGNOSTIC] Vercel URL from env:', process.env.VERCEL_URL);
+            console.log('🌐 [DIAGNOSTIC] Final QStash callback URL:', qstashCallbackUrl);
+            
             // Encolar el procesamiento en QStash
             const result = await qstash.publishJSON({
-                url: 'https://influencerplatform.vercel.app/api/qstash/process-scraping',
+                url: qstashCallbackUrl,
                 body: { jobId: job.id },
                 retries: 3,
                 notifyOnFailure: true
@@ -299,9 +311,9 @@ export async function GET(req: Request) {
             }
         }
 
-        // Comprobar si el job está en procesamiento pero no se ha actualizado en los últimos 5 minutos
+        // TEMPORARILY DISABLED FOR TESTING - Comprobar si el job está en procesamiento pero no se ha actualizado en los últimos 5 minutos
         // Esto indica que posiblemente el proceso se interrumpió
-        if ((job.status === 'processing' || job.status === 'pending') && 
+        if (false && (job.status === 'processing' || job.status === 'pending') && 
             job.updatedAt && 
             (new Date().getTime() - new Date(job.updatedAt).getTime()) > 5 * 60 * 1000) {
             

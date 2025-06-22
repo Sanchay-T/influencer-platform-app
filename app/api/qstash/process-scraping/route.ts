@@ -8,6 +8,9 @@ import { Resend } from 'resend'
 import CampaignFinishedEmail from '@/components/email-template'
 import { createClient } from '@supabase/supabase-js'
 
+// Global parameter to limit API calls for testing
+const MAX_API_CALLS_FOR_TESTING = 1; // Changed to 1 for super fast testing
+
 // Definir la interfaz para la respuesta de ScrapeCreators para Instagram
 interface ScrapeCreatorsInstagramResponse {
   data: {
@@ -43,6 +46,10 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL || 'h
 let apiResponse: any = null; // Declare apiResponse at a higher scope
 
 export async function POST(req: Request) {
+  console.log('\n🚀🚀🚀 [DIAGNOSTIC] QStash POST REQUEST RECEIVED 🚀🚀🚀')
+  console.log('📅 [DIAGNOSTIC] Timestamp:', new Date().toISOString())
+  console.log('🌐 [DIAGNOSTIC] Request URL:', req.url)
+  console.log('📋 [DIAGNOSTIC] Request headers:', Object.fromEntries(req.headers.entries()))
   console.log('🚀 INICIO DE SOLICITUD POST A /api/qstash/process-scraping')
   
   const signature = req.headers.get('Upstash-Signature')
@@ -487,6 +494,31 @@ export async function POST(req: Request) {
       }
       console.log('✅ Keywords encontradas para TikTok:', job.keywords);
 
+      // Check if we've reached the maximum number of API calls for testing
+      const currentRuns = job.processedRuns || 0;
+      if (currentRuns >= MAX_API_CALLS_FOR_TESTING) {
+        console.log(`🚫 TikTok: Reached maximum API calls for testing (${MAX_API_CALLS_FOR_TESTING}). Completing job.`);
+        await db.update(scrapingJobs).set({ 
+          status: 'completed',
+          completedAt: new Date(),
+          updatedAt: new Date(),
+          error: `Test limit reached: Maximum ${MAX_API_CALLS_FOR_TESTING} API calls made`
+        }).where(eq(scrapingJobs.id, jobId));
+        return NextResponse.json({ status: 'completed', message: `Test limit reached: Maximum ${MAX_API_CALLS_FOR_TESTING} API calls made.` });
+      }
+
+      // Update job status to processing if not already
+      if (job.status !== 'processing') {
+        await db.update(scrapingJobs)
+          .set({ 
+            status: 'processing',
+            startedAt: new Date(),
+            updatedAt: new Date()
+          })
+          .where(eq(scrapingJobs.id, jobId));
+        console.log('✅ TikTok job status updated to processing');
+      }
+
       console.log('🔍 Paso 6: Llamando a ScrapeCreators API para TikTok');
       const keywordQuery = job.keywords.join(', ');
       const apiUrl = `${process.env.SCRAPECREATORS_API_URL}?query=${encodeURIComponent(keywordQuery)}&cursor=${job.cursor || 0}`;
@@ -534,7 +566,7 @@ export async function POST(req: Request) {
               await qstash.publishJSON({
                 url: `${baseUrl}/api/qstash/process-scraping`,
                 body: { jobId: job.id },
-                delay: '30s',
+                delay: '5s', // Reduced delay for testing
                 retries: 5,
                 notifyOnFailure: true
               });
@@ -550,7 +582,121 @@ export async function POST(req: Request) {
         }
         apiResponse = await scrapingResponse.json();
         console.log('✅ ScrapeCreators TikTok API Response JSON:', apiResponse);
-        // ... (rest of existing TikTok processing logic using apiResponse)
+        
+        // [DIAGNOSTIC] Log sample data to understand the structure
+        if (apiResponse?.search_item_list?.[0]) {
+          console.log('🔍 [DIAGNOSTIC] Sample item structure:', JSON.stringify(apiResponse.search_item_list[0], null, 2));
+        }
+        
+        // Increment the processedRuns counter after successful API call
+        const newProcessedRuns = (job.processedRuns || 0) + 1;
+        console.log(`📊 TikTok: API call ${newProcessedRuns}/${MAX_API_CALLS_FOR_TESTING} completed`);
+        
+        // Update the job with new processedRuns count
+        await db.update(scrapingJobs)
+          .set({ 
+            processedRuns: newProcessedRuns,
+            updatedAt: new Date(),
+            status: 'processing'
+          })
+          .where(eq(scrapingJobs.id, jobId));
+        
+        // Process the API response and save results (simplified for testing)
+        if (apiResponse && apiResponse.search_item_list && apiResponse.search_item_list.length > 0) {
+          // Transform the response to match frontend expectations
+          const creators = apiResponse.search_item_list.map((item: any) => {
+            const awemeInfo = item.aweme_info || {};
+            const author = awemeInfo.author || {};
+            const statistics = awemeInfo.statistics || {};
+            const textExtras = awemeInfo.text_extra || [];
+            
+            return {
+              // Frontend expects: creator.creator?.name
+              creator: {
+                name: author.nickname || author.unique_id || 'Unknown Creator',
+                followers: author.follower_count || 0,
+                avatarUrl: author.avatar_medium?.url_list?.[0] || '',
+                profilePicUrl: author.avatar_medium?.url_list?.[0] || ''
+              },
+              // Frontend expects: creator.video?.description, etc.
+              video: {
+                description: awemeInfo.desc || 'No description',
+                url: awemeInfo.share_url || '',
+                statistics: {
+                  likes: statistics.digg_count || 0,
+                  comments: statistics.comment_count || 0,
+                  shares: statistics.share_count || 0,
+                  views: statistics.play_count || 0
+                }
+              },
+              // Frontend expects: creator.hashtags
+              hashtags: textExtras
+                .filter((extra: any) => extra.type === 1 && extra.hashtag_name)
+                .map((extra: any) => extra.hashtag_name),
+              // Additional metadata
+              createTime: awemeInfo.create_time || Date.now() / 1000,
+              platform: 'TikTok',
+              keywords: job.keywords || []
+            };
+          });
+          
+          // [DIAGNOSTIC] Log sample transformed data
+          if (creators[0]) {
+            console.log('🔍 [DIAGNOSTIC] Sample transformed creator:', JSON.stringify(creators[0], null, 2));
+          }
+          console.log(`📊 [DIAGNOSTIC] Total creators transformed: ${creators.length}`);
+          
+          // Save results to database
+          await db.insert(scrapingResults).values({
+            jobId: job.id,
+            creators: creators,
+            createdAt: new Date()
+          });
+          
+          console.log(`✅ TikTok: Saved ${creators.length} creators from API call ${newProcessedRuns}`);
+          
+          // Update job with processed results count
+          const totalProcessedResults = (job.processedResults || 0) + creators.length;
+          await db.update(scrapingJobs)
+            .set({ 
+              processedResults: totalProcessedResults,
+              updatedAt: new Date()
+            })
+            .where(eq(scrapingJobs.id, jobId));
+        }
+        
+        // Check if we've reached the test limit
+        if (newProcessedRuns >= MAX_API_CALLS_FOR_TESTING) {
+          console.log(`🏁 TikTok: Reached test limit of ${MAX_API_CALLS_FOR_TESTING} API calls. Completing job.`);
+          await db.update(scrapingJobs).set({ 
+            status: 'completed',
+            completedAt: new Date(),
+            updatedAt: new Date(),
+            progress: '100'
+          }).where(eq(scrapingJobs.id, jobId));
+          
+          return NextResponse.json({ 
+            status: 'completed', 
+            message: `Test completed: Made ${newProcessedRuns} API calls as configured.`,
+            processedRuns: newProcessedRuns
+          });
+        }
+        
+        // If we haven't reached the limit, schedule another run with delay
+        console.log(`🔄 TikTok: Scheduling next API call (${newProcessedRuns + 1}/${MAX_API_CALLS_FOR_TESTING})`);
+        await qstash.publishJSON({
+          url: `${baseUrl}/api/qstash/process-scraping`,
+          body: { jobId: job.id },
+          delay: '2s', // Much shorter delay for testing
+          retries: 3,
+          notifyOnFailure: true
+        });
+        
+        return NextResponse.json({ 
+          status: 'processing', 
+          message: `API call ${newProcessedRuns}/${MAX_API_CALLS_FOR_TESTING} completed. Next call scheduled.`,
+          processedRuns: newProcessedRuns
+        });
 
       } catch (apiError: any) {
         // This catches errors from fetch itself, JSON parsing, or if we re-throw above
