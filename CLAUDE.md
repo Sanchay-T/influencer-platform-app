@@ -923,7 +923,68 @@ NEXT_PUBLIC_SITE_URL=https://your-ngrok-url.ngrok-free.app
 ${siteUrl}/api/qstash/process-scraping
 ```
 
-### 10. Key Implementation Benefits
+### 10. CSV Export Integration
+
+#### YouTube-Specific CSV Export
+```javascript
+// YouTube-only export columns
+if (platform === 'YouTube') {
+  headers = [
+    'Channel Name',
+    'Video Title', 
+    'Video URL',
+    'Views',
+    'Duration (seconds)',
+    'Published Date',
+    'Hashtags',
+    'Keywords',
+    'Platform'
+  ];
+}
+
+// YouTube data extraction
+row = [
+  `"${creator.name || ''}"`,
+  `"${(video.description || '').replace(/"/g, '""')}"`, // Video title
+  `"${video.url || ''}"`,
+  `"${stats.views || 0}"`,
+  `"${item.lengthSeconds || 0}"`,
+  `"${publishedDate}"`,
+  `"${hashtags}"`,
+  `"${keywordsStr}"`,
+  `"YouTube"`
+];
+```
+
+#### Mixed Platform CSV Export (Campaign Level)
+```javascript
+// Unified format supporting TikTok + YouTube campaigns
+headers = [
+  'Platform',
+  'Creator/Channel Name',
+  'Followers',
+  'Video/Content URL',
+  'Title/Description', 
+  'Views',
+  'Likes',
+  'Comments',
+  'Shares',
+  'Duration (seconds)',
+  'Hashtags',
+  'Date',
+  'Keywords'
+];
+
+// Smart date handling based on platform
+let dateStr = '';
+if (itemPlatform === 'YouTube' && item.publishedTime) {
+  dateStr = new Date(item.publishedTime).toISOString().split('T')[0];
+} else if (item.createTime) {
+  dateStr = new Date(item.createTime * 1000).toISOString().split('T')[0];
+}
+```
+
+### 11. Key Implementation Benefits
 
 1. **Zero Impact on TikTok**: All existing TikTok logic remains completely untouched
 2. **Modular Architecture**: YouTube handler is completely self-contained in `lib/platforms/youtube/`
@@ -931,6 +992,7 @@ ${siteUrl}/api/qstash/process-scraping
 4. **Reusable Components**: Frontend components work for both platforms with dynamic routing
 5. **Optimized Data Display**: Table shows only relevant YouTube data (removed irrelevant columns)
 6. **Same Background Processing**: Uses identical QStash pattern as TikTok
+7. **Smart CSV Export**: Platform-aware export with appropriate columns and data formatting
 
 ## Implementation Guide for Other Platforms (Instagram)
 

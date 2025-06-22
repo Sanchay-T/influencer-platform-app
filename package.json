@@ -9,7 +9,9 @@
     "lint": "next lint",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
-    "drop": "drizzle-kit drop"
+    "drop": "drizzle-kit drop",
+    "test:tiktok-similar": "node run-tiktok-test.js",
+    "test:tiktok-similar-api": "node test-tiktok-similar.js"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.3",

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -10,39 +10,66 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, User } from "lucide-react";
+import { User } from "lucide-react";
 import ExportButton from '../export-button';
+import SimilarSearchProgress from './similar-search-progress';
 
 export default function SimilarSearchResults({ searchData }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [isPageLoading, setIsPageLoading] = useState(false);
+  const [creators, setCreators] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const itemsPerPage = 10;
 
-  const renderProfileLink = (username) => 
-    `https://instagram.com/${username}`;
+  // Validación básica
+  if (!searchData?.jobId) return null;
+
+  const handleResultsComplete = (data) => {
+    if (data.status === 'completed') {
+      setCreators(data.creators || []);
+      setIsLoading(false);
+    }
+  };
+
+  const renderProfileLink = (creator) => {
+    // Check platform from creator data or searchData
+    const platform = creator.platform || searchData.platform || 'Instagram';
+    if (platform === 'TikTok' || platform === 'tiktok') {
+      return `https://www.tiktok.com/@${creator.username}`;
+    }
+    return `https://instagram.com/${creator.username}`;
+  };
 
   const getProxiedImageUrl = (originalUrl) => {
     if (!originalUrl) return '';
     return `/api/proxy/image?url=${encodeURIComponent(originalUrl)}`;
   };
 
-  // Asegurarnos de que searchData y creators existen
-  if (!searchData || !searchData.creators || !Array.isArray(searchData.creators)) {
-    console.log('No data available:', searchData);
-    return <div className="text-center py-8 text-gray-500">No results available</div>;
+  // If still loading, show progress component
+  if (isLoading) {
+    return <SimilarSearchProgress searchData={searchData} onComplete={handleResultsComplete} />;
   }
 
-  console.log('Rendering results:', searchData.creators);
+  // If no creators found
+  if (!creators || creators.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <div className="text-gray-500">
+          <p className="text-lg font-medium">No similar creators found</p>
+          <p className="text-sm mt-2">Try searching for a different username or platform.</p>
+        </div>
+      </div>
+    );
+  }
 
   // Calcular el total de páginas
-  const totalPages = Math.ceil(searchData.creators.length / itemsPerPage);
+  const totalPages = Math.ceil(creators.length / itemsPerPage);
   
   // Obtener los elementos de la página actual
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentItems = searchData.creators.slice(startIndex, endIndex);
+  const currentItems = creators.slice(startIndex, endIndex);
 
   const handlePageChange = async (newPage) => {
     if (newPage === currentPage) return;
@@ -98,10 +125,15 @@ export default function SimilarSearchResults({ searchData }) {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Similar Profiles Found</h2>
+        <div>
+          <h2 className="text-2xl font-bold">Similar Profiles Found</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Similar {searchData.platform === 'tiktok' ? 'TikTok' : 'Instagram'} creators to @{searchData.targetUsername}
+          </p>
+        </div>
         <div className="flex items-center gap-4">
           <div className="text-sm text-muted-foreground">
-            Page {currentPage} of {totalPages} • Showing {startIndex + 1}-{Math.min(endIndex, searchData.creators.length)} of {searchData.creators.length}
+            Page {currentPage} of {totalPages} • Showing {startIndex + 1}-{Math.min(endIndex, creators.length)} of {creators.length}
           </div>
           {searchData?.jobId && <ExportButton jobId={searchData.jobId} />}
         </div>
@@ -125,7 +157,6 @@ export default function SimilarSearchResults({ searchData }) {
           </TableHeader>
           <TableBody>
             {currentItems.map((creator) => {
-              console.log('Profile pic URL for', creator.username, ':', creator.profile_pic_url);
               return (
                 <TableRow key={creator.id}>
                   <TableCell>
@@ -142,7 +173,7 @@ export default function SimilarSearchResults({ searchData }) {
                   </TableCell>
                   <TableCell>
                     <a 
-                      href={renderProfileLink(creator.username)}
+                      href={renderProfileLink(creator)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-600 hover:underline"

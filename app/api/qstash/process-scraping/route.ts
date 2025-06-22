@@ -8,6 +8,7 @@ import { Resend } from 'resend'
 import CampaignFinishedEmail from '@/components/email-template'
 import { createClient } from '@supabase/supabase-js'
 import { processYouTubeJob } from '@/lib/platforms/youtube/handler'
+import { processTikTokSimilarJob } from '@/lib/platforms/tiktok-similar/handler'
 
 // Global parameter to limit API calls for testing
 const MAX_API_CALLS_FOR_TESTING = 1; // Back to 1 for testing
@@ -742,6 +743,30 @@ export async function POST(req: Request) {
         }
         
         throw youtubeError;
+      }
+    }
+    // CÓDIGO PARA TIKTOK SIMILAR
+    else if (job.platform === 'TikTok' && job.targetUsername) {
+      console.log('🎬 Processing TikTok similar job for username:', job.targetUsername);
+      
+      try {
+        const result = await processTikTokSimilarJob(job, jobId);
+        return NextResponse.json(result);
+      } catch (tiktokError: any) {
+        console.error('❌ Error processing TikTok similar job:', tiktokError);
+        
+        // Ensure job status is updated on error
+        const currentJob = await db.query.scrapingJobs.findFirst({ where: eq(scrapingJobs.id, jobId) });
+        if (currentJob && currentJob.status !== 'error') {
+          await db.update(scrapingJobs).set({ 
+            status: 'error', 
+            error: tiktokError.message || 'Unknown TikTok similar processing error', 
+            completedAt: new Date(), 
+            updatedAt: new Date() 
+          }).where(eq(scrapingJobs.id, jobId));
+        }
+        
+        throw tiktokError;
       }
     } else {
       // Si no es ninguna plataforma soportada

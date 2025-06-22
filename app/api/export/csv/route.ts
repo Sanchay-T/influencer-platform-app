@@ -109,36 +109,58 @@ export async function GET(req: Request) {
       let csvContent = '';
       const firstCreator = allCreators[0];
       if (firstCreator.creator && firstCreator.video) {
+        // Detect platform mix for campaign export
+        const platforms = [...new Set(allCreators.map(item => item.platform || 'Unknown'))];
+        console.log('CSV Export (Campaign): Detected platforms:', platforms);
+        
+        // Use a unified format that works for all platforms
         const headers = [
-          'Username',
+          'Platform',
+          'Creator/Channel Name',
           'Followers',
-          'Video URL',
-          'Description',
+          'Video/Content URL',
+          'Title/Description', 
+          'Views',
           'Likes',
           'Comments',
           'Shares',
+          'Duration (seconds)',
           'Hashtags',
-          'Created Date',
+          'Date',
           'Keywords'
         ];
+        
         csvContent = headers.join(',') + '\n';
+        
         allCreators.forEach(item => {
           const creator = item.creator || {};
           const video = item.video || {};
           const stats = video.statistics || {};
           const hashtags = Array.isArray(item.hashtags) ? item.hashtags.join(';') : '';
-          const createdDate = item.createTime ? new Date(item.createTime * 1000).toISOString().split('T')[0] : '';
           const keywordsStr = keywords.join(';');
+          const itemPlatform = item.platform || 'Unknown';
+          
+          // Handle date based on platform
+          let dateStr = '';
+          if (itemPlatform === 'YouTube' && item.publishedTime) {
+            dateStr = new Date(item.publishedTime).toISOString().split('T')[0];
+          } else if (item.createTime) {
+            dateStr = new Date(item.createTime * 1000).toISOString().split('T')[0];
+          }
+          
           const row = [
+            `"${itemPlatform}"`,
             `"${creator.name || ''}"`,
             `"${creator.followers || 0}"`,
             `"${video.url || ''}"`,
             `"${(video.description || '').replace(/"/g, '""')}"`,
+            `"${stats.views || 0}"`,
             `"${stats.likes || 0}"`,
             `"${stats.comments || 0}"`,
             `"${stats.shares || 0}"`,
+            `"${item.lengthSeconds || 0}"`,
             `"${hashtags}"`,
-            `"${createdDate}"`,
+            `"${dateStr}"`,
             `"${keywordsStr}"`
           ];
           csvContent += row.join(',') + '\n';
@@ -254,20 +276,77 @@ export async function GET(req: Request) {
         JSON.stringify(firstCreator).substring(0, 200) + '...');
 
       // Detect the structure from the creators array
-      if (firstCreator.creator && firstCreator.video) {
-        // New TikTok structure with creator and video data
+      if (firstCreator.username && (firstCreator.is_verified !== undefined || firstCreator.full_name)) {
+        // This is similar search format (Instagram or TikTok similar)
+        console.log('CSV Export: Detected similar search format');
+        
+        const platform = firstCreator.platform || 'Unknown';
         const headers = [
           'Username',
+          'Full Name',
           'Followers',
-          'Video URL',
-          'Description',
-          'Likes',
-          'Comments',
-          'Shares',
-          'Hashtags',
-          'Created Date',
-          'Keywords'
+          'Verified',
+          'Private',
+          'Platform',
+          'Profile URL'
         ];
+        
+        csvContent = headers.join(',') + '\n';
+        
+        creators.forEach(creator => {
+          const profileUrl = creator.platform === 'TikTok' 
+            ? `https://www.tiktok.com/@${creator.username}`
+            : `https://instagram.com/${creator.username}`;
+            
+          const row = [
+            `"${creator.username || ''}"`,
+            `"${creator.full_name || creator.displayName || ''}"`,
+            `"${creator.followerCount || creator.followers || 0}"`,
+            `"${creator.is_verified || creator.verified ? 'Yes' : 'No'}"`,
+            `"${creator.is_private || creator.isPrivate ? 'Yes' : 'No'}"`,
+            `"${creator.platform || 'Instagram'}"`,
+            `"${profileUrl}"`
+          ];
+          
+          csvContent += row.join(',') + '\n';
+        });
+      } else if (firstCreator.creator && firstCreator.video) {
+        // Detect platform type to determine appropriate columns
+        const platform = firstCreator.platform || 'Unknown';
+        console.log('CSV Export: Detected platform:', platform);
+        
+        let headers: string[];
+        
+        if (platform === 'YouTube') {
+          // YouTube-specific columns
+          headers = [
+            'Channel Name',
+            'Video Title', 
+            'Video URL',
+            'Views',
+            'Duration (seconds)',
+            'Published Date',
+            'Hashtags',
+            'Keywords',
+            'Platform'
+          ];
+        } else {
+          // TikTok/other platforms columns
+          headers = [
+            'Username',
+            'Followers',
+            'Video URL',
+            'Description',
+            'Likes',
+            'Comments',
+            'Shares',
+            'Views',
+            'Hashtags',
+            'Created Date',
+            'Keywords',
+            'Platform'
+          ];
+        }
         
         csvContent = headers.join(',') + '\n';
         
@@ -276,26 +355,52 @@ export async function GET(req: Request) {
           const video = item.video || {};
           const stats = video.statistics || {};
           const hashtags = Array.isArray(item.hashtags) ? item.hashtags.join(';') : '';
-          const createdDate = item.createTime ? new Date(item.createTime * 1000).toISOString().split('T')[0] : '';
           const keywordsStr = keywords.join(';');
+          const itemPlatform = item.platform || 'Unknown';
           
-          const row = [
-            `"${creator.name || ''}"`,
-            `"${creator.followers || 0}"`,
-            `"${video.url || ''}"`,
-            `"${(video.description || '').replace(/"/g, '""')}"`,
-            `"${stats.likes || 0}"`,
-            `"${stats.comments || 0}"`,
-            `"${stats.shares || 0}"`,
-            `"${hashtags}"`,
-            `"${createdDate}"`,
-            `"${keywordsStr}"`
-          ];
+          let row: string[];
+          
+          if (itemPlatform === 'YouTube') {
+            // YouTube-specific data extraction
+            const publishedDate = item.publishedTime ? 
+              new Date(item.publishedTime).toISOString().split('T')[0] : '';
+            
+            row = [
+              `"${creator.name || ''}"`,
+              `"${(video.description || '').replace(/"/g, '""')}"`, // Video title
+              `"${video.url || ''}"`,
+              `"${stats.views || 0}"`,
+              `"${item.lengthSeconds || 0}"`,
+              `"${publishedDate}"`,
+              `"${hashtags}"`,
+              `"${keywordsStr}"`,
+              `"${itemPlatform}"`
+            ];
+          } else {
+            // TikTok/other platforms data extraction
+            const createdDate = item.createTime ? 
+              new Date(item.createTime * 1000).toISOString().split('T')[0] : '';
+            
+            row = [
+              `"${creator.name || ''}"`,
+              `"${creator.followers || 0}"`,
+              `"${video.url || ''}"`,
+              `"${(video.description || '').replace(/"/g, '""')}"`,
+              `"${stats.likes || 0}"`,
+              `"${stats.comments || 0}"`,
+              `"${stats.shares || 0}"`,
+              `"${stats.views || 0}"`,
+              `"${hashtags}"`,
+              `"${createdDate}"`,
+              `"${keywordsStr}"`,
+              `"${itemPlatform}"`
+            ];
+          }
           
           csvContent += row.join(',') + '\n';
         });
 
-        console.log('CSV Export: Generated CSV with new TikTok structure');
+        console.log(`CSV Export: Generated CSV with ${platform} structure`);
       } else if ('profile' in firstCreator) {
         // Old TikTok format
         csvContent = 'Profile,Keywords,Platform,Followers,Region,Profile URL,Creator Categories\n';
