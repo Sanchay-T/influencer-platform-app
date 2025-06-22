@@ -9,7 +9,7 @@ import CampaignFinishedEmail from '@/components/email-template'
 import { createClient } from '@supabase/supabase-js'
 
 // Global parameter to limit API calls for testing
-const MAX_API_CALLS_FOR_TESTING = 1; // Changed to 1 for super fast testing
+const MAX_API_CALLS_FOR_TESTING = 1; // Back to 1 for testing
 
 // Definir la interfaz para la respuesta de ScrapeCreators para Instagram
 interface ScrapeCreatorsInstagramResponse {
