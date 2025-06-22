@@ -43,11 +43,12 @@ export async function GET(request: Request) {
     console.log('🎨 [IMAGE-PROXY] Original content type:', contentType);
     console.log('📏 [IMAGE-PROXY] Original buffer size:', buffer.length, 'bytes');
 
-    // Convert HEIC/HEIF to JPEG for browser compatibility
+    // Handle HEIC/HEIF images - try conversion but fallback to alternative approaches
     if (isHeic || contentType === 'image/heic' || contentType === 'image/heif') {
-      console.log('🔄 [IMAGE-PROXY] Converting HEIC/HEIF to JPEG for browser compatibility');
+      console.log('🔄 [IMAGE-PROXY] Processing HEIC/HEIF image for browser compatibility');
       
       try {
+        // First, try Sharp conversion
         const convertStartTime = Date.now();
         buffer = await sharp(buffer)
           .jpeg({ quality: 85 })
@@ -56,14 +57,50 @@ export async function GET(request: Request) {
         const convertTime = Date.now() - convertStartTime;
         contentType = 'image/jpeg';
         
-        console.log('✅ [IMAGE-PROXY] HEIC conversion successful');
+        console.log('✅ [IMAGE-PROXY] HEIC conversion successful with Sharp');
         console.log('⏱️ [IMAGE-PROXY] Conversion time:', convertTime + 'ms');
         console.log('📏 [IMAGE-PROXY] Converted buffer size:', buffer.length, 'bytes');
         console.log('🎯 [IMAGE-PROXY] Final content type:', contentType);
       } catch (conversionError) {
-        console.error('❌ [IMAGE-PROXY] HEIC conversion failed:', conversionError);
-        console.log('🔄 [IMAGE-PROXY] Falling back to original image');
-        // Keep original buffer and content type
+        console.error('❌ [IMAGE-PROXY] Sharp HEIC conversion failed:', conversionError.message);
+        console.log('🔄 [IMAGE-PROXY] Attempting alternative solution...');
+        
+        // Alternative 1: Try to fetch a different format from TikTok by modifying the URL
+        if (imageUrl.includes('tiktokcdn') && imageUrl.includes('.heic')) {
+          try {
+            console.log('🔄 [IMAGE-PROXY] Trying to fetch JPEG version from TikTok...');
+            
+            // Replace .heic with .jpeg and remove quality params that might force HEIC
+            let jpegUrl = imageUrl.replace(/\.heic(\?|$)/, '.jpeg$1');
+            jpegUrl = jpegUrl.replace(/~tplv-[^~]*~/g, '~tplv-default~'); // Remove specific format params
+            
+            console.log('🔗 [IMAGE-PROXY] Trying JPEG URL:', jpegUrl);
+            
+            const jpegResponse = await fetch(jpegUrl, {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+              }
+            });
+            
+            if (jpegResponse.ok) {
+              const jpegArrayBuffer = await jpegResponse.arrayBuffer();
+              buffer = Buffer.from(new Uint8Array(jpegArrayBuffer));
+              contentType = 'image/jpeg';
+              
+              console.log('✅ [IMAGE-PROXY] Successfully fetched JPEG alternative');
+              console.log('📏 [IMAGE-PROXY] JPEG buffer size:', buffer.length, 'bytes');
+            } else {
+              throw new Error('JPEG alternative not available');
+            }
+          } catch (alternativeError) {
+            console.error('❌ [IMAGE-PROXY] JPEG alternative failed:', alternativeError.message);
+            console.log('🔄 [IMAGE-PROXY] Using original HEIC image (may not display in all browsers)');
+            // Keep original HEIC buffer and content type - some browsers do support it
+          }
+        } else {
+          console.log('🔄 [IMAGE-PROXY] Non-TikTok HEIC, using original image');
+          // Keep original buffer and content type
+        }
       }
     } else {
       console.log('✅ [IMAGE-PROXY] Image format compatible, no conversion needed');
