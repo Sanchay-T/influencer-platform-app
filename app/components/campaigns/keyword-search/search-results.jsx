@@ -224,6 +224,66 @@ const SearchResults = ({ searchData }) => {
     console.log('  🕐 Start time:', new Date().toISOString());
   };
 
+  const renderProfileLink = (creator) => {
+    // Check platform from searchData
+    const platform = searchData.selectedPlatform || 'TikTok';
+    
+    console.log('🔗 [PROFILE-LINK] Generating profile link for:', {
+      platform,
+      creatorName: creator.creator?.name,
+      videoUrl: creator.video?.url
+    });
+    
+    if (platform === 'TikTok' || platform === 'tiktok') {
+      // Try to extract username from video URL first (most reliable)
+      if (creator.video?.url) {
+        const match = creator.video.url.match(/@([^\/]+)/);
+        if (match) {
+          const profileUrl = `https://www.tiktok.com/@${match[1]}`;
+          console.log('🎯 [PROFILE-LINK] Extracted from video URL:', profileUrl);
+          return profileUrl;
+        }
+      }
+      
+      // Fallback: use creator name if it looks like a username (no spaces)
+      const creatorName = creator.creator?.name;
+      if (creatorName && !creatorName.includes(' ')) {
+        const profileUrl = `https://www.tiktok.com/@${creatorName}`;
+        console.log('🎯 [PROFILE-LINK] Using creator name as username:', profileUrl);
+        return profileUrl;
+      }
+      
+      // Last fallback: construct from creator name by removing spaces
+      if (creatorName) {
+        const cleanUsername = creatorName.replace(/\s+/g, '').toLowerCase();
+        const profileUrl = `https://www.tiktok.com/@${cleanUsername}`;
+        console.log('🎯 [PROFILE-LINK] Cleaned creator name:', profileUrl);
+        return profileUrl;
+      }
+    } else if (platform === 'YouTube' || platform === 'youtube') {
+      // For YouTube, try to extract channel from video URL
+      if (creator.video?.url) {
+        // YouTube video URLs contain channel info, try to construct channel URL
+        // Check if it's a channel URL pattern or just link to video
+        if (creator.video.url.includes('/channel/') || creator.video.url.includes('/c/') || creator.video.url.includes('/@')) {
+          const channelMatch = creator.video.url.match(/\/(channel\/[^\/]+|c\/[^\/]+|@[^\/]+)/);
+          if (channelMatch) {
+            const channelUrl = `https://www.youtube.com/${channelMatch[1]}`;
+            console.log('🎯 [PROFILE-LINK] YouTube channel URL:', channelUrl);
+            return channelUrl;
+          }
+        }
+        
+        // Fallback: link to the video
+        console.log('🎯 [PROFILE-LINK] YouTube video URL fallback:', creator.video.url);
+        return creator.video.url;
+      }
+    }
+    
+    console.log('⚠️ [PROFILE-LINK] No valid profile link found, returning #');
+    return '#';
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -248,6 +308,8 @@ const SearchResults = ({ searchData }) => {
             <TableRow>
               <TableHead>Profile</TableHead>
               <TableHead>Creator Name</TableHead>
+              <TableHead>Bio</TableHead>
+              <TableHead>Email</TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Video Title</TableHead>
               <TableHead>Views</TableHead>
@@ -287,7 +349,75 @@ const SearchResults = ({ searchData }) => {
                       </AvatarFallback>
                     </Avatar>
                   </TableCell>
-                  <TableCell>{creator.creator?.name || 'N/A'}</TableCell>
+                  <TableCell>
+                    {creator.creator?.name && creator.creator.name !== 'N/A' ? (
+                      <a 
+                        href={renderProfileLink(creator)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 hover:underline font-medium transition-colors duration-200 flex items-center gap-1"
+                        title={`View ${creator.creator.name}'s profile on ${searchData.selectedPlatform || 'TikTok'}`}
+                      >
+                        {creator.creator.name}
+                        <svg 
+                          className="w-3 h-3 opacity-70"
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round" 
+                            strokeWidth={2} 
+                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" 
+                          />
+                        </svg>
+                      </a>
+                    ) : (
+                      <span className="text-gray-500">N/A</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="max-w-[200px] truncate" title={creator.creator?.bio || 'No bio available'}>
+                      {creator.creator?.bio ? (
+                        <span className="text-sm text-gray-700">{creator.creator.bio}</span>
+                      ) : (
+                        <span className="text-gray-400 text-sm">No bio</span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {creator.creator?.emails && creator.creator.emails.length > 0 ? (
+                      <div className="space-y-1">
+                        {creator.creator.emails.map((email, emailIndex) => (
+                          <div key={emailIndex} className="flex items-center gap-1">
+                            <a 
+                              href={`mailto:${email}`}
+                              className="text-blue-600 hover:underline text-sm"
+                              title={`Send email to ${email}`}
+                            >
+                              {email}
+                            </a>
+                            <svg 
+                              className="w-3 h-3 opacity-60 text-blue-600"
+                              fill="none" 
+                              stroke="currentColor" 
+                              viewBox="0 0 24 24"
+                            >
+                              <path 
+                                strokeLinecap="round" 
+                                strokeLinejoin="round" 
+                                strokeWidth={2} 
+                                d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" 
+                              />
+                            </svg>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400 text-sm">No email</span>
+                    )}
+                  </TableCell>
                   <TableCell>{formatDate(creator.createTime)}</TableCell>
                   <TableCell>
                     <div className="max-w-[300px] truncate" title={creator.video?.description || 'No title'}>

@@ -335,6 +335,8 @@ export async function GET(req: Request) {
           headers = [
             'Username',
             'Followers',
+            'Bio',
+            'Email',
             'Video URL',
             'Description',
             'Likes',
@@ -381,9 +383,15 @@ export async function GET(req: Request) {
             const createdDate = item.createTime ? 
               new Date(item.createTime * 1000).toISOString().split('T')[0] : '';
             
+            // Extract bio and emails for TikTok export
+            const bio = (creator.bio || '').replace(/"/g, '""'); // Escape quotes for CSV
+            const emails = Array.isArray(creator.emails) ? creator.emails.join('; ') : '';
+            
             row = [
               `"${creator.name || ''}"`,
               `"${creator.followers || 0}"`,
+              `"${bio}"`,
+              `"${emails}"`,
               `"${video.url || ''}"`,
               `"${(video.description || '').replace(/"/g, '""')}"`,
               `"${stats.likes || 0}"`,

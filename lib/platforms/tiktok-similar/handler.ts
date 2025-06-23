@@ -44,11 +44,15 @@ export async function processTikTokSimilarJob(job: any, jobId: string) {
     console.log('🔍 Step 1: Getting TikTok profile data');
     const profileData = await getTikTokProfile(job.targetUsername);
     
-    console.log('👤 Profile found:', {
-      username: profileData.user.uniqueId,
-      displayName: profileData.user.nickname,
-      followers: profileData.stats.followerCount,
-      verified: profileData.user.verified
+    // Enhanced profile logging
+    console.log('🔄 [TRANSFORMATION] Profile data received for processing:', JSON.stringify(profileData, null, 2));
+    console.log('👤 [FIRST-PROFILE] Target profile processed:', {
+      username: profileData.user?.uniqueId,
+      displayName: profileData.user?.nickname,
+      followers: profileData.stats?.followerCount,
+      verified: profileData.user?.verified,
+      privateAccount: profileData.user?.privateAccount,
+      description: profileData.user?.signature
     });
 
     // Update progress after profile fetch
@@ -60,7 +64,12 @@ export async function processTikTokSimilarJob(job: any, jobId: string) {
     // Step 2: Extract keywords for similarity search
     console.log('🔍 Step 2: Extracting keywords from profile');
     const keywords = extractSearchKeywords(profileData);
-    console.log('📝 Extracted keywords:', keywords);
+    console.log('🔄 [TRANSFORMATION] Keywords extracted from profile:', keywords);
+    console.log('📝 [TRANSFORMATION] Keyword extraction details:', {
+      totalKeywords: keywords.length,
+      firstKeyword: keywords[0],
+      source: 'profile_description_and_metadata'
+    });
 
     if (keywords.length === 0) {
       throw new Error('No suitable keywords found in profile for similarity search');
@@ -94,6 +103,13 @@ export async function processTikTokSimilarJob(job: any, jobId: string) {
         
         if (searchResponse.users && searchResponse.users.length > 0) {
           const transformedUsers = transformTikTokUsers(searchResponse, keyword);
+          
+          // Enhanced transformation logging
+          console.log(`🔄 [TRANSFORMATION] Transformed ${transformedUsers.length} users for keyword "${keyword}"`);
+          if (transformedUsers[0]) {
+            console.log('👤 [FIRST-PROFILE] First transformed user from search:', JSON.stringify(transformedUsers[0], null, 2));
+          }
+          
           allUsers.push(...transformedUsers);
           console.log(`✅ Added ${transformedUsers.length} users for keyword "${keyword}"`);
         }
@@ -129,11 +145,17 @@ export async function processTikTokSimilarJob(job: any, jobId: string) {
       .sort((a, b) => b.followerCount - a.followerCount)
       .slice(0, 10);
     
-    console.log(`📊 Results summary:`);
+    // Enhanced final processing logging
+    console.log('🔄 [TRANSFORMATION] Final processing completed:');
+    console.log(`📊 [TRANSFORMATION] Results summary:`);
     console.log(`   - Total found: ${uniqueUsers.length}`);
     console.log(`   - After filtering: ${filteredUsers.length}`);
     console.log(`   - Final results: ${sortedUsers.length}`);
     console.log(`   - API calls used: ${apiCallCount}/${MAX_API_CALLS_FOR_TESTING}`);
+    
+    if (sortedUsers[0]) {
+      console.log('👤 [FIRST-PROFILE] Top ranked similar user:', JSON.stringify(sortedUsers[0], null, 2));
+    }
     
     if (sortedUsers.length === 0) {
       throw new Error('No similar creators found after filtering');

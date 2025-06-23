@@ -72,6 +72,13 @@ export async function processYouTubeJob(job: any, jobId: string): Promise<any> {
       videosCount: youtubeResponse.videos?.length || 0,
       hasContinuationToken: !!youtubeResponse.continuationToken
     });
+    
+    // Enhanced response structure logging
+    console.log('📊 [API-RESPONSE] YouTube response structure:', JSON.stringify({
+      totalResults: youtubeResponse.totalResults,
+      videoCount: youtubeResponse.videos?.length,
+      continuationToken: youtubeResponse.continuationToken ? '[PRESENT]' : '[NONE]'
+    }, null, 2));
 
     // Increment the processedRuns counter after successful API call
     const newProcessedRuns = (job.processedRuns || 0) + 1;
@@ -91,7 +98,19 @@ export async function processYouTubeJob(job: any, jobId: string): Promise<any> {
       // Transform YouTube videos to common frontend format
       const creators = transformYouTubeVideos(youtubeResponse.videos, job.keywords);
       
-      console.log(`📊 YouTube: Transformed ${creators.length} videos`);
+      // Enhanced transformation logging
+      console.log(`🔄 [TRANSFORMATION] Transformed ${creators.length} YouTube videos`);
+      if (creators[0]) {
+        console.log('👤 [FIRST-PROFILE] First transformed video/creator:', JSON.stringify(creators[0], null, 2));
+        console.log('🔄 [TRANSFORMATION] First creator structure:', {
+          creatorName: creators[0].creator?.name,
+          videoTitle: creators[0].video?.description,
+          videoUrl: creators[0].video?.url,
+          views: creators[0].video?.statistics?.views,
+          platform: creators[0].platform,
+          keywords: creators[0].keywords
+        });
+      }
       
       // Save results to database
       await db.insert(scrapingResults).values({

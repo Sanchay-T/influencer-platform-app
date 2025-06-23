@@ -182,19 +182,31 @@ export async function POST(req: Request) {
       }
 
       console.log('🔍 Llamando a la API de ScrapeCreators para Instagram');
-      // Hacer una llamada a ScrapeCreators para Instagram
+      
+      // Enhanced API Request Logging for Instagram
       const apiUrl = `${process.env.SCRAPECREATORS_INSTAGRAM_API_URL}?handle=${encodeURIComponent(job.targetUsername)}`;
-      console.log('🌐 URL de ScrapeCreators para Instagram:', apiUrl);
+      console.log('🚀 [API-REQUEST] Platform: Instagram | Type: Similar Search');
+      console.log('🌐 [API-REQUEST] URL:', apiUrl);
+      console.log('👤 [API-REQUEST] Target username:', job.targetUsername);
+      console.log('⏱️ [API-REQUEST] Timestamp:', new Date().toISOString());
+      
+      const requestStartTime = Date.now();
       
       try {
+        const requestHeaders = {
+          'x-api-key': process.env.SCRAPECREATORS_API_KEY!
+        };
+        
+        console.log('📋 [API-REQUEST] Headers:', JSON.stringify({ ...requestHeaders, 'x-api-key': '[REDACTED]' }, null, 2));
+        
         const scrapingResponse = await fetch(apiUrl, {
           method: 'GET',
-          headers: {
-            'x-api-key': process.env.SCRAPECREATORS_API_KEY!
-          }
+          headers: requestHeaders
         });
 
-        console.log('📡 Respuesta de ScrapeCreators:', scrapingResponse.status, scrapingResponse.statusText);
+        const responseTime = Date.now() - requestStartTime;
+        console.log('📡 [API-RESPONSE] Status:', scrapingResponse.status, scrapingResponse.statusText);
+        console.log('🕒 [API-RESPONSE] Response time:', `${responseTime}ms`);
 
         if (!scrapingResponse.ok) {
           let errorBody = 'Unknown error';
@@ -214,20 +226,48 @@ export async function POST(req: Request) {
           throw new Error(errorMessage); 
         }
 
-        // Leer la respuesta como texto primero para manejar posibles problemas de codificación
+        // Enhanced response logging
         const responseText = await scrapingResponse.text();
-        console.log('📝 Longitud de la respuesta de ScrapeCreators:', responseText.length);
-        console.log('📝 Primeros 200 caracteres de la respuesta:', responseText.substring(0, 200));
+        console.log('📝 [API-RESPONSE] Raw response length:', responseText.length);
+        console.log('📝 [API-RESPONSE] Raw response (first 1000 chars):', responseText.substring(0, 1000));
         
         // Intentar parsear el JSON con manejo de errores
         let instagramData: ScrapeCreatorsInstagramResponse;
         try {
           instagramData = JSON.parse(responseText);
-          console.log('✅ Respuesta de ScrapeCreators parseada correctamente');
-          console.log('📋 Perfil principal:', {
-            username: instagramData.data?.user?.username,
-            fullName: instagramData.data?.user?.full_name,
-            relatedProfilesCount: instagramData.data?.user?.edge_related_profiles?.edges?.length || 0
+          console.log('✅ [API-RESPONSE] JSON parsed successfully');
+          
+          // Enhanced First Profile Logging for Instagram
+          if (instagramData?.data?.user) {
+            const user = instagramData.data.user;
+            console.log('👤 [FIRST-PROFILE] Raw Instagram main profile:', JSON.stringify(user, null, 2));
+            console.log('👤 [FIRST-PROFILE] Main profile details:', {
+              username: user.username,
+              fullName: user.full_name,
+              profilePicUrl: user.profile_pic_url_hd,
+              relatedProfilesCount: user.edge_related_profiles?.edges?.length || 0
+            });
+            
+            // Log first related profile if available
+            if (user.edge_related_profiles?.edges?.[0]) {
+              const firstRelated = user.edge_related_profiles.edges[0].node;
+              console.log('👤 [FIRST-PROFILE] First related profile raw:', JSON.stringify(firstRelated, null, 2));
+              console.log('👤 [FIRST-PROFILE] First related profile details:', {
+                id: firstRelated.id,
+                username: firstRelated.username,
+                full_name: firstRelated.full_name,
+                is_private: firstRelated.is_private,
+                is_verified: firstRelated.is_verified,
+                profile_pic_url: firstRelated.profile_pic_url
+              });
+            }
+          }
+          
+          console.log('📊 [API-RESPONSE] Structure:', {
+            hasUser: !!instagramData.data?.user,
+            hasRelatedProfiles: !!instagramData.data?.user?.edge_related_profiles,
+            relatedProfilesCount: instagramData.data?.user?.edge_related_profiles?.edges?.length || 0,
+            status: instagramData.status
           });
         } catch (parseError: any) {
           console.error('❌ Error al parsear la respuesta de ScrapeCreators:', parseError);
@@ -264,7 +304,7 @@ export async function POST(req: Request) {
           }, { status: 400 });
         }
 
-        // Extraer perfil principal
+        // Extraer perfil principal con enhanced logging
         const mainProfile = {
           id: job.targetUsername, // Usamos el targetUsername como ID en lugar de buscar un id que no existe
           username: instagramData.data.user.username,
@@ -273,7 +313,7 @@ export async function POST(req: Request) {
           is_private: false,  // Valores por defecto ya que estamos buscando un perfil público
           is_verified: true   // Asumimos verificado para el perfil principal
         };
-        console.log('👤 Perfil principal:', mainProfile);
+        console.log('🔄 [TRANSFORMATION] Main profile extracted:', JSON.stringify(mainProfile, null, 2));
 
         // Extraer perfiles relacionados
         const relatedProfilesEdges = instagramData.data.user.edge_related_profiles.edges || [];
@@ -313,7 +353,10 @@ export async function POST(req: Request) {
           };
         });
 
-        console.log('✅ Perfiles relacionados procesados:', relatedProfiles.length);
+        console.log('🔄 [TRANSFORMATION] Related profiles processed:', relatedProfiles.length);
+        if (relatedProfiles[0]) {
+          console.log('🔄 [TRANSFORMATION] First related profile transformed:', JSON.stringify(relatedProfiles[0], null, 2));
+        }
 
         // Combinamos el perfil principal y los perfiles relacionados
         // El perfil principal viene como primer elemento en el array
@@ -524,17 +567,31 @@ export async function POST(req: Request) {
       console.log('🔍 Paso 6: Llamando a ScrapeCreators API para TikTok');
       const keywordQuery = job.keywords.join(', ');
       const apiUrl = `${process.env.SCRAPECREATORS_API_URL}?query=${encodeURIComponent(keywordQuery)}&cursor=${job.cursor || 0}`;
-      console.log('🌐 URL de ScrapeCreators para TikTok:', apiUrl);
+      
+      // Enhanced API Request Logging
+      console.log('🚀 [API-REQUEST] Platform: TikTok | Type: Keyword Search');
+      console.log('🌐 [API-REQUEST] URL:', apiUrl);
+      console.log('📋 [API-REQUEST] Keywords:', job.keywords);
+      console.log('🔢 [API-REQUEST] Cursor:', job.cursor || 0);
+      console.log('⏱️ [API-REQUEST] Timestamp:', new Date().toISOString());
+      
+      const requestStartTime = Date.now();
       
       try { // Start of new try block for TikTok API call
+        const requestHeaders = {
+          'x-api-key': process.env.SCRAPECREATORS_API_KEY!
+        };
+        
+        console.log('📋 [API-REQUEST] Headers:', JSON.stringify({ ...requestHeaders, 'x-api-key': '[REDACTED]' }, null, 2));
+        
         const scrapingResponse = await fetch(apiUrl, {
           method: 'GET',
-          headers: {
-            'x-api-key': process.env.SCRAPECREATORS_API_KEY!
-          }
+          headers: requestHeaders
         });
 
-        console.log('📡 Respuesta de ScrapeCreators (TikTok):', scrapingResponse.status, scrapingResponse.statusText);
+        const responseTime = Date.now() - requestStartTime;
+        console.log('📡 [API-RESPONSE] Status:', scrapingResponse.status, scrapingResponse.statusText);
+        console.log('🕒 [API-RESPONSE] Response time:', `${responseTime}ms`);
 
         if (!scrapingResponse.ok) {
           let errorBody = 'Unknown API error';
@@ -582,12 +639,58 @@ export async function POST(req: Request) {
           }
           throw new Error(errorMessage); // This will be caught by the new catch block below
         }
-        apiResponse = await scrapingResponse.json();
-        console.log('✅ ScrapeCreators TikTok API Response JSON:', apiResponse);
         
-        // [DIAGNOSTIC] Log sample data to understand the structure
+        // Read response text first for logging
+        const responseText = await scrapingResponse.text();
+        console.log('📝 [API-RESPONSE] Raw response length:', responseText.length);
+        console.log('📝 [API-RESPONSE] Raw response (first 1000 chars):', responseText.substring(0, 1000));
+        
+        // Parse JSON
+        apiResponse = JSON.parse(responseText);
+        console.log('✅ [API-RESPONSE] JSON parsed successfully');
+        console.log('📊 [API-RESPONSE] Structure:', {
+          hasSearchItemList: !!apiResponse?.search_item_list,
+          itemCount: apiResponse?.search_item_list?.length || 0,
+          totalResults: apiResponse?.total || 0,
+          hasMore: !!apiResponse?.has_more
+        });
+        
+        // Enhanced First Profile Logging
         if (apiResponse?.search_item_list?.[0]) {
-          console.log('🔍 [DIAGNOSTIC] Sample item structure:', JSON.stringify(apiResponse.search_item_list[0], null, 2));
+          const firstItem = apiResponse.search_item_list[0];
+          console.log('👤 [FIRST-PROFILE] Raw TikTok item structure:', JSON.stringify(firstItem, null, 2));
+          
+          // Log specific author data if available
+          if (firstItem.aweme_info?.author) {
+            const author = firstItem.aweme_info.author;
+            console.log('👤 [FIRST-PROFILE] Author details:', {
+              unique_id: author.unique_id,
+              nickname: author.nickname,
+              follower_count: author.follower_count,
+              avatar_url: author.avatar_medium?.url_list?.[0],
+              verified: author.is_verified || false,
+              signature: author.signature // ✅ ADD BIO LOGGING
+            });
+            
+            // Enhanced bio/signature debugging
+            console.log('📝 [BIO-DEBUG] Signature field analysis:', {
+              hasSignature: !!author.signature,
+              signatureType: typeof author.signature,
+              signatureLength: author.signature ? author.signature.length : 0,
+              signatureValue: author.signature || 'NO_SIGNATURE_FOUND'
+            });
+          }
+          
+          // Log video stats if available
+          if (firstItem.aweme_info?.statistics) {
+            const stats = firstItem.aweme_info.statistics;
+            console.log('👤 [FIRST-PROFILE] Video statistics:', {
+              likes: stats.digg_count,
+              comments: stats.comment_count,
+              shares: stats.share_count,
+              views: stats.play_count
+            });
+          }
         }
         
         // Increment the processedRuns counter after successful API call
@@ -603,22 +706,92 @@ export async function POST(req: Request) {
           })
           .where(eq(scrapingJobs.id, jobId));
         
-        // Process the API response and save results (simplified for testing)
+        // Process the API response and save results (enhanced with profile fetching)
         if (apiResponse && apiResponse.search_item_list && apiResponse.search_item_list.length > 0) {
-          // Transform the response to match frontend expectations
-          const creators = apiResponse.search_item_list.map((item: any) => {
+          console.log('🔍 [PROFILE-ENHANCEMENT] Starting enhanced profile data fetching for creators with missing bio data');
+          console.log(`🔍 [PROFILE-ENHANCEMENT] Processing ${apiResponse.search_item_list.length} creators`);
+          
+          // Transform the response to match frontend expectations (with controlled concurrency)
+          const creators = [];
+          for (let i = 0; i < apiResponse.search_item_list.length; i++) {
+            const item = apiResponse.search_item_list[i];
             const awemeInfo = item.aweme_info || {};
             const author = awemeInfo.author || {};
             const statistics = awemeInfo.statistics || {};
             const textExtras = awemeInfo.text_extra || [];
             
-            return {
+            // Extract emails from bio/signature with enhanced debugging and fallbacks
+            const bio = author.signature || author.desc || author.bio || author.description || '';
+            console.log('📝 [BIO-EXTRACTION] Processing bio for item:', {
+              authorUniqueId: author.unique_id,
+              authorNickname: author.nickname,
+              rawSignature: author.signature,
+              authorDesc: author.desc,
+              authorBio: author.bio,
+              authorDescription: author.description,
+              finalBio: bio,
+              bioLength: bio.length,
+              bioValue: bio
+            });
+            
+            const emailRegex = /[\w\.-]+@[\w\.-]+\.\w+/g;
+            const extractedEmails = bio.match(emailRegex) || [];
+            
+            console.log('📧 [EMAIL-EXTRACTION] Email extraction result:', {
+              bioInput: bio,
+              emailsFound: extractedEmails,
+              emailCount: extractedEmails.length
+            });
+            
+            // Enhanced Profile Fetching: If no bio found, try to get full profile data
+            let enhancedBio = bio;
+            let enhancedEmails = extractedEmails;
+            
+            if (!bio && author.unique_id) {
+              try {
+                console.log(`🔍 [PROFILE-FETCH] Attempting to fetch full profile for @${author.unique_id}`);
+                
+                // Make profile API call to get bio data
+                const profileApiUrl = `https://api.scrapecreators.com/v1/tiktok/profile?handle=${encodeURIComponent(author.unique_id)}`;
+                const profileResponse = await fetch(profileApiUrl, {
+                  headers: {
+                    'x-api-key': process.env.SCRAPECREATORS_API_KEY!
+                  }
+                });
+                
+                if (profileResponse.ok) {
+                  const profileData = await profileResponse.json();
+                  const profileUser = profileData.user || {};
+                  
+                  enhancedBio = profileUser.signature || profileUser.desc || profileUser.bio || '';
+                  const enhancedEmailMatches = enhancedBio.match(emailRegex) || [];
+                  enhancedEmails = enhancedEmailMatches;
+                  
+                  console.log(`✅ [PROFILE-FETCH] Successfully fetched profile for @${author.unique_id}:`, {
+                    bioFound: !!enhancedBio,
+                    bioLength: enhancedBio.length,
+                    emailsFound: enhancedEmails.length,
+                    bioPreview: enhancedBio.substring(0, 100)
+                  });
+                } else {
+                  console.log(`⚠️ [PROFILE-FETCH] Failed to fetch profile for @${author.unique_id}: ${profileResponse.status}`);
+                }
+              } catch (profileError: any) {
+                console.log(`❌ [PROFILE-FETCH] Error fetching profile for @${author.unique_id}:`, profileError.message);
+              }
+            }
+            
+            const creatorData = {
               // Frontend expects: creator.creator?.name
               creator: {
                 name: author.nickname || author.unique_id || 'Unknown Creator',
                 followers: author.follower_count || 0,
                 avatarUrl: (author.avatar_medium?.url_list?.[0] || '').replace('.heic', '.jpeg'),
-                profilePicUrl: (author.avatar_medium?.url_list?.[0] || '').replace('.heic', '.jpeg')
+                profilePicUrl: (author.avatar_medium?.url_list?.[0] || '').replace('.heic', '.jpeg'),
+                bio: enhancedBio,                    // ✅ Use enhanced bio
+                emails: enhancedEmails,              // ✅ Use enhanced emails
+                uniqueId: author.unique_id || '',
+                verified: author.is_verified || false
               },
               // Frontend expects: creator.video?.description, etc.
               video: {
@@ -640,13 +813,35 @@ export async function POST(req: Request) {
               platform: 'TikTok',
               keywords: job.keywords || []
             };
-          });
-          
-          // [DIAGNOSTIC] Log sample transformed data
-          if (creators[0]) {
-            console.log('🔍 [DIAGNOSTIC] Sample transformed creator:', JSON.stringify(creators[0], null, 2));
+            
+            creators.push(creatorData);
+            
+            // Add small delay between profile API calls to avoid rate limiting
+            if (i < apiResponse.search_item_list.length - 1) {
+              await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
+            }
           }
-          console.log(`📊 [DIAGNOSTIC] Total creators transformed: ${creators.length}`);
+          
+          console.log('🔍 [PROFILE-ENHANCEMENT] Enhanced profile data fetching completed');
+          
+          // Enhanced transformation logging
+          if (creators[0]) {
+            console.log('🔄 [TRANSFORMATION] First creator transformed structure:');
+            console.log('👤 [TRANSFORMATION] Creator data:', JSON.stringify(creators[0].creator, null, 2));
+            console.log('🎬 [TRANSFORMATION] Video data:', JSON.stringify(creators[0].video, null, 2));
+            console.log('🏷️ [TRANSFORMATION] Hashtags:', creators[0].hashtags);
+            console.log('📧 [TRANSFORMATION] Bio & Email extraction:', {
+              bioLength: creators[0].creator.bio?.length || 0,
+              bioPreview: creators[0].creator.bio?.substring(0, 100) || 'No bio',
+              extractedEmails: creators[0].creator.emails || [],
+              emailCount: creators[0].creator.emails?.length || 0
+            });
+            console.log('📊 [TRANSFORMATION] Platform/Keywords:', {
+              platform: creators[0].platform,
+              keywords: creators[0].keywords
+            });
+          }
+          console.log(`📊 [TRANSFORMATION] Total creators transformed: ${creators.length}`);
           
           // Save results to database
           await db.insert(scrapingResults).values({
