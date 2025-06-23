@@ -1,23 +1,38 @@
-# TikTok Influencer Platform - Complete Technical Documentation
+# Multi-Platform Influencer Platform - Complete Technical Documentation
 
 ## Overview
-This document details the complete end-to-end flow for TikTok influencer campaign creation, background processing, and results display. Use this as a blueprint for implementing similar functionality for other platforms (Instagram, YouTube, etc.).
+This document details the complete end-to-end flow for multi-platform influencer campaign creation, background processing, and results display. Supports TikTok keyword/similar search, Instagram similar search, and YouTube keyword search with comprehensive image handling and async processing.
 
 ## Architecture Overview
 
 ```mermaid
 graph TD
     A[User Creates Campaign] --> B[Campaign Saved to DB]
-    B --> C[User Configures Keywords]
-    C --> D[Scraping Job Created]
-    D --> E[QStash Message Published]
-    E --> F[Background Processing]
-    F --> G[ScrapeCreators API Call]
-    G --> H[Data Transformation]
-    H --> I[Results Saved to DB]
-    I --> J[Job Status Updated]
-    J --> K[Frontend Displays Results]
+    B --> C{Search Type?}
+    C -->|Keyword| D[Platform Selection: TikTok/YouTube]
+    C -->|Similar| E[Platform Selection: TikTok/Instagram]
+    D --> F[Keywords Configuration]
+    E --> G[Username Input]
+    F --> H[Scraping Job Created]
+    G --> H
+    H --> I[QStash Message Published]
+    I --> J[Background Processing]
+    J --> K[Platform-Specific API Call]
+    K --> L[Data Transformation]
+    L --> M[HEIC Image Processing]
+    M --> N[Results Saved to DB]
+    N --> O[Job Status Updated]
+    O --> P[Frontend Displays Results]
+    P --> Q[CSV Export Available]
 ```
+
+## Supported Platforms & Search Types
+
+| Platform | Keyword Search | Similar Search | Image Support | API Endpoint |
+|----------|---------------|----------------|---------------|--------------|
+| **TikTok** | ✅ | ✅ | HEIC → JPEG | `/api/scraping/tiktok`, `/api/scraping/tiktok-similar` |
+| **Instagram** | ❌ | ✅ | Standard | `/api/scraping/instagram` |
+| **YouTube** | ✅ | ❌ | Thumbnails | `/api/scraping/youtube` |
 
 ## Database Schema
 
@@ -35,14 +50,15 @@ campaigns {
   updatedAt: timestamp
 }
 
--- Background processing jobs
+-- Background processing jobs (updated schema)
 scrapingJobs {
   id: uuid (PK)
   userId: text
   campaignId: uuid (FK -> campaigns.id)
-  keywords: jsonb (string[])
-  platform: varchar ('Tiktok' | 'Instagram')
-  status: varchar ('pending' | 'processing' | 'completed' | 'error')
+  keywords: jsonb (string[] for keyword search)
+  targetUsername: text (for similar search)
+  platform: varchar ('TikTok' | 'Instagram' | 'YouTube')
+  status: varchar ('pending' | 'processing' | 'completed' | 'error' | 'timeout')
   processedRuns: integer (tracks API calls made)
   processedResults: integer (total creators found)
   targetResults: integer (goal: 100, 500, 1000)
@@ -51,6 +67,8 @@ scrapingJobs {
   timeoutAt: timestamp
   createdAt: timestamp
   updatedAt: timestamp
+  startedAt: timestamp
+  completedAt: timestamp
   error: text
 }
 
@@ -58,7 +76,7 @@ scrapingJobs {
 scrapingResults {
   id: uuid (PK)
   jobId: uuid (FK -> scrapingJobs.id)
-  creators: jsonb (CreatorResult[] | InstagramRelatedProfile[])
+  creators: jsonb (Platform-specific creator data)
   createdAt: timestamp
 }
 ```
@@ -67,391 +85,478 @@ scrapingResults {
 
 ### 1. Campaign Creation Flow
 
-#### Frontend: `/app/campaigns/new/page.jsx`
-- Renders `CampaignForm` component
-- User fills: name, description, search type
+#### Frontend Routes & Components
+- **Main Campaign Page**: `/app/campaigns/new/page.jsx`
+- **Campaign Form**: `/app/components/campaigns/campaign-form.jsx`
+- **Keyword Search**: `/app/campaigns/search/keyword/page.jsx`
+- **Similar Search**: `/app/campaigns/search/similar/page.jsx`
 
-#### Component: `/app/components/campaigns/campaign-form.jsx`
-```javascript
-// Step 1: Basic campaign info
-const handleSubmitBasicInfo = (e) => {
-  e.preventDefault();
-  setStep(2); // Move to search type selection
-};
+### 2. Platform-Specific Implementations
 
-// Step 2: Search type selection
-const handleSearchTypeSelection = async (type) => {
-  // Create campaign via API
-  const response = await fetch('/api/campaigns', {
-    method: 'POST',
-    body: JSON.stringify({
-      name: formData.name,
-      description: formData.description,
-      searchType: type, // 'keyword' or 'similar'
-    }),
-  });
+## TikTok Keyword Search Implementation
 
-  // Save to sessionStorage for next steps
-  sessionStorage.setItem('currentCampaign', JSON.stringify(campaign));
-  
-  // Redirect to search configuration
-  router.push('/campaigns/search/keyword');
-};
+### File Structure
+```
+/app/api/scraping/tiktok/route.ts                    # TikTok keyword API endpoint
+/app/api/qstash/process-scraping/route.ts            # Background processor (inline TikTok handling)
+/app/components/campaigns/keyword-search/
+  ├── keyword-search-form.jsx                       # Platform + keyword selection
+  ├── search-results.jsx                             # Results display with image handling
+  └── search-progress.jsx                            # Progress UI component
 ```
 
-#### API: `/app/api/campaigns/route.ts`
+### API Flow
+1. **POST `/api/scraping/tiktok`**
+   - Creates job with `platform: 'TikTok'` and `keywords: string[]`
+   - Publishes to QStash for background processing
+   - Returns `jobId` for polling
+
+2. **QStash Processing** (`/app/api/qstash/process-scraping/route.ts`)
+   ```javascript
+   // TikTok keyword search handling (inline)
+   if (job.platform === 'TikTok' && job.keywords) {
+     // Call ScrapeCreators TikTok API
+     const apiUrl = `${process.env.SCRAPECREATORS_API_URL}?query=${keywords}&cursor=${cursor}`;
+     
+     // Transform response to common format
+     const creators = transformTikTokResponse(apiResponse);
+     
+     // Save results and schedule continuation if needed
+     if (processedRuns < MAX_API_CALLS_FOR_TESTING) {
+       await qstash.publishJSON({ url: callbackUrl, body: { jobId }, delay: '2s' });
+     }
+   }
+   ```
+
+3. **GET `/api/scraping/tiktok?jobId=xxx`**
+   - Returns job status and results for frontend polling
+
+### Data Transformation
 ```javascript
-export async function POST(req: Request) {
-  // 1. Authenticate user via Supabase
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+// TikTok API Response → Common Format
+const creators = apiResponse.search_item_list.map((item) => {
+  const awemeInfo = item.aweme_info || {};
+  const author = awemeInfo.author || {};
   
-  // 2. Create campaign record
-  const [campaign] = await db.insert(campaigns).values({
-    userId: user.id,
-    name,
-    description,
-    searchType, // 'keyword' | 'similar'
-    status: 'draft'
-  }).returning();
-
-  return NextResponse.json(campaign);
-}
-```
-
-### 2. Keyword Configuration Flow
-
-#### Frontend: `/app/campaigns/search/keyword/page.jsx`
-```javascript
-// Multi-step process:
-// Step 1: Platform & creator count selection
-// Step 2: Keyword input and review  
-// Step 3: Results display
-
-const handleKeywordsSubmit = async (keywords) => {
-  const response = await fetch('/api/scraping/tiktok', {
-    method: 'POST',
-    body: JSON.stringify({
-      campaignId: campaignId,
-      keywords: keywords, // ['nike', 'fashion', 'sports']
-      targetResults: searchData.creatorsCount // 100, 500, or 1000
-    }),
-  });
-  
-  const data = await response.json();
-  setSearchData(prev => ({ 
-    ...prev, 
-    jobId: data.jobId // Store for polling
-  }));
-  setStep(3); // Move to results display
-};
-```
-
-#### Component: `/app/components/campaigns/keyword-search/keyword-search-form.jsx`
-```javascript
-// Configures:
-// - Platform selection (TikTok checked by default)
-// - Creator count slider (100-1000)
-// - Validates input before submission
-```
-
-### 3. Scraping Job Creation & QStash Integration
-
-#### API: `/app/api/scraping/tiktok/route.ts`
-```javascript
-export async function POST(req: Request) {
-  // 1. Authentication & validation
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  // 2. Parse and validate request
-  const { keywords, targetResults, campaignId } = await req.json();
-  
-  // 3. Verify campaign ownership
-  const campaign = await db.query.campaigns.findFirst({
-    where: and(
-      eq(campaigns.id, campaignId),
-      eq(campaigns.userId, user.id)
-    )
-  });
-
-  // 4. Create scraping job
-  const [job] = await db.insert(scrapingJobs).values({
-    userId: user.id,
-    keywords: sanitizedKeywords,
-    targetResults, // 100, 500, or 1000
-    status: 'pending',
-    platform: 'Tiktok',
-    campaignId,
-    processedRuns: 0,
-    processedResults: 0,
-    cursor: 0,
-    timeoutAt: new Date(Date.now() + 60 * 60 * 1000) // 1 hour timeout
-  }).returning();
-
-  // 5. Publish to QStash for background processing
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL;
-  const result = await qstash.publishJSON({
-    url: `${siteUrl}/api/qstash/process-scraping`,
-    body: { jobId: job.id },
-    retries: 3,
-    notifyOnFailure: true
-  });
-
-  return NextResponse.json({
-    message: 'Scraping job started successfully',
-    jobId: job.id,
-    qstashMessageId: result.messageId
-  });
-}
-```
-
-### 4. Background Processing with QStash
-
-#### API: `/app/api/qstash/process-scraping/route.ts`
-
-##### Core Processing Logic
-```javascript
-export async function POST(req: Request) {
-  // 1. Verify QStash signature
-  const signature = req.headers.get('Upstash-Signature');
-  const body = await req.text();
-  const isValid = await receiver.verify({
-    signature,
-    body,
-    url: `${baseUrl}/api/qstash/process-scraping`
-  });
-
-  // 2. Extract job ID and fetch job
-  const { jobId } = JSON.parse(body);
-  const job = await db.query.scrapingJobs.findFirst({
-    where: eq(scrapingJobs.id, jobId)
-  });
-
-  // 3. Check if job already completed or hit testing limits
-  if (job.status === 'completed' || job.status === 'error') {
-    return NextResponse.json({ status: job.status });
-  }
-
-  // TESTING LIMIT CHECK
-  const currentRuns = job.processedRuns || 0;
-  if (currentRuns >= MAX_API_CALLS_FOR_TESTING) {
-    await db.update(scrapingJobs).set({ 
-      status: 'completed',
-      completedAt: new Date(),
-      error: `Test limit reached: Maximum ${MAX_API_CALLS_FOR_TESTING} API calls made`
-    }).where(eq(scrapingJobs.id, jobId));
-    return NextResponse.json({ status: 'completed' });
-  }
-
-  // 4. Platform-specific processing
-  if (job.platform === 'Tiktok') {
-    await processTikTokJob(job, jobId);
-  } else if (job.platform === 'Instagram') {
-    await processInstagramJob(job, jobId);
-  }
-}
-```
-
-##### TikTok-Specific Processing
-```javascript
-async function processTikTokJob(job, jobId) {
-  // 1. Update job status to processing
-  await db.update(scrapingJobs).set({ 
-    status: 'processing',
-    startedAt: new Date(),
-    updatedAt: new Date()
-  }).where(eq(scrapingJobs.id, jobId));
-
-  // 2. Call ScrapeCreators API
-  const keywordQuery = job.keywords.join(', ');
-  const apiUrl = `${process.env.SCRAPECREATORS_API_URL}?query=${encodeURIComponent(keywordQuery)}&cursor=${job.cursor || 0}`;
-  
-  const scrapingResponse = await fetch(apiUrl, {
-    method: 'GET',
-    headers: {
-      'x-api-key': process.env.SCRAPECREATORS_API_KEY!
-    }
-  });
-
-  const apiResponse = await scrapingResponse.json();
-
-  // 3. Transform API response to match frontend expectations
-  const creators = apiResponse.search_item_list.map((item) => {
-    const awemeInfo = item.aweme_info || {};
-    const author = awemeInfo.author || {};
-    const statistics = awemeInfo.statistics || {};
-    
-    return {
-      // Frontend expects: creator.creator?.name
-      creator: {
-        name: author.nickname || author.unique_id || 'Unknown Creator',
-        followers: author.follower_count || 0,
-        avatarUrl: (author.avatar_medium?.url_list?.[0] || '').replace('.heic', '.jpeg'),
-        profilePicUrl: (author.avatar_medium?.url_list?.[0] || '').replace('.heic', '.jpeg')
-      },
-      // Frontend expects: creator.video?.description, etc.
-      video: {
-        description: awemeInfo.desc || 'No description',
-        url: awemeInfo.share_url || '',
-        statistics: {
-          likes: statistics.digg_count || 0,
-          comments: statistics.comment_count || 0,
-          shares: statistics.share_count || 0,
-          views: statistics.play_count || 0
-        }
-      },
-      // Frontend expects: creator.hashtags
-      hashtags: awemeInfo.text_extra
-        ?.filter((extra) => extra.type === 1 && extra.hashtag_name)
-        ?.map((extra) => extra.hashtag_name) || [],
-      // Additional metadata
-      createTime: awemeInfo.create_time || Date.now() / 1000,
-      platform: 'TikTok',
-      keywords: job.keywords || []
-    };
-  });
-
-  // 4. Save results to database
-  await db.insert(scrapingResults).values({
-    jobId: job.id,
-    creators: creators,
-    createdAt: new Date()
-  });
-
-  // 5. Update job progress
-  const newProcessedRuns = (job.processedRuns || 0) + 1;
-  const totalProcessedResults = (job.processedResults || 0) + creators.length;
-  
-  await db.update(scrapingJobs).set({ 
-    processedRuns: newProcessedRuns,
-    processedResults: totalProcessedResults,
-    updatedAt: new Date()
-  }).where(eq(scrapingJobs.id, jobId));
-
-  // 6. Check if we should continue or complete
-  if (newProcessedRuns >= MAX_API_CALLS_FOR_TESTING || 
-      totalProcessedResults >= job.targetResults) {
-    // Complete the job
-    await db.update(scrapingJobs).set({ 
-      status: 'completed',
-      completedAt: new Date(),
-      progress: '100'
-    }).where(eq(scrapingJobs.id, jobId));
-  } else {
-    // Schedule next API call
-    await qstash.publishJSON({
-      url: `${baseUrl}/api/qstash/process-scraping`,
-      body: { jobId: job.id },
-      delay: '2s', // Short delay between calls
-      retries: 3,
-      notifyOnFailure: true
-    });
-  }
-}
-```
-
-### 5. Results Display & Polling
-
-#### Frontend: `/app/components/campaigns/keyword-search/search-results.jsx`
-```javascript
-// Polls for job completion
-useEffect(() => {
-  const fetchResults = async () => {
-    const response = await fetch(`/api/scraping/tiktok?jobId=${searchData.jobId}`);
-    const data = await response.json();
-
-    if (data.status === 'completed') {
-      // Combine all creators from all results
-      const allCreators = data.results?.reduce((acc, result) => {
-        return [...acc, ...(result.creators || [])];
-      }, []) || [];
-      
-      setCreators(allCreators);
-      setIsLoading(false);
-    }
+  return {
+    creator: {
+      name: author.nickname || author.unique_id,
+      followers: author.follower_count || 0,
+      avatarUrl: author.avatar_medium?.url_list?.[0]?.replace('.heic', '.jpeg'),
+    },
+    video: {
+      description: awemeInfo.desc || 'No description',
+      url: awemeInfo.share_url || '',
+      statistics: {
+        likes: awemeInfo.statistics?.digg_count || 0,
+        comments: awemeInfo.statistics?.comment_count || 0,
+        views: awemeInfo.statistics?.play_count || 0
+      }
+    },
+    hashtags: awemeInfo.text_extra?.filter(e => e.type === 1).map(e => e.hashtag_name) || [],
+    platform: 'TikTok'
   };
-
-  const interval = setInterval(fetchResults, 3000); // Poll every 3 seconds
-  return () => clearInterval(interval);
-}, [searchData.jobId]);
+});
 ```
 
-#### API: `/app/api/scraping/tiktok/route.ts` (GET)
+## TikTok Similar Search Implementation
+
+### File Structure
+```
+/app/api/scraping/tiktok-similar/route.ts             # TikTok similar API endpoint
+/lib/platforms/tiktok-similar/
+  ├── types.ts                                       # TypeScript interfaces
+  ├── api.ts                                         # ScrapeCreators API calls
+  ├── transformer.ts                                 # Data transformation
+  └── handler.ts                                     # Background processing logic
+/app/components/campaigns/similar-search/
+  ├── similar-search-form.jsx                       # Username input form
+  ├── search-results.jsx                             # Results with progress UI
+  └── similar-search-progress.jsx                    # Progress component
+```
+
+### Modular Architecture
 ```javascript
+// lib/platforms/tiktok-similar/handler.ts
+export async function processTikTokSimilarJob(job: any, jobId: string) {
+  // Step 1: Get target user profile
+  const profileData = await getTikTokProfile(job.targetUsername);
+  
+  // Step 2: Extract keywords from profile
+  const keywords = extractSearchKeywords(profileData);
+  
+  // Step 3: Search for similar users using keywords
+  const searchResults = await searchTikTokUsers(keywords[0]);
+  
+  // Step 4: Transform and filter results
+  const creators = transformTikTokUsers(searchResults, keywords);
+  
+  // Step 5: Save results and handle continuation
+  if (processedRuns < MAX_API_CALLS_FOR_TESTING) {
+    await qstash.publishJSON({ url: callbackUrl, body: { jobId }, delay: '2s' });
+  } else {
+    await markJobCompleted(jobId);
+  }
+}
+```
+
+### QStash Integration
+```javascript
+// /app/api/qstash/process-scraping/route.ts
+else if (job.platform === 'TikTok' && job.targetUsername) {
+  const result = await processTikTokSimilarJob(job, jobId);
+  return NextResponse.json(result);
+}
+```
+
+## YouTube Keyword Search Implementation
+
+### File Structure
+```
+/app/api/scraping/youtube/route.ts                   # YouTube API endpoint
+/lib/platforms/youtube/
+  ├── types.ts                                       # YouTube-specific interfaces
+  ├── api.ts                                         # ScrapeCreators YouTube API
+  ├── transformer.ts                                 # YouTube data transformation
+  └── handler.ts                                     # Background processing
+```
+
+### Modular Processing
+```javascript
+// lib/platforms/youtube/handler.ts
+export async function processYouTubeJob(job: any, jobId: string) {
+  // Check testing limits
+  if (currentRuns >= MAX_API_CALLS_FOR_TESTING) {
+    return markJobCompleted(jobId);
+  }
+
+  // Call YouTube API
+  const searchParams = { keywords: job.keywords, mode: 'keyword' };
+  const youtubeResponse = await searchYouTube(searchParams);
+  
+  // Transform and save
+  const creators = transformYouTubeVideos(youtubeResponse.videos, job.keywords);
+  await saveResults(jobId, creators);
+  
+  // Schedule continuation or complete
+  if (newProcessedRuns < MAX_API_CALLS_FOR_TESTING) {
+    await scheduleNextCall(jobId);
+  } else {
+    await markJobCompleted(jobId);
+  }
+}
+```
+
+### YouTube Data Transformation
+```javascript
+// lib/platforms/youtube/transformer.ts
+export function transformYouTubeVideo(video, keywords = []) {
+  return {
+    creator: {
+      name: video.channel?.title || 'Unknown Channel',
+      followers: 0, // Not available in YouTube search API
+      avatarUrl: video.channel?.thumbnail || ''
+    },
+    video: {
+      description: video.title || 'No title',
+      url: video.url || '',
+      statistics: {
+        views: video.viewCountInt || 0, // Only views available
+        likes: 0, comments: 0, shares: 0 // Not available in search API
+      }
+    },
+    hashtags: extractHashtags(video.title || ''),
+    publishedTime: video.publishedTime || '',
+    lengthSeconds: video.lengthSeconds || 0,
+    platform: 'YouTube'
+  };
+}
+```
+
+## Instagram Similar Search Implementation
+
+### File Structure
+```
+/app/api/scraping/instagram/route.ts                 # Instagram API endpoint
+/app/api/qstash/process-scraping/route.ts            # Inline Instagram processing
+```
+
+### Inline Processing (Single API Call)
+```javascript
+// Instagram processing in QStash handler (lines 164-399)
+if (job.platform === 'Instagram' && job.targetUsername) {
+  // Single API call - no continuation needed
+  const apiUrl = `${process.env.SCRAPECREATORS_INSTAGRAM_API_URL}?handle=${job.targetUsername}`;
+  const response = await fetch(apiUrl, { headers: { 'x-api-key': apiKey } });
+  
+  // Transform related profiles
+  const relatedProfiles = response.data.user.edge_related_profiles.edges.map(edge => ({
+    id: edge.node.id,
+    username: edge.node.username,
+    full_name: edge.node.full_name,
+    is_private: edge.node.is_private,
+    is_verified: edge.node.is_verified,
+    profile_pic_url: edge.node.profile_pic_url
+  }));
+  
+  // Save and complete immediately
+  await saveResults(jobId, relatedProfiles);
+  await markJobCompleted(jobId);
+}
+```
+
+## Image Proxy System - Universal HEIC & CDN Handling
+
+### File Structure
+```
+/app/api/proxy/image/route.ts                        # Universal image proxy with HEIC conversion
+```
+
+### Comprehensive Image Processing Pipeline
+
+#### 1. HEIC Conversion (Vercel-Compatible)
+```javascript
+// Primary: heic-convert package (works on Vercel)
+import convert from 'heic-convert';
+
+if (isHeic || contentType === 'image/heic') {
+  try {
+    const outputBuffer = await convert({
+      buffer: buffer,
+      format: 'JPEG',
+      quality: 0.85
+    });
+    buffer = Buffer.from(outputBuffer);
+    contentType = 'image/jpeg';
+    console.log('✅ [IMAGE-PROXY] HEIC conversion successful with heic-convert');
+  } catch (heicError) {
+    // Fallback to Sharp if available
+    console.log('🔄 [IMAGE-PROXY] Trying Sharp as fallback...');
+  }
+}
+```
+
+#### 2. TikTok CDN 403 Handling (5-Layer Strategy)
+```javascript
+// Layer 1: Enhanced headers with TikTok referrer
+const fetchHeaders = {
+  'User-Agent': 'Mozilla/5.0...',
+  'Referer': 'https://www.tiktok.com/',
+  'Origin': 'https://www.tiktok.com'
+};
+
+// Layer 2: Remove referrer headers
+if (response.status === 403) {
+  delete headers['Referer'];
+  delete headers['Origin'];
+  response = await fetch(url, { headers });
+}
+
+// Layer 3: Simplify URL (remove query parameters)
+if (still403) {
+  const simplifiedUrl = imageUrl.split('?')[0];
+  response = await fetch(simplifiedUrl, { headers });
+}
+
+// Layer 4: Minimal curl-like headers
+if (still403) {
+  const minimalHeaders = { 'User-Agent': 'curl/7.68.0', 'Accept': '*/*' };
+  response = await fetch(simplifiedUrl, { headers: minimalHeaders });
+}
+
+// Layer 5: Alternative CDN domains
+if (still403) {
+  const cdnDomains = ['p16-sign-va.tiktokcdn.com', 'p19-sign-va.tiktokcdn.com'];
+  for (const domain of cdnDomains) {
+    const altUrl = simplifiedUrl.replace(/p\d+-[^.]+\.tiktokcdn[^/]*/, domain);
+    response = await fetch(altUrl, { headers: minimalHeaders });
+    if (response.ok) break;
+  }
+}
+```
+
+#### 3. SVG Placeholder Generation
+```javascript
+// Final fallback: Generate colored avatar placeholders
+if (allAttemptsFailed && imageUrl.includes('tiktokcdn')) {
+  const username = extractUsernameFromUrl(imageUrl);
+  const color = `hsl(${username.charCodeAt(0) * 7 % 360}, 70%, 50%)`;
+  const initial = username.charAt(0).toUpperCase();
+  
+  const placeholderSvg = `
+    <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="100" cy="100" r="100" fill="${color}"/>
+      <text x="100" y="120" font-family="Arial" font-size="80" font-weight="bold" 
+            fill="white" text-anchor="middle">${initial}</text>
+    </svg>
+  `;
+  
+  return new NextResponse(Buffer.from(placeholderSvg), {
+    headers: { 'Content-Type': 'image/svg+xml' }
+  });
+}
+```
+
+### Response Headers for Debugging
+```javascript
+headers: {
+  'Content-Type': contentType,
+  'X-Image-Proxy-Time': totalTime.toString(),
+  'X-Image-Proxy-Source': 'heic-converted' | 'original' | 'placeholder-403',
+  'X-Image-Original-Format': 'heic' | 'other' | 'blocked',
+  'X-Image-Fetch-Strategy': 'initial-success' | 'no-referrer' | 'simplified-url' | 'minimal-headers' | 'alternative-domain' | 'placeholder',
+  'X-Image-Final-Status': response.status.toString()
+}
+```
+
+## Frontend Image Loading with Enhanced Debugging
+
+### Universal Image Loading Handlers
+```javascript
+// app/components/campaigns/keyword-search/search-results.jsx
+// app/components/campaigns/similar-search/search-results.jsx
+
+const handleImageLoad = (e, username) => {
+  const img = e.target;
+  console.log('✅ [BROWSER-IMAGE] Image loaded successfully for', username);
+  console.log('  📏 Natural size:', img.naturalWidth + 'x' + img.naturalHeight);
+  console.log('  🔗 Loaded URL:', img.src);
+  console.log('  ⏱️ Load time:', (Date.now() - parseInt(img.dataset.startTime || '0')) + 'ms');
+};
+
+const handleImageError = (e, username, originalUrl) => {
+  console.error('❌ [BROWSER-IMAGE] Image failed to load for', username);
+  console.error('  🔗 Failed URL:', img.src);
+  console.error('  📍 Original URL:', originalUrl);
+  img.style.display = 'none'; // Hide broken images
+};
+
+// Usage in AvatarImage
+<AvatarImage
+  src={getProxiedImageUrl(creator.profile_pic_url)}
+  onLoad={(e) => handleImageLoad(e, creator.username)}
+  onError={(e) => handleImageError(e, creator.username, creator.profile_pic_url)}
+  onLoadStart={(e) => handleImageStart(e, creator.username)}
+/>
+```
+
+## CSV Export System
+
+### Universal Export Handler
+```javascript
+// app/api/export/csv/route.ts
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const jobId = searchParams.get('jobId');
-
+  
   // Get job with results
   const job = await db.query.scrapingJobs.findFirst({
     where: eq(scrapingJobs.id, jobId),
-    with: {
-      results: {
-        columns: {
-          id: true,
-          jobId: true,
-          creators: true,
-          createdAt: true
-        }
-      }
-    }
+    with: { results: true }
   });
-
-  // Check for timeouts and stalled jobs
-  if (job.timeoutAt && new Date(job.timeoutAt) < new Date()) {
-    if (job.status === 'processing' || job.status === 'pending') {
-      await db.update(scrapingJobs).set({ 
-        status: 'timeout',
-        error: 'Job exceeded maximum allowed time'
-      }).where(eq(scrapingJobs.id, jobId));
-    }
+  
+  // Platform-specific CSV generation
+  if (job.platform === 'YouTube') {
+    return generateYouTubeCSV(job);
+  } else if (job.platform === 'TikTok') {
+    return generateTikTokCSV(job);
+  } else if (job.platform === 'Instagram') {
+    return generateInstagramCSV(job);
   }
-
-  return NextResponse.json({
-    status: job.status,
-    processedResults: job.processedResults,
-    targetResults: job.targetResults,
-    error: job.error,
-    results: job.results,
-    progress: parseFloat(job.progress || '0')
-  });
 }
 ```
 
-### 6. Image Proxying System
+### Platform-Specific CSV Formats
 
-#### API: `/app/api/proxy/image/route.ts`
+#### YouTube CSV Export
 ```javascript
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const imageUrl = searchParams.get('url');
+headers = [
+  'Channel Name', 'Video Title', 'Video URL', 'Views', 
+  'Duration (seconds)', 'Published Date', 'Hashtags', 'Keywords', 'Platform'
+];
 
-  // Fetch image with proper headers
-  const response = await fetch(imageUrl, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-    }
-  });
-
-  const arrayBuffer = await response.arrayBuffer();
-  let buffer = Buffer.from(arrayBuffer);
-  let contentType = response.headers.get('content-type') || 'image/jpeg';
-
-  // Return proxied image with CORS headers
-  return new NextResponse(buffer, {
-    headers: {
-      'Content-Type': contentType,
-      'Cache-Control': 'public, max-age=3600',
-      'Access-Control-Allow-Origin': '*',
-    },
-  });
-}
+row = [
+  creator.name,
+  video.description, // Video title
+  video.url,
+  stats.views || 0,
+  item.lengthSeconds || 0,
+  publishedDate,
+  hashtags,
+  keywords,
+  'YouTube'
+];
 ```
 
-## Key Configuration Files
+#### TikTok CSV Export (Keyword & Similar)
+```javascript
+headers = [
+  'Creator Name', 'Followers', 'Video Description', 'Video URL',
+  'Likes', 'Comments', 'Shares', 'Views', 'Hashtags', 'Platform', 'Keywords'
+];
 
-### Environment Variables
+row = [
+  creator.name,
+  creator.followers || 0,
+  video.description,
+  video.url,
+  stats.likes || 0,
+  stats.comments || 0,
+  stats.shares || 0,
+  stats.views || 0,
+  hashtags,
+  'TikTok',
+  keywords
+];
+```
+
+#### Instagram CSV Export (Similar)
+```javascript
+headers = [
+  'Username', 'Full Name', 'Private', 'Verified', 'Platform', 'Search Type'
+];
+
+row = [
+  creator.username,
+  creator.full_name,
+  creator.is_private ? 'Yes' : 'No',
+  creator.is_verified ? 'Yes' : 'No',
+  'Instagram',
+  'Similar'
+];
+```
+
+## Testing Configuration
+
+### API Call Limits
+```javascript
+// /app/api/qstash/process-scraping/route.ts
+const MAX_API_CALLS_FOR_TESTING = 1; // Limits to 1 API call for testing
+
+// For production, change to:
+const MAX_API_CALLS_FOR_TESTING = 999; // Or remove limit entirely
+```
+
+### Local Development Setup
+```bash
+# Install dependencies
+npm install heic-convert
+
+# Environment variables needed
+SCRAPECREATORS_API_KEY=xxx
+SCRAPECREATORS_API_URL=https://api.scrapecreators.com/v1/tiktok/search/keyword
+SCRAPECREATORS_INSTAGRAM_API_URL=https://api.scrapecreators.com/v1/instagram/profile
+QSTASH_TOKEN=xxx
+DATABASE_URL=xxx
+
+# For local development with QStash
+ngrok http 3000
+# Update NEXT_PUBLIC_SITE_URL to ngrok URL
+```
+
+## Environment Configuration
+
+### Required Environment Variables
 ```bash
 # Database
 DATABASE_URL="postgresql://..."
@@ -466,6 +571,7 @@ QSTASH_NEXT_SIGNING_KEY=xxx
 
 # External APIs
 SCRAPECREATORS_API_URL=https://api.scrapecreators.com/v1/tiktok/search/keyword
+SCRAPECREATORS_INSTAGRAM_API_URL=https://api.scrapecreators.com/v1/instagram/profile
 SCRAPECREATORS_API_KEY=xxx
 
 # Deployment
@@ -473,657 +579,216 @@ NEXT_PUBLIC_SITE_URL=https://your-app.vercel.app
 VERCEL_URL=your-app.vercel.app
 ```
 
-### QStash Configuration: `/lib/queue/qstash.ts`
-```javascript
-import { Client } from "@upstash/qstash";
+### Package Dependencies
+```json
+{
+  "dependencies": {
+    "heic-convert": "^1.2.4",
+    "sharp": "^0.33.0",
+    "@upstash/qstash": "^1.0.0",
+    "drizzle-orm": "latest",
+    "postgres": "latest"
+  }
+}
+```
 
-export const qstash = new Client({
-  token: process.env.QSTASH_TOKEN!,
+## Deployment & Production Configuration
+
+### Vercel Deployment
+1. **Set Environment Variables** in Vercel dashboard
+2. **Update API Limits** for production:
+   ```javascript
+   const MAX_API_CALLS_FOR_TESTING = 999; // Remove testing restrictions
+   ```
+3. **Configure Domains** for CORS if needed
+4. **Monitor Function Logs** for image processing issues
+
+### Performance Optimizations
+1. **Database Indexing**
+   ```sql
+   CREATE INDEX idx_scraping_jobs_user_id ON scraping_jobs(user_id);
+   CREATE INDEX idx_scraping_jobs_status ON scraping_jobs(status);
+   CREATE INDEX idx_scraping_results_job_id ON scraping_results(job_id);
+   ```
+
+2. **Caching Strategy**
+   - Image proxy: 1 hour cache (`max-age=3600`)
+   - Placeholders: 5 minutes cache (`max-age=300`)
+   - Job status: No cache (real-time updates)
+
+3. **QStash Optimization**
+   - 2-second delays between API calls
+   - Maximum 3 retries per message
+   - Proper error handling and recovery
+
+## Monitoring & Debugging
+
+### Server-Side Logging
+Monitor these log patterns in Vercel Functions:
+
+#### Successful HEIC Conversion
+```
+🔄 [IMAGE-PROXY] Converting HEIC using heic-convert package...
+✅ [IMAGE-PROXY] HEIC conversion successful with heic-convert
+⏱️ [IMAGE-PROXY] Conversion time: 245ms
+📤 [IMAGE-PROXY] Sending response with content-type: image/jpeg
+```
+
+#### TikTok CDN Access Success
+```
+🎯 [IMAGE-PROXY] Using TikTok-specific headers
+📡 [IMAGE-PROXY] Fetch status: 403 Forbidden
+🔄 [IMAGE-PROXY] Retry 1: Removing referrer headers...
+📡 [IMAGE-PROXY] Retry 1 status: 200 OK
+```
+
+#### Placeholder Generation
+```
+❌ [IMAGE-PROXY] All fetch attempts failed: 403 Forbidden
+🔄 [IMAGE-PROXY] Serving placeholder for blocked TikTok image
+✅ [IMAGE-PROXY] Generated placeholder SVG
+```
+
+#### QStash Job Processing
+```
+🎬 Processing TikTok similar job for username: testuser
+🔍 Step 1: Getting TikTok profile data
+🔍 Step 2: Extracting keywords from profile
+✅ TikTok similar search completed successfully
+```
+
+### Browser-Side Debugging
+Monitor these patterns in browser console:
+
+#### Image Loading Success
+```
+🖼️ [BROWSER-IMAGE] Generating proxied URL:
+🚀 [BROWSER-IMAGE] Starting image load for username123
+✅ [BROWSER-IMAGE] Image loaded successfully for username123
+  📏 Natural size: 400x400
+  ⏱️ Load time: ~523ms
+```
+
+#### Image Loading Failure
+```
+❌ [BROWSER-IMAGE] Image failed to load for username123
+  🔗 Failed URL: /api/proxy/image?url=...
+  📍 Original URL: https://tiktokcdn.com/...
+```
+
+### Performance Monitoring Headers
+Check response headers for debugging:
+- `X-Image-Proxy-Time`: Processing time
+- `X-Image-Fetch-Strategy`: Which fetch method worked
+- `X-Image-Proxy-Source`: Conversion method used
+
+## Troubleshooting Common Issues
+
+### 1. HEIC Images Not Converting
+**Symptoms**: Images show as broken or don't load
+**Check**: 
+- Verify `heic-convert` package is installed
+- Check server logs for conversion errors
+- Ensure Vercel has enough memory allocation
+
+**Solution**: The `heic-convert` package should handle this automatically
+
+### 2. TikTok Images Getting 403 Errors
+**Symptoms**: Multiple 403 Forbidden errors in logs
+**Check**:
+- Server logs show retry attempts
+- Response headers indicate which strategy worked
+- Placeholder generation as fallback
+
+**Solution**: The 5-layer retry strategy should handle most cases
+
+### 3. QStash Jobs Not Processing
+**Symptoms**: Jobs stuck in 'pending' status
+**Check**:
+- QStash signature verification
+- NEXT_PUBLIC_SITE_URL correctly set
+- Callback URL accessibility
+
+**Solution**: 
+```javascript
+// Verify QStash setup
+const isValid = await receiver.verify({
+  signature: req.headers.get('Upstash-Signature'),
+  body: await req.text(),
+  url: `${baseUrl}/api/qstash/process-scraping`
 });
 ```
 
-### Database Connection: `/lib/db/index.ts`
-```javascript
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
-import * as schema from './schema';
-
-const client = postgres(process.env.DATABASE_URL!);
-export const db = drizzle(client, { schema });
-```
-
-## Testing & Development Configuration
-
-### Testing Limits
-```javascript
-// In /app/api/qstash/process-scraping/route.ts
-const MAX_API_CALLS_FOR_TESTING = 1; // Limits to 1 API call for testing
-
-// For production, either:
-// 1. Set to high number: const MAX_API_CALLS_FOR_TESTING = 999;
-// 2. Or remove the limit check entirely
-```
-
-### Local Development with QStash
-```bash
-# Option 1: Use ngrok tunnel
-ngrok http 3000
-# Update NEXT_PUBLIC_SITE_URL to ngrok URL
-
-# Option 2: Use Vercel dev
-vercel dev
-# QStash can reach vercel dev URLs
-```
-
-## YouTube Implementation (Complete Integration)
-
-### 1. Modular Platform Architecture
-
-YouTube integration follows a clean modular approach with completely separate platform handlers:
-
-```
-lib/platforms/youtube/
-├── types.ts           # YouTube-specific TypeScript interfaces
-├── api.ts            # YouTube API calls (keyword & hashtag search)
-├── transformer.ts    # YouTube data transformation to common format
-└── handler.ts        # YouTube background processing logic
-```
-
-### 2. YouTube API Integration
-
-#### API Endpoints Used
-- **Keyword Search**: `https://api.scrapecreators.com/v1/youtube/search`
-- **Hashtag Search**: `https://api.scrapecreators.com/v1/youtube/search/hashtag`
-
-#### YouTube API Response Structure
-```javascript
-{
-  "videos": [
-    {
-      "type": "video",
-      "id": "BzSzwqb-OEE",
-      "url": "https://www.youtube.com/watch?v=BzSzwqb-OEE",
-      "title": "NF - RUNNING (Audio)",
-      "thumbnail": "https://i.ytimg.com/vi/BzSzwqb-OEE/hq720.jpg",
-      "channel": {
-        "id": "UCoRR6OLuIZ2-5VxtnQIaN2w",
-        "title": "NFrealmusic",
-        "thumbnail": "https://yt3.ggpht.com/..."
-      },
-      "viewCountText": "14,860,541 views",
-      "viewCountInt": 14860541,
-      "publishedTimeText": "2 years ago",
-      "publishedTime": "2023-05-28T17:08:46.499Z",
-      "lengthText": "4:14",
-      "lengthSeconds": 254
-    }
-  ]
-}
-```
-
-### 3. Complete Backend Implementation
-
-#### YouTube API Endpoint (`/app/api/scraping/youtube/route.ts`)
-```javascript
-export async function POST(req: Request) {
-  // 1. Authenticate user via Supabase
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  // 2. Parse and validate request
-  const { keywords, targetResults, campaignId } = await req.json();
-  
-  // 3. Create YouTube scraping job
-  const [job] = await db.insert(scrapingJobs).values({
-    userId: user.id,
-    keywords: sanitizedKeywords,
-    targetResults,
-    status: 'pending',
-    platform: 'YouTube', // YouTube platform identifier
-    campaignId,
-    processedRuns: 0,
-    processedResults: 0,
-    cursor: 0,
-    timeoutAt: new Date(Date.now() + 60 * 60 * 1000)
-  }).returning();
-
-  // 4. Publish to QStash for background processing
-  const result = await qstash.publishJSON({
-    url: `${siteUrl}/api/qstash/process-scraping`,
-    body: { jobId: job.id },
-    retries: 3,
-    notifyOnFailure: true
-  });
-
-  return NextResponse.json({
-    message: 'YouTube scraping job started successfully',
-    jobId: job.id,
-    qstashMessageId: result.messageId
-  });
-}
-
-export async function GET(req: Request) {
-  // Same job status polling logic as TikTok
-  const { searchParams } = new URL(req.url);
-  const jobId = searchParams.get('jobId');
-  
-  const job = await db.query.scrapingJobs.findFirst({
-    where: eq(scrapingJobs.id, jobId),
-    with: { results: true }
-  });
-
-  return NextResponse.json({
-    status: job.status,
-    processedResults: job.processedResults,
-    targetResults: job.targetResults,
-    results: job.results,
-    progress: parseFloat(job.progress || '0')
-  });
-}
-```
-
-#### QStash Background Processing Integration
-```javascript
-// In /app/api/qstash/process-scraping/route.ts
-import { processYouTubeJob } from '@/lib/platforms/youtube/handler';
-
-// Added YouTube case without modifying existing TikTok logic
-else if (job.platform === 'YouTube') {
-  console.log('🎬 Processing YouTube job for keywords:', job.keywords);
-  
-  try {
-    const result = await processYouTubeJob(job, jobId);
-    return NextResponse.json(result);
-  } catch (youtubeError) {
-    // Error handling and job status updates
-    await db.update(scrapingJobs).set({ 
-      status: 'error', 
-      error: youtubeError.message,
-      completedAt: new Date()
-    }).where(eq(scrapingJobs.id, jobId));
-    
-    throw youtubeError;
-  }
-}
-```
-
-### 4. YouTube Background Processing Logic
-
-#### YouTube Handler (`/lib/platforms/youtube/handler.ts`)
-```javascript
-export async function processYouTubeJob(job: any, jobId: string) {
-  // Same testing limits as TikTok
-  const MAX_API_CALLS_FOR_TESTING = 1;
-  
-  // Check testing limits
-  const currentRuns = job.processedRuns || 0;
-  if (currentRuns >= MAX_API_CALLS_FOR_TESTING) {
-    await db.update(scrapingJobs).set({ 
-      status: 'completed',
-      error: `Test limit reached: Maximum ${MAX_API_CALLS_FOR_TESTING} API calls made`
-    }).where(eq(scrapingJobs.id, jobId));
-    return { status: 'completed' };
-  }
-
-  // Update job to processing
-  await db.update(scrapingJobs).set({ 
-    status: 'processing',
-    startedAt: new Date()
-  }).where(eq(scrapingJobs.id, jobId));
-
-  // Call YouTube API
-  const searchParams = {
-    keywords: job.keywords,
-    mode: 'keyword'
-  };
-  
-  const youtubeResponse = await searchYouTube(searchParams);
-  
-  // Transform and save results
-  const creators = transformYouTubeVideos(youtubeResponse.videos, job.keywords);
-  
-  await db.insert(scrapingResults).values({
-    jobId: job.id,
-    creators: creators,
-    createdAt: new Date()
-  });
-
-  // Update completion status
-  const newProcessedRuns = currentRuns + 1;
-  if (newProcessedRuns >= MAX_API_CALLS_FOR_TESTING) {
-    await db.update(scrapingJobs).set({ 
-      status: 'completed',
-      processedRuns: newProcessedRuns,
-      processedResults: creators.length,
-      progress: '100'
-    }).where(eq(scrapingJobs.id, jobId));
-    
-    return { status: 'completed', processedRuns: newProcessedRuns };
-  }
-  
-  // Schedule next API call if needed
-  await qstash.publishJSON({
-    url: `${baseUrl}/api/qstash/process-scraping`,
-    body: { jobId: job.id },
-    delay: '2s'
-  });
-  
-  return { status: 'processing', processedRuns: newProcessedRuns };
-}
-```
-
-### 5. YouTube Data Transformation
-
-#### YouTube to Common Format Transformation
-```javascript
-// lib/platforms/youtube/transformer.ts
-export function transformYouTubeVideo(video, keywords = []) {
-  // Extract hashtags from title and description
-  const titleHashtags = extractHashtags(video.title || '');
-  const descriptionHashtags = extractHashtags(video.description || '');
-  const allHashtags = [...new Set([...titleHashtags, ...descriptionHashtags])];
-  
-  return {
-    // Frontend expects: creator.creator?.name
-    creator: {
-      name: video.channel?.title || 'Unknown Channel',
-      followers: 0, // Not available in YouTube search API
-      avatarUrl: video.channel?.thumbnail || '',
-      profilePicUrl: video.channel?.thumbnail || ''
-    },
-    // Frontend expects: creator.video?.description, etc.
-    video: {
-      description: video.title || 'No title',
-      url: video.url || '',
-      statistics: {
-        likes: 0, // Not available in YouTube search API
-        comments: 0, // Not available in YouTube search API
-        shares: 0, // Not available in YouTube search API
-        views: video.viewCountInt || 0 // ✅ Available
-      }
-    },
-    // Frontend expects: creator.hashtags
-    hashtags: allHashtags,
-    // Metadata
-    createTime: Math.floor(new Date(video.publishedTime).getTime() / 1000),
-    platform: 'YouTube',
-    keywords: keywords,
-    // YouTube-specific fields
-    publishedTime: video.publishedTime || '',
-    lengthSeconds: video.lengthSeconds || 0,
-    channelId: video.channel?.id || ''
-  };
-}
-```
-
-### 6. Frontend Integration
-
-#### Platform Selection Update
-```javascript
-// app/components/campaigns/keyword-search/keyword-search-form.jsx
-<div className="flex space-x-4">
-  <div className="flex items-center">
-    <Checkbox
-      checked={selectedPlatforms.includes("tiktok")}
-      onCheckedChange={() => handlePlatformChange("tiktok")}
-    />
-    <span className="ml-2">TikTok</span>
-  </div>
-  <div className="flex items-center">
-    <Checkbox
-      checked={selectedPlatforms.includes("youtube")}
-      onCheckedChange={() => handlePlatformChange("youtube")}
-    />
-    <span className="ml-2">YouTube</span>
-  </div>
-</div>
-```
-
-#### Dynamic API Routing
-```javascript
-// app/campaigns/search/keyword/page.jsx
-const handleKeywordsSubmit = async (keywords) => {
-  // Determine API endpoint based on selected platform
-  let apiEndpoint = '/api/scraping/tiktok'; // Default
-  if (searchData.platforms.includes('youtube')) {
-    apiEndpoint = '/api/scraping/youtube';
-  }
-
-  const response = await fetch(apiEndpoint, {
-    method: 'POST',
-    body: JSON.stringify({
-      campaignId: campaignId,
-      keywords: keywords,
-      targetResults: searchData.creatorsCount
-    }),
-  });
-  
-  setSearchData(prev => ({ 
-    ...prev, 
-    keywords,
-    jobId: data.jobId,
-    selectedPlatform: searchData.platforms.includes('youtube') ? 'youtube' : 'tiktok'
-  }));
-};
-```
-
-#### Optimized Results Display
-```javascript
-// app/components/campaigns/keyword-search/search-results.jsx
-// Updated table structure for YouTube data
-<TableHeader>
-  <TableRow>
-    <TableHead>Profile</TableHead>
-    <TableHead>Creator Name</TableHead>
-    <TableHead>Date</TableHead>
-    <TableHead>Video Title</TableHead>
-    <TableHead>Views</TableHead>
-    <TableHead>Duration</TableHead>
-    <TableHead>Link</TableHead>
-  </TableRow>
-</TableHeader>
-
-// Dynamic API endpoint selection
-const fetchResults = async () => {
-  const apiEndpoint = searchData.selectedPlatform === 'youtube' ? 
-    '/api/scraping/youtube' : 
-    '/api/scraping/tiktok';
-  
-  const response = await fetch(`${apiEndpoint}?jobId=${searchData.jobId}`);
-  // Process results...
-};
-
-// Duration formatting
-const formatDuration = (seconds) => {
-  if (!seconds) return 'N/A';
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const remainingSeconds = seconds % 60;
-  
-  if (hours > 0) {
-    return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-  } else {
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  }
-};
-```
-
-### 7. Data Availability Comparison
-
-#### YouTube vs TikTok Data Availability
-```javascript
-// YouTube available data
-{
-  creator: { 
-    name: "✅ Channel title", 
-    avatarUrl: "✅ Channel thumbnail",
-    followers: "❌ Not available in search API"
-  },
-  video: { 
-    description: "✅ Video title",
-    url: "✅ Video URL",
-    statistics: {
-      views: "✅ View count",
-      likes: "❌ Not available in search API",
-      comments: "❌ Not available in search API", 
-      shares: "❌ Not available in search API"
-    }
-  },
-  publishedTime: "✅ Upload date",
-  lengthSeconds: "✅ Video duration",
-  hashtags: "⚠️ Only if present in title/description"
-}
-
-// TikTok available data  
-{
-  creator: { 
-    name: "✅ Creator nickname",
-    avatarUrl: "✅ Profile picture", 
-    followers: "✅ Follower count"
-  },
-  video: { 
-    description: "✅ Video description",
-    url: "✅ Share URL",
-    statistics: {
-      views: "✅ Play count",
-      likes: "✅ Like count", 
-      comments: "✅ Comment count",
-      shares: "✅ Share count"
-    }
-  },
-  hashtags: "✅ Extracted hashtags",
-  createTime: "✅ Creation timestamp"
-}
-```
-
-### 8. Environment Configuration
-
-```bash
-# YouTube API Configuration
-SCRAPECREATORS_API_KEY=xxx  # Same key as TikTok
-# YouTube endpoints are hardcoded in api.ts:
-# - https://api.scrapecreators.com/v1/youtube/search
-# - https://api.scrapecreators.com/v1/youtube/search/hashtag
-
-# Same QStash and database configuration as TikTok
-QSTASH_TOKEN=xxx
-DATABASE_URL=xxx
-```
-
-### 9. Testing Configuration
-
-```javascript
-// Same testing limits as TikTok
-const MAX_API_CALLS_FOR_TESTING = 1;
-
-// Local development with ngrok
-NEXT_PUBLIC_SITE_URL=https://your-ngrok-url.ngrok-free.app
-
-// Same QStash callback pattern
-${siteUrl}/api/qstash/process-scraping
-```
-
-### 10. CSV Export Integration
-
-#### YouTube-Specific CSV Export
-```javascript
-// YouTube-only export columns
-if (platform === 'YouTube') {
-  headers = [
-    'Channel Name',
-    'Video Title', 
-    'Video URL',
-    'Views',
-    'Duration (seconds)',
-    'Published Date',
-    'Hashtags',
-    'Keywords',
-    'Platform'
-  ];
-}
-
-// YouTube data extraction
-row = [
-  `"${creator.name || ''}"`,
-  `"${(video.description || '').replace(/"/g, '""')}"`, // Video title
-  `"${video.url || ''}"`,
-  `"${stats.views || 0}"`,
-  `"${item.lengthSeconds || 0}"`,
-  `"${publishedDate}"`,
-  `"${hashtags}"`,
-  `"${keywordsStr}"`,
-  `"YouTube"`
-];
-```
-
-#### Mixed Platform CSV Export (Campaign Level)
-```javascript
-// Unified format supporting TikTok + YouTube campaigns
-headers = [
-  'Platform',
-  'Creator/Channel Name',
-  'Followers',
-  'Video/Content URL',
-  'Title/Description', 
-  'Views',
-  'Likes',
-  'Comments',
-  'Shares',
-  'Duration (seconds)',
-  'Hashtags',
-  'Date',
-  'Keywords'
-];
-
-// Smart date handling based on platform
-let dateStr = '';
-if (itemPlatform === 'YouTube' && item.publishedTime) {
-  dateStr = new Date(item.publishedTime).toISOString().split('T')[0];
-} else if (item.createTime) {
-  dateStr = new Date(item.createTime * 1000).toISOString().split('T')[0];
-}
-```
-
-### 11. Key Implementation Benefits
-
-1. **Zero Impact on TikTok**: All existing TikTok logic remains completely untouched
-2. **Modular Architecture**: YouTube handler is completely self-contained in `lib/platforms/youtube/`
-3. **Same Testing Flow**: Identical 1 API call limit and local development experience
-4. **Reusable Components**: Frontend components work for both platforms with dynamic routing
-5. **Optimized Data Display**: Table shows only relevant YouTube data (removed irrelevant columns)
-6. **Same Background Processing**: Uses identical QStash pattern as TikTok
-7. **Smart CSV Export**: Platform-aware export with appropriate columns and data formatting
-
-## Implementation Guide for Other Platforms (Instagram)
-
-### 1. Database Changes
-```sql
--- Add new platform option
-ALTER TABLE scraping_jobs 
-ALTER COLUMN platform TYPE varchar(50);
--- Now supports 'Tiktok' | 'Instagram' | 'YouTube' etc.
-
--- Add platform-specific fields if needed
-ALTER TABLE scraping_jobs 
-ADD COLUMN target_username text; -- For Instagram similar search
-```
-
-### 2. API Endpoint Structure
-```
-/app/api/scraping/instagram/route.ts (similar to tiktok/route.ts)
-├── POST: Create Instagram scraping job
-└── GET: Check Instagram job status
-```
-
-### 3. QStash Processing Updates
-```javascript
-// In process-scraping/route.ts, add Instagram handler:
-if (job.platform === 'Instagram') {
-  await processInstagramJob(job, jobId);
-}
-
-async function processInstagramJob(job, jobId) {
-  // 1. Call Instagram API (different endpoint)
-  const apiUrl = `${process.env.SCRAPECREATORS_INSTAGRAM_API_URL}?handle=${job.targetUsername}`;
-  
-  // 2. Transform Instagram response format
-  const creators = instagramData.data.user.edge_related_profiles.edges.map(edge => ({
-    creator: {
-      name: edge.node.full_name,
-      followers: edge.node.follower_count || 0,
-      // Instagram-specific transformation
-    }
-  }));
-  
-  // 3. Same save/update logic as TikTok
-}
-```
-
-### 4. Frontend Components
-```
-/app/campaigns/search/instagram/page.jsx
-/app/components/campaigns/instagram-search/
-├── instagram-search-form.jsx
-├── instagram-review.jsx
-└── instagram-results.jsx
-```
-
-### 5. Data Transformation Differences
-```javascript
-// TikTok format
-{
-  creator: { name, followers, avatarUrl },
-  video: { description, statistics: { likes, comments, shares } },
-  hashtags: []
-}
-
-// Instagram format  
-{
-  creator: { name, followers, profilePicUrl },
-  post: { caption, statistics: { likes, comments } },
-  tags: []
-}
-
-// YouTube format
-{
-  creator: { name, avatarUrl }, // No followers available
-  video: { description, statistics: { views } }, // Only views available
-  hashtags: [], // Extracted from title if present
-  lengthSeconds: 254, // Video duration
-  publishedTime: "2023-05-28T17:08:46.499Z"
-}
-```
-
-## Error Handling & Monitoring
-
-### Common Error Scenarios
-1. **QStash signature verification fails**: Check signing keys
-2. **External API rate limits**: Implement exponential backoff
-3. **Job timeouts**: Set appropriate timeout values
-4. **Image proxy failures**: Graceful fallbacks for missing images
-
-### Monitoring Points
-1. **Job completion rates**: Track failed vs successful jobs
-2. **API response times**: Monitor external API performance
-3. **QStash delivery**: Track message delivery success
-4. **Image proxy performance**: Monitor proxy response times
-
-## Performance Optimizations
-
-### 1. Database Indexing
-```sql
-CREATE INDEX idx_scraping_jobs_user_id ON scraping_jobs(user_id);
-CREATE INDEX idx_scraping_jobs_status ON scraping_jobs(status);
-CREATE INDEX idx_scraping_results_job_id ON scraping_results(job_id);
-```
-
-### 2. Caching Strategy
-- Image proxy: 1 hour cache
-- Job status: No cache (real-time updates needed)
-- Campaign list: 1 minute cache
-
-### 3. QStash Optimization
-- Batch multiple API calls when possible
-- Use appropriate delays between calls (2-5 seconds)
-- Set reasonable retry limits (3-5 retries)
-
-## Security Considerations
-
-### 1. Authentication
-- All API endpoints verify user authentication
-- Campaign ownership validation before job creation
-- QStash signature verification for webhook security
-
-### 2. Rate Limiting
-- Testing limits prevent excessive API usage
-- User-based rate limiting in production
-- External API key management
-
-### 3. Data Privacy
-- User data isolation by userId
-- Secure storage of API keys
-- Image proxy doesn't store images permanently
+### 4. Frontend Not Showing Results
+**Symptoms**: Infinite loading or no results display
+**Check**:
+- Browser console for polling errors
+- Job status API responses
+- Frontend polling interval (3 seconds)
+
+**Solution**: Check job polling logic and API endpoints
+
+### 5. CSV Export Issues
+**Symptoms**: Export button not working or wrong format
+**Check**:
+- Job ID passed correctly to export endpoint
+- Platform-specific CSV generation
+- Results data structure
+
+## Error Recovery & Resilience
+
+### Automatic Recovery Features
+1. **QStash Retries**: Up to 3 automatic retries per message
+2. **Image Fallbacks**: 5-layer strategy ending with placeholders
+3. **Job Timeouts**: 1-hour timeout with automatic cleanup
+4. **Progress Tracking**: Real-time status updates
+
+### Manual Recovery Procedures
+1. **Stuck Jobs**: Check job status and manually update if needed
+2. **Missing Images**: Clear browser cache and retry
+3. **API Limits**: Adjust `MAX_API_CALLS_FOR_TESTING` as needed
+
+## Future Platform Extensions
+
+### Adding New Platforms
+To add a new platform (e.g., LinkedIn), follow this pattern:
+
+1. **Create Platform Module**:
+   ```
+   /lib/platforms/linkedin/
+     ├── types.ts
+     ├── api.ts
+     ├── transformer.ts
+     └── handler.ts
+   ```
+
+2. **Add API Endpoint**:
+   ```
+   /app/api/scraping/linkedin/route.ts
+   ```
+
+3. **Update QStash Processor**:
+   ```javascript
+   else if (job.platform === 'LinkedIn') {
+     const result = await processLinkedInJob(job, jobId);
+     return NextResponse.json(result);
+   }
+   ```
+
+4. **Update Frontend**:
+   - Add platform option to forms
+   - Update results display components
+   - Add platform-specific CSV export
+
+5. **Update Database Schema**:
+   ```sql
+   ALTER TABLE scraping_jobs 
+   ALTER COLUMN platform TYPE varchar(50);
+   -- Now supports 'TikTok' | 'Instagram' | 'YouTube' | 'LinkedIn'
+   ```
+
+This modular architecture ensures new platforms can be added without affecting existing functionality.
 
 ---
 
-This documentation provides a complete blueprint for understanding and extending the TikTok influencer platform to support additional social media platforms.
+**This documentation covers the complete multi-platform influencer search system with comprehensive image handling, async processing, and monitoring capabilities.**
