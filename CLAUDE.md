@@ -28,11 +28,11 @@ graph TD
 
 ## Supported Platforms & Search Types
 
-| Platform | Keyword Search | Similar Search | Image Support | API Endpoint |
-|----------|---------------|----------------|---------------|--------------|
-| **TikTok** | ✅ | ✅ | HEIC → JPEG | `/api/scraping/tiktok`, `/api/scraping/tiktok-similar` |
-| **Instagram** | ❌ | ✅ | Standard | `/api/scraping/instagram` |
-| **YouTube** | ✅ | ❌ | Thumbnails | `/api/scraping/youtube` |
+| Platform | Keyword Search | Similar Search | Bio/Email Extraction | Image Support | API Endpoint |
+|----------|---------------|----------------|---------------------|---------------|--------------|
+| **TikTok** | ✅ | ✅ | ✅ Enhanced Profile Fetching | HEIC → JPEG | `/api/scraping/tiktok`, `/api/scraping/tiktok-similar` |
+| **Instagram** | ❌ | ✅ | ✅ Direct from API | Standard | `/api/scraping/instagram` |
+| **YouTube** | ✅ | ❌ | ❌ Not Available | Thumbnails | `/api/scraping/youtube` |
 
 ## Database Schema
 
@@ -525,6 +525,314 @@ row = [
   'Similar'
 ];
 ```
+
+## Bio & Email Extraction System
+
+### Overview
+The platform features an advanced bio and email extraction system that automatically retrieves creator profile information including bio content and email addresses. This system addresses the limitation where TikTok keyword search API doesn't include bio data by implementing enhanced profile fetching.
+
+### Architecture
+
+```mermaid
+graph TD
+    A[TikTok Keyword Search API] --> B{Bio Data Available?}
+    B -->|No bio found| C[Enhanced Profile Fetching]
+    B -->|Bio exists| D[Use Existing Bio]
+    C --> E[Individual Profile API Calls]
+    E --> F[Extract Bio + Email Regex]
+    D --> F
+    F --> G[Store Enhanced Data]
+    G --> H[Frontend Display]
+    G --> I[CSV Export]
+```
+
+### Problem Solved
+**Issue**: TikTok keyword search API returns `author.signature: undefined`, meaning no bio/email data was available.
+**Solution**: Automatic enhanced profile fetching that makes additional API calls to get complete profile information.
+
+### Implementation Details
+
+#### 1. **Backend Data Transformation** (`/app/api/qstash/process-scraping/route.ts`)
+
+**Enhanced Profile Fetching Logic** (Lines 743-779):
+```javascript
+// Enhanced Profile Fetching: If no bio found, try to get full profile data
+let enhancedBio = bio;
+let enhancedEmails = extractedEmails;
+
+if (!bio && author.unique_id) {
+  try {
+    console.log(`🔍 [PROFILE-FETCH] Attempting to fetch full profile for @${author.unique_id}`);
+    
+    // Make profile API call to get bio data
+    const profileApiUrl = `https://api.scrapecreators.com/v1/tiktok/profile?handle=${encodeURIComponent(author.unique_id)}`;
+    const profileResponse = await fetch(profileApiUrl, {
+      headers: { 'x-api-key': process.env.SCRAPECREATORS_API_KEY! }
+    });
+    
+    if (profileResponse.ok) {
+      const profileData = await profileResponse.json();
+      const profileUser = profileData.user || {};
+      
+      enhancedBio = profileUser.signature || profileUser.desc || profileUser.bio || '';
+      const enhancedEmailMatches = enhancedBio.match(emailRegex) || [];
+      enhancedEmails = enhancedEmailMatches;
+    }
+  } catch (profileError) {
+    console.log(`❌ [PROFILE-FETCH] Error fetching profile for @${author.unique_id}:`, profileError.message);
+  }
+}
+```
+
+**Email Extraction Regex** (Lines 728-729):
+```javascript
+const emailRegex = /[\w\.-]+@[\w\.-]+\.\w+/g;
+const extractedEmails = bio.match(emailRegex) || [];
+```
+
+**Enhanced Creator Data Structure** (Lines 784-795):
+```javascript
+creator: {
+  name: author.nickname || author.unique_id || 'Unknown Creator',
+  followers: author.follower_count || 0,
+  avatarUrl: (author.avatar_medium?.url_list?.[0] || '').replace('.heic', '.jpeg'),
+  profilePicUrl: (author.avatar_medium?.url_list?.[0] || '').replace('.heic', '.jpeg'),
+  bio: enhancedBio,                    // ✅ Enhanced bio from profile API
+  emails: enhancedEmails,              // ✅ Extracted emails array
+  uniqueId: author.unique_id || '',
+  verified: author.is_verified || false
+}
+```
+
+#### 2. **Sequential Processing with Rate Limiting** (Lines 714-823)
+
+**Rate-Limited Processing**:
+```javascript
+// Sequential processing to avoid API rate limits
+const creators = [];
+for (let i = 0; i < apiResponse.search_item_list.length; i++) {
+  const item = apiResponse.search_item_list[i];
+  // ... process each creator
+  
+  creators.push(creatorData);
+  
+  // Add delay between profile API calls
+  if (i < apiResponse.search_item_list.length - 1) {
+    await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
+  }
+}
+```
+
+#### 3. **Frontend Display Enhancement** (`/app/components/campaigns/keyword-search/search-results.jsx`)
+
+**New Table Columns** (Lines 310-317):
+```javascript
+<TableHeader>
+  <TableRow>
+    <TableHead>Profile</TableHead>
+    <TableHead>Creator Name</TableHead>
+    <TableHead>Bio</TableHead>           // ✅ NEW
+    <TableHead>Email</TableHead>         // ✅ NEW
+    <TableHead>Date</TableHead>
+    <TableHead>Video Title</TableHead>
+    // ... rest of columns
+  </TableRow>
+</TableHeader>
+```
+
+**Bio Display Component** (Lines 380-388):
+```javascript
+<TableCell>
+  <div className="max-w-[200px] truncate" title={creator.creator?.bio || 'No bio available'}>
+    {creator.creator?.bio ? (
+      <span className="text-sm text-gray-700">{creator.creator.bio}</span>
+    ) : (
+      <span className="text-gray-400 text-sm">No bio</span>
+    )}
+  </div>
+</TableCell>
+```
+
+**Email Display Component** (Lines 389-420):
+```javascript
+<TableCell>
+  {creator.creator?.emails && creator.creator.emails.length > 0 ? (
+    <div className="space-y-1">
+      {creator.creator.emails.map((email, emailIndex) => (
+        <div key={emailIndex} className="flex items-center gap-1">
+          <a 
+            href={`mailto:${email}`}
+            className="text-blue-600 hover:underline text-sm"
+            title={`Send email to ${email}`}
+          >
+            {email}
+          </a>
+          <svg className="w-3 h-3 opacity-60 text-blue-600" /* email icon SVG */>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <span className="text-gray-400 text-sm">No email</span>
+  )}
+</TableCell>
+```
+
+**Clickable Creator Names** (Lines 351-375):
+```javascript
+<TableCell>
+  {creator.creator?.name && creator.creator.name !== 'N/A' ? (
+    <a 
+      href={renderProfileLink(creator)}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-blue-600 hover:text-blue-800 hover:underline font-medium transition-colors duration-200 flex items-center gap-1"
+      title={`View ${creator.creator.name}'s profile on ${searchData.selectedPlatform || 'TikTok'}`}
+    >
+      {creator.creator.name}
+      <svg className="w-3 h-3 opacity-70" /* external link icon */>
+    </a>
+  ) : (
+    <span className="text-gray-500">N/A</span>
+  )}
+</TableCell>
+```
+
+#### 4. **CSV Export Enhancement** (`/app/api/export/csv/route.ts`)
+
+**Updated TikTok CSV Headers** (Lines 335-350):
+```javascript
+headers = [
+  'Username',
+  'Followers',
+  'Bio',           // ✅ NEW
+  'Email',         // ✅ NEW
+  'Video URL',
+  'Description',
+  'Likes',
+  'Comments',
+  'Shares',
+  'Views',
+  'Hashtags',
+  'Created Date',
+  'Keywords',
+  'Platform'
+];
+```
+
+**Enhanced CSV Row Data** (Lines 386-394):
+```javascript
+// Extract bio and emails for TikTok export
+const bio = (creator.bio || '').replace(/"/g, '""'); // Escape quotes for CSV
+const emails = Array.isArray(creator.emails) ? creator.emails.join('; ') : '';
+
+row = [
+  `"${creator.name || ''}"`,
+  `"${creator.followers || 0}"`,
+  `"${bio}"`,        // ✅ NEW: Full bio in CSV
+  `"${emails}"`,     // ✅ NEW: All emails (semicolon-separated)
+  // ... rest of row data
+];
+```
+
+### Comprehensive Logging System
+
+#### **Profile Fetching Logs**:
+```javascript
+🔍 [PROFILE-ENHANCEMENT] Starting enhanced profile data fetching for creators with missing bio data
+🔍 [PROFILE-ENHANCEMENT] Processing 30 creators
+🔍 [PROFILE-FETCH] Attempting to fetch full profile for @therightonehq
+✅ [PROFILE-FETCH] Successfully fetched profile for @therightonehq: {
+  bioFound: true,
+  bioLength: 85,
+  emailsFound: 1,
+  bioPreview: "Your source for Apple news, rumors, and reviews 📱💻⌚ Contact us: tips@apple..."
+}
+```
+
+#### **Bio & Email Extraction Logs**:
+```javascript
+📝 [BIO-EXTRACTION] Processing bio for item: {
+  authorUniqueId: 'appleinsiderofficial',
+  authorNickname: 'AppleInsider',
+  rawSignature: undefined,
+  finalBio: 'Your source for Apple news, rumors, and reviews 📱💻⌚ Contact us: tips@appleinsider.com 📧',
+  bioLength: 85,
+  bioValue: 'Your source for Apple news, rumors, and reviews...'
+}
+📧 [EMAIL-EXTRACTION] Email extraction result: {
+  bioInput: 'Your source for Apple news, rumors, and reviews 📱💻⌚ Contact us: tips@appleinsider.com 📧',
+  emailsFound: ['tips@appleinsider.com'],
+  emailCount: 1
+}
+```
+
+#### **Transformation Logs**:
+```javascript
+📧 [TRANSFORMATION] Bio & Email extraction: {
+  bioLength: 85,
+  bioPreview: "Your source for Apple news, rumors, and reviews 📱💻⌚ Contact us: tips@apple...",
+  extractedEmails: ["tips@appleinsider.com"],
+  emailCount: 1
+}
+```
+
+### Email Pattern Matching
+
+**Supported Email Formats**:
+- ✅ `tips@appleinsider.com`
+- ✅ `contact@example.co.uk`
+- ✅ `hello.world@company-name.org`
+- ✅ `user123@domain.io`
+- ✅ `support+help@business.com`
+
+**Regex Pattern**: `/[\w\.-]+@[\w\.-]+\.\w+/g`
+
+### Performance Optimizations
+
+1. **Sequential Processing**: Prevents API rate limiting
+2. **100ms Delays**: Between profile API calls
+3. **Error Handling**: Failed profile fetches don't break the process
+4. **Graceful Fallbacks**: Shows "No bio" instead of crashing
+5. **Comprehensive Caching**: Profile data is cached within the same processing run
+
+### Features & Benefits
+
+#### **For Users**:
+- ✅ **Lead Generation**: Automatically extract contact emails from creator bios
+- ✅ **Professional Outreach**: Direct mailto links for immediate contact
+- ✅ **Complete Profiles**: Full bio context for better creator understanding
+- ✅ **Time Saving**: No manual copy-pasting of email addresses
+
+#### **For Developers**:
+- ✅ **Comprehensive Logging**: Detailed debugging information
+- ✅ **Error Recovery**: Robust error handling and fallbacks
+- ✅ **Rate Limiting**: Respects API limits with controlled concurrency
+- ✅ **CSV Integration**: Bio and email data included in exports
+
+### Debugging & Monitoring
+
+#### **Success Indicators**:
+```javascript
+✅ [PROFILE-FETCH] Successfully fetched profile for @username
+📧 [EMAIL-EXTRACTION] Email extraction result: { emailsFound: ["email@domain.com"], emailCount: 1 }
+🔄 [TRANSFORMATION] Bio & Email extraction: { bioLength: 85, emailCount: 1 }
+```
+
+#### **Error Patterns**:
+```javascript
+⚠️ [PROFILE-FETCH] Failed to fetch profile for @username: 429
+❌ [PROFILE-FETCH] Error fetching profile for @username: Network timeout
+📝 [BIO-DEBUG] Signature field analysis: { hasSignature: false, signatureValue: 'NO_SIGNATURE_FOUND' }
+```
+
+### Testing & Validation
+
+**Test the system by**:
+1. **Running a TikTok keyword search** with creators known to have bios
+2. **Monitoring server logs** for profile fetching activity
+3. **Checking the results table** for bio and email columns
+4. **Testing CSV export** to verify data inclusion
+5. **Clicking email links** to test mailto functionality
 
 ## Testing Configuration
 

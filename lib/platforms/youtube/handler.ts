@@ -2,7 +2,7 @@ import { db } from '@/lib/db';
 import { scrapingJobs, scrapingResults, campaigns } from '@/lib/db/schema';
 import { qstash } from '@/lib/queue/qstash';
 import { eq } from 'drizzle-orm';
-import { searchYouTube } from './api';
+import { searchYouTube, getYouTubeChannelProfile } from './api';
 import { transformYouTubeVideos } from './transformer';
 import { YouTubeSearchParams } from './types';
 // Removed email imports - not needed
@@ -95,22 +95,123 @@ export async function processYouTubeJob(job: any, jobId: string): Promise<any> {
 
     // Process the API response and save results
     if (youtubeResponse && youtubeResponse.videos && youtubeResponse.videos.length > 0) {
-      // Transform YouTube videos to common frontend format
-      const creators = transformYouTubeVideos(youtubeResponse.videos, job.keywords);
+      console.log('🔍 [PROFILE-ENHANCEMENT] Starting enhanced profile data fetching for YouTube channels');
+      console.log(`🔍 [PROFILE-ENHANCEMENT] Processing ${youtubeResponse.videos.length} videos`);
       
-      // Enhanced transformation logging
-      console.log(`🔄 [TRANSFORMATION] Transformed ${creators.length} YouTube videos`);
-      if (creators[0]) {
-        console.log('👤 [FIRST-PROFILE] First transformed video/creator:', JSON.stringify(creators[0], null, 2));
-        console.log('🔄 [TRANSFORMATION] First creator structure:', {
-          creatorName: creators[0].creator?.name,
-          videoTitle: creators[0].video?.description,
-          videoUrl: creators[0].video?.url,
-          views: creators[0].video?.statistics?.views,
-          platform: creators[0].platform,
-          keywords: creators[0].keywords
+      // Email extraction regex
+      const emailRegex = /[\w\.-]+@[\w\.-]+\.\w+/g;
+      
+      // Sequential processing to avoid API rate limits and enhance with profile data
+      const creators = [];
+      for (let i = 0; i < youtubeResponse.videos.length; i++) {
+        const video = youtubeResponse.videos[i];
+        const channel = video.channel || {};
+        
+        console.log(`\n📝 [BIO-EXTRACTION] Processing video ${i + 1}/${youtubeResponse.videos.length}:`, {
+          videoTitle: video.title,
+          channelTitle: channel.title,
+          channelHandle: channel.handle
         });
+        
+        // Enhanced Profile Fetching: Get full channel data for bio/email
+        let enhancedBio = '';
+        let enhancedEmails = [];
+        let enhancedLinks = [];
+        let channelDescription = '';
+        let subscriberCount = 0;
+        
+        if (channel.handle) {
+          try {
+            console.log(`🔍 [PROFILE-FETCH] Attempting to fetch full channel profile for ${channel.handle}`);
+            
+            const channelData = await getYouTubeChannelProfile(channel.handle);
+            
+            // Extract bio/description
+            channelDescription = channelData.description || '';
+            enhancedBio = channelDescription;
+            
+            // Extract emails from multiple sources
+            const emailsFromDescription = channelDescription.match(emailRegex) || [];
+            const directEmail = channelData.email ? [channelData.email] : [];
+            enhancedEmails = [...new Set([...directEmail, ...emailsFromDescription])]; // Remove duplicates
+            
+            // Extract social links
+            enhancedLinks = channelData.links || [];
+            subscriberCount = channelData.subscriberCount || 0;
+            
+            console.log(`✅ [PROFILE-FETCH] Successfully fetched channel profile for ${channel.handle}:`, {
+              bioFound: !!enhancedBio,
+              bioLength: enhancedBio.length,
+              emailsFound: enhancedEmails.length,
+              linksFound: enhancedLinks.length,
+              subscribers: channelData.subscriberCountText,
+              bioPreview: enhancedBio.substring(0, 100) + (enhancedBio.length > 100 ? '...' : '')
+            });
+            
+          } catch (profileError: any) {
+            console.log(`❌ [PROFILE-FETCH] Error fetching channel profile for ${channel.handle}:`, profileError.message);
+            // Continue with basic data if profile fetch fails
+          }
+        }
+        
+        // Log email extraction results
+        console.log(`📧 [EMAIL-EXTRACTION] Email extraction result:`, {
+          channelHandle: channel.handle,
+          bioInput: enhancedBio.substring(0, 100) + (enhancedBio.length > 100 ? '...' : ''),
+          emailsFound: enhancedEmails,
+          emailCount: enhancedEmails.length,
+          linksFound: enhancedLinks.length
+        });
+        
+        // Transform video with enhanced data
+        const creatorData = {
+          creator: {
+            name: channel.title || 'Unknown Channel',
+            followers: subscriberCount,
+            avatarUrl: channel.thumbnail || '',
+            profilePicUrl: channel.thumbnail || '',
+            bio: enhancedBio,
+            emails: enhancedEmails,
+            socialLinks: enhancedLinks,
+            handle: channel.handle || '',
+            channelId: channel.id || ''
+          },
+          video: {
+            description: video.title || 'No title',
+            url: video.url || '',
+            statistics: {
+              views: video.viewCountInt || 0,
+              likes: 0, // Not available in YouTube search API
+              comments: 0, // Not available in YouTube search API
+              shares: 0 // Not available in YouTube search API
+            }
+          },
+          hashtags: [], // Extract from title if needed
+          publishedTime: video.publishedTime || '',
+          lengthSeconds: video.lengthSeconds || 0,
+          platform: 'YouTube',
+          keywords: job.keywords
+        };
+        
+        creators.push(creatorData);
+        
+        // Log transformation result
+        console.log(`🔄 [TRANSFORMATION] Enhanced creator data:`, {
+          creatorName: creatorData.creator.name,
+          bioLength: creatorData.creator.bio?.length || 0,
+          emailCount: creatorData.creator.emails?.length || 0,
+          linksCount: creatorData.creator.socialLinks?.length || 0,
+          videoTitle: creatorData.video.description,
+          followers: creatorData.creator.followers
+        });
+        
+        // Add delay between profile API calls to avoid rate limiting
+        if (i < youtubeResponse.videos.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay
+        }
       }
+      
+      console.log(`✅ [PROFILE-ENHANCEMENT] Completed enhanced profile fetching for ${creators.length} channels`);
       
       // Save results to database
       await db.insert(scrapingResults).values({
@@ -119,7 +220,7 @@ export async function processYouTubeJob(job: any, jobId: string): Promise<any> {
         createdAt: new Date()
       });
       
-      console.log(`✅ YouTube: Saved ${creators.length} creators from API call ${newProcessedRuns}`);
+      console.log(`✅ YouTube: Saved ${creators.length} enhanced creators from API call ${newProcessedRuns}`);
       
       // Update job with processed results count
       const totalProcessedResults = (job.processedResults || 0) + creators.length;

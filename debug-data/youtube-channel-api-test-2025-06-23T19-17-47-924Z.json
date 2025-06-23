@@ -1,0 +1,932 @@
+{
+  "timestamp": "2025-06-23T19:17:47.927Z",
+  "testType": "youtube-channel-api-exploration",
+  "endpointsTested": 6,
+  "channelsTested": 2,
+  "totalRequests": 60,
+  "successfulRequests": 4,
+  "workingEndpoints": [
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel",
+      "parameter": "handle=TechIRL00",
+      "channel": "Tech IRL"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel",
+      "parameter": "handle=@TechIRL00",
+      "channel": "Tech IRL"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel",
+      "parameter": "handle=Apple",
+      "channel": "Apple"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel",
+      "parameter": "handle=@Apple",
+      "channel": "Apple"
+    }
+  ],
+  "allResults": [
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel",
+      "parameter": "id=UCeysIZV7YCOoSJNQc9pgbXQ",
+      "value": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "channelTitle": "Tech IRL",
+      "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "status": 400,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel?id=UCeysIZV7YCOoSJNQc9pgbXQ",
+      "errorText": "{\"message\":\"You must provide a handle or a channelId\"}"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel",
+      "parameter": "handle=TechIRL00",
+      "value": "TechIRL00",
+      "channelTitle": "Tech IRL",
+      "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "status": 200,
+      "success": true,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel?handle=TechIRL00",
+      "responseData": {
+        "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+        "channel": "http://www.youtube.com/@TechIRL00",
+        "handle": "@TechIRL00",
+        "name": "Tech IRL",
+        "avatar": {
+          "image": {
+            "sources": [
+              {
+                "url": "https://yt3.googleusercontent.com/ytc/AIdro_kne4uRMS-AezzBhblDnDd8FM3qIZ33LjrtEBnMC0A5r2c=s72-c-k-c0x00ffffff-no-rj",
+                "width": 72,
+                "height": 72
+              },
+              {
+                "url": "https://yt3.googleusercontent.com/ytc/AIdro_kne4uRMS-AezzBhblDnDd8FM3qIZ33LjrtEBnMC0A5r2c=s120-c-k-c0x00ffffff-no-rj",
+                "width": 120,
+                "height": 120
+              },
+              {
+                "url": "https://yt3.googleusercontent.com/ytc/AIdro_kne4uRMS-AezzBhblDnDd8FM3qIZ33LjrtEBnMC0A5r2c=s160-c-k-c0x00ffffff-no-rj",
+                "width": 160,
+                "height": 160
+              }
+            ],
+            "processor": {
+              "borderImageProcessor": {
+                "circular": true
+              }
+            }
+          },
+          "avatarImageSize": "AVATAR_SIZE_XL",
+          "loggingDirectives": {
+            "trackingParams": "CCoQ6OENIhMItrSc-KCIjgMVqsM_BB1ArQTS",
+            "visibility": {
+              "types": "12"
+            }
+          }
+        },
+        "description": "Subscribe for Tech Videos including Tech How To’s!\n\nFollow us on X (Formerly Twitter) @TechInRL",
+        "subscriberCount": 42500,
+        "subscriberCountText": "42.5K subscribers",
+        "videoCountText": "256 videos",
+        "videoCount": 256,
+        "viewCountText": "22,790,316 views",
+        "viewCount": 22790316,
+        "joinedDateText": "Joined Mar 8, 2017",
+        "tags": "Tech How To, iPhone, AirPods, macOS, ipad, AirPods2, AppleWatch, iwatch, apple watch, Series 4, reviews, tech reviews, AirPodsPro, iPhone13pro, airpodspro2, airpods3, applewatch8, applewatchultra, iphone14pro, iphone14, applewatchse",
+        "email": null,
+        "check_us_out_on_x_(twitter)": "https://twitter.com/TechInRL",
+        "check_us_out_on_tiktok": "https://tiktok.com/@techirl6?_t=8nMcdyQaNSY&_r=1",
+        "links": [
+          "https://twitter.com/TechInRL",
+          "https://tiktok.com/@techirl6?_t=8nMcdyQaNSY&_r=1"
+        ],
+        "country": "Canada"
+      },
+      "hasDescription": true,
+      "hasEmail": true
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel",
+      "parameter": "handle=@TechIRL00",
+      "value": "@TechIRL00",
+      "channelTitle": "Tech IRL",
+      "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "status": 200,
+      "success": true,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel?handle=%40TechIRL00",
+      "responseData": {
+        "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+        "channel": "http://www.youtube.com/@TechIRL00",
+        "handle": "@TechIRL00",
+        "name": "Tech IRL",
+        "avatar": {
+          "image": {
+            "sources": [
+              {
+                "url": "https://yt3.googleusercontent.com/ytc/AIdro_kne4uRMS-AezzBhblDnDd8FM3qIZ33LjrtEBnMC0A5r2c=s72-c-k-c0x00ffffff-no-rj",
+                "width": 72,
+                "height": 72
+              },
+              {
+                "url": "https://yt3.googleusercontent.com/ytc/AIdro_kne4uRMS-AezzBhblDnDd8FM3qIZ33LjrtEBnMC0A5r2c=s120-c-k-c0x00ffffff-no-rj",
+                "width": 120,
+                "height": 120
+              },
+              {
+                "url": "https://yt3.googleusercontent.com/ytc/AIdro_kne4uRMS-AezzBhblDnDd8FM3qIZ33LjrtEBnMC0A5r2c=s160-c-k-c0x00ffffff-no-rj",
+                "width": 160,
+                "height": 160
+              }
+            ],
+            "processor": {
+              "borderImageProcessor": {
+                "circular": true
+              }
+            }
+          },
+          "avatarImageSize": "AVATAR_SIZE_XL",
+          "loggingDirectives": {
+            "trackingParams": "CCoQ6OENIhMIqomg-aCIjgMVsS3WAB0FUzN2",
+            "visibility": {
+              "types": "12"
+            }
+          }
+        },
+        "description": "Subscribe for Tech Videos including Tech How To’s!\n\nFollow us on X (Formerly Twitter) @TechInRL",
+        "subscriberCount": 42500,
+        "subscriberCountText": "42.5K subscribers",
+        "videoCountText": "256 videos",
+        "videoCount": 256,
+        "viewCountText": "22,790,316 views",
+        "viewCount": 22790316,
+        "joinedDateText": "Joined Mar 8, 2017",
+        "tags": "Tech How To, iPhone, AirPods, macOS, ipad, AirPods2, AppleWatch, iwatch, apple watch, Series 4, reviews, tech reviews, AirPodsPro, iPhone13pro, airpodspro2, airpods3, applewatch8, applewatchultra, iphone14pro, iphone14, applewatchse",
+        "email": null,
+        "check_us_out_on_x_(twitter)": "https://twitter.com/TechInRL",
+        "check_us_out_on_tiktok": "https://tiktok.com/@techirl6?_t=8nMcdyQaNSY&_r=1",
+        "links": [
+          "https://twitter.com/TechInRL",
+          "https://tiktok.com/@techirl6?_t=8nMcdyQaNSY&_r=1"
+        ],
+        "country": "Canada"
+      },
+      "hasDescription": true,
+      "hasEmail": true
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel",
+      "parameter": "channel=UCeysIZV7YCOoSJNQc9pgbXQ",
+      "value": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "channelTitle": "Tech IRL",
+      "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "status": 400,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel?channel=UCeysIZV7YCOoSJNQc9pgbXQ",
+      "errorText": "{\"message\":\"You must provide a handle or a channelId\"}"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel",
+      "parameter": "username=TechIRL00",
+      "value": "TechIRL00",
+      "channelTitle": "Tech IRL",
+      "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "status": 400,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel?username=TechIRL00",
+      "errorText": "{\"message\":\"You must provide a handle or a channelId\"}"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel",
+      "parameter": "id=UCE_M8A5yxnLfW0KghEeajjw",
+      "value": "UCE_M8A5yxnLfW0KghEeajjw",
+      "channelTitle": "Apple",
+      "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+      "status": 400,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel?id=UCE_M8A5yxnLfW0KghEeajjw",
+      "errorText": "{\"message\":\"You must provide a handle or a channelId\"}"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel",
+      "parameter": "handle=Apple",
+      "value": "Apple",
+      "channelTitle": "Apple",
+      "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+      "status": 200,
+      "success": true,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel?handle=Apple",
+      "responseData": {
+        "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+        "channel": "http://www.youtube.com/@Apple",
+        "handle": "@Apple",
+        "name": "Apple",
+        "avatar": {
+          "image": {
+            "sources": [
+              {
+                "url": "https://yt3.googleusercontent.com/s5hlNKKDDQWjFGzYNnh8UeOW2j2w6id-cZGx7GdAA3d5Fu7zEi7ZMXEyslysuQUKigXNxtAB=s72-c-k-c0x00ffffff-no-rj",
+                "width": 72,
+                "height": 72
+              },
+              {
+                "url": "https://yt3.googleusercontent.com/s5hlNKKDDQWjFGzYNnh8UeOW2j2w6id-cZGx7GdAA3d5Fu7zEi7ZMXEyslysuQUKigXNxtAB=s120-c-k-c0x00ffffff-no-rj",
+                "width": 120,
+                "height": 120
+              },
+              {
+                "url": "https://yt3.googleusercontent.com/s5hlNKKDDQWjFGzYNnh8UeOW2j2w6id-cZGx7GdAA3d5Fu7zEi7ZMXEyslysuQUKigXNxtAB=s160-c-k-c0x00ffffff-no-rj",
+                "width": 160,
+                "height": 160
+              }
+            ],
+            "processor": {
+              "borderImageProcessor": {
+                "circular": true
+              }
+            }
+          },
+          "avatarImageSize": "AVATAR_SIZE_XL",
+          "loggingDirectives": {
+            "trackingParams": "CCoQ6OENIhMIlo7z-qCIjgMVb8M_BB1fGA0L",
+            "visibility": {
+              "types": "12"
+            }
+          }
+        },
+        "description": "Welcome to the official Apple YouTube channel. Here you’ll find news about product launches, tutorials, and other great content. \n\nApple revolutionized personal technology with the introduction of the Macintosh in 1984. Today Apple continues to be a global leader in innovation with products like iPhone, iPad, Mac, Apple Watch and Apple Vision Pro. Our six software platforms (iOS, iPadOS, macOS, watchOS, tvOS, and visionOS) provide seamless experiences across Apple devices. Breakthrough services include the App Store, Apple Music, Apple Pay, and iCloud. And Apple keeps pursuing innovation with products like HomePod, Apple Fitness+, and Apple Card. Apple’s more than 160,000 employees are dedicated to making the best products on earth, and to leaving the world better than we found it. \n\nAdditional products include AirPods, AirTags, Apple Arcade, Apple Books, Apple News, Apple Podcasts, and Apple TV.",
+        "subscriberCount": 20000000,
+        "subscriberCountText": "20M subscribers",
+        "videoCountText": "205 videos",
+        "videoCount": 205,
+        "viewCountText": "1,094,715,875 views",
+        "viewCount": 1094715875,
+        "joinedDateText": "Joined Jun 21, 2005",
+        "tags": "Apple, iPhone, TV, iPad Pro, Mac, iPod, Watch, MacBook, HomePod, Apple Watch, Apple TV, Macbook Pro, Apple Vision Pro",
+        "email": null,
+        "apple.com": "https://apple.com",
+        "instagram": "https://instagram.com/apple",
+        "links": [
+          "https://apple.com",
+          "https://instagram.com/apple"
+        ],
+        "country": "United States"
+      },
+      "hasDescription": true,
+      "hasEmail": false
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel",
+      "parameter": "handle=@Apple",
+      "value": "@Apple",
+      "channelTitle": "Apple",
+      "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+      "status": 200,
+      "success": true,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel?handle=%40Apple",
+      "responseData": {
+        "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+        "channel": "http://www.youtube.com/@Apple",
+        "handle": "@Apple",
+        "name": "Apple",
+        "avatar": {
+          "image": {
+            "sources": [
+              {
+                "url": "https://yt3.googleusercontent.com/s5hlNKKDDQWjFGzYNnh8UeOW2j2w6id-cZGx7GdAA3d5Fu7zEi7ZMXEyslysuQUKigXNxtAB=s72-c-k-c0x00ffffff-no-rj",
+                "width": 72,
+                "height": 72
+              },
+              {
+                "url": "https://yt3.googleusercontent.com/s5hlNKKDDQWjFGzYNnh8UeOW2j2w6id-cZGx7GdAA3d5Fu7zEi7ZMXEyslysuQUKigXNxtAB=s120-c-k-c0x00ffffff-no-rj",
+                "width": 120,
+                "height": 120
+              },
+              {
+                "url": "https://yt3.googleusercontent.com/s5hlNKKDDQWjFGzYNnh8UeOW2j2w6id-cZGx7GdAA3d5Fu7zEi7ZMXEyslysuQUKigXNxtAB=s160-c-k-c0x00ffffff-no-rj",
+                "width": 160,
+                "height": 160
+              }
+            ],
+            "processor": {
+              "borderImageProcessor": {
+                "circular": true
+              }
+            }
+          },
+          "avatarImageSize": "AVATAR_SIZE_XL",
+          "loggingDirectives": {
+            "trackingParams": "CCoQ6OENIhMIxMOz_KCIjgMVoi7WAB2wMDmB",
+            "visibility": {
+              "types": "12"
+            }
+          }
+        },
+        "description": "Welcome to the official Apple YouTube channel. Here you’ll find news about product launches, tutorials, and other great content. \n\nApple revolutionized personal technology with the introduction of the Macintosh in 1984. Today Apple continues to be a global leader in innovation with products like iPhone, iPad, Mac, Apple Watch and Apple Vision Pro. Our six software platforms (iOS, iPadOS, macOS, watchOS, tvOS, and visionOS) provide seamless experiences across Apple devices. Breakthrough services include the App Store, Apple Music, Apple Pay, and iCloud. And Apple keeps pursuing innovation with products like HomePod, Apple Fitness+, and Apple Card. Apple’s more than 160,000 employees are dedicated to making the best products on earth, and to leaving the world better than we found it. \n\nAdditional products include AirPods, AirTags, Apple Arcade, Apple Books, Apple News, Apple Podcasts, and Apple TV.",
+        "subscriberCount": 20000000,
+        "subscriberCountText": "20M subscribers",
+        "videoCountText": "205 videos",
+        "videoCount": 205,
+        "viewCountText": "1,094,715,875 views",
+        "viewCount": 1094715875,
+        "joinedDateText": "Joined Jun 21, 2005",
+        "tags": "Apple, iPhone, TV, iPad Pro, Mac, iPod, Watch, MacBook, HomePod, Apple Watch, Apple TV, Macbook Pro, Apple Vision Pro",
+        "email": null,
+        "apple.com": "https://apple.com",
+        "instagram": "https://instagram.com/apple",
+        "links": [
+          "https://apple.com",
+          "https://instagram.com/apple"
+        ],
+        "country": "United States"
+      },
+      "hasDescription": true,
+      "hasEmail": false
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel",
+      "parameter": "channel=UCE_M8A5yxnLfW0KghEeajjw",
+      "value": "UCE_M8A5yxnLfW0KghEeajjw",
+      "channelTitle": "Apple",
+      "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+      "status": 400,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel?channel=UCE_M8A5yxnLfW0KghEeajjw",
+      "errorText": "{\"message\":\"You must provide a handle or a channelId\"}"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel",
+      "parameter": "username=Apple",
+      "value": "Apple",
+      "channelTitle": "Apple",
+      "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+      "status": 400,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel?username=Apple",
+      "errorText": "{\"message\":\"You must provide a handle or a channelId\"}"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/profile",
+      "parameter": "id=UCeysIZV7YCOoSJNQc9pgbXQ",
+      "value": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "channelTitle": "Tech IRL",
+      "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/profile?id=UCeysIZV7YCOoSJNQc9pgbXQ",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/profile</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/profile",
+      "parameter": "handle=TechIRL00",
+      "value": "TechIRL00",
+      "channelTitle": "Tech IRL",
+      "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/profile?handle=TechIRL00",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/profile</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/profile",
+      "parameter": "handle=@TechIRL00",
+      "value": "@TechIRL00",
+      "channelTitle": "Tech IRL",
+      "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/profile?handle=%40TechIRL00",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/profile</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/profile",
+      "parameter": "channel=UCeysIZV7YCOoSJNQc9pgbXQ",
+      "value": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "channelTitle": "Tech IRL",
+      "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/profile?channel=UCeysIZV7YCOoSJNQc9pgbXQ",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/profile</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/profile",
+      "parameter": "username=TechIRL00",
+      "value": "TechIRL00",
+      "channelTitle": "Tech IRL",
+      "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/profile?username=TechIRL00",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/profile</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/profile",
+      "parameter": "id=UCE_M8A5yxnLfW0KghEeajjw",
+      "value": "UCE_M8A5yxnLfW0KghEeajjw",
+      "channelTitle": "Apple",
+      "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/profile?id=UCE_M8A5yxnLfW0KghEeajjw",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/profile</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/profile",
+      "parameter": "handle=Apple",
+      "value": "Apple",
+      "channelTitle": "Apple",
+      "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/profile?handle=Apple",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/profile</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/profile",
+      "parameter": "handle=@Apple",
+      "value": "@Apple",
+      "channelTitle": "Apple",
+      "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/profile?handle=%40Apple",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/profile</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/profile",
+      "parameter": "channel=UCE_M8A5yxnLfW0KghEeajjw",
+      "value": "UCE_M8A5yxnLfW0KghEeajjw",
+      "channelTitle": "Apple",
+      "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/profile?channel=UCE_M8A5yxnLfW0KghEeajjw",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/profile</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/profile",
+      "parameter": "username=Apple",
+      "value": "Apple",
+      "channelTitle": "Apple",
+      "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/profile?username=Apple",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/profile</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel/profile",
+      "parameter": "id=UCeysIZV7YCOoSJNQc9pgbXQ",
+      "value": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "channelTitle": "Tech IRL",
+      "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel/profile?id=UCeysIZV7YCOoSJNQc9pgbXQ",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/channel/profile</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel/profile",
+      "parameter": "handle=TechIRL00",
+      "value": "TechIRL00",
+      "channelTitle": "Tech IRL",
+      "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel/profile?handle=TechIRL00",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/channel/profile</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel/profile",
+      "parameter": "handle=@TechIRL00",
+      "value": "@TechIRL00",
+      "channelTitle": "Tech IRL",
+      "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel/profile?handle=%40TechIRL00",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/channel/profile</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel/profile",
+      "parameter": "channel=UCeysIZV7YCOoSJNQc9pgbXQ",
+      "value": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "channelTitle": "Tech IRL",
+      "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel/profile?channel=UCeysIZV7YCOoSJNQc9pgbXQ",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/channel/profile</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel/profile",
+      "parameter": "username=TechIRL00",
+      "value": "TechIRL00",
+      "channelTitle": "Tech IRL",
+      "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel/profile?username=TechIRL00",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/channel/profile</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel/profile",
+      "parameter": "id=UCE_M8A5yxnLfW0KghEeajjw",
+      "value": "UCE_M8A5yxnLfW0KghEeajjw",
+      "channelTitle": "Apple",
+      "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel/profile?id=UCE_M8A5yxnLfW0KghEeajjw",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/channel/profile</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel/profile",
+      "parameter": "handle=Apple",
+      "value": "Apple",
+      "channelTitle": "Apple",
+      "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel/profile?handle=Apple",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/channel/profile</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel/profile",
+      "parameter": "handle=@Apple",
+      "value": "@Apple",
+      "channelTitle": "Apple",
+      "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel/profile?handle=%40Apple",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/channel/profile</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel/profile",
+      "parameter": "channel=UCE_M8A5yxnLfW0KghEeajjw",
+      "value": "UCE_M8A5yxnLfW0KghEeajjw",
+      "channelTitle": "Apple",
+      "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel/profile?channel=UCE_M8A5yxnLfW0KghEeajjw",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/channel/profile</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel/profile",
+      "parameter": "username=Apple",
+      "value": "Apple",
+      "channelTitle": "Apple",
+      "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel/profile?username=Apple",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/channel/profile</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/creator",
+      "parameter": "id=UCeysIZV7YCOoSJNQc9pgbXQ",
+      "value": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "channelTitle": "Tech IRL",
+      "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/creator?id=UCeysIZV7YCOoSJNQc9pgbXQ",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/creator</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/creator",
+      "parameter": "handle=TechIRL00",
+      "value": "TechIRL00",
+      "channelTitle": "Tech IRL",
+      "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/creator?handle=TechIRL00",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/creator</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/creator",
+      "parameter": "handle=@TechIRL00",
+      "value": "@TechIRL00",
+      "channelTitle": "Tech IRL",
+      "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/creator?handle=%40TechIRL00",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/creator</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/creator",
+      "parameter": "channel=UCeysIZV7YCOoSJNQc9pgbXQ",
+      "value": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "channelTitle": "Tech IRL",
+      "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/creator?channel=UCeysIZV7YCOoSJNQc9pgbXQ",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/creator</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/creator",
+      "parameter": "username=TechIRL00",
+      "value": "TechIRL00",
+      "channelTitle": "Tech IRL",
+      "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/creator?username=TechIRL00",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/creator</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/creator",
+      "parameter": "id=UCE_M8A5yxnLfW0KghEeajjw",
+      "value": "UCE_M8A5yxnLfW0KghEeajjw",
+      "channelTitle": "Apple",
+      "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/creator?id=UCE_M8A5yxnLfW0KghEeajjw",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/creator</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/creator",
+      "parameter": "handle=Apple",
+      "value": "Apple",
+      "channelTitle": "Apple",
+      "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/creator?handle=Apple",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/creator</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/creator",
+      "parameter": "handle=@Apple",
+      "value": "@Apple",
+      "channelTitle": "Apple",
+      "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/creator?handle=%40Apple",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/creator</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/creator",
+      "parameter": "channel=UCE_M8A5yxnLfW0KghEeajjw",
+      "value": "UCE_M8A5yxnLfW0KghEeajjw",
+      "channelTitle": "Apple",
+      "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/creator?channel=UCE_M8A5yxnLfW0KghEeajjw",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/creator</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/creator",
+      "parameter": "username=Apple",
+      "value": "Apple",
+      "channelTitle": "Apple",
+      "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/creator?username=Apple",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/creator</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel/details",
+      "parameter": "id=UCeysIZV7YCOoSJNQc9pgbXQ",
+      "value": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "channelTitle": "Tech IRL",
+      "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel/details?id=UCeysIZV7YCOoSJNQc9pgbXQ",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/channel/details</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel/details",
+      "parameter": "handle=TechIRL00",
+      "value": "TechIRL00",
+      "channelTitle": "Tech IRL",
+      "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel/details?handle=TechIRL00",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/channel/details</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel/details",
+      "parameter": "handle=@TechIRL00",
+      "value": "@TechIRL00",
+      "channelTitle": "Tech IRL",
+      "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel/details?handle=%40TechIRL00",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/channel/details</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel/details",
+      "parameter": "channel=UCeysIZV7YCOoSJNQc9pgbXQ",
+      "value": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "channelTitle": "Tech IRL",
+      "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel/details?channel=UCeysIZV7YCOoSJNQc9pgbXQ",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/channel/details</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel/details",
+      "parameter": "username=TechIRL00",
+      "value": "TechIRL00",
+      "channelTitle": "Tech IRL",
+      "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel/details?username=TechIRL00",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/channel/details</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel/details",
+      "parameter": "id=UCE_M8A5yxnLfW0KghEeajjw",
+      "value": "UCE_M8A5yxnLfW0KghEeajjw",
+      "channelTitle": "Apple",
+      "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel/details?id=UCE_M8A5yxnLfW0KghEeajjw",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/channel/details</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel/details",
+      "parameter": "handle=Apple",
+      "value": "Apple",
+      "channelTitle": "Apple",
+      "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel/details?handle=Apple",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/channel/details</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel/details",
+      "parameter": "handle=@Apple",
+      "value": "@Apple",
+      "channelTitle": "Apple",
+      "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel/details?handle=%40Apple",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/channel/details</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel/details",
+      "parameter": "channel=UCE_M8A5yxnLfW0KghEeajjw",
+      "value": "UCE_M8A5yxnLfW0KghEeajjw",
+      "channelTitle": "Apple",
+      "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel/details?channel=UCE_M8A5yxnLfW0KghEeajjw",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/channel/details</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel/details",
+      "parameter": "username=Apple",
+      "value": "Apple",
+      "channelTitle": "Apple",
+      "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel/details?username=Apple",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/channel/details</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel/info",
+      "parameter": "id=UCeysIZV7YCOoSJNQc9pgbXQ",
+      "value": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "channelTitle": "Tech IRL",
+      "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel/info?id=UCeysIZV7YCOoSJNQc9pgbXQ",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/channel/info</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel/info",
+      "parameter": "handle=TechIRL00",
+      "value": "TechIRL00",
+      "channelTitle": "Tech IRL",
+      "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel/info?handle=TechIRL00",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/channel/info</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel/info",
+      "parameter": "handle=@TechIRL00",
+      "value": "@TechIRL00",
+      "channelTitle": "Tech IRL",
+      "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel/info?handle=%40TechIRL00",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/channel/info</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel/info",
+      "parameter": "channel=UCeysIZV7YCOoSJNQc9pgbXQ",
+      "value": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "channelTitle": "Tech IRL",
+      "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel/info?channel=UCeysIZV7YCOoSJNQc9pgbXQ",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/channel/info</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel/info",
+      "parameter": "username=TechIRL00",
+      "value": "TechIRL00",
+      "channelTitle": "Tech IRL",
+      "channelId": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel/info?username=TechIRL00",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/channel/info</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel/info",
+      "parameter": "id=UCE_M8A5yxnLfW0KghEeajjw",
+      "value": "UCE_M8A5yxnLfW0KghEeajjw",
+      "channelTitle": "Apple",
+      "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel/info?id=UCE_M8A5yxnLfW0KghEeajjw",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/channel/info</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel/info",
+      "parameter": "handle=Apple",
+      "value": "Apple",
+      "channelTitle": "Apple",
+      "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel/info?handle=Apple",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/channel/info</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel/info",
+      "parameter": "handle=@Apple",
+      "value": "@Apple",
+      "channelTitle": "Apple",
+      "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel/info?handle=%40Apple",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/channel/info</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel/info",
+      "parameter": "channel=UCE_M8A5yxnLfW0KghEeajjw",
+      "value": "UCE_M8A5yxnLfW0KghEeajjw",
+      "channelTitle": "Apple",
+      "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel/info?channel=UCE_M8A5yxnLfW0KghEeajjw",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/channel/info</pre>\n</body>\n</html>\n"
+    },
+    {
+      "endpoint": "https://api.scrapecreators.com/v1/youtube/channel/info",
+      "parameter": "username=Apple",
+      "value": "Apple",
+      "channelTitle": "Apple",
+      "channelId": "UCE_M8A5yxnLfW0KghEeajjw",
+      "status": 404,
+      "success": false,
+      "url": "https://api.scrapecreators.com/v1/youtube/channel/info?username=Apple",
+      "errorText": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot GET /v1/youtube/channel/info</pre>\n</body>\n</html>\n"
+    }
+  ],
+  "testChannels": [
+    {
+      "id": "UCeysIZV7YCOoSJNQc9pgbXQ",
+      "title": "Tech IRL",
+      "handle": "TechIRL00"
+    },
+    {
+      "id": "UCE_M8A5yxnLfW0KghEeajjw",
+      "title": "Apple",
+      "handle": "Apple"
+    }
+  ]
+}

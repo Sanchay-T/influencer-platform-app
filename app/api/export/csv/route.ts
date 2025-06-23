@@ -318,14 +318,17 @@ export async function GET(req: Request) {
         let headers: string[];
         
         if (platform === 'YouTube') {
-          // YouTube-specific columns
+          // YouTube-specific columns with bio/email support
           headers = [
             'Channel Name',
+            'Subscribers',
+            'Bio',
+            'Email',
+            'Social Links',
             'Video Title', 
             'Video URL',
             'Views',
             'Duration (seconds)',
-            'Published Date',
             'Hashtags',
             'Keywords',
             'Platform'
@@ -363,17 +366,22 @@ export async function GET(req: Request) {
           let row: string[];
           
           if (itemPlatform === 'YouTube') {
-            // YouTube-specific data extraction
-            const publishedDate = item.publishedTime ? 
-              new Date(item.publishedTime).toISOString().split('T')[0] : '';
+            // YouTube-specific data extraction with bio/email
+            // Extract bio and emails for YouTube export
+            const bio = (creator.bio || '').replace(/"/g, '""'); // Escape quotes for CSV
+            const emails = Array.isArray(creator.emails) ? creator.emails.join('; ') : '';
+            const socialLinks = Array.isArray(creator.socialLinks) ? creator.socialLinks.join('; ') : '';
             
             row = [
               `"${creator.name || ''}"`,
+              `"${creator.followers || 0}"`,
+              `"${bio}"`,
+              `"${emails}"`,
+              `"${socialLinks}"`,
               `"${(video.description || '').replace(/"/g, '""')}"`, // Video title
               `"${video.url || ''}"`,
               `"${stats.views || 0}"`,
               `"${item.lengthSeconds || 0}"`,
-              `"${publishedDate}"`,
               `"${hashtags}"`,
               `"${keywordsStr}"`,
               `"${itemPlatform}"`

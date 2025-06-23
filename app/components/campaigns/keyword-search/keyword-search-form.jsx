@@ -9,7 +9,7 @@ import { toast } from "react-hot-toast";
 import { createBrowserClient } from '@supabase/ssr';
 
 export default function KeywordSearchForm({ onSubmit }) {
-  const [selectedPlatforms, setSelectedPlatforms] = useState(["tiktok"]);
+  const [selectedPlatform, setSelectedPlatform] = useState("tiktok");
   const [creatorsCount, setCreatorsCount] = useState(100);
   const [isLoading, setIsLoading] = useState(false);
   const [keywords] = useState(["test"]); // Esto debería ser un input del usuario
@@ -40,11 +40,7 @@ export default function KeywordSearchForm({ onSubmit }) {
   }
 
   const handlePlatformChange = (platform) => {
-    setSelectedPlatforms((prev) =>
-      prev.includes(platform)
-        ? prev.filter((p) => p !== platform)
-        : [...prev, platform]
-    );
+    setSelectedPlatform(platform);
   };
 
   const getActualScraperLimit = (uiValue) => {
@@ -56,8 +52,8 @@ export default function KeywordSearchForm({ onSubmit }) {
     e.preventDefault();
     setIsLoading(true);
     
-    if (!selectedPlatforms.includes("tiktok") && !selectedPlatforms.includes("youtube")) {
-      toast.error("Please select at least one platform (TikTok or YouTube)");
+    if (!selectedPlatform) {
+      toast.error("Please select a platform (TikTok or YouTube)");
       setIsLoading(false);
       return;
     }
@@ -67,7 +63,7 @@ export default function KeywordSearchForm({ onSubmit }) {
 
     // Pasar el campaignId si existe
     onSubmit({
-      platforms: selectedPlatforms,
+      platforms: [selectedPlatform],
       creatorsCount: numericCreatorsCount,
       scraperLimit: numericCreatorsCount, // Usamos el valor numérico
       campaignId: campaignId
@@ -91,14 +87,14 @@ export default function KeywordSearchForm({ onSubmit }) {
             <div className="flex space-x-4">
               <div className="flex items-center">
                 <Checkbox
-                  checked={selectedPlatforms.includes("tiktok")}
+                  checked={selectedPlatform === "tiktok"}
                   onCheckedChange={() => handlePlatformChange("tiktok")}
                 />
                 <span className="ml-2">TikTok</span>
               </div>
               <div className="flex items-center">
                 <Checkbox
-                  checked={selectedPlatforms.includes("youtube")}
+                  checked={selectedPlatform === "youtube"}
                   onCheckedChange={() => handlePlatformChange("youtube")}
                 />
                 <span className="ml-2">YouTube</span>

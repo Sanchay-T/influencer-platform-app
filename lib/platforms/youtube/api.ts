@@ -69,6 +69,13 @@ export async function searchYouTubeKeywords(
     hasContinuationToken: !!data?.continuationToken,
     totalResults: data?.totalResults || 0
   });
+
+  // Debug data structure logging (no file saving in production)
+  console.log('📊 [API-RESPONSE] Debug info:', {
+    videoCount: data?.videos?.length || 0,
+    hasContinuation: !!data?.continuationToken,
+    sampleChannelHandles: data?.videos?.slice(0, 3).map(v => v.channel?.handle).filter(Boolean)
+  });
   
   // Enhanced First Profile Logging
   if (data?.videos?.[0]) {
@@ -171,6 +178,57 @@ export async function searchYouTubeHashtag(
   }
   
   console.log(`✅ YouTube hashtag search successful: ${data.videos?.length || 0} videos found`);
+  
+  return data;
+}
+
+/**
+ * Get YouTube channel profile data for bio/email extraction
+ */
+export async function getYouTubeChannelProfile(handle: string): Promise<any> {
+  // Clean handle - remove @ if present, API works with both formats
+  const cleanHandle = handle.startsWith('@') ? handle : handle;
+  const apiUrl = `https://api.scrapecreators.com/v1/youtube/channel?handle=${encodeURIComponent(cleanHandle)}`;
+  
+  console.log('🚀 [CHANNEL-API-REQUEST] Platform: YouTube | Type: Channel Profile');
+  console.log('🌐 [CHANNEL-API-REQUEST] URL:', apiUrl);
+  console.log('👤 [CHANNEL-API-REQUEST] Handle:', handle);
+  console.log('⏱️ [CHANNEL-API-REQUEST] Timestamp:', new Date().toISOString());
+  
+  const requestStartTime = Date.now();
+  const requestHeaders = {
+    'x-api-key': process.env.SCRAPECREATORS_API_KEY!
+  };
+  
+  const response = await fetch(apiUrl, {
+    method: 'GET',
+    headers: requestHeaders
+  });
+
+  const responseTime = Date.now() - requestStartTime;
+  console.log('📡 [CHANNEL-API-RESPONSE] Status:', response.status, response.statusText);
+  console.log('🕒 [CHANNEL-API-RESPONSE] Response time:', `${responseTime}ms`);
+
+  if (!response.ok) {
+    let errorBody = 'Unknown error';
+    try {
+      errorBody = await response.text();
+    } catch (e) {
+      console.error('Could not parse error body from YouTube Channel API', e);
+    }
+    console.log('❌ [CHANNEL-API-RESPONSE] Error body:', errorBody);
+    throw new Error(`YouTube Channel API Error (${response.status} ${response.statusText}): ${errorBody}`);
+  }
+
+  const data = await response.json();
+  console.log('✅ [CHANNEL-API-RESPONSE] Channel data received for:', data.name || handle);
+  console.log('📊 [CHANNEL-API-RESPONSE] Channel info:', {
+    name: data.name,
+    subscribers: data.subscriberCountText,
+    hasDescription: !!data.description,
+    hasEmail: !!data.email,
+    linksCount: data.links?.length || 0
+  });
   
   return data;
 }

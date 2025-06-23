@@ -173,11 +173,6 @@ const SearchResults = ({ searchData }) => {
     return pageNumbers;
   };
 
-  // Formato de fecha
-  const formatDate = (timestamp) => {
-    if (!timestamp) return 'N/A';
-    return new Date(timestamp * 1000).toLocaleDateString();
-  };
 
   // Format duration from seconds to MM:SS or HH:MM:SS
   const formatDuration = (seconds) => {
@@ -310,7 +305,6 @@ const SearchResults = ({ searchData }) => {
               <TableHead>Creator Name</TableHead>
               <TableHead>Bio</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Date</TableHead>
               <TableHead>Video Title</TableHead>
               <TableHead>Views</TableHead>
               <TableHead>Duration</TableHead>
@@ -418,7 +412,6 @@ const SearchResults = ({ searchData }) => {
                       <span className="text-gray-400 text-sm">No email</span>
                     )}
                   </TableCell>
-                  <TableCell>{formatDate(creator.createTime)}</TableCell>
                   <TableCell>
                     <div className="max-w-[300px] truncate" title={creator.video?.description || 'No title'}>
                       {creator.video?.description || 'No title'}

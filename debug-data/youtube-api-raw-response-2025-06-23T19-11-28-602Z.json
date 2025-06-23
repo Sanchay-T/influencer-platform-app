@@ -1,0 +1,1235 @@
+{
+  "timestamp": "2025-06-23T19:11:28.603Z",
+  "testType": "keyword-search",
+  "apiUrl": "https://api.scrapecreators.com/v1/youtube/search?query=apple%2C%20technology",
+  "keywords": [
+    "apple",
+    "technology"
+  ],
+  "query": "apple, technology",
+  "responseStatus": 200,
+  "rawResponse": {
+    "videos": [
+      {
+        "type": "video",
+        "id": "Qz8u00pX738",
+        "url": "https://www.youtube.com/watch?v=Qz8u00pX738",
+        "title": "New things on the way from Apple",
+        "thumbnail": "https://i.ytimg.com/vi/Qz8u00pX738/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLBsnbb6QXo3G646ZhHIbyGDi-TYdg",
+        "channel": {
+          "id": "UCE_M8A5yxnLfW0KghEeajjw",
+          "title": "Apple",
+          "handle": "Apple",
+          "thumbnail": "https://yt3.ggpht.com/s5hlNKKDDQWjFGzYNnh8UeOW2j2w6id-cZGx7GdAA3d5Fu7zEi7ZMXEyslysuQUKigXNxtAB=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "1,201,739 views",
+        "viewCountInt": 1201739,
+        "publishedTimeText": "2 weeks ago",
+        "publishedTime": "2025-06-09T19:11:28.445Z",
+        "lengthText": "2:14",
+        "lengthSeconds": 134,
+        "badges": [
+          "4K",
+          "CC"
+        ]
+      },
+      {
+        "type": "video",
+        "id": "uPo_wmR4a68",
+        "url": "https://www.youtube.com/watch?v=uPo_wmR4a68",
+        "title": "Why Apple Products Are So Expensive | So Expensive",
+        "thumbnail": "https://i.ytimg.com/vi/uPo_wmR4a68/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLD2dGejWYYowmOS0pS_HEWYV-OTNw",
+        "channel": {
+          "id": "UCcyq283he07B7_KUX07mmtA",
+          "title": "Business Insider",
+          "handle": "BusinessInsider",
+          "thumbnail": "https://yt3.ggpht.com/pjDcIrc21oYPCkKpfY1zElDRHhw907VyW4zpuhJP5YCCvZPpyt0de08XM-uECMPQFAsidNK0bw=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "2,969,743 views",
+        "viewCountInt": 2969743,
+        "publishedTimeText": "5 years ago",
+        "publishedTime": "2020-06-23T19:11:28.445Z",
+        "lengthText": "7:34",
+        "lengthSeconds": 454,
+        "badges": [
+          "CC"
+        ]
+      },
+      {
+        "type": "video",
+        "id": "GGMhQkHCjxo",
+        "url": "https://www.youtube.com/watch?v=GGMhQkHCjxo",
+        "title": "Hands on with Apple Intelligence | Apple",
+        "thumbnail": "https://i.ytimg.com/vi/GGMhQkHCjxo/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLAPMW4T1FgAUrrUP6LDSGjPZlqx6A",
+        "channel": {
+          "id": "UCE_M8A5yxnLfW0KghEeajjw",
+          "title": "Apple",
+          "handle": "Apple",
+          "thumbnail": "https://yt3.ggpht.com/s5hlNKKDDQWjFGzYNnh8UeOW2j2w6id-cZGx7GdAA3d5Fu7zEi7ZMXEyslysuQUKigXNxtAB=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "945,340 views",
+        "viewCountInt": 945340,
+        "publishedTimeText": "1 month ago",
+        "publishedTime": "2025-05-23T19:11:28.445Z",
+        "lengthText": "5:58",
+        "lengthSeconds": 358,
+        "badges": [
+          "4K",
+          "CC"
+        ]
+      },
+      {
+        "type": "video",
+        "id": "a1XKmXL2dUQ",
+        "url": "https://www.youtube.com/watch?v=a1XKmXL2dUQ",
+        "title": "The Problem With Apple",
+        "thumbnail": "https://i.ytimg.com/vi/a1XKmXL2dUQ/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLCS5LcNyAXAF1oDUlNShKKOmClL2Q",
+        "channel": {
+          "id": "UCEuiOszNd6msGgqsD0f9YAQ",
+          "title": "Interesting Engineering",
+          "handle": "Interestingengineeringofficial",
+          "thumbnail": "https://yt3.ggpht.com/dU8yt_UaG09X4ogUhpMw_heyRbkpdc2LBidP4WAkK0PSaE_kxL73tN8VOEW1nkIqAxC5nU8l=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "124,150 views",
+        "viewCountInt": 124150,
+        "publishedTimeText": "8 months ago",
+        "publishedTime": "2024-10-23T19:11:28.445Z",
+        "lengthText": "13:41",
+        "lengthSeconds": 821,
+        "badges": [
+          "CC"
+        ]
+      },
+      {
+        "type": "video",
+        "id": "hz6oys4Eem4",
+        "url": "https://www.youtube.com/watch?v=hz6oys4Eem4",
+        "title": "Apple's AI Crisis: Explained!",
+        "thumbnail": "https://i.ytimg.com/vi/hz6oys4Eem4/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLBNi2qb7kwm3xI3tVvFnqbVPrlyTg",
+        "channel": {
+          "id": "UCBJycsmduvYEL83R_U4JriQ",
+          "title": "Marques Brownlee",
+          "handle": "mkbhd",
+          "thumbnail": "https://yt3.ggpht.com/PEwQfVuhh5jO7_NDDufCq349q0W6MgZeYlgeMyW3OSRMxMx9W5yre5Fgbi4Bql56L1cPwoteOA=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "7,358,369 views",
+        "viewCountInt": 7358369,
+        "publishedTimeText": "2 months ago",
+        "publishedTime": "2025-04-23T19:11:28.445Z",
+        "lengthText": "16:52",
+        "lengthSeconds": 1012,
+        "badges": [
+          "4K",
+          "CC"
+        ]
+      },
+      {
+        "type": "video",
+        "id": "5z2jKSJB3Yc",
+        "url": "https://www.youtube.com/watch?v=5z2jKSJB3Yc",
+        "title": "Apple September Event LEAKS - 10 MAJOR Products are Coming!",
+        "thumbnail": "https://i.ytimg.com/vi/5z2jKSJB3Yc/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLAnNb7lDzJseHFDq7v-rvuBhtyh8w",
+        "channel": {
+          "id": "UCptwuAv0XQHo1OQUSaO6NHw",
+          "title": "Max Tech",
+          "handle": "MaxTechOfficial",
+          "thumbnail": "https://yt3.ggpht.com/ytc/AIdro_myEKwPp7n1o7Gt1vd1X3pPoioDaF9xNSKcvQibs1SEyTc=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "151,929 views",
+        "viewCountInt": 151929,
+        "publishedTimeText": "3 days ago",
+        "publishedTime": "2025-06-20T19:11:28.445Z",
+        "lengthText": "9:02",
+        "lengthSeconds": 542,
+        "badges": [
+          "New",
+          "4K"
+        ]
+      },
+      {
+        "type": "video",
+        "id": "eFnj7LvhvR4",
+        "url": "https://www.youtube.com/watch?v=eFnj7LvhvR4",
+        "title": "I Bought the Last One Apple Ever Made... - Apple XServe 3,1 Server",
+        "thumbnail": "https://i.ytimg.com/vi/eFnj7LvhvR4/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLCHjMLILLsyvd2_qvh-IYDeh2J_rg",
+        "channel": {
+          "id": "UCXuqSBlHAE6Xw-yeJA0Tunw",
+          "title": "Linus Tech Tips",
+          "handle": "LinusTechTips",
+          "thumbnail": "https://yt3.ggpht.com/gnvYLhXy8FAlPXZ2RTrkrgj-5kyt0vdE2FUGVOiKGdEZIa-wN5A-7nwZBlWJLzUMmoh1NWAU=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "2,722,848 views",
+        "viewCountInt": 2722848,
+        "publishedTimeText": "2 years ago",
+        "publishedTime": "2023-06-23T19:11:28.446Z",
+        "lengthText": "19:05",
+        "lengthSeconds": 1145,
+        "badges": [
+          "4K",
+          "CC"
+        ]
+      },
+      {
+        "type": "video",
+        "id": "7i7k3OAZuR0",
+        "url": "https://www.youtube.com/watch?v=7i7k3OAZuR0",
+        "title": "How Apple Makes So Much Money",
+        "thumbnail": "https://i.ytimg.com/vi/7i7k3OAZuR0/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLDQljZ5-1cMypxV-v8OI0jHcqqAJA",
+        "channel": {
+          "id": "UCfw2hvuj40AChU7n-N-PRHA",
+          "title": "Apple Explained",
+          "handle": "AppleExplained",
+          "thumbnail": "https://yt3.ggpht.com/lPBCEpE5yxteHRFpv8Q_Fo5rfdyHy13MC_glNOVG7u47sU-uDvRIrZsylOSJzaexo30WBq_krQ=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "76,217 views",
+        "viewCountInt": 76217,
+        "publishedTimeText": "2 weeks ago",
+        "publishedTime": "2025-06-09T19:11:28.446Z",
+        "lengthText": "11:08",
+        "lengthSeconds": 668,
+        "badges": [
+          "4K"
+        ]
+      },
+      {
+        "type": "video",
+        "id": "2qKQVqwc9yU",
+        "url": "https://www.youtube.com/watch?v=2qKQVqwc9yU",
+        "title": "The Apple Ecosystem Secrets I Wish I'd Known Earlier!",
+        "thumbnail": "https://i.ytimg.com/vi/2qKQVqwc9yU/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLAsBhpxaLH9-wgVASedqFa7PsyJLw",
+        "channel": {
+          "id": "UCdKvOz1yqCbty9TwmEUQSiA",
+          "title": "Better Creating",
+          "handle": "BetterCreating",
+          "thumbnail": "https://yt3.ggpht.com/ytc/AIdro_ls11I3LfeKpqOwBBsxkPmfe_scKUxEMC0AklLiFBmTcQ=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "202,506 views",
+        "viewCountInt": 202506,
+        "publishedTimeText": "1 month ago",
+        "publishedTime": "2025-05-23T19:11:28.446Z",
+        "lengthText": "8:54",
+        "lengthSeconds": 534,
+        "badges": [
+          "4K"
+        ]
+      },
+      {
+        "type": "video",
+        "id": "jGztGfRujSE",
+        "url": "https://www.youtube.com/watch?v=jGztGfRujSE",
+        "title": "Introducing Liquid Glass | Apple",
+        "thumbnail": "https://i.ytimg.com/vi/jGztGfRujSE/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLBn6VN7Hw6sy9ClDkhQ42q8Kkp_Ng",
+        "channel": {
+          "id": "UCE_M8A5yxnLfW0KghEeajjw",
+          "title": "Apple",
+          "handle": "Apple",
+          "thumbnail": "https://yt3.ggpht.com/s5hlNKKDDQWjFGzYNnh8UeOW2j2w6id-cZGx7GdAA3d5Fu7zEi7ZMXEyslysuQUKigXNxtAB=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "2,535,503 views",
+        "viewCountInt": 2535503,
+        "publishedTimeText": "2 weeks ago",
+        "publishedTime": "2025-06-09T19:11:28.446Z",
+        "lengthText": "4:34",
+        "lengthSeconds": 274,
+        "badges": [
+          "4K",
+          "CC"
+        ]
+      },
+      {
+        "type": "video",
+        "id": "8oPXtfZlsto",
+        "url": "https://www.youtube.com/watch?v=8oPXtfZlsto",
+        "title": "How Apple’s iPhone Overtook Samsung As The Top Smartphone In The World",
+        "thumbnail": "https://i.ytimg.com/vi/8oPXtfZlsto/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLC1DdLbGEgShUcb9s7An25rPZlUdA",
+        "channel": {
+          "id": "UCvJJ_dzjViJCoLf5uKUTwoA",
+          "title": "CNBC",
+          "handle": "CNBC",
+          "thumbnail": "https://yt3.ggpht.com/rkKj6aQsYMytXxqeLCRF1AnmUNYehzbWF7YoT6pIzp42JDZhG_5_Q8ABJqhpofOhCP2cAKL_icE=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "666,402 views",
+        "viewCountInt": 666402,
+        "publishedTimeText": "1 year ago",
+        "publishedTime": "2024-06-23T19:11:28.446Z",
+        "lengthText": "12:01",
+        "lengthSeconds": 721,
+        "badges": [
+          "CC"
+        ]
+      },
+      {
+        "type": "video",
+        "id": "PugKQZHPut8",
+        "url": "https://www.youtube.com/watch?v=PugKQZHPut8",
+        "title": "Apple Intelligence on iPhone in 5 minutes",
+        "thumbnail": "https://i.ytimg.com/vi/PugKQZHPut8/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLDHjs925ZR5Abj_eYYDTLUFYpQQXw",
+        "channel": {
+          "id": "UCE_M8A5yxnLfW0KghEeajjw",
+          "title": "Apple",
+          "handle": "Apple",
+          "thumbnail": "https://yt3.ggpht.com/s5hlNKKDDQWjFGzYNnh8UeOW2j2w6id-cZGx7GdAA3d5Fu7zEi7ZMXEyslysuQUKigXNxtAB=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "9,108,348 views",
+        "viewCountInt": 9108348,
+        "publishedTimeText": "9 months ago",
+        "publishedTime": "2024-09-23T19:11:28.446Z",
+        "lengthText": "4:43",
+        "lengthSeconds": 283,
+        "badges": [
+          "CC"
+        ]
+      },
+      {
+        "type": "video",
+        "id": "Ox0Lb2-d1q8",
+        "url": "https://www.youtube.com/watch?v=Ox0Lb2-d1q8",
+        "title": "Apple Intelligence: Everything You Need to Know!",
+        "thumbnail": "https://i.ytimg.com/vi/Ox0Lb2-d1q8/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLDuHqn3Kwatw7ZlokOpJ1ndzt6_qg",
+        "channel": {
+          "id": "UCaFGDBmGK_jw66u3av2Ysjw",
+          "title": "MacRumors",
+          "handle": "macrumors",
+          "thumbnail": "https://yt3.ggpht.com/vfFcyv0_vz0Li2sRXziJAiHe9yYKKBhHlcTI2wiLT7Pl2F0bhMnKYoFo3_cHrLoV0jYswt9BYg=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "117,275 views",
+        "viewCountInt": 117275,
+        "publishedTimeText": "6 months ago",
+        "publishedTime": "2024-12-23T19:11:28.446Z",
+        "lengthText": "8:08",
+        "lengthSeconds": 488,
+        "badges": [
+          "4K"
+        ]
+      }
+    ],
+    "channels": [
+      {
+        "type": "channel",
+        "id": "UCE_M8A5yxnLfW0KghEeajjw",
+        "channelName": "Apple",
+        "handle": "Apple",
+        "description": "Welcome to the official Apple YouTube channel. Here you'll find news about product launches, tutorials, and other great content.",
+        "thumbnail": "http://yt3.ggpht.com/s5hlNKKDDQWjFGzYNnh8UeOW2j2w6id-cZGx7GdAA3d5Fu7zEi7ZMXEyslysuQUKigXNxtAB=s176-c-k-c0x00ffffff-no-rj-mo",
+        "subscriberCountText": "20M",
+        "subscriberCountInt": 20000000,
+        "badges": [
+          "Verified"
+        ]
+      }
+    ],
+    "playlists": [],
+    "shorts": [
+      {
+        "type": "short",
+        "id": "LZYfSYXY-go",
+        "url": "https://www.youtube.com/watch?v=LZYfSYXY-go",
+        "title": "Apple’s THINNEST ever device is RIDICULOUS!",
+        "thumbnail": "https://i.ytimg.com/vi/LZYfSYXY-go/hq720.jpg?sqp=-oaymwFBCNAFEJQDSFryq4qpAzMIARUAAIhCGADYAQHiAQoIGBACGAY4AUAB8AEB-AG2CIACgA-KAgwIABABGDogJSh_MA8=&rs=AOn4CLD91mQpTzeYIlCJ9h7kEuQDyHutEA",
+        "channel": {
+          "id": "UCMiJRAwDNSNzuYeN2uWa0pA",
+          "title": "Mrwhosetheboss",
+          "handle": "Mrwhosetheboss",
+          "thumbnail": "https://yt3.ggpht.com/a_1U9tYmozHPhZhsLiqqQ_XcYbhlmG_X1fsTdBWAHBjLmRN0haiv1xa_owiit7p8xyKDlMF1LXw=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "17,563,677 views",
+        "viewCountInt": 17563677,
+        "publishedTimeText": "1 year ago",
+        "publishedTime": "2024-06-23T19:11:28.445Z",
+        "lengthText": "0:30",
+        "lengthSeconds": 30,
+        "badges": []
+      },
+      {
+        "type": "short",
+        "id": "SLpBl0BdccU",
+        "url": "https://www.youtube.com/watch?v=SLpBl0BdccU",
+        "title": "Apple Intelligence BEST FEATURES! 🤯",
+        "thumbnail": "https://i.ytimg.com/vi/SLpBl0BdccU/hq720.jpg?sqp=-oaymwFBCNAFEJQDSFryq4qpAzMIARUAAIhCGADYAQHiAQoIGBACGAY4AUAB8AEB-AG2CIACgA-KAgwIABABGHIgSSgzMA8=&rs=AOn4CLDHIQPBhGfb5QEkp1___1KjYxgmFQ",
+        "channel": {
+          "id": "UCtZxw36pSnZYffC_XhQdhew",
+          "title": "Renz Sadiwa",
+          "handle": "renzsadiwa",
+          "thumbnail": "https://yt3.ggpht.com/JirXyZoX-9Tuedk9aAmDLeHkE0bcVYXSTrOjDsfV8LxnyYWidYRSTdG-e_LXcrjY1sqxfpmhAg=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "1,662,976 views",
+        "viewCountInt": 1662976,
+        "publishedTimeText": "7 months ago",
+        "publishedTime": "2024-11-23T19:11:28.446Z",
+        "lengthText": "0:36",
+        "lengthSeconds": 36,
+        "badges": []
+      },
+      {
+        "type": "short",
+        "id": "7uFrtqSwYzM",
+        "url": "https://www.youtube.com/watch?v=7uFrtqSwYzM",
+        "title": "APPLE Glass Revolutionizes AR Experience Forever!",
+        "thumbnail": "https://i.ytimg.com/vi/7uFrtqSwYzM/hq720.jpg?sqp=-oaymwFBCNAFEJQDSFryq4qpAzMIARUAAIhCGADYAQHiAQoIGBACGAY4AUAB8AEB-AG2CIACgA-KAgwIABABGGUgWChVMA8=&rs=AOn4CLAVOw3nVoipNq3xR2lIuzTiFTl_rg",
+        "channel": {
+          "id": "UCxqG_E-68WAE0TWYfIopv6Q",
+          "title": "Digifix",
+          "handle": "digifixaus",
+          "thumbnail": "https://yt3.ggpht.com/4UV6iH9OtUQnMohj_PkzgVySv89Azvc8tEUrTzlI8_kd-twhf-D3NOwfiqAUfeHdkBXScn-M_5U=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "3,042,973 views",
+        "viewCountInt": 3042973,
+        "publishedTimeText": "6 months ago",
+        "publishedTime": "2024-12-23T19:11:28.446Z",
+        "lengthText": "0:16",
+        "lengthSeconds": 16,
+        "badges": []
+      },
+      {
+        "type": "short",
+        "id": "_jefSDX6N3s",
+        "url": "https://www.youtube.com/watch?v=_jefSDX6N3s",
+        "title": "Why Apple Products LAST!!",
+        "thumbnail": "https://i.ytimg.com/vi/_jefSDX6N3s/hq720.jpg?sqp=-oaymwFBCNAFEJQDSFryq4qpAzMIARUAAIhCGADYAQHiAQoIGBACGAY4AUAB8AEB-AG2CIACgA-KAgwIABABGE4gXChlMA8=&rs=AOn4CLDUN6DN_jeIrTLUj_8OTY7lMk909Q",
+        "channel": {
+          "id": "UCIxLxlan8q9WA7sjuq6LdTQ",
+          "title": "Hayls World",
+          "handle": "HaylsWorld",
+          "thumbnail": "https://yt3.ggpht.com/704S41So1nsXofY3i5_AQ4hE4nM50TvDhuXmS_Ny1EZ9QZ2b-t_kaM3mfVnFu7IAaiJMe9KErw=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "510,992 views",
+        "viewCountInt": 510992,
+        "publishedTimeText": "1 year ago",
+        "publishedTime": "2024-06-23T19:11:28.446Z",
+        "lengthText": "0:55",
+        "lengthSeconds": 55,
+        "badges": []
+      },
+      {
+        "type": "short",
+        "id": "ep2ptxlBqw8",
+        "url": "https://www.youtube.com/watch?v=ep2ptxlBqw8",
+        "title": "Apple Intelligence in iPhone 16 series #iphone16 #apple #ai",
+        "thumbnail": "https://i.ytimg.com/vi/ep2ptxlBqw8/hq720.jpg?sqp=-oaymwFBCNAFEJQDSFryq4qpAzMIARUAAIhCGADYAQHiAQoIGBACGAY4AUAB8AEB-AG2CIACgA-KAgwIABABGGUgZShlMA8=&rs=AOn4CLDtWBZrdyoPLtSCA-fmFruMukWWBA",
+        "channel": {
+          "id": "UCu8lJ8_RT6Pw1z_mHXF22Kw",
+          "title": "Apple TechWorld",
+          "handle": "tech.chourasia",
+          "thumbnail": "https://yt3.ggpht.com/eeqnV9B0QXH6a0FySrdlYazgK83PpC31A0pqQEFfr2OQ4waUZmZ3Iy3wClkCU_zgPdFZnzalrg=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "368,457 views",
+        "viewCountInt": 368457,
+        "publishedTimeText": "7 months ago",
+        "publishedTime": "2024-11-23T19:11:28.446Z",
+        "lengthText": "0:23",
+        "lengthSeconds": 23,
+        "badges": []
+      }
+    ],
+    "shelves": [
+      {
+        "type": "shelf",
+        "title": "Shorts",
+        "items": [
+          {
+            "type": "short",
+            "id": "3gr_DHxWj6Q",
+            "url": "https://www.youtube.com/watch?v=3gr_DHxWj6Q",
+            "title": "Can I Use The FIRST iPhone in 2024?",
+            "thumbnail": "https://i.ytimg.com/vi/3gr_DHxWj6Q/oardefault.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLBj8G8Clvizmk0bJ71RLeiV7473LA",
+            "viewCountText": "15M",
+            "viewCountInt": 15000000
+          },
+          {
+            "type": "short",
+            "id": "UFHEuE2PtFc",
+            "url": "https://www.youtube.com/watch?v=UFHEuE2PtFc",
+            "title": "This iPhone is Older Than My Dinosaur 🫣 #shorts #moneytalkswireless #apple #iPhone #fyp",
+            "thumbnail": "https://i.ytimg.com/vi/UFHEuE2PtFc/oardefault.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLDwwVD7oUKervQE9ztH9lBCtn1aZQ",
+            "viewCountText": "599K",
+            "viewCountInt": 599000
+          },
+          {
+            "type": "short",
+            "id": "nQ1Ogw-Uyl0",
+            "url": "https://www.youtube.com/watch?v=nQ1Ogw-Uyl0",
+            "title": "Unboxing new apple products 💻",
+            "thumbnail": "https://i.ytimg.com/vi/nQ1Ogw-Uyl0/hq720.jpg?sqp=-oaymwEoCJUDENAFSFryq4qpAxoIARUAAIhC0AEB2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLBkuBczP-pLcHbhcKolJJC-gbCJhg",
+            "viewCountText": "6.6M",
+            "viewCountInt": 6600000
+          },
+          {
+            "type": "short",
+            "id": "rZw3T4PtAWw",
+            "url": "https://www.youtube.com/watch?v=rZw3T4PtAWw",
+            "title": "You've NEVER seen Apple products this TINY.",
+            "thumbnail": "https://i.ytimg.com/vi/rZw3T4PtAWw/hq720_2.jpg?sqp=-oaymwEoCI4CEOADSFryq4qpAxoIARUAAIhC0AEB2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLCYt2xfng17IW2ZkMkdjsR6Ln8gPQ",
+            "viewCountText": "34M",
+            "viewCountInt": 34000000
+          },
+          {
+            "type": "short",
+            "id": "wqeM11oxX3s",
+            "url": "https://www.youtube.com/watch?v=wqeM11oxX3s",
+            "title": "4 Apple Products you Never knew Existed 😳",
+            "thumbnail": "https://i.ytimg.com/vi/wqeM11oxX3s/oar2.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLAkPgO5xCBNzdAd_TtI2a6CHW9d_A",
+            "viewCountText": "10M",
+            "viewCountInt": 10000000
+          },
+          {
+            "type": "short",
+            "id": "gM0A7JKB1pE",
+            "url": "https://www.youtube.com/watch?v=gM0A7JKB1pE",
+            "title": "The only Apple devices you need #shorts #apple #iphone #ipad #applewatch #macbook #ecosystem #tech",
+            "thumbnail": "https://i.ytimg.com/vi/gM0A7JKB1pE/oar2.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLBmuzeDeX8JqdPXadKz7rNctdbkKQ",
+            "viewCountText": "638K",
+            "viewCountInt": 638000
+          },
+          {
+            "type": "short",
+            "id": "7uj_4CatnNg",
+            "url": "https://www.youtube.com/watch?v=7uj_4CatnNg",
+            "title": "one of the many reasons why apple ecosystem is just makes sense 👨‍💻 #apple #ios #airpodspro",
+            "thumbnail": "https://i.ytimg.com/vi/7uj_4CatnNg/oar2.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLCcheVZbz7iQUpqWXjvfNYvzQW9Iw",
+            "viewCountText": "61K",
+            "viewCountInt": 61000
+          },
+          {
+            "type": "short",
+            "id": "T6hkupYbkFI",
+            "url": "https://www.youtube.com/watch?v=T6hkupYbkFI",
+            "title": "These are the WORST Apple products!",
+            "thumbnail": "https://i.ytimg.com/vi/T6hkupYbkFI/oar2.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLDSx5HSEiEw9D2_3zc8vzGVLrJi6g",
+            "viewCountText": "4.2M",
+            "viewCountInt": 4200000
+          },
+          {
+            "type": "short",
+            "id": "7uFrtqSwYzM",
+            "url": "https://www.youtube.com/watch?v=7uFrtqSwYzM",
+            "title": "APPLE Glass Revolutionizes AR Experience Forever!",
+            "thumbnail": "https://i.ytimg.com/vi/7uFrtqSwYzM/oardefault.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLD1Z2-cbrEmcx47ThnH6vT1liv5wQ",
+            "viewCountText": "3M",
+            "viewCountInt": 3000000
+          },
+          {
+            "type": "short",
+            "id": "Ceqabjjgh8o",
+            "url": "https://www.youtube.com/watch?v=Ceqabjjgh8o",
+            "title": "$30 vs $300 Apple Watch!",
+            "thumbnail": "https://i.ytimg.com/vi/Ceqabjjgh8o/oar2.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLBZfus5hml9ibwiDheSAgphHXb-kg",
+            "viewCountText": "7.7M",
+            "viewCountInt": 7700000
+          },
+          {
+            "type": "short",
+            "id": "_jefSDX6N3s",
+            "url": "https://www.youtube.com/watch?v=_jefSDX6N3s",
+            "title": "Why Apple Products LAST!!",
+            "thumbnail": "https://i.ytimg.com/vi/_jefSDX6N3s/oardefault.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLA8cv-9kCse8IC2tj-0Jkma3ib-HQ",
+            "viewCountText": "510K",
+            "viewCountInt": 510000
+          },
+          {
+            "type": "short",
+            "id": "b4riHHPOz2o",
+            "url": "https://www.youtube.com/watch?v=b4riHHPOz2o",
+            "title": "unboxing the brand NEW apple mac studio + other apple goodies📦☁️",
+            "thumbnail": "https://i.ytimg.com/vi/b4riHHPOz2o/oar2.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLDB3ZJCouuP9u6JqcHYd_GisiNSgg",
+            "viewCountText": "3.6M",
+            "viewCountInt": 3600000
+          },
+          {
+            "type": "short",
+            "id": "SLpBl0BdccU",
+            "url": "https://www.youtube.com/watch?v=SLpBl0BdccU",
+            "title": "Apple Intelligence BEST FEATURES! 🤯",
+            "thumbnail": "https://i.ytimg.com/vi/SLpBl0BdccU/oardefault.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLBUSBUtspObMRbPZtwgE8jkA7piDg",
+            "viewCountText": "1.6M",
+            "viewCountInt": 1600000
+          },
+          {
+            "type": "short",
+            "id": "0SPRDDEAHWo",
+            "url": "https://www.youtube.com/watch?v=0SPRDDEAHWo",
+            "title": "5 Ways Apple's Products Save Lives",
+            "thumbnail": "https://i.ytimg.com/vi/0SPRDDEAHWo/oardefault.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLBMjJn1JBpx_JGQv4MrBwVpQxGpzQ",
+            "viewCountText": "4.7K",
+            "viewCountInt": 4700
+          },
+          {
+            "type": "short",
+            "id": "nifUnSk21-w",
+            "url": "https://www.youtube.com/watch?v=nifUnSk21-w",
+            "title": "Apple has done this before 👀",
+            "thumbnail": "https://i.ytimg.com/vi/nifUnSk21-w/oardefault.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLCERQSLaaTueGtgWyQcLBmvgukN7Q",
+            "viewCountText": "4.5M",
+            "viewCountInt": 4500000
+          },
+          {
+            "type": "short",
+            "id": "gV7eaLNC5ac",
+            "url": "https://www.youtube.com/watch?v=gV7eaLNC5ac",
+            "title": "The Smallest iPhone in the World.",
+            "thumbnail": "https://i.ytimg.com/vi/gV7eaLNC5ac/oar2.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLAmjAVQYXd72h1yi496Z71R2iEWJw",
+            "viewCountText": "21M",
+            "viewCountInt": 21000000
+          },
+          {
+            "type": "short",
+            "id": "OltS40EjSxk",
+            "url": "https://www.youtube.com/watch?v=OltS40EjSxk",
+            "title": "Apple Silicon Explained in 56 seconds",
+            "thumbnail": "https://i.ytimg.com/vi/OltS40EjSxk/oardefault.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLBZOo66sGktxBiXBq6Gyy7G-xhfwQ",
+            "viewCountText": "2M",
+            "viewCountInt": 2000000
+          },
+          {
+            "type": "short",
+            "id": "PioAKjUJyUU",
+            "url": "https://www.youtube.com/watch?v=PioAKjUJyUU",
+            "title": "iPhone users aren’t brainwashed #carterpcs #tech #techtok #techfacts #iphone #android #apple",
+            "thumbnail": "https://i.ytimg.com/vi/PioAKjUJyUU/oar2.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLACfAyjKxLaV0OZ0yOhGzlTp8SwFQ",
+            "viewCountText": "33K",
+            "viewCountInt": 33000
+          },
+          {
+            "type": "short",
+            "id": "GAOln0vn1iA",
+            "url": "https://www.youtube.com/watch?v=GAOln0vn1iA",
+            "title": "Top ways to use Apple Intelligence (so far!)",
+            "thumbnail": "https://i.ytimg.com/vi/GAOln0vn1iA/oardefault.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLDKXd-pHNNt4XAOEGDaazQm64d48A",
+            "viewCountText": "565K",
+            "viewCountInt": 565000
+          },
+          {
+            "type": "short",
+            "id": "ep2ptxlBqw8",
+            "url": "https://www.youtube.com/watch?v=ep2ptxlBqw8",
+            "title": "Apple Intelligence in iPhone 16 series #iphone16 #apple #ai",
+            "thumbnail": "https://i.ytimg.com/vi/ep2ptxlBqw8/oardefault.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLCM-Fnprcclw2T0dI2k3AiEEUG29w",
+            "viewCountText": "368K",
+            "viewCountInt": 368000
+          },
+          {
+            "type": "short",
+            "id": "DvjSFiR4z9g",
+            "url": "https://www.youtube.com/watch?v=DvjSFiR4z9g",
+            "title": "you're WRONG about Apple's Liquid Glass redesign #liquidglass #ios26 #ipados26 #iphone #apple",
+            "thumbnail": "https://i.ytimg.com/vi/DvjSFiR4z9g/oardefault.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLAfy5QUVwt0UmTXbgpmGi_ebdzoDg",
+            "viewCountText": "10K",
+            "viewCountInt": 10000
+          },
+          {
+            "type": "short",
+            "id": "lACHhr7RKXc",
+            "url": "https://www.youtube.com/watch?v=lACHhr7RKXc",
+            "title": "Why hasn't Apple invented this yet?!",
+            "thumbnail": "https://i.ytimg.com/vi/lACHhr7RKXc/oar2.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLA1jQmJZFKaV4SNC2ZnNYzEx9Vfww",
+            "viewCountText": "123M",
+            "viewCountInt": 123000000
+          },
+          {
+            "type": "short",
+            "id": "T1xcjYq6280",
+            "url": "https://www.youtube.com/watch?v=T1xcjYq6280",
+            "title": "Why the Apple Mac Studio is a MONSTER.",
+            "thumbnail": "https://i.ytimg.com/vi/T1xcjYq6280/oar2.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLBYEgFzQCJeMjrFSU-BEqBElFDkJg",
+            "viewCountText": "13M",
+            "viewCountInt": 13000000
+          },
+          {
+            "type": "short",
+            "id": "FNnK1J-BdiM",
+            "url": "https://www.youtube.com/watch?v=FNnK1J-BdiM",
+            "title": "The World's Largest iPhone Has a Secret...",
+            "thumbnail": "https://i.ytimg.com/vi/FNnK1J-BdiM/oar2.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLCfcs8b2LO-PHxBzwgvzVcDD3XkhQ",
+            "viewCountText": "42M",
+            "viewCountInt": 42000000
+          },
+          {
+            "type": "short",
+            "id": "Gh473LQIPPA",
+            "url": "https://www.youtube.com/watch?v=Gh473LQIPPA",
+            "title": "Apple Glass vs Google Glass The Battle Begins!",
+            "thumbnail": "https://i.ytimg.com/vi/Gh473LQIPPA/oardefault.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLD-ThTyNp9cz5Uev7MeVulIgTfR_A",
+            "viewCountText": "14K",
+            "viewCountInt": 14000
+          },
+          {
+            "type": "short",
+            "id": "geDEx5J-VzM",
+            "url": "https://www.youtube.com/watch?v=geDEx5J-VzM",
+            "title": "People think Apple should kill this next!",
+            "thumbnail": "https://i.ytimg.com/vi/geDEx5J-VzM/oar2.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLCJTnhmHFZ5l32PqIRqqPVACtWdYQ",
+            "viewCountText": "5.2M",
+            "viewCountInt": 5200000
+          },
+          {
+            "type": "short",
+            "id": "4PnIatbdzKY",
+            "url": "https://www.youtube.com/watch?v=4PnIatbdzKY",
+            "title": "Is Apple In Decline?",
+            "thumbnail": "https://i.ytimg.com/vi/4PnIatbdzKY/oardefault.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLAGSbPjm-BQ6d3hMIWYUC8M3eTTBw",
+            "viewCountText": "9.8K",
+            "viewCountInt": 9800
+          },
+          {
+            "type": "short",
+            "id": "lK2qHfEzZpI",
+            "url": "https://www.youtube.com/watch?v=lK2qHfEzZpI",
+            "title": "APPLE VS ANDROID - WHO WINS? 👀🤔",
+            "thumbnail": "https://i.ytimg.com/vi/lK2qHfEzZpI/hq720.jpg?sqp=-oaymwEoCJUDENAFSFryq4qpAxoIARUAAIhC0AEB2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLCZuAsA7AxFjznPK4yRDCuf0X43pQ",
+            "viewCountText": "1.7M",
+            "viewCountInt": 1700000
+          },
+          {
+            "type": "short",
+            "id": "nA4m0aRgbMI",
+            "url": "https://www.youtube.com/watch?v=nA4m0aRgbMI",
+            "title": "The Apple Ecosystem is AMAZING! HomePod Mini Animation Easter-egg 🤯",
+            "thumbnail": "https://i.ytimg.com/vi/nA4m0aRgbMI/oar2.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLDZTOjMO2SAHdbNXgK8CWWZoU6HJg",
+            "viewCountText": "148K",
+            "viewCountInt": 148000
+          },
+          {
+            "type": "short",
+            "id": "xJrklzjNUwA",
+            "url": "https://www.youtube.com/watch?v=xJrklzjNUwA",
+            "title": "iPad OS 26 vs The MacBook ft @mkbhd",
+            "thumbnail": "https://i.ytimg.com/vi/xJrklzjNUwA/oardefault.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLDFj7x61UtfU9l2KJx8veA6n58dFg",
+            "viewCountText": "587K",
+            "viewCountInt": 587000
+          },
+          {
+            "type": "short",
+            "id": "IreKg1twCH4",
+            "url": "https://www.youtube.com/watch?v=IreKg1twCH4",
+            "title": "BEST budget Apple Watch in 2025🤔#applewatch",
+            "thumbnail": "https://i.ytimg.com/vi/IreKg1twCH4/oardefault.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLBDRG7TQ5qkxD6Fpba4L-0PqnjIDg",
+            "viewCountText": "90K",
+            "viewCountInt": 90000
+          },
+          {
+            "type": "short",
+            "id": "qEYu_s9dwaw",
+            "url": "https://www.youtube.com/watch?v=qEYu_s9dwaw",
+            "title": "Apple's Durability Lab!",
+            "thumbnail": "https://i.ytimg.com/vi/qEYu_s9dwaw/oardefault.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLD2EwPF4l579rL3bCl-7q9nmckMpQ",
+            "viewCountText": "17K",
+            "viewCountInt": 17000
+          },
+          {
+            "type": "short",
+            "id": "2-S30XL43mI",
+            "url": "https://www.youtube.com/watch?v=2-S30XL43mI",
+            "title": "@mkbhd  vs @Apple 's  Liquid Glass!",
+            "thumbnail": "https://i.ytimg.com/vi/2-S30XL43mI/oardefault.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLCJr08P3Rx7ZuxNL-A2qfQ13ceWVw",
+            "viewCountText": "137K",
+            "viewCountInt": 137000
+          },
+          {
+            "type": "short",
+            "id": "wAHYNgSAuMQ",
+            "url": "https://www.youtube.com/watch?v=wAHYNgSAuMQ",
+            "title": "The Real Reason for Macs",
+            "thumbnail": "https://i.ytimg.com/vi/wAHYNgSAuMQ/oar2.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLBmCD229EB18l8UniyWhHc75weXGg",
+            "viewCountText": "101K",
+            "viewCountInt": 101000
+          },
+          {
+            "type": "short",
+            "id": "fKLo-ZTVhyQ",
+            "url": "https://www.youtube.com/watch?v=fKLo-ZTVhyQ",
+            "title": "What's coming next from Apple?",
+            "thumbnail": "https://i.ytimg.com/vi/fKLo-ZTVhyQ/oar2.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLDufAVpFbqjLmRu71ow75Mp5IYDyQ",
+            "viewCountText": "6.9K",
+            "viewCountInt": 6900
+          },
+          {
+            "type": "short",
+            "id": "62Jg36rpJkA",
+            "url": "https://www.youtube.com/watch?v=62Jg36rpJkA",
+            "title": "Introducing Writing Tools on iPhone 16 & iPhone 16 Pro",
+            "thumbnail": "https://i.ytimg.com/vi/62Jg36rpJkA/oardefault.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLCihTlGsHlDoXVnTg7XaqWC5WRVAA",
+            "viewCountText": "220K",
+            "viewCountInt": 220000
+          },
+          {
+            "type": "short",
+            "id": "MzmYiiioq1o",
+            "url": "https://www.youtube.com/watch?v=MzmYiiioq1o",
+            "title": "How Apple Store put on Screen Protector on your iPhone!",
+            "thumbnail": "https://i.ytimg.com/vi/MzmYiiioq1o/oar2.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLBmbPepccz8_dTGxYk8WYzDFOescg",
+            "viewCountText": "20M",
+            "viewCountInt": 20000000
+          },
+          {
+            "type": "short",
+            "id": "DkUVqAIoryA",
+            "url": "https://www.youtube.com/watch?v=DkUVqAIoryA",
+            "title": "Steve Jobs introduces iPhone 4 & FaceTime first appearance #shorts #apple #stevejobs #tech #iphone",
+            "thumbnail": "https://i.ytimg.com/vi/DkUVqAIoryA/hq720_2.jpg?sqp=-oaymwEoCJUDENAFSFryq4qpAxoIARUAAIhC0AEB2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLAuTqMAHxhNtLfl_VqYZxL16K28zg",
+            "viewCountText": "875K",
+            "viewCountInt": 875000
+          },
+          {
+            "type": "short",
+            "id": "QnN04Esm0Ho",
+            "url": "https://www.youtube.com/watch?v=QnN04Esm0Ho",
+            "title": "Which Is the Ultimate Luxury Phone? VERTU vs Apple vs Xiaomi – Real Comparison",
+            "thumbnail": "https://i.ytimg.com/vi/QnN04Esm0Ho/oar2.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLDyWj6egqX4shLEMohBk6_MwMT7hg",
+            "viewCountText": "14K",
+            "viewCountInt": 14000
+          },
+          {
+            "type": "short",
+            "id": "UbG2-0pfc3A",
+            "url": "https://www.youtube.com/watch?v=UbG2-0pfc3A",
+            "title": "Hands On with Apple's Visual Intelligence",
+            "thumbnail": "https://i.ytimg.com/vi/UbG2-0pfc3A/oar2.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLD5mEuDR_AJvKRXL-YTHpyugJhDYw",
+            "viewCountText": "14K",
+            "viewCountInt": 14000
+          }
+        ]
+      },
+      {
+        "type": "shelf",
+        "title": "Shorts",
+        "items": [
+          {
+            "type": "short",
+            "id": "wqeM11oxX3s",
+            "url": "https://www.youtube.com/watch?v=wqeM11oxX3s",
+            "title": "4 Apple Products you Never knew Existed 😳",
+            "thumbnail": "https://i.ytimg.com/vi/wqeM11oxX3s/oar2.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLAkPgO5xCBNzdAd_TtI2a6CHW9d_A",
+            "viewCountText": "10M",
+            "viewCountInt": 10000000
+          },
+          {
+            "type": "short",
+            "id": "gM0A7JKB1pE",
+            "url": "https://www.youtube.com/watch?v=gM0A7JKB1pE",
+            "title": "The only Apple devices you need #shorts #apple #iphone #ipad #applewatch #macbook #ecosystem #tech",
+            "thumbnail": "https://i.ytimg.com/vi/gM0A7JKB1pE/oar2.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLBmuzeDeX8JqdPXadKz7rNctdbkKQ",
+            "viewCountText": "638K",
+            "viewCountInt": 638000
+          },
+          {
+            "type": "short",
+            "id": "7uj_4CatnNg",
+            "url": "https://www.youtube.com/watch?v=7uj_4CatnNg",
+            "title": "one of the many reasons why apple ecosystem is just makes sense 👨‍💻 #apple #ios #airpodspro",
+            "thumbnail": "https://i.ytimg.com/vi/7uj_4CatnNg/oar2.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLCcheVZbz7iQUpqWXjvfNYvzQW9Iw",
+            "viewCountText": "61K",
+            "viewCountInt": 61000
+          },
+          {
+            "type": "short",
+            "id": "T6hkupYbkFI",
+            "url": "https://www.youtube.com/watch?v=T6hkupYbkFI",
+            "title": "These are the WORST Apple products!",
+            "thumbnail": "https://i.ytimg.com/vi/T6hkupYbkFI/oar2.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLDSx5HSEiEw9D2_3zc8vzGVLrJi6g",
+            "viewCountText": "4.2M",
+            "viewCountInt": 4200000
+          },
+          {
+            "type": "short",
+            "id": "Ceqabjjgh8o",
+            "url": "https://www.youtube.com/watch?v=Ceqabjjgh8o",
+            "title": "$30 vs $300 Apple Watch!",
+            "thumbnail": "https://i.ytimg.com/vi/Ceqabjjgh8o/oar2.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLBZfus5hml9ibwiDheSAgphHXb-kg",
+            "viewCountText": "7.7M",
+            "viewCountInt": 7700000
+          },
+          {
+            "type": "short",
+            "id": "_jefSDX6N3s",
+            "url": "https://www.youtube.com/watch?v=_jefSDX6N3s",
+            "title": "Why Apple Products LAST!!",
+            "thumbnail": "https://i.ytimg.com/vi/_jefSDX6N3s/oardefault.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLA8cv-9kCse8IC2tj-0Jkma3ib-HQ",
+            "viewCountText": "510K",
+            "viewCountInt": 510000
+          },
+          {
+            "type": "short",
+            "id": "b4riHHPOz2o",
+            "url": "https://www.youtube.com/watch?v=b4riHHPOz2o",
+            "title": "unboxing the brand NEW apple mac studio + other apple goodies📦☁️",
+            "thumbnail": "https://i.ytimg.com/vi/b4riHHPOz2o/oar2.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLDB3ZJCouuP9u6JqcHYd_GisiNSgg",
+            "viewCountText": "3.6M",
+            "viewCountInt": 3600000
+          },
+          {
+            "type": "short",
+            "id": "SLpBl0BdccU",
+            "url": "https://www.youtube.com/watch?v=SLpBl0BdccU",
+            "title": "Apple Intelligence BEST FEATURES! 🤯",
+            "thumbnail": "https://i.ytimg.com/vi/SLpBl0BdccU/oardefault.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLBUSBUtspObMRbPZtwgE8jkA7piDg",
+            "viewCountText": "1.6M",
+            "viewCountInt": 1600000
+          },
+          {
+            "type": "short",
+            "id": "0SPRDDEAHWo",
+            "url": "https://www.youtube.com/watch?v=0SPRDDEAHWo",
+            "title": "5 Ways Apple's Products Save Lives",
+            "thumbnail": "https://i.ytimg.com/vi/0SPRDDEAHWo/oardefault.jpg?sqp=-oaymwEoCJUDENAFSFqQAgHyq4qpAxcIARUAAIhC2AEB4gEKCBgQAhgGOAFAAQ==&rs=AOn4CLBMjJn1JBpx_JGQv4MrBwVpQxGpzQ",
+            "viewCountText": "4.7K",
+            "viewCountInt": 4700
+          }
+        ]
+      },
+      {
+        "type": "shelf",
+        "title": "People also watched",
+        "items": [
+          {
+            "type": "video",
+            "id": "phYYB_Z5tkg",
+            "url": "https://www.youtube.com/watch?v=phYYB_Z5tkg",
+            "title": "Cedar cladding, and a sketchy ladder.",
+            "thumbnail": "https://i.ytimg.com/vi/phYYB_Z5tkg/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLBL0w1sQ2nQEARU8tgwspBFGrytzA",
+            "channel": {
+              "id": "UC0MGL-8ZUj8bB5rDdE4TXZQ",
+              "title": "Escape to rural France",
+              "handle": "escapetoruralfrance",
+              "thumbnail": "https://yt3.ggpht.com/CbCLZ5ys5xhPdo5UiF9eCU93RoxfcewHWUdBAiUqSC7cAOemCU6RImVzY_JRlIWOn_i00-nJy2E=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "18,951 views",
+            "viewCountInt": 18951,
+            "publishedTimeText": "26 minutes ago",
+            "publishedTime": "2025-06-23T19:11:28.445Z",
+            "lengthText": "9:43",
+            "lengthSeconds": 583,
+            "badges": [
+              "New",
+              "4K"
+            ]
+          },
+          {
+            "type": "video",
+            "id": "f5CPPcbrxi4",
+            "url": "https://www.youtube.com/watch?v=f5CPPcbrxi4",
+            "title": "Tesla Robotaxi Ride LIVESTREAM",
+            "thumbnail": "https://i.ytimg.com/vi/f5CPPcbrxi4/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLCbbXGaQIVuPOIs6f2klQbGU34JGQ",
+            "channel": {
+              "id": "UCLdTYHvdML-EXsPeiiYJLqA",
+              "title": "Kim Java",
+              "handle": "ItsKimJava",
+              "thumbnail": "https://yt3.ggpht.com/Y99-Goj8txrs_9ppQy3I-UN86Sa3CSt_72S5N4bGarYYHBLIf95tjgmlelxh-_h-BZ9sdIkQ7A=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "13,765 views",
+            "viewCountInt": 13765,
+            "publishedTimeText": "Streamed 4 hours ago",
+            "publishedTime": "2025-06-23T19:11:28.446Z",
+            "lengthText": "17:28",
+            "lengthSeconds": 1048,
+            "badges": [
+              "New"
+            ]
+          },
+          {
+            "type": "video",
+            "id": "3OIf8Omk9wI",
+            "url": "https://www.youtube.com/watch?v=3OIf8Omk9wI",
+            "title": "Dubai Police Surprised Us with Gifts & a Supercar Reveal! 🇦🇪🔥 | EP 06",
+            "thumbnail": "https://i.ytimg.com/vi/3OIf8Omk9wI/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLDBytbzwtytTIEiFvhpaMn8uLtPoQ",
+            "channel": {
+              "id": "UCMFqvZr7SMOR5tfxGoDFzEQ",
+              "title": "SHUTTERBOX FILMS",
+              "handle": "SHUTTERBOXFILMS",
+              "thumbnail": "https://yt3.ggpht.com/-3nx--as4yOAKoUQw621m7pSpGziCk5fuJ5mCftk5LF_mvYXRxQ6bhbcx9EBEJ9gj4ISyo8L=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "18,550 views",
+            "viewCountInt": 18550,
+            "publishedTimeText": "7 hours ago",
+            "publishedTime": "2025-06-23T19:11:28.446Z",
+            "lengthText": "16:15",
+            "lengthSeconds": 975,
+            "badges": [
+              "New",
+              "4K"
+            ]
+          },
+          {
+            "type": "video",
+            "id": "wJ1NSQSgVTE",
+            "url": "https://www.youtube.com/watch?v=wJ1NSQSgVTE",
+            "title": "iOS 26 is terrible.",
+            "thumbnail": "https://i.ytimg.com/vi/wJ1NSQSgVTE/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLBnSgL_5J4zQhYPvgOT9HogwWcv3w",
+            "channel": {
+              "id": "UC8jkbVLPvztz8TuE98OYo8Q",
+              "title": "fpt.",
+              "handle": "FrontPageTech",
+              "thumbnail": "https://yt3.ggpht.com/4Qt0e2sBMSTDjv1BVqI0MpMyWHOH8Y0vUJ2YsHFWiBPGL0t6LFM6TOtDUxcAPt4-TrAyzay2y6U=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "348,658 views",
+            "viewCountInt": 348658,
+            "publishedTimeText": "7 days ago",
+            "publishedTime": "2025-06-16T19:11:28.446Z",
+            "lengthText": "8:25",
+            "lengthSeconds": 505,
+            "badges": [
+              "4K"
+            ]
+          },
+          {
+            "type": "video",
+            "id": "5bj1UVT9Me8",
+            "url": "https://www.youtube.com/watch?v=5bj1UVT9Me8",
+            "title": "Thai businesses adapting after nation loses crown as most visited ASEAN country",
+            "thumbnail": "https://i.ytimg.com/vi/5bj1UVT9Me8/hqdefault.jpg?sqp=-oaymwEnCOADEI4CSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLAP9B0i7lx5-rFX9UgUIECmugdDow",
+            "channel": {
+              "id": "UC83jt4dlz1Gjl58fzQrrKZg",
+              "title": "CNA",
+              "handle": "channelnewsasia",
+              "thumbnail": "https://yt3.ggpht.com/ytc/AIdro_n00DzE39o-4IFJ07IP3gG__TMqKxXXbwYaARinwTXTDFM=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "169,243 views",
+            "viewCountInt": 169243,
+            "publishedTimeText": "14 hours ago",
+            "publishedTime": "2025-06-23T19:11:28.446Z",
+            "lengthText": "4:56",
+            "lengthSeconds": 296,
+            "badges": [
+              "New"
+            ]
+          },
+          {
+            "type": "video",
+            "id": "RoGQ2UzmJ9I",
+            "url": "https://www.youtube.com/watch?v=RoGQ2UzmJ9I",
+            "title": "Nahost-Krieg: Iran und Israel setzen ihre Angriffe fort",
+            "thumbnail": "https://i.ytimg.com/vi/RoGQ2UzmJ9I/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLAnmWo4V9ECSqySYGoX4V4ZdNhTcw",
+            "channel": {
+              "id": "UC5NOEUbkLheQcaaRldYW5GA",
+              "title": "tagesschau",
+              "handle": "tagesschau",
+              "thumbnail": "https://yt3.ggpht.com/9EmplOcwPUsr4FnvxJx_vQe8octHR-lmvdMBu5KEo1PfFWZQWV1QPg30v4YX4OQiA0matxfrCn0=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "33,367 views",
+            "viewCountInt": 33367,
+            "publishedTimeText": "4 hours ago",
+            "publishedTime": "2025-06-23T19:11:28.446Z",
+            "lengthText": "8:32",
+            "lengthSeconds": 512,
+            "badges": [
+              "New"
+            ]
+          },
+          {
+            "type": "video",
+            "id": "hpm6gV4aY5s",
+            "url": "https://www.youtube.com/watch?v=hpm6gV4aY5s",
+            "title": "Bloomberg Tech Summit",
+            "thumbnail": "https://i.ytimg.com/vi/hpm6gV4aY5s/hqdefault.jpg?sqp=-oaymwEnCOADEI4CSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLAG5IDV0BeBvjnEx4BQe1NqzavuEw",
+            "channel": {
+              "id": "UCrM7B7SL_g1edFOnmj-SDKg",
+              "title": "Bloomberg Technology",
+              "handle": "BloombergTechnology",
+              "thumbnail": "https://yt3.ggpht.com/12DXqfZQBwvHFBp31Teww9briF_9d45RTmGp6fiYScdvI4LZ3xPEfmw54EXV4o6tQMuG1I2t4Q=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "1,241 views",
+            "viewCountInt": 1241,
+            "publishedTimeText": "5 hours ago",
+            "publishedTime": "2025-06-23T19:11:28.446Z",
+            "lengthText": "23:56",
+            "lengthSeconds": 1436,
+            "badges": [
+              "New",
+              "CC"
+            ]
+          },
+          {
+            "type": "video",
+            "id": "yI7fV88T8A0",
+            "url": "https://www.youtube.com/watch?v=yI7fV88T8A0",
+            "title": "Gaming on the Apple SERVER? - XServe 3,1",
+            "thumbnail": "https://i.ytimg.com/vi/yI7fV88T8A0/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLCq9Ni4IYZSbyoYavfcKlqeNxNuOQ",
+            "channel": {
+              "id": "UCXuqSBlHAE6Xw-yeJA0Tunw",
+              "title": "Linus Tech Tips",
+              "handle": "LinusTechTips",
+              "thumbnail": "https://yt3.ggpht.com/gnvYLhXy8FAlPXZ2RTrkrgj-5kyt0vdE2FUGVOiKGdEZIa-wN5A-7nwZBlWJLzUMmoh1NWAU=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "1,716,874 views",
+            "viewCountInt": 1716874,
+            "publishedTimeText": "1 year ago",
+            "publishedTime": "2024-06-23T19:11:28.446Z",
+            "lengthText": "20:22",
+            "lengthSeconds": 1222,
+            "badges": [
+              "4K",
+              "CC"
+            ]
+          },
+          {
+            "type": "video",
+            "id": "GZwbhgS9fuc",
+            "url": "https://www.youtube.com/watch?v=GZwbhgS9fuc",
+            "title": "Why Avocados Are So Expensive | So Expensive",
+            "thumbnail": "https://i.ytimg.com/vi/GZwbhgS9fuc/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLA0DmQYk2G860llsX5xQK6BPz2Sqg",
+            "channel": {
+              "id": "UCcyq283he07B7_KUX07mmtA",
+              "title": "Business Insider",
+              "handle": "BusinessInsider",
+              "thumbnail": "https://yt3.ggpht.com/pjDcIrc21oYPCkKpfY1zElDRHhw907VyW4zpuhJP5YCCvZPpyt0de08XM-uECMPQFAsidNK0bw=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "4,593,204 views",
+            "viewCountInt": 4593204,
+            "publishedTimeText": "5 years ago",
+            "publishedTime": "2020-06-23T19:11:28.446Z",
+            "lengthText": "8:34",
+            "lengthSeconds": 514,
+            "badges": [
+              "CC"
+            ]
+          }
+        ]
+      },
+      {
+        "type": "shelf",
+        "title": "From related searches",
+        "items": [
+          {
+            "type": "video",
+            "id": "m1QQWvE18kU",
+            "url": "https://www.youtube.com/watch?v=m1QQWvE18kU",
+            "title": "Outage Protection | You Are In Control",
+            "thumbnail": "https://i.ytimg.com/vi/m1QQWvE18kU/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLCOhwxqQ1oTk0ickh-XZQyVyBdyAA",
+            "channel": {
+              "id": "UC5WjFrtBdufl6CZojX3D8dQ",
+              "title": "Tesla",
+              "handle": "tesla",
+              "thumbnail": "https://yt3.ggpht.com/YMRZbg8UjcGgiFOj4qxIWynUkxkV9h5KcpbQGO3yuJnU34Lga3UJeCEAP3T-t7MmNj8Yxsw-EQ=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "92,151 views",
+            "viewCountInt": 92151,
+            "publishedTimeText": "1 month ago",
+            "publishedTime": "2025-05-23T19:11:28.446Z",
+            "lengthText": "2:01",
+            "lengthSeconds": 121,
+            "badges": [
+              "4K"
+            ]
+          },
+          {
+            "type": "video",
+            "id": "o_YV7lSEbO0",
+            "url": "https://www.youtube.com/watch?v=o_YV7lSEbO0",
+            "title": "ALL Mickey Mouse Clubhouse Season 1 Full Episodes | Compilation | @disneyjr",
+            "thumbnail": "https://i.ytimg.com/vi/o_YV7lSEbO0/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLCn9AxfkAmRnPy3VACv7CdLlYlqbA",
+            "channel": {
+              "id": "UCNcdbMyA59zE-Vk668bKWOg",
+              "title": "Disney Jr. ",
+              "handle": "disneyjr",
+              "thumbnail": "https://yt3.ggpht.com/ycmH6u_8GXdVOSwL8K8D0QSLxzoJvd6yiRORWT0QYosXdtBBOkqQdXTR4DS6kDHd-U49Z3dcpHY=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "40,614,852 views",
+            "viewCountInt": 40614852,
+            "publishedTimeText": "5 months ago",
+            "publishedTime": "2025-01-23T19:11:28.446Z",
+            "lengthText": "10:24:53",
+            "lengthSeconds": 37493,
+            "badges": []
+          },
+          {
+            "type": "video",
+            "id": "_waPvOwL9Z8",
+            "url": "https://www.youtube.com/watch?v=_waPvOwL9Z8",
+            "title": "GTC March 2025 Keynote with NVIDIA CEO Jensen Huang",
+            "thumbnail": "https://i.ytimg.com/vi/_waPvOwL9Z8/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLBgWFCSXfMkeXHkWy3DHCB8QUSJbQ",
+            "channel": {
+              "id": "UCHuiy8bXnmK5nisYHUd1J5g",
+              "title": "NVIDIA",
+              "handle": "NVIDIA",
+              "thumbnail": "https://yt3.ggpht.com/btm1_PK-7VRUr9GY2D0UV_2XfbUZPBjghyptjSO1crsfN86HyTYDWPmUbq7JxC3H0Lxe_s067nA=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "37,450,803 views",
+            "viewCountInt": 37450803,
+            "publishedTimeText": "Streamed 3 months ago",
+            "publishedTime": "2025-06-23T19:11:28.446Z",
+            "lengthText": "2:11:48",
+            "lengthSeconds": 7908,
+            "badges": [
+              "4K",
+              "CC"
+            ]
+          }
+        ]
+      }
+    ],
+    "lives": [
+      {
+        "type": "live",
+        "id": "0_DjDdfqtUE",
+        "url": "https://www.youtube.com/watch?v=0_DjDdfqtUE",
+        "title": "WWDC 2025 — June 9 | Apple",
+        "thumbnail": "https://i.ytimg.com/vi/0_DjDdfqtUE/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLC_KiX3CIyjHyULh5I2Bu6nyaG_CQ",
+        "channel": {
+          "id": "UCE_M8A5yxnLfW0KghEeajjw",
+          "title": "Apple",
+          "handle": "Apple",
+          "thumbnail": "https://yt3.ggpht.com/s5hlNKKDDQWjFGzYNnh8UeOW2j2w6id-cZGx7GdAA3d5Fu7zEi7ZMXEyslysuQUKigXNxtAB=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "8,269,610 views",
+        "viewCountInt": 8269610,
+        "publishedTimeText": "Streamed 2 weeks ago",
+        "publishedTime": "2025-06-23T19:11:28.445Z",
+        "lengthText": "1:32:26",
+        "lengthSeconds": 5546,
+        "badges": [
+          "4K",
+          "CC"
+        ]
+      }
+    ],
+    "continuationToken": "ErgDEhFhcHBsZSwgdGVjaG5vbG9neRqiA1NCU0NBUXRSZWpoMU1EQndXRGN6T0lJQkMzVlFiMTkzYlZJMFlUWTRnZ0VMTUY5RWFrUmtabkYwVlVXQ0FRdEhSMDFvVVd0SVEycDRiNElCQzJFeFdFdHRXRXd5WkZWUmdnRVlWVU5GWDAwNFFUVjVlRzVNWmxjd1MyZG9SV1ZoYW1wM2dnRUxhSG8yYjNsek5FVmxiVFNDQVFzMWVqSnFTMU5LUWpOWlk0SUJDMHhhV1daVFdWaFpMV2R2Z2dFTFUweHdRbXd3UW1SalkxV0NBUXRsUm01cU4weDJhSFpTTklJQkN6ZDFSbkowY1ZOM1dYcE5nZ0VMTjJrM2F6TlBRVnAxVWpDQ0FRdGZhbVZtVTBSWU5rNHpjNElCQ3pKeFMxRldjWGRqT1hsVmdnRUxha2Q2ZEVkbVVuVnFVMFdDQVFzNGIxQllkR1phYkhOMGI0SUJDMUIxWjB0UldraFFkWFE0Z2dFTFpYQXljSFI0YkVKeGR6aUNBUXRQZURCTVlqSXRaREZ4T0xJQkJnb0VDQmtRQXVvQkJBZ0NFREUlM0QYgeDoGCILc2VhcmNoLWZlZWQ%3D"
+  },
+  "firstVideoSample": {
+    "type": "video",
+    "id": "Qz8u00pX738",
+    "url": "https://www.youtube.com/watch?v=Qz8u00pX738",
+    "title": "New things on the way from Apple",
+    "thumbnail": "https://i.ytimg.com/vi/Qz8u00pX738/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLBsnbb6QXo3G646ZhHIbyGDi-TYdg",
+    "channel": {
+      "id": "UCE_M8A5yxnLfW0KghEeajjw",
+      "title": "Apple",
+      "handle": "Apple",
+      "thumbnail": "https://yt3.ggpht.com/s5hlNKKDDQWjFGzYNnh8UeOW2j2w6id-cZGx7GdAA3d5Fu7zEi7ZMXEyslysuQUKigXNxtAB=s68-c-k-c0x00ffffff-no-rj"
+    },
+    "viewCountText": "1,201,739 views",
+    "viewCountInt": 1201739,
+    "publishedTimeText": "2 weeks ago",
+    "publishedTime": "2025-06-09T19:11:28.445Z",
+    "lengthText": "2:14",
+    "lengthSeconds": 134,
+    "badges": [
+      "4K",
+      "CC"
+    ]
+  },
+  "videoCount": 13,
+  "hasContinuation": true,
+  "dataStructure": {
+    "hasVideos": true,
+    "videoCount": 13,
+    "sampleVideoKeys": [
+      "type",
+      "id",
+      "url",
+      "title",
+      "thumbnail",
+      "channel",
+      "viewCountText",
+      "viewCountInt",
+      "publishedTimeText",
+      "publishedTime",
+      "lengthText",
+      "lengthSeconds",
+      "badges"
+    ],
+    "sampleChannelKeys": [
+      "id",
+      "title",
+      "handle",
+      "thumbnail"
+    ]
+  }
+}
