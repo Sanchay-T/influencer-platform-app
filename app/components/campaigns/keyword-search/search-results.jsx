@@ -307,14 +307,6 @@ const SearchResults = ({ searchData }) => {
               <TableHead>Email</TableHead>
               <TableHead>Video Title</TableHead>
               <TableHead>Views</TableHead>
-              {searchData.selectedPlatform === 'tiktok' && (
-                <>
-                  <TableHead>Likes</TableHead>
-                  <TableHead>Comments</TableHead>
-                  <TableHead>Shares</TableHead>
-                </>
-              )}
-              <TableHead>Duration</TableHead>
               <TableHead>Link</TableHead>
             </TableRow>
           </TableHeader>
@@ -425,14 +417,6 @@ const SearchResults = ({ searchData }) => {
                     </div>
                   </TableCell>
                   <TableCell>{(creator.video?.statistics?.views || 0).toLocaleString()}</TableCell>
-                  {searchData.selectedPlatform === 'tiktok' && (
-                    <>
-                      <TableCell>{(creator.video?.statistics?.likes || 0).toLocaleString()}</TableCell>
-                      <TableCell>{(creator.video?.statistics?.comments || 0).toLocaleString()}</TableCell>
-                      <TableCell>{(creator.video?.statistics?.shares || 0).toLocaleString()}</TableCell>
-                    </>
-                  )}
-                  <TableCell>{formatDuration(creator.lengthSeconds || 0)}</TableCell>
                   <TableCell>
                     {creator.video?.url && (
                       <a 
