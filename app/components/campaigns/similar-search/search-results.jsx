@@ -33,7 +33,12 @@ export default function SimilarSearchResults({ searchData }) {
   };
 
   const renderProfileLink = (creator) => {
-    // Check platform from creator data or searchData
+    // Use profileUrl if available (from enhanced backend data), otherwise generate
+    if (creator.profileUrl) {
+      return creator.profileUrl;
+    }
+    
+    // Fallback: Check platform from creator data or searchData
     const platform = creator.platform || searchData.platform || 'Instagram';
     if (platform === 'TikTok' || platform === 'tiktok') {
       return `https://www.tiktok.com/@${creator.username}`;
@@ -183,6 +188,8 @@ export default function SimilarSearchResults({ searchData }) {
               <TableHead>Profile</TableHead>
               <TableHead>Username</TableHead>
               <TableHead>Full Name</TableHead>
+              <TableHead>Bio</TableHead>
+              <TableHead>Email</TableHead>
               <TableHead>Private</TableHead>
               <TableHead>Verified</TableHead>
             </TableRow>
@@ -216,12 +223,47 @@ export default function SimilarSearchResults({ searchData }) {
                       href={renderProfileLink(creator)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
+                      className="text-blue-600 hover:text-blue-800 hover:underline font-medium transition-colors duration-200 flex items-center gap-1"
+                      title={`View ${creator.username}'s profile on ${creator.platform || searchData.platform || 'Instagram'}`}
                     >
                       @{creator.username}
+                      <svg className="w-3 h-3 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
                     </a>
                   </TableCell>
                   <TableCell>{creator.full_name}</TableCell>
+                  <TableCell>
+                    <div className="max-w-[200px] truncate" title={creator.bio || 'No bio available'}>
+                      {creator.bio ? (
+                        <span className="text-sm text-gray-700">{creator.bio}</span>
+                      ) : (
+                        <span className="text-gray-400 text-sm">Not available</span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {creator.emails && creator.emails.length > 0 ? (
+                      <div className="space-y-1">
+                        {creator.emails.map((email, emailIndex) => (
+                          <div key={emailIndex} className="flex items-center gap-1">
+                            <a 
+                              href={`mailto:${email}`}
+                              className="text-blue-600 hover:underline text-sm"
+                              title={`Send email to ${email}`}
+                            >
+                              {email}
+                            </a>
+                            <svg className="w-3 h-3 opacity-60 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400 text-sm">Not available</span>
+                    )}
+                  </TableCell>
                   <TableCell>{creator.is_private ? "Yes" : "No"}</TableCell>
                   <TableCell>{creator.is_verified ? "Yes" : "No"}</TableCell>
                 </TableRow>

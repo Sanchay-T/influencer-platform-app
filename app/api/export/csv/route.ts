@@ -425,12 +425,18 @@ export async function GET(req: Request) {
         });
         console.log('CSV Export: Generated CSV with old TikTok structure');
       } else if ('username' in firstCreator && ('is_private' in firstCreator || 'full_name' in firstCreator)) {
-        // Instagram structure
-        csvContent = 'Username,Full Name,Private,Verified,Profile URL\n';
+        // Instagram similar search structure - enhanced with bio and email
+        csvContent = 'Username,Full Name,Bio,Email,Private,Verified,Profile URL,Platform\n';
         creators.forEach(creator => {
-          csvContent += `"${creator.username || ''}","${creator.full_name || ''}","${creator.is_private || ''}","${creator.is_verified || ''}","${creator.profile_pic_url || ''}"\n`;
+          // Extract bio and emails for Instagram export
+          const bio = (creator.bio || '').replace(/"/g, '""'); // Escape quotes for CSV
+          const emails = Array.isArray(creator.emails) ? creator.emails.join('; ') : '';
+          const profileUrl = creator.profileUrl || `https://instagram.com/${creator.username}`;
+          const platform = creator.platform || 'Instagram';
+          
+          csvContent += `"${creator.username || ''}","${creator.full_name || ''}","${bio}","${emails}","${creator.is_private ? 'Yes' : 'No'}","${creator.is_verified ? 'Yes' : 'No'}","${profileUrl}","${platform}"\n`;
         });
-        console.log('CSV Export: Generated CSV with Instagram structure');
+        console.log('CSV Export: Generated CSV with enhanced Instagram structure (bio/email included)');
       } else {
         // Fallback for unknown structure - just try to extract common fields
         const fields = Object.keys(firstCreator);

@@ -3,6 +3,8 @@
  */
 
 import { TikTokProfileResponse, TikTokUserSearchResponse } from './types';
+import { writeFileSync } from 'fs';
+import { join } from 'path';
 
 const BASE_URL = 'https://api.scrapecreators.com';
 
@@ -26,7 +28,8 @@ export async function getTikTokProfile(handle: string): Promise<TikTokProfileRes
   console.log('📋 [API-REQUEST] Headers:', JSON.stringify({ ...requestHeaders, 'x-api-key': '[REDACTED]' }, null, 2));
   
   const response = await fetch(url, {
-    headers: requestHeaders
+    headers: requestHeaders,
+    signal: AbortSignal.timeout(30000) // 30 second timeout
   });
 
   const responseTime = Date.now() - requestStartTime;
@@ -44,6 +47,29 @@ export async function getTikTokProfile(handle: string): Promise<TikTokProfileRes
   console.log('📝 [API-RESPONSE] Raw response length:', responseText.length);
   console.log('📝 [API-RESPONSE] Raw response (first 1000 chars):', responseText.substring(0, 1000));
   
+  // Save raw response to file for analysis
+  try {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `tiktok-profile-${handle}-${timestamp}.json`;
+    const logPath = join(process.cwd(), 'logs', 'raw-responses', filename);
+    
+    const logData = {
+      timestamp: new Date().toISOString(),
+      platform: 'TikTok',
+      apiType: 'Profile',
+      handle: handle,
+      requestUrl: url,
+      responseStatus: response.status,
+      responseTime: responseTime,
+      rawResponse: responseText
+    };
+    
+    writeFileSync(logPath, JSON.stringify(logData, null, 2));
+    console.log('💾 [FILE-LOG] Raw response saved to:', logPath);
+  } catch (fileError: any) {
+    console.error('❌ [FILE-LOG] Failed to save response:', fileError.message);
+  }
+  
   const jsonData = JSON.parse(responseText);
   console.log('✅ [API-RESPONSE] JSON parsed successfully');
   
@@ -55,9 +81,23 @@ export async function getTikTokProfile(handle: string): Promise<TikTokProfileRes
       nickname: jsonData.user.nickname,
       verified: jsonData.user.verified,
       privateAccount: jsonData.user.privateAccount,
+      signature: jsonData.user.signature || 'NO_SIGNATURE_FOUND',
       followingCount: jsonData.stats?.followingCount,
       followerCount: jsonData.stats?.followerCount,
       videoCount: jsonData.stats?.videoCount
+    });
+    
+    // Enhanced Bio & Email Analysis for TikTok Profile
+    const bio = jsonData.user.signature || '';
+    const emailRegex = /[\w\.-]+@[\w\.-]+\.\w+/g;
+    const extractedEmails = bio.match(emailRegex) || [];
+    
+    console.log('📧 [EMAIL-EXTRACTION] TikTok Profile - Bio analysis:', {
+      hasBio: !!bio,
+      bioLength: bio.length,
+      bioPreview: bio.substring(0, 100),
+      emailsFound: extractedEmails,
+      emailCount: extractedEmails.length
     });
   }
   
@@ -88,7 +128,8 @@ export async function searchTikTokUsers(
   console.log('📋 [API-REQUEST] Headers:', JSON.stringify({ ...requestHeaders, 'x-api-key': '[REDACTED]' }, null, 2));
   
   const response = await fetch(url, {
-    headers: requestHeaders
+    headers: requestHeaders,
+    signal: AbortSignal.timeout(30000) // 30 second timeout
   });
 
   const responseTime = Date.now() - requestStartTime;
@@ -105,6 +146,30 @@ export async function searchTikTokUsers(
   const responseText = await response.text();
   console.log('📝 [API-RESPONSE] Raw response length:', responseText.length);
   console.log('📝 [API-RESPONSE] Raw response (first 1000 chars):', responseText.substring(0, 1000));
+  
+  // Save raw response to file for analysis
+  try {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `tiktok-usersearch-${keyword.replace(/[^a-zA-Z0-9]/g, '_')}-${timestamp}.json`;
+    const logPath = join(process.cwd(), 'logs', 'raw-responses', filename);
+    
+    const logData = {
+      timestamp: new Date().toISOString(),
+      platform: 'TikTok',
+      apiType: 'UserSearch',
+      keyword: keyword,
+      cursor: cursor,
+      requestUrl: url,
+      responseStatus: response.status,
+      responseTime: responseTime,
+      rawResponse: responseText
+    };
+    
+    writeFileSync(logPath, JSON.stringify(logData, null, 2));
+    console.log('💾 [FILE-LOG] Raw response saved to:', logPath);
+  } catch (fileError: any) {
+    console.error('❌ [FILE-LOG] Failed to save response:', fileError.message);
+  }
   
   const jsonData = JSON.parse(responseText);
   console.log('✅ [API-RESPONSE] JSON parsed successfully');

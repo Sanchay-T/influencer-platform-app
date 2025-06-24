@@ -231,6 +231,29 @@ export async function POST(req: Request) {
         console.log('📝 [API-RESPONSE] Raw response length:', responseText.length);
         console.log('📝 [API-RESPONSE] Raw response (first 1000 chars):', responseText.substring(0, 1000));
         
+        // Save raw response to file for analysis
+        try {
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+          const filename = `instagram-similar-${job.targetUsername}-${timestamp}.json`;
+          const logPath = require('path').join(process.cwd(), 'logs', 'raw-responses', filename);
+          
+          const logData = {
+            timestamp: new Date().toISOString(),
+            platform: 'Instagram',
+            apiType: 'SimilarSearch',
+            targetUsername: job.targetUsername,
+            requestUrl: apiUrl,
+            responseStatus: scrapingResponse.status,
+            responseTime: responseTime,
+            rawResponse: responseText
+          };
+          
+          require('fs').writeFileSync(logPath, JSON.stringify(logData, null, 2));
+          console.log('💾 [FILE-LOG] Raw response saved to:', logPath);
+        } catch (fileError: any) {
+          console.error('❌ [FILE-LOG] Failed to save response:', fileError.message);
+        }
+        
         // Intentar parsear el JSON con manejo de errores
         let instagramData: ScrapeCreatorsInstagramResponse;
         try {
@@ -304,16 +327,35 @@ export async function POST(req: Request) {
           }, { status: 400 });
         }
 
-        // Extraer perfil principal con enhanced logging
+        // Enhanced main profile extraction with bio and email extraction
+        const mainUserData = instagramData.data.user;
+        const mainProfileBio = mainUserData.biography || '';
+        
+        // Extract emails from main profile bio
+        const emailRegex = /[\w\.-]+@[\w\.-]+\.\w+/g;
+        const mainProfileEmails = mainProfileBio.match(emailRegex) || [];
+        
+        console.log('📧 [EMAIL-EXTRACTION] Instagram Main Profile - Bio analysis:', {
+          username: mainUserData.username,
+          bioLength: mainProfileBio.length,
+          bioPreview: mainProfileBio.substring(0, 100),
+          emailsFound: mainProfileEmails,
+          emailCount: mainProfileEmails.length
+        });
+        
         const mainProfile = {
           id: job.targetUsername, // Usamos el targetUsername como ID en lugar de buscar un id que no existe
-          username: instagramData.data.user.username,
-          full_name: instagramData.data.user.full_name,
-          profile_pic_url_hd: instagramData.data.user.profile_pic_url_hd,
+          username: mainUserData.username,
+          full_name: mainUserData.full_name,
+          profile_pic_url_hd: mainUserData.profile_pic_url_hd,
+          profile_pic_url: mainUserData.profile_pic_url_hd, // For consistency
           is_private: false,  // Valores por defecto ya que estamos buscando un perfil público
-          is_verified: true   // Asumimos verificado para el perfil principal
+          is_verified: true,   // Asumimos verificado para el perfil principal
+          bio: mainProfileBio, // Add bio data
+          emails: mainProfileEmails, // Add extracted emails
+          profileUrl: `https://www.instagram.com/${mainUserData.username}` // Add profile URL
         };
-        console.log('🔄 [TRANSFORMATION] Main profile extracted:', JSON.stringify(mainProfile, null, 2));
+        console.log('🔄 [TRANSFORMATION] Enhanced main profile extracted:', JSON.stringify(mainProfile, null, 2));
 
         // Extraer perfiles relacionados
         const relatedProfilesEdges = instagramData.data.user.edge_related_profiles.edges || [];
@@ -340,22 +382,64 @@ export async function POST(req: Request) {
           });
         }
 
-        // Transformar perfiles relacionados al formato necesario usando la tipificación de la interfaz principal
-        const relatedProfiles = relatedProfilesEdges.map((edge: ScrapeCreatorsInstagramResponse['data']['user']['edge_related_profiles']['edges'][0]) => {
+        // Enhanced related profiles transformation with bio extraction potential
+        console.log('🔄 [ENHANCED-BIO] Processing related profiles with enhanced data extraction');
+        
+        const relatedProfiles: any[] = [];
+        
+        // Process related profiles sequentially to add enhanced data
+        for (let i = 0; i < relatedProfilesEdges.length; i++) {
+          const edge = relatedProfilesEdges[i];
           const node = edge.node;
-          return {
+          
+          // Basic profile data (always available)
+          let profileData = {
             id: node.id,
             username: node.username,
             full_name: node.full_name || '',
             is_private: Boolean(node.is_private),
             is_verified: Boolean(node.is_verified),
-            profile_pic_url: node.profile_pic_url || ''
+            profile_pic_url: node.profile_pic_url || '',
+            bio: '', // Default empty, will try to enhance
+            emails: [] as string[], // Default empty, will try to enhance
+            profileUrl: `https://www.instagram.com/${node.username}` // Add profile URL
           };
-        });
+          
+          // Optional: Try to get bio data for non-private profiles
+          // Note: This would require individual API calls and may be rate-limited
+          if (!node.is_private) {
+            try {
+              console.log(`🔍 [ENHANCED-BIO] Attempting to fetch bio for @${node.username} (${i + 1}/${relatedProfilesEdges.length})`);
+              
+              // For now, we'll use a placeholder since individual Instagram profile API calls 
+              // would require the same API endpoint but for each username
+              // This could be implemented if needed: 
+              // const profileResponse = await fetch(`${process.env.SCRAPECREATORS_INSTAGRAM_API_URL}?handle=${node.username}`);
+              
+              console.log(`ℹ️ [ENHANCED-BIO] Bio extraction for related profiles requires individual API calls - currently using basic data only`);
+              
+              // Placeholder for enhanced bio extraction
+              // If we had bio data, we would extract emails like this:
+              // const bio = profileData.biography || '';
+              // const emails = bio.match(emailRegex) || [];
+              // profileData.bio = bio;
+              // profileData.emails = emails;
+              
+            } catch (bioError: any) {
+              console.log(`⚠️ [ENHANCED-BIO] Failed to fetch bio for @${node.username}: ${bioError.message}`);
+            }
+          } else {
+            console.log(`🔒 [ENHANCED-BIO] Skipping private profile @${node.username}`);
+          }
+          
+          relatedProfiles.push(profileData);
+          
+          console.log(`✅ [ENHANCED-BIO] Processed related profile ${i + 1}/${relatedProfilesEdges.length}: @${node.username}`);
+        }
 
-        console.log('🔄 [TRANSFORMATION] Related profiles processed:', relatedProfiles.length);
+        console.log('🔄 [TRANSFORMATION] Enhanced related profiles processed:', relatedProfiles.length);
         if (relatedProfiles[0]) {
-          console.log('🔄 [TRANSFORMATION] First related profile transformed:', JSON.stringify(relatedProfiles[0], null, 2));
+          console.log('🔄 [TRANSFORMATION] First enhanced related profile:', JSON.stringify(relatedProfiles[0], null, 2));
         }
 
         // Combinamos el perfil principal y los perfiles relacionados

@@ -39,7 +39,7 @@ interface ScrapeCreatorsResponse {
 const TIMEOUT_MINUTES = 60;
 
 // Global parameter to limit API calls for testing
-const MAX_API_CALLS_FOR_TESTING = 2;
+const MAX_API_CALLS_FOR_TESTING = 1;
 
 // Inicializar el receptor de QStash
 const receiver = new Receiver({

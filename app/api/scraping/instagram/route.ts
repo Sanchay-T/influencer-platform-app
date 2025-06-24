@@ -109,14 +109,16 @@ export async function POST(req: Request) {
       console.log('✅ Job creado correctamente:', job.id);
 
       console.log('🔍 Encolando procesamiento en QStash');
-      // Obtener la URL base del ambiente actual
-      const currentHost = req.headers.get('host') || process.env.VERCEL_URL || 'influencerplatform.vercel.app';
-      const protocol = currentHost.includes('localhost') ? 'http' : 'https';
-      const baseUrl = `${protocol}://${currentHost}`;
+      
+      // Determine the correct URL for QStash callback
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL || 'https://influencerplatform.vercel.app';
+      const qstashCallbackUrl = `${siteUrl}/api/qstash/process-scraping`;
+      
+      console.log('🌐 QStash callback URL:', qstashCallbackUrl);
       
       // Encolar el procesamiento en QStash
       const result = await qstash.publishJSON({
-        url: `${baseUrl}/api/qstash/process-scraping`,
+        url: qstashCallbackUrl,
         body: { jobId: job.id },
         retries: 3,
         notifyOnFailure: true

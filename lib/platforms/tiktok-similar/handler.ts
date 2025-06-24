@@ -7,7 +7,7 @@ import { scrapingJobs, scrapingResults } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { qstash } from '@/lib/queue/qstash';
 import { getTikTokProfile, searchTikTokUsers } from './api';
-import { extractSearchKeywords, transformTikTokUsers } from './transformer';
+import { extractSearchKeywords, transformTikTokUsers, transformTikTokUser, transformTikTokUserWithEnhancedBio } from './transformer';
 import { TikTokSimilarCreator, TikTokSimilarSearchResult } from './types';
 
 // Same testing limits as other platforms
@@ -102,10 +102,12 @@ export async function processTikTokSimilarJob(job: any, jobId: string) {
         }).where(eq(scrapingJobs.id, jobId));
         
         if (searchResponse.users && searchResponse.users.length > 0) {
+          // Fast basic transformation only - no additional API calls
+          console.log(`🔄 [FAST-TRANSFORM] Processing ${searchResponse.users.length} users with basic bio extraction`);
+          
           const transformedUsers = transformTikTokUsers(searchResponse, keyword);
           
-          // Enhanced transformation logging
-          console.log(`🔄 [TRANSFORMATION] Transformed ${transformedUsers.length} users for keyword "${keyword}"`);
+          console.log(`🔄 [TRANSFORMATION] Fast transformation completed: ${transformedUsers.length} total users for keyword "${keyword}"`);
           if (transformedUsers[0]) {
             console.log('👤 [FIRST-PROFILE] First transformed user from search:', JSON.stringify(transformedUsers[0], null, 2));
           }
