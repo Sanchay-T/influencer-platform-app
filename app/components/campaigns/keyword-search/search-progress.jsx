@@ -56,10 +56,11 @@ export default function SearchProgress({ jobId, onComplete, platform = 'tiktok' 
         
         console.log('📡 [SEARCH-PROGRESS] Poll response:', {
           status: response.status,
-          jobStatus: data.status,
-          progress: data.progress,
-          processedResults: data.processedResults,
-          error: data.error
+          jobStatus: data.job?.status || data.status,
+          progress: data.job?.progress || data.progress,
+          processedResults: data.job?.processedResults || data.processedResults,
+          error: data.job?.error || data.error,
+          fullData: data
         });
 
         if (data.error) {
@@ -84,17 +85,32 @@ export default function SearchProgress({ jobId, onComplete, platform = 'tiktok' 
         // Enhanced progress calculation with detailed logging
         let calculatedProgress = 0;
         
+        // Handle both old format (data.progress) and new format (data.job.progress)
+        const jobData = data.job || data;
+        const currentStatus = jobData.status;
+        const currentProgress = jobData.progress;
+        const currentProcessedResults = jobData.processedResults;
+        const currentTargetResults = jobData.targetResults;
+        
+        console.log('📈 [SEARCH-PROGRESS] Job data extraction:', {
+          hasJobProperty: !!data.job,
+          status: currentStatus,
+          progress: currentProgress,
+          processedResults: currentProcessedResults,
+          targetResults: currentTargetResults
+        });
+        
         // First, check if we have explicit progress from the API
-        if (data.progress !== undefined && data.progress !== null) {
-          calculatedProgress = parseFloat(data.progress);
+        if (currentProgress !== undefined && currentProgress !== null) {
+          calculatedProgress = parseFloat(currentProgress);
           console.log('📈 [SEARCH-PROGRESS] Using explicit progress:', calculatedProgress);
         } 
         // Otherwise, calculate from processed results
-        else if (data.processedResults && data.targetResults) {
-          calculatedProgress = (data.processedResults / data.targetResults) * 100;
+        else if (currentProcessedResults && currentTargetResults) {
+          calculatedProgress = (currentProcessedResults / currentTargetResults) * 100;
           console.log('📈 [SEARCH-PROGRESS] Calculated from results:', {
-            processedResults: data.processedResults,
-            targetResults: data.targetResults,
+            processedResults: currentProcessedResults,
+            targetResults: currentTargetResults,
             calculated: calculatedProgress
           });
         }
@@ -110,26 +126,26 @@ export default function SearchProgress({ jobId, onComplete, platform = 'tiktok' 
         }
         
         // IMPORTANT: Check if Instagram job is stuck at 99%
-        if (normalizedPlatform === 'instagram' && calculatedProgress >= 99 && data.status !== 'completed') {
+        if (normalizedPlatform === 'instagram' && calculatedProgress >= 99 && currentStatus !== 'completed') {
           console.warn('⚠️ [SEARCH-PROGRESS] Instagram job stuck at 99%!', {
             jobId: jobId,
-            status: data.status,
+            status: currentStatus,
             progress: calculatedProgress,
-            rawProgress: data.progress,
-            processedResults: data.processedResults,
-            targetResults: data.targetResults,
+            rawProgress: currentProgress,
+            processedResults: currentProcessedResults,
+            targetResults: currentTargetResults,
             fullData: data
           });
         }
         
         setProgress(calculatedProgress);
-        setStatus(data.status);
+        setStatus(currentStatus);
 
         // Smoothly animate progress - never decrease, only increase
         setDisplayProgress(prev => Math.max(prev, calculatedProgress));
 
         // Check for completion
-        if (data.status === 'completed') {
+        if (currentStatus === 'completed') {
           console.log('🎉 [SEARCH-PROGRESS] Job completed! Stopping polling.');
           clearInterval(pollIntervalRef.current);
           // Ensure we set progress to 100 when completed
@@ -142,7 +158,7 @@ export default function SearchProgress({ jobId, onComplete, platform = 'tiktok' 
         }
         
         // Also check if Apify status shows completed but job status hasn't updated
-        if (data.apifyStatus && data.apifyStatus.status === 'SUCCEEDED' && data.status !== 'completed') {
+        if (data.apifyStatus && data.apifyStatus.status === 'SUCCEEDED' && currentStatus !== 'completed') {
           console.warn('⚠️ [SEARCH-PROGRESS] Apify succeeded but job not marked complete! Apify finished at:', data.apifyStatus.finishedAt);
           // The GET endpoint should handle this, but log it for debugging
         }

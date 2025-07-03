@@ -204,6 +204,8 @@ export async function POST(req: Request) {
         startedAt: job.startedAt
       });
       
+      const processingStartTime = Date.now(); // Track total processing time
+      
       try {
         console.log('🔧 [APIFY-INSTAGRAM] Initializing Apify client...');
         const { ApifyClient } = await import('apify-client');
@@ -398,7 +400,7 @@ export async function POST(req: Request) {
           console.log('\n🎉 [APIFY-INSTAGRAM] Job completed successfully:', {
             jobId: job.id,
             resultsCount: items.length,
-            totalProcessingTime: Date.now() - requestStartTime + 'ms'
+            totalProcessingTime: Date.now() - processingStartTime + 'ms'
           });
           console.log('========== END INSTAGRAM HASHTAG PROCESSING ==========\n\n');
           

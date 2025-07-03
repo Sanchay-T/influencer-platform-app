@@ -194,6 +194,15 @@ export async function POST(req: NextRequest) {
         const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL || 'https://influencerplatform.vercel.app';
         const qstashCallbackUrl = `${siteUrl}/api/qstash/process-scraping`;
         
+        // Enhanced URL debugging
+        console.log('🌐 [INSTAGRAM-HASHTAG-API] URL debugging:', {
+          NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+          VERCEL_URL: process.env.VERCEL_URL,
+          finalSiteUrl: siteUrl,
+          finalCallbackUrl: qstashCallbackUrl,
+          isLocal: siteUrl.includes('localhost') || siteUrl.includes('ngrok')
+        });
+        
         console.log('🌐 [INSTAGRAM-HASHTAG-API] QStash configuration:', {
           siteUrl: siteUrl,
           callbackUrl: qstashCallbackUrl,
@@ -362,11 +371,20 @@ export async function GET(req: NextRequest) {
             
             console.log('✅ [INSTAGRAM-HASHTAG-API] Fixed stuck job - marked as completed with', items.length, 'results');
             
-            // Re-fetch the updated job
-            job = await db.query.scrapingJobs.findFirst({
+            // Re-fetch the updated job to get latest status
+            const updatedJob = await db.query.scrapingJobs.findFirst({
               where: eq(scrapingJobs.id, jobId),
               with: { results: { columns: { id: true, jobId: true, creators: true, createdAt: true } } }
             });
+            
+            if (updatedJob) {
+              job = updatedJob;
+              console.log('✅ [INSTAGRAM-HASHTAG-API] Re-fetched updated job:', {
+                status: job.status,
+                progress: job.progress,
+                processedResults: job.processedResults
+              });
+            }
             
           } catch (fixError) {
             console.error('❌ [INSTAGRAM-HASHTAG-API] Failed to fix stuck job:', fixError);
@@ -396,7 +414,8 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({
+    // Enhanced response logging to debug frontend issue
+    const responseData = {
       job: {
         id: job.id,
         status: job.status,
@@ -411,7 +430,18 @@ export async function GET(req: NextRequest) {
       },
       apifyStatus,
       results: job.results || []
+    };
+    
+    console.log('📤 [INSTAGRAM-HASHTAG-API] Sending response to frontend:', {
+      jobId: jobId,
+      jobStatus: job.status,
+      jobProgress: job.progress,
+      jobProcessedResults: job.processedResults,
+      responseStructure: Object.keys(responseData),
+      hasResults: !!(job.results && job.results.length > 0)
     });
+    
+    return NextResponse.json(responseData);
 
   } catch (error) {
     console.error('❌ [INSTAGRAM-HASHTAG-API] Status check error:', error);
