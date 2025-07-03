@@ -162,28 +162,63 @@ export async function POST(req: Request) {
 
     // DETECTAR SI ES UN JOB DE INSTAGRAM HASHTAG
     if (job.platform === 'Instagram' && job.keywords && job.runId) {
+      console.log('\n\n========== INSTAGRAM HASHTAG JOB PROCESSING ==========');
       console.log('🔄 [APIFY-INSTAGRAM] Processing hashtag job:', job.id);
+      console.log('📋 [APIFY-INSTAGRAM] Job details:', {
+        jobId: job.id,
+        runId: job.runId,
+        keywords: job.keywords,
+        status: job.status,
+        progress: job.progress,
+        processedResults: job.processedResults,
+        targetResults: job.targetResults,
+        createdAt: job.createdAt,
+        startedAt: job.startedAt
+      });
       
       try {
+        console.log('🔧 [APIFY-INSTAGRAM] Initializing Apify client...');
         const { ApifyClient } = await import('apify-client');
         const apifyClient = new ApifyClient({ token: process.env.APIFY_TOKEN! });
+        console.log('✅ [APIFY-INSTAGRAM] Apify client initialized');
         
         // Check Apify run status
+        console.log('🔍 [APIFY-INSTAGRAM] Fetching Apify run status for runId:', job.runId);
+        const runStartTime = Date.now();
         const run = await apifyClient.run(job.runId).get();
+        const runFetchTime = Date.now() - runStartTime;
         
-        console.log('📊 [APIFY-INSTAGRAM] Run status:', {
+        console.log('📊 [APIFY-INSTAGRAM] Run status retrieved in', runFetchTime, 'ms');
+        console.log('📊 [APIFY-INSTAGRAM] Detailed run status:', {
           jobId: job.id,
           runId: job.runId,
-          status: run.status
+          status: run.status,
+          startedAt: run.startedAt,
+          finishedAt: run.finishedAt,
+          buildNumber: run.buildNumber,
+          exitCode: run.exitCode,
+          defaultDatasetId: run.defaultDatasetId,
+          defaultKeyValueStoreId: run.defaultKeyValueStoreId,
+          statusMessage: run.statusMessage,
+          isStatusMessageTerminal: run.isStatusMessageTerminal,
+          stats: run.stats
         });
         
         if (run.status === 'SUCCEEDED') {
-          // Get results from dataset
-          const { items } = await apifyClient.dataset(run.defaultDatasetId).listItems();
+          console.log('\n🎉 [APIFY-INSTAGRAM] Run SUCCEEDED! Fetching results...');
+          console.log('📂 [APIFY-INSTAGRAM] Dataset ID:', run.defaultDatasetId);
           
-          console.log('✅ [APIFY-INSTAGRAM] Retrieved results:', {
+          // Get results from dataset
+          const datasetStartTime = Date.now();
+          const { items } = await apifyClient.dataset(run.defaultDatasetId).listItems();
+          const datasetFetchTime = Date.now() - datasetStartTime;
+          
+          console.log('✅ [APIFY-INSTAGRAM] Retrieved results in', datasetFetchTime, 'ms');
+          console.log('📊 [APIFY-INSTAGRAM] Results summary:', {
             jobId: job.id,
-            itemCount: items.length
+            itemCount: items.length,
+            expectedResults: job.targetResults,
+            currentProgress: job.progress
           });
           
           // DEBUG: Log actual Apify response structure to understand what we're getting
@@ -271,27 +306,73 @@ export async function POST(req: Request) {
           });
           
           // Save results to database
-          await db.insert(scrapingResults).values({
-            jobId: job.id,
-            creators: transformedCreators,
-            createdAt: new Date()
-          });
+          console.log('\n💾 [APIFY-INSTAGRAM] Saving results to database...');
+          const dbSaveStartTime = Date.now();
+          
+          try {
+            await db.insert(scrapingResults).values({
+              jobId: job.id,
+              creators: transformedCreators,
+              createdAt: new Date()
+            });
+            
+            const dbSaveTime = Date.now() - dbSaveStartTime;
+            console.log('✅ [APIFY-INSTAGRAM] Results saved to DB in', dbSaveTime, 'ms');
+          } catch (dbSaveError) {
+            console.error('❌ [APIFY-INSTAGRAM] Failed to save results to DB:', dbSaveError);
+            throw dbSaveError;
+          }
           
           // Mark job as completed
-          await db.update(scrapingJobs)
-            .set({
-              status: 'completed',
-              processedResults: items.length,
-              progress: '100',
-              completedAt: new Date(),
-              updatedAt: new Date()
-            })
-            .where(eq(scrapingJobs.id, job.id));
+          console.log('\n📝 [APIFY-INSTAGRAM] Updating job status to completed...');
+          const jobUpdateStartTime = Date.now();
           
-          console.log('🎉 [APIFY-INSTAGRAM] Job completed successfully:', {
+          try {
+            // First, let's check current job state before updating
+            const currentJob = await db.query.scrapingJobs.findFirst({
+              where: eq(scrapingJobs.id, job.id)
+            });
+            console.log('🔍 [APIFY-INSTAGRAM] Current job state before update:', {
+              status: currentJob?.status,
+              progress: currentJob?.progress,
+              processedResults: currentJob?.processedResults
+            });
+            
+            await db.update(scrapingJobs)
+              .set({
+                status: 'completed',
+                processedResults: items.length,
+                progress: '100',
+                completedAt: new Date(),
+                updatedAt: new Date()
+              })
+              .where(eq(scrapingJobs.id, job.id));
+            
+            const jobUpdateTime = Date.now() - jobUpdateStartTime;
+            console.log('✅ [APIFY-INSTAGRAM] Job status updated in', jobUpdateTime, 'ms');
+            
+            // Verify the update
+            const updatedJob = await db.query.scrapingJobs.findFirst({
+              where: eq(scrapingJobs.id, job.id)
+            });
+            console.log('🔍 [APIFY-INSTAGRAM] Job state after update:', {
+              status: updatedJob?.status,
+              progress: updatedJob?.progress,
+              processedResults: updatedJob?.processedResults,
+              completedAt: updatedJob?.completedAt
+            });
+            
+          } catch (jobUpdateError) {
+            console.error('❌ [APIFY-INSTAGRAM] Failed to update job status:', jobUpdateError);
+            throw jobUpdateError;
+          }
+          
+          console.log('\n🎉 [APIFY-INSTAGRAM] Job completed successfully:', {
             jobId: job.id,
-            resultsCount: items.length
+            resultsCount: items.length,
+            totalProcessingTime: Date.now() - requestStartTime + 'ms'
           });
+          console.log('========== END INSTAGRAM HASHTAG PROCESSING ==========\n\n');
           
           return NextResponse.json({ 
             status: 'completed',
@@ -301,17 +382,40 @@ export async function POST(req: Request) {
           
         } else if (run.status === 'RUNNING') {
           // Still processing, check again in 30 seconds
-          console.log('⏳ [APIFY-INSTAGRAM] Still running, rescheduling check:', job.id);
+          console.log('\n⏳ [APIFY-INSTAGRAM] Still running, need to reschedule check');
+          console.log('📊 [APIFY-INSTAGRAM] Run progress:', {
+            stats: run.stats,
+            currentTime: new Date().toISOString(),
+            runStartedAt: run.startedAt,
+            runningFor: run.startedAt ? `${Math.floor((Date.now() - new Date(run.startedAt).getTime()) / 1000)} seconds` : 'unknown'
+          });
           
+          // Update progress in DB based on Apify stats if available
+          if (run.stats && run.stats.inputBodyLen > 0) {
+            const estimatedProgress = Math.min(99, Math.floor((run.stats.requestsFinished / run.stats.requestsTotal) * 100));
+            console.log('📈 [APIFY-INSTAGRAM] Updating progress to:', estimatedProgress + '%');
+            
+            await db.update(scrapingJobs)
+              .set({
+                progress: estimatedProgress.toString(),
+                updatedAt: new Date()
+              })
+              .where(eq(scrapingJobs.id, job.id));
+          }
+          
+          console.log('🔄 [APIFY-INSTAGRAM] Publishing to QStash for next check...');
           await qstash.publishJSON({
             url: `${baseUrl}/api/qstash/process-scraping`,
             body: { jobId: job.id },
             delay: '30s'
           });
+          console.log('✅ [APIFY-INSTAGRAM] QStash message published');
           
           return NextResponse.json({ 
             status: 'processing',
-            message: 'Instagram hashtag search still running'
+            message: 'Instagram hashtag search still running',
+            apifyRunStatus: run.status,
+            stats: run.stats
           });
           
         } else if (run.status === 'FAILED' || run.status === 'ABORTED' || run.status === 'TIMED-OUT') {
@@ -339,19 +443,38 @@ export async function POST(req: Request) {
         }
         
       } catch (error: any) {
-        console.error('❌ [APIFY-INSTAGRAM] Processing error:', error);
+        console.error('\n❌ [APIFY-INSTAGRAM] Processing error occurred');
+        console.error('❌ [APIFY-INSTAGRAM] Error type:', error.constructor.name);
+        console.error('❌ [APIFY-INSTAGRAM] Error message:', error.message);
+        console.error('❌ [APIFY-INSTAGRAM] Error stack:', error.stack);
+        console.error('❌ [APIFY-INSTAGRAM] Full error object:', JSON.stringify(error, null, 2));
         
-        await db.update(scrapingJobs)
-          .set({
-            status: 'error',
-            error: error instanceof Error ? error.message : 'Processing failed',
-            updatedAt: new Date()
-          })
-          .where(eq(scrapingJobs.id, job.id));
+        const errorMessage = error instanceof Error ? error.message : 'Processing failed';
+        
+        try {
+          await db.update(scrapingJobs)
+            .set({
+              status: 'error',
+              error: errorMessage,
+              updatedAt: new Date(),
+              completedAt: new Date()
+            })
+            .where(eq(scrapingJobs.id, job.id));
+          console.log('✅ [APIFY-INSTAGRAM] Error status saved to DB');
+        } catch (dbError) {
+          console.error('❌ [APIFY-INSTAGRAM] Failed to update error status in DB:', dbError);
+        }
           
+        console.log('========== END INSTAGRAM HASHTAG PROCESSING (ERROR) ==========\n\n');
+        
         return NextResponse.json({ 
           status: 'error',
-          error: error instanceof Error ? error.message : 'Processing failed'
+          error: errorMessage,
+          details: {
+            jobId: job.id,
+            runId: job.runId,
+            errorType: error.constructor.name
+          }
         });
       }
     }

@@ -84,7 +84,8 @@ const SearchResults = ({ searchData }) => {
   if (isLoading) {
     return (
       <SearchProgress 
-        jobId={searchData.jobId} 
+        jobId={searchData.jobId}
+        platform={searchData.selectedPlatform}
         onComplete={(data) => {
           if (data && data.status === 'completed') {
             // Combinar todos los creadores de todos los resultados
@@ -97,9 +98,22 @@ const SearchResults = ({ searchData }) => {
               setIsLoading(false);
             } else {
               // Si no hay creadores, intentar una última vez
-              const apiEndpoint = searchData.selectedPlatform === 'youtube' ? 
-                '/api/scraping/youtube' : 
-                '/api/scraping/tiktok';
+              // Enhanced API endpoint selection with logging
+              let apiEndpoint;
+              if (searchData.selectedPlatform === 'youtube') {
+                apiEndpoint = '/api/scraping/youtube';
+              } else if (searchData.selectedPlatform === 'instagram') {
+                apiEndpoint = '/api/scraping/instagram-hashtag';
+              } else {
+                apiEndpoint = '/api/scraping/tiktok';
+              }
+              
+              console.log('🔍 [SEARCH-RESULTS] Final status check:', {
+                platform: searchData.selectedPlatform,
+                apiEndpoint: apiEndpoint,
+                jobId: searchData.jobId,
+                status: status
+              });
               
               fetch(`${apiEndpoint}?jobId=${searchData.jobId}`)
                 .then(response => response.json())

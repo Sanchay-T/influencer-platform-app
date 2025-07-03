@@ -7,7 +7,7 @@ import { Loader2, CheckCircle2, AlertCircle, RefreshCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useRouter } from 'next/navigation'
 
-export default function SearchProgress({ jobId, onComplete }) {
+export default function SearchProgress({ jobId, onComplete, platform = 'tiktok' }) {
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('processing');
   const [error, setError] = useState(null);
@@ -26,8 +26,41 @@ export default function SearchProgress({ jobId, onComplete }) {
 
     pollIntervalRef.current = setInterval(async () => {
       try {
-        const response = await fetch(`/api/scraping/tiktok?jobId=${jobId}`);
+        // Enhanced polling with platform-aware endpoint and logging
+        console.log('\n🔄 [SEARCH-PROGRESS] Starting poll:', {
+          jobId: jobId,
+          pollNumber: pollIntervalRef.current ? 'ongoing' : 'first',
+          timestamp: new Date().toISOString()
+        });
+        
+        // Determine the correct API endpoint based on platform
+        let apiEndpoint;
+        const normalizedPlatform = platform?.toLowerCase();
+        
+        if (normalizedPlatform === 'instagram') {
+          apiEndpoint = `/api/scraping/instagram-hashtag?jobId=${jobId}`;
+        } else if (normalizedPlatform === 'youtube') {
+          apiEndpoint = `/api/scraping/youtube?jobId=${jobId}`;
+        } else {
+          apiEndpoint = `/api/scraping/tiktok?jobId=${jobId}`;
+        }
+        
+        console.log('🎯 [SEARCH-PROGRESS] Using endpoint:', {
+          platform: platform,
+          normalizedPlatform: normalizedPlatform,
+          apiEndpoint: apiEndpoint
+        });
+        
+        const response = await fetch(apiEndpoint);
         const data = await response.json();
+        
+        console.log('📡 [SEARCH-PROGRESS] Poll response:', {
+          status: response.status,
+          jobStatus: data.status,
+          progress: data.progress,
+          processedResults: data.processedResults,
+          error: data.error
+        });
 
         if (data.error) {
           setError(data.error);
@@ -48,18 +81,45 @@ export default function SearchProgress({ jobId, onComplete }) {
           setTimeout(() => setRecovery(null), 5000); // Clear recovery message after 5 seconds
         }
 
-        // Use explicit progress if available, otherwise calculate from results
-        let calculatedProgress = data.progress !== undefined 
-          ? data.progress 
-          : data.processedResults 
-            ? (data.processedResults / data.targetResults) * 100 
-            : 0;
+        // Enhanced progress calculation with detailed logging
+        let calculatedProgress = 0;
         
-        // If progress is still 0, use time-based estimate
-        if (calculatedProgress <= 0) {
+        // First, check if we have explicit progress from the API
+        if (data.progress !== undefined && data.progress !== null) {
+          calculatedProgress = parseFloat(data.progress);
+          console.log('📈 [SEARCH-PROGRESS] Using explicit progress:', calculatedProgress);
+        } 
+        // Otherwise, calculate from processed results
+        else if (data.processedResults && data.targetResults) {
+          calculatedProgress = (data.processedResults / data.targetResults) * 100;
+          console.log('📈 [SEARCH-PROGRESS] Calculated from results:', {
+            processedResults: data.processedResults,
+            targetResults: data.targetResults,
+            calculated: calculatedProgress
+          });
+        }
+        // Fallback to time-based estimate
+        else {
           const elapsedSeconds = (new Date() - startTime) / 1000;
           const estimatedTotalSeconds = 180; // Estimated total time in seconds
           calculatedProgress = Math.min(elapsedSeconds / estimatedTotalSeconds * 100, 99);
+          console.log('📈 [SEARCH-PROGRESS] Time-based estimate:', {
+            elapsedSeconds: elapsedSeconds,
+            calculatedProgress: calculatedProgress
+          });
+        }
+        
+        // IMPORTANT: Check if Instagram job is stuck at 99%
+        if (normalizedPlatform === 'instagram' && calculatedProgress >= 99 && data.status !== 'completed') {
+          console.warn('⚠️ [SEARCH-PROGRESS] Instagram job stuck at 99%!', {
+            jobId: jobId,
+            status: data.status,
+            progress: calculatedProgress,
+            rawProgress: data.progress,
+            processedResults: data.processedResults,
+            targetResults: data.targetResults,
+            fullData: data
+          });
         }
         
         setProgress(calculatedProgress);
