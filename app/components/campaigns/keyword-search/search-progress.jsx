@@ -128,7 +128,9 @@ export default function SearchProgress({ jobId, onComplete, platform = 'tiktok' 
         // Smoothly animate progress - never decrease, only increase
         setDisplayProgress(prev => Math.max(prev, calculatedProgress));
 
+        // Check for completion
         if (data.status === 'completed') {
+          console.log('🎉 [SEARCH-PROGRESS] Job completed! Stopping polling.');
           clearInterval(pollIntervalRef.current);
           // Ensure we set progress to 100 when completed
           setProgress(100);
@@ -137,6 +139,12 @@ export default function SearchProgress({ jobId, onComplete, platform = 'tiktok' 
             status: 'completed',
             creators: data.results?.[0]?.creators || data.creators || []
           });
+        }
+        
+        // Also check if Apify status shows completed but job status hasn't updated
+        if (data.apifyStatus && data.apifyStatus.status === 'SUCCEEDED' && data.status !== 'completed') {
+          console.warn('⚠️ [SEARCH-PROGRESS] Apify succeeded but job not marked complete! Apify finished at:', data.apifyStatus.finishedAt);
+          // The GET endpoint should handle this, but log it for debugging
         }
       } catch (error) {
         console.error('Error polling job status:', error);

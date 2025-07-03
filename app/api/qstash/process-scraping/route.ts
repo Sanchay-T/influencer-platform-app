@@ -45,13 +45,24 @@ const receiver = new Receiver({
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL || 'http://localhost:3000'; // Define siteUrl
 
+console.log('🌐 [ENV-CHECK] Site URL configuration:', {
+  NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+  VERCEL_URL: process.env.VERCEL_URL,
+  finalSiteUrl: siteUrl
+});
+
 let apiResponse: any = null; // Declare apiResponse at a higher scope
 
 export async function POST(req: Request) {
-  console.log('\n🚀🚀🚀 [DIAGNOSTIC] QStash POST REQUEST RECEIVED 🚀🚀🚀')
-  console.log('📅 [DIAGNOSTIC] Timestamp:', new Date().toISOString())
-  console.log('🌐 [DIAGNOSTIC] Request URL:', req.url)
-  console.log('📋 [DIAGNOSTIC] Request headers:', Object.fromEntries(req.headers.entries()))
+  console.log('\n\n🚀🚀🚀🚀🚀 [QSTASH-WEBHOOK] RECEIVED POST REQUEST 🚀🚀🚀🚀🚀')
+  console.log('📅 [QSTASH-WEBHOOK] Timestamp:', new Date().toISOString())
+  console.log('🌐 [QSTASH-WEBHOOK] Request URL:', req.url)
+  console.log('🔑 [QSTASH-WEBHOOK] User-Agent:', req.headers.get('user-agent'))
+  console.log('🔑 [QSTASH-WEBHOOK] QStash headers present:', {
+    signature: !!req.headers.get('Upstash-Signature'),
+    messageId: req.headers.get('Upstash-Message-Id'),
+    timestamp: req.headers.get('Upstash-Timestamp')
+  })
   console.log('🚀 INICIO DE SOLICITUD POST A /api/qstash/process-scraping')
   
   const signature = req.headers.get('Upstash-Signature')
@@ -151,6 +162,22 @@ export async function POST(req: Request) {
     console.log('✅ Job encontrado correctamente');
     console.log('📋 Detalles del job:', JSON.stringify(job, null, 2));
 
+    // CRITICAL DIAGNOSTIC: Check platform detection logic
+    console.log('\n🔍🔍🔍 [PLATFORM-DETECTION] DIAGNOSTIC CHECK 🔍🔍🔍');
+    console.log('📋 [PLATFORM-DETECTION] job.platform:', JSON.stringify(job.platform));
+    console.log('📋 [PLATFORM-DETECTION] job.keywords:', JSON.stringify(job.keywords));
+    console.log('📋 [PLATFORM-DETECTION] job.runId:', JSON.stringify(job.runId));
+    console.log('📋 [PLATFORM-DETECTION] job.targetUsername:', JSON.stringify(job.targetUsername));
+    console.log('📋 [PLATFORM-DETECTION] Platform exact match tests:');
+    console.log('  - Instagram hashtag:', job.platform === 'Instagram' && job.keywords && job.runId);
+    console.log('  - Instagram similar:', job.platform === 'Instagram' && job.targetUsername);
+    console.log('  - TikTok keyword (Tiktok):', job.platform === 'Tiktok');
+    console.log('  - TikTok similar:', job.platform === 'TikTok' && job.targetUsername);
+    console.log('  - YouTube:', job.platform === 'YouTube');
+    console.log('📋 [PLATFORM-DETECTION] Platform typeof:', typeof job.platform);
+    console.log('📋 [PLATFORM-DETECTION] Platform length:', job.platform?.length);
+    console.log('🔍🔍🔍 [PLATFORM-DETECTION] END DIAGNOSTIC 🔍🔍🔍\n');
+
     // Si el job ya está completado o en error, no hacer nada
     if (job.status === 'completed' || job.status === 'error') {
       console.log('ℹ️ Job ya está en estado final:', job.status);
@@ -162,6 +189,7 @@ export async function POST(req: Request) {
 
     // DETECTAR SI ES UN JOB DE INSTAGRAM HASHTAG
     if (job.platform === 'Instagram' && job.keywords && job.runId) {
+      console.log('✅ [PLATFORM-DETECTION] Instagram hashtag job detected!');
       console.log('\n\n========== INSTAGRAM HASHTAG JOB PROCESSING ==========');
       console.log('🔄 [APIFY-INSTAGRAM] Processing hashtag job:', job.id);
       console.log('📋 [APIFY-INSTAGRAM] Job details:', {
@@ -480,6 +508,7 @@ export async function POST(req: Request) {
     }
     // DETECTAR SI ES UN JOB DE INSTAGRAM SIMILAR
     else if (job.platform === 'Instagram' && job.targetUsername) {
+      console.log('✅ [PLATFORM-DETECTION] Instagram similar job detected!');
       console.log('🔍 Procesando job de Instagram para username:', job.targetUsername);
 
       // Actualizar el estado del job a processing
@@ -1366,6 +1395,18 @@ export async function POST(req: Request) {
         throw tiktokError;
       }
     } else {
+      console.log('❌ [PLATFORM-DETECTION] NO MATCHING CONDITION FOUND!');
+      console.log('❌ [PLATFORM-DETECTION] Job details for debugging:', {
+        platform: job.platform,
+        platformType: typeof job.platform,
+        platformLength: job.platform?.length,
+        keywords: job.keywords,
+        keywordsType: typeof job.keywords,
+        targetUsername: job.targetUsername,
+        runId: job.runId,
+        status: job.status
+      });
+      console.log('❌ [PLATFORM-DETECTION] This job will not be processed!');
       // Si no es ninguna plataforma soportada
       console.error('❌ Plataforma no soportada:', job.platform);
       return NextResponse.json({ error: `Unsupported platform: ${job.platform}` }, { status: 400 });

@@ -189,20 +189,35 @@ export async function POST(req: NextRequest) {
         .where(eq(scrapingJobs.id, job.id));
 
       // Schedule background processing with QStash
+      console.log('\n🔔 [INSTAGRAM-HASHTAG-API] Scheduling QStash processing...');
       if (process.env.QSTASH_TOKEN) {
         const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL || 'https://influencerplatform.vercel.app';
         const qstashCallbackUrl = `${siteUrl}/api/qstash/process-scraping`;
         
+        console.log('🌐 [INSTAGRAM-HASHTAG-API] QStash configuration:', {
+          siteUrl: siteUrl,
+          callbackUrl: qstashCallbackUrl,
+          jobId: job.id,
+          hasToken: !!process.env.QSTASH_TOKEN
+        });
+        
         const { Client } = await import('@upstash/qstash');
         const qstash = new Client({ token: process.env.QSTASH_TOKEN });
         
-        await qstash.publishJSON({
-          url: qstashCallbackUrl,
-          body: { jobId: job.id },
-          delay: '30s', // Check status in 30 seconds
-          retries: 3,
-          notifyOnFailure: true
-        });
+        try {
+          const publishResult = await qstash.publishJSON({
+            url: qstashCallbackUrl,
+            body: { jobId: job.id },
+            delay: '30s', // Check status in 30 seconds
+            retries: 3,
+            notifyOnFailure: true
+          });
+          console.log('✅ [INSTAGRAM-HASHTAG-API] QStash message published:', publishResult);
+        } catch (qstashError) {
+          console.error('❌ [INSTAGRAM-HASHTAG-API] Failed to publish QStash message:', qstashError);
+        }
+      } else {
+        console.warn('⚠️ [INSTAGRAM-HASHTAG-API] No QSTASH_TOKEN found, background processing will not work!');
       }
       return NextResponse.json({
         success: true,
@@ -259,6 +274,8 @@ export async function GET(req: NextRequest) {
 
     // If job has Apify run ID, get additional status from Apify
     let apifyStatus = null;
+    let shouldUpdateJobStatus = false;
+    
     if (job.runId) {
       try {
         const run = await apifyClient.run(job.runId).get();
@@ -269,6 +286,92 @@ export async function GET(req: NextRequest) {
           stats: run.stats
         };
         console.log('📊 [INSTAGRAM-HASHTAG-API] Apify status:', apifyStatus);
+        
+        // CRITICAL: Check if Apify succeeded but job is still processing
+        if (run.status === 'SUCCEEDED' && (job.status === 'processing' || job.status === 'pending')) {
+          console.log('🚨 [INSTAGRAM-HASHTAG-API] DETECTED STUCK JOB! Apify succeeded but job still processing');
+          console.log('🔧 [INSTAGRAM-HASHTAG-API] Attempting to fix stuck job...');
+          shouldUpdateJobStatus = true;
+          
+          // Fetch results from Apify dataset
+          try {
+            const { items } = await apifyClient.dataset(run.defaultDatasetId).listItems();
+            console.log('✅ [INSTAGRAM-HASHTAG-API] Retrieved', items.length, 'results from Apify');
+            
+            // Transform and save results (same logic as in QStash handler)
+            const transformedCreators = items.map((post: any) => {
+              const possibleAvatarFields = [
+                post.ownerProfilePicUrl, post.ownerAvatar, post.userProfilePic,
+                post.profilePicUrl, post.ownerProfilePic, post.avatar,
+                post.profilePic, post.ownerImage, post.userImage,
+                post.authorProfilePic, post.authorAvatar
+              ];
+              const avatarUrl = possibleAvatarFields.find(field => field && field.length > 0) || '';
+              
+              return {
+                creator: {
+                  name: post.ownerFullName || post.ownerUsername || 'Unknown',
+                  uniqueId: post.ownerUsername || '',
+                  followers: 0,
+                  avatarUrl: avatarUrl,
+                  profilePicUrl: avatarUrl,
+                  verified: false,
+                  bio: '',
+                  emails: []
+                },
+                video: {
+                  description: post.caption || '',
+                  url: post.url || `https://instagram.com/p/${post.shortCode}`,
+                  statistics: {
+                    likes: post.likesCount || 0,
+                    comments: post.commentsCount || 0,
+                    views: 0,
+                    shares: 0
+                  }
+                },
+                hashtags: post.hashtags || [],
+                publishedTime: post.timestamp || new Date().toISOString(),
+                platform: 'Instagram',
+                postType: post.type,
+                mediaUrl: post.displayUrl,
+                postId: post.id,
+                shortCode: post.shortCode,
+                ownerUsername: post.ownerUsername,
+                ownerFullName: post.ownerFullName,
+                ownerId: post.ownerId
+              };
+            });
+            
+            // Save results to database
+            await db.insert(scrapingResults).values({
+              jobId: job.id,
+              creators: transformedCreators,
+              createdAt: new Date()
+            });
+            
+            // Update job status to completed
+            await db.update(scrapingJobs)
+              .set({
+                status: 'completed',
+                processedResults: items.length,
+                progress: '100',
+                completedAt: new Date(),
+                updatedAt: new Date()
+              })
+              .where(eq(scrapingJobs.id, job.id));
+            
+            console.log('✅ [INSTAGRAM-HASHTAG-API] Fixed stuck job - marked as completed with', items.length, 'results');
+            
+            // Re-fetch the updated job
+            job = await db.query.scrapingJobs.findFirst({
+              where: eq(scrapingJobs.id, jobId),
+              with: { results: { columns: { id: true, jobId: true, creators: true, createdAt: true } } }
+            });
+            
+          } catch (fixError) {
+            console.error('❌ [INSTAGRAM-HASHTAG-API] Failed to fix stuck job:', fixError);
+          }
+        }
       } catch (apifyError) {
         console.warn('⚠️ [INSTAGRAM-HASHTAG-API] Could not fetch Apify status:', apifyError);
       }
