@@ -40,9 +40,19 @@ const SearchResults = ({ searchData }) => {
     const fetchResults = async () => {
       try {
         // Determine API endpoint based on platform
-        const apiEndpoint = searchData.selectedPlatform === 'youtube' ? 
+        console.log('🔍 [API-ENDPOINT] Platform detection:', {
+          selectedPlatform: searchData.selectedPlatform,
+          platforms: searchData.platforms,
+          searchData: searchData
+        });
+        
+        const apiEndpoint = searchData.selectedPlatform === 'Instagram' ? 
+          '/api/scraping/instagram-hashtag' :
+          searchData.selectedPlatform === 'YouTube' ? 
           '/api/scraping/youtube' : 
           '/api/scraping/tiktok';
+          
+        console.log('🌐 [API-ENDPOINT] Using endpoint:', apiEndpoint);
         
         const response = await fetch(`${apiEndpoint}?jobId=${searchData.jobId}`);
         const data = await response.json();

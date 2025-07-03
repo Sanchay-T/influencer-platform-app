@@ -1,0 +1,18 @@
+{
+  "metadata": {
+    "timestamp": "2025-07-03T10:57:17.758Z",
+    "testName": "Minimal Test",
+    "actorId": "dSCLg0C3YEZ83HzYX",
+    "input": {
+      "directUrls": [
+        "https://www.instagram.com/redbull/"
+      ],
+      "resultsLimit": 5
+    }
+  },
+  "error": {
+    "message": "Did not expect property `waitForFinish` to exist, got `true` in object `options`",
+    "type": "ArgumentError",
+    "details": null
+  }
+}

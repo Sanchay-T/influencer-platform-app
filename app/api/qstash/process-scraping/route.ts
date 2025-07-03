@@ -160,8 +160,203 @@ export async function POST(req: Request) {
       })
     }
 
-    // DETECTAR SI ES UN JOB DE INSTAGRAM
-    if (job.platform === 'Instagram' && job.targetUsername) {
+    // DETECTAR SI ES UN JOB DE INSTAGRAM HASHTAG
+    if (job.platform === 'Instagram' && job.keywords && job.runId) {
+      console.log('🔄 [APIFY-INSTAGRAM] Processing hashtag job:', job.id);
+      
+      try {
+        const { ApifyClient } = await import('apify-client');
+        const apifyClient = new ApifyClient({ token: process.env.APIFY_TOKEN! });
+        
+        // Check Apify run status
+        const run = await apifyClient.run(job.runId).get();
+        
+        console.log('📊 [APIFY-INSTAGRAM] Run status:', {
+          jobId: job.id,
+          runId: job.runId,
+          status: run.status
+        });
+        
+        if (run.status === 'SUCCEEDED') {
+          // Get results from dataset
+          const { items } = await apifyClient.dataset(run.defaultDatasetId).listItems();
+          
+          console.log('✅ [APIFY-INSTAGRAM] Retrieved results:', {
+            jobId: job.id,
+            itemCount: items.length
+          });
+          
+          // DEBUG: Log actual Apify response structure to understand what we're getting
+          if (items.length > 0) {
+            console.log('🔍 [APIFY-DEBUG] First item structure:', JSON.stringify(items[0], null, 2));
+            console.log('🔍 [APIFY-DEBUG] All available fields:', Object.keys(items[0]));
+          }
+          
+          // Transform Apify data to your format
+          const transformedCreators = items.map((post: any) => {
+            // Check for various possible profile picture field names
+            const possibleAvatarFields = [
+              post.ownerProfilePicUrl,
+              post.ownerAvatar,
+              post.userProfilePic,
+              post.profilePicUrl,
+              post.ownerProfilePic,
+              post.avatar,
+              post.profilePic,
+              post.ownerImage,
+              post.userImage,
+              post.authorProfilePic,
+              post.authorAvatar
+            ];
+            
+            const avatarUrl = possibleAvatarFields.find(field => field && field.length > 0) || '';
+            
+            // DEBUG: Log what influencer/creator data we can extract
+            console.log('🔍 [INFLUENCER-DATA] Creator extraction for post:', {
+              ownerUsername: post.ownerUsername,
+              ownerFullName: post.ownerFullName,
+              ownerId: post.ownerId,
+              caption: (post.caption || '').substring(0, 100) + '...',
+              hashtags: post.hashtags,
+              likesCount: post.likesCount,
+              commentsCount: post.commentsCount,
+              foundAvatar: avatarUrl,
+              postUrl: post.url,
+              allFields: Object.keys(post)
+            });
+            
+            return {
+              creator: {
+                name: post.ownerFullName || post.ownerUsername || 'Unknown',
+                uniqueId: post.ownerUsername || '',
+                followers: 0, // Not available in hashtag search
+                avatarUrl: avatarUrl,
+                profilePicUrl: avatarUrl,
+                verified: false, // Not available
+                bio: '', // Not available  
+                emails: [] // Not available
+              },
+              video: {
+                description: post.caption || '',
+                url: post.url || `https://instagram.com/p/${post.shortCode}`,
+                statistics: {
+                  likes: post.likesCount || 0,
+                  comments: post.commentsCount || 0,
+                  views: 0, // Not available for Instagram
+                  shares: 0 // Not available
+                }
+              },
+              hashtags: post.hashtags || [],
+              publishedTime: post.timestamp || new Date().toISOString(),
+              platform: 'Instagram',
+              // Instagram-specific fields
+              postType: post.type, // Image, Video, Sidecar
+              mediaUrl: post.displayUrl,
+              postId: post.id,
+              shortCode: post.shortCode,
+              ownerUsername: post.ownerUsername,
+              ownerFullName: post.ownerFullName,
+              ownerId: post.ownerId,
+              dimensions: {
+                height: post.dimensionsHeight,
+                width: post.dimensionsWidth
+              },
+              // Additional media for carousels/videos
+              images: post.images || [],
+              videoUrl: post.videoUrl || null,
+              videoDuration: post.videoDuration || null,
+              childPosts: post.childPosts || [],
+              musicInfo: post.musicInfo || null
+            };
+          });
+          
+          // Save results to database
+          await db.insert(scrapingResults).values({
+            jobId: job.id,
+            creators: transformedCreators,
+            createdAt: new Date()
+          });
+          
+          // Mark job as completed
+          await db.update(scrapingJobs)
+            .set({
+              status: 'completed',
+              processedResults: items.length,
+              progress: '100',
+              completedAt: new Date(),
+              updatedAt: new Date()
+            })
+            .where(eq(scrapingJobs.id, job.id));
+          
+          console.log('🎉 [APIFY-INSTAGRAM] Job completed successfully:', {
+            jobId: job.id,
+            resultsCount: items.length
+          });
+          
+          return NextResponse.json({ 
+            status: 'completed',
+            processedResults: items.length,
+            message: 'Instagram hashtag search completed'
+          });
+          
+        } else if (run.status === 'RUNNING') {
+          // Still processing, check again in 30 seconds
+          console.log('⏳ [APIFY-INSTAGRAM] Still running, rescheduling check:', job.id);
+          
+          await qstash.publishJSON({
+            url: `${baseUrl}/api/qstash/process-scraping`,
+            body: { jobId: job.id },
+            delay: '30s'
+          });
+          
+          return NextResponse.json({ 
+            status: 'processing',
+            message: 'Instagram hashtag search still running'
+          });
+          
+        } else if (run.status === 'FAILED' || run.status === 'ABORTED' || run.status === 'TIMED-OUT') {
+          // Handle failure
+          const errorMessage = `Apify run ${run.status.toLowerCase()}: ${run.statusMessage || 'Unknown error'}`;
+          
+          await db.update(scrapingJobs)
+            .set({
+              status: 'error',
+              error: errorMessage,
+              updatedAt: new Date()
+            })
+            .where(eq(scrapingJobs.id, job.id));
+          
+          console.error('❌ [APIFY-INSTAGRAM] Job failed:', {
+            jobId: job.id,
+            runStatus: run.status,
+            error: errorMessage
+          });
+          
+          return NextResponse.json({ 
+            status: 'error',
+            error: errorMessage
+          });
+        }
+        
+      } catch (error: any) {
+        console.error('❌ [APIFY-INSTAGRAM] Processing error:', error);
+        
+        await db.update(scrapingJobs)
+          .set({
+            status: 'error',
+            error: error instanceof Error ? error.message : 'Processing failed',
+            updatedAt: new Date()
+          })
+          .where(eq(scrapingJobs.id, job.id));
+          
+        return NextResponse.json({ 
+          status: 'error',
+          error: error instanceof Error ? error.message : 'Processing failed'
+        });
+      }
+    }
+    // DETECTAR SI ES UN JOB DE INSTAGRAM SIMILAR
+    else if (job.platform === 'Instagram' && job.targetUsername) {
       console.log('🔍 Procesando job de Instagram para username:', job.targetUsername);
 
       // Actualizar el estado del job a processing

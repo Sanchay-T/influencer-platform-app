@@ -1,0 +1,23 @@
+{
+  "metadata": {
+    "timestamp": "2025-07-03T10:54:35.513Z",
+    "actorId": "dSCLg0C3YEZ83HzYX",
+    "endpoint": "https://api.apify.com/v2/acts/dSCLg0C3YEZ83HzYX/run-sync-get-dataset-items?token=HIDDEN",
+    "testConfig": {
+      "search": "redbull",
+      "searchType": "hashtag",
+      "searchLimit": 2,
+      "resultsType": "posts",
+      "resultsLimit": 5
+    },
+    "responseTime": 7287,
+    "status": 400,
+    "statusText": "Bad Request"
+  },
+  "data": {
+    "error": {
+      "type": "invalid-input",
+      "message": "Input is not valid: Field input.usernames is required"
+    }
+  }
+}

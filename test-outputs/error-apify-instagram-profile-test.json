@@ -1,0 +1,18 @@
+{
+  "metadata": {
+    "timestamp": "2025-07-03T10:57:17.754Z",
+    "testName": "Profile Scraper Format",
+    "actorId": "dSCLg0C3YEZ83HzYX",
+    "input": {
+      "usernames": [
+        "redbull"
+      ],
+      "resultsLimit": 10
+    }
+  },
+  "error": {
+    "message": "Did not expect property `waitForFinish` to exist, got `true` in object `options`",
+    "type": "ArgumentError",
+    "details": null
+  }
+}

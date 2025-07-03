@@ -109,7 +109,9 @@ export default function KeywordSearch() {
       // Determine API endpoint based on selected platform
       // For now, we'll handle one platform at a time - prioritize the first selected platform
       let apiEndpoint = '/api/scraping/tiktok'; // Default to TikTok
-      if (searchData.platforms.includes('youtube')) {
+      if (searchData.platforms.includes('instagram')) {
+        apiEndpoint = '/api/scraping/instagram-hashtag';
+      } else if (searchData.platforms.includes('youtube')) {
         apiEndpoint = '/api/scraping/youtube';
       }
 
@@ -142,7 +144,8 @@ export default function KeywordSearch() {
         ...prev, 
         keywords,
         jobId: data.jobId,
-        selectedPlatform: searchData.platforms.includes('youtube') ? 'youtube' : 'tiktok'
+        selectedPlatform: searchData.platforms.includes('instagram') ? 'Instagram' : 
+                         searchData.platforms.includes('youtube') ? 'YouTube' : 'TikTok'
       }));
       setStep(3);
       console.log('🔄 [KEYWORD-SEARCH-PAGE] Moving to step 3 (results)');

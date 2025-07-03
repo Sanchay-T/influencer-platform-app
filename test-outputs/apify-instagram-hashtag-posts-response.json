@@ -1,0 +1,41 @@
+{
+  "metadata": {
+    "timestamp": "2025-07-03T10:55:34.585Z",
+    "testName": "hashtag-posts",
+    "actorId": "apify/instagram-search-scraper",
+    "endpoint": "https://api.apify.com/v2/acts/apify/instagram-search-scraper/run-sync-get-dataset-items?token=HIDDEN",
+    "testConfig": {
+      "search": "redbull",
+      "searchType": "hashtag",
+      "searchLimit": 2,
+      "resultsType": "posts",
+      "resultsLimit": 10
+    },
+    "responseTime": 1496,
+    "status": 404,
+    "statusText": "Not Found",
+    "headers": {
+      "access-control-allow-headers": "User-Agent, Content-Type, Authorization, X-Apify-Request-Origin, openai-conversation-id, openai-ephemeral-user-id",
+      "access-control-allow-methods": "GET",
+      "access-control-allow-origin": "*",
+      "access-control-expose-headers": "X-Apify-Pagination-Total, X-Apify-Pagination-Offset, X-Apify-Pagination-Desc, X-Apify-Pagination-Count, X-Apify-Pagination-Limit",
+      "cache-control": "no-cache, no-store, must-revalidate",
+      "connection": "keep-alive",
+      "content-length": "153",
+      "content-type": "application/json; charset=utf-8",
+      "date": "Thu, 03 Jul 2025 10:55:34 GMT",
+      "etag": "W/\"99-JoTse/A9r2bb6vUL3wSLXgsIY+c\"",
+      "expires": "0",
+      "pragma": "no-cache",
+      "referrer-policy": "no-referrer",
+      "x-robots-tag": "none"
+    }
+  },
+  "data": {
+    "error": {
+      "type": "page-not-found",
+      "message": "We have bad news: there is no API endpoint at this URL. Did you specify it correctly?"
+    }
+  },
+  "summary": null
+}

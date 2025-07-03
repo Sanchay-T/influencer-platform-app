@@ -1,0 +1,321 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { ApifyClient } from 'apify-client';
+import { createClient } from '@/utils/supabase/server';
+import { db } from '@/lib/db';
+import { scrapingJobs, scrapingResults, campaigns, type JobStatus } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
+
+// Initialize Apify client
+const apifyClient = new ApifyClient({
+  token: process.env.APIFY_TOKEN!
+});
+
+const TIMEOUT_MINUTES = 60;
+
+export async function POST(req: NextRequest) {
+  console.log('\n\n====== INSTAGRAM HASHTAG API CALLED ======');
+  console.log('🚀 [INSTAGRAM-HASHTAG-API] POST request received at:', new Date().toISOString());
+  
+  try {
+    console.log('🔍 [INSTAGRAM-HASHTAG-API] Step 1: Verifying user authentication');
+    
+    // Verify user authentication
+    const supabase = await createClient();
+    console.log('✅ [INSTAGRAM-HASHTAG-API] Supabase client created');
+    
+    let user;
+    let userError;
+    
+    try {
+      const { data, error } = await supabase.auth.getUser();
+      user = data?.user;
+      userError = error;
+      console.log('🔑 [INSTAGRAM-HASHTAG-API] Authentication result:', user ? 'User authenticated' : 'User not authenticated');
+    } catch (authError: any) {
+      console.error('❌ [INSTAGRAM-HASHTAG-API] Authentication error:', authError);
+      return NextResponse.json({ 
+        error: 'Authentication error: Invalid session encoding',
+        details: authError.message
+      }, { status: 401 });
+    }
+    
+    if (userError || !user) {
+      console.error('❌ [INSTAGRAM-HASHTAG-API] Authentication error:', userError);
+      return NextResponse.json({ 
+        error: 'Unauthorized',
+        details: userError?.message || 'No user found'
+      }, { status: 401 });
+    }
+    console.log('✅ [INSTAGRAM-HASHTAG-API] User authenticated successfully:', user.id);
+
+    console.log('🔍 [INSTAGRAM-HASHTAG-API] Step 2: Reading request body');
+    
+    // Read and parse request body
+    const bodyText = await req.text();
+    console.log('📝 [INSTAGRAM-HASHTAG-API] Request body length:', bodyText.length);
+    
+    let body;
+    try {
+      body = JSON.parse(bodyText);
+      console.log('✅ [INSTAGRAM-HASHTAG-API] JSON parsed successfully');
+      console.log('📦 [INSTAGRAM-HASHTAG-API] Body structure:', JSON.stringify(body, null, 2).substring(0, 200) + '...');
+    } catch (parseError: any) {
+      console.error('❌ [INSTAGRAM-HASHTAG-API] JSON parse error:', parseError);
+      return NextResponse.json(
+        { error: `Invalid JSON in request body: ${parseError.message || 'Unknown error'}` },
+        { status: 400 }
+      );
+    }
+
+    console.log('🔍 [INSTAGRAM-HASHTAG-API] Step 3: Extracting request data');
+    const { keywords, targetResults = 50, campaignId } = body;
+    console.log('🔑 [INSTAGRAM-HASHTAG-API] Keywords received:', keywords);
+    console.log('🎯 [INSTAGRAM-HASHTAG-API] Target results:', targetResults);
+    console.log('📋 [INSTAGRAM-HASHTAG-API] Campaign ID:', campaignId);
+
+    // Validate keywords
+    if (!keywords || !Array.isArray(keywords) || keywords.length === 0) {
+      console.error('❌ [INSTAGRAM-HASHTAG-API] Invalid keywords:', keywords);
+      return NextResponse.json(
+        { error: 'Keywords are required and must be an array' },
+        { status: 400 }
+      );
+    }
+
+    // Sanitize keywords for Apify (remove spaces, special chars, keep only alphanumeric)
+    const sanitizedKeywords = keywords.map(keyword => {
+      // Remove # symbol if present, remove spaces and special characters
+      let cleaned = keyword.replace(/^#/, '');
+      // Keep only letters, numbers, and underscores (Apify requirement)
+      cleaned = cleaned.replace(/[^a-zA-Z0-9_]/g, '');
+      return cleaned.trim();
+    }).filter(k => k.length > 0); // Remove empty keywords
+    console.log('✅ [INSTAGRAM-HASHTAG-API] Keywords sanitized:', sanitizedKeywords);
+
+    if (sanitizedKeywords.length === 0) {
+      console.error('❌ [INSTAGRAM-HASHTAG-API] No valid keywords after sanitization');
+      return NextResponse.json(
+        { error: 'No valid hashtags found. Use only letters, numbers, and underscores (no spaces or special characters)' },
+        { status: 400 }
+      );
+    }
+
+    if (!campaignId) {
+      console.error('❌ [INSTAGRAM-HASHTAG-API] Campaign ID not provided');
+      return NextResponse.json(
+        { error: 'Campaign ID is required' },
+        { status: 400 }
+      );
+    }
+
+    console.log('🔍 [INSTAGRAM-HASHTAG-API] Step 4: Verifying campaign exists and belongs to user');
+    
+    // Verify campaign exists and belongs to user
+    const campaign = await db.query.campaigns.findFirst({
+      where: (campaigns, { eq, and }) => and(
+        eq(campaigns.id, campaignId),
+        eq(campaigns.userId, user.id)
+      )
+    });
+    console.log('📋 [INSTAGRAM-HASHTAG-API] Campaign search result:', campaign ? 'Campaign found' : 'Campaign not found');
+
+    if (!campaign) {
+      console.error('❌ [INSTAGRAM-HASHTAG-API] Campaign not found or unauthorized');
+      return NextResponse.json(
+        { error: 'Campaign not found or unauthorized' },
+        { status: 404 }
+      );
+    }
+    console.log('✅ [INSTAGRAM-HASHTAG-API] Campaign verified successfully');
+
+    console.log('🔍 [INSTAGRAM-HASHTAG-API] Step 5: Validating target results');
+    
+    // Validate targetResults (same as TikTok/YouTube)
+    if (![100, 500, 1000].includes(targetResults)) {
+      console.error('❌ [INSTAGRAM-HASHTAG-API] Invalid target results:', targetResults);
+      return NextResponse.json(
+        { error: 'targetResults must be 100, 500, or 1000' },
+        { status: 400 }
+      );
+    }
+    console.log('✅ [INSTAGRAM-HASHTAG-API] Target results validated successfully');
+
+    try {
+      // Create job in database (exactly like TikTok/YouTube)
+      const [job] = await db.insert(scrapingJobs)
+        .values({
+          userId: user.id,
+          keywords: sanitizedKeywords,
+          targetResults,
+          status: 'pending',
+          processedRuns: 0,
+          processedResults: 0,
+          platform: 'Instagram',
+          region: 'US',
+          campaignId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          cursor: 0,
+          progress: '0',
+          timeoutAt: new Date(Date.now() + TIMEOUT_MINUTES * 60 * 1000)
+        })
+        .returning();
+
+      console.log('✅ [INSTAGRAM-HASHTAG-API] Job created successfully:', job.id);
+      
+      // Prepare Apify input (hardcode small limit for testing)
+      const apifyInput = {
+        hashtags: sanitizedKeywords,
+        resultsLimit: 15, // Hardcoded to 15 for fast testing
+        addParentData: true,
+        enhanceOwnerInformation: true
+      };
+
+      // Start Apify actor
+      const run = await apifyClient
+        .actor(process.env.INSTAGRAM_HASHTAG_SCRAPER_ID!)
+        .start(apifyInput);
+
+      console.log('✅ [INSTAGRAM-HASHTAG-API] Apify actor started:', run.id);
+
+      // Update job with Apify run ID (store in runId field like TikTok/YouTube pattern)
+      await db.update(scrapingJobs)
+        .set({
+          runId: run.id,
+          status: 'processing',
+          startedAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(scrapingJobs.id, job.id));
+
+      // Schedule background processing with QStash
+      if (process.env.QSTASH_TOKEN) {
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL || 'https://influencerplatform.vercel.app';
+        const qstashCallbackUrl = `${siteUrl}/api/qstash/process-scraping`;
+        
+        const { Client } = await import('@upstash/qstash');
+        const qstash = new Client({ token: process.env.QSTASH_TOKEN });
+        
+        await qstash.publishJSON({
+          url: qstashCallbackUrl,
+          body: { jobId: job.id },
+          delay: '30s', // Check status in 30 seconds
+          retries: 3,
+          notifyOnFailure: true
+        });
+      }
+      return NextResponse.json({
+        success: true,
+        jobId: job.id,
+        message: 'Instagram hashtag search started successfully'
+      });
+
+    } catch (dbError: any) {
+      console.error('❌ [INSTAGRAM-HASHTAG-API] Database error:', dbError);
+      return NextResponse.json(
+        { error: `Database error: ${dbError.message || 'Unknown error'}` },
+        { status: 500 }
+      );
+    }
+  } catch (error: any) {
+    console.error('❌ [INSTAGRAM-HASHTAG-API] General error:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    );
+  }
+}
+
+// GET endpoint for checking job status
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const jobId = searchParams.get('jobId');
+    console.log('\n=== INSTAGRAM HASHTAG GET REQUEST START ===');
+    console.log('Job ID:', jobId);
+
+    if (!jobId) {
+      return NextResponse.json({ error: 'jobId is required' }, { status: 400 });
+    }
+
+    // Get job with results
+    const job = await db.query.scrapingJobs.findFirst({
+      where: eq(scrapingJobs.id, jobId),
+      with: {
+        results: {
+          columns: {
+            id: true,
+            jobId: true,
+            creators: true,
+            createdAt: true
+          }
+        }
+      }
+    });
+
+    if (!job) {
+      return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+    }
+
+    // If job has Apify run ID, get additional status from Apify
+    let apifyStatus = null;
+    if (job.runId) {
+      try {
+        const run = await apifyClient.run(job.runId).get();
+        apifyStatus = {
+          status: run.status,
+          startedAt: run.startedAt,
+          finishedAt: run.finishedAt,
+          stats: run.stats
+        };
+        console.log('📊 [INSTAGRAM-HASHTAG-API] Apify status:', apifyStatus);
+      } catch (apifyError) {
+        console.warn('⚠️ [INSTAGRAM-HASHTAG-API] Could not fetch Apify status:', apifyError);
+      }
+    }
+
+    // Check for timeout
+    if (job.timeoutAt && new Date(job.timeoutAt) < new Date()) {
+      console.log('\n=== INSTAGRAM HASHTAG JOB TIMEOUT DETECTED ===');
+      if (job.status === 'processing' || job.status === 'pending') {
+        await db.update(scrapingJobs)
+          .set({ 
+            status: 'timeout' as JobStatus,
+            error: 'Job exceeded maximum allowed time',
+            completedAt: new Date()
+          })
+          .where(eq(scrapingJobs.id, job.id));
+        
+        return NextResponse.json({ 
+          status: 'timeout',
+          error: 'Job exceeded maximum allowed time'
+        });
+      }
+    }
+
+    return NextResponse.json({
+      job: {
+        id: job.id,
+        status: job.status,
+        progress: job.progress,
+        processedResults: job.processedResults,
+        targetResults: job.targetResults,
+        keywords: job.keywords,
+        platform: job.platform,
+        error: job.error,
+        createdAt: job.createdAt,
+        completedAt: job.completedAt
+      },
+      apifyStatus,
+      results: job.results || []
+    });
+
+  } catch (error) {
+    console.error('❌ [INSTAGRAM-HASHTAG-API] Status check error:', error);
+    
+    return NextResponse.json(
+      { error: 'Failed to get job status' },
+      { status: 500 }
+    );
+  }
+}

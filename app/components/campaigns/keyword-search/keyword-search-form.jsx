@@ -53,7 +53,7 @@ export default function KeywordSearchForm({ onSubmit }) {
     setIsLoading(true);
     
     if (!selectedPlatform) {
-      toast.error("Please select a platform (TikTok or YouTube)");
+      toast.error("Please select a platform (TikTok, Instagram, or YouTube)");
       setIsLoading(false);
       return;
     }
@@ -91,6 +91,13 @@ export default function KeywordSearchForm({ onSubmit }) {
                   onCheckedChange={() => handlePlatformChange("tiktok")}
                 />
                 <span className="ml-2">TikTok</span>
+              </div>
+              <div className="flex items-center">
+                <Checkbox
+                  checked={selectedPlatform === "instagram"}
+                  onCheckedChange={() => handlePlatformChange("instagram")}
+                />
+                <span className="ml-2">Instagram (Hashtag)</span>
               </div>
               <div className="flex items-center">
                 <Checkbox
