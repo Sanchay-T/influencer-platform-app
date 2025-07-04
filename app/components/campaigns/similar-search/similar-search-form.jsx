@@ -21,7 +21,7 @@ import { Loader2 } from "lucide-react";
 
 export function SimilarSearchForm({ campaignId, onSuccess }) {
   const [username, setUsername] = useState("");
-  const [platform, setPlatform] = useState("instagram"); // instagram or tiktok
+  const [platform, setPlatform] = useState("instagram"); // instagram, tiktok, or youtube
   const [searchState, setSearchState] = useState({
     status: 'idle', // idle, searching, processing
     message: '',
@@ -75,7 +75,10 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
 
     try {
       // Determine API endpoint based on platform
-      const apiEndpoint = platform === 'tiktok' ? '/api/scraping/tiktok-similar' : '/api/scraping/instagram';
+      const apiEndpoint = 
+        platform === 'tiktok' ? '/api/scraping/tiktok-similar' : 
+        platform === 'youtube' ? '/api/scraping/youtube-similar' : 
+        '/api/scraping/instagram';
       console.log(`🔄 [SIMILAR-SEARCH-FORM] Making API request to ${apiEndpoint}`);
       
       const response = await fetch(apiEndpoint, {
@@ -152,17 +155,28 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
                 />
                 <span className="ml-2">TikTok</span>
               </div>
+              <div className="flex items-center">
+                <Checkbox
+                  checked={platform === "youtube"}
+                  onCheckedChange={() => setPlatform("youtube")}
+                />
+                <span className="ml-2">YouTube</span>
+              </div>
             </div>
           </div>
 
           <div className="space-y-4">
             <label className="text-sm font-medium">
-              {platform === 'tiktok' ? 'TikTok' : 'Instagram'} Username
+              {platform === 'tiktok' ? 'TikTok' : platform === 'youtube' ? 'YouTube' : 'Instagram'} Username
             </label>
             <Input
               value={username}
               onChange={handleUsernameChange}
-              placeholder={platform === 'tiktok' ? "e.g. stoolpresidente" : "e.g. gainsbybrains"}
+              placeholder={
+                platform === 'tiktok' ? "e.g. stoolpresidente" : 
+                platform === 'youtube' ? "e.g. mkbhd" : 
+                "e.g. gainsbybrains"
+              }
               required
               disabled={searchState.status !== 'idle'}
             />

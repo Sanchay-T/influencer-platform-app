@@ -10,6 +10,7 @@ import { createClient } from '@supabase/supabase-js'
 import { processYouTubeJob } from '@/lib/platforms/youtube/handler'
 import { processTikTokSimilarJob } from '@/lib/platforms/tiktok-similar/handler'
 import { processInstagramSimilarJob } from '@/lib/platforms/instagram-similar/handler'
+import { processYouTubeSimilarJob } from '@/lib/platforms/youtube-similar/handler'
 
 // Global parameter to limit API calls for testing
 const MAX_API_CALLS_FOR_TESTING = 1; // Back to 1 for testing
@@ -533,6 +534,30 @@ export async function POST(req: Request) {
         }
         
         throw tiktokError;
+      }
+    }
+    // CÓDIGO PARA YOUTUBE SIMILAR  
+    else if (job.platform === 'YouTube' && job.targetUsername) {
+      console.log('🎬 Processing YouTube similar job for username:', job.targetUsername);
+      
+      try {
+        const result = await processYouTubeSimilarJob(job, jobId);
+        return NextResponse.json(result);
+      } catch (youtubeError: any) {
+        console.error('❌ Error processing YouTube similar job:', youtubeError);
+        
+        // Ensure job status is updated on error
+        const currentJob = await db.query.scrapingJobs.findFirst({ where: eq(scrapingJobs.id, jobId) });
+        if (currentJob && currentJob.status !== 'error') {
+          await db.update(scrapingJobs).set({ 
+            status: 'error', 
+            error: youtubeError.message || 'Unknown YouTube similar processing error', 
+            completedAt: new Date(), 
+            updatedAt: new Date() 
+          }).where(eq(scrapingJobs.id, jobId));
+        }
+        
+        throw youtubeError;
       }
     } else {
       console.log('❌ [PLATFORM-DETECTION] NO MATCHING CONDITION FOUND!');

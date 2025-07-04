@@ -1,0 +1,2457 @@
+{
+  "timestamp": "2025-07-04T10:52:24.716Z",
+  "overallResult": "COMPLETED",
+  "tests": {
+    "profileAPI": {
+      "success": true,
+      "results": [
+        {
+          "handle": "@FitnessBlender",
+          "niche": "fitness",
+          "size": "large",
+          "expectedKeywords": [
+            "fitness",
+            "workout",
+            "exercise"
+          ],
+          "success": true,
+          "responseTime": 2061,
+          "data": {
+            "channelId": "UCiP6wD_tYlYLYh3agzbByWQ",
+            "channel": "http://www.youtube.com/@fitnessblender",
+            "handle": "@fitnessblender",
+            "name": "FitnessBlender",
+            "avatar": {
+              "image": {
+                "sources": [
+                  {
+                    "url": "https://yt3.googleusercontent.com/wnfBVvWhYNIpC9fvT5Qc-iM1kbCS5mmodj8J0l79F0xB7LZue1fDeWwyHwZ6aFZy8AAWmTP1-g=s72-c-k-c0x00ffffff-no-rj",
+                    "width": 72,
+                    "height": 72
+                  },
+                  {
+                    "url": "https://yt3.googleusercontent.com/wnfBVvWhYNIpC9fvT5Qc-iM1kbCS5mmodj8J0l79F0xB7LZue1fDeWwyHwZ6aFZy8AAWmTP1-g=s120-c-k-c0x00ffffff-no-rj",
+                    "width": 120,
+                    "height": 120
+                  },
+                  {
+                    "url": "https://yt3.googleusercontent.com/wnfBVvWhYNIpC9fvT5Qc-iM1kbCS5mmodj8J0l79F0xB7LZue1fDeWwyHwZ6aFZy8AAWmTP1-g=s160-c-k-c0x00ffffff-no-rj",
+                    "width": 160,
+                    "height": 160
+                  }
+                ],
+                "processor": {
+                  "borderImageProcessor": {
+                    "circular": true
+                  }
+                }
+              },
+              "avatarImageSize": "AVATAR_SIZE_XL",
+              "loggingDirectives": {
+                "trackingParams": "CDQQ6OENIhMIrpL_0ISjjgMVggjWAB1mMA4V",
+                "visibility": {
+                  "types": "12"
+                }
+              }
+            },
+            "description": "We offer at-home workout videos created by certified personal trainers and doctors of physical therapy. In our videos, you’ll see us sweat, laugh, lose count, and modify exercises based on what our bodies are telling us—we have fun with our workouts, and we want you to enjoy yourself, too! No matter your fitness level, if you need help with consistency, motivation, or achieving specific fitness goals, we’re here for you.\n• Explore our library of workout videos, from strength training and HIIT to yoga\n• Reach your goals with smart and effective workout programs\n• Use the customizable workout calendar and personalized stats to track your progress\n• Eat better with healthy recipes and meal plans built by registered dietitians\n• Reduce stress with mental wellness resources from licensed psychologists\n• Interact with our community of like-minded exercisers for support and motivation\nJoin for free or access exclusive content with an FB Plus Pass or Subscription: https://gofb.info/Membership\n",
+            "subscriberCount": 6590000,
+            "subscriberCountText": "6.59M subscribers",
+            "videoCountText": "1,676 videos",
+            "videoCount": 1676,
+            "viewCountText": "1,325,133,105 views",
+            "viewCount": 1325133105,
+            "joinedDateText": "Joined Jan 19, 2010",
+            "tags": "fitness, blender, exercise, hiit, toning, health, work, out, workout, abs, tone, weight, loss, home workout, exercises, pilates, full length workout videos, workout videos, free workout videos, Fitness Blender, boot, camps, boot camps, Pilates, Pilates workouts, cardio workouts, strength, cardio",
+            "email": null,
+            "new:_channel_membership": "https://gofb.info/FB_Exclusive",
+            "join_fb_plus": "https://fitnessblender.com/fb-plus",
+            "workout_programs_for_results": "https://fitnessblender.com/plans",
+            "search_1,000+_workout_videos": "https://fitnessblender.com/videos",
+            "fitnessblender.com": "https://fitnessblender.com",
+            "fitness_blender_forums": "https://fitnessblender.com/community",
+            "eat_real_food!_tasty_recipes": "https://fitnessblender.com/healthy-living/healthy-recipes",
+            "fb_on_facebook": "https://facebook.com/fitnessblender",
+            "fb_on_twitter": "https://twitter.com/#!/fitnessblender",
+            "fb_on_instagram": "https://instagram.com/fitnessblender",
+            "links": [
+              "https://gofb.info/FB_Exclusive",
+              "https://fitnessblender.com/fb-plus",
+              "https://fitnessblender.com/plans",
+              "https://fitnessblender.com/videos",
+              "https://fitnessblender.com",
+              "https://fitnessblender.com/community",
+              "https://fitnessblender.com/healthy-living/healthy-recipes",
+              "https://facebook.com/fitnessblender",
+              "https://twitter.com/#!/fitnessblender",
+              "https://instagram.com/fitnessblender"
+            ],
+            "country": "United States"
+          },
+          "analysis": {
+            "name": "FitnessBlender",
+            "handle": "@fitnessblender",
+            "hasDescription": true,
+            "descriptionLength": 1000,
+            "hasEmail": false,
+            "hasLinks": true,
+            "subscriberCount": "6.59M subscribers",
+            "keywordPotential": "high",
+            "extractedKeywords": [
+              "offer",
+              "home",
+              "workout",
+              "videos",
+              "created"
+            ],
+            "keywordMatch": {
+              "matches": 1,
+              "percentage": 33.33333333333333,
+              "matchedKeywords": [
+                "workout"
+              ]
+            }
+          }
+        },
+        {
+          "handle": "@athleanx",
+          "niche": "fitness",
+          "size": "large",
+          "expectedKeywords": [
+            "fitness",
+            "muscle",
+            "training"
+          ],
+          "success": true,
+          "responseTime": 1718,
+          "data": {
+            "channelId": "UCe0TLA0EsQbE-MjuHXevj2A",
+            "channel": "http://www.youtube.com/@athleanx",
+            "handle": "@athleanx",
+            "name": "ATHLEAN-X™",
+            "avatar": {
+              "image": {
+                "sources": [
+                  {
+                    "url": "https://yt3.googleusercontent.com/UN93iXdFUqIzbOHUOneFgq4hxmqbZVXAxNx-e_OJJ6FRwiQH3Id0SBYa99ezjeZd82wow6nE=s72-c-k-c0x00ffffff-no-rj",
+                    "width": 72,
+                    "height": 72
+                  },
+                  {
+                    "url": "https://yt3.googleusercontent.com/UN93iXdFUqIzbOHUOneFgq4hxmqbZVXAxNx-e_OJJ6FRwiQH3Id0SBYa99ezjeZd82wow6nE=s120-c-k-c0x00ffffff-no-rj",
+                    "width": 120,
+                    "height": 120
+                  },
+                  {
+                    "url": "https://yt3.googleusercontent.com/UN93iXdFUqIzbOHUOneFgq4hxmqbZVXAxNx-e_OJJ6FRwiQH3Id0SBYa99ezjeZd82wow6nE=s160-c-k-c0x00ffffff-no-rj",
+                    "width": 160,
+                    "height": 160
+                  }
+                ],
+                "processor": {
+                  "borderImageProcessor": {
+                    "circular": true
+                  }
+                }
+              },
+              "avatarImageSize": "AVATAR_SIZE_XL",
+              "loggingDirectives": {
+                "trackingParams": "CCwQ6OENIhMI9OWx0oSjjgMVLcM_BB3tACQA",
+                "visibility": {
+                  "types": "12"
+                }
+              }
+            },
+            "description": "Welcome to ATHLEAN-X™ on YouTube!  This is where you can find all the latest FREE workouts, nutrition and training advice to get you on your way to a healthy, leaner,  more muscular, athletic body by training like an athlete.\n\nLearn from the physical therapist and strength coach Jeff Cavaliere, exactly what he does with his professional athlete and celebrity clients.  Put the science back in strength to build muscle, keep your muscles and joints healthy and to improve your overall athleticism.  \n\nSubscribe for free weekly workouts.\n\nIf you want to look like an athlete...you've got to train like an athlete!  Now you can with the ATHLEAN-X™ workouts here on YouTube!\n\nSend Pro Athlete / Celebrity Training Requests to:  mediarelations@athleanx.com\n\nRules of Conduct: This channel is for those looking to learn. Period. No racism/hate speech. No inciting/spreading drama. No advertising or self-promotion of any kind.",
+            "subscriberCount": 14100000,
+            "subscriberCountText": "14.1M subscribers",
+            "videoCountText": "1,604 videos",
+            "videoCount": 1604,
+            "viewCountText": "2,641,640,238 views",
+            "viewCount": 2641640238,
+            "joinedDateText": "Joined Dec 16, 2006",
+            "tags": "workouts, how to build muscle, how to lose fat, science based workout, science based workouts, science-based workout, how to get six pack abs, bicep workout, chest workout, back workout, arm workout, leg workout, training, how to lose weight, how to lose belly fat, exercises, fitness, tips, home workout, fat burning, how to build muscle, biceps workout, exercises ranked, perfect workouts, physical therapy, shoulder workouts, tricep workout, athlean x, jeff cavaliere",
+            "email": "mediarelations@athleanx.com",
+            "athleanx.com": "https://athleanx.com",
+            "ax_on_instagram": "https://instagram.com/athleanx",
+            "ax_on_facebook": "https://facebook.com/athleanx",
+            "workout_supplements": "https://athleanx.com/athleanrx",
+            "links": [
+              "https://athleanx.com",
+              "https://instagram.com/athleanx",
+              "https://facebook.com/athleanx",
+              "https://athleanx.com/athleanrx"
+            ],
+            "country": "United States"
+          },
+          "analysis": {
+            "name": "ATHLEAN-X™",
+            "handle": "@athleanx",
+            "hasDescription": true,
+            "descriptionLength": 922,
+            "hasEmail": true,
+            "hasLinks": true,
+            "subscriberCount": "14.1M subscribers",
+            "keywordPotential": "high",
+            "extractedKeywords": [
+              "welcome",
+              "athlean",
+              "youtube",
+              "this",
+              "where"
+            ],
+            "keywordMatch": {
+              "matches": 0,
+              "percentage": 0,
+              "matchedKeywords": []
+            }
+          }
+        },
+        {
+          "handle": "@Calisthenic-Movement",
+          "niche": "fitness",
+          "size": "medium",
+          "expectedKeywords": [
+            "calisthenics",
+            "bodyweight"
+          ],
+          "success": true,
+          "responseTime": 1389,
+          "data": {
+            "channelId": "UCZIIRX8rkNjVpP-oLMHpeDw",
+            "channel": "http://www.youtube.com/@calimove",
+            "handle": "@calimove",
+            "name": "Calisthenicmovement",
+            "avatar": {
+              "image": {
+                "sources": [
+                  {
+                    "url": "https://yt3.googleusercontent.com/ytc/AIdro_mAeOtj3ItFBKtGrZnBUFkL-QOK7CyMshVvxYk9lX0aRmo=s72-c-k-c0x00ffffff-no-rj",
+                    "width": 72,
+                    "height": 72
+                  },
+                  {
+                    "url": "https://yt3.googleusercontent.com/ytc/AIdro_mAeOtj3ItFBKtGrZnBUFkL-QOK7CyMshVvxYk9lX0aRmo=s120-c-k-c0x00ffffff-no-rj",
+                    "width": 120,
+                    "height": 120
+                  },
+                  {
+                    "url": "https://yt3.googleusercontent.com/ytc/AIdro_mAeOtj3ItFBKtGrZnBUFkL-QOK7CyMshVvxYk9lX0aRmo=s160-c-k-c0x00ffffff-no-rj",
+                    "width": 160,
+                    "height": 160
+                  }
+                ],
+                "processor": {
+                  "borderImageProcessor": {
+                    "circular": true
+                  }
+                }
+              },
+              "avatarImageSize": "AVATAR_SIZE_XL",
+              "loggingDirectives": {
+                "trackingParams": "CC4Q6OENIhMIsMDK04SjjgMVzMY_BB0HjTEe",
+                "visibility": {
+                  "types": "12"
+                }
+              }
+            },
+            "description": "Sports Company - Fitness/Nutrition/Health\nGet Your Workout Program : ►► https://calimove.com ◄◄",
+            "subscriberCount": 4280000,
+            "subscriberCountText": "4.28M subscribers",
+            "videoCountText": "385 videos",
+            "videoCount": 385,
+            "viewCountText": "548,036,416 views",
+            "viewCount": 548036416,
+            "joinedDateText": "Joined Mar 2, 2012",
+            "tags": null,
+            "email": null,
+            "workout_programs": "https://calimove.com",
+            "facebook": "https://facebook.com/pages/Calisthenic-Movement/154846744637610",
+            "instagram": "https://instagram.com/calimove",
+            "website": "https://calimove.com",
+            "impressum": "https://calimove.com/p/disclosure",
+            "tiktok": "https://tiktok.com/@calisthenicmovement?lang=de-DE",
+            "links": [
+              "https://calimove.com",
+              "https://facebook.com/pages/Calisthenic-Movement/154846744637610",
+              "https://instagram.com/calimove",
+              "https://calimove.com",
+              "https://calimove.com/p/disclosure",
+              "https://tiktok.com/@calisthenicmovement?lang=de-DE"
+            ],
+            "country": "Germany"
+          },
+          "analysis": {
+            "name": "Calisthenicmovement",
+            "handle": "@calimove",
+            "hasDescription": true,
+            "descriptionLength": 95,
+            "hasEmail": false,
+            "hasLinks": true,
+            "subscriberCount": "4.28M subscribers",
+            "keywordPotential": "medium",
+            "extractedKeywords": [
+              "sports",
+              "company",
+              "fitness",
+              "nutrition",
+              "health"
+            ],
+            "keywordMatch": {
+              "matches": 0,
+              "percentage": 0,
+              "matchedKeywords": []
+            }
+          }
+        },
+        {
+          "handle": "@MKBHD",
+          "niche": "tech",
+          "size": "large",
+          "expectedKeywords": [
+            "tech",
+            "review",
+            "smartphone"
+          ],
+          "success": true,
+          "responseTime": 2052,
+          "data": {
+            "channelId": "UCBJycsmduvYEL83R_U4JriQ",
+            "channel": "http://www.youtube.com/@mkbhd",
+            "handle": "@mkbhd",
+            "name": "Marques Brownlee",
+            "avatar": {
+              "image": {
+                "sources": [
+                  {
+                    "url": "https://yt3.googleusercontent.com/PEwQfVuhh5jO7_NDDufCq349q0W6MgZeYlgeMyW3OSRMxMx9W5yre5Fgbi4Bql56L1cPwoteOA=s72-c-k-c0x00ffffff-no-rj",
+                    "width": 72,
+                    "height": 72
+                  },
+                  {
+                    "url": "https://yt3.googleusercontent.com/PEwQfVuhh5jO7_NDDufCq349q0W6MgZeYlgeMyW3OSRMxMx9W5yre5Fgbi4Bql56L1cPwoteOA=s120-c-k-c0x00ffffff-no-rj",
+                    "width": 120,
+                    "height": 120
+                  },
+                  {
+                    "url": "https://yt3.googleusercontent.com/PEwQfVuhh5jO7_NDDufCq349q0W6MgZeYlgeMyW3OSRMxMx9W5yre5Fgbi4Bql56L1cPwoteOA=s160-c-k-c0x00ffffff-no-rj",
+                    "width": 160,
+                    "height": 160
+                  }
+                ],
+                "processor": {
+                  "borderImageProcessor": {
+                    "circular": true
+                  }
+                }
+              },
+              "avatarImageSize": "AVATAR_SIZE_XL",
+              "loggingDirectives": {
+                "trackingParams": "CC8Q6OENIhMI9br91ISjjgMV6ds_BB3vXBu7",
+                "visibility": {
+                  "types": "12"
+                }
+              }
+            },
+            "description": "MKBHD: Quality Tech Videos | YouTuber | Geek | Consumer Electronics | Tech Head | Internet Personality!\n\nbusiness@MKBHD.com\n\nNYC",
+            "subscriberCount": 20100000,
+            "subscriberCountText": "20.1M subscribers",
+            "videoCountText": "1,747 videos",
+            "videoCount": 1747,
+            "viewCountText": "4,842,761,412 views",
+            "viewCount": 4842761412,
+            "joinedDateText": "Joined Mar 21, 2008",
+            "tags": "MKBHD, MarquesBrownlee, Marques, Brownlee",
+            "email": "business@MKBHD.com",
+            "twitter": "https://twitter.com/MKBHD",
+            "instagram": "https://instagram.com/MKBHD",
+            "the_studio": "https://youtube.com/c/TheStudio",
+            "reddit": "https://reddit.com/r/MKBHD",
+            "discord": "https://discord.gg/MKBHD",
+            "links": [
+              "https://twitter.com/MKBHD",
+              "https://instagram.com/MKBHD",
+              "https://youtube.com/c/TheStudio",
+              "https://reddit.com/r/MKBHD",
+              "https://discord.gg/MKBHD"
+            ],
+            "country": "United States"
+          },
+          "analysis": {
+            "name": "Marques Brownlee",
+            "handle": "@mkbhd",
+            "hasDescription": true,
+            "descriptionLength": 128,
+            "hasEmail": true,
+            "hasLinks": true,
+            "subscriberCount": "20.1M subscribers",
+            "keywordPotential": "high",
+            "extractedKeywords": [
+              "tech",
+              "mkbhd",
+              "quality",
+              "videos",
+              "youtuber"
+            ],
+            "keywordMatch": {
+              "matches": 1,
+              "percentage": 33.33333333333333,
+              "matchedKeywords": [
+                "tech"
+              ]
+            }
+          }
+        },
+        {
+          "handle": "@UnboxTherapy",
+          "niche": "tech",
+          "size": "large",
+          "expectedKeywords": [
+            "unboxing",
+            "gadgets",
+            "tech"
+          ],
+          "success": true,
+          "responseTime": 1750,
+          "data": {
+            "channelId": "UCsTcErHg8oDvUnTzoqsYeNw",
+            "channel": "http://www.youtube.com/@unboxtherapy",
+            "handle": "@unboxtherapy",
+            "name": "Unbox Therapy",
+            "avatar": {
+              "image": {
+                "sources": [
+                  {
+                    "url": "https://yt3.googleusercontent.com/ytc/AIdro_mrdFKrYUtuMEqVUWPmtKSzy0weSdlawiMI2VPqP9yq1ks=s72-c-k-c0x00ffffff-no-rj",
+                    "width": 72,
+                    "height": 72
+                  },
+                  {
+                    "url": "https://yt3.googleusercontent.com/ytc/AIdro_mrdFKrYUtuMEqVUWPmtKSzy0weSdlawiMI2VPqP9yq1ks=s120-c-k-c0x00ffffff-no-rj",
+                    "width": 120,
+                    "height": 120
+                  },
+                  {
+                    "url": "https://yt3.googleusercontent.com/ytc/AIdro_mrdFKrYUtuMEqVUWPmtKSzy0weSdlawiMI2VPqP9yq1ks=s160-c-k-c0x00ffffff-no-rj",
+                    "width": 160,
+                    "height": 160
+                  }
+                ],
+                "processor": {
+                  "borderImageProcessor": {
+                    "circular": true
+                  }
+                }
+              },
+              "avatarImageSize": "AVATAR_SIZE_XL",
+              "loggingDirectives": {
+                "trackingParams": "CC4Q6OENIhMI88Ws1oSjjgMVUgzWAB0byCIw",
+                "visibility": {
+                  "types": "12"
+                }
+              }
+            },
+            "description": "Where products get naked.\n\nHere you will find a variety of videos showcasing the coolest products on the planet. From the newest smartphone to surprising gadgets and technology you never knew existed. It's all here on Unbox Therapy.\n\nBusiness / professional inquiries ONLY - jack [at] unboxtherapy.com\n(please don't use YouTube inbox)",
+            "subscriberCount": 24700000,
+            "subscriberCountText": "24.7M subscribers",
+            "videoCountText": "2,386 videos",
+            "videoCount": 2386,
+            "viewCountText": "4,882,663,729 views",
+            "viewCount": 4882663729,
+            "joinedDateText": "Joined Dec 21, 2010",
+            "tags": "unboxing, tech, technology, gadgets, gaming, games, unbox, computers, apple, mac, reviews, iphone, samsung, galaxy, android, review",
+            "email": null,
+            "twitter": "https://twitter.com/unboxtherapy",
+            "facebook": "https://facebook.com/unboxtherapy",
+            "instagram": "https://instagram.com/unboxtherapy",
+            "the_official_website": "https://unboxtherapy.com",
+            "links": [
+              "https://twitter.com/unboxtherapy",
+              "https://facebook.com/unboxtherapy",
+              "https://instagram.com/unboxtherapy",
+              "https://unboxtherapy.com"
+            ]
+          },
+          "analysis": {
+            "name": "Unbox Therapy",
+            "handle": "@unboxtherapy",
+            "hasDescription": true,
+            "descriptionLength": 334,
+            "hasEmail": false,
+            "hasLinks": true,
+            "subscriberCount": "24.7M subscribers",
+            "keywordPotential": "high",
+            "extractedKeywords": [
+              "products",
+              "where",
+              "naked",
+              "here",
+              "find"
+            ],
+            "keywordMatch": {
+              "matches": 0,
+              "percentage": 0,
+              "matchedKeywords": []
+            }
+          }
+        },
+        {
+          "handle": "@LinusTechTips",
+          "niche": "tech",
+          "size": "large",
+          "expectedKeywords": [
+            "tech",
+            "computer",
+            "review"
+          ],
+          "success": true,
+          "responseTime": 2078,
+          "data": {
+            "channelId": "UCXuqSBlHAE6Xw-yeJA0Tunw",
+            "channel": "http://www.youtube.com/@LinusTechTips",
+            "handle": "@LinusTechTips",
+            "name": "Linus Tech Tips",
+            "avatar": {
+              "image": {
+                "sources": [
+                  {
+                    "url": "https://yt3.googleusercontent.com/gnvYLhXy8FAlPXZ2RTrkrgj-5kyt0vdE2FUGVOiKGdEZIa-wN5A-7nwZBlWJLzUMmoh1NWAU=s72-c-k-c0x00ffffff-no-rj",
+                    "width": 72,
+                    "height": 72
+                  },
+                  {
+                    "url": "https://yt3.googleusercontent.com/gnvYLhXy8FAlPXZ2RTrkrgj-5kyt0vdE2FUGVOiKGdEZIa-wN5A-7nwZBlWJLzUMmoh1NWAU=s120-c-k-c0x00ffffff-no-rj",
+                    "width": 120,
+                    "height": 120
+                  },
+                  {
+                    "url": "https://yt3.googleusercontent.com/gnvYLhXy8FAlPXZ2RTrkrgj-5kyt0vdE2FUGVOiKGdEZIa-wN5A-7nwZBlWJLzUMmoh1NWAU=s160-c-k-c0x00ffffff-no-rj",
+                    "width": 160,
+                    "height": 160
+                  }
+                ],
+                "processor": {
+                  "borderImageProcessor": {
+                    "circular": true
+                  }
+                }
+              },
+              "avatarImageSize": "AVATAR_SIZE_XL",
+              "loggingDirectives": {
+                "trackingParams": "CC8Q6OENIhMIg_zh14SjjgMVEt0_BB0Ewzej",
+                "visibility": {
+                  "types": "12"
+                }
+              }
+            },
+            "description": "Linus Tech Tips is a passionate team of \"professionally curious\" experts in consumer technology and video production who aim to educate and entertain.\n\nSponsorship Inquiries: partnerships@linusmediagroup.com\n",
+            "subscriberCount": 16399999.999999998,
+            "subscriberCountText": "16.4M subscribers",
+            "videoCountText": "7,364 videos",
+            "videoCount": 7364,
+            "viewCountText": "8,814,652,621 views",
+            "viewCount": 8814652621,
+            "joinedDateText": "Joined Nov 24, 2008",
+            "tags": "Unboxing, Review, Computer, Hardware, Motherboard, Intel, AMD, NVIDIA, gaming",
+            "email": "partnerships@linusmediagroup.com",
+            "lttstore.com": "https://lttstore.com",
+            "twitter": "https://twitter.com/LinusTech",
+            "facebook": "https://facebook.com/LinusTech",
+            "tiktok": "https://tiktok.com/@linustech",
+            "instagram": "https://instagram.com/linustech",
+            "links": [
+              "https://lttstore.com",
+              "https://twitter.com/LinusTech",
+              "https://facebook.com/LinusTech",
+              "https://tiktok.com/@linustech",
+              "https://instagram.com/linustech"
+            ],
+            "country": "Canada"
+          },
+          "analysis": {
+            "name": "Linus Tech Tips",
+            "handle": "@LinusTechTips",
+            "hasDescription": true,
+            "descriptionLength": 208,
+            "hasEmail": true,
+            "hasLinks": true,
+            "subscriberCount": "16.4M subscribers",
+            "keywordPotential": "high",
+            "extractedKeywords": [
+              "linus",
+              "tech",
+              "tips",
+              "passionate",
+              "team"
+            ],
+            "keywordMatch": {
+              "matches": 1,
+              "percentage": 33.33333333333333,
+              "matchedKeywords": [
+                "tech"
+              ]
+            }
+          }
+        },
+        {
+          "handle": "@PewDiePie",
+          "niche": "gaming",
+          "size": "massive",
+          "expectedKeywords": [
+            "gaming",
+            "games"
+          ],
+          "success": true,
+          "responseTime": 2070,
+          "data": {
+            "channelId": "UC-lHJZR3Gqxm24_Vd_AJ5Yw",
+            "channel": "http://www.youtube.com/@PewDiePie",
+            "handle": "@PewDiePie",
+            "name": "PewDiePie",
+            "avatar": {
+              "image": {
+                "sources": [
+                  {
+                    "url": "https://yt3.googleusercontent.com/vik8mAiwHQbXiFyKfZ3__p55_VBdGvwxPpuPJBBwdbF0PjJxikXhrP-C3nLQAMAxGNd_-xQCIg=s72-c-k-c0x00ffffff-no-rj",
+                    "width": 72,
+                    "height": 72
+                  },
+                  {
+                    "url": "https://yt3.googleusercontent.com/vik8mAiwHQbXiFyKfZ3__p55_VBdGvwxPpuPJBBwdbF0PjJxikXhrP-C3nLQAMAxGNd_-xQCIg=s120-c-k-c0x00ffffff-no-rj",
+                    "width": 120,
+                    "height": 120
+                  },
+                  {
+                    "url": "https://yt3.googleusercontent.com/vik8mAiwHQbXiFyKfZ3__p55_VBdGvwxPpuPJBBwdbF0PjJxikXhrP-C3nLQAMAxGNd_-xQCIg=s160-c-k-c0x00ffffff-no-rj",
+                    "width": 160,
+                    "height": 160
+                  }
+                ],
+                "processor": {
+                  "borderImageProcessor": {
+                    "circular": true
+                  }
+                }
+              },
+              "avatarImageSize": "AVATAR_SIZE_XL",
+              "loggingDirectives": {
+                "trackingParams": "CC0Q6OENIhMIyMul2YSjjgMVuMI_BB1NQRc9",
+                "visibility": {
+                  "types": "12"
+                }
+              }
+            },
+            "description": "I make videos.",
+            "subscriberCount": 110000000,
+            "subscriberCountText": "110M subscribers",
+            "videoCountText": "4,818 videos",
+            "videoCount": 4818,
+            "viewCountText": "29,565,683,217 views",
+            "viewCount": 29565683217,
+            "joinedDateText": "Joined Apr 29, 2010",
+            "tags": "pewdiepie, pewds, gaming, felix arvid ulf, felix, kjellberg",
+            "email": null,
+            "ig": "https://instagram.com/pewdiepie",
+            "tiktok": "https://tiktok.com/@pewdiepie",
+            "twitch": "https://twitch.tv/pewdiepie",
+            "links": [
+              "https://instagram.com/pewdiepie",
+              "https://tiktok.com/@pewdiepie",
+              "https://twitch.tv/pewdiepie"
+            ],
+            "country": "Japan"
+          },
+          "analysis": {
+            "name": "PewDiePie",
+            "handle": "@PewDiePie",
+            "hasDescription": true,
+            "descriptionLength": 14,
+            "hasEmail": false,
+            "hasLinks": true,
+            "subscriberCount": "110M subscribers",
+            "keywordPotential": "low",
+            "extractedKeywords": [
+              "make",
+              "videos"
+            ],
+            "keywordMatch": {
+              "matches": 0,
+              "percentage": 0,
+              "matchedKeywords": []
+            }
+          }
+        },
+        {
+          "handle": "@Markiplier",
+          "niche": "gaming",
+          "size": "large",
+          "expectedKeywords": [
+            "gaming",
+            "horror",
+            "games"
+          ],
+          "success": true,
+          "responseTime": 2034,
+          "data": {
+            "channelId": "UC7_YxT-KID8kRbqZo7MyscQ",
+            "channel": "http://www.youtube.com/@markiplier",
+            "handle": "@markiplier",
+            "name": "Markiplier",
+            "avatar": {
+              "image": {
+                "sources": [
+                  {
+                    "url": "https://yt3.googleusercontent.com/ytc/AIdro_nfDvwu14-iN5YZcaLIomwno1_3oFcYTmG5_kn7SMj_nec=s72-c-k-c0x00ffffff-no-rj",
+                    "width": 72,
+                    "height": 72
+                  },
+                  {
+                    "url": "https://yt3.googleusercontent.com/ytc/AIdro_nfDvwu14-iN5YZcaLIomwno1_3oFcYTmG5_kn7SMj_nec=s120-c-k-c0x00ffffff-no-rj",
+                    "width": 120,
+                    "height": 120
+                  },
+                  {
+                    "url": "https://yt3.googleusercontent.com/ytc/AIdro_nfDvwu14-iN5YZcaLIomwno1_3oFcYTmG5_kn7SMj_nec=s160-c-k-c0x00ffffff-no-rj",
+                    "width": 160,
+                    "height": 160
+                  }
+                ],
+                "processor": {
+                  "borderImageProcessor": {
+                    "circular": true
+                  }
+                }
+              },
+              "avatarImageSize": "AVATAR_SIZE_XL",
+              "loggingDirectives": {
+                "trackingParams": "CDEQ6OENIhMI_uvc2oSjjgMVl9w_BB0MOwD7",
+                "visibility": {
+                  "types": "12"
+                }
+              }
+            },
+            "description": "Hi, I'm Markiplier. I make videos. \n\nFrom quality content to meme-able garbage, from scary games to full-on interactive movies you'll find it all. You will, actually. I have over 5000 videos so I'm sure there's something you'd like. \n\nMaybe you like horror games, or funny games, or comedy sketches, or animations, or compilations, or reactions, or reviews, or challenges, or cryptic lore, or mind-crippling ennui, or stuff-that-is-guaranteed-to-probably-make-you-cry? Whatever you're into I'm sure there's something for you down in the briny deep of my video page. So why not dive in?\n\nOr don't. Life is yours to choose after all.\n",
+            "subscriberCount": 37600000,
+            "subscriberCountText": "37.6M subscribers",
+            "videoCountText": "5,747 videos",
+            "videoCount": 5747,
+            "viewCountText": "22,662,971,084 views",
+            "viewCount": 22662971084,
+            "joinedDateText": "Joined May 26, 2012",
+            "tags": "markiplier, comedy, gaming, funny videos, funny moments, sketch comedy, laughing, lets play, challenge videos, hilarious, challenges, sketches, scary games, funny games, rage games, mark fischbach",
+            "email": null,
+            "cloak": "https://cloakbrand.com",
+            "twitter": "https://twitter.com/markiplier",
+            "instagram": "https://instagram.com/markiplier",
+            "tiktok": "https://tiktok.com/@notmarkiplier",
+            "tumblr": "https://markiplier.tumblr.com",
+            "facebook": "https://facebook.com/markiplier",
+            "reddit!": "https://reddit.com/r/Markiplier",
+            "links": [
+              "https://cloakbrand.com",
+              "https://twitter.com/markiplier",
+              "https://instagram.com/markiplier",
+              "https://tiktok.com/@notmarkiplier",
+              "https://markiplier.tumblr.com",
+              "https://facebook.com/markiplier",
+              "https://reddit.com/r/Markiplier"
+            ],
+            "country": "United States"
+          },
+          "analysis": {
+            "name": "Markiplier",
+            "handle": "@markiplier",
+            "hasDescription": true,
+            "descriptionLength": 632,
+            "hasEmail": false,
+            "hasLinks": true,
+            "subscriberCount": "37.6M subscribers",
+            "keywordPotential": "high",
+            "extractedKeywords": [
+              "from",
+              "markiplier",
+              "make",
+              "videos",
+              "quality"
+            ],
+            "keywordMatch": {
+              "matches": 0,
+              "percentage": 0,
+              "matchedKeywords": []
+            }
+          }
+        },
+        {
+          "handle": "@BingingwithBabish",
+          "niche": "cooking",
+          "size": "large",
+          "expectedKeywords": [
+            "cooking",
+            "recipe",
+            "food"
+          ],
+          "success": true,
+          "responseTime": 1845,
+          "data": {
+            "channelId": "UCJHA_jMfCvEnv-3kRjTCQXw",
+            "channel": "http://www.youtube.com/@babishculinaryuniverse",
+            "handle": "@babishculinaryuniverse",
+            "name": "Babish Culinary Universe",
+            "avatar": {
+              "image": {
+                "sources": [
+                  {
+                    "url": "https://yt3.googleusercontent.com/ytc/AIdro_lssgUwpMFtlZY-s6J7RrKdya1RKGniwlV37dNsk0d3Ow=s72-c-k-c0x00ffffff-no-rj",
+                    "width": 72,
+                    "height": 72
+                  },
+                  {
+                    "url": "https://yt3.googleusercontent.com/ytc/AIdro_lssgUwpMFtlZY-s6J7RrKdya1RKGniwlV37dNsk0d3Ow=s120-c-k-c0x00ffffff-no-rj",
+                    "width": 120,
+                    "height": 120
+                  },
+                  {
+                    "url": "https://yt3.googleusercontent.com/ytc/AIdro_lssgUwpMFtlZY-s6J7RrKdya1RKGniwlV37dNsk0d3Ow=s160-c-k-c0x00ffffff-no-rj",
+                    "width": 160,
+                    "height": 160
+                  }
+                ],
+                "processor": {
+                  "borderImageProcessor": {
+                    "circular": true
+                  }
+                }
+              },
+              "avatarImageSize": "AVATAR_SIZE_XL",
+              "loggingDirectives": {
+                "trackingParams": "CC4Q6OENIhMIuvj524SjjgMVPkxMCB04mQUt",
+                "visibility": {
+                  "types": "12"
+                }
+              }
+            },
+            "description": "Binging with Babish is the realization of a young(ish) man's dream to combine his love of film and cooking, and to have some fun in the process.  Join us each week as we recreate the foods you've always wanted to try in movies and television - and if you're not careful, you just might learn a thing or two.\n\nhttp://www.twitter.com/bingingwbabish\nhttp://www.facebook.com/bingingwithbabish\nhttp://www.youtube.com/bgfilms\nhttp://www.instagram.com/bingingwithbabish",
+            "subscriberCount": 10400000,
+            "subscriberCountText": "10.4M subscribers",
+            "videoCountText": "1,013 videos",
+            "videoCount": 1013,
+            "viewCountText": "2,978,327,425 views",
+            "viewCount": 2978327425,
+            "joinedDateText": "Joined Aug 21, 2006",
+            "tags": "binging with babish, babbish, cooking with babish",
+            "email": null,
+            "website": "https://bingingwithbabish.com",
+            "facebook": "https://facebook.com/BingingWithBabish",
+            "twitter": "https://twitter.com/bingingwbabish",
+            "instagram": "https://instagram.com/bingingwithbabish",
+            "links": [
+              "https://bingingwithbabish.com",
+              "https://facebook.com/BingingWithBabish",
+              "https://twitter.com/bingingwbabish",
+              "https://instagram.com/bingingwithbabish"
+            ],
+            "country": "United States"
+          },
+          "analysis": {
+            "name": "Babish Culinary Universe",
+            "handle": "@babishculinaryuniverse",
+            "hasDescription": true,
+            "descriptionLength": 462,
+            "hasEmail": false,
+            "hasLinks": true,
+            "subscriberCount": "10.4M subscribers",
+            "keywordPotential": "high",
+            "extractedKeywords": [
+              "binging",
+              "babish",
+              "realization",
+              "young",
+              "dream"
+            ],
+            "keywordMatch": {
+              "matches": 0,
+              "percentage": 0,
+              "matchedKeywords": []
+            }
+          }
+        },
+        {
+          "handle": "@JoshuaWeissman",
+          "niche": "cooking",
+          "size": "medium",
+          "expectedKeywords": [
+            "cooking",
+            "chef",
+            "recipe"
+          ],
+          "success": true,
+          "responseTime": 1236,
+          "data": {
+            "channelId": "UChBEbMKI1eCcejTtmI32UEw",
+            "channel": "http://www.youtube.com/@JoshuaWeissman",
+            "handle": "@JoshuaWeissman",
+            "name": "Joshua Weissman",
+            "avatar": {
+              "image": {
+                "sources": [
+                  {
+                    "url": "https://yt3.googleusercontent.com/ytc/AIdro_nfXRvoxu5cFt2H4WhJfFLbL5SVdzmvEnFymnPzH3_1qPM=s72-c-k-c0x00ffffff-no-rj",
+                    "width": 72,
+                    "height": 72
+                  },
+                  {
+                    "url": "https://yt3.googleusercontent.com/ytc/AIdro_nfXRvoxu5cFt2H4WhJfFLbL5SVdzmvEnFymnPzH3_1qPM=s120-c-k-c0x00ffffff-no-rj",
+                    "width": 120,
+                    "height": 120
+                  },
+                  {
+                    "url": "https://yt3.googleusercontent.com/ytc/AIdro_nfXRvoxu5cFt2H4WhJfFLbL5SVdzmvEnFymnPzH3_1qPM=s160-c-k-c0x00ffffff-no-rj",
+                    "width": 160,
+                    "height": 160
+                  }
+                ],
+                "processor": {
+                  "borderImageProcessor": {
+                    "circular": true
+                  }
+                }
+              },
+              "avatarImageSize": "AVATAR_SIZE_XL",
+              "loggingDirectives": {
+                "trackingParams": "CCwQ6OENIhMI8cOT3YSjjgMVBi7WAB3A4gOQ",
+                "visibility": {
+                  "types": "12"
+                }
+              }
+            },
+            "description": "Hi, I'm Josh and I make entertaining, exciting, and inspirational videos about food and cooking. I'm obsessive about bread, and I like to eat things that have a large quantity of butter in them. All I want is to entertain and excite YOU about food, and maybe inspire you to go cook something yourself. \n\nFind me on: \nhttp://instagram.com/joshuaweissman\nhttp://twitter.com/therealweissman\nhttp://facebook.com/thejoshuaweissman\nhttp://joshuaweissman.com\n\nFor any Business, brand or partnership enquiries Email: josh.cohen@oddprojects.com",
+            "subscriberCount": 10300000,
+            "subscriberCountText": "10.3M subscribers",
+            "videoCountText": "752 videos",
+            "videoCount": 752,
+            "viewCountText": "2,152,039,533 views",
+            "viewCount": 2152039533,
+            "joinedDateText": "Joined Feb 27, 2014",
+            "tags": null,
+            "email": "josh.cohen@oddprojects.com",
+            "instagram": "https://instagram.com/joshuaweissman",
+            "twitter": "https://twitter.com/therealweissman",
+            "facebook": "https://facebook.com/thejoshuaweissman",
+            "tik_tok": "https://tiktok.com/@flakeysalt",
+            "links": [
+              "https://instagram.com/joshuaweissman",
+              "https://twitter.com/therealweissman",
+              "https://facebook.com/thejoshuaweissman",
+              "https://tiktok.com/@flakeysalt"
+            ]
+          },
+          "analysis": {
+            "name": "Joshua Weissman",
+            "handle": "@JoshuaWeissman",
+            "hasDescription": true,
+            "descriptionLength": 535,
+            "hasEmail": true,
+            "hasLinks": true,
+            "subscriberCount": "10.3M subscribers",
+            "keywordPotential": "high",
+            "extractedKeywords": [
+              "josh",
+              "make",
+              "entertaining",
+              "exciting",
+              "inspirational"
+            ],
+            "keywordMatch": {
+              "matches": 0,
+              "percentage": 0,
+              "matchedKeywords": []
+            }
+          }
+        },
+        {
+          "handle": "@veritasium",
+          "niche": "education",
+          "size": "large",
+          "expectedKeywords": [
+            "science",
+            "education"
+          ],
+          "success": true,
+          "responseTime": 1420,
+          "data": {
+            "channelId": "UCHnyfMqiRRG1u-2MsSQLbXA",
+            "channel": "http://www.youtube.com/@veritasium",
+            "handle": "@veritasium",
+            "name": "Veritasium",
+            "avatar": {
+              "image": {
+                "sources": [
+                  {
+                    "url": "https://yt3.googleusercontent.com/ytc/AIdro_nSatGjGLZG1_O1ztYxuKvRazCbk9A0kPhtt2NxEH4ZKfA=s72-c-k-c0x00ffffff-no-rj",
+                    "width": 72,
+                    "height": 72
+                  },
+                  {
+                    "url": "https://yt3.googleusercontent.com/ytc/AIdro_nSatGjGLZG1_O1ztYxuKvRazCbk9A0kPhtt2NxEH4ZKfA=s120-c-k-c0x00ffffff-no-rj",
+                    "width": 120,
+                    "height": 120
+                  },
+                  {
+                    "url": "https://yt3.googleusercontent.com/ytc/AIdro_nSatGjGLZG1_O1ztYxuKvRazCbk9A0kPhtt2NxEH4ZKfA=s160-c-k-c0x00ffffff-no-rj",
+                    "width": 160,
+                    "height": 160
+                  }
+                ],
+                "processor": {
+                  "borderImageProcessor": {
+                    "circular": true
+                  }
+                }
+              },
+              "avatarImageSize": "AVATAR_SIZE_XL",
+              "loggingDirectives": {
+                "trackingParams": "CC4Q6OENIhMI_oGd3oSjjgMVuMI_BB1NQRc9",
+                "visibility": {
+                  "types": "12"
+                }
+              }
+            },
+            "description": "An element of truth - videos about science, education, and anything else we find interesting.",
+            "subscriberCount": 18200000,
+            "subscriberCountText": "18.2M subscribers",
+            "videoCountText": "444 videos",
+            "videoCount": 444,
+            "viewCountText": "3,407,487,808 views",
+            "viewCount": 3407487808,
+            "joinedDateText": "Joined Jul 21, 2010",
+            "tags": "science videos, science, science education, science literacy, veritasium, misconceptions, physics, education, astronomy, science songs, chemistry, biology, teaching, learning, math",
+            "email": null,
+            "buy_snatoms": "https://snatoms.com",
+            "patreon": "https://patreon.com/veritasium",
+            "facebook": "https://facebook.com/veritasium",
+            "tiktok": "https://tiktok.com/@veritasium?lang=en",
+            "twitter": "https://twitter.com/veritasium",
+            "instagram": "https://instagram.com/veritasium_daily",
+            "links": [
+              "https://snatoms.com",
+              "https://patreon.com/veritasium",
+              "https://facebook.com/veritasium",
+              "https://tiktok.com/@veritasium?lang=en",
+              "https://twitter.com/veritasium",
+              "https://instagram.com/veritasium_daily"
+            ],
+            "country": "United States"
+          },
+          "analysis": {
+            "name": "Veritasium",
+            "handle": "@veritasium",
+            "hasDescription": true,
+            "descriptionLength": 93,
+            "hasEmail": false,
+            "hasLinks": true,
+            "subscriberCount": "18.2M subscribers",
+            "keywordPotential": "medium",
+            "extractedKeywords": [
+              "element",
+              "truth",
+              "videos",
+              "about",
+              "science"
+            ],
+            "keywordMatch": {
+              "matches": 1,
+              "percentage": 50,
+              "matchedKeywords": [
+                "science"
+              ]
+            }
+          }
+        },
+        {
+          "handle": "@3Blue1Brown",
+          "niche": "education",
+          "size": "medium",
+          "expectedKeywords": [
+            "math",
+            "animation",
+            "education"
+          ],
+          "success": true,
+          "responseTime": 1240,
+          "data": {
+            "channelId": "UCYO_jab_esuFRV4b17AJtAw",
+            "channel": "http://www.youtube.com/@3blue1brown",
+            "handle": "@3blue1brown",
+            "name": "3Blue1Brown",
+            "avatar": {
+              "image": {
+                "sources": [
+                  {
+                    "url": "https://yt3.googleusercontent.com/ytc/AIdro_nFzZFPLxPZRHcE3SSwzdrbuWqfoWYwLAu0_2iO6blQYAU=s72-c-k-c0x00ffffff-no-rj",
+                    "width": 72,
+                    "height": 72
+                  },
+                  {
+                    "url": "https://yt3.googleusercontent.com/ytc/AIdro_nFzZFPLxPZRHcE3SSwzdrbuWqfoWYwLAu0_2iO6blQYAU=s120-c-k-c0x00ffffff-no-rj",
+                    "width": 120,
+                    "height": 120
+                  },
+                  {
+                    "url": "https://yt3.googleusercontent.com/ytc/AIdro_nFzZFPLxPZRHcE3SSwzdrbuWqfoWYwLAu0_2iO6blQYAU=s160-c-k-c0x00ffffff-no-rj",
+                    "width": 160,
+                    "height": 160
+                  }
+                ],
+                "processor": {
+                  "borderImageProcessor": {
+                    "circular": true
+                  }
+                }
+              },
+              "avatarImageSize": "AVATAR_SIZE_XL",
+              "loggingDirectives": {
+                "trackingParams": "CDAQ6OENIhMIhcaw34SjjgMVCArWAB3wbxM2",
+                "visibility": {
+                  "types": "12"
+                }
+              }
+            },
+            "description": "My name is Grant Sanderson. Videos here cover a variety of topics in math, or adjacent fields like physics and CS, all with an emphasis on visualizing the core ideas. The goal is to use animation to help elucidate and motivate otherwise tricky topics, and for difficult problems to be made simple with changes in perspective.\n\nFor more information, other projects, FAQs, and inquiries see the website: https://www.3blue1brown.com",
+            "subscriberCount": 7420000,
+            "subscriberCountText": "7.42M subscribers",
+            "videoCountText": "214 videos",
+            "videoCount": 214,
+            "viewCountText": "662,680,741 views",
+            "viewCount": 662680741,
+            "joinedDateText": "Joined Mar 3, 2015",
+            "tags": "Mathematics",
+            "email": null,
+            "all_things_3b1b": "https://3blue1brown.com",
+            "patreon": "https://patreon.com/3blue1brown",
+            "mailing_list": "https://3blue1brown.substack.com",
+            "twitter": "https://twitter.com/3blue1brown",
+            "reddit": "https://reddit.com/r/3blue1brown",
+            "instagram": "https://instagram.com/3blue1brown",
+            "facebook": "https://facebook.com/3blue1brown",
+            "store": "https://store.dftba.com/collections/3blue1brown",
+            "links": [
+              "https://3blue1brown.com",
+              "https://patreon.com/3blue1brown",
+              "https://3blue1brown.substack.com",
+              "https://twitter.com/3blue1brown",
+              "https://reddit.com/r/3blue1brown",
+              "https://instagram.com/3blue1brown",
+              "https://facebook.com/3blue1brown",
+              "https://store.dftba.com/collections/3blue1brown"
+            ],
+            "country": "United States"
+          },
+          "analysis": {
+            "name": "3Blue1Brown",
+            "handle": "@3blue1brown",
+            "hasDescription": true,
+            "descriptionLength": 429,
+            "hasEmail": false,
+            "hasLinks": true,
+            "subscriberCount": "7.42M subscribers",
+            "keywordPotential": "high",
+            "extractedKeywords": [
+              "name",
+              "grant",
+              "sanderson",
+              "videos",
+              "here"
+            ],
+            "keywordMatch": {
+              "matches": 0,
+              "percentage": 0,
+              "matchedKeywords": []
+            }
+          }
+        }
+      ],
+      "timestamp": "2025-07-04T10:52:57.647Z"
+    },
+    "keywordExtraction": {
+      "success": true,
+      "results": [
+        {
+          "channel": "FitnessBlender",
+          "expectedNiche": "fitness",
+          "expectedKeywords": [
+            "fitness",
+            "workout",
+            "exercise",
+            "training",
+            "hiit"
+          ],
+          "extractionResults": {
+            "basic": [
+              "fitness",
+              "workout",
+              "homeworkout",
+              "fitness",
+              "free"
+            ],
+            "enhanced": [
+              "fitness",
+              "workout",
+              "homeworkout",
+              "fitness",
+              "free",
+              "full",
+              "length",
+              "workout"
+            ],
+            "channelInfo": [
+              "fitnessblender"
+            ],
+            "niche": {
+              "fitness": {
+                "count": 11,
+                "keywords": [
+                  "workout",
+                  "fitness",
+                  "strength",
+                  "training",
+                  "pilates",
+                  "yoga",
+                  "cardio",
+                  "gym"
+                ]
+              }
+            },
+            "combined": [
+              "fitness",
+              "workout",
+              "homeworkout",
+              "free",
+              "full",
+              "length",
+              "fitnessblender",
+              "strength"
+            ]
+          },
+          "relevanceScore": {
+            "score": 40,
+            "exactMatches": 2,
+            "partialMatches": 0,
+            "matchedKeywords": [
+              {
+                "type": "exact",
+                "term": "fitness"
+              },
+              {
+                "type": "exact",
+                "term": "workout"
+              }
+            ],
+            "details": "2 exact, 0 partial out of 5 search terms"
+          },
+          "stats": {
+            "originalLength": 254,
+            "cleanedLength": 213,
+            "totalWords": 23,
+            "uniqueWords": 22
+          }
+        },
+        {
+          "channel": "Marques Brownlee",
+          "expectedNiche": "tech",
+          "expectedKeywords": [
+            "tech",
+            "review",
+            "technology",
+            "smartphone"
+          ],
+          "extractionResults": {
+            "basic": [
+              "tech",
+              "business",
+              "vector",
+              "logos",
+              "available"
+            ],
+            "enhanced": [
+              "tech",
+              "business",
+              "vector",
+              "logos",
+              "available",
+              "website",
+              "reviews",
+              "crispy"
+            ],
+            "channelInfo": [
+              "marques",
+              "brownlee",
+              "mkbhd"
+            ],
+            "niche": {
+              "tech": {
+                "count": 2,
+                "keywords": [
+                  "tech"
+                ]
+              },
+              "business": {
+                "count": 2,
+                "keywords": [
+                  "business"
+                ]
+              }
+            },
+            "combined": [
+              "tech",
+              "business",
+              "vector",
+              "logos",
+              "available",
+              "website",
+              "reviews",
+              "crispy"
+            ]
+          },
+          "relevanceScore": {
+            "score": 50,
+            "exactMatches": 1,
+            "partialMatches": 2,
+            "matchedKeywords": [
+              {
+                "type": "exact",
+                "term": "tech"
+              },
+              {
+                "type": "partial",
+                "term": "review",
+                "match": "reviews"
+              },
+              {
+                "type": "partial",
+                "term": "technology",
+                "match": "tech"
+              }
+            ],
+            "details": "1 exact, 2 partial out of 4 search terms"
+          },
+          "stats": {
+            "originalLength": 171,
+            "cleanedLength": 144,
+            "totalWords": 17,
+            "uniqueWords": 15
+          }
+        },
+        {
+          "channel": "Binging with Babish",
+          "expectedNiche": "cooking",
+          "expectedKeywords": [
+            "cooking",
+            "recipe",
+            "food",
+            "chef"
+          ],
+          "extractionResults": {
+            "basic": [
+              "cooking",
+              "recipe",
+              "food",
+              "filmmaker",
+              "turned"
+            ],
+            "enhanced": [
+              "cooking",
+              "recipe",
+              "food",
+              "filmmaker",
+              "turned",
+              "chef",
+              "making",
+              "foods"
+            ],
+            "channelInfo": [
+              "binging",
+              "with",
+              "babish",
+              "bingingwithbabish"
+            ],
+            "niche": {
+              "cooking": {
+                "count": 4,
+                "keywords": [
+                  "chef",
+                  "cooking",
+                  "recipe",
+                  "food"
+                ]
+              }
+            },
+            "combined": [
+              "cooking",
+              "recipe",
+              "food",
+              "filmmaker",
+              "turned",
+              "chef",
+              "making",
+              "foods"
+            ]
+          },
+          "relevanceScore": {
+            "score": 100,
+            "exactMatches": 4,
+            "partialMatches": 0,
+            "matchedKeywords": [
+              {
+                "type": "exact",
+                "term": "cooking"
+              },
+              {
+                "type": "exact",
+                "term": "recipe"
+              },
+              {
+                "type": "exact",
+                "term": "food"
+              },
+              {
+                "type": "exact",
+                "term": "chef"
+              }
+            ],
+            "details": "4 exact, 0 partial out of 4 search terms"
+          },
+          "stats": {
+            "originalLength": 186,
+            "cleanedLength": 158,
+            "totalWords": 17,
+            "uniqueWords": 15
+          }
+        },
+        {
+          "channel": "Veritasium",
+          "expectedNiche": "education",
+          "expectedKeywords": [
+            "science",
+            "education",
+            "learning"
+          ],
+          "extractionResults": {
+            "basic": [
+              "videos",
+              "science",
+              "element",
+              "truth",
+              "about"
+            ],
+            "enhanced": [
+              "videos",
+              "science",
+              "element",
+              "truth",
+              "about",
+              "education",
+              "anything",
+              "else"
+            ],
+            "channelInfo": [
+              "veritasium"
+            ],
+            "niche": {
+              "education": {
+                "count": 3,
+                "keywords": [
+                  "science",
+                  "education"
+                ]
+              }
+            },
+            "combined": [
+              "videos",
+              "science",
+              "element",
+              "truth",
+              "about",
+              "education",
+              "anything",
+              "else"
+            ]
+          },
+          "relevanceScore": {
+            "score": 66.66666666666666,
+            "exactMatches": 2,
+            "partialMatches": 0,
+            "matchedKeywords": [
+              {
+                "type": "exact",
+                "term": "science"
+              },
+              {
+                "type": "exact",
+                "term": "education"
+              }
+            ],
+            "details": "2 exact, 0 partial out of 3 search terms"
+          },
+          "stats": {
+            "originalLength": 174,
+            "cleanedLength": 167,
+            "totalWords": 18,
+            "uniqueWords": 15
+          }
+        },
+        {
+          "channel": "PewDiePie",
+          "expectedNiche": "gaming",
+          "expectedKeywords": [
+            "gaming",
+            "games",
+            "youtube"
+          ],
+          "extractionResults": {
+            "basic": [
+              "gaming",
+              "games",
+              "funny",
+              "norwegian",
+              "swedish"
+            ],
+            "enhanced": [
+              "gaming",
+              "games",
+              "funny",
+              "norwegian",
+              "swedish",
+              "guy",
+              "who",
+              "plays"
+            ],
+            "channelInfo": [
+              "pewdiepie"
+            ],
+            "niche": {
+              "tech": {
+                "count": 1,
+                "keywords": [
+                  "gaming"
+                ]
+              },
+              "gaming": {
+                "count": 2,
+                "keywords": [
+                  "youtube",
+                  "gaming"
+                ]
+              },
+              "entertainment": {
+                "count": 1,
+                "keywords": [
+                  "funny"
+                ]
+              }
+            },
+            "combined": [
+              "gaming",
+              "games",
+              "funny",
+              "norwegian",
+              "swedish",
+              "guy",
+              "who",
+              "plays"
+            ]
+          },
+          "relevanceScore": {
+            "score": 66.66666666666666,
+            "exactMatches": 2,
+            "partialMatches": 0,
+            "matchedKeywords": [
+              {
+                "type": "exact",
+                "term": "gaming"
+              },
+              {
+                "type": "exact",
+                "term": "games"
+              }
+            ],
+            "details": "2 exact, 0 partial out of 3 search terms"
+          },
+          "stats": {
+            "originalLength": 139,
+            "cleanedLength": 115,
+            "totalWords": 12,
+            "uniqueWords": 12
+          }
+        }
+      ],
+      "timestamp": "2025-07-04T10:52:59.661Z"
+    },
+    "similarSearchLogic": {
+      "success": true,
+      "results": [
+        {
+          "channel": "@FitnessBlender",
+          "niche": "fitness",
+          "processingTime": 3456,
+          "result": {
+            "targetChannel": {
+              "name": "FitnessBlender",
+              "handle": "@FitnessBlender",
+              "subscribers": "6.59M subscribers",
+              "description": "We offer at-home workout videos created by certified personal trainers and doctors of physical therapy. In our videos, you’ll see us sweat, laugh, lose count, and modify exercises based on what our bodies are telling us—we have fun with our workouts, and we want you to enjoy yourself, too! No matter your fitness level, if you need help with consistency, motivation, or achieving specific fitness goals, we’re here for you.\n• Explore our library of workout videos, from strength training and HIIT to yoga\n• Reach your goals with smart and effective workout programs\n• Use the customizable workout calendar and personalized stats to track your progress\n• Eat better with healthy recipes and meal plans built by registered dietitians\n• Reduce stress with mental wellness resources from licensed psychologists\n• Interact with our community of like-minded exercisers for support and motivation\nJoin for free or access exclusive content with an FB Plus Pass or Subscription: https://gofb.info/Membership\n"
+            },
+            "searchKeywords": [
+              "workout",
+              "videos",
+              "fitness",
+              "motivation",
+              "goals",
+              "fitnessblender"
+            ],
+            "similarChannels": [
+              {
+                "id": "UCVl6ZdslZz2Zj-34bMJFPbg",
+                "name": "Walk at Home",
+                "handle": "LeslieSansonesWalkatHome",
+                "thumbnail": "https://yt3.ggpht.com/JiwUI67T7OPayDz1Xgmz8_9sLiS7OqXn4YRtMUROwXm7nBnZ5c91KoBNWJaObxu8cmpCw-Qfzw=s68-c-k-c0x00ffffff-no-rj",
+                "videos": [
+                  {
+                    "title": "FAST Walking in 30 minutes | Fitness Videos",
+                    "views": 160667086,
+                    "publishedTime": "2019-07-04T10:53:04.984Z",
+                    "url": "https://www.youtube.com/watch?v=enYITYwvPAQ"
+                  },
+                  {
+                    "title": "Walking Exercise with the SUPER Coaches! | Walk at Home",
+                    "views": 14856762,
+                    "publishedTime": "2024-07-04T10:53:04.985Z",
+                    "url": "https://www.youtube.com/watch?v=AdqrTg_hpEQ"
+                  },
+                  {
+                    "title": "12 Minute Walk at Fat Burning Pace | Walk at Home",
+                    "views": 10011833,
+                    "publishedTime": "2020-07-04T10:53:04.985Z",
+                    "url": "https://www.youtube.com/watch?v=TJLKgWsS7vw"
+                  },
+                  {
+                    "title": "30 Minute Boosted Fitness Walk | Walk at Home",
+                    "views": 95342328,
+                    "publishedTime": "2019-07-04T10:53:04.985Z",
+                    "url": "https://www.youtube.com/watch?v=cvEJ5WFk2KE"
+                  },
+                  {
+                    "title": "20 Minute Walk at Home Exercise | Fitness Videos",
+                    "views": 53194798,
+                    "publishedTime": "2018-07-04T10:53:04.985Z",
+                    "url": "https://www.youtube.com/watch?v=-SSYX8sIOmM"
+                  },
+                  {
+                    "title": "Walk Yourself Healthy! - a YouTube Fitness Show | Episode 1 | Walk at Home",
+                    "views": 2808499,
+                    "publishedTime": "2024-11-04T10:53:04.985Z",
+                    "url": "https://www.youtube.com/watch?v=bSnNQaAr5l8"
+                  }
+                ],
+                "relevanceScore": 34,
+                "similarityFactors": {
+                  "nameSimilarity": 0,
+                  "contentRelevance": 60.83333333333333,
+                  "activityScore": 15,
+                  "keywordMatch": 33.33333333333333
+                }
+              },
+              {
+                "id": "UCyAgfkYxkAWDuHlZe6_R8lQ",
+                "name": "GVO Kids",
+                "handle": "GVOKids",
+                "thumbnail": "https://yt3.ggpht.com/ytc/AIdro_nAmICXcaOY45bDBYMG6xUMNMOaljETTR9kGNLpmyNtnlQ=s68-c-k-c0x00ffffff-no-rj",
+                "videos": [
+                  {
+                    "title": "“GET STRONG” Best Core Exercises For Kids (15 Minute Kids Workout)",
+                    "views": 2142626,
+                    "publishedTime": "2024-07-04T10:53:04.985Z",
+                    "url": "https://www.youtube.com/watch?v=R9Fk-N9fMxk"
+                  },
+                  {
+                    "title": "Kids \"GET STRONG\" 💪 Full Body Strength Training Workout!🔥",
+                    "views": 463060,
+                    "publishedTime": "2024-09-04T10:53:04.985Z",
+                    "url": "https://www.youtube.com/watch?v=UwZ3IlK43PA"
+                  },
+                  {
+                    "title": "\"GET STRONG\" Kids Core Workout (How To Get A Strong CORE)",
+                    "views": 2051222,
+                    "publishedTime": "2024-07-04T10:53:04.985Z",
+                    "url": "https://www.youtube.com/watch?v=cZuspnI9nf0"
+                  }
+                ],
+                "relevanceScore": 29.5,
+                "similarityFactors": {
+                  "nameSimilarity": 0,
+                  "contentRelevance": 61.666666666666664,
+                  "activityScore": 7.5,
+                  "keywordMatch": 16.666666666666664
+                }
+              },
+              {
+                "id": "UCDUlDJcPPOOQK-3UrxEyhAQ",
+                "name": "Roberta's Gym",
+                "handle": "RobertasGym",
+                "thumbnail": "https://yt3.ggpht.com/ytc/AIdro_lrnw9xyzZYIuaFSVC7ELA9aHCrvjRASQPoeTNhoS8tFg=s68-c-k-c0x00ffffff-no-rj",
+                "videos": [
+                  {
+                    "title": "Kids Exercise - Kids Workout At Home",
+                    "views": 30456313,
+                    "publishedTime": "2018-07-04T10:53:04.985Z",
+                    "url": "https://www.youtube.com/watch?v=8uUawnM-FD8"
+                  },
+                  {
+                    "title": "20 Minute Full Body Workout At Home - No Equipment",
+                    "views": 6907708,
+                    "publishedTime": "2020-07-04T10:53:04.985Z",
+                    "url": "https://www.youtube.com/watch?v=Y08OkdVO4Co"
+                  }
+                ],
+                "relevanceScore": 29,
+                "similarityFactors": {
+                  "nameSimilarity": 0,
+                  "contentRelevance": 61.666666666666664,
+                  "activityScore": 5,
+                  "keywordMatch": 16.666666666666664
+                }
+              },
+              {
+                "id": "UCFjc9H89-RpWuIStDqhO7AQ",
+                "name": "Body Project",
+                "handle": "BodyProjectchallenge",
+                "thumbnail": "https://yt3.ggpht.com/ytc/AIdro_m-L55pl7buhl77Zq-rCuT4LgKKEWUMcKq5j3cMpww9YEM=s68-c-k-c0x00ffffff-no-rj",
+                "videos": [
+                  {
+                    "title": "Low impact cardio and resistance standing home workout",
+                    "views": 2768812,
+                    "publishedTime": "2021-07-04T10:53:04.985Z",
+                    "url": "https://www.youtube.com/watch?v=eyvHfxgCAJQ"
+                  },
+                  {
+                    "title": "Low impact, beginner, fat burning, home cardio workout. ALL standing!",
+                    "views": 13625238,
+                    "publishedTime": "2020-07-04T10:53:04.985Z",
+                    "url": "https://www.youtube.com/watch?v=PvEnWsPrL4w"
+                  }
+                ],
+                "relevanceScore": 29,
+                "similarityFactors": {
+                  "nameSimilarity": 0,
+                  "contentRelevance": 61.666666666666664,
+                  "activityScore": 5,
+                  "keywordMatch": 16.666666666666664
+                }
+              },
+              {
+                "id": "UCsLF0qPTpkYKq81HsjgzhwQ",
+                "name": "growingannanas",
+                "handle": "growingannanas",
+                "thumbnail": "https://yt3.ggpht.com/ytc/AIdro_m59N6Yys5ZGin7QpYC047fGfJY86bhbDJRhDjvrKlAVec=s68-c-k-c0x00ffffff-no-rj",
+                "videos": [
+                  {
+                    "title": "25 MIN FULL BODY HIIT for Beginners - No Equipment - No Repeat Home Workout",
+                    "views": 21293738,
+                    "publishedTime": "2023-07-04T10:53:04.985Z",
+                    "url": "https://www.youtube.com/watch?v=cbKkB3POqaY"
+                  }
+                ],
+                "relevanceScore": 28.5,
+                "similarityFactors": {
+                  "nameSimilarity": 0,
+                  "contentRelevance": 61.666666666666664,
+                  "activityScore": 2.5,
+                  "keywordMatch": 16.666666666666664
+                }
+              },
+              {
+                "id": "UC9EGeHNUGvFocvu6qbUIMBg",
+                "name": "Get Fit With Rick",
+                "handle": "rickbhullarfitness",
+                "thumbnail": "https://yt3.ggpht.com/ytc/AIdro_k2SU-vD4lPyFctQpnV9wHTQAFM4IlVXHiwtOyQcufnV84=s68-c-k-c0x00ffffff-no-rj",
+                "videos": [
+                  {
+                    "title": "Bruno Mars Walking Workout | Daily Workout at home | 8 minutes",
+                    "views": 3122780,
+                    "publishedTime": "2022-07-04T10:53:04.985Z",
+                    "url": "https://www.youtube.com/watch?v=59ZnUHNwI0c"
+                  }
+                ],
+                "relevanceScore": 28.5,
+                "similarityFactors": {
+                  "nameSimilarity": 0,
+                  "contentRelevance": 61.666666666666664,
+                  "activityScore": 2.5,
+                  "keywordMatch": 16.666666666666664
+                }
+              },
+              {
+                "id": "UCpis3RcTw6t47XO0R_KY4WQ",
+                "name": "Caroline Girvan",
+                "handle": "CarolineGirvan",
+                "thumbnail": "https://yt3.ggpht.com/SFOuP_iRJrdGFfXu67IAO-EcWJPUhePfh6E9WAUs3N7PdWhYsctmXQHEvmHPUHNgVaJajj6i=s68-c-k-c0x00ffffff-no-rj",
+                "videos": [
+                  {
+                    "title": "30 Min FULL BODY DUMBBELL WORKOUT at Home | Muscle Building",
+                    "views": 14453965,
+                    "publishedTime": "2021-07-04T10:53:04.985Z",
+                    "url": "https://www.youtube.com/watch?v=GViX8riaHX4"
+                  }
+                ],
+                "relevanceScore": 28.5,
+                "similarityFactors": {
+                  "nameSimilarity": 0,
+                  "contentRelevance": 61.666666666666664,
+                  "activityScore": 2.5,
+                  "keywordMatch": 16.666666666666664
+                }
+              },
+              {
+                "id": "UCSMPWn95qPnq-Z1wm8M8c1A",
+                "name": "Improved Health",
+                "handle": "ImprovedHealth",
+                "thumbnail": "https://yt3.ggpht.com/tQwlcyZzq3qjL8vAAB3a7dJTntYnBCpV4Ua-DnXvfvxFy8MHDXjHlpkdMyvjo_bv8JTyVWwW-Q=s68-c-k-c0x00ffffff-no-rj",
+                "videos": [
+                  {
+                    "title": "💃 Making Exercise Fun with Classics of the 1970's!💃 70's music Dance Workout 💃",
+                    "views": 2275403,
+                    "publishedTime": "2023-07-04T10:53:04.985Z",
+                    "url": "https://www.youtube.com/watch?v=xqA_T8qQB4g"
+                  }
+                ],
+                "relevanceScore": 28.5,
+                "similarityFactors": {
+                  "nameSimilarity": 0,
+                  "contentRelevance": 61.666666666666664,
+                  "activityScore": 2.5,
+                  "keywordMatch": 16.666666666666664
+                }
+              },
+              {
+                "id": "UCi-gw2zFTtLD5evzz_ed-VQ",
+                "name": "TRAIN WITH GAINSBYBRAINS",
+                "handle": "TRAINWITHGAINSBYBRAINS",
+                "thumbnail": "https://yt3.ggpht.com/nXuSU8rj9ivZThmr_0dwXnrDtHz52preAAuF9BzBaQ2HpT6bip4Jkma83CQA-4BQ7-wQb6wML5s=s68-c-k-c0x00ffffff-no-rj",
+                "videos": [
+                  {
+                    "title": "20 MIN FULL BODY Workout - No Repeat, Home Workout",
+                    "views": 927692,
+                    "publishedTime": "2024-07-04T10:53:04.985Z",
+                    "url": "https://www.youtube.com/watch?v=_ePDYvjGRdY"
+                  }
+                ],
+                "relevanceScore": 28.5,
+                "similarityFactors": {
+                  "nameSimilarity": 0,
+                  "contentRelevance": 61.666666666666664,
+                  "activityScore": 2.5,
+                  "keywordMatch": 16.666666666666664
+                }
+              }
+            ],
+            "stats": {
+              "totalSearchResults": 18,
+              "channelsExtracted": 9,
+              "finalResults": 9,
+              "avgRelevanceScore": 29.333333333333332
+            }
+          },
+          "analysis": {
+            "keywordsUsed": [
+              "workout",
+              "videos",
+              "fitness",
+              "motivation",
+              "goals",
+              "fitnessblender"
+            ],
+            "totalSimilarChannels": 9,
+            "avgRelevanceScore": 29.333333333333332,
+            "topChannels": [
+              {
+                "name": "Walk at Home",
+                "score": 34
+              },
+              {
+                "name": "GVO Kids",
+                "score": 29.5
+              },
+              {
+                "name": "Roberta's Gym",
+                "score": 29
+              },
+              {
+                "name": "Body Project",
+                "score": 29
+              },
+              {
+                "name": "growingannanas",
+                "score": 28.5
+              }
+            ],
+            "qualityAssessment": "POOR",
+            "qualityDistribution": {
+              "high": 0,
+              "medium": 0,
+              "low": 9
+            }
+          },
+          "success": true
+        },
+        {
+          "channel": "@MKBHD",
+          "niche": "tech",
+          "processingTime": 3438,
+          "result": {
+            "targetChannel": {
+              "name": "Marques Brownlee",
+              "handle": "@MKBHD",
+              "subscribers": "20.1M subscribers",
+              "description": "MKBHD: Quality Tech Videos | YouTuber | Geek | Consumer Electronics | Tech Head | Internet Personality!\n\nbusiness@MKBHD.com\n\nNYC"
+            },
+            "searchKeywords": [
+              "tech",
+              "mkbhd",
+              "quality",
+              "videos",
+              "youtuber",
+              "marques"
+            ],
+            "similarChannels": [
+              {
+                "id": "UC8jkbVLPvztz8TuE98OYo8Q",
+                "name": "fpt.",
+                "handle": "FrontPageTech",
+                "thumbnail": "https://yt3.ggpht.com/4Qt0e2sBMSTDjv1BVqI0MpMyWHOH8Y0vUJ2YsHFWiBPGL0t6LFM6TOtDUxcAPt4-TrAyzay2y6U=s68-c-k-c0x00ffffff-no-rj",
+                "videos": [
+                  {
+                    "title": "How MKBHD RUINED Tech Videos - From Quality to Copycats",
+                    "views": 1439914,
+                    "publishedTime": "2024-07-04T10:53:10.419Z",
+                    "url": "https://www.youtube.com/watch?v=YLRdnXsNT08"
+                  }
+                ],
+                "relevanceScore": 52.5,
+                "similarityFactors": {
+                  "nameSimilarity": 0,
+                  "contentRelevance": 96.66666666666666,
+                  "activityScore": 2.5,
+                  "keywordMatch": 66.66666666666666
+                }
+              }
+            ],
+            "stats": {
+              "totalSearchResults": 8,
+              "channelsExtracted": 3,
+              "finalResults": 1,
+              "avgRelevanceScore": 52.5
+            }
+          },
+          "analysis": {
+            "keywordsUsed": [
+              "tech",
+              "mkbhd",
+              "quality",
+              "videos",
+              "youtuber",
+              "marques"
+            ],
+            "totalSimilarChannels": 1,
+            "avgRelevanceScore": 52.5,
+            "topChannels": [
+              {
+                "name": "fpt.",
+                "score": 52.5
+              }
+            ],
+            "qualityAssessment": "GOOD",
+            "qualityDistribution": {
+              "high": 0,
+              "medium": 1,
+              "low": 0
+            }
+          },
+          "success": true
+        },
+        {
+          "channel": "@BingingwithBabish",
+          "niche": "cooking",
+          "processingTime": 3590,
+          "result": {
+            "targetChannel": {
+              "name": "Babish Culinary Universe",
+              "handle": "@BingingwithBabish",
+              "subscribers": "10.4M subscribers",
+              "description": "Binging with Babish is the realization of a young(ish) man's dream to combine his love of film and cooking, and to have some fun in the process.  Join us each week as we recreate the foods you've always wanted to try in movies and television - and if you're not careful, you just might learn a thing or two.\n\nhttp://www.twitter.com/bingingwbabish\nhttp://www.facebook.com/bingingwithbabish\nhttp://www.youtube.com/bgfilms\nhttp://www.instagram.com/bingingwithbabish"
+            },
+            "searchKeywords": [
+              "binging",
+              "babish",
+              "realization",
+              "young",
+              "ish",
+              "culinary"
+            ],
+            "similarChannels": [
+              {
+                "id": "UCJHA_jMfCvEnv-3kRjTCQXw",
+                "name": "Babish Culinary Universe",
+                "handle": "babishculinaryuniverse",
+                "thumbnail": "https://yt3.ggpht.com/ytc/AIdro_lssgUwpMFtlZY-s6J7RrKdya1RKGniwlV37dNsk0d3Ow=s68-c-k-c0x00ffffff-no-rj",
+                "videos": [
+                  {
+                    "title": "Binging with Babish: Troy's Casserole from Community",
+                    "views": 5237398,
+                    "publishedTime": "2020-07-04T10:53:15.991Z",
+                    "url": "https://www.youtube.com/watch?v=mGZcg6A6FTg"
+                  },
+                  {
+                    "title": "Binging with Babish: Tyler's Bullsh*t from The Menu",
+                    "views": 3084731,
+                    "publishedTime": "2023-07-04T10:53:15.991Z",
+                    "url": "https://www.youtube.com/watch?v=WAuY3FJaJak"
+                  },
+                  {
+                    "title": "Binging with Babish: Turturkeykey from How I Met Your Mother",
+                    "views": 7409852,
+                    "publishedTime": "2020-07-04T10:53:15.991Z",
+                    "url": "https://www.youtube.com/watch?v=FWQKc6idm64"
+                  },
+                  {
+                    "title": "Binging with Babish: The EVERYTHING Bagel from Everything Everywhere All at Once",
+                    "views": 1415556,
+                    "publishedTime": "2023-07-04T10:53:15.991Z",
+                    "url": "https://www.youtube.com/watch?v=1vOBpRmp8v8"
+                  },
+                  {
+                    "title": "Binging with Babish: Braciole from Everybody Loves Raymond",
+                    "views": 3753344,
+                    "publishedTime": "2020-07-04T10:53:15.991Z",
+                    "url": "https://www.youtube.com/watch?v=1inpwA-_PzQ"
+                  },
+                  {
+                    "title": "Binging with Babish: The Good Place",
+                    "views": 5099286,
+                    "publishedTime": "2019-07-04T10:53:15.991Z",
+                    "url": "https://www.youtube.com/watch?v=f428glyXdY4"
+                  },
+                  {
+                    "title": "Binging with Babish: Arrested Development Special (feat. Sean Evans)",
+                    "views": 4782136,
+                    "publishedTime": "2018-07-04T10:53:15.991Z",
+                    "url": "https://www.youtube.com/watch?v=2U_0OlCizx0"
+                  },
+                  {
+                    "title": "Binging with Babish: The Perfect Bite from YOU (Netflix)",
+                    "views": 5064090,
+                    "publishedTime": "2020-07-04T10:53:15.991Z",
+                    "url": "https://www.youtube.com/watch?v=7vTxUYBD0Nk"
+                  },
+                  {
+                    "title": "Binging with Babish: Breakfast from The Phantom Thread",
+                    "views": 6224382,
+                    "publishedTime": "2019-07-04T10:53:15.991Z",
+                    "url": "https://www.youtube.com/watch?v=yiElOt9cI8k"
+                  },
+                  {
+                    "title": "Binging with Babish: Croque Monsieur from Brooklyn Nine-Nine",
+                    "views": 12876189,
+                    "publishedTime": "2021-07-04T10:53:15.991Z",
+                    "url": "https://www.youtube.com/watch?v=q7JDYiLz9Mo"
+                  }
+                ],
+                "relevanceScore": 65.33333333333333,
+                "similarityFactors": {
+                  "nameSimilarity": 65,
+                  "contentRelevance": 85,
+                  "activityScore": 25,
+                  "keywordMatch": 66.66666666666666
+                }
+              },
+              {
+                "id": "UCIsbLox_y9dCIMLd8tdC6qg",
+                "name": "Vanity Fair",
+                "handle": "VanityFair",
+                "thumbnail": "https://yt3.ggpht.com/ytc/AIdro_kySPlGnGIO1FMb2Jm5nuvTZx_V6rj_fwuA7cYRgBKgviCz=s68-c-k-c0x00ffffff-no-rj",
+                "videos": [
+                  {
+                    "title": "Everything Binging with Babish Does In a Day | Vanity Fair",
+                    "views": 972036,
+                    "publishedTime": "2020-07-04T10:53:15.991Z",
+                    "url": "https://www.youtube.com/watch?v=JHC_KAqU55s"
+                  }
+                ],
+                "relevanceScore": 44.5,
+                "similarityFactors": {
+                  "nameSimilarity": 0,
+                  "contentRelevance": 85,
+                  "activityScore": 2.5,
+                  "keywordMatch": 50
+                }
+              },
+              {
+                "id": "UCamLstJyCa-t5gfZegxsFMw",
+                "name": "Colin and Samir",
+                "handle": "ColinandSamir",
+                "thumbnail": "https://yt3.ggpht.com/ytc/AIdro_k-3YijnZNqr_9SNBOzN2sFB3xJ6SrHy9q3LJ0b1HApVHI=s68-c-k-c0x00ffffff-no-rj",
+                "videos": [
+                  {
+                    "title": "The Untold Story of Binging with Babish",
+                    "views": 522702,
+                    "publishedTime": "2022-07-04T10:53:15.991Z",
+                    "url": "https://www.youtube.com/watch?v=VbNIh88Nq5k"
+                  }
+                ],
+                "relevanceScore": 44.5,
+                "similarityFactors": {
+                  "nameSimilarity": 0,
+                  "contentRelevance": 85,
+                  "activityScore": 2.5,
+                  "keywordMatch": 50
+                }
+              },
+              {
+                "id": "UCSIFu39z2Dy3vLVS_hlxsdQ",
+                "name": "Blair (Whatitis)",
+                "handle": "Whatitis",
+                "thumbnail": "https://yt3.ggpht.com/a7OmnLJTKmI5LBYV3A7VKCykyV6cGTFrxVp1D2Rj_tHoRWLCs5vzGYTeHN6L59hJv3XlEH_Jcg=s68-c-k-c0x00ffffff-no-rj",
+                "videos": [
+                  {
+                    "title": "Why It Works: Binging the Babish",
+                    "views": 470113,
+                    "publishedTime": "2018-07-04T10:53:15.991Z",
+                    "url": "https://www.youtube.com/watch?v=JbCygZ8fByw"
+                  }
+                ],
+                "relevanceScore": 44.5,
+                "similarityFactors": {
+                  "nameSimilarity": 0,
+                  "contentRelevance": 85,
+                  "activityScore": 2.5,
+                  "keywordMatch": 50
+                }
+              },
+              {
+                "id": "UCftwRNsjfRo08xYE31tkiyw",
+                "name": "WIRED",
+                "handle": "WIRED",
+                "thumbnail": "https://yt3.ggpht.com/3xLaRljIs8OZjbxyGnMlpHXtzrxY-keMiy9foklNwa9G5wzB2stC4ND56rZfZAuyLKmRLMm2cik=s68-c-k-c0x00ffffff-no-rj",
+                "videos": [
+                  {
+                    "title": "Binging with Babish Answers the Web's Most Searched Questions | WIRED",
+                    "views": 2495178,
+                    "publishedTime": "2020-07-04T10:53:15.991Z",
+                    "url": "https://www.youtube.com/watch?v=0WNMatxr7BE"
+                  }
+                ],
+                "relevanceScore": 44.5,
+                "similarityFactors": {
+                  "nameSimilarity": 0,
+                  "contentRelevance": 85,
+                  "activityScore": 2.5,
+                  "keywordMatch": 50
+                }
+              },
+              {
+                "id": "UCj8DGOv5P7Ngsh-telMG-pw",
+                "name": "Jon Youshaei",
+                "handle": "youshaei",
+                "thumbnail": "https://yt3.ggpht.com/M3wL89LOmSiYS784WYKZ33eJwmn3jXimTHP-Q-vvZaIUYAawNpJNqqzuJV6DHHy5vjrcXcgMyQ=s68-c-k-c0x00ffffff-no-rj",
+                "videos": [
+                  {
+                    "title": "How YouTube’s $20M Chef Nearly Lost Everything (Babish Interview)",
+                    "views": 317957,
+                    "publishedTime": "2025-01-04T10:53:15.991Z",
+                    "url": "https://www.youtube.com/watch?v=KqRTwb-21Ww"
+                  }
+                ],
+                "relevanceScore": 36.5,
+                "similarityFactors": {
+                  "nameSimilarity": 0,
+                  "contentRelevance": 73.33333333333333,
+                  "activityScore": 2.5,
+                  "keywordMatch": 33.33333333333333
+                }
+              }
+            ],
+            "stats": {
+              "totalSearchResults": 15,
+              "channelsExtracted": 6,
+              "finalResults": 6,
+              "avgRelevanceScore": 46.638888888888886
+            }
+          },
+          "analysis": {
+            "keywordsUsed": [
+              "binging",
+              "babish",
+              "realization",
+              "young",
+              "ish",
+              "culinary"
+            ],
+            "totalSimilarChannels": 6,
+            "avgRelevanceScore": 46.638888888888886,
+            "topChannels": [
+              {
+                "name": "Babish Culinary Universe",
+                "score": 65.33333333333333
+              },
+              {
+                "name": "Vanity Fair",
+                "score": 44.5
+              },
+              {
+                "name": "Colin and Samir",
+                "score": 44.5
+              },
+              {
+                "name": "Blair (Whatitis)",
+                "score": 44.5
+              },
+              {
+                "name": "WIRED",
+                "score": 44.5
+              }
+            ],
+            "qualityAssessment": "GOOD",
+            "qualityDistribution": {
+              "high": 0,
+              "medium": 1,
+              "low": 5
+            }
+          },
+          "success": true
+        },
+        {
+          "channel": "@veritasium",
+          "niche": "education",
+          "processingTime": 3086,
+          "result": {
+            "targetChannel": {
+              "name": "Veritasium",
+              "handle": "@veritasium",
+              "subscribers": "18.2M subscribers",
+              "description": "An element of truth - videos about science, education, and anything else we find interesting."
+            },
+            "searchKeywords": [
+              "element",
+              "truth",
+              "videos",
+              "about",
+              "science",
+              "veritasium"
+            ],
+            "similarChannels": [
+              {
+                "id": "UCHnyfMqiRRG1u-2MsSQLbXA",
+                "name": "Veritasium",
+                "handle": "veritasium",
+                "thumbnail": "https://yt3.ggpht.com/ytc/AIdro_nSatGjGLZG1_O1ztYxuKvRazCbk9A0kPhtt2NxEH4ZKfA=s68-c-k-c0x00ffffff-no-rj",
+                "videos": [
+                  {
+                    "title": "The Illusion of Truth",
+                    "views": 4020026,
+                    "publishedTime": "2017-07-04T10:53:21.110Z",
+                    "url": "https://www.youtube.com/watch?v=cebFWOlx848"
+                  },
+                  {
+                    "title": "Post-Truth: Why Facts Don't Matter Anymore",
+                    "views": 1987668,
+                    "publishedTime": "2017-07-04T10:53:21.110Z",
+                    "url": "https://www.youtube.com/watch?v=dvk2PQNcg8w"
+                  }
+                ],
+                "relevanceScore": 40.666666666666664,
+                "similarityFactors": {
+                  "nameSimilarity": 41.666666666666664,
+                  "contentRelevance": 61.666666666666664,
+                  "activityScore": 5,
+                  "keywordMatch": 33.33333333333333
+                }
+              },
+              {
+                "id": "UCdOviuBHo47X9HwXoVIZmDA",
+                "name": "EricHeights",
+                "handle": "EricHeights",
+                "thumbnail": "https://yt3.ggpht.com/P9OJigK_pqgc_2gT7q6RSOCtIlSUFUr_SXJhFfHeMUytsEhuIi2QJWlgIp36rMjQnneXx5bI1w=s68-c-k-c0x00ffffff-no-rj",
+                "videos": [
+                  {
+                    "title": "Prime Element \"Truth\" music video ft. Rakaa Iriscience of Dilated Peoples",
+                    "views": 58612,
+                    "publishedTime": "2011-07-04T10:53:21.110Z",
+                    "url": "https://www.youtube.com/watch?v=Ihfbn-vYl8c"
+                  }
+                ],
+                "relevanceScore": 39.53344,
+                "similarityFactors": {
+                  "nameSimilarity": 0,
+                  "contentRelevance": 72.5836,
+                  "activityScore": 2.5,
+                  "keywordMatch": 50
+                }
+              },
+              {
+                "id": "UCNC6_a55pPllfQYJsZ0HL8w",
+                "name": "JRE +",
+                "handle": "jre-plus",
+                "thumbnail": "https://yt3.ggpht.com/Ql9m3cZ9K2uH1zHeP1ga5pAdrWfH0zObvuU-tGwEpa5GbrQ1Njoa_T2plSDcSraN-hrO79iI=s68-c-k-c0x00ffffff-no-rj",
+                "videos": [
+                  {
+                    "title": "Bob Lazar was telling the truth.. Recent Evidence | Joe Rogan",
+                    "views": 817659,
+                    "publishedTime": "2025-06-04T10:53:21.110Z",
+                    "url": "https://www.youtube.com/watch?v=uuk1wkaUh3E"
+                  }
+                ],
+                "relevanceScore": 38.50000000000001,
+                "similarityFactors": {
+                  "nameSimilarity": 0,
+                  "contentRelevance": 61.666666666666664,
+                  "activityScore": 52.5,
+                  "keywordMatch": 16.666666666666664
+                }
+              },
+              {
+                "id": "UCRv-75tTPWHt5x0LhHZLavw",
+                "name": "Megans TV",
+                "handle": "meganstv3851",
+                "thumbnail": "https://yt3.ggpht.com/ytc/AIdro_kO5e9_yXBoTyWQuHFf8aS5l6zNP2izIElS-O8kyfqRkA=s68-c-k-c0x00ffffff-no-rj",
+                "videos": [
+                  {
+                    "title": "An Element of Truth (1995) Donna Mills TV Movie",
+                    "views": 110367,
+                    "publishedTime": "2017-07-04T10:53:21.110Z",
+                    "url": "https://www.youtube.com/watch?v=Rd1tMzusnr0"
+                  }
+                ],
+                "relevanceScore": 36.5,
+                "similarityFactors": {
+                  "nameSimilarity": 0,
+                  "contentRelevance": 73.33333333333333,
+                  "activityScore": 2.5,
+                  "keywordMatch": 33.33333333333333
+                }
+              },
+              {
+                "id": "UC1qYrOiUu37SPWYJ5XUI4nA",
+                "name": "Basic Element Forever",
+                "handle": "Basicelementforever",
+                "thumbnail": "https://yt3.ggpht.com/bYOjyN8usmdRsqktkcU1NaKrvVeTQETAonzggBwDWkz2I4g43H1CX3s4f9dYnNu-j2a0A33t4A=s68-c-k-c0x00ffffff-no-rj",
+                "videos": [
+                  {
+                    "title": "Basic Element - The Truth (Lyrics)",
+                    "views": 11636,
+                    "publishedTime": "2012-07-04T10:53:21.110Z",
+                    "url": "https://www.youtube.com/watch?v=LvgXQ3LcbXE"
+                  }
+                ],
+                "relevanceScore": 28.22965333333333,
+                "similarityFactors": {
+                  "nameSimilarity": 11.666666666666664,
+                  "contentRelevance": 46.824133333333336,
+                  "activityScore": 2.5,
+                  "keywordMatch": 33.33333333333333
+                }
+              },
+              {
+                "id": "UCYeF244yNGuFefuFKqxIAXw",
+                "name": "The Royal Institution",
+                "handle": "TheRoyalInstitution",
+                "thumbnail": "https://yt3.ggpht.com/SUE-fRNKaVKjwyOCvw-p4pS0WhoGhaBz_7312THIQlPjQGO7jdpOMf-lMWa5FTOtangzzzS4yg=s68-c-k-c0x00ffffff-no-rj",
+                "videos": [
+                  {
+                    "title": "Derek Muller - The Element of Truth",
+                    "views": 18595,
+                    "publishedTime": "2013-07-04T10:53:21.110Z",
+                    "url": "https://www.youtube.com/watch?v=x-G6DYuv5SU"
+                  }
+                ],
+                "relevanceScore": 26.7314,
+                "similarityFactors": {
+                  "nameSimilarity": 0,
+                  "contentRelevance": 48.911833333333334,
+                  "activityScore": 2.5,
+                  "keywordMatch": 33.33333333333333
+                }
+              }
+            ],
+            "stats": {
+              "totalSearchResults": 10,
+              "channelsExtracted": 9,
+              "finalResults": 6,
+              "avgRelevanceScore": 35.02686
+            }
+          },
+          "analysis": {
+            "keywordsUsed": [
+              "element",
+              "truth",
+              "videos",
+              "about",
+              "science",
+              "veritasium"
+            ],
+            "totalSimilarChannels": 6,
+            "avgRelevanceScore": 35.02686,
+            "topChannels": [
+              {
+                "name": "Veritasium",
+                "score": 40.666666666666664
+              },
+              {
+                "name": "EricHeights",
+                "score": 39.53344
+              },
+              {
+                "name": "JRE +",
+                "score": 38.50000000000001
+              },
+              {
+                "name": "Megans TV",
+                "score": 36.5
+              },
+              {
+                "name": "Basic Element Forever",
+                "score": 28.22965333333333
+              }
+            ],
+            "qualityAssessment": "FAIR",
+            "qualityDistribution": {
+              "high": 0,
+              "medium": 0,
+              "low": 6
+            }
+          },
+          "success": true
+        }
+      ],
+      "timestamp": "2025-07-04T10:53:23.239Z"
+    }
+  },
+  "summary": {
+    "apiReliability": "EXCELLENT",
+    "dataQuality": "EXCELLENT",
+    "keywordEffectiveness": "GOOD",
+    "similarSearchViability": "FAIR",
+    "overallFeasibility": "HIGH",
+    "scores": {
+      "apiReliability": 100,
+      "dataQuality": 91.66666666666666,
+      "keywordEffectiveness": 75,
+      "similarSearchViability": 40.87477055555556,
+      "overall": 76.88535930555554
+    },
+    "recommendations": [
+      "✅ STRONG RECOMMENDATION: Proceed with YouTube Similar Search implementation",
+      "🚀 Expected high success rate and user satisfaction"
+    ]
+  },
+  "recommendation": "",
+  "confidence": "",
+  "implementationPlan": ""
+}

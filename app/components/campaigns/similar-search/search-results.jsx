@@ -43,6 +43,9 @@ export default function SimilarSearchResults({ searchData }) {
     if (platform === 'TikTok' || platform === 'tiktok') {
       return `https://www.tiktok.com/@${creator.username}`;
     }
+    if (platform === 'YouTube' || platform === 'youtube') {
+      return `https://www.youtube.com/${creator.handle || `@${creator.username}`}`;
+    }
     return `https://instagram.com/${creator.username}`;
   };
 
@@ -165,7 +168,11 @@ export default function SimilarSearchResults({ searchData }) {
         <div>
           <h2 className="text-2xl font-bold">Similar Profiles Found</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Similar {searchData.platform === 'tiktok' ? 'TikTok' : 'Instagram'} creators to @{searchData.targetUsername}
+            Similar {
+              searchData.platform === 'tiktok' ? 'TikTok' : 
+              searchData.platform === 'youtube' ? 'YouTube' : 
+              'Instagram'
+            } creators to @{searchData.targetUsername}
           </p>
         </div>
         <div className="flex items-center gap-4">
@@ -186,27 +193,33 @@ export default function SimilarSearchResults({ searchData }) {
           <TableHeader>
             <TableRow>
               <TableHead>Profile</TableHead>
-              <TableHead>Username</TableHead>
+              <TableHead>{searchData.platform === 'youtube' ? 'Channel Name' : 'Username'}</TableHead>
               <TableHead>Full Name</TableHead>
               <TableHead>Bio</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Private</TableHead>
-              <TableHead>Verified</TableHead>
+              {searchData.platform !== 'youtube' && (
+                <>
+                  <TableHead>Private</TableHead>
+                  <TableHead>Verified</TableHead>
+                </>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
             {currentItems.map((creator) => {
-              const imageUrl = getProxiedImageUrl(creator.profile_pic_url);
+              const imageUrl = getProxiedImageUrl(
+                creator.profile_pic_url || creator.thumbnail || ''
+              );
               return (
                 <TableRow key={creator.id}>
                   <TableCell>
                     <Avatar className="w-10 h-10">
                       <AvatarImage 
                         src={imageUrl}
-                        alt={creator.username}
-                        onLoad={(e) => handleImageLoad(e, creator.username)}
-                        onError={(e) => handleImageError(e, creator.username, creator.profile_pic_url)}
-                        onLoadStart={(e) => handleImageStart(e, creator.username)}
+                        alt={creator.username || creator.name}
+                        onLoad={(e) => handleImageLoad(e, creator.username || creator.name)}
+                        onError={(e) => handleImageError(e, creator.username || creator.name, creator.profile_pic_url || creator.thumbnail)}
+                        onLoadStart={(e) => handleImageStart(e, creator.username || creator.name)}
                         style={{ 
                           maxWidth: '100%', 
                           height: 'auto',
@@ -224,18 +237,22 @@ export default function SimilarSearchResults({ searchData }) {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-600 hover:text-blue-800 hover:underline font-medium transition-colors duration-200 flex items-center gap-1"
-                      title={`View ${creator.username}'s profile on ${creator.platform || searchData.platform || 'Instagram'}`}
+                      title={`View ${creator.username || creator.name}'s profile on ${creator.platform || searchData.platform || 'Instagram'}`}
                     >
-                      @{creator.username}
+                      {searchData.platform === 'youtube' ? creator.name : `@${creator.username}`}
                       <svg className="w-3 h-3 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                       </svg>
                     </a>
                   </TableCell>
-                  <TableCell>{creator.full_name}</TableCell>
+                  <TableCell>
+                    <span className="text-sm text-gray-700">
+                      {creator.full_name || creator.name || 'N/A'}
+                    </span>
+                  </TableCell>
                   <TableCell>
                     <div className="max-w-[200px] truncate" title={creator.bio || 'No bio available'}>
-                      {creator.bio ? (
+                      {creator.bio && creator.bio.length > 0 ? (
                         <span className="text-sm text-gray-700">{creator.bio}</span>
                       ) : (
                         <span className="text-gray-400 text-sm">Not available</span>
@@ -264,8 +281,12 @@ export default function SimilarSearchResults({ searchData }) {
                       <span className="text-gray-400 text-sm">Not available</span>
                     )}
                   </TableCell>
-                  <TableCell>{creator.is_private ? "Yes" : "No"}</TableCell>
-                  <TableCell>{creator.is_verified ? "Yes" : "No"}</TableCell>
+                  {searchData.platform !== 'youtube' && (
+                    <>
+                      <TableCell>{creator.is_private ? "Yes" : "No"}</TableCell>
+                      <TableCell>{creator.is_verified ? "Yes" : "No"}</TableCell>
+                    </>
+                  )}
                 </TableRow>
               );
             })}

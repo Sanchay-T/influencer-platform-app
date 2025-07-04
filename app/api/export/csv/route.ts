@@ -317,8 +317,21 @@ export async function GET(req: Request) {
         
         let headers: string[];
         
-        if (platform === 'YouTube') {
-          // YouTube-specific columns with bio/email support
+        if (platform === 'YouTube' && job?.targetUsername) {
+          // YouTube Similar Search - enhanced with bio/email data
+          headers = [
+            'Channel Name',
+            'Handle',
+            'Full Name',
+            'Bio',
+            'Email',
+            'Social Links',
+            'Subscribers',
+            'Target Channel',
+            'Platform'
+          ];
+        } else if (platform === 'YouTube') {
+          // YouTube Keyword Search - video-based data
           headers = [
             'Channel Name',
             'Subscribers',
@@ -365,8 +378,25 @@ export async function GET(req: Request) {
           
           let row: string[];
           
-          if (itemPlatform === 'YouTube') {
-            // YouTube-specific data extraction with bio/email
+          if (itemPlatform === 'YouTube' && job?.targetUsername) {
+            // YouTube Similar Search - enhanced with bio/email data
+            const bio = (item.bio || '').replace(/"/g, '""'); // Escape quotes for CSV
+            const emails = Array.isArray(item.emails) ? item.emails.join('; ') : '';
+            const socialLinks = Array.isArray(item.socialLinks) ? item.socialLinks.join('; ') : '';
+            
+            row = [
+              `"${item.name || ''}"`,
+              `"${item.handle || ''}"`,
+              `"${item.full_name || item.name || ''}"`,
+              `"${bio}"`,
+              `"${emails}"`,
+              `"${socialLinks}"`,
+              `"${item.subscriberCount || 'N/A'}"`,
+              `"${job.targetUsername || ''}"`,
+              `"${itemPlatform}"`
+            ];
+          } else if (itemPlatform === 'YouTube') {
+            // YouTube Keyword Search - video-based data  
             // Extract bio and emails for YouTube export
             const bio = (creator.bio || '').replace(/"/g, '""'); // Escape quotes for CSV
             const emails = Array.isArray(creator.emails) ? creator.emails.join('; ') : '';
