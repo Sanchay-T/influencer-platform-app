@@ -992,6 +992,11 @@ Check response headers for debugging:
 
 ## Troubleshooting Common Issues
 
+### 0. Instagram Hashtag Jobs Stuck at 99%
+**Symptoms**: Instagram hashtag search gets stuck at 99% progress on Vercel
+**Root Cause**: Frontend-backend data structure mismatch in job status polling
+**Solution**: See detailed analysis in [`docs/instagram-hashtag-troubleshooting.md`](./docs/instagram-hashtag-troubleshooting.md)
+
 ### 1. HEIC Images Not Converting
 **Symptoms**: Images show as broken or don't load
 **Check**: 
