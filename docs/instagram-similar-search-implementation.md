@@ -52,33 +52,7 @@ We conducted comprehensive testing of Instagram similar search APIs using multip
     }
   ]
 }
-```
 
-### **ScrapeCreators Response (For Comparison)**
-
-```json
-{
-  "data": {
-    "user": {
-      "username": "redbull",
-      "full_name": "Red Bull",
-      "biography": "watch the World Of Red Bull👇\n#givesyouwiiings",
-      "edge_related_profiles": {
-        "edges": [
-          {
-            "node": {
-              "id": "3999827868",
-              "username": "redbullbike",
-              "full_name": "Red Bull Bike",
-              "is_verified": true,
-              "is_private": false
-            }
-          }
-        ]
-      }
-    }
-  }
-}
 ```
 
 ### **Unified Platform Format (Target)**
