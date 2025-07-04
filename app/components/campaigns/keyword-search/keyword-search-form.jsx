@@ -97,7 +97,7 @@ export default function KeywordSearchForm({ onSubmit }) {
                   checked={selectedPlatform === "instagram"}
                   onCheckedChange={() => handlePlatformChange("instagram")}
                 />
-                <span className="ml-2">Instagram (Hashtag)</span>
+                <span className="ml-2">Instagram</span>
               </div>
               <div className="flex items-center">
                 <Checkbox
