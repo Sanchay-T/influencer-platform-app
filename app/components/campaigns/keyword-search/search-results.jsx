@@ -42,6 +42,7 @@ const SearchResults = ({ searchData }) => {
         // Determine API endpoint based on platform
         console.log('🔍 [API-ENDPOINT] Platform detection:', {
           selectedPlatform: searchData.selectedPlatform,
+          selectedPlatformType: typeof searchData.selectedPlatform,
           platforms: searchData.platforms,
           searchData: searchData
         });

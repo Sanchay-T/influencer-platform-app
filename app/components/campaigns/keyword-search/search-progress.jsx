@@ -35,7 +35,7 @@ export default function SearchProgress({ jobId, onComplete, platform = 'tiktok' 
         
         // Determine the correct API endpoint based on platform
         let apiEndpoint;
-        const normalizedPlatform = platform?.toLowerCase();
+        const normalizedPlatform = platform?.toLowerCase?.() || String(platform).toLowerCase();
         
         if (normalizedPlatform === 'instagram') {
           apiEndpoint = `/api/scraping/instagram-hashtag?jobId=${jobId}`;
@@ -47,11 +47,28 @@ export default function SearchProgress({ jobId, onComplete, platform = 'tiktok' 
         
         console.log('🎯 [SEARCH-PROGRESS] Using endpoint:', {
           platform: platform,
+          platformType: typeof platform,
           normalizedPlatform: normalizedPlatform,
           apiEndpoint: apiEndpoint
         });
         
         const response = await fetch(apiEndpoint);
+        
+        // Check for 404 errors and log them
+        if (!response.ok) {
+          console.error(`❌ [SEARCH-PROGRESS] API error: ${response.status} ${response.statusText}`, {
+            url: apiEndpoint,
+            jobId: jobId,
+            platform: platform,
+            status: response.status
+          });
+          
+          // If it's a 404, throw an error to trigger retry
+          if (response.status === 404) {
+            throw new Error(`API endpoint not found: ${apiEndpoint}`);
+          }
+        }
+        
         const data = await response.json();
         
         console.log('📡 [SEARCH-PROGRESS] Poll response:', {

@@ -13,7 +13,7 @@ import { processInstagramSimilarJob } from '@/lib/platforms/instagram-similar/ha
 import { processYouTubeSimilarJob } from '@/lib/platforms/youtube-similar/handler'
 
 // Global parameter to limit API calls for testing
-const MAX_API_CALLS_FOR_TESTING = 1; // Back to 1 for testing
+const MAX_API_CALLS_FOR_TESTING = 5; // Increased to 5 for realistic progress testing
 
 
 // Inicializar el receptor de QStash
@@ -510,6 +510,260 @@ export async function POST(req: Request) {
         }
         
         throw instagramError;
+      }
+    }
+    // CÓDIGO PARA TIKTOK KEYWORD SEARCH
+    else if (job.platform === 'Tiktok' && job.keywords) {
+      console.log('✅ [PLATFORM-DETECTION] TikTok keyword job detected!');
+      console.log('🎬 Processing TikTok keyword job for keywords:', job.keywords);
+      
+      try {
+        // TikTok keyword processing logic (inline like Instagram hashtag)
+        // This matches the pattern described in Claude.md
+        console.log('🔄 [TIKTOK-KEYWORD] Starting TikTok keyword search processing');
+        
+        // 📊 PROGRESS LOGGING: Current job state
+        console.log('📊 [PROGRESS-CHECK] Current job state:', {
+          jobId: job.id,
+          processedRuns: job.processedRuns,
+          processedResults: job.processedResults,
+          targetResults: job.targetResults,
+          currentProgress: job.progress,
+          maxApiCalls: MAX_API_CALLS_FOR_TESTING
+        });
+        
+        // Check if we've exceeded testing limits
+        if (job.processedRuns >= MAX_API_CALLS_FOR_TESTING) {
+          console.log('✅ [TIKTOK-KEYWORD] Testing limit reached, marking job as completed');
+          console.log('📊 [PROGRESS-FINAL] Final stats:', {
+            totalApiCalls: job.processedRuns,
+            totalResults: job.processedResults,
+            finalProgress: '100'
+          });
+          
+          await db.update(scrapingJobs)
+            .set({
+              status: 'completed',
+              completedAt: new Date(),
+              updatedAt: new Date(),
+              progress: '100'
+            })
+            .where(eq(scrapingJobs.id, jobId));
+          
+          return NextResponse.json({ 
+            status: 'completed',
+            message: 'TikTok keyword search completed (testing limit reached)'
+          });
+        }
+        
+        // Mark job as processing
+        console.log('🔄 [PROGRESS-UPDATE] Marking job as processing');
+        await db.update(scrapingJobs)
+          .set({
+            status: 'processing',
+            startedAt: job.startedAt || new Date(),
+            updatedAt: new Date()
+          })
+          .where(eq(scrapingJobs.id, jobId));
+        
+        // Make TikTok keyword API call
+        const keywords = Array.isArray(job.keywords) ? job.keywords.join(' ') : '';
+        const apiUrl = `${process.env.SCRAPECREATORS_API_URL}?query=${encodeURIComponent(keywords)}&cursor=${job.cursor || 0}`;
+        
+        // 📊 API CALL LOGGING
+        console.log('📡 [TIKTOK-KEYWORD] Making API call:', {
+          apiUrl: apiUrl,
+          callNumber: job.processedRuns + 1,
+          maxCalls: MAX_API_CALLS_FOR_TESTING,
+          cursor: job.cursor || 0
+        });
+        
+        const response = await fetch(apiUrl, {
+          headers: { 'x-api-key': process.env.SCRAPECREATORS_API_KEY! }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`TikTok API error: ${response.status} ${response.statusText}`);
+        }
+        
+        const apiResponse = await response.json();
+        console.log('✅ [TIKTOK-KEYWORD] API response received:', {
+          hasSearchItemList: !!apiResponse?.search_item_list,
+          itemCount: apiResponse?.search_item_list?.length || 0,
+          totalResults: apiResponse?.total || 0,
+          hasMore: !!apiResponse?.has_more
+        });
+        
+        // Transform TikTok data (inline processing like Instagram hashtag)
+        const creators = apiResponse.search_item_list?.map((item: any) => {
+          const awemeInfo = item.aweme_info || {};
+          const author = awemeInfo.author || {};
+          
+          return {
+            creator: {
+              name: author.nickname || author.unique_id || 'Unknown Creator',
+              followers: author.follower_count || 0,
+              avatarUrl: (author.avatar_medium?.url_list?.[0] || '').replace('.heic', '.jpeg'),
+            },
+            video: {
+              description: awemeInfo.desc || 'No description',
+              url: awemeInfo.share_url || '',
+              statistics: {
+                likes: awemeInfo.statistics?.digg_count || 0,
+                comments: awemeInfo.statistics?.comment_count || 0,
+                views: awemeInfo.statistics?.play_count || 0
+              }
+            },
+            hashtags: awemeInfo.text_extra?.filter((e: any) => e.type === 1).map((e: any) => e.hashtag_name) || [],
+            platform: 'TikTok'
+          };
+        }) || [];
+        
+        // Save results
+        if (creators.length > 0) {
+          console.log('💾 [TIKTOK-KEYWORD] Saving results to database:', {
+            creatorCount: creators.length,
+            jobId: jobId
+          });
+          
+          await db.insert(scrapingResults).values({
+            jobId: jobId,
+            creators: creators
+          });
+        }
+        
+        // Update job progress
+        const newProcessedRuns = job.processedRuns + 1;
+        const newProcessedResults = job.processedResults + creators.length;
+        
+        // 📊 REALISTIC PROGRESS CALCULATION
+        // Based on runs instead of results for more gradual progress
+        const runBasedProgress = Math.floor((newProcessedRuns / MAX_API_CALLS_FOR_TESTING) * 100);
+        const resultBasedProgress = Math.floor((newProcessedResults / job.targetResults) * 100);
+        
+        // Use the smaller of the two to ensure gradual progress
+        const progress = Math.min(runBasedProgress, resultBasedProgress, 100);
+        
+        console.log('📊 [PROGRESS-CALCULATION] Progress calculation details:', {
+          previousRuns: job.processedRuns,
+          newRuns: newProcessedRuns,
+          maxRuns: MAX_API_CALLS_FOR_TESTING,
+          previousResults: job.processedResults,
+          newResults: newProcessedResults,
+          targetResults: job.targetResults,
+          runBasedProgress: runBasedProgress,
+          resultBasedProgress: resultBasedProgress,
+          finalProgress: progress,
+          progressFormula: `min(${runBasedProgress}, ${resultBasedProgress}, 100) = ${progress}`
+        });
+        
+        console.log('🔄 [PROGRESS-UPDATE] Updating job progress in database');
+        await db.update(scrapingJobs)
+          .set({
+            processedRuns: newProcessedRuns,
+            processedResults: newProcessedResults,
+            progress: progress.toString(),
+            updatedAt: new Date(),
+            cursor: (job.cursor || 0) + creators.length
+          })
+          .where(eq(scrapingJobs.id, jobId));
+        
+        console.log('✅ [PROGRESS-UPDATE] Database updated successfully');
+        
+        // Schedule next call or complete
+        if (newProcessedRuns < MAX_API_CALLS_FOR_TESTING && newProcessedResults < job.targetResults) {
+          console.log('🔄 [TIKTOK-KEYWORD] Scheduling next API call:', {
+            nextCallNumber: newProcessedRuns + 1,
+            remainingCalls: MAX_API_CALLS_FOR_TESTING - newProcessedRuns,
+            currentProgress: progress,
+            willContinue: true
+          });
+          
+          await qstash.publishJSON({
+            url: `${baseUrl}/api/qstash/process-scraping`,
+            body: { jobId: jobId },
+            delay: '2s'
+          });
+          
+          console.log('✅ [TIKTOK-KEYWORD] Next call scheduled successfully');
+          
+          return NextResponse.json({ 
+            status: 'processing',
+            message: 'TikTok keyword search in progress',
+            processedResults: newProcessedResults,
+            progress: progress
+          });
+        } else {
+          // Determine why we're completing
+          const completionReason = newProcessedRuns >= MAX_API_CALLS_FOR_TESTING 
+            ? 'Reached max API calls limit' 
+            : 'Reached target results';
+          
+          console.log('✅ [TIKTOK-KEYWORD] Job completed:', {
+            reason: completionReason,
+            totalApiCalls: newProcessedRuns,
+            totalResults: newProcessedResults,
+            finalProgress: '100'
+          });
+          
+          await db.update(scrapingJobs)
+            .set({
+              status: 'completed',
+              completedAt: new Date(),
+              updatedAt: new Date(),
+              progress: '100'
+            })
+            .where(eq(scrapingJobs.id, jobId));
+          
+          console.log('✅ [PROGRESS-UPDATE] Final database update complete');
+          
+          return NextResponse.json({ 
+            status: 'completed',
+            message: 'TikTok keyword search completed',
+            processedResults: newProcessedResults
+          });
+        }
+        
+      } catch (tiktokKeywordError: any) {
+        console.error('❌ Error processing TikTok keyword job:', tiktokKeywordError);
+        
+        // Update job status to error
+        await db.update(scrapingJobs).set({ 
+          status: 'error', 
+          error: tiktokKeywordError.message || 'Unknown TikTok keyword processing error', 
+          completedAt: new Date(), 
+          updatedAt: new Date() 
+        }).where(eq(scrapingJobs.id, jobId));
+        
+        return NextResponse.json({ 
+          status: 'error',
+          error: tiktokKeywordError.message
+        });
+      }
+    }
+    // CÓDIGO PARA YOUTUBE KEYWORD SEARCH
+    else if (job.platform === 'YouTube' && job.keywords) {
+      console.log('✅ [PLATFORM-DETECTION] YouTube keyword job detected!');
+      console.log('🎬 Processing YouTube keyword job for keywords:', job.keywords);
+      
+      try {
+        const result = await processYouTubeJob(job, jobId);
+        return NextResponse.json(result);
+      } catch (youtubeKeywordError: any) {
+        console.error('❌ Error processing YouTube keyword job:', youtubeKeywordError);
+        
+        // Ensure job status is updated on error
+        const currentJob = await db.query.scrapingJobs.findFirst({ where: eq(scrapingJobs.id, jobId) });
+        if (currentJob && currentJob.status !== 'error') {
+          await db.update(scrapingJobs).set({ 
+            status: 'error', 
+            error: youtubeKeywordError.message || 'Unknown YouTube keyword processing error', 
+            completedAt: new Date(), 
+            updatedAt: new Date() 
+          }).where(eq(scrapingJobs.id, jobId));
+        }
+        
+        throw youtubeKeywordError;
       }
     }
     // CÓDIGO PARA TIKTOK SIMILAR
