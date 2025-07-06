@@ -1,6 +1,6 @@
-import { createClient } from '@/utils/supabase/server'
+import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db'
-import { campaigns } from '@/lib/db/schema'
+import { campaigns, scrapingJobs } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -12,22 +12,19 @@ export async function GET(
     const { id } = await params;
     console.log('🔍 [CAMPAIGN-DETAIL-API] GET request received for campaign:', id);
     
-    console.log('🔄 [CAMPAIGN-DETAIL-API] Creating Supabase client');
-    const supabase = await createClient()
+    console.log('🔐 [CAMPAIGN-DETAIL-API] Getting authenticated user from Clerk');
+    const { userId } = await auth()
     
-    console.log('🔐 [CAMPAIGN-DETAIL-API] Getting authenticated user');
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    
-    if (userError || !user) {
-      console.error('❌ [CAMPAIGN-DETAIL-API] Unauthorized - No valid user session', userError);
+    if (!userId) {
+      console.error('❌ [CAMPAIGN-DETAIL-API] Unauthorized - No valid user session');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    console.log('✅ [CAMPAIGN-DETAIL-API] User authenticated', { userId: user.id });
+    console.log('✅ [CAMPAIGN-DETAIL-API] User authenticated', { userId });
 
     console.log('🔄 [CAMPAIGN-DETAIL-API] Querying campaign with scraping jobs and results');
     // Obtener la campaña con sus scraping jobs y resultados
     const campaign = await db.query.campaigns.findFirst({
-      where: eq(campaigns.id, id),
+      where: (campaigns, { eq }) => eq(campaigns.id, id),
       with: {
         scrapingJobs: {
           with: {
@@ -52,10 +49,10 @@ export async function GET(
     console.log('✅ [CAMPAIGN-DETAIL-API] Campaign found:', { id: campaign.id, name: campaign.name });
 
     // Verificar que la campaña pertenece al usuario
-    if (campaign.userId !== user.id) {
+    if (campaign.userId !== userId) {
       console.error('❌ [CAMPAIGN-DETAIL-API] Unauthorized - Campaign belongs to different user', {
         campaignUserId: campaign.userId,
-        requestUserId: user.id
+        requestUserId: userId
       });
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
