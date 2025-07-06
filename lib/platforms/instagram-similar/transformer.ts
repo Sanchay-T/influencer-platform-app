@@ -43,26 +43,46 @@ export function transformInstagramProfile(profileData: ApifyInstagramProfileResp
 }
 
 /**
- * Transform a single Apify related profile to Instagram frontend format
+ * Transform a single Apify related profile to unified frontend format (matches TikTok/YouTube structure)
  */
 export function transformRelatedProfile(profile: ApifyRelatedProfile, order: number = 0): any {
-  // Transform to the format expected by the Instagram similar search frontend
+  // Transform to the UNIFIED format expected by SearchProgress component (same as TikTok/YouTube)
   return {
+    creator: {
+      name: profile.full_name || profile.username || 'Unknown Creator',
+      uniqueId: profile.username || '',
+      followers: 0, // Will be enhanced later
+      avatarUrl: profile.profile_pic_url || '',
+      profilePicUrl: profile.profile_pic_url || '',
+      verified: profile.is_verified || false,
+      bio: '', // Will be enhanced later
+      emails: [] // Will be enhanced later
+    },
+    video: {
+      description: `Instagram profile: @${profile.username}`,
+      url: `https://instagram.com/${profile.username}`,
+      statistics: {
+        likes: 0,
+        comments: 0,
+        views: 0,
+        shares: 0
+      }
+    },
+    hashtags: [],
+    platform: 'Instagram',
+    // Instagram-specific fields for similar search
     id: profile.id,
     username: profile.username || '',
     full_name: profile.full_name || '',
     is_private: profile.is_private || false,
     is_verified: profile.is_verified || false,
     profile_pic_url: profile.profile_pic_url || '',
-    profileUrl: `https://instagram.com/${profile.username}`,
-    platform: 'Instagram',
-    bio: '', // Will be enhanced later
-    emails: [] // Will be enhanced later
+    profileUrl: `https://instagram.com/${profile.username}`
   };
 }
 
 /**
- * Transform enhanced profile data to include bio and emails
+ * Transform enhanced profile data to include bio and emails (unified format)
  */
 export function transformEnhancedProfile(baseProfile: any, enhancedData: ApifyInstagramProfileResponse): any {
   const bio = enhancedData.biography || '';
@@ -70,6 +90,13 @@ export function transformEnhancedProfile(baseProfile: any, enhancedData: ApifyIn
   
   return {
     ...baseProfile,
+    creator: {
+      ...baseProfile.creator,
+      bio: bio,
+      emails: emails,
+      followers: enhancedData.followersCount || 0
+    },
+    // Keep Instagram-specific fields for compatibility
     bio: bio,
     emails: emails,
     followers_count: enhancedData.followersCount || 0

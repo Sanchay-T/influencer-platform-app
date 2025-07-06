@@ -87,6 +87,7 @@ const SearchResults = ({ searchData }) => {
       <SearchProgress 
         jobId={searchData.jobId}
         platform={searchData.selectedPlatform}
+        searchData={searchData}
         onComplete={(data) => {
           if (data && data.status === 'completed') {
             // Combinar todos los creadores de todos los resultados

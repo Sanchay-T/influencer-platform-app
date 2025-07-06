@@ -7,7 +7,27 @@ import { Loader2, CheckCircle2, AlertCircle, RefreshCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useRouter } from 'next/navigation'
 
-export default function SearchProgress({ jobId, onComplete, onIntermediateResults, platform = 'tiktok' }) {
+export default function SearchProgress({ jobId, onComplete, onIntermediateResults, platform = 'tiktok', searchData }) {
+  // Debug logging for props
+  console.log('🚀 [SEARCH-PROGRESS] Component initialized with props:', {
+    jobId: jobId,
+    platform: platform,
+    searchData: searchData,
+    searchDataType: typeof searchData,
+    hasTargetUsername: searchData?.targetUsername,
+    hasKeywords: searchData?.keywords
+  });
+  
+  // Instagram similar search detection (case-insensitive)
+  const platformNormalized = (searchData?.platform || platform || '').toLowerCase();
+  const isInstagramSimilar = searchData?.targetUsername && platformNormalized === 'instagram';
+  console.log('🔍 [SEARCH-PROGRESS] Search type detection:', {
+    isInstagramSimilar,
+    platform: searchData?.platform || platform,
+    platformNormalized,
+    hasTargetUsername: !!searchData?.targetUsername
+  });
+
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('processing');
   const [error, setError] = useState(null);
@@ -17,15 +37,25 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
   const [retryCount, setRetryCount] = useState(0);
   const [intermediateCreators, setIntermediateCreators] = useState([]);
   const [showIntermediateResults, setShowIntermediateResults] = useState(false);
+  const [renderKey, setRenderKey] = useState(0); // Force re-render trigger
   const maxRetries = 3;
   const pollIntervalRef = useRef(null);
   const router = useRouter();
+  
+  // 🚨 VALIDATION LOG: Track component state initialization
+  console.log('🔍 [STATE-VALIDATION] SearchProgress state initialized:', {
+    jobId,
+    initialIntermediateCreators: intermediateCreators.length,
+    initialRenderKey: renderKey,
+    isInstagramSimilar,
+    timestamp: new Date().toISOString()
+  });
 
-  // Adaptive polling interval based on progress
+  // FASTER polling for live updates
   const getPollingInterval = (progress) => {
-    if (progress < 20) return 1000;  // 1 second - users are anxious at start
-    if (progress < 80) return 3000;  // 3 seconds - standard polling
-    return 5000;                     // 5 seconds - less frequent when nearly done
+    if (progress < 70) return 1500;  // 1.5 seconds - faster for live updates
+    if (progress < 95) return 2000;  // 2 seconds - still frequent
+    return 3000;                     // 3 seconds - when nearly done
   };
 
   const startPolling = () => {
@@ -42,22 +72,46 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
           timestamp: new Date().toISOString()
         });
         
-        // Determine the correct API endpoint based on platform
+        // Determine the correct API endpoint based on platform and search type
         let apiEndpoint;
         const normalizedPlatform = platform?.toLowerCase?.() || String(platform).toLowerCase();
+        const isSimilarSearch = searchData?.targetUsername; // Similar search has targetUsername, keyword search has keywords
         
-        if (normalizedPlatform === 'instagram') {
-          apiEndpoint = `/api/scraping/instagram-hashtag?jobId=${jobId}`;
-        } else if (normalizedPlatform === 'youtube') {
-          apiEndpoint = `/api/scraping/youtube?jobId=${jobId}`;
+        console.log('🔍 [ENDPOINT-DETECTION] API endpoint selection:', {
+          platform: platform,
+          normalizedPlatform: normalizedPlatform,
+          searchData: searchData,
+          targetUsername: searchData?.targetUsername,
+          keywords: searchData?.keywords,
+          isSimilarSearch: isSimilarSearch
+        });
+        
+        if (isSimilarSearch) {
+          // Similar search endpoints
+          if (normalizedPlatform === 'instagram') {
+            apiEndpoint = `/api/scraping/instagram?jobId=${jobId}`;
+          } else if (normalizedPlatform === 'youtube') {
+            apiEndpoint = `/api/scraping/youtube-similar?jobId=${jobId}`;
+          } else {
+            apiEndpoint = `/api/scraping/tiktok-similar?jobId=${jobId}`;
+          }
         } else {
-          apiEndpoint = `/api/scraping/tiktok?jobId=${jobId}`;
+          // Keyword search endpoints (existing logic)
+          if (normalizedPlatform === 'instagram') {
+            apiEndpoint = `/api/scraping/instagram-hashtag?jobId=${jobId}`;
+          } else if (normalizedPlatform === 'youtube') {
+            apiEndpoint = `/api/scraping/youtube?jobId=${jobId}`;
+          } else {
+            apiEndpoint = `/api/scraping/tiktok?jobId=${jobId}`;
+          }
         }
         
         console.log('🎯 [SEARCH-PROGRESS] Using endpoint:', {
           platform: platform,
           platformType: typeof platform,
           normalizedPlatform: normalizedPlatform,
+          searchType: isSimilarSearch ? 'similar' : 'keyword',
+          targetUsername: searchData?.targetUsername,
           apiEndpoint: apiEndpoint
         });
         
@@ -86,7 +140,25 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
           progress: data.job?.progress || data.progress,
           processedResults: data.job?.processedResults || data.processedResults,
           error: data.job?.error || data.error,
-          fullData: data
+          resultsLength: data.results?.length || 0,
+          firstResultCreatorsCount: data.results?.[0]?.creators?.length || 0
+        });
+        
+        // 🚨 COMPREHENSIVE POLLING DEBUG: Log exact data structure received
+        console.log('🚨 [POLLING-DEBUG] Complete API response analysis:', {
+          responseType: typeof data,
+          responseKeys: Object.keys(data),
+          hasResults: !!data.results,
+          resultsArray: data.results,
+          resultsType: typeof data.results,
+          resultsLength: data.results?.length || 0,
+          firstResult: data.results?.[0],
+          firstResultType: typeof data.results?.[0],
+          firstResultKeys: data.results?.[0] ? Object.keys(data.results[0]) : 'no keys',
+          hasCreatorsInFirstResult: !!data.results?.[0]?.creators,
+          creatorsCount: data.results?.[0]?.creators?.length || 0,
+          platform: normalizedPlatform,
+          isSimilarSearch: isSimilarSearch
         });
 
         if (data.error) {
@@ -184,9 +256,44 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
 
         // Check for intermediate results while processing
         if (currentStatus === 'processing' && data.results && data.results.length > 0) {
+          // 🚨 VISIBLE DEBUG: Log to console and show alert for debugging
+          const debugInfo = {
+            resultsType: typeof data.results,
+            resultsLength: data.results.length,
+            firstResult: data.results[0],
+            firstResultType: typeof data.results[0],
+            firstResultKeys: data.results[0] ? Object.keys(data.results[0]) : 'no keys',
+            searchType: searchData?.targetUsername ? 'similar' : 'keyword'
+          };
+          
+          console.log('🔍 [INTERMEDIATE-DEBUG] Raw results data:', debugInfo);
+          
+          // 🚨 SUPER VISIBLE: Also log to console in a way that's easy to see
+          console.warn('🚨 INTERMEDIATE RESULTS DEBUG:', debugInfo);
+          
           const foundCreators = data.results.reduce((acc, result) => {
             return [...acc, ...(result.creators || [])];
           }, []);
+          
+          // 🚨 CRITICAL DEBUG: Log detailed creator extraction
+          console.log('🚨 [CREATOR-EXTRACTION] Detailed analysis:', {
+            totalResultObjects: data.results.length,
+            creatorsInEachResult: data.results.map((r, idx) => ({
+              resultIndex: idx,
+              hasCreators: !!r.creators,
+              creatorsCount: r.creators?.length || 0,
+              firstCreatorName: r.creators?.[0]?.creator?.name || 'no name'
+            })),
+            foundCreatorsTotal: foundCreators.length,
+            foundCreatorsFirst5: foundCreators.slice(0, 5).map(c => c.creator?.name),
+            extractionMethod: 'reduce accumulation'
+          });
+          
+          console.log('🔍 [INTERMEDIATE-DEBUG] Extracted creators:', {
+            foundCount: foundCreators.length,
+            firstCreator: foundCreators[0],
+            searchType: searchData?.targetUsername ? 'similar' : 'keyword'
+          });
           
           if (foundCreators.length > 0) {
             console.log('🎯 [SEARCH-PROGRESS] Found intermediate results:', {
@@ -195,7 +302,72 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
               status: currentStatus
             });
             
-            setIntermediateCreators(foundCreators);
+            // 🚨 VALIDATION LOG: Deep analysis of data source and freshness
+            console.log('🚨 [DATA-FRESHNESS-VALIDATION] Analyzing found creators before state update:', {
+              jobId,
+              dataSource: 'API polling response',
+              foundCreatorsCount: foundCreators.length,
+              foundCreatorNames: foundCreators.slice(0, 5).map(c => c.creator?.name),
+              currentIntermediateCount: intermediateCreators.length,
+              isDataFresh: foundCreators.length !== intermediateCreators.length,
+              apiResponseTimestamp: new Date().toISOString(),
+              potentialStaleDataIssue: foundCreators.length === 80 && intermediateCreators.length === 80
+            });
+            
+            // 🔄 LIVE UPDATES: Only add NEW creators, don't replace entire list
+            setIntermediateCreators(prevCreators => {
+              // 🔍 DETAILED DEBUGGING: Log exactly what we're comparing
+              console.log('🔍 [LIVE-UPDATE-DEBUG] Comparing creators:', {
+                previousCount: prevCreators.length,
+                newCount: foundCreators.length,
+                prevFirstCreator: prevCreators[0]?.creator?.name || 'none',
+                newFirstCreator: foundCreators[0]?.creator?.name || 'none',
+                prevLastCreator: prevCreators[prevCreators.length - 1]?.creator?.name || 'none',
+                newLastCreator: foundCreators[foundCreators.length - 1]?.creator?.name || 'none',
+                prevCreators: prevCreators.slice(0, 5).map(c => c.creator?.name),
+                newCreators: foundCreators.slice(0, 5).map(c => c.creator?.name)
+              });
+              
+              // 🚨 CRITICAL: Compare the actual creator arrays content, not just length
+              const prevNames = prevCreators.map(c => c.creator?.name).join(',');
+              const newNames = foundCreators.map(c => c.creator?.name).join(',');
+              const contentChanged = prevNames !== newNames;
+              
+              console.log('🚨 [CONTENT-COMPARISON] Creator content analysis:', {
+                lengthChanged: foundCreators.length !== prevCreators.length,
+                contentChanged: contentChanged,
+                prevNamesString: prevNames.substring(0, 100) + '...',
+                newNamesString: newNames.substring(0, 100) + '...'
+              });
+              
+              // Check if we have new creators to add OR content changed
+              if (foundCreators.length > prevCreators.length || contentChanged) {
+                console.log('📈 [LIVE-UPDATE] Updating creators:', {
+                  previousCount: prevCreators.length,
+                  newCount: foundCreators.length,
+                  newCreatorsAdded: foundCreators.length - prevCreators.length,
+                  contentChanged: contentChanged,
+                  progress: calculatedProgress
+                });
+                
+                // 🎯 SUPER VISIBLE: Alert for debugging live updates
+                console.warn('🚨 CREATORS UPDATE DETECTED!', {
+                  reason: foundCreators.length > prevCreators.length ? 'length increase' : 'content change',
+                  from: prevCreators.length,
+                  to: foundCreators.length
+                });
+                
+                // 🔄 FORCE RE-RENDER: Trigger React to re-render the cards
+                setRenderKey(prev => prev + 1);
+                console.log('🔄 [FORCE-RENDER] Triggered re-render with key:', renderKey + 1);
+                
+                return foundCreators; // Update with new list
+              }
+              
+              // Even if no new creators, log the current state
+              console.log('📊 [LIVE-UPDATE] No changes detected - Current count:', prevCreators.length, 'API count:', foundCreators.length);
+              return prevCreators; // Keep existing if no new creators
+            });
             setShowIntermediateResults(true);
             
             // Still call the callback if provided
@@ -242,7 +414,20 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
         }
         
       } catch (error) {
-        console.error('Error polling job status:', error);
+        console.error('❌ [POLL-ERROR] Error polling job status:', error);
+        
+        // 🚨 VALIDATION LOG: Check if component shows stale data during connection errors
+        console.log('🚨 [ERROR-STATE-CHECK] Component state during polling error:', {
+          errorType: error.name,
+          errorMessage: error.message,
+          currentIntermediateCreators: intermediateCreators.length,
+          currentRenderKey: renderKey,
+          showingStaleData: intermediateCreators.length > 0,
+          staleDataNames: intermediateCreators.slice(0, 3).map(c => c.creator?.name),
+          jobId: jobId,
+          retryCount: retryCount
+        });
+        
         if (retryCount >= maxRetries) {
           clearTimeout(pollIntervalRef.current);
           setError("Unable to connect to the server. Please check your campaign status later.");
@@ -266,6 +451,29 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
 
   useEffect(() => {
     if (!jobId) return;
+    
+    // 🚨 VALIDATION LOG: Component lifecycle and state reset
+    console.log('🚨 [LIFECYCLE-VALIDATION] Component mounting/jobId change:', {
+      newJobId: jobId,
+      currentIntermediateCreators: intermediateCreators.length,
+      currentRenderKey: renderKey,
+      shouldResetState: true,
+      staleCreatorNames: intermediateCreators.slice(0, 3).map(c => c.creator?.name),
+      timestamp: new Date().toISOString()
+    });
+    
+    // Check if we have stale data that should be cleared
+    if (intermediateCreators.length > 0) {
+      console.log('🧹 [STATE-CLEANUP] WARNING: Found stale intermediate creators from previous job, should clear them');
+      console.log('🧹 [STALE-DATA]:', {
+        staleCount: intermediateCreators.length,
+        staleNames: intermediateCreators.slice(0, 5).map(c => c.creator?.name),
+        oldRenderKey: renderKey
+      });
+      // Reset stale state
+      setIntermediateCreators([]);
+      setRenderKey(0);
+    }
     
     startPolling();
     
@@ -317,9 +525,29 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
     const platformName = platform || 'TikTok';
     const speed = processingSpeed > 0 ? ` (~${processingSpeed}/min)` : '';
     
+    // Defensive check for searchData with detailed logging
+    let isSimilarSearch = false;
+    let targetUser = '';
+    try {
+      isSimilarSearch = searchData && typeof searchData === 'object' && searchData.targetUsername;
+      targetUser = searchData?.targetUsername || '';
+      console.log('🔍 [PROGRESS-STAGE] Search type detection:', {
+        searchData: searchData,
+        searchDataType: typeof searchData,
+        targetUsername: searchData?.targetUsername,
+        isSimilarSearch: isSimilarSearch,
+        platform: platformName
+      });
+    } catch (e) {
+      console.error('❌ [PROGRESS-STAGE] Error accessing searchData:', e);
+      isSimilarSearch = false;
+    }
+    
+    const searchTypeText = isSimilarSearch ? 'similar' : 'keyword';
+    
     if (processedResults > 0) {
       if (displayProgress < 25) {
-        return `Found ${processedResults} ${platformName.toLowerCase()} creators, discovering more${speed}`;
+        return `Found ${processedResults} ${searchTypeText} ${platformName.toLowerCase()} creators, discovering more${speed}`;
       }
       if (displayProgress < 50) {
         return `Analyzing ${processedResults} ${platformName.toLowerCase()} profiles & engagement${speed}`;
@@ -329,11 +557,19 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
       }
       return `Finalizing ${processedResults} ${platformName.toLowerCase()} creators & preparing export${speed}`;
     } else {
-      // No results yet - show platform-specific searching messages
-      if (displayProgress < 25) return `Searching ${platformName.toLowerCase()} database...`;
-      if (displayProgress < 50) return `Analyzing ${platformName.toLowerCase()} content...`;
-      if (displayProgress < 75) return `Processing ${platformName.toLowerCase()} profiles...`;
-      return 'Finalizing search results...';
+      // No results yet - show search-type-specific messages
+      if (isSimilarSearch && targetUser) {
+        if (displayProgress < 25) return `Finding creators similar to @${targetUser}...`;
+        if (displayProgress < 50) return `Analyzing ${platformName.toLowerCase()} creator relationships...`;
+        if (displayProgress < 75) return `Processing similar ${platformName.toLowerCase()} profiles...`;
+        return 'Finalizing similar creator results...';
+      } else {
+        // Keyword search messages (existing)
+        if (displayProgress < 25) return `Searching ${platformName.toLowerCase()} database...`;
+        if (displayProgress < 50) return `Analyzing ${platformName.toLowerCase()} content...`;
+        if (displayProgress < 75) return `Processing ${platformName.toLowerCase()} profiles...`;
+        return 'Finalizing search results...';
+      }
     }
   };
 
@@ -417,11 +653,24 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
                 </span>
               )}
             </div>
-            <div className="w-full bg-blue-200 rounded-full h-2">
+            <div className="w-full bg-blue-100 rounded-lg h-6 relative overflow-hidden shadow-inner">
               <div 
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                className="bg-gradient-to-r from-blue-500 to-blue-600 h-6 rounded-lg transition-all duration-500 relative shadow-sm" 
                 style={{ width: `${Math.min(displayProgress, 100)}%` }}
-              />
+              >
+                {/* 📊 INTEGRATED PERCENTAGE: Show percentage inside the progress bar */}
+                {displayProgress > 12 && (
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm font-semibold text-white drop-shadow">
+                    {Math.round(displayProgress)}%
+                  </span>
+                )}
+              </div>
+              {/* Show percentage outside when progress bar is too small */}
+              {displayProgress <= 12 && (
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sm font-semibold text-gray-700">
+                  {Math.round(displayProgress)}%
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -431,32 +680,80 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
           <div className="w-full mt-6 space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-medium text-gray-900">
-                Partial Results ({intermediateCreators.length} creators)
+                Latest Results (<span className="text-blue-600 font-semibold">{intermediateCreators.length}</span> creators found)
               </h3>
-              <span className="text-sm text-gray-500">More results loading...</span>
+              <span className="text-sm text-gray-500 flex items-center gap-1">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                {status === 'processing' ? 'More results loading...' : 'Loading complete'}
+              </span>
             </div>
             
-            {/* Creator List matching your design */}
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {intermediateCreators.slice(0, 5).map((creator, index) => (
-                <div key={index} className="flex items-start gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
-                  <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center border-l-4 border-l-blue-500">
-                    {creator.creator?.avatarUrl ? (
+            {/* Creator List with LIVE UPDATES and smooth animations */}
+            <div key={renderKey} className="space-y-3 max-h-96 overflow-y-auto scroll-smooth">
+              {/* 🔍 TARGETED DEBUG: Log what cards are being rendered */}
+              {console.log('🎨 [CARD-RENDER] Rendering creator cards:', {
+                renderKey: renderKey,
+                totalCreators: intermediateCreators.length,
+                cardsToShow: Math.min(5, intermediateCreators.length),
+                showingMode: 'latest 5 creators',
+                firstCreatorName: intermediateCreators[0]?.creator?.name,
+                lastCreatorName: intermediateCreators[intermediateCreators.length - 1]?.creator?.name,
+                latestCreatorNames: intermediateCreators.slice(-5).map(c => c.creator?.name),
+                allCreatorNames: intermediateCreators.map(c => c.creator?.name),
+                timestamp: new Date().toISOString()
+              })}
+              
+              {intermediateCreators.slice(-5).map((creator, index) => {
+                // 🖼️ IMAGE PROXY: Use same logic as final table for proper image loading
+                const avatarUrl = creator.creator?.avatarUrl || creator.creator?.profilePicUrl || '';
+                const proxiedImageUrl = avatarUrl ? `/api/proxy/image?url=${encodeURIComponent(avatarUrl)}` : '';
+                
+                // 🔍 TARGETED DEBUG: Log each card being rendered
+                console.log(`🎭 [CARD-${index}] Rendering card:`, {
+                  index: index,
+                  name: creator.creator?.name,
+                  username: creator.creator?.uniqueId,
+                  avatarUrl: avatarUrl,
+                  hasProxy: !!proxiedImageUrl
+                });
+                
+                return (
+                <div 
+                  key={`${creator.creator?.uniqueId || creator.creator?.name || index}`}
+                  className="flex items-start gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-all duration-500 animate-in fade-in slide-in-from-bottom-4"
+                  style={{ 
+                    animationDelay: `${index * 50}ms`,
+                    borderLeft: index < 5 ? '3px solid #3B82F6' : '3px solid transparent' // Highlight first 5 as "new"
+                  }}
+                >
+                  <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                    {proxiedImageUrl ? (
                       <img 
-                        src={creator.creator.avatarUrl} 
-                        alt={creator.creator.name}
+                        src={proxiedImageUrl}
+                        alt={creator.creator?.name || 'Creator'}
                         className="w-full h-full rounded-full object-cover"
+                        onError={(e) => {
+                          // Fallback to initials if image fails to load
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
                       />
-                    ) : (
-                      <span className="text-sm font-medium text-gray-600">
-                        {creator.creator?.name?.charAt(0)?.toUpperCase() || '?'}
-                      </span>
-                    )}
+                    ) : null}
+                    <span 
+                      className="text-sm font-medium text-gray-600"
+                      style={{ display: proxiedImageUrl ? 'none' : 'flex' }}
+                    >
+                      {creator.creator?.name?.charAt(0)?.toUpperCase() || '?'}
+                    </span>
                   </div>
                   
                   <div className="flex-1 min-w-0">
                     <h4 className="font-medium text-gray-900 truncate">
                       {creator.creator?.name || 'Unknown Creator'}
+                      {/* 🔍 VISUAL DEBUG: Show render timestamp */}
+                      <span className="ml-2 text-xs text-blue-500">
+                        #{index + 1} ({new Date().getSeconds()}s)
+                      </span>
                     </h4>
                     <p className="text-sm text-gray-600 line-clamp-2">
                       {creator.video?.description || 'No description available'}
@@ -468,7 +765,8 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
                     )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
               
               {intermediateCreators.length > 5 && (
                 <div className="text-center py-3 text-sm text-gray-500 bg-gray-50 rounded-lg">

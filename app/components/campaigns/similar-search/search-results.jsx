@@ -13,7 +13,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { User } from "lucide-react";
 import ExportButton from '../export-button';
-import SimilarSearchProgress from './similar-search-progress';
+import SearchProgress from '../keyword-search/search-progress';
 
 export default function SimilarSearchResults({ searchData }) {
   const [currentPage, setCurrentPage] = useState(1);
@@ -26,9 +26,23 @@ export default function SimilarSearchResults({ searchData }) {
   if (!searchData?.jobId) return null;
 
   const handleResultsComplete = (data) => {
+    console.log('🔄 [RESULTS-HANDOFF] handleResultsComplete called with:', {
+      status: data.status,
+      hasCreators: !!data.creators,
+      creatorsLength: data.creators?.length || 0,
+      dataKeys: Object.keys(data),
+      fullData: data
+    });
+    
     if (data.status === 'completed') {
+      console.log('✅ [RESULTS-HANDOFF] Setting final creators:', {
+        creatorsReceived: data.creators?.length || 0,
+        firstCreator: data.creators?.[0]
+      });
       setCreators(data.creators || []);
       setIsLoading(false);
+    } else {
+      console.log('⚠️ [RESULTS-HANDOFF] Received non-completed status:', data.status);
     }
   };
 
@@ -91,13 +105,25 @@ export default function SimilarSearchResults({ searchData }) {
     console.log('  🕐 Start time:', new Date().toISOString());
   };
 
-  // If still loading, show progress component
+  // If still loading, show enhanced progress component
   if (isLoading) {
-    return <SimilarSearchProgress searchData={searchData} onComplete={handleResultsComplete} />;
+    console.log('🔄 [SEARCH-RESULTS] Still loading, showing SearchProgress component for jobId:', searchData.jobId);
+    return <SearchProgress 
+      jobId={searchData.jobId}
+      platform={searchData.platform}
+      searchData={searchData}
+      onComplete={handleResultsComplete} 
+    />;
   }
 
   // If no creators found
   if (!creators || creators.length === 0) {
+    console.log('❌ [SEARCH-RESULTS] No creators to display:', {
+      creators,
+      creatorsLength: creators?.length,
+      isLoading,
+      searchDataJobId: searchData?.jobId
+    });
     return (
       <div className="text-center py-8">
         <div className="text-gray-500">

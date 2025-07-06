@@ -3,7 +3,7 @@ import { ApifyClient } from 'apify-client';
 import { db } from '@/lib/db';
 import { scrapingJobs, scrapingResults, type PlatformResult, type InstagramRelatedProfile } from '@/lib/db/schema';
 import { auth } from '@clerk/nextjs/server';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { qstash } from '@/lib/queue/qstash';
 
 const TIMEOUT_MINUTES = 60;
@@ -56,17 +56,18 @@ export async function POST(req: Request) {
   console.log('🚀 [INSTAGRAM-API] Processing request to /api/scraping/instagram');
   
   try {
-    console.log('🔍 [INSTAGRAM-API] Creating Supabase client');
-    const supabase = await createClient();
+    console.log('🔍 [INSTAGRAM-API] Step 1: Verifying user authentication with Clerk');
+    // Verify user authentication with Clerk
+    const { userId } = await auth();
     
-    console.log('🔐 [INSTAGRAM-API] Getting authenticated user');
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError || !user) {
-      console.error('❌ [INSTAGRAM-API] Authentication error:', userError);
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!userId) {
+      console.error('❌ [INSTAGRAM-API] Authentication error: No user found');
+      return NextResponse.json({ 
+        error: 'Unauthorized',
+        details: 'No user found'
+      }, { status: 401 });
     }
-    console.log('✅ [INSTAGRAM-API] User authenticated:', user.id);
+    console.log('✅ [INSTAGRAM-API] User authenticated successfully:', userId);
 
     console.log('📦 [INSTAGRAM-API] Parsing request body');
     const body = await req.json();
@@ -93,7 +94,7 @@ export async function POST(req: Request) {
       // Crear el job en la base de datos
       const [job] = await db.insert(scrapingJobs)
         .values({
-          userId: user.id,
+          userId: userId,
           targetUsername: sanitizedUsername,
           targetResults: 20, // Número arbitrario, ya que los perfiles relacionados son limitados
           status: 'pending',
@@ -150,18 +151,33 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
   try {
+    // Verify user authentication with Clerk
+    const { userId } = await auth();
+    
+    if (!userId) {
+      console.error('❌ [INSTAGRAM-API-GET] Authentication error: No user found');
+      return NextResponse.json({ 
+        error: 'Unauthorized',
+        details: 'No user found'
+      }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
     const jobId = searchParams.get('jobId');
     console.log('\n=== GET REQUEST START ===');
     console.log('Job ID:', jobId);
+    console.log('User ID:', userId);
 
     if (!jobId) {
       return NextResponse.json({ error: 'jobId is required' }, { status: 400 });
     }
 
-    // Obtener el job con sus resultados
+    // Obtener el job con sus resultados (verificando que pertenece al usuario)
     const job = await db.query.scrapingJobs.findFirst({
-      where: eq(scrapingJobs.id, jobId),
+      where: (scrapingJobs, { eq, and }) => and(
+        eq(scrapingJobs.id, jobId),
+        eq(scrapingJobs.userId, userId)
+      ),
       with: {
         results: {
           columns: {
@@ -198,27 +214,66 @@ export async function GET(req: Request) {
       }
     }
 
-    // Si ya tenemos resultados, devolverlos
+    // 🔍 COMPREHENSIVE DEBUG: Log the raw job data for frontend debugging
+    console.log('🔍 [INSTAGRAM-API-GET] Job data structure:', {
+      jobId: job.id,
+      status: job.status,
+      progress: job.progress,
+      processedResults: job.processedResults,
+      targetResults: job.targetResults,
+      hasResults: job.results && job.results.length > 0,
+      resultsCount: job.results ? job.results.length : 0
+    });
+    
+    // 🚨 CRITICAL DEBUG: Log the actual results data structure
     if (job.results && job.results.length > 0) {
-      console.log('Retornando resultados existentes');
-      
-      // Filtrar solo los perfiles relacionados de Instagram
-      const creators = job.results[0].creators as InstagramRelatedProfile[];
-      
-      return NextResponse.json({ 
-        status: 'completed',
-        creators: creators
+      console.log('🚨 [RESULTS-DEBUG] Full results structure:', {
+        totalResults: job.results.length,
+        firstResult: job.results[0],
+        firstResultType: typeof job.results[0],
+        firstResultKeys: job.results[0] ? Object.keys(job.results[0]) : 'no keys',
+        hasCreators: job.results[0]?.creators ? true : false,
+        creatorsLength: job.results[0]?.creators?.length || 0,
+        firstCreatorInDB: job.results[0]?.creators?.[0]?.creator?.name || 'no creator name',
+        lastCreatorInDB: job.results[0]?.creators?.[job.results[0]?.creators?.length - 1]?.creator?.name || 'no last creator'
       });
+      
+      // 🔍 Log first 3 creators from database for comparison
+      if (job.results[0]?.creators && job.results[0].creators.length > 0) {
+        console.log('👥 [DB-CREATORS] First 3 creators in database:', 
+          job.results[0].creators.slice(0, 3).map((c, idx) => ({
+            index: idx,
+            name: c.creator?.name,
+            username: c.creator?.uniqueId,
+            platform: c.platform
+          }))
+        );
+      }
+    } else {
+      console.log('⚠️ [RESULTS-DEBUG] No results found in database for job:', jobId);
     }
 
-    // Si está todavía en proceso, devolver el estado actual
-    return NextResponse.json({
+    // 🚨 FINAL DEBUG: Log what we're sending to frontend
+    const responseData = {
       status: job.status,
       processedResults: job.processedResults,
       targetResults: job.targetResults,
       error: job.error,
+      results: job.results,  // ✅ Same structure as keyword search for intermediate results
       progress: parseFloat(job.progress || '0')
+    };
+    
+    console.log('📤 [API-RESPONSE] Sending to frontend:', {
+      status: responseData.status,
+      progress: responseData.progress,
+      processedResults: responseData.processedResults,
+      resultsLength: responseData.results?.length || 0,
+      firstResultCreatorsCount: responseData.results?.[0]?.creators?.length || 0,
+      responseKeys: Object.keys(responseData)
     });
+    
+    // Return consistent format with keyword searches (results array structure)
+    return NextResponse.json(responseData);
   } catch (error) {
     console.error('Error checking job status:', error);
     return NextResponse.json(

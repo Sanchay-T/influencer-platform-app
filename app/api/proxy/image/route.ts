@@ -2,6 +2,51 @@ import { NextResponse } from 'next/server';
 import sharp from 'sharp';
 import convert from 'heic-convert';
 
+// Generate placeholder for failed images
+function generatePlaceholderResponse(imageUrl: string) {
+  console.log('🎨 [IMAGE-PROXY] Generating placeholder for failed image:', imageUrl);
+  
+  // Extract username or create a generic placeholder
+  let initial = '?';
+  let color = '#6B7280'; // Default gray
+  
+  try {
+    // Try to extract some identifier from the URL for personalization
+    if (imageUrl.includes('instagram')) {
+      initial = 'I';
+      color = '#E1306C'; // Instagram pink
+    } else if (imageUrl.includes('tiktok')) {
+      initial = 'T';
+      color = '#FF0050'; // TikTok red
+    } else {
+      initial = 'U'; // Unknown/User
+      color = '#3B82F6'; // Blue
+    }
+  } catch (e) {
+    // Use defaults
+  }
+  
+  const placeholderSvg = `
+    <svg width="150" height="150" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="75" cy="75" r="75" fill="${color}"/>
+      <text x="75" y="85" font-family="Arial, sans-serif" font-size="60" font-weight="bold" 
+            fill="white" text-anchor="middle">${initial}</text>
+    </svg>
+  `;
+  
+  console.log('✅ [IMAGE-PROXY] Generated placeholder SVG');
+  
+  return new NextResponse(Buffer.from(placeholderSvg), {
+    headers: {
+      'Content-Type': 'image/svg+xml',
+      'Cache-Control': 'public, max-age=300', // Cache for 5 minutes
+      'Access-Control-Allow-Origin': '*',
+      'X-Image-Proxy-Source': 'placeholder-network-error',
+      'X-Image-Original-Format': 'failed',
+    },
+  });
+}
+
 export async function GET(request: Request) {
   const startTime = Date.now();
   try {
@@ -43,12 +88,27 @@ export async function GET(request: Request) {
       console.log('🎯 [IMAGE-PROXY] Using TikTok-specific headers');
     }
 
-    let response = await fetch(imageUrl, { headers: fetchHeaders });
+    let response;
     let fetchStrategy = 'initial';
-
-    const fetchTime = Date.now() - startTime;
-    console.log('📊 [IMAGE-PROXY] Fetch completed in', fetchTime + 'ms');
-    console.log('📡 [IMAGE-PROXY] Fetch status:', response.status, response.statusText);
+    
+    try {
+      response = await fetch(imageUrl, { headers: fetchHeaders });
+      const fetchTime = Date.now() - startTime;
+      console.log('📊 [IMAGE-PROXY] Fetch completed in', fetchTime + 'ms');
+      console.log('📡 [IMAGE-PROXY] Fetch status:', response.status, response.statusText);
+    } catch (fetchError: any) {
+      console.error('❌ [IMAGE-PROXY] Network error:', fetchError.message);
+      
+      // Handle DNS resolution errors (common with Instagram CDN)
+      if (fetchError.cause?.code === 'ENOTFOUND' || fetchError.message.includes('getaddrinfo ENOTFOUND')) {
+        console.log('🔄 [IMAGE-PROXY] DNS resolution failed, generating placeholder...');
+        return generatePlaceholderResponse(imageUrl);
+      }
+      
+      // Handle other network errors
+      console.log('🔄 [IMAGE-PROXY] Network error, generating placeholder...');
+      return generatePlaceholderResponse(imageUrl);
+    }
 
     // Retry logic for 403 Forbidden errors
     if (response.status === 403) {

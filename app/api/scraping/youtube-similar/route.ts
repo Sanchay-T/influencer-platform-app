@@ -12,15 +12,14 @@ export async function POST(req: Request) {
   console.log('🚀 [YOUTUBE-SIMILAR-API] POST request received at:', new Date().toISOString());
   
   try {
-    // Authenticate user
-    const supabase = await createClient();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Authenticate user with Clerk
+    const { userId } = await auth();
     
-    if (userError || !user) {
-      console.error('❌ [YOUTUBE-SIMILAR-API] Authentication error:', userError);
+    if (!userId) {
+      console.error('❌ [YOUTUBE-SIMILAR-API] Authentication error: No user ID');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    console.log('✅ [YOUTUBE-SIMILAR-API] User authenticated:', user.id);
+    console.log('✅ [YOUTUBE-SIMILAR-API] User authenticated:', userId);
 
     // Parse request body
     const body = await req.json();
@@ -41,7 +40,7 @@ export async function POST(req: Request) {
     const campaign = await db.query.campaigns.findFirst({
       where: and(
         eq(campaigns.id, campaignId),
-        eq(campaigns.userId, user.id)
+        eq(campaigns.userId, userId)
       )
     });
 
@@ -77,7 +76,7 @@ export async function POST(req: Request) {
     // Create scraping job
     console.log('💾 [YOUTUBE-SIMILAR-API] Creating scraping job...');
     const newJob = await db.insert(scrapingJobs).values({
-      userId: user.id,
+      userId: userId,
       campaignId: campaignId,
       targetUsername: username,
       platform: 'YouTube',
@@ -144,12 +143,11 @@ export async function GET(req: Request) {
   console.log('🔍 [YOUTUBE-SIMILAR-API] GET request received - job status check');
   
   try {
-    // Authenticate user
-    const supabase = await createClient();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Authenticate user with Clerk
+    const { userId } = await auth();
     
-    if (userError || !user) {
-      console.error('❌ [YOUTUBE-SIMILAR-API] Authentication error:', userError);
+    if (!userId) {
+      console.error('❌ [YOUTUBE-SIMILAR-API] Authentication error: No user ID');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -168,7 +166,7 @@ export async function GET(req: Request) {
     const job = await db.query.scrapingJobs.findFirst({
       where: and(
         eq(scrapingJobs.id, jobId),
-        eq(scrapingJobs.userId, user.id)
+        eq(scrapingJobs.userId, userId)
       ),
       with: {
         results: true
@@ -183,6 +181,22 @@ export async function GET(req: Request) {
     console.log('✅ [YOUTUBE-SIMILAR-API] Job found with status:', job.status);
 
     // Return job status and results
+    // During processing: return LATEST intermediate results for partial display
+    // When completed: return final enhanced results
+    let creators = [];
+    if (job.results && job.results.length > 0) {
+      if (job.status === 'processing') {
+        // During processing: Return the LATEST intermediate results (most recent)
+        const latestResult = job.results[job.results.length - 1];
+        creators = latestResult.creators || [];
+        console.log(`🔄 [YOUTUBE-SIMILAR-API] Returning latest intermediate results: ${creators.length} creators (result ${job.results.length}/${job.results.length})`);
+      } else {
+        // When completed: Return the final results (should be the last/only result)
+        creators = job.results[job.results.length - 1]?.creators || [];
+        console.log(`✅ [YOUTUBE-SIMILAR-API] Returning final results: ${creators.length} creators`);
+      }
+    }
+
     const response = {
       jobId: job.id,
       status: job.status,
@@ -195,7 +209,10 @@ export async function GET(req: Request) {
       createdAt: job.createdAt,
       startedAt: job.startedAt,
       completedAt: job.completedAt,
-      results: job.results?.map(result => result.creators) || []
+      creators: creators,
+      // ✅ CRITICAL FIX: Add results array for SearchProgress compatibility
+      // SearchProgress expects data.results array for intermediate display
+      results: job.results || []
     };
 
     return NextResponse.json(response);

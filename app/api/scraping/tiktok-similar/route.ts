@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { scrapingJobs, scrapingResults, campaigns } from '@/lib/db/schema';
-import { createClient } from '@/utils/supabase/server';
+import { auth } from '@clerk/nextjs/server';
 import { eq, and } from 'drizzle-orm';
 import { qstash } from '@/lib/queue/qstash';
 
@@ -12,15 +12,14 @@ export async function POST(req: Request) {
   console.log('🚀 [TIKTOK-SIMILAR-API] POST request received at:', new Date().toISOString());
   
   try {
-    // Authenticate user
-    const supabase = await createClient();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Authenticate user with Clerk
+    const { userId } = await auth();
     
-    if (userError || !user) {
-      console.error('❌ [TIKTOK-SIMILAR-API] Authentication error:', userError);
+    if (!userId) {
+      console.error('❌ [TIKTOK-SIMILAR-API] Authentication error: No user ID');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    console.log('✅ [TIKTOK-SIMILAR-API] User authenticated:', user.id);
+    console.log('✅ [TIKTOK-SIMILAR-API] User authenticated:', userId);
 
     // Parse request body
     const body = await req.json();
@@ -42,7 +41,7 @@ export async function POST(req: Request) {
     const campaign = await db.query.campaigns.findFirst({
       where: and(
         eq(campaigns.id, campaignId),
-        eq(campaigns.userId, user.id)
+        eq(campaigns.userId, userId)
       )
     });
 
@@ -62,7 +61,7 @@ export async function POST(req: Request) {
       // Create the job in the database
       const [job] = await db.insert(scrapingJobs)
         .values({
-          userId: user.id,
+          userId: userId,
           targetUsername: sanitizedUsername,
           targetResults: 10, // Expected number of similar creators
           status: 'pending',

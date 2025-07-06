@@ -73,6 +73,77 @@ export async function processYouTubeSimilarJob(job: any, jobId: string): Promise
           const channels = extractChannelsFromVideos(searchResults.videos, job.targetUsername);
           allExtractedChannels.push(...channels);
           console.log(`✅ [YOUTUBE-SIMILAR] Search ${i + 1} found ${channels.length} unique channels from ${searchResults.videos.length} videos`);
+          
+          // ✅ SAVE INTERMEDIATE RESULTS for partial display
+          if (allExtractedChannels.length > 0 && (i + 1) % 2 === 0) { // Save every 2 searches
+            // Quick deduplication for intermediate results
+            const quickChannelMap = new Map();
+            allExtractedChannels.forEach(channel => {
+              if (!quickChannelMap.has(channel.id)) {
+                quickChannelMap.set(channel.id, channel);
+              }
+            });
+            const intermediateChannels = Array.from(quickChannelMap.values()).slice(0, 20);
+            
+            // ✅ Transform to SearchProgress expected format (creator.creator structure)
+            const transformedIntermediateChannels = intermediateChannels.map(channel => ({
+              // SearchProgress expects creator.creator.* structure
+              creator: {
+                name: channel.name || 'Unknown Channel',
+                avatarUrl: channel.thumbnail || '',
+                profilePicUrl: channel.thumbnail || '',
+                followers: 0, // Will be enhanced later
+                uniqueId: channel.handle || channel.name?.replace(/\s+/g, ''),
+                verified: false
+              },
+              // SearchProgress expects creator.video.* structure  
+              video: {
+                description: `YouTube channel: ${channel.name || 'Unknown'}`,
+                url: `https://www.youtube.com/${channel.handle || `@${channel.name?.replace(/\s+/g, '') || 'unknown'}`}`,
+                statistics: {
+                  views: 0,
+                  likes: 0,
+                  comments: 0
+                }
+              },
+              // Additional data for final display
+              platform: 'YouTube',
+              id: channel.id,
+              handle: channel.handle,
+              videos: channel.videos || []
+            }));
+            
+            // ✅ CRITICAL FIX: Use TikTok APPEND pattern for SearchProgress compatibility
+            // Check if there are existing results to append to
+            const existingResults = await db.query.scrapingResults.findFirst({
+              where: eq(scrapingResults.jobId, jobId)
+            });
+            
+            if (existingResults) {
+              // Append new creators to existing results (TikTok pattern)
+              const existingCreators = Array.isArray(existingResults.creators) ? existingResults.creators : [];
+              const updatedCreators = [...existingCreators, ...transformedIntermediateChannels];
+              
+              await db.update(scrapingResults)
+                .set({
+                  creators: updatedCreators,
+                  createdAt: new Date()
+                })
+                .where(eq(scrapingResults.jobId, jobId));
+                
+              console.log(`💾 [YOUTUBE-SIMILAR] APPENDED ${transformedIntermediateChannels.length} new channels to existing ${existingCreators.length} results (total: ${updatedCreators.length})`);
+            } else {
+              // Create first result entry
+              await db.insert(scrapingResults).values({
+                jobId: jobId,
+                creators: transformedIntermediateChannels,
+                createdAt: new Date()
+              });
+              
+              console.log(`💾 [YOUTUBE-SIMILAR] Created first result entry with ${transformedIntermediateChannels.length} channels after search ${i + 1}`);
+            }
+          }
+          
         } else {
           console.log(`⚠️ [YOUTUBE-SIMILAR] Search ${i + 1} returned no videos`);
         }
@@ -81,6 +152,7 @@ export async function processYouTubeSimilarJob(job: any, jobId: string): Promise
         const progress = Math.min(80, 50 + Math.floor((30 * (i + 1)) / searchKeywords.length));
         await db.update(scrapingJobs).set({ 
           progress: progress.toString(),
+          processedResults: allExtractedChannels.length,
           updatedAt: new Date()
         }).where(eq(scrapingJobs.id, jobId));
         
@@ -251,13 +323,30 @@ export async function processYouTubeSimilarJob(job: any, jobId: string): Promise
       updatedAt: new Date()
     }).where(eq(scrapingJobs.id, jobId));
 
-    // Save results to database
-    await db.insert(scrapingResults).values({
-      jobId: jobId,
-      creators: enhancedChannels,
-      createdAt: new Date()
+    // ✅ APPEND PATTERN: Update existing results with final enhanced data
+    // Get current results and replace with enhanced version
+    const currentResults = await db.query.scrapingResults.findFirst({
+      where: eq(scrapingResults.jobId, jobId)
     });
-    console.log('✅ [YOUTUBE-SIMILAR] Results saved to database');
+    
+    if (currentResults) {
+      // Replace intermediate results with final enhanced results
+      await db.update(scrapingResults)
+        .set({
+          creators: enhancedChannels, // Final enhanced data with bio/emails
+          createdAt: new Date()
+        })
+        .where(eq(scrapingResults.jobId, jobId));
+      console.log('✅ [YOUTUBE-SIMILAR] Updated results with final enhanced data');
+    } else {
+      // Fallback: create new results if none exist
+      await db.insert(scrapingResults).values({
+        jobId: jobId,
+        creators: enhancedChannels,
+        createdAt: new Date()
+      });
+      console.log('✅ [YOUTUBE-SIMILAR] Created final enhanced results');
+    }
 
     // Mark job as completed
     await db.update(scrapingJobs).set({
