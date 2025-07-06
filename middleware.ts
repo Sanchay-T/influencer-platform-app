@@ -1,19 +1,38 @@
-import { createServerClient } from '@supabase/ssr'
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
-  // Para rutas de QStash y scraping, permitir todos los headers necesarios
-  if (request.nextUrl.pathname.startsWith('/api/qstash/') || request.nextUrl.pathname.startsWith('/api/scraping/')) {
-    // Permitir CORS para las rutas
+// Define public routes that don't require authentication
+const isPublicRoute = createRouteMatcher([
+  '/',
+  '/sign-in(.*)',
+  '/sign-up(.*)',
+  '/sso-callback(.*)',
+])
+
+// Define API routes that need special handling for QStash
+const isWebhookRoute = createRouteMatcher([
+  '/api/qstash/(.*)',
+  '/api/scraping/(.*)',
+  '/api/proxy/(.*)',
+  '/api/export/(.*)',
+])
+
+// API routes that are protected but handled differently
+const isProtectedApiRoute = createRouteMatcher([
+  '/api/campaigns(.*)',
+])
+
+export default clerkMiddleware(async (auth, request) => {
+  // Handle QStash and scraping API routes - allow all headers for webhooks
+  if (isWebhookRoute(request)) {
     const response = NextResponse.next()
     
-    // Permitir los headers necesarios
+    // Allow CORS for these routes
     response.headers.set('Access-Control-Allow-Origin', '*')
     response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
     response.headers.set('Access-Control-Allow-Headers', '*')
     
-    // Si es una solicitud OPTIONS, responder inmediatamente
+    // Handle preflight requests
     if (request.method === 'OPTIONS') {
       return new NextResponse(null, {
         status: 200,
@@ -24,93 +43,32 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
-  // Para todas las demás rutas, manejar la autenticación
-  try {
-    let response = NextResponse.next({
-      request: {
-        headers: request.headers,
-      },
-    })
-
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name) {
-            return request.cookies.get(name)?.value
-          },
-          set(name, value, options) {
-            response.cookies.set({
-              name,
-              value,
-              ...options,
-            })
-          },
-          remove(name, options) {
-            response.cookies.set({
-              name,
-              value: '',
-              ...options,
-            })
-          },
-        },
-      }
-    )
-
-    // Verificar si el usuario está autenticado
-    const { data: { user }, error } = await supabase.auth.getUser()
-    
-    if (error) {
-      console.error('Error al obtener el usuario:', error)
-    }
-
-    // Rutas públicas que no requieren autenticación
-    const publicRoutes = [
-      '/auth/login',
-      '/auth/register',
-      '/auth/verify-email',
-      '/auth/callback',
-      '/auth/forgot-password',
-      '/auth/update-password',
-      '/auth/verify',
-      '/api/test' // Agregado para pruebas solamente
-    ]
-    
-    // Verificar si la ruta actual es pública
-    const isPublicRoute = publicRoutes.some(route => 
-      request.nextUrl.pathname === route || 
-      request.nextUrl.pathname.startsWith(route + '/')
-    )
-
-    // Si el usuario no está autenticado y trata de acceder a rutas protegidas
-    if (!user && !isPublicRoute) {
-      console.log('Usuario no autenticado intentando acceder a ruta protegida:', request.nextUrl.pathname)
-      const redirectUrl = new URL('/auth/login', request.url)
-      return NextResponse.redirect(redirectUrl)
-    }
-
-    // Si el usuario está autenticado y trata de acceder a páginas de auth (excepto update-password)
-    if (user && isPublicRoute && request.nextUrl.pathname !== '/auth/update-password') {
-      console.log('Usuario autenticado intentando acceder a ruta pública:', request.nextUrl.pathname)
-      const redirectUrl = new URL('/', request.url)
-      return NextResponse.redirect(redirectUrl)
-    }
-
-    return response
-  } catch (error) {
-    // Si hay algún error, redirigimos a login por seguridad
-    console.error('Middleware error:', error)
-    const redirectUrl = new URL('/auth/login', request.url)
-    return NextResponse.redirect(redirectUrl)
+  // For protected API routes, let them handle auth internally
+  if (isProtectedApiRoute(request)) {
+    return NextResponse.next()
   }
-}
+
+  // Protect non-public routes
+  if (!isPublicRoute(request)) {
+    // Get the auth object and check if user is signed in
+    const { userId } = await auth()
+    
+    // If not signed in, redirect to sign-in page
+    if (!userId) {
+      const signInUrl = new URL('/sign-in', request.url)
+      signInUrl.searchParams.set('redirect_url', request.url)
+      return NextResponse.redirect(signInUrl)
+    }
+  }
+
+  return NextResponse.next()
+})
 
 export const config = {
   matcher: [
-    // Proteger todas las rutas excepto las estáticas y públicas
-    '/((?!_next/static|_next/image|favicon.ico|public|assets).*)',
-    // Proteger las rutas de API
-    '/api/:path*'
-  ]
-} 
+    // Skip Next.js internals and all static files, unless found in search params
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    // Always run for API routes
+    '/(api|trpc)(.*)',
+  ],
+}

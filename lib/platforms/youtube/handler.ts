@@ -11,6 +11,34 @@ import { YouTubeSearchParams } from './types';
 const MAX_API_CALLS_FOR_TESTING = 1;
 
 /**
+ * Unified progress calculation for consistent progress across platforms
+ * Formula: (apiCalls × 0.3) + (results × 0.7)
+ */
+function calculateUnifiedProgress(processedRuns, maxRuns, processedResults, targetResults) {
+  // API calls progress (30% weight)
+  const apiCallsProgress = maxRuns > 0 ? (processedRuns / maxRuns) * 100 * 0.3 : 0;
+  
+  // Results progress (70% weight)
+  const resultsProgress = targetResults > 0 ? (processedResults / targetResults) * 100 * 0.7 : 0;
+  
+  // Combined progress, capped at 100%
+  const totalProgress = Math.min(apiCallsProgress + resultsProgress, 100);
+  
+  console.log('📊 [UNIFIED-PROGRESS] YouTube calculation:', {
+    processedRuns,
+    maxRuns,
+    processedResults,
+    targetResults,
+    apiCallsProgress: Math.round(apiCallsProgress * 10) / 10,
+    resultsProgress: Math.round(resultsProgress * 10) / 10,
+    totalProgress: Math.round(totalProgress * 10) / 10,
+    formula: `(${processedRuns}/${maxRuns} × 30%) + (${processedResults}/${targetResults} × 70%) = ${Math.round(totalProgress)}%`
+  });
+  
+  return totalProgress;
+}
+
+/**
  * Process YouTube scraping job in background
  * This function is called by the QStash processor
  */
@@ -213,20 +241,59 @@ export async function processYouTubeJob(job: any, jobId: string): Promise<any> {
       
       console.log(`✅ [PROFILE-ENHANCEMENT] Completed enhanced profile fetching for ${creators.length} channels`);
       
-      // Save results to database
-      await db.insert(scrapingResults).values({
-        jobId: job.id,
-        creators: creators,
-        createdAt: new Date()
-      });
+      // Save results to database (append to existing results)
+      if (creators.length > 0) {
+        console.log('💾 [YOUTUBE] Saving results to database:', {
+          creatorCount: creators.length,
+          jobId: job.id,
+          apiCall: newProcessedRuns,
+          isPartialResult: newProcessedRuns < MAX_API_CALLS_FOR_TESTING
+        });
+        
+        // Check if there are existing results to append to
+        const existingResults = await db.query.scrapingResults.findFirst({
+          where: eq(scrapingResults.jobId, job.id)
+        });
+        
+        if (existingResults) {
+          // Append new creators to existing results
+          const existingCreators = Array.isArray(existingResults.creators) ? existingResults.creators : [];
+          const updatedCreators = [...existingCreators, ...creators];
+          
+          await db.update(scrapingResults)
+            .set({
+              creators: updatedCreators
+            })
+            .where(eq(scrapingResults.jobId, job.id));
+            
+          console.log('✅ [YOUTUBE] Appended', creators.length, 'new creators to existing', existingCreators.length, 'results');
+        } else {
+          // Create first result entry
+          await db.insert(scrapingResults).values({
+            jobId: job.id,
+            creators: creators,
+            createdAt: new Date()
+          });
+          
+          console.log('✅ [YOUTUBE] Created first result entry with', creators.length, 'creators');
+        }
+      }
       
-      console.log(`✅ YouTube: Saved ${creators.length} enhanced creators from API call ${newProcessedRuns}`);
-      
-      // Update job with processed results count
+      // Update job with processed results count and unified progress
       const totalProcessedResults = (job.processedResults || 0) + creators.length;
+      
+      // Calculate unified progress
+      const progress = calculateUnifiedProgress(
+        newProcessedRuns,
+        MAX_API_CALLS_FOR_TESTING,
+        totalProcessedResults,
+        job.targetResults || 1000
+      );
+      
       await db.update(scrapingJobs)
         .set({ 
           processedResults: totalProcessedResults,
+          progress: progress.toString(),
           updatedAt: new Date()
         })
         .where(eq(scrapingJobs.id, jobId));

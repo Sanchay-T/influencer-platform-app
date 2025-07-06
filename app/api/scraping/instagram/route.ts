@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server';
 import { ApifyClient } from 'apify-client';
 import { db } from '@/lib/db';
 import { scrapingJobs, scrapingResults, type PlatformResult, type InstagramRelatedProfile } from '@/lib/db/schema';
-import { createClient } from '@/utils/supabase/server';
-import { cookies } from 'next/headers';
+import { auth } from '@clerk/nextjs/server';
 import { eq } from 'drizzle-orm';
 import { qstash } from '@/lib/queue/qstash';
 

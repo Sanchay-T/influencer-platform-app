@@ -15,6 +15,34 @@ import { processYouTubeSimilarJob } from '@/lib/platforms/youtube-similar/handle
 // Global parameter to limit API calls for testing
 const MAX_API_CALLS_FOR_TESTING = 5; // Increased to 5 for realistic progress testing
 
+/**
+ * Unified progress calculation for all platforms
+ * Formula: (apiCalls × 0.3) + (results × 0.7) for consistent progress across platforms
+ */
+function calculateUnifiedProgress(processedRuns, maxRuns, processedResults, targetResults) {
+  // API calls progress (30% weight)
+  const apiCallsProgress = maxRuns > 0 ? (processedRuns / maxRuns) * 100 * 0.3 : 0;
+  
+  // Results progress (70% weight)
+  const resultsProgress = targetResults > 0 ? (processedResults / targetResults) * 100 * 0.7 : 0;
+  
+  // Combined progress, capped at 100%
+  const totalProgress = Math.min(apiCallsProgress + resultsProgress, 100);
+  
+  console.log('📊 [UNIFIED-PROGRESS] Calculation:', {
+    processedRuns,
+    maxRuns,
+    processedResults,
+    targetResults,
+    apiCallsProgress: Math.round(apiCallsProgress * 10) / 10,
+    resultsProgress: Math.round(resultsProgress * 10) / 10,
+    totalProgress: Math.round(totalProgress * 10) / 10,
+    formula: `(${processedRuns}/${maxRuns} × 30%) + (${processedResults}/${targetResults} × 70%) = ${Math.round(totalProgress)}%`
+  });
+  
+  return totalProgress;
+}
+
 
 // Inicializar el receptor de QStash
 const receiver = new Receiver({
@@ -390,14 +418,108 @@ export async function POST(req: Request) {
           });
           
         } else if (run.status === 'RUNNING') {
-          // Still processing, check again in 30 seconds
-          console.log('\n⏳ [APIFY-INSTAGRAM] Still running, need to reschedule check');
+          // Still processing, check for timeout and reschedule
+          const runStartTime = run.startedAt ? new Date(run.startedAt).getTime() : Date.now();
+          const runningTimeSeconds = Math.floor((Date.now() - runStartTime) / 1000);
+          const timeoutThresholdSeconds = 300; // 5 minutes timeout
+          
+          console.log('\n⏳ [APIFY-INSTAGRAM] Still running, checking for timeout');
           console.log('📊 [APIFY-INSTAGRAM] Run progress:', {
             stats: run.stats,
             currentTime: new Date().toISOString(),
             runStartedAt: run.startedAt,
-            runningFor: run.startedAt ? `${Math.floor((Date.now() - new Date(run.startedAt).getTime()) / 1000)} seconds` : 'unknown'
+            runningForSeconds: runningTimeSeconds,
+            timeoutThreshold: timeoutThresholdSeconds,
+            isTimeout: runningTimeSeconds > timeoutThresholdSeconds
           });
+          
+          // Check if job has been running too long (timeout detection)
+          if (runningTimeSeconds > timeoutThresholdSeconds) {
+            console.warn('⚠️ [APIFY-INSTAGRAM] Instagram job running too long, checking if it actually finished');
+            
+            // Force check the dataset even if status is still RUNNING
+            try {
+              const { items } = await apifyClient.dataset(run.defaultDatasetId).listItems();
+              
+              if (items && items.length > 0) {
+                console.log('🔧 [APIFY-INSTAGRAM] Found results in "running" job! Forcing completion...');
+                
+                // Transform and save results (same as completion logic)
+                const transformedCreators = items.map((post: any) => {
+                  const possibleAvatarFields = [
+                    post.ownerProfilePicUrl, post.ownerAvatar, post.userProfilePic,
+                    post.profilePicUrl, post.ownerProfilePic, post.avatar,
+                    post.profilePic, post.ownerImage, post.userImage,
+                    post.authorProfilePic, post.authorAvatar
+                  ];
+                  const avatarUrl = possibleAvatarFields.find(field => field && field.length > 0) || '';
+                  
+                  return {
+                    creator: {
+                      name: post.ownerFullName || post.ownerUsername || 'Unknown',
+                      uniqueId: post.ownerUsername || '',
+                      followers: 0,
+                      avatarUrl: avatarUrl,
+                      profilePicUrl: avatarUrl,
+                      verified: false,
+                      bio: '',
+                      emails: []
+                    },
+                    video: {
+                      description: post.caption || '',
+                      url: post.url || `https://instagram.com/p/${post.shortCode}`,
+                      statistics: {
+                        likes: post.likesCount || 0,
+                        comments: post.commentsCount || 0,
+                        views: 0,
+                        shares: 0
+                      }
+                    },
+                    hashtags: post.hashtags || [],
+                    publishedTime: post.timestamp || new Date().toISOString(),
+                    platform: 'Instagram',
+                    postType: post.type,
+                    mediaUrl: post.displayUrl,
+                    postId: post.id,
+                    shortCode: post.shortCode,
+                    ownerUsername: post.ownerUsername,
+                    ownerFullName: post.ownerFullName,
+                    ownerId: post.ownerId
+                  };
+                });
+                
+                // Save results and mark as completed
+                await db.insert(scrapingResults).values({
+                  jobId: job.id,
+                  creators: transformedCreators,
+                  createdAt: new Date()
+                });
+                
+                await db.update(scrapingJobs)
+                  .set({
+                    status: 'completed',
+                    processedResults: items.length,
+                    progress: '100',
+                    completedAt: new Date(),
+                    updatedAt: new Date()
+                  })
+                  .where(eq(scrapingJobs.id, job.id));
+                
+                console.log('✅ [APIFY-INSTAGRAM] Forced completion with', items.length, 'results');
+                
+                return NextResponse.json({ 
+                  status: 'completed',
+                  processedResults: items.length,
+                  message: 'Instagram hashtag search completed (recovered from timeout)'
+                });
+                
+              } else {
+                console.log('⚠️ [APIFY-INSTAGRAM] No results found in timeout check, continuing to wait');
+              }
+            } catch (timeoutCheckError) {
+              console.error('❌ [APIFY-INSTAGRAM] Error checking for timeout completion:', timeoutCheckError);
+            }
+          }
           
           // Update progress in DB based on Apify stats if available
           if (run.stats && run.stats.inputBodyLen > 0) {
@@ -594,68 +716,123 @@ export async function POST(req: Request) {
           hasMore: !!apiResponse?.has_more
         });
         
-        // Transform TikTok data (inline processing like Instagram hashtag)
-        const creators = apiResponse.search_item_list?.map((item: any) => {
-          const awemeInfo = item.aweme_info || {};
-          const author = awemeInfo.author || {};
-          
-          return {
-            creator: {
-              name: author.nickname || author.unique_id || 'Unknown Creator',
-              followers: author.follower_count || 0,
-              avatarUrl: (author.avatar_medium?.url_list?.[0] || '').replace('.heic', '.jpeg'),
-            },
-            video: {
-              description: awemeInfo.desc || 'No description',
-              url: awemeInfo.share_url || '',
-              statistics: {
-                likes: awemeInfo.statistics?.digg_count || 0,
-                comments: awemeInfo.statistics?.comment_count || 0,
-                views: awemeInfo.statistics?.play_count || 0
-              }
-            },
-            hashtags: awemeInfo.text_extra?.filter((e: any) => e.type === 1).map((e: any) => e.hashtag_name) || [],
-            platform: 'TikTok'
-          };
-        }) || [];
+        // Transform TikTok data with granular progress updates
+        const rawResults = apiResponse.search_item_list || [];
+        const creators = [];
+        const batchSize = 5; // Process in smaller batches for smoother progress
         
-        // Save results
-        if (creators.length > 0) {
-          console.log('💾 [TIKTOK-KEYWORD] Saving results to database:', {
-            creatorCount: creators.length,
-            jobId: jobId
+        console.log('🔄 [GRANULAR-PROGRESS] Processing', rawResults.length, 'TikTok results in batches of', batchSize);
+        
+        for (let i = 0; i < rawResults.length; i += batchSize) {
+          const batch = rawResults.slice(i, i + batchSize);
+          
+          // Transform each batch
+          const batchCreators = batch.map((item: any) => {
+            const awemeInfo = item.aweme_info || {};
+            const author = awemeInfo.author || {};
+            
+            return {
+              creator: {
+                name: author.nickname || author.unique_id || 'Unknown Creator',
+                followers: author.follower_count || 0,
+                avatarUrl: (author.avatar_medium?.url_list?.[0] || '').replace('.heic', '.jpeg'),
+              },
+              video: {
+                description: awemeInfo.desc || 'No description',
+                url: awemeInfo.share_url || '',
+                statistics: {
+                  likes: awemeInfo.statistics?.digg_count || 0,
+                  comments: awemeInfo.statistics?.comment_count || 0,
+                  views: awemeInfo.statistics?.play_count || 0
+                }
+              },
+              hashtags: awemeInfo.text_extra?.filter((e: any) => e.type === 1).map((e: any) => e.hashtag_name) || [],
+              platform: 'TikTok'
+            };
           });
           
-          await db.insert(scrapingResults).values({
-            jobId: jobId,
-            creators: creators
+          creators.push(...batchCreators);
+          
+          // Update granular progress for this batch
+          const currentBatchProgress = ((i + batch.length) / rawResults.length) * 100;
+          const baseProgress = (job.processedRuns / MAX_API_CALLS_FOR_TESTING) * 100;
+          const granularProgress = baseProgress + (currentBatchProgress / MAX_API_CALLS_FOR_TESTING);
+          
+          console.log('📊 [GRANULAR-PROGRESS] Batch', Math.floor(i/batchSize) + 1, 'processed:', {
+            batchSize: batch.length,
+            totalProcessed: creators.length,
+            batchProgress: Math.round(currentBatchProgress),
+            granularProgress: Math.round(granularProgress)
           });
+          
+          // Update database with granular progress (only for significant batches)
+          if (i > 0 && (i % (batchSize * 2) === 0 || i + batchSize >= rawResults.length)) {
+            const tempProcessedResults = job.processedResults + creators.length;
+            await db.update(scrapingJobs)
+              .set({
+                processedResults: tempProcessedResults,
+                progress: Math.min(granularProgress, 100).toString(),
+                updatedAt: new Date()
+              })
+              .where(eq(scrapingJobs.id, jobId));
+            
+            console.log('💾 [GRANULAR-PROGRESS] Updated database with granular progress:', Math.round(granularProgress) + '%');
+          }
+          
+          // Small delay between batches to make progress visible
+          if (i + batchSize < rawResults.length) {
+            await new Promise(resolve => setTimeout(resolve, 50)); // 50ms delay
+          }
         }
         
-        // Update job progress
+        // Calculate new processed counts (needed for both results saving and progress)
         const newProcessedRuns = job.processedRuns + 1;
         const newProcessedResults = job.processedResults + creators.length;
         
-        // 📊 REALISTIC PROGRESS CALCULATION
-        // Based on runs instead of results for more gradual progress
-        const runBasedProgress = Math.floor((newProcessedRuns / MAX_API_CALLS_FOR_TESTING) * 100);
-        const resultBasedProgress = Math.floor((newProcessedResults / job.targetResults) * 100);
+        // Save results (both partial and append to existing)
+        if (creators.length > 0) {
+          console.log('💾 [TIKTOK-KEYWORD] Saving results to database:', {
+            creatorCount: creators.length,
+            jobId: jobId,
+            isPartialResult: newProcessedRuns < MAX_API_CALLS_FOR_TESTING && newProcessedResults < job.targetResults
+          });
+          
+          // Check if there are existing results to append to
+          const existingResults = await db.query.scrapingResults.findFirst({
+            where: eq(scrapingResults.jobId, jobId)
+          });
+          
+          if (existingResults) {
+            // Append new creators to existing results
+            const existingCreators = Array.isArray(existingResults.creators) ? existingResults.creators : [];
+            const updatedCreators = [...existingCreators, ...creators];
+            
+            await db.update(scrapingResults)
+              .set({
+                creators: updatedCreators
+              })
+              .where(eq(scrapingResults.jobId, jobId));
+              
+            console.log('✅ [TIKTOK-KEYWORD] Appended', creators.length, 'new creators to existing', existingCreators.length, 'results');
+          } else {
+            // Create first result entry
+            await db.insert(scrapingResults).values({
+              jobId: jobId,
+              creators: creators
+            });
+            
+            console.log('✅ [TIKTOK-KEYWORD] Created first result entry with', creators.length, 'creators');
+          }
+        }
         
-        // Use the smaller of the two to ensure gradual progress
-        const progress = Math.min(runBasedProgress, resultBasedProgress, 100);
-        
-        console.log('📊 [PROGRESS-CALCULATION] Progress calculation details:', {
-          previousRuns: job.processedRuns,
-          newRuns: newProcessedRuns,
-          maxRuns: MAX_API_CALLS_FOR_TESTING,
-          previousResults: job.processedResults,
-          newResults: newProcessedResults,
-          targetResults: job.targetResults,
-          runBasedProgress: runBasedProgress,
-          resultBasedProgress: resultBasedProgress,
-          finalProgress: progress,
-          progressFormula: `min(${runBasedProgress}, ${resultBasedProgress}, 100) = ${progress}`
-        });
+        // Update job progress using unified calculation (variables already declared above)
+        // Use unified progress calculation
+        const progress = calculateUnifiedProgress(
+          newProcessedRuns,
+          MAX_API_CALLS_FOR_TESTING,
+          newProcessedResults,
+          job.targetResults
+        );
         
         console.log('🔄 [PROGRESS-UPDATE] Updating job progress in database');
         await db.update(scrapingJobs)

@@ -1,4 +1,4 @@
-import { createClient } from '@/utils/supabase/server'
+import { auth } from '@clerk/nextjs/server'
 import { db } from '@/lib/db'
 import { campaigns, scrapingJobs } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
@@ -10,16 +10,14 @@ export async function POST(req: Request) {
   console.log('\n\n====== CAMPAIGNS API POST CALLED ======');
   console.log('📝 [CAMPAIGNS-API] POST request received at:', new Date().toISOString());
   try {
-    console.log('🔄 [CAMPAIGNS-API] Creating Supabase client');
-    const supabase = await createClient()
-    console.log('🔐 [CAMPAIGNS-API] Getting authenticated user');
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    console.log('🔐 [CAMPAIGNS-API] Getting authenticated user from Clerk');
+    const { userId } = await auth()
     
-    if (userError || !user) {
-      console.error('❌ [CAMPAIGNS-API] Unauthorized - No valid user session', userError);
+    if (!userId) {
+      console.error('❌ [CAMPAIGNS-API] Unauthorized - No valid user session');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    console.log('✅ [CAMPAIGNS-API] User authenticated', { userId: user.id });
+    console.log('✅ [CAMPAIGNS-API] User authenticated', { userId });
 
     console.log('🔄 [CAMPAIGNS-API] Parsing request body');
     const body = await req.json();
@@ -29,7 +27,7 @@ export async function POST(req: Request) {
     console.log('🔄 [CAMPAIGNS-API] Creating campaign in database');
     // Crear la campaña y devolver el resultado
     const [campaign] = await db.insert(campaigns).values({
-      userId: user.id,
+      userId: userId,
       name,
       description,
       searchType,
@@ -53,16 +51,14 @@ export async function GET(request: Request) {
   console.log('\n\n====== CAMPAIGNS API GET CALLED ======');
   console.log('🔍 [CAMPAIGNS-API] GET request received at:', new Date().toISOString());
   try {
-    console.log('🔄 [CAMPAIGNS-API] Creating Supabase client');
-    const supabase = await createClient()
-    console.log('🔐 [CAMPAIGNS-API] Getting authenticated user');
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    console.log('🔐 [CAMPAIGNS-API] Getting authenticated user from Clerk');
+    const { userId } = await auth()
     
-    if (userError || !user) {
-      console.error('❌ [CAMPAIGNS-API] Unauthorized - No valid user session', userError);
+    if (!userId) {
+      console.error('❌ [CAMPAIGNS-API] Unauthorized - No valid user session');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    console.log('✅ [CAMPAIGNS-API] User authenticated', { userId: user.id });
+    console.log('✅ [CAMPAIGNS-API] User authenticated', { userId });
 
     const url = new URL(request.url)
     const page = parseInt(url.searchParams.get('page') || '1')
@@ -76,12 +72,12 @@ export async function GET(request: Request) {
     const [totalCount, userCampaigns] = await Promise.all([
       // Consulta optimizada para contar
       db.select({ count: count() }).from(campaigns)
-        .where(eq(campaigns.userId, user.id))
+        .where(eq(campaigns.userId, userId))
         .then(result => result[0].count),
 
       // Consulta principal optimizada
       db.query.campaigns.findMany({
-        where: (campaigns, { eq }) => eq(campaigns.userId, user.id),
+        where: (campaigns, { eq }) => eq(campaigns.userId, userId),
         limit: limit,
         offset: offset,
         columns: {

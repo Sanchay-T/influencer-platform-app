@@ -4,30 +4,19 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { LayoutDashboard, Search, PlusCircle, LogOut, UserRoundCog } from "lucide-react";
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/app/lib/supabase'
+import { useClerk, useUser } from '@clerk/nextjs'
 
 export default function Sidebar() {
   const router = useRouter()
+  const { signOut } = useClerk()
+  const { user } = useUser()
   
   const handleLogout = async () => {
     try {
-      // Usar el endpoint del servidor para el logout
-      const response = await fetch('/auth/signout', {
-        method: 'POST',
-        credentials: 'include', // Importante para enviar cookies
-      })
-      
-      if (!response.ok) {
-        // Si hay un error con el endpoint del servidor, intentar logout desde el cliente como fallback
-        console.error('Error con el endpoint de logout, probando logout desde cliente')
-        const supabase = createClient()
-        await supabase.auth.signOut({ scope: 'global' })
-      }
-      
-      // Redirigir al usuario a la página de login con una redirección completa
-      window.location.href = '/auth/login'
+      await signOut()
+      router.push('/sign-in')
     } catch (err) {
-      console.error('Error inesperado al cerrar sesión:', err)
+      console.error('Error al cerrar sesión:', err)
     }
   }
 
@@ -71,7 +60,18 @@ export default function Sidebar() {
         </nav>
       </div>
 
-      <div>
+      <div className="space-y-4">
+        {user && (
+          <div className="px-3 py-2 bg-zinc-100 rounded-lg">
+            <p className="text-sm font-medium text-zinc-800">
+              {user.emailAddresses[0]?.emailAddress}
+            </p>
+            <p className="text-xs text-zinc-600">
+              {user.firstName} {user.lastName}
+            </p>
+          </div>
+        )}
+        
         <Button 
           variant="ghost" 
           className="w-full border border-zinc-200 justify-center text-zinc-600 hover:text-destructive hover:bg-destructive/10 hover:border-destructive"

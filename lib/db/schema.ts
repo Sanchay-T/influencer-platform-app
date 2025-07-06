@@ -85,10 +85,10 @@ export const searchResults = pgTable('search_results', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
-// User Profiles table
+// User Profiles table (updated for Clerk user IDs)
 export const userProfiles = pgTable('user_profiles', {
   id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id').notNull().unique(),
+  userId: text('user_id').notNull().unique(), // Changed from uuid to text for Clerk user IDs
   name: text('name').notNull(),
   companyName: text('company_name').notNull(),
   industry: text('industry').notNull(),

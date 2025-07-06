@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ApifyClient } from 'apify-client';
-import { createClient } from '@/utils/supabase/server';
+import { auth } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
 import { scrapingJobs, scrapingResults, campaigns, type JobStatus } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
@@ -19,34 +19,17 @@ export async function POST(req: NextRequest) {
   try {
     console.log('🔍 [INSTAGRAM-HASHTAG-API] Step 1: Verifying user authentication');
     
-    // Verify user authentication
-    const supabase = await createClient();
-    console.log('✅ [INSTAGRAM-HASHTAG-API] Supabase client created');
+    // Verify user authentication with Clerk
+    const { userId } = await auth();
     
-    let user;
-    let userError;
-    
-    try {
-      const { data, error } = await supabase.auth.getUser();
-      user = data?.user;
-      userError = error;
-      console.log('🔑 [INSTAGRAM-HASHTAG-API] Authentication result:', user ? 'User authenticated' : 'User not authenticated');
-    } catch (authError: any) {
-      console.error('❌ [INSTAGRAM-HASHTAG-API] Authentication error:', authError);
-      return NextResponse.json({ 
-        error: 'Authentication error: Invalid session encoding',
-        details: authError.message
-      }, { status: 401 });
-    }
-    
-    if (userError || !user) {
-      console.error('❌ [INSTAGRAM-HASHTAG-API] Authentication error:', userError);
+    if (!userId) {
+      console.error('❌ [INSTAGRAM-HASHTAG-API] Authentication error: No user found');
       return NextResponse.json({ 
         error: 'Unauthorized',
-        details: userError?.message || 'No user found'
+        details: 'No user found'
       }, { status: 401 });
     }
-    console.log('✅ [INSTAGRAM-HASHTAG-API] User authenticated successfully:', user.id);
+    console.log('✅ [INSTAGRAM-HASHTAG-API] User authenticated successfully:', userId);
 
     console.log('🔍 [INSTAGRAM-HASHTAG-API] Step 2: Reading request body');
     
@@ -114,7 +97,7 @@ export async function POST(req: NextRequest) {
     const campaign = await db.query.campaigns.findFirst({
       where: (campaigns, { eq, and }) => and(
         eq(campaigns.id, campaignId),
-        eq(campaigns.userId, user.id)
+        eq(campaigns.userId, userId)
       )
     });
     console.log('📋 [INSTAGRAM-HASHTAG-API] Campaign search result:', campaign ? 'Campaign found' : 'Campaign not found');
@@ -144,7 +127,7 @@ export async function POST(req: NextRequest) {
       // Create job in database (exactly like TikTok/YouTube)
       const [job] = await db.insert(scrapingJobs)
         .values({
-          userId: user.id,
+          userId: userId,
           keywords: sanitizedKeywords,
           targetResults,
           status: 'pending',
@@ -253,18 +236,33 @@ export async function POST(req: NextRequest) {
 // GET endpoint for checking job status
 export async function GET(req: NextRequest) {
   try {
+    // Verify user authentication with Clerk
+    const { userId } = await auth();
+    
+    if (!userId) {
+      console.error('❌ [INSTAGRAM-HASHTAG-API-GET] Authentication error: No user found');
+      return NextResponse.json({ 
+        error: 'Unauthorized',
+        details: 'No user found'
+      }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
     const jobId = searchParams.get('jobId');
     console.log('\n=== INSTAGRAM HASHTAG GET REQUEST START ===');
     console.log('Job ID:', jobId);
+    console.log('User ID:', userId);
 
     if (!jobId) {
       return NextResponse.json({ error: 'jobId is required' }, { status: 400 });
     }
 
-    // Get job with results
-    const job = await db.query.scrapingJobs.findFirst({
-      where: eq(scrapingJobs.id, jobId),
+    // Get job with results (ensuring it belongs to the user)
+    let job = await db.query.scrapingJobs.findFirst({
+      where: (scrapingJobs, { eq, and }) => and(
+        eq(scrapingJobs.id, jobId),
+        eq(scrapingJobs.userId, userId)
+      ),
       with: {
         results: {
           columns: {

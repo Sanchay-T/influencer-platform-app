@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { scrapingResults, scrapingJobs } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import { createClient } from '@/utils/supabase/server';
+import { auth } from '@clerk/nextjs/server';
 
 export async function GET(req: Request) {
   try {
@@ -19,15 +19,14 @@ export async function GET(req: Request) {
     console.log(`CSV Export: Processing job ID ${jobId} and campaign ID ${campaignId}`);
 
     // Verify authentication
-    const supabase = await createClient();
-    const { data: { user }, error } = await supabase.auth.getUser();
+    const { userId } = await auth();
     
-    if (error || !user) {
-      console.log('CSV Export: Authentication failed', error);
+    if (!userId) {
+      console.log('CSV Export: Authentication failed');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('CSV Export: Authentication successful');
+    console.log('CSV Export: Authentication successful', { userId });
 
     // Si se recibe campaignId, exportar todos los creadores de todos los jobs de la campaña
     if (campaignId) {

@@ -1,5 +1,4 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
-import { createClient } from '@supabase/supabase-js';
 import postgres from 'postgres';
 import * as schema from './schema';
 
@@ -30,11 +29,7 @@ const queryClient =
 
 if (!global.__queryClient) global.__queryClient = queryClient;
 
-// Create Supabase browser/server client (stateless; no pooling needed)
-export const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Note: We only use Supabase for database hosting, auth is handled by Clerk
 
 // Re-use Drizzle ORM wrapper as well
 export const db =

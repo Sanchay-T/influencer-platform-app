@@ -1,8 +1,8 @@
 import { db } from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { scrapingJobs, scrapingResults, campaigns, type JobStatus } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
-import { createClient } from '@/utils/supabase/server';
+import { eq, and } from 'drizzle-orm';
+import { auth } from '@clerk/nextjs/server';
 import { qstash } from '@/lib/queue/qstash';
 
 const TIMEOUT_MINUTES = 60;
@@ -13,37 +13,17 @@ export async function POST(req: Request) {
     
     try {
         console.log('🔍 [YOUTUBE-API] Step 1: Verifying user authentication');
-        // Verify user authentication
-        const supabase = await createClient();
-        console.log('✅ [YOUTUBE-API] Supabase client created');
+        // Verify user authentication with Clerk
+        const { userId } = await auth();
         
-        let user;
-        let userError;
-        
-        try {
-            const { data, error } = await supabase.auth.getUser();
-            user = data?.user;
-            userError = error;
-            console.log('🔑 [YOUTUBE-API] Authentication result:', user ? 'User authenticated' : 'User not authenticated');
-        } catch (authError: any) {
-            console.error('❌ [YOUTUBE-API] Error during authentication:', authError);
-            console.error('❌ [YOUTUBE-API] Error type:', authError.name);
-            console.error('❌ [YOUTUBE-API] Error message:', authError.message);
-            
-            return NextResponse.json({ 
-                error: 'Authentication error: Invalid session encoding',
-                details: authError.message
-            }, { status: 401 });
-        }
-        
-        if (userError || !user) {
-            console.error('❌ [YOUTUBE-API] Authentication error:', userError);
+        if (!userId) {
+            console.error('❌ [YOUTUBE-API] Authentication error: No user found');
             return NextResponse.json({ 
                 error: 'Unauthorized',
-                details: userError?.message || 'No user found'
+                details: 'No user found'
             }, { status: 401 });
         }
-        console.log('✅ [YOUTUBE-API] User authenticated successfully:', user.id);
+        console.log('✅ [YOUTUBE-API] User authenticated successfully:', userId);
 
         console.log('🔍 [YOUTUBE-API] Step 2: Reading request body');
         // Read the request body as text first to handle encoding
@@ -104,7 +84,7 @@ export async function POST(req: Request) {
         const campaign = await db.query.campaigns.findFirst({
             where: (campaigns, { eq, and }) => and(
                 eq(campaigns.id, campaignId),
-                eq(campaigns.userId, user.id)
+                eq(campaigns.userId, userId)
             )
         });
         console.log('📋 Campaign search result:', campaign ? 'Campaign found' : 'Campaign not found');
@@ -134,7 +114,7 @@ export async function POST(req: Request) {
             // Create job in database
             const [job] = await db.insert(scrapingJobs)
                 .values({
-                    userId: user.id,
+                    userId: userId,
                     keywords: sanitizedKeywords,
                     targetResults,
                     status: 'pending',
@@ -202,10 +182,22 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
     try {
+        // Verify user authentication with Clerk
+        const { userId } = await auth();
+        
+        if (!userId) {
+            console.error('❌ [YOUTUBE-API-GET] Authentication error: No user found');
+            return NextResponse.json({ 
+                error: 'Unauthorized',
+                details: 'No user found'
+            }, { status: 401 });
+        }
+
         const { searchParams } = new URL(req.url);
         const jobId = searchParams.get('jobId');
         console.log('\n=== YOUTUBE GET REQUEST START ===');
         console.log('Job ID:', jobId);
+        console.log('User ID:', userId);
 
         if (!jobId) {
             return NextResponse.json({ error: 'jobId is required' }, { status: 400 });
@@ -216,9 +208,12 @@ export async function GET(req: Request) {
         const protocol = currentHost.includes('localhost') ? 'http' : 'https';
         const baseUrl = `${protocol}://${currentHost}`;
 
-        // Get job with results
+        // Get job with results (ensuring it belongs to the user)
         const job = await db.query.scrapingJobs.findFirst({
-            where: eq(scrapingJobs.id, jobId),
+            where: (scrapingJobs, { eq, and }) => and(
+                eq(scrapingJobs.id, jobId),
+                eq(scrapingJobs.userId, userId)
+            ),
             with: {
                 results: {
                     columns: {

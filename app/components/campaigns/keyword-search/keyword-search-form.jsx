@@ -6,26 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "react-hot-toast";
-import { createBrowserClient } from '@supabase/ssr';
+import { useUser } from '@clerk/nextjs';
 
 export default function KeywordSearchForm({ onSubmit }) {
   const [selectedPlatform, setSelectedPlatform] = useState("tiktok");
   const [creatorsCount, setCreatorsCount] = useState(100);
   const [isLoading, setIsLoading] = useState(false);
   const [keywords] = useState(["test"]); // Esto debería ser un input del usuario
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [campaignId, setCampaignId] = useState(null);
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  );
+  const { user, isLoaded } = useUser();
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setIsAuthenticated(!!user);
-    };
-    checkAuth();
 
     // Obtener el campaignId de la URL si existe
     const urlParams = new URLSearchParams(window.location.search);
@@ -35,7 +26,7 @@ export default function KeywordSearchForm({ onSubmit }) {
     }
   }, []);
 
-  if (!isAuthenticated) {
+  if (!isLoaded || !user) {
     return null; // o un componente de carga
   }
 

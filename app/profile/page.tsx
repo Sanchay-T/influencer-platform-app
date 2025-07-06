@@ -2,8 +2,8 @@
 
 // Siempre añadir ComponentProps cuando se importa react con card
 import React, { useState, useEffect, ComponentProps } from 'react';
-import { createClient } from '@/app/lib/supabase';
-import DashboardLayout from 'app/layouts/DashboardLayout';
+import { useUser } from '@clerk/nextjs';
+import DashboardLayout from '../components/layout/dashboard-layout';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {

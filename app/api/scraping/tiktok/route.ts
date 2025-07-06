@@ -1,8 +1,8 @@
-import { supabase, db } from '@/lib/db';
+import { db } from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { scrapingJobs, scrapingResults, campaigns, type JobStatus } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import { createClient } from '@/utils/supabase/server';
+import { auth } from '@clerk/nextjs/server';
 import { qstash } from '@/lib/queue/qstash'
 import { Receiver } from "@upstash/qstash"
 
@@ -54,49 +54,17 @@ export async function POST(req: Request) {
     
     try {
         console.log('🔍 [TIKTOK-API] Paso 1: Verificando autenticación del usuario');
-        // Verificar autenticación del usuario
-        const supabase = await createClient()
-        console.log('✅ [TIKTOK-API] Cliente Supabase creado');
+        // Verificar autenticación del usuario con Clerk
+        const { userId } = await auth()
         
-        let user;
-        let userError;
-        
-        try {
-            const { data, error } = await supabase.auth.getUser();
-            user = data?.user;
-            userError = error;
-            console.log('🔑 [TIKTOK-API] Resultado de autenticación:', user ? 'Usuario autenticado' : 'Usuario no autenticado');
-        } catch (authError: any) {
-            console.error('❌ [TIKTOK-API] Error durante la autenticación:', authError);
-            console.error('❌ [TIKTOK-API] Tipo de error:', authError.name);
-            console.error('❌ [TIKTOK-API] Mensaje de error:', authError.message);
-            console.error('❌ [TIKTOK-API] Stack trace:', authError.stack);
-            
-            // Si es un error de codificación UTF-8, intentamos limpiar la sesión
-            if (authError.message.includes('Invalid UTF-8 sequence')) {
-                console.log('🔄 [TIKTOK-API] Intentando limpiar la sesión debido a error de codificación UTF-8');
-                try {
-                    await supabase.auth.signOut();
-                    console.log('✅ [TIKTOK-API] Sesión limpiada exitosamente');
-                } catch (signOutError: any) {
-                    console.error('❌ [TIKTOK-API] Error al limpiar la sesión:', signOutError);
-                }
-            }
-            
-            return NextResponse.json({ 
-                error: 'Authentication error: Invalid session encoding',
-                details: authError.message
-            }, { status: 401 });
-        }
-        
-        if (userError || !user) {
-            console.error('❌ [TIKTOK-API] Error de autenticación:', userError);
+        if (!userId) {
+            console.error('❌ [TIKTOK-API] Error de autenticación: No user found');
             return NextResponse.json({ 
                 error: 'Unauthorized',
-                details: userError?.message || 'No user found'
+                details: 'No user found'
             }, { status: 401 });
         }
-        console.log('✅ [TIKTOK-API] Usuario autenticado correctamente:', user.id);
+        console.log('✅ [TIKTOK-API] Usuario autenticado correctamente:', userId);
 
         console.log('🔍 [TIKTOK-API] Paso 2: Leyendo cuerpo de la solicitud');
         // Leer el cuerpo de la solicitud como texto primero para manejar la codificación
@@ -158,7 +126,7 @@ export async function POST(req: Request) {
         const campaign = await db.query.campaigns.findFirst({
             where: (campaigns, { eq, and }) => and(
                 eq(campaigns.id, campaignId),
-                eq(campaigns.userId, user.id)
+                eq(campaigns.userId, userId)
             )
         })
         console.log('📋 Resultado de búsqueda de campaña:', campaign ? 'Campaña encontrada' : 'Campaña no encontrada');
@@ -188,7 +156,7 @@ export async function POST(req: Request) {
             // Crear el job en la base de datos
             const [job] = await db.insert(scrapingJobs)
                 .values({
-                    userId: user.id,
+                    userId: userId,
                     keywords: sanitizedKeywords,
                     targetResults,
                     status: 'pending',
@@ -258,10 +226,22 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
     try {
+        // Verificar autenticación del usuario con Clerk
+        const { userId } = await auth()
+        
+        if (!userId) {
+            console.error('❌ [TIKTOK-API-GET] Error de autenticación: No user found');
+            return NextResponse.json({ 
+                error: 'Unauthorized',
+                details: 'No user found'
+            }, { status: 401 });
+        }
+
         const { searchParams } = new URL(req.url);
         const jobId = searchParams.get('jobId');
         console.log('\n=== GET REQUEST START ===');
         console.log('Job ID:', jobId);
+        console.log('User ID:', userId);
 
         if (!jobId) {
             return NextResponse.json({ error: 'jobId is required' }, { status: 400 });
@@ -272,9 +252,12 @@ export async function GET(req: Request) {
         const protocol = currentHost.includes('localhost') ? 'http' : 'https';
         const baseUrl = `${protocol}://${currentHost}`;
 
-        // Obtener el job con sus resultados
+        // Obtener el job con sus resultados (verificando que pertenece al usuario)
         const job = await db.query.scrapingJobs.findFirst({
-            where: eq(scrapingJobs.id, jobId),
+            where: (scrapingJobs, { eq, and }) => and(
+                eq(scrapingJobs.id, jobId),
+                eq(scrapingJobs.userId, userId)
+            ),
             with: {
                 results: {
                     columns: {

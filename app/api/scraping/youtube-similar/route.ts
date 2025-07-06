@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { scrapingJobs, scrapingResults, campaigns } from '@/lib/db/schema';
-import { createClient } from '@/utils/supabase/server';
+import { auth } from '@clerk/nextjs/server';
 import { eq, and } from 'drizzle-orm';
 import { qstash } from '@/lib/queue/qstash';
 
