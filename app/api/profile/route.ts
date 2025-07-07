@@ -4,6 +4,38 @@ import { db } from '@/lib/db';
 import { userProfiles } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
+export async function GET() {
+  try {
+    console.log('🔐 [PROFILE-API-GET] Getting authenticated user from Clerk');
+    const { userId } = await auth();
+
+    if (!userId) {
+      console.error('❌ [PROFILE-API-GET] Unauthorized - No valid user session');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    console.log('✅ [PROFILE-API-GET] User authenticated', { userId });
+
+    // Buscar el perfil del usuario
+    console.log('🔍 [PROFILE-API-GET] Fetching user profile');
+    const userProfile = await db.query.userProfiles.findFirst({
+      where: (userProfiles, { eq }) => eq(userProfiles.userId, userId),
+    });
+
+    if (!userProfile) {
+      console.log('ℹ️ [PROFILE-API-GET] No profile found for user');
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+    }
+
+    console.log('✅ [PROFILE-API-GET] Profile fetched successfully', { profileId: userProfile.id });
+    return NextResponse.json(userProfile);
+  } catch (error: any) {
+    console.error('💥 [PROFILE-API-GET] Error fetching profile:', error);
+    return NextResponse.json({ 
+      error: 'Error interno del servidor' 
+    }, { status: 500 });
+  }
+}
+
 export async function POST(request: Request) {
   try {
     console.log('🔐 [PROFILE-API] Getting authenticated user from Clerk');

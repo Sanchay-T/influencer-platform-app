@@ -1,135 +1,108 @@
 'use client';
 
-// Siempre añadir ComponentProps cuando se importa react con card
-import React, { useState, useEffect, ComponentProps } from 'react';
+import { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
 import DashboardLayout from '../components/layout/dashboard-layout';
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
     Card,
     CardContent,
     CardDescription,
-    CardFooter,
     CardHeader,
     CardTitle,
   } from "@/components/ui/card";
 import {
-  Pencil,
-  Lock,
   User,
   Building2,
   Factory,
-  Mail
+  Mail,
+  ExternalLink,
+  Settings
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 
-type CardProps = ComponentProps<typeof Card>;
-type CardHeaderProps = ComponentProps<typeof CardHeader>;
-type CardContentProps = ComponentProps<typeof CardContent>;
-type CardTitleProps = ComponentProps<typeof CardTitle>;
-type CardDescriptionProps = ComponentProps<typeof CardDescription>;
-type CardFooterProps = ComponentProps<typeof CardFooter>;
-
 export default function ProfileSettingsPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [message, setMessage] = useState('');
+  const { user, isLoaded } = useUser();
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [isEditingEmail, setIsEditingEmail] = useState(false);
-  const [isEditingPassword, setIsEditingPassword] = useState(false);
   const [userProfile, setUserProfile] = useState({
     name: '',
-    company_name: '',
+    companyName: '',
     industry: '',
     email: ''
   });
 
-  const supabase = createClient();
-
   useEffect(() => {
     async function getUserProfile() {
+      if (!isLoaded || !user) {
+        setLoading(false);
+        return;
+      }
+
       try {
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        
-        if (authError) {
-          console.error('Error al obtener usuario:', authError);
-          setError('Error al obtener información del usuario');
-          return;
-        }
+        setLoading(true);
+        console.log('🔍 [PROFILE-PAGE] Fetching user profile for:', user.id);
 
-        if (!user) {
-          console.error('No hay usuario autenticado');
-          setError('No hay usuario autenticado');
-          return;
-        }
+        // Try to fetch user profile data from our API
+        const response = await fetch('/api/profile', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
 
-        const { data: profiles, error: profileError } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(1);
-
-        if (profileError) {
-          console.error('Error al obtener perfil:', profileError);
-          setError('Error al obtener el perfil de usuario');
-          return;
-        }
-
-        // Siempre establecer el email del usuario
-        const baseProfile = {
-          name: '',
-          company_name: '',
-          industry: '',
-          email: user.email || ''
-        };
-
-        // Si hay un perfil, actualizar con sus datos
-        if (profiles && profiles.length > 0) {
-          const profile = profiles[0];
+        if (response.ok) {
+          const profileData = await response.json();
+          console.log('✅ [PROFILE-PAGE] Profile data fetched:', profileData);
+          
           setUserProfile({
-            ...baseProfile,
-            name: profile.name || '',
-            company_name: profile.company_name || '',
-            industry: profile.industry || ''
+            name: profileData.name || user.fullName || '',
+            companyName: profileData.companyName || '',
+            industry: profileData.industry || '',
+            email: user.emailAddresses?.[0]?.emailAddress || ''
           });
         } else {
-          // Si no hay perfil, usar el perfil base
-          setUserProfile(baseProfile);
+          // Profile doesn't exist yet, set default values from Clerk
+          console.log('ℹ️ [PROFILE-PAGE] No profile found, using Clerk user data');
+          setUserProfile({
+            name: user.fullName || '',
+            companyName: '',
+            industry: '',
+            email: user.emailAddresses?.[0]?.emailAddress || ''
+          });
         }
-      } catch (error) {
-        console.error('Error inesperado:', error);
-        setError('Ocurrió un error inesperado');
+      } catch (fetchError) {
+        console.error('💥 [PROFILE-PAGE] Error fetching profile:', fetchError);
+        setError('Error loading profile data');
+      } finally {
+        setLoading(false);
       }
     }
 
     getUserProfile();
-  }, []);
+  }, [isLoaded, user]);
 
-  const handleEmailChange = async () => {
-    const { error } = await supabase.auth.updateUser({ email });
-    if (error) {
-      setError('Error al cambiar el email.');
-    } else {
-      setMessage('Email updated successfully.');
-      setUserProfile(prev => ({ ...prev, email }));
-      setIsEditingEmail(false);
-      setEmail('');
+  const handleManageAccount = () => {
+    // Redirect to Clerk's user management interface
+    if (user) {
+      // You can customize this URL based on your Clerk setup
+      window.open(`${window.location.origin}/sign-in#/user`, '_blank');
     }
   };
 
-  const handlePasswordChange = async () => {
-    const { error } = await supabase.auth.updateUser({ password });
-    if (error) {
-      setError('Error al cambiar la contraseña.');
-    } else {
-      setMessage('Password updated successfully.');
-      setPassword('');
-      setIsEditingPassword(false);
-    }
-  };
+  if (!isLoaded || loading) {
+    return (
+      <DashboardLayout>
+        <div className="max-w-3xl mx-auto space-y-6">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/4 mb-2"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -137,7 +110,7 @@ export default function ProfileSettingsPage() {
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Profile</h2>
           <p className="text-muted-foreground">
-            Manage your personal information and credentials
+            Manage your personal information and account settings
           </p>
         </div>
         
@@ -151,17 +124,29 @@ export default function ProfileSettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {error && error !== 'No se encontró un perfil para este usuario' ? (
+            {error ? (
               <div className="text-sm text-red-500 p-4 bg-red-50 rounded-md">
                 {error}
               </div>
             ) : (
-              <div className="grid gap-3">
+              <div className="grid gap-4">
                 <div className="flex items-center space-x-4">
                   <User className="text-gray-500" size={20} />
                   <div className="space-y-0.5">
                     <Label>Name</Label>
-                    <p className="text-sm text-muted-foreground">{userProfile.name || 'Not available'}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {userProfile.name || 'Not available'}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-4">
+                  <Mail className="text-gray-500" size={20} />
+                  <div className="space-y-0.5">
+                    <Label>Email</Label>
+                    <p className="text-sm text-muted-foreground">
+                      {userProfile.email || 'Not available'}
+                    </p>
                   </div>
                 </div>
                 
@@ -169,7 +154,9 @@ export default function ProfileSettingsPage() {
                   <Building2 className="text-gray-500" size={20} />
                   <div className="space-y-0.5">
                     <Label>Company</Label>
-                    <p className="text-sm text-muted-foreground">{userProfile.company_name || 'Not available'}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {userProfile.companyName || 'Not set'}
+                    </p>
                   </div>
                 </div>
 
@@ -177,7 +164,9 @@ export default function ProfileSettingsPage() {
                   <Factory className="text-gray-500" size={20} />
                   <div className="space-y-0.5">
                     <Label>Industry</Label>
-                    <p className="text-sm text-muted-foreground">{userProfile.industry || 'Not available'}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {userProfile.industry || 'Not set'}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -187,88 +176,30 @@ export default function ProfileSettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Credentials</CardTitle>
+            <CardTitle>Account Management</CardTitle>
             <CardDescription>
-              Update your email and password
+              Manage your email, password, and security settings
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-4">
-              <div className="grid gap-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <Mail className="text-gray-500" size={20} />
-                    <div className="space-y-0.5">
-                      <Label>Current Email</Label>
-                      <p className="text-sm text-muted-foreground">{userProfile.email}</p>
-                    </div>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="flex items-center"
-                    onClick={() => setIsEditingEmail(!isEditingEmail)}
-                  >
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Change
-                  </Button>
-                </div>
-                {isEditingEmail && (
-                  <div className="space-y-2">
-                    <Input
-                      id="newEmail"
-                      type="email"
-                      placeholder="New Email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
-                    <Button onClick={handleEmailChange} variant="secondary">
-                      Save new email
-                    </Button>
-                  </div>
-                )}
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Account Settings</Label>
+                <p className="text-sm text-muted-foreground">
+                  Update your email, password, and security preferences
+                </p>
               </div>
-
-              <div className="grid gap-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <Lock className="text-gray-500" size={20} />
-                    <div className="space-y-0.5">
-                      <Label>Password</Label>
-                      <p className="text-sm text-muted-foreground">••••••••</p>
-                    </div>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="flex items-center"
-                    onClick={() => setIsEditingPassword(!isEditingPassword)}
-                  >
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Change
-                  </Button>
-                </div>
-                {isEditingPassword && (
-                  <div className="space-y-2">
-                    <Input
-                      id="newPassword"
-                      type="password"
-                      placeholder="New Password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                    />
-                    <Button onClick={handlePasswordChange} variant="secondary">
-                      Save new password
-                    </Button>
-                  </div>
-                )}
-              </div>
+              <Button 
+                variant="outline" 
+                onClick={handleManageAccount}
+                className="flex items-center gap-2"
+              >
+                <Settings className="h-4 w-4" />
+                Manage Account
+                <ExternalLink className="h-4 w-4" />
+              </Button>
             </div>
           </CardContent>
-          <CardFooter>
-            {message && <p className="text-sm text-green-500">{message}</p>}
-            {error && <p className="text-sm text-red-500">{error}</p>}
-          </CardFooter>
         </Card>
       </div>
     </DashboardLayout>
