@@ -6,7 +6,6 @@ import { NextResponse } from 'next/server'
 import { Receiver } from "@upstash/qstash"
 import { Resend } from 'resend'
 import CampaignFinishedEmail from '@/components/email-template'
-import { createClient } from '@supabase/supabase-js'
 import { processYouTubeJob } from '@/lib/platforms/youtube/handler'
 import { processTikTokSimilarJob } from '@/lib/platforms/tiktok-similar/handler'
 import { processInstagramSimilarJob } from '@/lib/platforms/instagram-similar/handler'
