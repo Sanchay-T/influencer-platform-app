@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { LayoutDashboard, Search, PlusCircle, LogOut, UserRoundCog } from "lucide-react";
+import { LayoutDashboard, Search, PlusCircle, LogOut, UserRoundCog, Settings } from "lucide-react";
 import { useRouter } from 'next/navigation'
 import { useClerk, useUser } from '@clerk/nextjs'
 
@@ -18,6 +18,12 @@ export default function Sidebar() {
     } catch (err) {
       console.error('Error al cerrar sesión:', err)
     }
+  }
+
+  // Simple admin check - in production, you'd want a more robust system
+  const isAdmin = () => {
+    const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(',') || [];
+    return adminEmails.includes(user?.emailAddresses[0]?.emailAddress || '');
   }
 
   return (
@@ -57,6 +63,18 @@ export default function Sidebar() {
               Profile Settings
             </Button>
           </Link>
+
+          {isAdmin() && (
+            <Link href="/admin/system-config">
+              <Button 
+                variant="ghost" 
+                className="w-full justify-start text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100"
+              >
+                <Settings className="mr-2 h-4 w-4" />
+                System Config
+              </Button>
+            </Link>
+          )}
         </nav>
       </div>
 

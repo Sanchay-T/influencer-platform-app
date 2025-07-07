@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 import { auth } from '@clerk/nextjs/server';
 import { qstash } from '@/lib/queue/qstash'
 import { Receiver } from "@upstash/qstash"
+import { SystemConfig } from '@/lib/config/system-config'
 
 // Definir la interfaz para la respuesta de ScrapeCreators
 interface ScrapeCreatorsResponse {
@@ -36,10 +37,7 @@ interface ScrapeCreatorsResponse {
     }>;
 }
 
-const TIMEOUT_MINUTES = 60;
-
-// Global parameter to limit API calls for testing
-const MAX_API_CALLS_FOR_TESTING = 1;
+// Configuration constants moved to dynamic loading in functions
 
 // Inicializar el receptor de QStash
 const receiver = new Receiver({
@@ -65,6 +63,11 @@ export async function POST(req: Request) {
             }, { status: 401 });
         }
         console.log('✅ [TIKTOK-API] Usuario autenticado correctamente:', userId);
+
+        // Load dynamic configuration
+        console.log('🔧 [CONFIG] Loading dynamic system configurations...');
+        const TIMEOUT_MINUTES = await SystemConfig.get('timeouts', 'standard_job_timeout') / (60 * 1000); // Convert ms to minutes
+        console.log('🔧 [CONFIG] Job timeout (minutes):', TIMEOUT_MINUTES);
 
         console.log('🔍 [TIKTOK-API] Paso 2: Leyendo cuerpo de la solicitud');
         // Leer el cuerpo de la solicitud como texto primero para manejar la codificación

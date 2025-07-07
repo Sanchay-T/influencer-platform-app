@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, varchar, timestamp, integer, jsonb, numeric } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, varchar, timestamp, integer, jsonb, numeric, unique } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // Status types
@@ -97,6 +97,21 @@ export const userProfiles = pgTable('user_profiles', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
+// System Configurations table
+export const systemConfigurations = pgTable('system_configurations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  category: varchar('category', { length: 50 }).notNull(),
+  key: varchar('key', { length: 100 }).notNull(),
+  value: text('value').notNull(),
+  valueType: varchar('value_type', { length: 20 }).notNull(), // 'number', 'duration', 'boolean'
+  description: text('description'),
+  isHotReloadable: varchar('is_hot_reloadable', { length: 5 }).notNull().default('true'), // 'true' or 'false'
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  uniqueCategoryKey: unique().on(table.category, table.key),
+}));
+
 // Relations
 export const campaignRelations = relations(campaigns, ({ many }) => ({
   scrapingJobs: many(scrapingJobs),
@@ -146,3 +161,5 @@ export type SearchResult = typeof searchResults.$inferSelect;
 export type NewSearchResult = typeof searchResults.$inferInsert;
 export type UserProfile = typeof userProfiles.$inferSelect;
 export type NewUserProfile = typeof userProfiles.$inferInsert;
+export type SystemConfiguration = typeof systemConfigurations.$inferSelect;
+export type NewSystemConfiguration = typeof systemConfigurations.$inferInsert;

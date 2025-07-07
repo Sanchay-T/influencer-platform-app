@@ -20,6 +20,7 @@ const isWebhookRoute = createRouteMatcher([
 // API routes that are protected but handled differently
 const isProtectedApiRoute = createRouteMatcher([
   '/api/campaigns(.*)',
+  '/api/admin(.*)',
 ])
 
 export default clerkMiddleware(async (auth, request) => {

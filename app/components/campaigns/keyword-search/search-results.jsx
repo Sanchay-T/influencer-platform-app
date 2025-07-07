@@ -25,12 +25,14 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import SearchProgress from "./search-progress";
+import Breadcrumbs from "../../breadcrumbs";
 
 const SearchResults = ({ searchData }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isPageLoading, setIsPageLoading] = useState(false);
   const [creators, setCreators] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [campaignName, setCampaignName] = useState('Campaign');
   const itemsPerPage = 10;
 
   // Validación básica
@@ -81,6 +83,27 @@ const SearchResults = ({ searchData }) => {
 
     fetchResults();
   }, [searchData.jobId]);
+
+  // Fetch campaign name for breadcrumbs
+  useEffect(() => {
+    const fetchCampaignName = async () => {
+      if (!searchData?.campaignId) return;
+      
+      try {
+        const response = await fetch(`/api/campaigns/${searchData.campaignId}`);
+        const data = await response.json();
+        
+        if (data && data.name) {
+          setCampaignName(data.name);
+        }
+      } catch (error) {
+        console.error('Error fetching campaign name:', error);
+        // Keep fallback name 'Campaign'
+      }
+    };
+
+    fetchCampaignName();
+  }, [searchData?.campaignId]);
 
   if (isLoading) {
     return (
@@ -308,6 +331,18 @@ const SearchResults = ({ searchData }) => {
 
   return (
     <div className="space-y-4">
+      <Breadcrumbs 
+        items={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { 
+            label: campaignName, 
+            href: searchData?.campaignId ? `/campaigns/${searchData.campaignId}` : '/dashboard',
+            type: 'campaign'
+          },
+          { label: 'Search Results' }
+        ]}
+      />
+      
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Results Found</h2>
         <div className="flex items-center gap-4">

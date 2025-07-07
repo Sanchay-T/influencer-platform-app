@@ -9,15 +9,18 @@ import { qstash } from '@/lib/queue/qstash';
 import { getTikTokProfile, searchTikTokUsers } from './api';
 import { extractSearchKeywords, transformTikTokUsers, transformTikTokUser, transformTikTokUserWithEnhancedBio } from './transformer';
 import { TikTokSimilarCreator, TikTokSimilarSearchResult } from './types';
-
-// Same testing limits as other platforms
-const MAX_API_CALLS_FOR_TESTING = 1;
+import { SystemConfig } from '@/lib/config/system-config';
 
 /**
  * Process TikTok similar creator search job
  */
 export async function processTikTokSimilarJob(job: any, jobId: string) {
   console.log('🎬 Processing TikTok similar job for username:', job.targetUsername);
+  
+  // Load dynamic configuration
+  console.log('🔧 [CONFIG] Loading dynamic system configurations...');
+  const MAX_API_CALLS_FOR_TESTING = await SystemConfig.get('api_limits', 'max_api_calls_tiktok_similar');
+  console.log('🔧 [CONFIG] Max API calls for TikTok similar:', MAX_API_CALLS_FOR_TESTING);
   
   // Check testing limits (same as other platforms)
   const currentRuns = job.processedRuns || 0;

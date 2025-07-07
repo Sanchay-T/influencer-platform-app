@@ -10,9 +10,7 @@ import { processYouTubeJob } from '@/lib/platforms/youtube/handler'
 import { processTikTokSimilarJob } from '@/lib/platforms/tiktok-similar/handler'
 import { processInstagramSimilarJob } from '@/lib/platforms/instagram-similar/handler'
 import { processYouTubeSimilarJob } from '@/lib/platforms/youtube-similar/handler'
-
-// Global parameter to limit API calls for testing
-const MAX_API_CALLS_FOR_TESTING = 5; // Increased to 5 for realistic progress testing
+import { SystemConfig } from '@/lib/config/system-config'
 
 /**
  * Unified progress calculation for all platforms
@@ -167,6 +165,17 @@ export async function POST(req: Request) {
     }
     console.log('✅ Job encontrado correctamente');
     console.log('📋 Detalles del job:', JSON.stringify(job, null, 2));
+
+    // Load dynamic configuration
+    console.log('🔧 [CONFIG] Loading dynamic system configurations...');
+    const MAX_API_CALLS_FOR_TESTING = await SystemConfig.get('api_limits', 'max_api_calls_for_testing');
+    const TIKTOK_CONTINUATION_DELAY_MS = await SystemConfig.get('qstash_delays', 'tiktok_continuation_delay');
+    const TIKTOK_CONTINUATION_DELAY = `${TIKTOK_CONTINUATION_DELAY_MS}ms`;
+    const INSTAGRAM_HASHTAG_DELAY_MS = await SystemConfig.get('qstash_delays', 'instagram_hashtag_delay');
+    const INSTAGRAM_HASHTAG_DELAY = `${INSTAGRAM_HASHTAG_DELAY_MS}ms`;
+    console.log('🔧 [CONFIG] Max API calls for testing:', MAX_API_CALLS_FOR_TESTING);
+    console.log('🔧 [CONFIG] TikTok continuation delay:', TIKTOK_CONTINUATION_DELAY);
+    console.log('🔧 [CONFIG] Instagram hashtag delay:', INSTAGRAM_HASHTAG_DELAY);
 
     // CRITICAL DIAGNOSTIC: Check platform detection logic
     console.log('\n🔍🔍🔍 [PLATFORM-DETECTION] DIAGNOSTIC CHECK 🔍🔍🔍');
@@ -537,7 +546,7 @@ export async function POST(req: Request) {
           await qstash.publishJSON({
             url: `${baseUrl}/api/qstash/process-scraping`,
             body: { jobId: job.id },
-            delay: '30s'
+            delay: INSTAGRAM_HASHTAG_DELAY
           });
           console.log('✅ [APIFY-INSTAGRAM] QStash message published');
           
@@ -858,7 +867,7 @@ export async function POST(req: Request) {
           await qstash.publishJSON({
             url: `${baseUrl}/api/qstash/process-scraping`,
             body: { jobId: jobId },
-            delay: '2s'
+            delay: TIKTOK_CONTINUATION_DELAY
           });
           
           console.log('✅ [TIKTOK-KEYWORD] Next call scheduled successfully');

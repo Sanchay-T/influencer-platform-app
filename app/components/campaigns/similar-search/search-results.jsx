@@ -14,13 +14,36 @@ import { Button } from "@/components/ui/button";
 import { User } from "lucide-react";
 import ExportButton from '../export-button';
 import SearchProgress from '../keyword-search/search-progress';
+import Breadcrumbs from "../../breadcrumbs";
 
 export default function SimilarSearchResults({ searchData }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [isPageLoading, setIsPageLoading] = useState(false);
   const [creators, setCreators] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [campaignName, setCampaignName] = useState('Campaign');
   const itemsPerPage = 10;
+
+  // Fetch campaign name for breadcrumbs
+  useEffect(() => {
+    const fetchCampaignName = async () => {
+      if (!searchData?.campaignId) return;
+      
+      try {
+        const response = await fetch(`/api/campaigns/${searchData.campaignId}`);
+        const data = await response.json();
+        
+        if (data && data.name) {
+          setCampaignName(data.name);
+        }
+      } catch (error) {
+        console.error('Error fetching campaign name:', error);
+        // Keep fallback name 'Campaign'
+      }
+    };
+
+    fetchCampaignName();
+  }, [searchData?.campaignId]);
 
   // Validación básica
   if (!searchData?.jobId) return null;
@@ -190,6 +213,18 @@ export default function SimilarSearchResults({ searchData }) {
 
   return (
     <div className="space-y-4">
+      <Breadcrumbs 
+        items={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { 
+            label: campaignName, 
+            href: searchData?.campaignId ? `/campaigns/${searchData.campaignId}` : '/dashboard',
+            type: 'campaign'
+          },
+          { label: 'Search Results' }
+        ]}
+      />
+      
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold">Similar Profiles Found</h2>

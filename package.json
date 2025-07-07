@@ -9,6 +9,7 @@
     "lint": "next lint",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
+    "db:migrate": "node apply-migration.js",
     "drop": "drizzle-kit drop",
     "test:tiktok-similar": "node run-tiktok-test.js",
     "test:tiktok-similar-api": "node test-tiktok-similar.js"
@@ -54,7 +55,7 @@
     "@types/react-dom": "^19.0.4",
     "@typescript-eslint/eslint-plugin": "^8.26.0",
     "@typescript-eslint/parser": "^8.26.0",
-    "drizzle-kit": "^0.30.4",
+    "drizzle-kit": "^0.28.1",
     "eslint": "^9",
     "eslint-config-next": "15.2.3",
     "postcss": "^8",

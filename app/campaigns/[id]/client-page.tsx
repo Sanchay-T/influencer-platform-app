@@ -198,16 +198,30 @@ export default function ClientCampaignPage({ campaign }: { campaign: Campaign | 
   }
 
   if (campaignState === 'completed') {
-    const lastCompletedJob = campaign.scrapingJobs?.find(job => 
+    const completedJobs = campaign.scrapingJobs?.filter(job => 
       job.status === 'completed' && job.results?.length > 0
-    );
+    ) || [];
 
-    if (campaign.searchType === 'keyword' && lastCompletedJob) {
+    console.log('🔍 [CLIENT-DEBUG] Found completed jobs:', completedJobs.length);
+    completedJobs.forEach((job, index) => {
+      console.log(`✅ [CLIENT-JOB-${index + 1}] Job ${job.id}:`, {
+        platform: job.platform,
+        createdAt: job.createdAt,
+        resultsCount: job.results?.length || 0
+      });
+    });
+
+    if (campaign.searchType === 'keyword' && completedJobs.length > 0) {
+      // For now, use the most recent completed job to maintain existing flow
+      const mostRecentJob = completedJobs.sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )[0];
+      
       const searchData = {
-        jobId: lastCompletedJob.id,
+        jobId: mostRecentJob.id,
         campaignId: campaign.id,
-        keywords: lastCompletedJob.keywords || [],
-        platform: lastCompletedJob.platform || 'Tiktok'
+        keywords: mostRecentJob.keywords || [],
+        platform: mostRecentJob.platform || 'Tiktok'
       };
 
       return (
@@ -242,6 +256,52 @@ export default function ClientCampaignPage({ campaign }: { campaign: Campaign | 
             </CardContent>
           </Card>
 
+          {/* All Completed Runs Section */}
+          {completedJobs.length > 1 && (
+            <Card className="border-none bg-white">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg font-medium text-gray-900">All Runs ({completedJobs.length})</CardTitle>
+                <CardDescription>All completed search runs for this campaign</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {completedJobs.map((job, index) => (
+                    <div key={job.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center space-x-4">
+                        <div className="text-sm font-medium text-gray-900">
+                          Run #{completedJobs.length - index}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {new Date(job.createdAt).toLocaleDateString()} at {new Date(job.createdAt).toLocaleTimeString()}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {job.platform}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {job.results?.[0]?.creators?.length || 0} results
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {job.id === mostRecentJob.id && (
+                          <Badge variant="outline" className="text-xs">Currently Showing</Badge>
+                        )}
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            window.location.href = `/campaigns/${campaign.id}?jobId=${job.id}`;
+                          }}
+                        >
+                          View Results
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Suspense fallback={
             <div className="flex items-center justify-center py-12">
               <div className="flex flex-col items-center gap-4">
@@ -256,12 +316,17 @@ export default function ClientCampaignPage({ campaign }: { campaign: Campaign | 
       );
     }
 
-    if (campaign.searchType === 'similar' && lastCompletedJob) {
+    if (campaign.searchType === 'similar' && completedJobs.length > 0) {
+      // For now, use the most recent completed job to maintain existing flow
+      const mostRecentJob = completedJobs.sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )[0];
+      
       const searchData = {
-        jobId: lastCompletedJob.id,
-        platform: lastCompletedJob.platform || 'Instagram',
-        targetUsername: lastCompletedJob.targetUsername,
-        creators: lastCompletedJob.results?.[0]?.creators || []
+        jobId: mostRecentJob.id,
+        platform: mostRecentJob.platform || 'Instagram',
+        targetUsername: mostRecentJob.targetUsername,
+        creators: mostRecentJob.results?.[0]?.creators || []
       };
 
       return (
@@ -295,6 +360,52 @@ export default function ClientCampaignPage({ campaign }: { campaign: Campaign | 
               </div>
             </CardContent>
           </Card>
+
+          {/* All Completed Runs Section */}
+          {completedJobs.length > 1 && (
+            <Card className="border-none bg-white">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg font-medium text-gray-900">All Runs ({completedJobs.length})</CardTitle>
+                <CardDescription>All completed search runs for this campaign</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {completedJobs.map((job, index) => (
+                    <div key={job.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center space-x-4">
+                        <div className="text-sm font-medium text-gray-900">
+                          Run #{completedJobs.length - index}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {new Date(job.createdAt).toLocaleDateString()} at {new Date(job.createdAt).toLocaleTimeString()}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {job.platform}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {job.results?.[0]?.creators?.length || 0} results
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {job.id === mostRecentJob.id && (
+                          <Badge variant="outline" className="text-xs">Currently Showing</Badge>
+                        )}
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            window.location.href = `/campaigns/${campaign.id}?jobId=${job.id}`;
+                          }}
+                        >
+                          View Results
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Suspense fallback={
             <div className="flex items-center justify-center py-12">
