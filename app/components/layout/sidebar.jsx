@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { LayoutDashboard, Search, PlusCircle, LogOut, UserRoundCog, Settings } from "lucide-react";
+import { LayoutDashboard, Search, PlusCircle, LogOut, UserRoundCog, Settings, Mail } from "lucide-react";
 import { useRouter } from 'next/navigation'
 import { useClerk, useUser } from '@clerk/nextjs'
 
@@ -65,15 +65,27 @@ export default function Sidebar() {
           </Link>
 
           {isAdmin() && (
-            <Link href="/admin/system-config">
-              <Button 
-                variant="ghost" 
-                className="w-full justify-start text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100"
-              >
-                <Settings className="mr-2 h-4 w-4" />
-                System Config
-              </Button>
-            </Link>
+            <>
+              <Link href="/admin/system-config">
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100"
+                >
+                  <Settings className="mr-2 h-4 w-4" />
+                  System Config
+                </Button>
+              </Link>
+              
+              <Link href="/admin/email-testing">
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100"
+                >
+                  <Mail className="mr-2 h-4 w-4" />
+                  Email Testing
+                </Button>
+              </Link>
+            </>
           )}
         </nav>
       </div>

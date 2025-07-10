@@ -12,8 +12,15 @@ export default defineConfig({
   dbCredentials: {
     url: process.env.DATABASE_URL!,
   },
+  // Fix for CHECK constraint introspection bug
+  introspect: {
+    casing: 'preserve',
+  },
+  // Disable strict mode to avoid CHECK constraint parsing issues
+  strict: false,
   verbose: true,
-  strict: true,
+  // Skip problematic introspection during push
+  breakpoints: false,
 });
 
 /* ssl: process.env.NODE_ENV === 'development' ? false : true, // Deshabilitar SSL en desarrollo

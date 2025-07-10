@@ -5,6 +5,18 @@ import { db } from '@/lib/db';
 import { scrapingJobs, scrapingResults, campaigns, type JobStatus } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
+// Add simple API logging
+let simpleLogApiCall: any = null;
+try {
+    const path = require('path');
+    const loggerPath = path.join(process.cwd(), 'scripts', 'simple-api-logger.js');
+    const simpleLogger = require(loggerPath);
+    simpleLogApiCall = simpleLogger.logApiCall;
+    console.log('✅ [INSTAGRAM-HASHTAG-API] Simple API logging enabled');
+} catch (error: any) {
+    console.log('⚠️ [INSTAGRAM-HASHTAG-API] Simple API logging not available:', error.message);
+}
+
 // Initialize Apify client
 const apifyClient = new ApifyClient({
   token: process.env.APIFY_TOKEN!
@@ -304,6 +316,23 @@ export async function GET(req: NextRequest) {
           try {
             const { items } = await apifyClient.dataset(run.defaultDatasetId).listItems();
             console.log('✅ [INSTAGRAM-HASHTAG-API] Retrieved', items.length, 'results from Apify');
+            
+            // Simple logging - just request and response
+            if (simpleLogApiCall) {
+              const request = {
+                keywords: job.keywords,
+                targetResults: job.targetResults,
+                runId: job.runId,
+                platform: 'Instagram'
+              };
+              
+              try {
+                simpleLogApiCall('instagram', 'keyword', request, { items });
+                console.log('✅ [INSTAGRAM-HASHTAG-API] Successfully logged Instagram data');
+              } catch (logError: any) {
+                console.error('❌ [INSTAGRAM-HASHTAG-API] Error logging Instagram data:', logError.message);
+              }
+            }
             
             // Transform and save results (same logic as in QStash handler)
             const transformedCreators = items.map((post: any) => {

@@ -7,6 +7,18 @@ import { qstash } from '@/lib/queue/qstash'
 import { Receiver } from "@upstash/qstash"
 import { SystemConfig } from '@/lib/config/system-config'
 
+// Add API logging if enabled
+let logApiCallSafe: any = null;
+if (process.env.NODE_ENV !== 'production' || process.env.ENABLE_API_LOGGING === 'true') {
+    try {
+        const apiLogger = require('../../../scripts/api-logger.js');
+        logApiCallSafe = apiLogger.logApiCallSafe;
+        console.log('✅ [TIKTOK-API] API logging enabled');
+    } catch (error) {
+        console.log('⚠️ [TIKTOK-API] API logging not available:', error.message);
+    }
+}
+
 // Definir la interfaz para la respuesta de ScrapeCreators
 interface ScrapeCreatorsResponse {
     cursor: number;
@@ -198,6 +210,22 @@ export async function POST(req: Request) {
 
             console.log('✅ Job encolado en QStash correctamente');
             console.log('📋 Resultado de QStash:', JSON.stringify(result, null, 2));
+
+            // Log API call for analysis if available
+            if (logApiCallSafe) {
+                logApiCallSafe(
+                    'tiktok-keyword',
+                    { keywords: sanitizedKeywords, targetResults, campaignId },
+                    null, // No raw response yet (will be logged in QStash handler)
+                    null, // No transformed data yet
+                    { 
+                        userId,
+                        campaignId,
+                        jobId: job.id,
+                        phase: 'job-created'
+                    }
+                );
+            }
 
             console.log('🚀 FIN DE SOLICITUD POST A /api/scraping/tiktok - ÉXITO');
             return NextResponse.json({

@@ -15,6 +15,7 @@ const isWebhookRoute = createRouteMatcher([
   '/api/scraping/(.*)',
   '/api/proxy/(.*)',
   '/api/export/(.*)',
+  '/api/email/send-scheduled',
 ])
 
 // API routes that are protected but handled differently

@@ -1,0 +1,120 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
+import postgres from 'postgres';
+
+// In-memory cache for user search results
+const userCache = new Map<string, { data: any[], timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+export async function GET(req: NextRequest) {
+  try {
+    const startTime = Date.now();
+    
+    // Authentication check
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const query = searchParams.get('q');
+    
+    if (!query || query.length < 2) {
+      return NextResponse.json({ users: [] });
+    }
+
+    // Check cache first
+    const cacheKey = `search:${query.toLowerCase()}`;
+    const cached = userCache.get(cacheKey);
+    
+    if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
+      console.log(`⚡ [CACHED-SEARCH] Cache hit for "${query}" (${Date.now() - startTime}ms)`);
+      return NextResponse.json({
+        users: cached.data,
+        query,
+        count: cached.data.length,
+        cached: true
+      });
+    }
+
+    console.log(`🔍 [CACHED-SEARCH] Cache miss, fetching for: ${query}`);
+    
+    const sql = postgres(process.env.DATABASE_URL!, {
+      max: 1,
+      connect_timeout: 5,
+      prepare: false,
+    });
+    
+    try {
+      const dbStartTime = Date.now();
+      
+      // Fast query with minimal data
+      const users = await sql`
+        SELECT 
+          user_id,
+          full_name,
+          business_name,
+          trial_status,
+          onboarding_step
+        FROM user_profiles 
+        WHERE 
+          full_name ILIKE ${query + '%'} OR 
+          user_id ILIKE ${query + '%'}
+        ORDER BY 
+          CASE WHEN full_name ILIKE ${query + '%'} THEN 0 ELSE 1 END,
+          created_at DESC 
+        LIMIT 5
+      `;
+      
+      const dbTime = Date.now() - dbStartTime;
+      
+      // Minimal processing
+      const results = users.map(user => ({
+        user_id: user.user_id,
+        full_name: user.full_name,
+        business_name: user.business_name,
+        trial_status: user.trial_status,
+        onboarding_step: user.onboarding_step,
+        computed_trial_status: user.trial_status === 'active' ? 'Active' : 'No Trial'
+      }));
+      
+      // Cache the results
+      userCache.set(cacheKey, {
+        data: results,
+        timestamp: Date.now()
+      });
+      
+      // Clean old cache entries (simple cleanup)
+      if (userCache.size > 100) {
+        const now = Date.now();
+        for (const [key, value] of userCache.entries()) {
+          if (now - value.timestamp > CACHE_TTL) {
+            userCache.delete(key);
+          }
+        }
+      }
+      
+      const totalTime = Date.now() - startTime;
+      console.log(`⚡ [CACHED-SEARCH] Fresh data: ${totalTime}ms (DB: ${dbTime}ms)`);
+      
+      return NextResponse.json({
+        users: results,
+        query,
+        count: results.length,
+        cached: false,
+        dbTime,
+        totalTime
+      });
+      
+    } finally {
+      await sql.end();
+    }
+
+  } catch (error) {
+    console.error('❌ [CACHED-SEARCH] Error:', error);
+    return NextResponse.json(
+      { error: 'Search failed' },
+      { status: 500 }
+    );
+  }
+}

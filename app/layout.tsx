@@ -3,6 +3,8 @@ import './globals.css'
 import { ReactNode } from 'react';
 import { ClerkProvider } from '@clerk/nextjs';
 import { ToastProvider } from './providers/toast-provider';
+import { AuthLogger } from './components/auth/auth-logger';
+import { NavigationLogger } from './components/navigation/navigation-logger';
 
 export const metadata = {
   title: 'Influencer Platform',
@@ -18,6 +20,8 @@ export default function RootLayout({ children }: RootLayoutProps) {
     <ClerkProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY!}>
       <html lang="en">
         <body>
+          <AuthLogger />
+          <NavigationLogger />
           {children}
           <ToastProvider />
         </body>

@@ -1,21 +1,8 @@
-import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { SystemConfig } from '@/lib/config/system-config';
+import { isAdminUser } from '@/lib/auth/admin-utils';
 
 export const maxDuration = 30;
-
-// Helper function to check if user is admin
-async function isAdminUser(): Promise<boolean> {
-  const { userId } = await auth();
-  if (!userId) return false;
-  
-  // Check if user is in admin email list
-  const adminEmails = process.env.ADMIN_EMAILS?.split(',') || [];
-  
-  // For now, we'll just check if ADMIN_EMAILS is configured
-  // In production, you'd want to check the actual user email
-  return adminEmails.length > 0;
-}
 
 // POST - Initialize default configurations
 export async function POST(request: Request) {

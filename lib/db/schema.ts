@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, varchar, timestamp, integer, jsonb, numeric, unique } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, varchar, timestamp, integer, jsonb, numeric, unique, boolean } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // Status types
@@ -85,14 +85,30 @@ export const searchResults = pgTable('search_results', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
-// User Profiles table (updated for Clerk user IDs)
+// User Profiles table (updated for Clerk user IDs + onboarding fields + trial system)
 export const userProfiles = pgTable('user_profiles', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: text('user_id').notNull().unique(), // Changed from uuid to text for Clerk user IDs
-  name: text('name').notNull(),
-  companyName: text('company_name').notNull(),
-  industry: text('industry').notNull(),
+  name: text('name'),
+  companyName: text('company_name'),
+  industry: text('industry'),
   email: text('email'),
+  // Onboarding fields
+  signupTimestamp: timestamp('signup_timestamp').notNull().defaultNow(),
+  onboardingStep: varchar('onboarding_step', { length: 50 }).notNull().default('pending'), // 'pending', 'info_captured', 'intent_captured', 'completed'
+  fullName: text('full_name'),
+  businessName: text('business_name'),
+  brandDescription: text('brand_description'),
+  emailScheduleStatus: jsonb('email_schedule_status').default('{}'),
+  // Trial system fields
+  trialStartDate: timestamp('trial_start_date'),
+  trialEndDate: timestamp('trial_end_date'),
+  trialStatus: varchar('trial_status', { length: 20 }).default('pending'), // 'pending', 'active', 'expired', 'cancelled', 'converted'
+  stripeCustomerId: text('stripe_customer_id'),
+  stripeSubscriptionId: text('stripe_subscription_id'),
+  subscriptionStatus: varchar('subscription_status', { length: 20 }).default('none'), // 'none', 'trialing', 'active', 'past_due', 'canceled'
+  // Admin system field
+  isAdmin: boolean('is_admin').default(false), // Database-based admin role
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });

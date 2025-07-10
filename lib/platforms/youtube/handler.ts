@@ -7,6 +7,50 @@ import { transformYouTubeVideos } from './transformer';
 import { YouTubeSearchParams } from './types';
 // Removed email imports - not needed
 
+// Inline API logging function (Vercel-compatible)
+const fs = require('fs');
+const path = require('path');
+
+function logApiCall(platform: string, searchType: string, request: any, response: any) {
+  try {
+    // Ensure directories exist
+    const logDir = path.join(process.cwd(), 'logs/api-raw', searchType);
+    if (!fs.existsSync(logDir)) {
+      fs.mkdirSync(logDir, { recursive: true });
+    }
+    
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `${platform}-${timestamp}.json`;
+    const filepath = path.join(logDir, filename);
+    
+    const logData = {
+      timestamp: new Date().toISOString(),
+      platform: platform,
+      searchType: searchType,
+      request: request,
+      response: response
+    };
+    
+    fs.writeFileSync(filepath, JSON.stringify(logData, null, 2));
+    
+    // ENHANCED LOGGING - VERY VISIBLE IN TERMINAL
+    console.log('\n🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨');
+    console.log('📁 RAW API DATA SAVED TO FILE - CHECK THIS IMMEDIATELY!');
+    console.log(`🔥 PLATFORM: ${platform.toUpperCase()}`);
+    console.log(`🔥 SEARCH TYPE: ${searchType.toUpperCase()}`);
+    console.log(`🔥 FULL FILE PATH: ${filepath}`);
+    console.log(`🔥 FILENAME: ${filename}`);
+    console.log(`🔥 REQUEST SIZE: ${JSON.stringify(request).length} characters`);
+    console.log(`🔥 RESPONSE SIZE: ${JSON.stringify(response).length} characters`);
+    console.log('🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨\n');
+    
+    return true;
+  } catch (error) {
+    console.error('❌ [INLINE-LOGGING] Failed to save API data:', error);
+    return false;
+  }
+}
+
 // Testing limit - same as TikTok
 const MAX_API_CALLS_FOR_TESTING = 1;
 
@@ -100,6 +144,33 @@ export async function processYouTubeJob(job: any, jobId: string): Promise<any> {
       videosCount: youtubeResponse.videos?.length || 0,
       hasContinuationToken: !!youtubeResponse.continuationToken
     });
+    
+    // ENHANCED LOGGING FOR ANALYSIS TEAM - VERY VISIBLE
+    console.log('\n🚨🚨🚨 YOUTUBE API CALL DETECTED 🚨🚨🚨');
+    console.log('📡 [YOUTUBE-API-REQUEST] Keywords:', job.keywords);
+    console.log('📡 [YOUTUBE-API-REQUEST] Mode:', searchParams.mode);
+    console.log('📡 [YOUTUBE-API-REQUEST] Continuation Token:', searchParams.continuationToken || 'none');
+    console.log('📡 [YOUTUBE-API-REQUEST] Target Results:', job.targetResults);
+    
+    // Log complete raw response
+    console.log('📊 [YOUTUBE-API-RESPONSE] Complete Raw Response:');
+    console.log(JSON.stringify(youtubeResponse, null, 2));
+    
+    // Enhanced file logging for analysis team with inline function
+    const request = {
+        keywords: job.keywords,
+        targetResults: job.targetResults,
+        mode: searchParams.mode,
+        continuationToken: searchParams.continuationToken || null,
+        platform: 'YouTube',
+        callNumber: (job.processedRuns || 0) + 1
+    };
+    
+    console.log('🔥 [FILE-LOGGING] Saving complete YouTube raw data to file...');
+    const saved = logApiCall('youtube', 'keyword', request, youtubeResponse);
+    if (saved) {
+        console.log('🔥 [FILE-LOGGING] YouTube data saved! Check logs/api-raw/keyword/ directory');
+    }
     
     // Enhanced response structure logging
     console.log('📊 [API-RESPONSE] YouTube response structure:', JSON.stringify({

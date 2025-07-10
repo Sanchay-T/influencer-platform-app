@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
 import { userProfiles } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { getTrialStatus } from '@/lib/trial/trial-service';
 
 export async function GET() {
   try {
@@ -26,8 +27,57 @@ export async function GET() {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
-    console.log('✅ [PROFILE-API-GET] Profile fetched successfully', { profileId: userProfile.id });
-    return NextResponse.json(userProfile);
+    // Get trial status data
+    console.log('🎯 [PROFILE-API-GET] Fetching trial status');
+    const trialData = await getTrialStatus(userId);
+
+    // Prepare response with trial data
+    const responseData = {
+      // Basic profile info
+      id: userProfile.id,
+      userId: userProfile.userId,
+      name: userProfile.name,
+      companyName: userProfile.companyName,
+      industry: userProfile.industry,
+      email: userProfile.email,
+      
+      // Onboarding info
+      signupTimestamp: userProfile.signupTimestamp,
+      onboardingStep: userProfile.onboardingStep,
+      fullName: userProfile.fullName,
+      businessName: userProfile.businessName,
+      brandDescription: userProfile.brandDescription,
+      emailScheduleStatus: userProfile.emailScheduleStatus,
+      
+      // Trial system data
+      trialData: trialData ? {
+        status: trialData.trialStatus,
+        startDate: trialData.trialStartDate?.toISOString(),
+        endDate: trialData.trialEndDate?.toISOString(),
+        daysRemaining: trialData.daysRemaining,
+        hoursRemaining: trialData.hoursRemaining,
+        minutesRemaining: trialData.minutesRemaining,
+        progressPercentage: trialData.progressPercentage,
+        timeUntilExpiry: trialData.timeUntilExpiry,
+        isExpired: trialData.isExpired,
+        stripeCustomerId: trialData.stripeCustomerId,
+        stripeSubscriptionId: trialData.stripeSubscriptionId,
+        subscriptionStatus: trialData.subscriptionStatus
+      } : null,
+      
+      // Timestamps
+      createdAt: userProfile.createdAt,
+      updatedAt: userProfile.updatedAt
+    };
+
+    console.log('✅ [PROFILE-API-GET] Profile fetched successfully', { 
+      profileId: userProfile.id,
+      hasTrialData: !!trialData,
+      trialStatus: trialData?.trialStatus || 'none',
+      daysRemaining: trialData?.daysRemaining || 0
+    });
+    
+    return NextResponse.json(responseData);
   } catch (error: any) {
     console.error('💥 [PROFILE-API-GET] Error fetching profile:', error);
     return NextResponse.json({ 

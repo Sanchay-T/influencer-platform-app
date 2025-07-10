@@ -12,6 +12,50 @@ import { processInstagramSimilarJob } from '@/lib/platforms/instagram-similar/ha
 import { processYouTubeSimilarJob } from '@/lib/platforms/youtube-similar/handler'
 import { SystemConfig } from '@/lib/config/system-config'
 
+// Inline API logging function (Vercel-compatible)
+const fs = require('fs');
+const path = require('path');
+
+function logApiCall(platform: string, searchType: string, request: any, response: any) {
+  try {
+    // Ensure directories exist
+    const logDir = path.join(process.cwd(), 'logs/api-raw', searchType);
+    if (!fs.existsSync(logDir)) {
+      fs.mkdirSync(logDir, { recursive: true });
+    }
+    
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `${platform}-${timestamp}.json`;
+    const filepath = path.join(logDir, filename);
+    
+    const logData = {
+      timestamp: new Date().toISOString(),
+      platform: platform,
+      searchType: searchType,
+      request: request,
+      response: response
+    };
+    
+    fs.writeFileSync(filepath, JSON.stringify(logData, null, 2));
+    
+    // ENHANCED LOGGING - VERY VISIBLE IN TERMINAL
+    console.log('\n🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨');
+    console.log('📁 RAW API DATA SAVED TO FILE - CHECK THIS IMMEDIATELY!');
+    console.log(`🔥 PLATFORM: ${platform.toUpperCase()}`);
+    console.log(`🔥 SEARCH TYPE: ${searchType.toUpperCase()}`);
+    console.log(`🔥 FULL FILE PATH: ${filepath}`);
+    console.log(`🔥 FILENAME: ${filename}`);
+    console.log(`🔥 REQUEST SIZE: ${JSON.stringify(request).length} characters`);
+    console.log(`🔥 RESPONSE SIZE: ${JSON.stringify(response).length} characters`);
+    console.log('🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨\n');
+    
+    return true;
+  } catch (error) {
+    console.error('❌ [INLINE-LOGGING] Failed to save API data:', error);
+    return false;
+  }
+}
+
 /**
  * Unified progress calculation for all platforms
  * Formula: (apiCalls × 0.3) + (results × 0.7) for consistent progress across platforms
@@ -165,6 +209,20 @@ export async function POST(req: Request) {
     }
     console.log('✅ Job encontrado correctamente');
     console.log('📋 Detalles del job:', JSON.stringify(job, null, 2));
+    
+    // 🚨 ENHANCED PLATFORM DETECTION LOGGING 🚨
+    console.log('\n🚨🚨🚨 PLATFORM DETECTION DEBUG 🚨🚨🚨');
+    console.log('🔍 Job Platform:', `"${job.platform}"`);
+    console.log('🔍 Platform Type:', typeof job.platform);
+    console.log('🔍 Has Keywords:', !!job.keywords);
+    console.log('🔍 Keywords Value:', job.keywords);
+    console.log('🔍 Has Target Username:', !!job.targetUsername);
+    console.log('🔍 Target Username Value:', job.targetUsername);
+    console.log('🔍 Platform === "Tiktok":', job.platform === 'Tiktok');
+    console.log('🔍 Platform === "TikTok":', job.platform === 'TikTok');
+    console.log('🔍 Platform === "Instagram":', job.platform === 'Instagram');
+    console.log('🔍 Platform === "YouTube":', job.platform === 'YouTube');
+    console.log('🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨\n');
 
     // Load dynamic configuration
     console.log('🔧 [CONFIG] Loading dynamic system configurations...');
@@ -270,6 +328,36 @@ export async function POST(req: Request) {
           if (items.length > 0) {
             console.log('🔍 [APIFY-DEBUG] First item structure:', JSON.stringify(items[0], null, 2));
             console.log('🔍 [APIFY-DEBUG] All available fields:', Object.keys(items[0]));
+          }
+          
+          // Simple logging - just request and response
+          console.log('🔍 [DEBUG-LOGGING] About to call simpleLogApiCall:', {
+            available: !!simpleLogApiCall,
+            itemsLength: items.length
+          });
+          
+          if (simpleLogApiCall) {
+            const request = {
+              keywords: job.keywords,
+              targetResults: job.targetResults,
+              runId: job.runId,
+              platform: 'Instagram'
+            };
+            
+            console.log('📝 [DEBUG-LOGGING] Calling simpleLogApiCall with:', {
+              platform: 'instagram',
+              searchType: 'keyword',
+              request: request
+            });
+            
+            try {
+              simpleLogApiCall('instagram', 'keyword', request, { items });
+              console.log('✅ [DEBUG-LOGGING] Successfully logged Instagram data');
+            } catch (logError: any) {
+              console.error('❌ [DEBUG-LOGGING] Error logging Instagram data:', logError.message);
+            }
+          } else {
+            console.log('⚠️ [DEBUG-LOGGING] simpleLogApiCall not available');
           }
           
           // Transform Apify data to your format
@@ -644,6 +732,7 @@ export async function POST(req: Request) {
     }
     // CÓDIGO PARA TIKTOK KEYWORD SEARCH
     else if (job.platform === 'Tiktok' && job.keywords) {
+      console.log('\n🚨🚨🚨 ENTERING TIKTOK KEYWORD PROCESSING 🚨🚨🚨');
       console.log('✅ [PLATFORM-DETECTION] TikTok keyword job detected!');
       console.log('🎬 Processing TikTok keyword job for keywords:', job.keywords);
       
@@ -724,6 +813,33 @@ export async function POST(req: Request) {
           hasMore: !!apiResponse?.has_more
         });
         
+        // ENHANCED LOGGING FOR ANALYSIS TEAM - VERY VISIBLE
+        console.log('\n🚨🚨🚨 TIKTOK API CALL DETECTED 🚨🚨🚨');
+        console.log('📡 [TIKTOK-API-REQUEST] Full URL:', apiUrl);
+        console.log('📡 [TIKTOK-API-REQUEST] Keywords:', job.keywords);
+        console.log('📡 [TIKTOK-API-REQUEST] Cursor:', job.cursor || 0);
+        console.log('📡 [TIKTOK-API-REQUEST] Target Results:', job.targetResults);
+        
+        // Log complete raw response
+        console.log('📊 [TIKTOK-API-RESPONSE] Complete Raw Response:');
+        console.log(JSON.stringify(apiResponse, null, 2));
+        
+        // Enhanced file logging with inline function
+        const request = {
+            fullApiUrl: apiUrl,
+            keywords: job.keywords,
+            targetResults: job.targetResults,
+            cursor: job.cursor || 0,
+            platform: 'TikTok',
+            callNumber: job.processedRuns + 1
+        };
+        
+        console.log('🔥 [FILE-LOGGING] Saving complete TikTok raw data to file...');
+        const saved = logApiCall('tiktok', 'keyword', request, apiResponse);
+        if (saved) {
+            console.log('🔥 [FILE-LOGGING] TikTok data saved! Check logs/api-raw/keyword/ directory');
+        }
+        
         // Transform TikTok data with granular progress updates
         const rawResults = apiResponse.search_item_list || [];
         const creators = [];
@@ -796,6 +912,7 @@ export async function POST(req: Request) {
         // Calculate new processed counts (needed for both results saving and progress)
         const newProcessedRuns = job.processedRuns + 1;
         const newProcessedResults = job.processedResults + creators.length;
+        
         
         // Save results (both partial and append to existing)
         if (creators.length > 0) {

@@ -9,6 +9,15 @@ import { getInstagramProfile, getEnhancedInstagramProfile, extractUsername } fro
 import { transformInstagramProfile, transformEnhancedProfile, extractProfileInfo } from './transformer';
 import { InstagramSimilarJobResult } from './types';
 
+// Add simple API logging
+let simpleLogApiCall: any = null;
+try {
+    const simpleLogger = require('../../../scripts/simple-api-logger.js');
+    simpleLogApiCall = simpleLogger.logApiCall;
+} catch (error) {
+    // Logging not available
+}
+
 // Same testing limits as other platforms
 const MAX_API_CALLS_FOR_TESTING = 1;
 
@@ -60,6 +69,16 @@ export async function processInstagramSimilarJob(job: any, jobId: string): Promi
     }
     
     const profileData = profileResult.data;
+    
+    // Simple logging - just request and response
+    if (simpleLogApiCall) {
+      const request = {
+        username: username,
+        targetUsername: job.targetUsername
+      };
+      
+      simpleLogApiCall('instagram', 'similar', request, profileData);
+    }
     
     // Log profile information (similar to TikTok pattern)
     const profileInfo = extractProfileInfo(profileData);
