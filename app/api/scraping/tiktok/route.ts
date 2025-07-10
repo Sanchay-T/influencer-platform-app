@@ -9,13 +9,14 @@ import { SystemConfig } from '@/lib/config/system-config'
 
 // Add API logging if enabled
 let logApiCallSafe: any = null;
-if (process.env.NODE_ENV !== 'production' || process.env.ENABLE_API_LOGGING === 'true') {
+if (process.env.NODE_ENV === 'development') {
     try {
+        // Dynamic import only in development
         const apiLogger = require('../../../scripts/api-logger.js');
         logApiCallSafe = apiLogger.logApiCallSafe;
         console.log('✅ [TIKTOK-API] API logging enabled');
     } catch (error) {
-        console.log('⚠️ [TIKTOK-API] API logging not available:', error.message);
+        console.log('⚠️ [TIKTOK-API] API logging not available');
     }
 }
 

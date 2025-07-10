@@ -7,14 +7,16 @@ import { eq } from 'drizzle-orm';
 
 // Add simple API logging
 let simpleLogApiCall: any = null;
-try {
-    const path = require('path');
-    const loggerPath = path.join(process.cwd(), 'scripts', 'simple-api-logger.js');
-    const simpleLogger = require(loggerPath);
-    simpleLogApiCall = simpleLogger.logApiCall;
-    console.log('✅ [INSTAGRAM-HASHTAG-API] Simple API logging enabled');
-} catch (error: any) {
-    console.log('⚠️ [INSTAGRAM-HASHTAG-API] Simple API logging not available:', error.message);
+if (process.env.NODE_ENV === 'development') {
+    try {
+        const path = require('path');
+        const loggerPath = path.join(process.cwd(), 'scripts', 'simple-api-logger.js');
+        const simpleLogger = require(loggerPath);
+        simpleLogApiCall = simpleLogger.logApiCall;
+        console.log('✅ [INSTAGRAM-HASHTAG-API] Simple API logging enabled');
+    } catch (error: any) {
+        console.log('⚠️ [INSTAGRAM-HASHTAG-API] Simple API logging not available');
+    }
 }
 
 // Initialize Apify client

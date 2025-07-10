@@ -1,15 +1,14 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import { logNavigation, logUserAction } from '@/lib/utils/frontend-logger';
 
 /**
- * Navigation logging component that tracks page changes
- * This provides comprehensive logging for user navigation in the production flow
+ * Inner component that uses useSearchParams
  */
-export function NavigationLogger() {
+function NavigationLoggerInner() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { userId, user } = useAuth() as any;
@@ -105,4 +104,16 @@ export function NavigationLogger() {
 
   // This component doesn't render anything - it's just for logging
   return null;
+}
+
+/**
+ * Navigation logging component that tracks page changes
+ * This provides comprehensive logging for user navigation in the production flow
+ */
+export function NavigationLogger() {
+  return (
+    <Suspense fallback={null}>
+      <NavigationLoggerInner />
+    </Suspense>
+  );
 }
