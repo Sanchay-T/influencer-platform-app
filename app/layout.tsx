@@ -7,7 +7,7 @@ import { AuthLogger } from './components/auth/auth-logger';
 import { NavigationLogger } from './components/navigation/navigation-logger';
 
 export const metadata = {
-  title: 'Influencer Platform',
+  title: 'usegemz',
   description: 'Multi-platform influencer campaign management',
 };
 

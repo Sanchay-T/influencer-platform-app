@@ -64,7 +64,7 @@ import {
             </Button>
           </Section>
           <Text style={{ color: '#6a737d', fontSize: '12px', textAlign: 'center', marginTop: '60px' }}>
-            Influencer Platform
+            usegemz
           </Text>
         </Container>
       </Body>
@@ -177,7 +177,7 @@ import {
             </Button>
           </Section>
           <Text style={{ color: '#6a737d', fontSize: '12px', textAlign: 'center', marginTop: '60px' }}>
-            Influencer Platform
+            usegemz
           </Text>
         </Container>
       </Body>

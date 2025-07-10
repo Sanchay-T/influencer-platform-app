@@ -30,7 +30,7 @@ export default function Sidebar() {
     <div className="h-full w-64 border-r border-zinc-200 bg-zinc-50/50 p-6 flex flex-col">
       <div className="flex flex-col space-y-8 flex-grow">
         <div className="flex items-center space-x-2">
-          <h2 className="text-lg font-semibold text-zinc-800">Influencer Hub</h2>
+          <h2 className="text-lg font-semibold text-zinc-800">usegemz</h2>
         </div>
 
         <nav className="flex flex-col space-y-1">

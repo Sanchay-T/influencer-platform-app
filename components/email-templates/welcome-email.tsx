@@ -35,19 +35,19 @@ export const WelcomeEmail = ({
     <Head />
     <Body style={main}>
       <Preview>
-        Welcome to the Influencer Platform! 🎉 Your account is ready to go.
+        Welcome to the usegemz! 🎉 Your account is ready to go.
       </Preview>
       <Container style={container}>
         <Img
           src={`${baseUrl}/static/logo.png`}
           width="48"
           height="48"
-          alt="Influencer Platform Logo"
+          alt="usegemz Logo"
           style={logo}
         />
         
         <Text style={title}>
-          Welcome to Influencer Platform! 🎉
+          Welcome to usegemz! 🎉
         </Text>
         
         <Text style={paragraph}>
@@ -93,7 +93,7 @@ export const WelcomeEmail = ({
         
         <Text style={footer}>
           Best regards,<br />
-          The Influencer Platform Team
+          The usegemz Team
         </Text>
 
         {unsubscribeUrl && (

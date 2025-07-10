@@ -9,7 +9,7 @@ export default function Page() {
             Create your account
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Join the influencer platform and start managing campaigns
+            Join usegemz and start managing campaigns
           </p>
         </div>
         <SignUp 

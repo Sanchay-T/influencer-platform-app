@@ -130,7 +130,7 @@ export default function OnboardingModal({
         throw new Error('Failed to complete onboarding');
       }
 
-      toast.success('Welcome to Influencer Platform! 🎉');
+      toast.success('Welcome to usegemz! 🎉');
       onComplete();
     } catch (error) {
       console.error('❌ Error completing onboarding:', error);
@@ -181,7 +181,7 @@ export default function OnboardingModal({
             <>
               <CardHeader>
                 <CardTitle className="text-2xl font-bold text-gray-900">
-                  Welcome to Influencer Platform! 🎉
+                  Welcome to usegemz! 🎉
                 </CardTitle>
                 <CardDescription className="text-gray-600">
                   Let's get to know you and your business better. This helps us personalize your experience.

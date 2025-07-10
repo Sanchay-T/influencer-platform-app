@@ -42,7 +42,7 @@ export const TrialDay5Email = ({
           src={`${baseUrl}/static/logo.png`}
           width="48"
           height="48"
-          alt="Influencer Platform Logo"
+          alt="usegemz Logo"
           style={logo}
         />
         
@@ -129,7 +129,7 @@ export const TrialDay5Email = ({
         
         <Text style={footer}>
           Thanks for being part of our community!<br />
-          The Influencer Platform Team
+          The usegemz Team
         </Text>
 
         <Text style={footer}>

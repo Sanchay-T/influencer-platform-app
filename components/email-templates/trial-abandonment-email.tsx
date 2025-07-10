@@ -42,7 +42,7 @@ export const TrialAbandonmentEmail = ({
           src={`${baseUrl}/static/logo.png`}
           width="48"
           height="48"
-          alt="Influencer Platform Logo"
+          alt="usegemz Logo"
           style={logo}
         />
         
@@ -55,7 +55,7 @@ export const TrialAbandonmentEmail = ({
         </Text>
         
         <Text style={paragraph}>
-          We noticed you signed up for Influencer Platform but haven't completed your setup yet. 
+          We noticed you signed up for usegemz but haven't completed your setup yet. 
           {businessName ? ` ${businessName}` : ' Your brand'} is just a few steps away from discovering 
           thousands of perfect influencer matches!
         </Text>
@@ -110,7 +110,7 @@ export const TrialAbandonmentEmail = ({
         
         <Text style={footer}>
           Ready to grow your brand?<br />
-          The Influencer Platform Team
+          The usegemz Team
         </Text>
 
         {unsubscribeUrl && (

@@ -245,7 +245,7 @@ export default function OnboardingStep1() {
         <Card className="shadow-sm border border-gray-200">
           <CardHeader>
             <CardTitle className="text-2xl font-bold text-gray-900">
-              Welcome to Influencer Platform! 🎉
+              Welcome to usegemz! 🎉
             </CardTitle>
             <CardDescription className="text-gray-600 mt-2">
               Let's get to know you and your business better. This helps us personalize your experience.
