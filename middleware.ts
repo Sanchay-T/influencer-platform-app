@@ -24,6 +24,12 @@ const isProtectedApiRoute = createRouteMatcher([
   '/api/admin(.*)',
 ])
 
+// Admin routes that require admin access
+const isAdminRoute = createRouteMatcher([
+  '/admin(.*)',
+  '/api/admin(.*)',
+])
+
 export default clerkMiddleware(async (auth, request) => {
   // Handle QStash and scraping API routes - allow all headers for webhooks
   if (isWebhookRoute(request)) {
@@ -53,13 +59,32 @@ export default clerkMiddleware(async (auth, request) => {
   // Protect non-public routes
   if (!isPublicRoute(request)) {
     // Get the auth object and check if user is signed in
-    const { userId } = await auth()
+    const { userId, sessionClaims } = await auth()
     
     // If not signed in, redirect to sign-in page
     if (!userId) {
       const signInUrl = new URL('/sign-in', request.url)
       signInUrl.searchParams.set('redirect_url', request.url)
       return NextResponse.redirect(signInUrl)
+    }
+
+    // Check admin routes
+    if (isAdminRoute(request)) {
+      const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(',').map(e => e.trim()) || []
+      const userEmail = sessionClaims?.email as string | undefined
+      
+      if (!userEmail || !adminEmails.includes(userEmail)) {
+        // For UI routes, redirect to home
+        if (!request.url.includes('/api/')) {
+          return NextResponse.redirect(new URL('/', request.url))
+        }
+        
+        // For API routes, return 403
+        return NextResponse.json(
+          { error: 'Forbidden: Admin access required' },
+          { status: 403 }
+        )
+      }
     }
   }
 

@@ -840,26 +840,93 @@ export async function POST(req: Request) {
             console.log('🔥 [FILE-LOGGING] TikTok data saved! Check logs/api-raw/keyword/ directory');
         }
         
-        // Transform TikTok data with granular progress updates
+        // Transform TikTok data with granular progress updates and enhanced bio fetching
         const rawResults = apiResponse.search_item_list || [];
         const creators = [];
         const batchSize = 5; // Process in smaller batches for smoother progress
         
         console.log('🔄 [GRANULAR-PROGRESS] Processing', rawResults.length, 'TikTok results in batches of', batchSize);
+        console.log('🔍 [PROFILE-ENHANCEMENT] Starting enhanced profile data fetching for creators with missing bio data');
+        
+        // Email extraction regex
+        const emailRegex = /[\w\.-]+@[\w\.-]+\.\w+/g;
         
         for (let i = 0; i < rawResults.length; i += batchSize) {
           const batch = rawResults.slice(i, i + batchSize);
           
-          // Transform each batch
-          const batchCreators = batch.map((item: any) => {
+          // Transform each batch with enhanced bio fetching
+          const batchCreators = [];
+          
+          for (let j = 0; j < batch.length; j++) {
+            const item = batch[j];
             const awemeInfo = item.aweme_info || {};
             const author = awemeInfo.author || {};
             
-            return {
+            // Extract initial bio and emails
+            const initialBio = author.signature || '';
+            const initialEmails = initialBio.match(emailRegex) || [];
+            
+            console.log(`📝 [BIO-EXTRACTION] Processing item ${i + j + 1}:`, {
+              authorUniqueId: author.unique_id,
+              authorNickname: author.nickname,
+              rawSignature: author.signature || 'NO_SIGNATURE_FOUND',
+              initialBio: initialBio || 'NO_BIO_FOUND',
+              bioLength: initialBio.length,
+              initialEmails: initialEmails
+            });
+            
+            // Enhanced Profile Fetching: If no bio found, try to get full profile data
+            let enhancedBio = initialBio;
+            let enhancedEmails = initialEmails;
+
+            if (!initialBio && author.unique_id) {
+              try {
+                console.log(`🔍 [PROFILE-FETCH] Attempting to fetch full profile for @${author.unique_id}`);
+                
+                // Make profile API call to get bio data
+                const profileApiUrl = `https://api.scrapecreators.com/v1/tiktok/profile?handle=${encodeURIComponent(author.unique_id)}`;
+                const profileResponse = await fetch(profileApiUrl, {
+                  headers: { 'x-api-key': process.env.SCRAPECREATORS_API_KEY! }
+                });
+                
+                if (profileResponse.ok) {
+                  const profileData = await profileResponse.json();
+                  const profileUser = profileData.user || {};
+                  
+                  enhancedBio = profileUser.signature || profileUser.desc || profileUser.bio || '';
+                  const enhancedEmailMatches = enhancedBio.match(emailRegex) || [];
+                  enhancedEmails = enhancedEmailMatches;
+                  
+                  console.log(`✅ [PROFILE-FETCH] Successfully fetched profile for @${author.unique_id}:`, {
+                    bioFound: !!enhancedBio,
+                    bioLength: enhancedBio.length,
+                    emailsFound: enhancedEmails.length,
+                    bioPreview: enhancedBio.substring(0, 50) + (enhancedBio.length > 50 ? '...' : '')
+                  });
+                } else {
+                  console.log(`⚠️ [PROFILE-FETCH] Profile API failed for @${author.unique_id}: ${profileResponse.status}`);
+                }
+              } catch (profileError: any) {
+                console.log(`❌ [PROFILE-FETCH] Error fetching profile for @${author.unique_id}:`, profileError.message);
+              }
+            }
+
+            console.log(`📧 [EMAIL-EXTRACTION] Email extraction result:`, {
+              bioInput: enhancedBio,
+              emailsFound: enhancedEmails,
+              emailCount: enhancedEmails.length
+            });
+
+            const creatorData = {
               creator: {
                 name: author.nickname || author.unique_id || 'Unknown Creator',
                 followers: author.follower_count || 0,
                 avatarUrl: (author.avatar_medium?.url_list?.[0] || '').replace('.heic', '.jpeg'),
+                profilePicUrl: (author.avatar_medium?.url_list?.[0] || '').replace('.heic', '.jpeg'),
+                bio: enhancedBio,
+                emails: enhancedEmails,
+                uniqueId: author.unique_id || '',
+                verified: author.is_verified || false
               },
               video: {
                 description: awemeInfo.desc || 'No description',
@@ -867,13 +934,28 @@ export async function POST(req: Request) {
                 statistics: {
                   likes: awemeInfo.statistics?.digg_count || 0,
                   comments: awemeInfo.statistics?.comment_count || 0,
-                  views: awemeInfo.statistics?.play_count || 0
+                  views: awemeInfo.statistics?.play_count || 0,
+                  shares: awemeInfo.statistics?.share_count || 0
                 }
               },
               hashtags: awemeInfo.text_extra?.filter((e: any) => e.type === 1).map((e: any) => e.hashtag_name) || [],
               platform: 'TikTok'
             };
-          });
+
+            console.log(`🔄 [TRANSFORMATION] Bio & Email extraction:`, {
+              bioLength: enhancedBio.length,
+              bioPreview: enhancedBio.substring(0, 50) + (enhancedBio.length > 50 ? '...' : ''),
+              extractedEmails: enhancedEmails,
+              emailCount: enhancedEmails.length
+            });
+
+            batchCreators.push(creatorData);
+            
+            // Add delay between profile API calls to avoid rate limiting
+            if (j < batch.length - 1) {
+              await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
+            }
+          }
           
           creators.push(...batchCreators);
           

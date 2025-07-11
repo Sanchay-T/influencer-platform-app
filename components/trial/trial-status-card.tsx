@@ -2,16 +2,13 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { 
   Clock, 
   CheckCircle, 
   Calendar, 
-  Mail, 
   CreditCard, 
-  AlertTriangle,
-  Sparkles
+  AlertTriangle
 } from 'lucide-react';
 import { useFormattedCountdown, type TrialData } from '@/lib/hooks/useTrialCountdown';
 
@@ -159,25 +156,6 @@ export function TrialStatusCard({ trialData, className = '' }: TrialStatusCardPr
           </div>
         )}
 
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          {countdown.isExpired ? (
-            <Button className="w-full sm:flex-1 bg-blue-600 hover:bg-blue-700 text-white">
-              <CreditCard className="h-4 w-4 mr-2" />
-              Upgrade Now - $49/month
-            </Button>
-          ) : (
-            <>
-              <Button variant="outline" className="w-full sm:flex-1">
-                Cancel Trial
-              </Button>
-              <Button className="w-full sm:flex-1 bg-blue-600 hover:bg-blue-700 text-white">
-                <Sparkles className="h-4 w-4 mr-2" />
-                Upgrade Early
-              </Button>
-            </>
-          )}
-        </div>
       </CardContent>
     </Card>
   );

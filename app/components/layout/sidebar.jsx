@@ -5,11 +5,13 @@ import Link from "next/link";
 import { LayoutDashboard, Search, PlusCircle, LogOut, UserRoundCog, Settings, Mail } from "lucide-react";
 import { useRouter } from 'next/navigation'
 import { useClerk, useUser } from '@clerk/nextjs'
+import { useAdmin } from '@/lib/hooks/use-admin'
 
 export default function Sidebar() {
   const router = useRouter()
   const { signOut } = useClerk()
   const { user } = useUser()
+  const { isAdmin } = useAdmin()
   
   const handleLogout = async () => {
     try {
@@ -18,12 +20,6 @@ export default function Sidebar() {
     } catch (err) {
       console.error('Error al cerrar sesión:', err)
     }
-  }
-
-  // Simple admin check - in production, you'd want a more robust system
-  const isAdmin = () => {
-    const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(',') || [];
-    return adminEmails.includes(user?.emailAddresses[0]?.emailAddress || '');
   }
 
   return (
@@ -64,7 +60,7 @@ export default function Sidebar() {
             </Button>
           </Link>
 
-          {isAdmin() && (
+          {isAdmin && (
             <>
               <Link href="/admin/system-config">
                 <Button 

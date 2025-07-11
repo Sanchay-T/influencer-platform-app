@@ -704,6 +704,9 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
               })}
               
               {intermediateCreators.slice(-5).map((creator, index) => {
+                // Calculate the actual index in the full array
+                const actualIndex = intermediateCreators.length - 5 + index;
+                
                 // 🖼️ IMAGE PROXY: Use same logic as final table for proper image loading
                 const avatarUrl = creator.creator?.avatarUrl || creator.creator?.profilePicUrl || '';
                 const proxiedImageUrl = avatarUrl ? `/api/proxy/image?url=${encodeURIComponent(avatarUrl)}` : '';
@@ -711,6 +714,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
                 // 🔍 TARGETED DEBUG: Log each card being rendered
                 console.log(`🎭 [CARD-${index}] Rendering card:`, {
                   index: index,
+                  actualIndex: actualIndex,
                   name: creator.creator?.name,
                   username: creator.creator?.uniqueId,
                   avatarUrl: avatarUrl,
@@ -719,7 +723,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
                 
                 return (
                 <div 
-                  key={`${creator.creator?.uniqueId || creator.creator?.name || index}`}
+                  key={`progress-creator-${creator.creator?.uniqueId || actualIndex}-${creator.creator?.name || 'unknown'}-${actualIndex}`}
                   className="flex items-start gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-all duration-500 animate-in fade-in slide-in-from-bottom-4"
                   style={{ 
                     animationDelay: `${index * 50}ms`,
