@@ -30,7 +30,7 @@ graph TD
 
 | Platform | Keyword Search | Similar Search | Bio/Email Extraction | Image Support | API Endpoint |
 |----------|---------------|----------------|---------------------|---------------|--------------|
-| **TikTok** | ✅ | ✅ | ✅ Enhanced Profile Fetching | HEIC → JPEG | `/api/scraping/tiktok`, `/api/scraping/tiktok-similar` |
+| **TikTok** | ✅ | ✅ | ✅ Universal Enhanced Profile Fetching | HEIC → JPEG | `/api/scraping/tiktok`, `/api/scraping/tiktok-similar` |
 | **Instagram** | ✅ Hashtag Search | ✅ | ✅ Direct from API | Standard | `/api/scraping/instagram-hashtag`, `/api/scraping/instagram` |
 | **YouTube** | ✅ | ✅ | ✅ Enhanced Profile Fetching | Thumbnails | `/api/scraping/youtube`, `/api/scraping/youtube-similar` |
 
@@ -710,9 +710,9 @@ graph TD
 
 ### Implementation Details
 
-#### 1. **Backend Data Transformation** (`/app/api/qstash/process-scraping/route.ts`)
+#### 1. **TikTok Keyword Search** (`/app/api/qstash/process-scraping/route.ts`)
+Enhanced profile fetching when `author.signature` is undefined:
 
-**Enhanced Profile Fetching Logic** (Lines 743-779):
 ```javascript
 // Enhanced Profile Fetching: If no bio found, try to get full profile data
 let enhancedBio = bio;
@@ -722,7 +722,6 @@ if (!bio && author.unique_id) {
   try {
     console.log(`🔍 [PROFILE-FETCH] Attempting to fetch full profile for @${author.unique_id}`);
     
-    // Make profile API call to get bio data
     const profileApiUrl = `https://api.scrapecreators.com/v1/tiktok/profile?handle=${encodeURIComponent(author.unique_id)}`;
     const profileResponse = await fetch(profileApiUrl, {
       headers: { 'x-api-key': process.env.SCRAPECREATORS_API_KEY! }
@@ -742,7 +741,45 @@ if (!bio && author.unique_id) {
 }
 ```
 
-**Email Extraction Regex** (Lines 728-729):
+#### 2. **TikTok Similar Search** (`/lib/platforms/tiktok-similar/transformer.ts`)
+Enhanced bio extraction using `transformTikTokUserWithEnhancedBio()`:
+
+```javascript
+export async function transformTikTokUserWithEnhancedBio(userItem, searchKeyword) {
+  const userInfo = userItem.user_info;
+  let bio = userInfo.search_user_desc || '';
+  
+  // Enhanced profile fetching with 10s timeout
+  try {
+    const { getTikTokProfile } = await import('./api');
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Profile fetch timeout (10s)')), 10000);
+    });
+    
+    const profileData = await Promise.race([
+      getTikTokProfile(userInfo.unique_id),
+      timeoutPromise
+    ]);
+    
+    const enhancedBio = profileData.user?.signature || bio;
+    if (enhancedBio && enhancedBio.length > bio.length) {
+      bio = enhancedBio;
+    }
+  } catch (profileError) {
+    console.log(`⚠️ [ENHANCED-BIO] Failed to fetch profile: ${profileError.message}`);
+  }
+  
+  // Extract emails from enhanced bio
+  const emailRegex = /[\w\.-]+@[\w\.-]+\.\w+/g;
+  const extractedEmails = bio.match(emailRegex) || [];
+  
+  return { bio, emails: extractedEmails, ...otherUserData };
+}
+```
+
+#### 3. **Universal Email Extraction**
+Both search types use the same email regex pattern:
+
 ```javascript
 const emailRegex = /[\w\.-]+@[\w\.-]+\.\w+/g;
 const extractedEmails = bio.match(emailRegex) || [];
