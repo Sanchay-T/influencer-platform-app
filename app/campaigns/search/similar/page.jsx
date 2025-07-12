@@ -10,7 +10,7 @@ export default function SimilarCreatorSearch() {
   const [searchData, setSearchData] = useState({
     jobId: null,
     campaignId: null,
-    platform: 'instagram',
+    platform: 'tiktok',
     targetUsername: ''
   });
   const [isLoading, setIsLoading] = useState(true);

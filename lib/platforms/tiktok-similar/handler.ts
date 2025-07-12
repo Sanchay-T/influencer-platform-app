@@ -105,10 +105,12 @@ export async function processTikTokSimilarJob(job: any, jobId: string) {
         }).where(eq(scrapingJobs.id, jobId));
         
         if (searchResponse.users && searchResponse.users.length > 0) {
-          // Fast basic transformation only - no additional API calls
-          console.log(`🔄 [FAST-TRANSFORM] Processing ${searchResponse.users.length} users with basic bio extraction`);
+          // Enhanced transformation with individual profile API calls for bio/email extraction
+          console.log(`🔄 [ENHANCED-TRANSFORM] Processing ${searchResponse.users.length} users with enhanced bio extraction`);
           
-          const transformedUsers = transformTikTokUsers(searchResponse, keyword);
+          const transformedUsers = await Promise.all(
+            searchResponse.users.map(user => transformTikTokUserWithEnhancedBio(user, keyword))
+          );
           
           console.log(`🔄 [TRANSFORMATION] Fast transformation completed: ${transformedUsers.length} total users for keyword "${keyword}"`);
           if (transformedUsers[0]) {

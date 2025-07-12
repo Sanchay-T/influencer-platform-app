@@ -21,7 +21,7 @@ import { Loader2 } from "lucide-react";
 
 export function SimilarSearchForm({ campaignId, onSuccess }) {
   const [username, setUsername] = useState("");
-  const [platform, setPlatform] = useState("instagram"); // instagram, tiktok, or youtube
+  const [platform, setPlatform] = useState("tiktok"); // tiktok, instagram, or youtube
   const [searchState, setSearchState] = useState({
     status: 'idle', // idle, searching, processing
     message: '',
@@ -143,17 +143,17 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
             <div className="flex space-x-4">
               <div className="flex items-center">
                 <Checkbox
-                  checked={platform === "instagram"}
-                  onCheckedChange={() => setPlatform("instagram")}
-                />
-                <span className="ml-2">Instagram</span>
-              </div>
-              <div className="flex items-center">
-                <Checkbox
                   checked={platform === "tiktok"}
                   onCheckedChange={() => setPlatform("tiktok")}
                 />
                 <span className="ml-2">TikTok</span>
+              </div>
+              <div className="flex items-center">
+                <Checkbox
+                  checked={platform === "instagram"}
+                  onCheckedChange={() => setPlatform("instagram")}
+                />
+                <span className="ml-2">Instagram</span>
               </div>
               <div className="flex items-center">
                 <Checkbox
