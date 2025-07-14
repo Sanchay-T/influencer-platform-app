@@ -64,6 +64,13 @@
       "when": 1751983236826,
       "tag": "0008_nifty_stick",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1752324786798,
+      "tag": "0009_silky_moon_knight",
+      "breakpoints": false
     }
   ]
 }

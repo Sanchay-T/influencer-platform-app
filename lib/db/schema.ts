@@ -104,9 +104,13 @@ export const userProfiles = pgTable('user_profiles', {
   trialStartDate: timestamp('trial_start_date'),
   trialEndDate: timestamp('trial_end_date'),
   trialStatus: varchar('trial_status', { length: 20 }).default('pending'), // 'pending', 'active', 'expired', 'cancelled', 'converted'
-  stripeCustomerId: text('stripe_customer_id'),
-  stripeSubscriptionId: text('stripe_subscription_id'),
+  stripeCustomerId: text('stripe_customer_id'), // Repurposed for Clerk billing customer ID
+  stripeSubscriptionId: text('stripe_subscription_id'), // Repurposed for Clerk billing subscription ID
   subscriptionStatus: varchar('subscription_status', { length: 20 }).default('none'), // 'none', 'trialing', 'active', 'past_due', 'canceled'
+  // Clerk billing fields
+  clerkCustomerId: text('clerk_customer_id'),
+  clerkSubscriptionId: text('clerk_subscription_id'),
+  currentPlan: varchar('current_plan', { length: 20 }).default('free'), // 'free', 'premium', 'enterprise'
   // Admin system field
   isAdmin: boolean('is_admin').default(false), // Database-based admin role
   createdAt: timestamp('created_at').notNull().defaultNow(),

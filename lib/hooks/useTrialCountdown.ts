@@ -129,7 +129,7 @@ export function useTrialCountdown(initialTrialData?: TrialData | null) {
       
       if (profileData.trialData) {
         console.log('✅ [TRIAL-COUNTDOWN] Trial data refreshed:', {
-          status: profileData.trialData.status,
+          status: profileData.trialData.status,   
           endDate: profileData.trialData.endDate,
           daysRemaining: profileData.trialData.daysRemaining
         });

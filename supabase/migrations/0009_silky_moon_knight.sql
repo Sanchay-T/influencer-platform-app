@@ -1,0 +1,10 @@
+ALTER TABLE "user_profiles" ADD COLUMN "trial_start_date" timestamp;
+ALTER TABLE "user_profiles" ADD COLUMN "trial_end_date" timestamp;
+ALTER TABLE "user_profiles" ADD COLUMN "trial_status" varchar(20) DEFAULT 'pending';
+ALTER TABLE "user_profiles" ADD COLUMN "stripe_customer_id" text;
+ALTER TABLE "user_profiles" ADD COLUMN "stripe_subscription_id" text;
+ALTER TABLE "user_profiles" ADD COLUMN "subscription_status" varchar(20) DEFAULT 'none';
+ALTER TABLE "user_profiles" ADD COLUMN "clerk_customer_id" text;
+ALTER TABLE "user_profiles" ADD COLUMN "clerk_subscription_id" text;
+ALTER TABLE "user_profiles" ADD COLUMN "current_plan" varchar(20) DEFAULT 'free';
+ALTER TABLE "user_profiles" ADD COLUMN "is_admin" boolean DEFAULT false;

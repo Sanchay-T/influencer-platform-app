@@ -4,7 +4,7 @@ const path = require('path');
 
 async function runMigration() {
   // Read the latest migration
-  const migrationPath = path.join(__dirname, 'supabase/migrations/0009_trial_system.sql');
+  const migrationPath = path.join(__dirname, 'supabase/migrations/0012_clerk_billing_fields.sql');
   const migrationSql = fs.readFileSync(migrationPath, 'utf8');
   
   // Split by statement breakpoints and clean up

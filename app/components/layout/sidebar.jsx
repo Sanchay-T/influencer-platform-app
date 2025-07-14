@@ -2,10 +2,11 @@
 
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { LayoutDashboard, Search, PlusCircle, LogOut, UserRoundCog, Settings, Mail } from "lucide-react";
+import { LayoutDashboard, Search, PlusCircle, LogOut, UserRoundCog, Settings, Mail, CreditCard } from "lucide-react";
 import { useRouter } from 'next/navigation'
 import { useClerk, useUser } from '@clerk/nextjs'
 import { useAdmin } from '@/lib/hooks/use-admin'
+import { TrialSidebarIndicator } from '@/app/components/trial/trial-sidebar-indicator'
 
 export default function Sidebar() {
   const router = useRouter()
@@ -60,6 +61,26 @@ export default function Sidebar() {
             </Button>
           </Link>
 
+          <Link href="/billing">
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100"
+            >
+              <CreditCard className="mr-2 h-4 w-4" />
+              Billing & Plans
+            </Button>
+          </Link>
+
+          <Link href="/pricing">
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100"
+            >
+              <CreditCard className="mr-2 h-4 w-4" />
+              View All Plans
+            </Button>
+          </Link>
+
           {isAdmin && (
             <>
               <Link href="/admin/system-config">
@@ -84,6 +105,9 @@ export default function Sidebar() {
             </>
           )}
         </nav>
+        
+        {/* Trial Status Indicator */}
+        <TrialSidebarIndicator />
       </div>
 
       <div className="space-y-4">

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import ExportButton from '../export-button';
 import { cn } from "@/lib/utils";
+import { FeatureGate } from '@/app/components/billing/protect';
 import {
   Table,
   TableBody,
@@ -349,7 +350,18 @@ const SearchResults = ({ searchData }) => {
           <div className="text-sm text-muted-foreground">
             Page {currentPage} of {Math.ceil(creators.length / itemsPerPage)} • Showing {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, creators.length)} of {creators.length}
           </div>
-          {(searchData?.campaignId || searchData?.jobId) && <ExportButton campaignId={searchData.campaignId} jobId={searchData.jobId} />}
+          {(searchData?.campaignId || searchData?.jobId) && (
+            <FeatureGate 
+              feature="csv_export"
+              fallback={
+                <Button variant="outline" disabled>
+                  Export CSV (Premium)
+                </Button>
+              }
+            >
+              <ExportButton campaignId={searchData.campaignId} jobId={searchData.jobId} />
+            </FeatureGate>
+          )}
         </div>
       </div>
 

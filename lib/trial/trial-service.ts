@@ -1,6 +1,7 @@
 import { db } from '@/lib/db';
 import { userProfiles } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { ClerkBillingService } from '@/lib/billing/clerk-billing';
 
 // Trial status types
 export type TrialStatus = 'pending' | 'active' | 'expired' | 'cancelled' | 'converted';
@@ -22,6 +23,11 @@ export interface TrialData {
   subscriptionStatus: SubscriptionStatus;
   isExpired: boolean;
   timeUntilExpiry: string;
+  // Clerk billing fields
+  clerkCustomerId: string | null;
+  clerkSubscriptionId: string | null;
+  currentPlan: 'free' | 'premium' | 'enterprise';
+  hasActiveSubscription: boolean;
 }
 
 // Countdown calculation interface
@@ -89,9 +95,9 @@ export function calculateCountdown(trialEndDate: Date): CountdownData {
 }
 
 /**
- * Start a 7-day trial for a user
+ * Start a 7-day trial for a user with Clerk billing integration
  */
-export async function startTrial(userId: string, mockStripeData?: {
+export async function startTrial(userId: string, clerkBillingData?: {
   customerId: string;
   subscriptionId: string;
 }): Promise<TrialData> {
@@ -106,6 +112,9 @@ export async function startTrial(userId: string, mockStripeData?: {
       endDate: trialEndDate.toISOString()
     });
 
+    // Get current billing status from Clerk
+    const billingStatus = await ClerkBillingService.getUserBillingStatus(userId);
+
     // Update user profile with trial information
     await db.update(userProfiles)
       .set({
@@ -113,14 +122,19 @@ export async function startTrial(userId: string, mockStripeData?: {
         trialEndDate: trialEndDate,
         trialStatus: 'active',
         subscriptionStatus: 'trialing',
-        stripeCustomerId: mockStripeData?.customerId || null,
-        stripeSubscriptionId: mockStripeData?.subscriptionId || null,
+        clerkCustomerId: clerkBillingData?.customerId || null,
+        clerkSubscriptionId: clerkBillingData?.subscriptionId || null,
+        currentPlan: billingStatus.currentPlan,
+        // Keep legacy Stripe fields for compatibility
+        stripeCustomerId: clerkBillingData?.customerId || null,
+        stripeSubscriptionId: clerkBillingData?.subscriptionId || null,
         updatedAt: new Date()
       })
       .where(eq(userProfiles.userId, userId));
 
     console.log('✅ [TRIAL-SERVICE] Trial started successfully');
-    console.log('💳 [TRIAL-SERVICE] Mock Stripe data:', mockStripeData || 'None');
+    console.log('💳 [TRIAL-SERVICE] Clerk billing data:', clerkBillingData || 'None');
+    console.log('📋 [TRIAL-SERVICE] Current plan:', billingStatus.currentPlan);
 
     // Calculate countdown data
     const countdown = calculateCountdown(trialEndDate);
@@ -131,9 +145,13 @@ export async function startTrial(userId: string, mockStripeData?: {
       trialStartDate: now,
       trialEndDate: trialEndDate,
       ...countdown,
-      stripeCustomerId: mockStripeData?.customerId || null,
-      stripeSubscriptionId: mockStripeData?.subscriptionId || null,
-      subscriptionStatus: 'trialing'
+      stripeCustomerId: clerkBillingData?.customerId || null,
+      stripeSubscriptionId: clerkBillingData?.subscriptionId || null,
+      subscriptionStatus: 'trialing',
+      clerkCustomerId: clerkBillingData?.customerId || null,
+      clerkSubscriptionId: clerkBillingData?.subscriptionId || null,
+      currentPlan: billingStatus.currentPlan,
+      hasActiveSubscription: billingStatus.isActive && !billingStatus.isTrialing
     };
 
     console.log('⏰ [TRIAL-SERVICE] Countdown calculated:', {
@@ -151,7 +169,7 @@ export async function startTrial(userId: string, mockStripeData?: {
 }
 
 /**
- * Get current trial status for a user
+ * Get current trial status for a user with Clerk billing integration
  */
 export async function getTrialStatus(userId: string): Promise<TrialData | null> {
   try {
@@ -167,10 +185,32 @@ export async function getTrialStatus(userId: string): Promise<TrialData | null> 
       return null;
     }
 
-    // If no trial dates, return null
+    // Get current billing status from Clerk
+    const billingStatus = await ClerkBillingService.getUserBillingStatus(userId);
+
+    // If no trial dates, create default trial data with billing info
     if (!userProfile.trialStartDate || !userProfile.trialEndDate) {
-      console.log('ℹ️ [TRIAL-SERVICE] No trial data found for user');
-      return null;
+      console.log('ℹ️ [TRIAL-SERVICE] No trial data found, using billing status');
+      return {
+        userId,
+        trialStatus: 'pending',
+        trialStartDate: null,
+        trialEndDate: null,
+        daysRemaining: 0,
+        hoursRemaining: 0,
+        minutesRemaining: 0,
+        totalDaysElapsed: 0,
+        progressPercentage: 0,
+        isExpired: false,
+        timeUntilExpiry: 'No trial',
+        stripeCustomerId: userProfile.stripeCustomerId,
+        stripeSubscriptionId: userProfile.stripeSubscriptionId,
+        subscriptionStatus: userProfile.subscriptionStatus as SubscriptionStatus,
+        clerkCustomerId: userProfile.clerkCustomerId,
+        clerkSubscriptionId: userProfile.clerkSubscriptionId,
+        currentPlan: billingStatus.currentPlan,
+        hasActiveSubscription: billingStatus.isActive && !billingStatus.isTrialing
+      };
     }
 
     // Calculate current countdown
@@ -201,14 +241,20 @@ export async function getTrialStatus(userId: string): Promise<TrialData | null> 
       ...countdown,
       stripeCustomerId: userProfile.stripeCustomerId,
       stripeSubscriptionId: userProfile.stripeSubscriptionId,
-      subscriptionStatus: userProfile.subscriptionStatus as SubscriptionStatus
+      subscriptionStatus: userProfile.subscriptionStatus as SubscriptionStatus,
+      clerkCustomerId: userProfile.clerkCustomerId,
+      clerkSubscriptionId: userProfile.clerkSubscriptionId,
+      currentPlan: billingStatus.currentPlan,
+      hasActiveSubscription: billingStatus.isActive && !billingStatus.isTrialing
     };
 
     console.log('📊 [TRIAL-SERVICE] Trial status retrieved:', {
       status: currentTrialStatus,
       daysRemaining: countdown.daysRemaining,
       progressPercentage: countdown.progressPercentage,
-      isExpired: countdown.isExpired
+      isExpired: countdown.isExpired,
+      currentPlan: billingStatus.currentPlan,
+      hasActiveSubscription: trialData.hasActiveSubscription
     });
 
     return trialData;

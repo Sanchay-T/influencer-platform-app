@@ -120,41 +120,6 @@ export function TrialStatusCard({ trialData, className = '' }: TrialStatusCardPr
           </div>
         </div>
 
-        {/* Mock Stripe Information */}
-        {(trialData.stripeCustomerId || trialData.stripeSubscriptionId) && (
-          <div className="bg-white rounded-lg p-4 border border-gray-200">
-            <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
-              <CreditCard className="h-4 w-4" />
-              Subscription Details
-            </h4>
-            <div className="space-y-2 text-sm">
-              {trialData.stripeCustomerId && (
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Customer ID:</span>
-                  <code className="text-xs bg-gray-100 px-2 py-1 rounded">
-                    {trialData.stripeCustomerId} <span className="text-blue-600">(MOCK)</span>
-                  </code>
-                </div>
-              )}
-              {trialData.stripeSubscriptionId && (
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Subscription ID:</span>
-                  <code className="text-xs bg-gray-100 px-2 py-1 rounded">
-                    {trialData.stripeSubscriptionId} <span className="text-blue-600">(MOCK)</span>
-                  </code>
-                </div>
-              )}
-              {trialData.subscriptionStatus && (
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Status:</span>
-                  <Badge variant="outline" className="text-xs">
-                    {trialData.subscriptionStatus}
-                  </Badge>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
 
       </CardContent>
     </Card>

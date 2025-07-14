@@ -25,10 +25,14 @@ import { Label } from "@/components/ui/label";
 import TrialStatusCard from '@/components/trial/trial-status-card';
 import TrialStatusCardUser from '@/components/trial/trial-status-card-user';
 import EmailScheduleDisplay from '@/components/trial/email-schedule-display';
+import { PlanBadge } from '@/app/components/billing/protect';
+import { useBilling } from '@/lib/hooks/use-billing';
+import Link from 'next/link';
 
 export default function ProfileSettingsPage() {
   const { user, isLoaded } = useUser();
   const { isAdmin } = useAdmin();
+  const { currentPlan, needsUpgrade } = useBilling();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [userProfile, setUserProfile] = useState({
@@ -265,6 +269,49 @@ export default function ProfileSettingsPage() {
                 </CardContent>
               </Card>
 
+              {/* Subscription Plan Card */}
+              <Card className="h-fit">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    Subscription Plan
+                    <PlanBadge />
+                  </CardTitle>
+                  <CardDescription>
+                    Manage your subscription and billing
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Current Plan</Label>
+                      <p className="text-sm text-muted-foreground">
+                        You are currently on the {currentPlan?.charAt(0).toUpperCase() + currentPlan?.slice(1)} plan
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Link href="/pricing" className="flex-1">
+                        <Button 
+                          variant={needsUpgrade ? "default" : "outline"}
+                          className="w-full"
+                        >
+                          {needsUpgrade ? "Upgrade Plan" : "View Plans"}
+                        </Button>
+                      </Link>
+                      {!needsUpgrade && (
+                        <Button 
+                          variant="outline" 
+                          onClick={() => window.open('/api/billing/portal', '_blank')}
+                          className="flex items-center gap-2"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          Billing
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* Account Management Card */}
               <Card className="h-fit">
                 <CardHeader>
@@ -296,65 +343,6 @@ export default function ProfileSettingsPage() {
             </div>
           </section>
 
-          {/* Debug Section - Only visible to admins in development */}
-          {process.env.NODE_ENV === 'development' && isAdmin && userProfile.trialData && (
-            <section>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Debug Information</h2>
-              <Card className="border-orange-200 bg-orange-50">
-                <CardHeader>
-                  <CardTitle className="text-orange-800">Development Tools</CardTitle>
-                  <CardDescription className="text-orange-600">
-                    Trial system debugging data (development only)
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="font-medium text-sm text-orange-800 mb-2">Trial Data:</h4>
-                      <pre className="text-xs bg-white p-3 rounded border overflow-auto max-h-40">
-                        {JSON.stringify(userProfile.trialData, null, 2) || 'No trial data'}
-                      </pre>
-                    </div>
-                    
-                    <div>
-                      <h4 className="font-medium text-sm text-orange-800 mb-2">Email Schedule Status:</h4>
-                      <pre className="text-xs bg-white p-3 rounded border overflow-auto max-h-32">
-                        {JSON.stringify(userProfile.emailScheduleStatus, null, 2) || 'No email schedule data'}
-                      </pre>
-                    </div>
-
-                    <div>
-                      <h4 className="font-medium text-sm text-orange-800 mb-2">Actions:</h4>
-                      <div className="flex gap-2 flex-wrap">
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => {
-                            console.log('🔄 [DEBUG] Manual profile refresh triggered');
-                            getUserProfile();
-                          }}
-                          className="bg-white hover:bg-orange-50"
-                        >
-                          Refresh Profile Data
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => {
-                            console.log('📊 [DEBUG] Current profile state:', userProfile);
-                            console.log('👤 [DEBUG] Clerk user data:', user);
-                          }}
-                          className="bg-white hover:bg-orange-50"
-                        >
-                          Log Current State
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </section>
-          )}
         </div>
       </div>
     </DashboardLayout>

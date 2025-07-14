@@ -17,7 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "react-hot-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, Lock } from "lucide-react";
+import { FeatureGate } from '@/app/components/billing/protect';
 
 export function SimilarSearchForm({ campaignId, onSuccess }) {
   const [username, setUsername] = useState("");
@@ -148,20 +149,54 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
                 />
                 <span className="ml-2">TikTok</span>
               </div>
-              <div className="flex items-center">
-                <Checkbox
-                  checked={platform === "instagram"}
-                  onCheckedChange={() => setPlatform("instagram")}
-                />
-                <span className="ml-2">Instagram</span>
-              </div>
-              <div className="flex items-center">
-                <Checkbox
-                  checked={platform === "youtube"}
-                  onCheckedChange={() => setPlatform("youtube")}
-                />
-                <span className="ml-2">YouTube</span>
-              </div>
+              <FeatureGate 
+                feature="instagram_search"
+                fallback={
+                  <div className="flex items-center opacity-50">
+                    <Checkbox
+                      checked={false}
+                      disabled
+                    />
+                    <span className="ml-2 flex items-center gap-1">
+                      Instagram 
+                      <Lock className="h-3 w-3" />
+                      <span className="text-xs text-blue-600">(Premium)</span>
+                    </span>
+                  </div>
+                }
+              >
+                <div className="flex items-center">
+                  <Checkbox
+                    checked={platform === "instagram"}
+                    onCheckedChange={() => setPlatform("instagram")}
+                  />
+                  <span className="ml-2">Instagram</span>
+                </div>
+              </FeatureGate>
+              <FeatureGate 
+                feature="youtube_search"
+                fallback={
+                  <div className="flex items-center opacity-50">
+                    <Checkbox
+                      checked={false}
+                      disabled
+                    />
+                    <span className="ml-2 flex items-center gap-1">
+                      YouTube 
+                      <Lock className="h-3 w-3" />
+                      <span className="text-xs text-blue-600">(Premium)</span>
+                    </span>
+                  </div>
+                }
+              >
+                <div className="flex items-center">
+                  <Checkbox
+                    checked={platform === "youtube"}
+                    onCheckedChange={() => setPlatform("youtube")}
+                  />
+                  <span className="ml-2">YouTube</span>
+                </div>
+              </FeatureGate>
             </div>
           </div>
 
