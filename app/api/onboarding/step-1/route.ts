@@ -66,6 +66,78 @@ export async function PATCH(request: Request) {
 
       console.log('✅✅✅ [ONBOARDING-STEP1] PROFILE UPDATED SUCCESSFULLY');
       console.log('💾 [ONBOARDING-STEP1] Update completed in:', Date.now() - startTime, 'ms');
+
+      // Schedule welcome email for existing users too (if not already sent)
+      const userEmail = await getUserEmailFromClerk(userId);
+      
+      if (userEmail && await shouldSendEmail(userId, 'welcome')) {
+        console.log('📧📧📧 [ONBOARDING-STEP1] SCHEDULING WELCOME EMAIL FOR EXISTING USER');
+        console.log('📧 [ONBOARDING-STEP1] Email details:', {
+          targetEmail: userEmail,
+          emailType: 'welcome',
+          fullName: fullName.trim(),
+          businessName: businessName.trim(),
+          dashboardUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/onboarding/step-2`
+        });
+        
+        const emailResult = await scheduleEmail({
+          userId,
+          emailType: 'welcome',
+          userEmail,
+          templateProps: {
+            fullName: fullName.trim(),
+            businessName: businessName.trim(),
+            dashboardUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/onboarding/step-2`
+          }
+        });
+
+        if (emailResult.success) {
+          await updateEmailScheduleStatus(userId, 'welcome', 'scheduled', emailResult.messageId);
+          console.log('✅✅✅ [ONBOARDING-STEP1] WELCOME EMAIL SCHEDULED FOR EXISTING USER');
+          console.log('📧 [ONBOARDING-STEP1] Welcome email details:', {
+            messageId: emailResult.messageId,
+            scheduledFor: 'In 10 minutes',
+            qstashId: 'N/A'
+          });
+        } else {
+          console.error('❌ [ONBOARDING-STEP1] Welcome email scheduling failed:', emailResult.error);
+        }
+      }
+
+      // Schedule abandonment email for existing users too (if not already sent)
+      if (userEmail && await shouldSendEmail(userId, 'abandonment')) {
+        console.log('📧📧📧 [ONBOARDING-STEP1] SCHEDULING ABANDONMENT EMAIL FOR EXISTING USER');
+        console.log('📧 [ONBOARDING-STEP1] Abandonment email details:', {
+          targetEmail: userEmail,
+          emailType: 'abandonment',
+          scheduledFor: '2 hours after signup',
+          fullName: fullName.trim(),
+          businessName: businessName.trim()
+        });
+        
+        const abandonmentResult = await scheduleEmail({
+          userId,
+          emailType: 'abandonment',
+          userEmail,
+          templateProps: {
+            fullName: fullName.trim(),
+            businessName: businessName.trim(),
+            dashboardUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/onboarding/step-2`
+          }
+        });
+
+        if (abandonmentResult.success) {
+          await updateEmailScheduleStatus(userId, 'abandonment', 'scheduled', abandonmentResult.messageId);
+          console.log('✅✅✅ [ONBOARDING-STEP1] ABANDONMENT EMAIL SCHEDULED FOR EXISTING USER');
+          console.log('📧 [ONBOARDING-STEP1] Abandonment email details:', {
+            messageId: abandonmentResult.messageId,
+            scheduledFor: 'In 2 hours',
+            qstashId: 'N/A'
+          });
+        } else {
+          console.error('❌ [ONBOARDING-STEP1] Abandonment email scheduling failed:', abandonmentResult.error);
+        }
+      }
     } else {
       // Create new profile
       console.log('🆕🆕🆕 [ONBOARDING-STEP1] CREATING NEW PROFILE');
@@ -112,8 +184,8 @@ export async function PATCH(request: Request) {
           console.log('✅✅✅ [ONBOARDING-STEP1] WELCOME EMAIL SCHEDULED SUCCESSFULLY');
           console.log('📧 [ONBOARDING-STEP1] Welcome email details:', {
             messageId: emailResult.messageId,
-            scheduledFor: emailResult.deliveryTime,
-            qstashId: emailResult.qstashId || 'N/A'
+            scheduledFor: 'In 10 minutes',
+            qstashId: 'N/A'
           });
         } else {
           console.error('❌ [ONBOARDING-STEP1] Welcome email scheduling failed:', emailResult.error);
@@ -147,8 +219,8 @@ export async function PATCH(request: Request) {
           console.log('✅✅✅ [ONBOARDING-STEP1] ABANDONMENT EMAIL SCHEDULED SUCCESSFULLY');
           console.log('📧 [ONBOARDING-STEP1] Abandonment email details:', {
             messageId: abandonmentResult.messageId,
-            scheduledFor: abandonmentResult.deliveryTime,
-            qstashId: abandonmentResult.qstashId || 'N/A'
+            scheduledFor: 'In 2 hours',
+            qstashId: 'N/A'
           });
         } else {
           console.error('❌ [ONBOARDING-STEP1] Abandonment email scheduling failed:', abandonmentResult.error);

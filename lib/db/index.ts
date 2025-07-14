@@ -11,9 +11,9 @@ import * as schema from './schema';
  */
 
 declare global {
-  // eslint-disable-next-line no-var
+   
   var __queryClient: ReturnType<typeof postgres> | undefined;
-  // eslint-disable-next-line no-var
+   
   var __db: ReturnType<typeof drizzle> | undefined;
 }
 
