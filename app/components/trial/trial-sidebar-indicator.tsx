@@ -1,19 +1,105 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Clock, Zap, AlertTriangle } from 'lucide-react';
+import { Clock, Zap, AlertTriangle, Crown, Star, CheckCircle, Settings } from 'lucide-react';
 import { useBilling } from '@/lib/hooks/use-billing';
 import { useFormattedCountdown } from '@/lib/hooks/useTrialCountdown';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import Link from 'next/link';
 
+// Subscription Badge Component for Paid Users
+function SubscriptionBadge({ currentPlan }: { currentPlan: string }) {
+  const getPlanDetails = () => {
+    switch (currentPlan) {
+      case 'basic':
+        return {
+          name: 'Basic',
+          icon: Star,
+          color: 'from-blue-50 to-blue-100',
+          borderColor: 'border-blue-200',
+          textColor: 'text-blue-900',
+          iconColor: 'text-blue-600'
+        };
+      case 'premium':
+        return {
+          name: 'Premium',
+          icon: Zap,
+          color: 'from-purple-50 to-purple-100',
+          borderColor: 'border-purple-200',
+          textColor: 'text-purple-900',
+          iconColor: 'text-purple-600'
+        };
+      case 'enterprise':
+        return {
+          name: 'Enterprise',
+          icon: Crown,
+          color: 'from-amber-50 to-amber-100',
+          borderColor: 'border-amber-200',
+          textColor: 'text-amber-900',
+          iconColor: 'text-amber-600'
+        };
+      default:
+        return {
+          name: 'Basic',
+          icon: Star,
+          color: 'from-blue-50 to-blue-100',
+          borderColor: 'border-blue-200',
+          textColor: 'text-blue-900',
+          iconColor: 'text-blue-600'
+        };
+    }
+  };
+
+  const planDetails = getPlanDetails();
+  const IconComponent = planDetails.icon;
+
+  return (
+    <div className={`bg-gradient-to-r ${planDetails.color} border ${planDetails.borderColor} rounded-lg p-3 space-y-3`}>
+      {/* Subscription Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className={`p-1 bg-white bg-opacity-50 rounded-full`}>
+            <IconComponent className={`h-3 w-3 ${planDetails.iconColor}`} />
+          </div>
+          <span className={`text-sm font-medium ${planDetails.textColor}`}>
+            {planDetails.name} Plan
+          </span>
+        </div>
+        <CheckCircle className="h-3 w-3 text-green-500" />
+      </div>
+
+      {/* Status */}
+      <div className="text-center">
+        <div className={`text-lg font-bold ${planDetails.textColor}`}>
+          Active
+        </div>
+        <p className={`text-xs ${planDetails.textColor} opacity-75`}>
+          All features unlocked
+        </p>
+      </div>
+
+      {/* Manage Subscription */}
+      <Link href="/billing" className="block">
+        <Button 
+          size="sm" 
+          variant="outline"
+          className="w-full text-xs border-white/50 hover:bg-white/20"
+        >
+          <Settings className="h-3 w-3 mr-1" />
+          Manage Subscription
+        </Button>
+      </Link>
+    </div>
+  );
+}
+
 export function TrialSidebarIndicator() {
-  const { currentPlan, isTrialing, trialStatus, usageInfo } = useBilling();
+  const { currentPlan, isTrialing, trialStatus, usageInfo, isPaidUser, hasActiveSubscription } = useBilling();
   const [trialData, setTrialData] = useState(null);
   const countdown = useFormattedCountdown(trialData);
 
-  // Fetch trial data for countdown
+  // Fetch trial data for countdown - always call hooks first
   useEffect(() => {
     if (isTrialing) {
       fetch('/api/profile')
@@ -26,6 +112,11 @@ export function TrialSidebarIndicator() {
         .catch(err => console.error('Failed to fetch trial data:', err));
     }
   }, [isTrialing]);
+
+  // If user has active paid subscription, show subscription badge instead
+  if (isPaidUser && hasActiveSubscription && currentPlan !== 'free_trial') {
+    return <SubscriptionBadge currentPlan={currentPlan} />;
+  }
 
   // Don't show for non-trial users
   if (currentPlan !== 'free_trial' || !isTrialing) {

@@ -1,0 +1,67 @@
+{
+  "query": "food",
+  "statusCode": 200,
+  "data": {
+    "reels_serp_modules": [],
+    "has_more": false,
+    "other_results": {
+      "keyword_recommendations": {
+        "keywords": [
+          {
+            "id": 8426771523104412000,
+            "name": "box braids",
+            "is_popular": false
+          },
+          {
+            "id": 6507649540427480000,
+            "name": "toy poodle",
+            "is_popular": false
+          },
+          {
+            "id": 7446997258677982000,
+            "name": "space painting",
+            "is_popular": false
+          },
+          {
+            "id": 7558351354859620000,
+            "name": "food photography",
+            "is_popular": false
+          },
+          {
+            "id": 3159661734608291000,
+            "name": "yard work",
+            "is_popular": false
+          },
+          {
+            "id": 6708275338809419000,
+            "name": "fitness motivation",
+            "is_popular": false
+          },
+          {
+            "id": 1064159535119609600,
+            "name": "teacher outfit",
+            "is_popular": false
+          },
+          {
+            "id": 5301341567132814000,
+            "name": "boxing motivation",
+            "is_popular": false
+          },
+          {
+            "id": 4059621759796041700,
+            "name": "rainbow makeup",
+            "is_popular": false
+          },
+          {
+            "id": 7549119303694342000,
+            "name": "breakfast recipes",
+            "is_popular": false
+          }
+        ],
+        "title": "Popular Searches"
+      }
+    },
+    "status": "ok"
+  },
+  "rawResponse": "{\"reels_serp_modules\":[],\"has_more\":false,\"other_results\":{\"keyword_recommendations\":{\"keywords\":[{\"id\":8426771523104411543,\"name\":\"box braids\",\"is_popular\":false},{\"id\":6507649540427479701,\"name\":\"toy poodle\",\"is_popular\":false},{\"id\":7446997258677981937,\"name\":\"space painting\",\"is_popular\":false},{\"id\":7558351354859620503,\"name\":\"food photography\",\"is_popular\":false},{\"id\":3159661734608290806,\"name\":\"yard work\",\"is_popular\":false},{\"id\":6708275338809418749,\"name\":\"fitness motivation\",\"is_popular\":false},{\"id\":1064159535119609626,\"name\":\"teacher outfit\",\"is_popular\":false},{\"id\":5301341567132814379,\"name\":\"boxing motivation\",\"is_popular\":false},{\"id\":4059621759796041546,\"name\":\"rainbow makeup\",\"is_popular\":false},{\"id\":7549119303694342158,\"name\":\"breakfast recipes\",\"is_popular\":false}],\"title\":\"Popular Searches\"}},\"status\":\"ok\"}"
+}

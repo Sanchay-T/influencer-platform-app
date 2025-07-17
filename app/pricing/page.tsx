@@ -250,7 +250,11 @@ const PricingPageContent = () => {
 
       {/* Pricing Cards */}
       <div className="flex justify-center px-4">
-        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 max-w-7xl w-full">
+        <div className={`grid gap-6 grid-cols-1 sm:grid-cols-2 ${
+          plans.length === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'
+        } max-w-7xl w-full ${
+          plans.length === 3 ? 'lg:max-w-5xl' : ''
+        }`}>
         {plans.map((plan, index) => {
           const Icon = plan.icon;
           return (

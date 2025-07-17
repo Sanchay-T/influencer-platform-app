@@ -1,0 +1,945 @@
+{
+  "timestamp": "2025-07-17T10:50:38.357Z",
+  "platform": "youtube",
+  "searchType": "keyword",
+  "request": {
+    "keywords": [
+      "airpods pro"
+    ],
+    "targetResults": 100,
+    "mode": "keyword",
+    "continuationToken": null,
+    "platform": "YouTube",
+    "callNumber": 1
+  },
+  "response": {
+    "videos": [
+      {
+        "type": "video",
+        "id": "49YrA7YOEpI",
+        "url": "https://www.youtube.com/watch?v=49YrA7YOEpI",
+        "title": "AirPods Pro 2 Hidden Features, Tips And Tricks.",
+        "thumbnail": "https://i.ytimg.com/vi/49YrA7YOEpI/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLCkextS6yBD6mTOmOpSslT9KA318w",
+        "channel": {
+          "id": "UClQQoervgLHV2pAOxHJ16NA",
+          "title": "HotshotTek",
+          "handle": "HotshotTek",
+          "thumbnail": "https://yt3.ggpht.com/_0aCR_brd1AV3pGH0nK77DUQ1Upgdlcv_4Pk8ZdqyTj23ATN9mDgeaq0IjVQrZOpM1UQPLp12A=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "526,905 views",
+        "viewCountInt": 526905,
+        "publishedTimeText": "1 year ago",
+        "publishedTime": "2024-07-17T10:50:38.152Z",
+        "lengthText": "11:41",
+        "lengthSeconds": 701,
+        "badges": []
+      },
+      {
+        "type": "video",
+        "id": "MZLlPvDYxME",
+        "url": "https://www.youtube.com/watch?v=MZLlPvDYxME",
+        "title": "AirPods Pro User Guide and Tutorial",
+        "thumbnail": "https://i.ytimg.com/vi/MZLlPvDYxME/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLB5xjlzWLu-5k2avwh_oxzPEZ4MfA",
+        "channel": {
+          "id": "UCeysIZV7YCOoSJNQc9pgbXQ",
+          "title": "Tech IRL",
+          "handle": "TechIRL00",
+          "thumbnail": "https://yt3.ggpht.com/ytc/AIdro_kne4uRMS-AezzBhblDnDd8FM3qIZ33LjrtEBnMC0A5r2c=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "2,688,099 views",
+        "viewCountInt": 2688099,
+        "publishedTimeText": "5 years ago",
+        "publishedTime": "2020-07-17T10:50:38.152Z",
+        "lengthText": "13:26",
+        "lengthSeconds": 806,
+        "badges": []
+      },
+      {
+        "type": "video",
+        "id": "NsUIp57lxd4",
+        "url": "https://www.youtube.com/watch?v=NsUIp57lxd4",
+        "title": "7 Basic AirPods Pro Controls",
+        "thumbnail": "https://i.ytimg.com/vi/NsUIp57lxd4/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLAPJq3U_ULIALOByiTcpepF1Qa6HA",
+        "channel": {
+          "id": "UCVLZmDKeT-mV4H3ToYXIFYg",
+          "title": "Insider Tech",
+          "handle": "InsiderTech",
+          "thumbnail": "https://yt3.ggpht.com/SywhKTIRtdwrJGZb5PgrB3RCKH9I-g6gIPDYoEpAkP69nW4AVTFr7J3yP0vTEB4W7_i6w9t06g=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "783,802 views",
+        "viewCountInt": 783802,
+        "publishedTimeText": "3 years ago",
+        "publishedTime": "2022-07-17T10:50:38.152Z",
+        "lengthText": "4:39",
+        "lengthSeconds": 279,
+        "badges": [
+          "CC"
+        ]
+      },
+      {
+        "type": "video",
+        "id": "ql6mhhHCldY",
+        "url": "https://www.youtube.com/watch?v=ql6mhhHCldY",
+        "title": "AirPods Pro | Adaptive Audio. Now playing. | Apple",
+        "thumbnail": "https://i.ytimg.com/vi/ql6mhhHCldY/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLCPm2xtGhxW1P9bvBXw6s5XGrLwgw",
+        "channel": {
+          "id": "UCE_M8A5yxnLfW0KghEeajjw",
+          "title": "Apple",
+          "handle": "Apple",
+          "thumbnail": "https://yt3.ggpht.com/s5hlNKKDDQWjFGzYNnh8UeOW2j2w6id-cZGx7GdAA3d5Fu7zEi7ZMXEyslysuQUKigXNxtAB=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "4,109,474 views",
+        "viewCountInt": 4109474,
+        "publishedTimeText": "1 year ago",
+        "publishedTime": "2024-07-17T10:50:38.152Z",
+        "lengthText": "0:58",
+        "lengthSeconds": 58,
+        "badges": [
+          "CC"
+        ]
+      },
+      {
+        "type": "video",
+        "id": "HJ8rzbL3Tig",
+        "url": "https://www.youtube.com/watch?v=HJ8rzbL3Tig",
+        "title": "How To Use AirPod Pro 2! (Complete Beginners Guide)",
+        "thumbnail": "https://i.ytimg.com/vi/HJ8rzbL3Tig/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLCmrV8bEZJI9bSQIASI-f3Q0Q532w",
+        "channel": {
+          "id": "UCy1PnKNVtEG-SfSzyIfnvrA",
+          "title": "Simple Alpaca",
+          "handle": "SimpleAlpaca",
+          "thumbnail": "https://yt3.ggpht.com/ytc/AIdro_kc7747L68U3IZIDYN6HJHyIg6C1VFEHK2b92NvZ9b-pck=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "1,070,895 views",
+        "viewCountInt": 1070895,
+        "publishedTimeText": "2 years ago",
+        "publishedTime": "2023-07-17T10:50:38.152Z",
+        "lengthText": "9:27",
+        "lengthSeconds": 567,
+        "badges": []
+      },
+      {
+        "type": "video",
+        "id": "6VGuGQ_drQY",
+        "url": "https://www.youtube.com/watch?v=6VGuGQ_drQY",
+        "title": "🎧 AirPods Pro 3 – HUGE Upgrades Coming! Should You Wait?",
+        "thumbnail": "https://i.ytimg.com/vi/6VGuGQ_drQY/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLCfCN0vIZuHYodbNbQFIDBUFXz2yg",
+        "channel": {
+          "id": "UCUUNkL6Wke6i0P6funa7wdQ",
+          "title": "AppleInsider",
+          "handle": "AppleInsider",
+          "thumbnail": "https://yt3.ggpht.com/ytc/AIdro_kZqLRha50F7uz4uwO1DvHn771CAfiyR-OSsXwrL0UrsGZv=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "129,292 views",
+        "viewCountInt": 129292,
+        "publishedTimeText": "5 months ago",
+        "publishedTime": "2025-02-17T10:50:38.152Z",
+        "lengthText": "8:38",
+        "lengthSeconds": 518,
+        "badges": [
+          "4K"
+        ]
+      },
+      {
+        "type": "video",
+        "id": "yCrJ000ZggE",
+        "url": "https://www.youtube.com/watch?v=yCrJ000ZggE",
+        "title": "AirPods 4 (ANC) vs. AirPods Pro 2 - Which Should You Buy?",
+        "thumbnail": "https://i.ytimg.com/vi/yCrJ000ZggE/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLC2mCeRK72JSlR3RT3bOZBgtnsPqQ",
+        "channel": {
+          "id": "UCJOl2JvledP26K2OQ_HLgnQ",
+          "title": "6 Months Later",
+          "handle": "6MonthsLater",
+          "thumbnail": "https://yt3.ggpht.com/2Kiy90zc2RNKwNkAaZuMSLZAkPfP332BHsTJDjEuZc22fO7v2iwUGOEKytVkSyNtxJ6Ujcqe=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "606,671 views",
+        "viewCountInt": 606671,
+        "publishedTimeText": "7 months ago",
+        "publishedTime": "2024-12-17T10:50:38.152Z",
+        "lengthText": "8:38",
+        "lengthSeconds": 518,
+        "badges": [
+          "4K",
+          "CC"
+        ]
+      },
+      {
+        "type": "video",
+        "id": "BaCtpivg0_I",
+        "url": "https://www.youtube.com/watch?v=BaCtpivg0_I",
+        "title": "Airpods Pro Eartip Replacement...(How To Replace)",
+        "thumbnail": "https://i.ytimg.com/vi/BaCtpivg0_I/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLCZySsPTaDFyGIUdrZb_qll-a2Qrg",
+        "channel": {
+          "id": "UCwgP40E6FHIqB2eBoJk5AfQ",
+          "title": "The Average Tech Guy",
+          "handle": "TheAverageTechGuy",
+          "thumbnail": "https://yt3.ggpht.com/wHqvMe6lJEZmSA0Ww_Vy7ExBkeHeTozP0nlJzzJ5gECSUmhkFPZEQzplS4X8Ae365qIfu9oK-g=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "2,393,061 views",
+        "viewCountInt": 2393061,
+        "publishedTimeText": "5 years ago",
+        "publishedTime": "2020-07-17T10:50:38.152Z",
+        "lengthText": "1:38",
+        "lengthSeconds": 98,
+        "badges": []
+      },
+      {
+        "type": "video",
+        "id": "Um64STc2suk",
+        "url": "https://www.youtube.com/watch?v=Um64STc2suk",
+        "title": "AirPods Pro User Guide and Tutorial (Updated)",
+        "thumbnail": "https://i.ytimg.com/vi/Um64STc2suk/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLDhnCOJu-DKeZTc2qKTbGeeU-RWDw",
+        "channel": {
+          "id": "UCeysIZV7YCOoSJNQc9pgbXQ",
+          "title": "Tech IRL",
+          "handle": "TechIRL00",
+          "thumbnail": "https://yt3.ggpht.com/ytc/AIdro_kne4uRMS-AezzBhblDnDd8FM3qIZ33LjrtEBnMC0A5r2c=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "127,996 views",
+        "viewCountInt": 127996,
+        "publishedTimeText": "2 years ago",
+        "publishedTime": "2023-07-17T10:50:38.152Z",
+        "lengthText": "19:32",
+        "lengthSeconds": 1172,
+        "badges": []
+      },
+      {
+        "type": "video",
+        "id": "f3DfJxvkN-8",
+        "url": "https://www.youtube.com/watch?v=f3DfJxvkN-8",
+        "title": "AirPods Pro 2 Review: 1 Underrated Thing!",
+        "thumbnail": "https://i.ytimg.com/vi/f3DfJxvkN-8/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLD0qJdqiYcANwFWuNwAtMcoOHXMww",
+        "channel": {
+          "id": "UCBJycsmduvYEL83R_U4JriQ",
+          "title": "Marques Brownlee",
+          "handle": "mkbhd",
+          "thumbnail": "https://yt3.ggpht.com/PEwQfVuhh5jO7_NDDufCq349q0W6MgZeYlgeMyW3OSRMxMx9W5yre5Fgbi4Bql56L1cPwoteOA=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "8,349,046 views",
+        "viewCountInt": 8349046,
+        "publishedTimeText": "2 years ago",
+        "publishedTime": "2023-07-17T10:50:38.152Z",
+        "lengthText": "11:17",
+        "lengthSeconds": 677,
+        "badges": [
+          "4K",
+          "CC"
+        ]
+      },
+      {
+        "type": "video",
+        "id": "_HQkpsLfWzI",
+        "url": "https://www.youtube.com/watch?v=_HQkpsLfWzI",
+        "title": "AirPods Pro 2 Review - 6 Months Later",
+        "thumbnail": "https://i.ytimg.com/vi/_HQkpsLfWzI/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLAPsCRusaDvuvg06sje17UvHe9Tfw",
+        "channel": {
+          "id": "UCJOl2JvledP26K2OQ_HLgnQ",
+          "title": "6 Months Later",
+          "handle": "6MonthsLater",
+          "thumbnail": "https://yt3.ggpht.com/2Kiy90zc2RNKwNkAaZuMSLZAkPfP332BHsTJDjEuZc22fO7v2iwUGOEKytVkSyNtxJ6Ujcqe=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "188,008 views",
+        "viewCountInt": 188008,
+        "publishedTimeText": "5 months ago",
+        "publishedTime": "2025-02-17T10:50:38.152Z",
+        "lengthText": "14:50",
+        "lengthSeconds": 890,
+        "badges": [
+          "4K",
+          "CC"
+        ]
+      },
+      {
+        "type": "video",
+        "id": "JloOtpv-Wv8",
+        "url": "https://www.youtube.com/watch?v=JloOtpv-Wv8",
+        "title": "AirPods Pro 2 Tips, Tricks & Hidden Features | YOU MUST KNOW!!!",
+        "thumbnail": "https://i.ytimg.com/vi/JloOtpv-Wv8/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLBY0mVYRzwoaApK1Iwzm6XAlA0f2g",
+        "channel": {
+          "id": "UCIxLxlan8q9WA7sjuq6LdTQ",
+          "title": "Hayls World",
+          "handle": "HaylsWorld",
+          "thumbnail": "https://yt3.ggpht.com/704S41So1nsXofY3i5_AQ4hE4nM50TvDhuXmS_Ny1EZ9QZ2b-t_kaM3mfVnFu7IAaiJMe9KErw=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "3,011,425 views",
+        "viewCountInt": 3011425,
+        "publishedTimeText": "2 years ago",
+        "publishedTime": "2023-07-17T10:50:38.152Z",
+        "lengthText": "10:35",
+        "lengthSeconds": 635,
+        "badges": [
+          "4K"
+        ]
+      },
+      {
+        "type": "video",
+        "id": "cG8PXdTlDag",
+        "url": "https://www.youtube.com/watch?v=cG8PXdTlDag",
+        "title": "AirPods Pro Review: Imperfectly Perfect!",
+        "thumbnail": "https://i.ytimg.com/vi/cG8PXdTlDag/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLCLhJ5lnnA4CarlHuzB5vsUD69Onw",
+        "channel": {
+          "id": "UCBJycsmduvYEL83R_U4JriQ",
+          "title": "Marques Brownlee",
+          "handle": "mkbhd",
+          "thumbnail": "https://yt3.ggpht.com/PEwQfVuhh5jO7_NDDufCq349q0W6MgZeYlgeMyW3OSRMxMx9W5yre5Fgbi4Bql56L1cPwoteOA=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "7,470,499 views",
+        "viewCountInt": 7470499,
+        "publishedTimeText": "5 years ago",
+        "publishedTime": "2020-07-17T10:50:38.152Z",
+        "lengthText": "9:37",
+        "lengthSeconds": 577,
+        "badges": [
+          "4K"
+        ]
+      },
+      {
+        "type": "video",
+        "id": "xHNqdsJf1UM",
+        "url": "https://www.youtube.com/watch?v=xHNqdsJf1UM",
+        "title": "SHOWDOWN: AirPods Pro 2 VS SONY WF1000XM5!",
+        "thumbnail": "https://i.ytimg.com/vi/xHNqdsJf1UM/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLBP8hA6bZbfWuK58ukjAXnmM3KnIg",
+        "channel": {
+          "id": "UC9fSZHEh6XsRpX-xJc6lT3A",
+          "title": "UrAvgConsumer",
+          "handle": "UrAvgConsumer",
+          "thumbnail": "https://yt3.ggpht.com/8-YFq0watPvwsxWIUpCusG9TotYWxcgmaAgMRmeUB2vUBIart9TfVx_jIIFYn9fZEs5pkE-D_Q=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "711,428 views",
+        "viewCountInt": 711428,
+        "publishedTimeText": "1 year ago",
+        "publishedTime": "2024-07-17T10:50:38.152Z",
+        "lengthText": "13:00",
+        "lengthSeconds": 780,
+        "badges": [
+          "4K"
+        ]
+      }
+    ],
+    "channels": [],
+    "playlists": [],
+    "shorts": [
+      {
+        "type": "short",
+        "id": "5-15J66Ibd8",
+        "url": "https://www.youtube.com/watch?v=5-15J66Ibd8",
+        "title": "Apple AirPods Pro 2 HIDDEN FEATURE!",
+        "thumbnail": "https://i.ytimg.com/vi/5-15J66Ibd8/hq720_2.jpg?sqp=-oaymwFBCNAFEJQDSFryq4qpAzMIARUAAIhCGADYAQHiAQoIGBACGAY4AUAB8AEB-AHOBYACgAqKAgwIABABGGUgXShOMA8=&rs=AOn4CLC6HUqxRTMjZKJnjl3KMcJYQcXuIw",
+        "channel": {
+          "id": "UC55Jb99LT3IINRY_g5V6rtA",
+          "title": "Andru Edwards",
+          "handle": "Andru",
+          "thumbnail": "https://yt3.ggpht.com/F8QesCl8ERVLsC5XWmzwDLroJ12xsRqFTYAQQmfNl8j88nT_M8-8U35owfM0rnGVjdv0ZIoisgM=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "6,752,299 views",
+        "viewCountInt": 6752299,
+        "publishedTimeText": "2 years ago",
+        "publishedTime": "2023-07-17T10:50:38.152Z",
+        "lengthText": "0:25",
+        "lengthSeconds": 25,
+        "badges": [
+          "CC"
+        ]
+      },
+      {
+        "type": "short",
+        "id": "SIP_rsW43pw",
+        "url": "https://www.youtube.com/watch?v=SIP_rsW43pw",
+        "title": "How to Reset Apple Airpods Pro 🔥🔥#shorts #viral #airpodspro",
+        "thumbnail": "https://i.ytimg.com/vi/SIP_rsW43pw/hq720_2.jpg?sqp=-oaymwFBCNAFEJQDSFryq4qpAzMIARUAAIhCGADYAQHiAQoIGBACGAY4AUAB8AEB-AG2CIACgA-KAgwIABABGHIgSSg-MA8=&rs=AOn4CLDof5MUrecrks4V961h83LYB8RTdQ",
+        "channel": {
+          "id": "UC4fGtCJSU4bdBigc9H1Ghnw",
+          "title": "9SATCreations",
+          "handle": "9SATCreations",
+          "thumbnail": "https://yt3.ggpht.com/EGoqzLPKcvj1cG9BhM_5kX8Shv76gLLAVMEBGy_NYdhxhwJcbd9AobFDRjfuIjDIhVRBWUGzaw=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "703,058 views",
+        "viewCountInt": 703058,
+        "publishedTimeText": "2 years ago",
+        "publishedTime": "2023-07-17T10:50:38.152Z",
+        "lengthText": "0:18",
+        "lengthSeconds": 18,
+        "badges": []
+      },
+      {
+        "type": "short",
+        "id": "c9v3jUmQLWo",
+        "url": "https://www.youtube.com/watch?v=c9v3jUmQLWo",
+        "title": "Unboxing AirPod pros 2 #airpods #airpodspros #airpodpros #apple #airpodspro2 #airpodsprounboxing",
+        "thumbnail": "https://i.ytimg.com/vi/c9v3jUmQLWo/hq720.jpg?sqp=-oaymwFBCNAFEJQDSFryq4qpAzMIARUAAIhCGADYAQHiAQoIGBACGAY4AUAB8AEB-AG2CIACgA-KAgwIABABGEUgZShfMA8=&rs=AOn4CLD7-7QM4WBAVTniIqYTCR_s3ZSv3A",
+        "channel": {
+          "id": "UCRIAzRiN7R0VZKViukgWeCA",
+          "title": "page",
+          "handle": "pagedoesntexist",
+          "thumbnail": "https://yt3.ggpht.com/TFzLEtLhnBXJpXdElMPLD-tbqgOUN6kfZiKuR2EhKuCNgZxzTi9dqdurnCaJtawHkDmIeSwSeuw=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "1,807 views",
+        "viewCountInt": 1807,
+        "publishedTimeText": "1 day ago",
+        "publishedTime": "2025-07-16T10:50:38.152Z",
+        "lengthText": "1:34",
+        "lengthSeconds": 94,
+        "badges": [
+          "New"
+        ]
+      },
+      {
+        "type": "short",
+        "id": "EdJ1SEZfWCU",
+        "url": "https://www.youtube.com/watch?v=EdJ1SEZfWCU",
+        "title": "Best feature on the AirPod Pro (2nd Gen)",
+        "thumbnail": "https://i.ytimg.com/vi/EdJ1SEZfWCU/hq720_2.jpg?sqp=-oaymwFBCNAFEJQDSFryq4qpAzMIARUAAIhCGADYAQHiAQoIGBACGAY4AUAB8AEB-AG-BIACgAiKAgwIABABGHIgRyhBMA8=&rs=AOn4CLCU38MAXemMQvUU-X4E-FwwMCEnpA",
+        "channel": {
+          "id": "UCi7wDE2ZTiR5QYYrUY5WhtA",
+          "title": "CarterPCs",
+          "handle": "actuallycarterpcs",
+          "thumbnail": "https://yt3.ggpht.com/ZsnIdsl9IofkucEiem3m2zCzd3IA6f23zuXhzzeas0gYLWz2xG1QY8tTruXPGtXrVr7tKDiGOw=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "3,245,259 views",
+        "viewCountInt": 3245259,
+        "publishedTimeText": "2 years ago",
+        "publishedTime": "2023-07-17T10:50:38.152Z",
+        "lengthText": "0:30",
+        "lengthSeconds": 30,
+        "badges": []
+      },
+      {
+        "type": "short",
+        "id": "enR5sCWLcEo",
+        "url": "https://www.youtube.com/watch?v=enR5sCWLcEo",
+        "title": "AirPods Pro 1 vs AirPods Pro 2 feature comparison",
+        "thumbnail": "https://i.ytimg.com/vi/enR5sCWLcEo/hq720_2.jpg?sqp=-oaymwFBCNAFEJQDSFryq4qpAzMIARUAAIhCGADYAQHiAQoIGBACGAY4AUAB8AEB-AHOBYACgAqKAgwIABABGGUgZShlMA8=&rs=AOn4CLDBBAHwhKFztrxlxsX0VOrKjhGrQw",
+        "channel": {
+          "id": "UCc2cIemw-S90d2bxWpTrbFA",
+          "title": "TheiPhoneCam",
+          "handle": "TheiPhoneCam",
+          "thumbnail": "https://yt3.ggpht.com/ytc/AIdro_lFSQ7U8EVG8RvoVBaemK2zwwuOqyKjPDoSWDliYpks=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "214,801 views",
+        "viewCountInt": 214801,
+        "publishedTimeText": "2 years ago",
+        "publishedTime": "2023-07-17T10:50:38.152Z",
+        "lengthText": "0:33",
+        "lengthSeconds": 33,
+        "badges": []
+      },
+      {
+        "type": "short",
+        "id": "iiXMV8K6PcM",
+        "url": "https://www.youtube.com/watch?v=iiXMV8K6PcM",
+        "title": "THE BEST AIRPOD PRO FAKES? NOISE CANCELLATION?  #shorts",
+        "thumbnail": "https://i.ytimg.com/vi/iiXMV8K6PcM/hq720_2.jpg?sqp=-oaymwFBCNAFEJQDSFryq4qpAzMIARUAAIhCGADYAQHiAQoIGBACGAY4AUAB8AEB-AHOBYACgAqKAgwIABABGCYgXSh_MA8=&rs=AOn4CLBZaRv9MD7FMLq0Ix_kZUQpkJLlzg",
+        "channel": {
+          "id": "UCCOrp7GPgZA8EGrbOcIAsyQ",
+          "title": "Phone Repair Guru",
+          "handle": "PhoneRepairGuru",
+          "thumbnail": "https://yt3.ggpht.com/fONlaJBmPJOK2GtysqwNPk0uSzs5426bj0mDjjyap7PmijjPZGtkdl4KLzJQi38Rp3NVPlGG5g=s68-c-k-c0x00ffffff-no-rj"
+        },
+        "viewCountText": "15,658,275 views",
+        "viewCountInt": 15658275,
+        "publishedTimeText": "3 years ago",
+        "publishedTime": "2022-07-17T10:50:38.152Z",
+        "lengthText": "0:47",
+        "lengthSeconds": 47,
+        "badges": []
+      }
+    ],
+    "shelves": [
+      {
+        "type": "shelf",
+        "title": "People also watched",
+        "items": [
+          {
+            "type": "video",
+            "id": "5o_qtPuf6Kw",
+            "url": "https://www.youtube.com/watch?v=5o_qtPuf6Kw",
+            "title": "USB-C AirPods Pro 2 Unboxing and Overview",
+            "thumbnail": "https://i.ytimg.com/vi/5o_qtPuf6Kw/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLDiTRq7fHlD1m95xTjnZLu4GVRQ9A",
+            "channel": {
+              "id": "UCiQMYozSSTkJ2twtZM1bG9w",
+              "title": "zollotech",
+              "handle": "zollotech",
+              "thumbnail": "https://yt3.ggpht.com/soizvdy-JxaTWS-mu5psIUy6Lfh_uOct1sEqdjcYNNQ4-cJSzi6sdYdx46epO7o3eZlB8BA9=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "234,295 views",
+            "viewCountInt": 234295,
+            "publishedTimeText": "1 year ago",
+            "publishedTime": "2024-07-17T10:50:38.152Z",
+            "lengthText": "6:04",
+            "lengthSeconds": 364,
+            "badges": [
+              "4K"
+            ]
+          },
+          {
+            "type": "video",
+            "id": "nLN_tVEo5kk",
+            "url": "https://www.youtube.com/watch?v=nLN_tVEo5kk",
+            "title": "New Apple AirPods Pro Revealed (2022)",
+            "thumbnail": "https://i.ytimg.com/vi/nLN_tVEo5kk/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLCqUUGCJOApejsTZORrtWIJdUogRw",
+            "channel": {
+              "id": "UCmKtn_HvpfbTu3QV4lhJIMw",
+              "title": "CNET Highlights",
+              "handle": "CNETHighlights",
+              "thumbnail": "https://yt3.ggpht.com/sMoc5_O7syK9_exBQPgmJENM89TZEneSliAgyMBr_8gzembRXqon_rtJ9hOGrRp6A24mXXMdcw=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "267,219 views",
+            "viewCountInt": 267219,
+            "publishedTimeText": "2 years ago",
+            "publishedTime": "2023-07-17T10:50:38.152Z",
+            "lengthText": "6:50",
+            "lengthSeconds": 410,
+            "badges": []
+          },
+          {
+            "type": "video",
+            "id": "q4JSweF_aGo",
+            "url": "https://www.youtube.com/watch?v=q4JSweF_aGo",
+            "title": "AirPods Pro 2 - First 14 Things To Do!",
+            "thumbnail": "https://i.ytimg.com/vi/q4JSweF_aGo/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLBlrST6XDsgDUE-aPVichLTS8zI5w",
+            "channel": {
+              "id": "UCpZy-Hfqcxf-R7nQzlv9Bvw",
+              "title": "Brandon Butch",
+              "handle": "BrandonButch",
+              "thumbnail": "https://yt3.ggpht.com/IBgiJOen7sXZxskS-BNsDVr_T5WLHSD4-jsvPRtmb_g1BkMSigXjv0uQyySxiF3Sq0BDriJfjcc=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "1,850,706 views",
+            "viewCountInt": 1850706,
+            "publishedTimeText": "2 years ago",
+            "publishedTime": "2023-07-17T10:50:38.152Z",
+            "lengthText": "14:48",
+            "lengthSeconds": 888,
+            "badges": [
+              "4K",
+              "CC"
+            ]
+          },
+          {
+            "type": "video",
+            "id": "gIaraa91RE0",
+            "url": "https://www.youtube.com/watch?v=gIaraa91RE0",
+            "title": "FAKE VS REAL Apple AirPods Pro - Buyers Beware! 1:1 Clone",
+            "thumbnail": "https://i.ytimg.com/vi/gIaraa91RE0/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLCF4Ii-yntEDNYU7fYtUlBf7UlG2w",
+            "channel": {
+              "id": "UCf_67twWOb9eYH-HX562r6A",
+              "title": "Redskull",
+              "handle": "RedskullPro",
+              "thumbnail": "https://yt3.ggpht.com/ytc/AIdro_kQY83iCWr3laL8sQ35HH7qL2ADpwJhvB9Fre3xGVQEKqI=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "900,900 views",
+            "viewCountInt": 900900,
+            "publishedTimeText": "5 years ago",
+            "publishedTime": "2020-07-17T10:50:38.152Z",
+            "lengthText": "5:30",
+            "lengthSeconds": 330,
+            "badges": [
+              "4K"
+            ]
+          },
+          {
+            "type": "video",
+            "id": "90hM07V4JoI",
+            "url": "https://www.youtube.com/watch?v=90hM07V4JoI",
+            "title": "AirPods Pro 3 Release Date and Price - Get Ready for 5 BIG UPGRADES!",
+            "thumbnail": "https://i.ytimg.com/vi/90hM07V4JoI/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLDL6D5Nj_J2ARzPHdg5G1Lu-O91Tg",
+            "channel": {
+              "id": "UCz6PEeVLG1TL6jMRTvSLm4g",
+              "title": "Matt Talks Tech",
+              "handle": "MattTalkTech",
+              "thumbnail": "https://yt3.ggpht.com/X0FWMawqq22ygYpj0cNN0d5ehgg5JbBATRr1TBMb6HqLGtEnV9pzuy2o0FE_10Erz3gcWLzygw=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "148,693 views",
+            "viewCountInt": 148693,
+            "publishedTimeText": "11 days ago",
+            "publishedTime": "2025-07-06T10:50:38.152Z",
+            "lengthText": "8:41",
+            "lengthSeconds": 521,
+            "badges": []
+          },
+          {
+            "type": "video",
+            "id": "934V2eiwsNA",
+            "url": "https://www.youtube.com/watch?v=934V2eiwsNA",
+            "title": "AIRPODS PRO Tips, Tricks, and Hidden Features most people don't know",
+            "thumbnail": "https://i.ytimg.com/vi/934V2eiwsNA/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLDyCZRDqOLlfDiJ31SXR5f5TFIqfg",
+            "channel": {
+              "id": "UCZZ4ivUawsXRktLKej8d6Xw",
+              "title": "Mike O'Brien",
+              "handle": "MikeOBrienMedia",
+              "thumbnail": "https://yt3.ggpht.com/ytc/AIdro_mSh7FIrnxkpscWtyWhHVfvQxAzwtwdtEZ-kJ6xcAGZBoE=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "1,198,463 views",
+            "viewCountInt": 1198463,
+            "publishedTimeText": "2 years ago",
+            "publishedTime": "2023-07-17T10:50:38.152Z",
+            "lengthText": "12:33",
+            "lengthSeconds": 753,
+            "badges": [
+              "4K"
+            ]
+          },
+          {
+            "type": "video",
+            "id": "FNEEwNHeRoU",
+            "url": "https://www.youtube.com/watch?v=FNEEwNHeRoU",
+            "title": "22 ACTUAL AirPods Pro 2 Tricks You Didn’t Know!",
+            "thumbnail": "https://i.ytimg.com/vi/FNEEwNHeRoU/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLDDuxG6qoMOd7NCwa12oVyUQ01MZw",
+            "channel": {
+              "id": "UCpZy-Hfqcxf-R7nQzlv9Bvw",
+              "title": "Brandon Butch",
+              "handle": "BrandonButch",
+              "thumbnail": "https://yt3.ggpht.com/IBgiJOen7sXZxskS-BNsDVr_T5WLHSD4-jsvPRtmb_g1BkMSigXjv0uQyySxiF3Sq0BDriJfjcc=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "1,244,503 views",
+            "viewCountInt": 1244503,
+            "publishedTimeText": "2 years ago",
+            "publishedTime": "2023-07-17T10:50:38.152Z",
+            "lengthText": "14:10",
+            "lengthSeconds": 850,
+            "badges": [
+              "4K"
+            ]
+          },
+          {
+            "type": "video",
+            "id": "19CvDxMUWh0",
+            "url": "https://www.youtube.com/watch?v=19CvDxMUWh0",
+            "title": "MUSIC FANS: it's time to ditch the AirPods!",
+            "thumbnail": "https://i.ytimg.com/vi/19CvDxMUWh0/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLDplAv9oEmeC7iXdqDO4pav9TszOg",
+            "channel": {
+              "id": "UCQIcXQ2n0sa-7CD0NtqnrrA",
+              "title": "Darko Audio",
+              "handle": "DarkoAudio",
+              "thumbnail": "https://yt3.ggpht.com/zuHAzwwdMzeQrehyJOXAoozMFqa57mZMeYmCdPp8Nbia0LHmF4wiot31rIkxudyQ2eBnFHUz9Q=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "132,156 views",
+            "viewCountInt": 132156,
+            "publishedTimeText": "6 days ago",
+            "publishedTime": "2025-07-11T10:50:38.152Z",
+            "lengthText": "16:47",
+            "lengthSeconds": 1007,
+            "badges": [
+              "New",
+              "4K"
+            ]
+          },
+          {
+            "type": "video",
+            "id": "fDOBPbPBYXY",
+            "url": "https://www.youtube.com/watch?v=fDOBPbPBYXY",
+            "title": "AirPods Pro Tips, Tricks & Hidden Features | That You MUST Know!!!",
+            "thumbnail": "https://i.ytimg.com/vi/fDOBPbPBYXY/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLBljzKNkLCjEtTLHEwuQbdss1KgYw",
+            "channel": {
+              "id": "UCIxLxlan8q9WA7sjuq6LdTQ",
+              "title": "Hayls World",
+              "handle": "HaylsWorld",
+              "thumbnail": "https://yt3.ggpht.com/704S41So1nsXofY3i5_AQ4hE4nM50TvDhuXmS_Ny1EZ9QZ2b-t_kaM3mfVnFu7IAaiJMe9KErw=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "2,417,297 views",
+            "viewCountInt": 2417297,
+            "publishedTimeText": "5 years ago",
+            "publishedTime": "2020-07-17T10:50:38.152Z",
+            "lengthText": "8:50",
+            "lengthSeconds": 530,
+            "badges": []
+          },
+          {
+            "type": "video",
+            "id": "VixPhOj2DG8",
+            "url": "https://www.youtube.com/watch?v=VixPhOj2DG8",
+            "title": "New AirPods Pro 2 are LIFE CHANGING!!!",
+            "thumbnail": "https://i.ytimg.com/vi/VixPhOj2DG8/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLAb0HTMWrkN9ZLkuRIBnXYhQUL4Xw",
+            "channel": {
+              "id": "UCey_c7U86mJGz1VJWH5CYPA",
+              "title": "iJustine",
+              "handle": "iJustine",
+              "thumbnail": "https://yt3.ggpht.com/TyFX--bFsY4XVipOdLiWA-NK8X0iwocs9ViPuoSMddCEgwSCrGCPQdRIe5KhEwwmRTvPv6vpnA=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "900,909 views",
+            "viewCountInt": 900909,
+            "publishedTimeText": "2 years ago",
+            "publishedTime": "2023-07-17T10:50:38.152Z",
+            "lengthText": "11:38",
+            "lengthSeconds": 698,
+            "badges": [
+              "4K",
+              "CC"
+            ]
+          }
+        ]
+      },
+      {
+        "type": "shelf",
+        "title": "Channels new to you",
+        "items": [
+          {
+            "type": "video",
+            "id": "90hM07V4JoI",
+            "url": "https://www.youtube.com/watch?v=90hM07V4JoI",
+            "title": "AirPods Pro 3 Release Date and Price - Get Ready for 5 BIG UPGRADES!",
+            "thumbnail": "https://i.ytimg.com/vi/90hM07V4JoI/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLDL6D5Nj_J2ARzPHdg5G1Lu-O91Tg",
+            "channel": {
+              "id": "UCz6PEeVLG1TL6jMRTvSLm4g",
+              "title": "Matt Talks Tech",
+              "handle": "MattTalkTech",
+              "thumbnail": "https://yt3.ggpht.com/X0FWMawqq22ygYpj0cNN0d5ehgg5JbBATRr1TBMb6HqLGtEnV9pzuy2o0FE_10Erz3gcWLzygw=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "148,693 views",
+            "viewCountInt": 148693,
+            "publishedTimeText": "11 days ago",
+            "publishedTime": "2025-07-06T10:50:38.152Z",
+            "lengthText": "8:41",
+            "lengthSeconds": 521,
+            "badges": []
+          },
+          {
+            "type": "video",
+            "id": "41uOQNcNHwo",
+            "url": "https://www.youtube.com/watch?v=41uOQNcNHwo",
+            "title": "Apple AirPods Pro 3: New Features Coming Soon!",
+            "thumbnail": "https://i.ytimg.com/vi/41uOQNcNHwo/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLAoTmnlHkxxtmV7T4lfZfkJKg3k8A",
+            "channel": {
+              "id": "UCaFGDBmGK_jw66u3av2Ysjw",
+              "title": "MacRumors",
+              "handle": "macrumors",
+              "thumbnail": "https://yt3.ggpht.com/vfFcyv0_vz0Li2sRXziJAiHe9yYKKBhHlcTI2wiLT7Pl2F0bhMnKYoFo3_cHrLoV0jYswt9BYg=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "134,294 views",
+            "viewCountInt": 134294,
+            "publishedTimeText": "2 weeks ago",
+            "publishedTime": "2025-07-03T10:50:38.152Z",
+            "lengthText": "3:38",
+            "lengthSeconds": 218,
+            "badges": [
+              "4K"
+            ]
+          },
+          {
+            "type": "video",
+            "id": "IjmNixdZtsw",
+            "url": "https://www.youtube.com/watch?v=IjmNixdZtsw",
+            "title": "AirPods Pro: How To Make Them (Really) Useful in 2025",
+            "thumbnail": "https://i.ytimg.com/vi/IjmNixdZtsw/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLB6bvYtW61UjVd32xm3zsWTYatB4Q",
+            "channel": {
+              "id": "UC_TdF-rtQ8N53wHNbknPxkA",
+              "title": "Nikias Molina",
+              "handle": "NikiasMolina",
+              "thumbnail": "https://yt3.ggpht.com/32SSG5cC8LfRD3wdd4vHimZEUaAUkYZ719KbNvNF0yMUQVQksQKTbVDoRJB3Cc4v_RYbSSv7OA=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "50,996 views",
+            "viewCountInt": 50996,
+            "publishedTimeText": "2 months ago",
+            "publishedTime": "2025-05-17T10:50:38.152Z",
+            "lengthText": "8:11",
+            "lengthSeconds": 491,
+            "badges": [
+              "4K"
+            ]
+          },
+          {
+            "type": "video",
+            "id": "D2RSvDxhqrU",
+            "url": "https://www.youtube.com/watch?v=D2RSvDxhqrU",
+            "title": "🎧 AirPods Pro 3: Release Date, Price & 5 MASSIVE Upgrades You Won’t Believe!",
+            "thumbnail": "https://i.ytimg.com/vi/D2RSvDxhqrU/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLB9cGjlk6-pohGhkK5mKuzduKpO0Q",
+            "channel": {
+              "id": "UCdM4CVlJtqYL3NIK0uK59TQ",
+              "title": "Technology in the Future",
+              "handle": "TechnologyintheFuture",
+              "thumbnail": "https://yt3.ggpht.com/ytc/AIdro_lVzjwEBet4IJYp7UnfHrQOsvVg9E5lslltLN6w7FD36Q=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "5,061 views",
+            "viewCountInt": 5061,
+            "publishedTimeText": "9 days ago",
+            "publishedTime": "2025-07-08T10:50:38.152Z",
+            "lengthText": "7:14",
+            "lengthSeconds": 434,
+            "badges": []
+          },
+          {
+            "type": "video",
+            "id": "cAR2C06dSBY",
+            "url": "https://www.youtube.com/watch?v=cAR2C06dSBY",
+            "title": "SHOWDOWN: PowerBeats Pro 2 VS AirPods Pro 2!",
+            "thumbnail": "https://i.ytimg.com/vi/cAR2C06dSBY/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLCjCuJrlTgwczxbNi8m94rtmTAuqg",
+            "channel": {
+              "id": "UC9fSZHEh6XsRpX-xJc6lT3A",
+              "title": "UrAvgConsumer",
+              "handle": "UrAvgConsumer",
+              "thumbnail": "https://yt3.ggpht.com/8-YFq0watPvwsxWIUpCusG9TotYWxcgmaAgMRmeUB2vUBIart9TfVx_jIIFYn9fZEs5pkE-D_Q=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "261,779 views",
+            "viewCountInt": 261779,
+            "publishedTimeText": "3 months ago",
+            "publishedTime": "2025-04-17T10:50:38.152Z",
+            "lengthText": "10:59",
+            "lengthSeconds": 659,
+            "badges": [
+              "4K"
+            ]
+          },
+          {
+            "type": "video",
+            "id": "0Z0aTlDT3KI",
+            "url": "https://www.youtube.com/watch?v=0Z0aTlDT3KI",
+            "title": "AirPods Pro 3 Is Shaping Up To Be A HUGE UPGRADE!",
+            "thumbnail": "https://i.ytimg.com/vi/0Z0aTlDT3KI/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLB71YMtQOksixwY5oWJAUmEJGGZXg",
+            "channel": {
+              "id": "UCz6PEeVLG1TL6jMRTvSLm4g",
+              "title": "Matt Talks Tech",
+              "handle": "MattTalkTech",
+              "thumbnail": "https://yt3.ggpht.com/X0FWMawqq22ygYpj0cNN0d5ehgg5JbBATRr1TBMb6HqLGtEnV9pzuy2o0FE_10Erz3gcWLzygw=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "284,928 views",
+            "viewCountInt": 284928,
+            "publishedTimeText": "4 months ago",
+            "publishedTime": "2025-03-17T10:50:38.152Z",
+            "lengthText": "9:39",
+            "lengthSeconds": 579,
+            "badges": [
+              "4K"
+            ]
+          },
+          {
+            "type": "video",
+            "id": "o7RJCTyv2Vk",
+            "url": "https://www.youtube.com/watch?v=o7RJCTyv2Vk",
+            "title": "AirPods Max in 2025: Still Worth Buying?",
+            "thumbnail": "https://i.ytimg.com/vi/o7RJCTyv2Vk/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLDYsSAN8SWb5J_6Ky1IoM8ogJG7FA",
+            "channel": {
+              "id": "UCaFGDBmGK_jw66u3av2Ysjw",
+              "title": "MacRumors",
+              "handle": "macrumors",
+              "thumbnail": "https://yt3.ggpht.com/vfFcyv0_vz0Li2sRXziJAiHe9yYKKBhHlcTI2wiLT7Pl2F0bhMnKYoFo3_cHrLoV0jYswt9BYg=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "114,421 views",
+            "viewCountInt": 114421,
+            "publishedTimeText": "2 months ago",
+            "publishedTime": "2025-05-17T10:50:38.152Z",
+            "lengthText": "7:07",
+            "lengthSeconds": 427,
+            "badges": [
+              "4K"
+            ]
+          },
+          {
+            "type": "video",
+            "id": "5XcKkvEHcz4",
+            "url": "https://www.youtube.com/watch?v=5XcKkvEHcz4",
+            "title": "AirPods Pro 3 (2025) – 5 Revolutionary Features You Need to Know Before Buying",
+            "thumbnail": "https://i.ytimg.com/vi/5XcKkvEHcz4/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLBTluOV1GerU5mdC1f7PH0Wl6oQvQ",
+            "channel": {
+              "id": "UCdM4CVlJtqYL3NIK0uK59TQ",
+              "title": "Technology in the Future",
+              "handle": "TechnologyintheFuture",
+              "thumbnail": "https://yt3.ggpht.com/ytc/AIdro_lVzjwEBet4IJYp7UnfHrQOsvVg9E5lslltLN6w7FD36Q=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "1,775 views",
+            "viewCountInt": 1775,
+            "publishedTimeText": "3 days ago",
+            "publishedTime": "2025-07-14T10:50:38.152Z",
+            "lengthText": "9:41",
+            "lengthSeconds": 581,
+            "badges": [
+              "New"
+            ]
+          },
+          {
+            "type": "video",
+            "id": "vXqrL5sO72k",
+            "url": "https://www.youtube.com/watch?v=vXqrL5sO72k",
+            "title": "Airpods Pro 2 BUY NOW OR WAIT? (Early 2025)",
+            "thumbnail": "https://i.ytimg.com/vi/vXqrL5sO72k/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLD3o7FKtsveNIu6gj1bfhUJ_gfsiw",
+            "channel": {
+              "id": "UC7Jh_-fyN4VnMxXfErdtLng",
+              "title": "Jon Adams ",
+              "handle": "JonAdamsTech",
+              "thumbnail": "https://yt3.ggpht.com/kacp-yBOf6FpqFOiCrlXatWs2uNLil4b-qUmW84sY1bP45L1KAih3czKmU31fUiU7309boocjA=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "58,316 views",
+            "viewCountInt": 58316,
+            "publishedTimeText": "5 months ago",
+            "publishedTime": "2025-02-17T10:50:38.152Z",
+            "lengthText": "6:29",
+            "lengthSeconds": 389,
+            "badges": [
+              "4K"
+            ]
+          },
+          {
+            "type": "video",
+            "id": "sotIBHzy8Y0",
+            "url": "https://www.youtube.com/watch?v=sotIBHzy8Y0",
+            "title": "I tested the AirPods Pro 2 and Powerbeats Pro 2 and found a clear winner",
+            "thumbnail": "https://i.ytimg.com/vi/sotIBHzy8Y0/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLAJyNt4YIkZBSfOPSjz8rQKXAOasg",
+            "channel": {
+              "id": "UCupvZG-5ko_eiXAupbDfxWw",
+              "title": "CNN",
+              "handle": "CNN",
+              "thumbnail": "https://yt3.ggpht.com/wSqAf5WdxsGsl7ZMtlyfz3qKULo_URoFjmKky0gLThm_Jtu2wsVHMu-XzGZPAb-z8zeMBYUUMYA=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "25,848 views",
+            "viewCountInt": 25848,
+            "publishedTimeText": "2 months ago",
+            "publishedTime": "2025-05-17T10:50:38.152Z",
+            "lengthText": "5:10",
+            "lengthSeconds": 310,
+            "badges": []
+          }
+        ]
+      },
+      {
+        "type": "shelf",
+        "title": "From related searches",
+        "items": [
+          {
+            "type": "video",
+            "id": "-oS7RhrIFSA",
+            "url": "https://www.youtube.com/watch?v=-oS7RhrIFSA",
+            "title": "AUDIO ENGINEER REVIEWS The Samsung Galaxy Buds 3 Pro (3 Month Review)",
+            "thumbnail": "https://i.ytimg.com/vi/-oS7RhrIFSA/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLDvzHWXbb4DN3-dH-msfJ4DnOE6EQ",
+            "channel": {
+              "id": "UCEAMLkMKtq6YhmaZdUT1ywA",
+              "title": "This is Tech Today",
+              "handle": "ThisIsTechToday",
+              "thumbnail": "https://yt3.ggpht.com/ytc/AIdro_kjnBLcgqKrgDM_Hfp6xks9dkbBdgDTLtv57ClrUkGrRQ=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "777,582 views",
+            "viewCountInt": 777582,
+            "publishedTimeText": "11 months ago",
+            "publishedTime": "2024-08-17T10:50:38.152Z",
+            "lengthText": "24:51",
+            "lengthSeconds": 1491,
+            "badges": [
+              "4K"
+            ]
+          },
+          {
+            "type": "video",
+            "id": "HToe6646XrI",
+            "url": "https://www.youtube.com/watch?v=HToe6646XrI",
+            "title": "The NEW Powerbeats Pro 2: Beats Finds its Heart (AUDIO ENGINEER REVIEW)",
+            "thumbnail": "https://i.ytimg.com/vi/HToe6646XrI/hq720.jpg?sqp=-oaymwEnCNAFEJQDSFryq4qpAxkIARUAAIhCGAHYAQHiAQoIGBACGAY4AUAB&rs=AOn4CLCfdY-ocoF38V0TIb8PW9WeWvV-fg",
+            "channel": {
+              "id": "UCEAMLkMKtq6YhmaZdUT1ywA",
+              "title": "This is Tech Today",
+              "handle": "ThisIsTechToday",
+              "thumbnail": "https://yt3.ggpht.com/ytc/AIdro_kjnBLcgqKrgDM_Hfp6xks9dkbBdgDTLtv57ClrUkGrRQ=s68-c-k-c0x00ffffff-no-rj"
+            },
+            "viewCountText": "129,485 views",
+            "viewCountInt": 129485,
+            "publishedTimeText": "5 months ago",
+            "publishedTime": "2025-02-17T10:50:38.152Z",
+            "lengthText": "15:36",
+            "lengthSeconds": 936,
+            "badges": [
+              "4K"
+            ]
+          }
+        ]
+      }
+    ],
+    "lives": [],
+    "continuationToken": "EqQDEgthaXJwb2RzIHBybxqUA1NCU0NBUXMwT1ZseVFUZFpUMFZ3U1lJQkMwMWFUR3hRZGtSWmVFMUZnZ0VMTlMweE5VbzJOa2xpWkRpQ0FRdE9jMVZKY0RVM2JIaGtOSUlCQzNGc05tMW9hRWhEYkdSWmdnRUxTRW80Y25waVRETlVhV2VDQVFzMlZrZDFSMUZmWkhKUldZSUJDMU5KVUY5eWMxYzBNM0IzZ2dFTFl6bDJNMnBWYlZGTVYyLUNBUXQ1UTNKS01EQXdXbWRuUllJQkMwSmhRM1J3YVhabk1GOUpnZ0VMUldSS01WTkZXbVpYUTFXQ0FRdFZiVFkwVTFSak1uTjFhNElCQzJZelJHWktlSFpyVGkwNGdnRUxYMGhSYTNCelRHWlhla21DQVF0bGJsSTFjME5YVEdORmI0SUJDMHBzYjA5MGNIWXRWM1k0Z2dFTFkwYzRVRmhrVkd4RVlXZUNBUXQ0U0U1eFpITktaakZWVFlJQkMybHBXRTFXT0VzMlVHTk5zZ0VHQ2dRSUdoQUM2Z0VFQ0FJUUZBJTNEJTNEGIHg6BgiC3NlYXJjaC1mZWVk"
+  }
+}

@@ -110,7 +110,30 @@ export const userProfiles = pgTable('user_profiles', {
   // Clerk billing fields
   clerkCustomerId: text('clerk_customer_id'),
   clerkSubscriptionId: text('clerk_subscription_id'),
-  currentPlan: varchar('current_plan', { length: 20 }).default('free'), // 'free', 'premium', 'enterprise'
+  currentPlan: varchar('current_plan', { length: 50 }).default('free'), // 'free', 'glow_up', 'viral_surge', 'fame_flex'
+  // Payment method fields
+  paymentMethodId: text('payment_method_id'),
+  cardLast4: varchar('card_last_4', { length: 4 }),
+  cardBrand: varchar('card_brand', { length: 20 }),
+  cardExpMonth: integer('card_exp_month'),
+  cardExpYear: integer('card_exp_year'),
+  billingAddressCity: text('billing_address_city'),
+  billingAddressCountry: varchar('billing_address_country', { length: 2 }),
+  billingAddressPostalCode: varchar('billing_address_postal_code', { length: 20 }),
+  // Plan feature tracking
+  planCampaignsLimit: integer('plan_campaigns_limit'),
+  planCreatorsLimit: integer('plan_creators_limit'),
+  planFeatures: jsonb('plan_features'),
+  usageCampaignsCurrent: integer('usage_campaigns_current').default(0),
+  usageCreatorsCurrentMonth: integer('usage_creators_current_month').default(0),
+  usageResetDate: timestamp('usage_reset_date').defaultNow(),
+  // Billing webhook tracking
+  lastWebhookEvent: varchar('last_webhook_event', { length: 100 }),
+  lastWebhookTimestamp: timestamp('last_webhook_timestamp'),
+  billingSyncStatus: varchar('billing_sync_status', { length: 20 }).default('pending'),
+  trialConversionDate: timestamp('trial_conversion_date'),
+  subscriptionCancelDate: timestamp('subscription_cancel_date'),
+  subscriptionRenewalDate: timestamp('subscription_renewal_date'),
   // Admin system field
   isAdmin: boolean('is_admin').default(false), // Database-based admin role
   createdAt: timestamp('created_at').notNull().defaultNow(),

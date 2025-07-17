@@ -1,7 +1,7 @@
 # 🔍 Search APIs Overview - All 6 Platform Combinations
 
 ## Overview
-Complete documentation of all 6 platform search combinations: TikTok (keyword/similar), Instagram (similar/hashtag), and YouTube (keyword/similar) with their unique features, data structures, and processing patterns.
+Complete documentation of all 6 platform search combinations: TikTok (keyword/similar), Instagram (similar/reels), and YouTube (keyword/similar) with their unique features, data structures, and processing patterns.
 
 ## 🏗️ Platform Search Architecture
 
@@ -15,7 +15,7 @@ Complete documentation of all 6 platform search combinations: TikTok (keyword/si
 │  │                 │    │                 │                    │
 │  │ ✅ Keyword      │    │ ❌ Keyword      │                    │
 │  │ ✅ Similar      │    │ ✅ Similar      │                    │
-│  │                 │    │ ✅ Hashtag      │                    │
+│  │                 │    │ ✅ Reels        │                    │
 │  └─────────────────┘    └─────────────────┘                    │
 │                                                                 │
 │  ┌─────────────────┐                                           │
@@ -33,13 +33,13 @@ Complete documentation of all 6 platform search combinations: TikTok (keyword/si
 
 ## 📊 Platform Feature Matrix
 
-| Feature | TikTok Keyword | TikTok Similar | Instagram Similar | Instagram Hashtag | YouTube Keyword | YouTube Similar |
+| Feature | TikTok Keyword | TikTok Similar | Instagram Similar | Instagram Reels | YouTube Keyword | YouTube Similar |
 |---------|----------------|----------------|-------------------|-------------------|-----------------|-----------------|
-| **API Endpoint** | `/api/scraping/tiktok` | `/api/scraping/tiktok-similar` | `/api/scraping/instagram` | `/api/scraping/instagram-hashtag` | `/api/scraping/youtube` | `/api/scraping/youtube-similar` |
-| **Search Method** | Keywords | Target Username | Target Username | Hashtag | Keywords | Target Channel |
-| **Bio Extraction** | ✅ Enhanced | ✅ Basic | ✅ Enhanced | ✅ Basic | ✅ Enhanced | ✅ Enhanced |
-| **Email Extraction** | ✅ Profile API | ✅ Bio Regex | ✅ Bio Regex | ✅ Bio Regex | ✅ Channel API | ✅ Channel API |
-| **Follower Count** | ✅ | ✅ | ❌ | ✅ | ✅ Subscribers | ✅ Subscribers |
+| **API Endpoint** | `/api/scraping/tiktok` | `/api/scraping/tiktok-similar` | `/api/scraping/instagram` | `/api/scraping/instagram-reels` | `/api/scraping/youtube` | `/api/scraping/youtube-similar` |
+| **Search Method** | Keywords | Target Username | Target Username | Reels | Keywords | Target Channel |
+| **Bio Extraction** | ✅ Enhanced | ✅ Basic | ✅ Enhanced | ✅ Enhanced | ✅ Enhanced | ✅ Enhanced |
+| **Email Extraction** | ✅ Profile API | ✅ Bio Regex | ✅ Bio Regex | ✅ Profile API | ✅ Channel API | ✅ Channel API |
+| **Follower Count** | ✅ | ✅ | ❌ | ✅ Enhanced | ✅ Subscribers | ✅ Subscribers |
 | **Verification Status** | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
 | **Private Accounts** | ❌ | Filter Out | Show Status | Filter Out | ❌ | ❌ |
 | **Max Results** | 1000 | 10 | ~20 | 1000 | 1000 | 10 |
@@ -234,9 +234,9 @@ for (let i = 0; i < creators.length; i++) {
 }
 ```
 
-### 4. **Instagram Hashtag Search**
+### 4. **Instagram Reels Search**
 
-#### **Endpoint**: `/api/scraping/instagram-hashtag`
+#### **Endpoint**: `/api/scraping/instagram-reels`
 
 #### **Request Structure**:
 ```json
@@ -248,7 +248,7 @@ for (let i = 0; i < creators.length; i++) {
 ```
 
 #### **Processing Features**:
-- #️⃣ **Hashtag Normalization**: Removes # prefix
+- #️⃣ **Keyword Normalization**: Removes # prefix for reel searches
 - 📸 **Post-Based Discovery**: Finds creators through posts
 - 🔁 **Pagination**: Cursor-based for large result sets
 - 🎯 **Creator Deduplication**: Unique creators only
@@ -478,7 +478,7 @@ const DELAY_BETWEEN_CALLS = await SystemConfig.get('api', 'delay_between_calls')
 | TikTok Keyword | 1 (test) / 999 (prod) | 2s | 100ms |
 | TikTok Similar | 1 (test) / 10 (prod) | 2s | N/A |
 | Instagram Similar | 1 | N/A | 500ms |
-| Instagram Hashtag | 1 (test) / 999 (prod) | 2s | 100ms |
+| Instagram Reels | 1 (test) / 999 (prod) | 2s | 100ms |
 | YouTube Keyword | 1 (test) / 999 (prod) | 2s | 200ms |
 | YouTube Similar | 1 (test) / 10 (prod) | 2s | 200ms |
 

@@ -36,9 +36,6 @@ const SearchResults = ({ searchData }) => {
   const [campaignName, setCampaignName] = useState('Campaign');
   const itemsPerPage = 10;
 
-  // Validación básica
-  if (!searchData?.jobId) return null;
-
   useEffect(() => {
     const fetchResults = async () => {
       try {
@@ -51,7 +48,7 @@ const SearchResults = ({ searchData }) => {
         });
         
         const apiEndpoint = searchData.selectedPlatform === 'Instagram' ? 
-          '/api/scraping/instagram-hashtag' :
+          '/api/scraping/instagram-reels' :
           searchData.selectedPlatform === 'YouTube' ? 
           '/api/scraping/youtube' : 
           '/api/scraping/tiktok';
@@ -106,6 +103,9 @@ const SearchResults = ({ searchData }) => {
     fetchCampaignName();
   }, [searchData?.campaignId]);
 
+  // Validación básica - moved after hooks to avoid conditional hook calls
+  if (!searchData?.jobId) return null;
+
   if (isLoading) {
     return (
       <SearchProgress 
@@ -114,10 +114,14 @@ const SearchResults = ({ searchData }) => {
         searchData={searchData}
         onComplete={(data) => {
           if (data && data.status === 'completed') {
-            // Combinar todos los creadores de todos los resultados
-            const allCreators = data.results?.reduce((acc, result) => {
-              return [...acc, ...(result.creators || [])];
-            }, []) || [];
+            console.log('🎯 [SEARCH-RESULTS] onComplete triggered:', {
+              creatorsCount: data.creators?.length || 0,
+              hasCreators: !!data.creators,
+              platform: searchData.selectedPlatform
+            });
+            
+            // Use creators directly from data.creators (already processed with bio/email)
+            const allCreators = data.creators || [];
             
             if (allCreators.length > 0) {
               setCreators(allCreators);
@@ -129,7 +133,7 @@ const SearchResults = ({ searchData }) => {
               if (searchData.selectedPlatform === 'youtube') {
                 apiEndpoint = '/api/scraping/youtube';
               } else if (searchData.selectedPlatform === 'instagram') {
-                apiEndpoint = '/api/scraping/instagram-hashtag';
+                apiEndpoint = '/api/scraping/instagram-reels';
               } else {
                 apiEndpoint = '/api/scraping/tiktok';
               }
@@ -137,8 +141,7 @@ const SearchResults = ({ searchData }) => {
               console.log('🔍 [SEARCH-RESULTS] Final status check:', {
                 platform: searchData.selectedPlatform,
                 apiEndpoint: apiEndpoint,
-                jobId: searchData.jobId,
-                status: status
+                jobId: searchData.jobId
               });
               
               fetch(`${apiEndpoint}?jobId=${searchData.jobId}`)
@@ -156,7 +159,7 @@ const SearchResults = ({ searchData }) => {
                 });
             }
           }
-        }} 
+        }}
       />
     );
   }
@@ -564,6 +567,7 @@ const SearchResults = ({ searchData }) => {
           Last
         </Button>
       </div>
+
     </div>
   );
 };

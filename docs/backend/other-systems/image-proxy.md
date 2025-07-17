@@ -3,6 +3,53 @@
 ## Overview
 Comprehensive image proxy system that handles HEIC conversion, bypasses CDN restrictions, provides fallback placeholders, and optimizes image delivery across all platforms with advanced retry strategies.
 
+**⚠️ IMPORTANT: This system now works alongside the Universal Image Cache Service for optimal performance.**
+
+## 🚀 New Universal Image Cache Service
+The platform now features a **Universal Image Cache Service** that downloads and stores creator profile images in Vercel Blob Storage, eliminating dependencies on external CDNs and ensuring permanent image URLs.
+
+### Key Benefits
+- **Permanent URLs**: Images cached in Vercel Blob Storage never expire
+- **Eliminates TikTok signature expiration**: No more broken images after 24 hours
+- **Performance**: Faster loading from Vercel's global CDN
+- **Reliability**: Reduces dependency on external CDNs
+- **Cost Efficiency**: Reduced repeated API calls for same images
+
+### Implementation Status
+- ✅ **TikTok Keyword Search**: Fully integrated with image caching
+- ✅ **TikTok Similar Search**: Fully integrated with image caching
+- 🔄 **Instagram & YouTube**: Ready for implementation (same pattern)
+
+### Architecture
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    IMAGE CACHING FLOW                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  Background Processing (QStash)                                 │
+│         │                                                       │
+│         ▼                                                       │
+│  ┌─────────────────┐                                           │
+│  │   Image Cache   │                                           │
+│  │   Service       │                                           │
+│  │                 │                                           │
+│  │ Check if cached │                                           │
+│  │ Download & Store│                                           │
+│  │ Return blob URL │                                           │
+│  └─────────────────┘                                           │
+│         │                                                       │
+│         ▼                                                       │
+│  ┌─────────────────┐                                           │
+│  │   Vercel Blob   │                                           │
+│  │   Storage       │                                           │
+│  │                 │                                           │
+│  │ Permanent URLs  │                                           │
+│  │ Global CDN      │                                           │
+│  │ Never expires   │                                           │
+│  └─────────────────┘                                           │
+└─────────────────────────────────────────────────────────────────┘
+```
+
 ## 🏗️ Image Proxy Architecture
 
 ```

@@ -3,6 +3,7 @@
  */
 
 import { TikTokProfileResponse, TikTokUserSearchResponse, TikTokSimilarCreator } from './types';
+import { ImageCache } from '@/lib/services/image-cache';
 
 /**
  * Extract search keywords from TikTok profile data
@@ -46,7 +47,8 @@ export function extractSearchKeywords(profileData: TikTokProfileResponse): strin
 /**
  * Transform TikTok user search result to similar creator format
  */
-export function transformTikTokUser(userItem: TikTokUserSearchResponse['users'][0], searchKeyword: string): TikTokSimilarCreator {
+export async function transformTikTokUser(userItem: TikTokUserSearchResponse['users'][0], searchKeyword: string): Promise<TikTokSimilarCreator> {
+  const imageCache = new ImageCache();
   const userInfo = userItem.user_info;
   
   // Extract bio from search_user_desc (the only available bio field in user search)
@@ -67,6 +69,10 @@ export function transformTikTokUser(userItem: TikTokUserSearchResponse['users'][
   // Generate profile URL
   const profileUrl = `https://www.tiktok.com/@${userInfo.unique_id}`;
   
+  // Cache the profile image
+  const originalImageUrl = userInfo.avatar_medium?.url_list?.[0] || '';
+  const cachedImageUrl = await imageCache.getCachedImageUrl(originalImageUrl, 'TikTok', userInfo.unique_id);
+  
   // Transform to match the expected format for similar search results
   // The UI expects: id, username, full_name, is_private, is_verified, profile_pic_url
   return {
@@ -76,7 +82,7 @@ export function transformTikTokUser(userItem: TikTokUserSearchResponse['users'][
     full_name: userInfo.nickname, // Map displayName to full_name
     is_private: userInfo.is_private_account === 1,
     is_verified: userInfo.verification_type > 0,
-    profile_pic_url: userInfo.avatar_medium?.url_list?.[0] || '',
+    profile_pic_url: cachedImageUrl,
     
     // Additional TikTok-specific fields
     displayName: userInfo.nickname,
@@ -85,7 +91,7 @@ export function transformTikTokUser(userItem: TikTokUserSearchResponse['users'][
     videoCount: userInfo.aweme_count || 0,
     totalLikes: userInfo.total_favorited || 0,
     verified: userInfo.verification_type > 0,
-    profilePicUrl: userInfo.avatar_medium?.url_list?.[0] || '',
+    profilePicUrl: cachedImageUrl,
     bio: bio,
     emails: extractedEmails, // Add extracted emails
     profileUrl: profileUrl, // Add profile URL
@@ -102,6 +108,7 @@ export async function transformTikTokUserWithEnhancedBio(
   userItem: TikTokUserSearchResponse['users'][0], 
   searchKeyword: string
 ): Promise<TikTokSimilarCreator> {
+  const imageCache = new ImageCache();
   const userInfo = userItem.user_info;
   
   // Start with basic bio from search results
@@ -150,6 +157,10 @@ export async function transformTikTokUserWithEnhancedBio(
   // Generate profile URL
   const profileUrl = `https://www.tiktok.com/@${userInfo.unique_id}`;
   
+  // Cache the profile image
+  const originalImageUrl = userInfo.avatar_medium?.url_list?.[0] || '';
+  const cachedImageUrl = await imageCache.getCachedImageUrl(originalImageUrl, 'TikTok', userInfo.unique_id);
+  
   // Transform to match the expected format for similar search results
   return {
     // Match Instagram format for seamless UI integration
@@ -158,7 +169,7 @@ export async function transformTikTokUserWithEnhancedBio(
     full_name: userInfo.nickname, // Map displayName to full_name
     is_private: userInfo.is_private_account === 1,
     is_verified: userInfo.verification_type > 0,
-    profile_pic_url: userInfo.avatar_medium?.url_list?.[0] || '',
+    profile_pic_url: cachedImageUrl,
     
     // Additional TikTok-specific fields
     displayName: userInfo.nickname,
@@ -167,7 +178,7 @@ export async function transformTikTokUserWithEnhancedBio(
     videoCount: userInfo.aweme_count || 0,
     totalLikes: userInfo.total_favorited || 0,
     verified: userInfo.verification_type > 0,
-    profilePicUrl: userInfo.avatar_medium?.url_list?.[0] || '',
+    profilePicUrl: cachedImageUrl,
     bio: bio, // Enhanced bio from profile API
     emails: extractedEmails, // Enhanced email extraction
     profileUrl: profileUrl, // Add profile URL
@@ -180,13 +191,13 @@ export async function transformTikTokUserWithEnhancedBio(
 /**
  * Transform multiple user search results
  */
-export function transformTikTokUsers(
+export async function transformTikTokUsers(
   searchResponse: TikTokUserSearchResponse, 
   searchKeyword: string
-): TikTokSimilarCreator[] {
+): Promise<TikTokSimilarCreator[]> {
   if (!searchResponse.users || searchResponse.users.length === 0) {
     return [];
   }
 
-  return searchResponse.users.map(userItem => transformTikTokUser(userItem, searchKeyword));
+  return Promise.all(searchResponse.users.map(userItem => transformTikTokUser(userItem, searchKeyword)));
 }

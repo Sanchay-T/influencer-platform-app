@@ -71,6 +71,13 @@
       "when": 1752324786798,
       "tag": "0009_silky_moon_knight",
       "breakpoints": false
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1752671755916,
+      "tag": "0010_zippy_dagger",
+      "breakpoints": false
     }
   ]
 }

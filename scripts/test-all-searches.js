@@ -31,7 +31,7 @@ const TEST_CONFIG = {
       username: 'tech',
       platform: 'Instagram'
     },
-    'instagram-hashtag': {
+    'instagram-reels': {
       keywords: ['tech', 'gadgets'],
       targetResults: 100,
       platform: 'Instagram'
@@ -53,7 +53,7 @@ const ENDPOINTS = {
   'tiktok-keyword': '/api/scraping/tiktok',
   'tiktok-similar': '/api/scraping/tiktok-similar',
   'instagram-similar': '/api/scraping/instagram',
-  'instagram-hashtag': '/api/scraping/instagram-hashtag',
+  'instagram-reels': '/api/scraping/instagram-reels',
   'youtube-keyword': '/api/scraping/youtube',
   'youtube-similar': '/api/scraping/youtube-similar'
 };

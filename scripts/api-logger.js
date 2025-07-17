@@ -32,8 +32,8 @@ const SEARCH_ENDPOINTS = {
     type: 'similar',
     platform: 'Instagram'
   },
-  'instagram-hashtag': {
-    endpoint: '/api/scraping/instagram-hashtag',
+  'instagram-reels': {
+    endpoint: '/api/scraping/instagram-reels',
     type: 'keyword',
     platform: 'Instagram'
   },

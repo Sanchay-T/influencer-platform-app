@@ -62,7 +62,7 @@ The usegemz backend is built with Next.js API routes, providing a robust server-
 ### 🔍 [Search APIs](./apis/)
 - **[Overview](./apis/search-apis-overview.md)** - All 6 platform combinations
 - **[TikTok APIs](./apis/tiktok-apis.md)** - Keyword + Similar search endpoints
-- **[Instagram APIs](./apis/instagram-apis.md)** - Similar search implementation
+- **[Instagram APIs](./apis/instagram-apis.md)** - Reels + Similar search implementation
 - **[YouTube APIs](./apis/youtube-apis.md)** - Keyword + Similar search endpoints
 - **[API Transformers](./apis/api-transformers.md)** - Data transformation patterns
 - **[Bio/Email Extraction](./apis/bio-email-extraction.md)** - Enhanced profile fetching system

@@ -51,7 +51,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
     timestamp: new Date().toISOString()
   });
 
-  // FASTER polling for live updates
+  // Standard polling intervals for all platforms
   const getPollingInterval = (progress) => {
     if (progress < 70) return 1500;  // 1.5 seconds - faster for live updates
     if (progress < 95) return 2000;  // 2 seconds - still frequent
@@ -98,7 +98,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
         } else {
           // Keyword search endpoints (existing logic)
           if (normalizedPlatform === 'instagram') {
-            apiEndpoint = `/api/scraping/instagram-hashtag?jobId=${jobId}`;
+            apiEndpoint = `/api/scraping/instagram-reels?jobId=${jobId}`;
           } else if (normalizedPlatform === 'youtube') {
             apiEndpoint = `/api/scraping/youtube?jobId=${jobId}`;
           } else {
@@ -115,9 +115,13 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
           apiEndpoint: apiEndpoint
         });
         
-        const response = await fetch(apiEndpoint);
+        const response = await fetch(apiEndpoint, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
         
-        // Check for 404 errors and log them
+        // Check for API errors and log them
         if (!response.ok) {
           console.error(`❌ [SEARCH-PROGRESS] API error: ${response.status} ${response.statusText}`, {
             url: apiEndpoint,
@@ -129,6 +133,13 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
           // If it's a 404, throw an error to trigger retry
           if (response.status === 404) {
             throw new Error(`API endpoint not found: ${apiEndpoint}`);
+          }
+          
+          // If it's a 401, it's likely a temporary auth issue - continue polling
+          if (response.status === 401) {
+            console.warn('⚠️ [SEARCH-PROGRESS] 401 Unauthorized - continuing to poll (may be temporary)');
+            // Don't throw error, just continue polling
+            return;
           }
         }
         
@@ -384,9 +395,9 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
 
         // Check for completion
         if (currentStatus === 'completed') {
+          // Standard completion for all platforms
           console.log('🎉 [SEARCH-PROGRESS] Job completed! Stopping polling.');
           clearTimeout(pollIntervalRef.current);
-          // Ensure we set progress to 100 when completed
           setProgress(100);
           setDisplayProgress(100);
           onComplete({ 
@@ -401,16 +412,22 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
           // The GET endpoint should handle this, but log it for debugging
         }
         
-        // Schedule next poll with adaptive interval (only if not completed)
-        if (currentStatus !== 'completed') {
+        // Schedule next poll with adaptive interval
+        let shouldContinuePolling = currentStatus !== 'completed';
+        
+        if (shouldContinuePolling) {
           const nextInterval = getPollingInterval(calculatedProgress);
+          
           console.log('🔄 [ADAPTIVE-POLLING] Scheduling next poll:', {
             currentProgress: Math.round(calculatedProgress),
             nextInterval: nextInterval + 'ms',
-            intervalType: nextInterval === 1000 ? 'fast' : nextInterval === 3000 ? 'normal' : 'slow'
+            intervalType: nextInterval === 1500 ? 'fast' : nextInterval === 2000 ? 'medium' : 'slow'
           });
           
           pollIntervalRef.current = setTimeout(poll, nextInterval);
+        } else {
+          console.log('⏹️ [POLLING] Stopping polling - job complete');
+          clearTimeout(pollIntervalRef.current);
         }
         
       } catch (error) {
@@ -545,17 +562,26 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
     
     const searchTypeText = isSimilarSearch ? 'similar' : 'keyword';
     
+    // Special handling for Instagram reels bio/email enhancement progress
+    const isInstagramReels = platformName.toLowerCase() === 'instagram' && !isSimilarSearch;
+    
     if (processedResults > 0) {
-      if (displayProgress < 25) {
-        return `Found ${processedResults} ${searchTypeText} ${platformName.toLowerCase()} creators, discovering more${speed}`;
+      if (isInstagramReels) {
+        // Show real enhancement progress for Instagram reels
+        return `Enhancing ${processedResults} Instagram creator profiles (${Math.round(displayProgress)}%)`;
+      } else {
+        // Standard messages for other platforms
+        if (displayProgress < 25) {
+          return `Found ${processedResults} ${searchTypeText} ${platformName.toLowerCase()} creators, discovering more${speed}`;
+        }
+        if (displayProgress < 50) {
+          return `Analyzing ${processedResults} ${platformName.toLowerCase()} profiles & engagement${speed}`;
+        }
+        if (displayProgress < 75) {
+          return `Processing ${processedResults} creator profiles & extracting contact info${speed}`;
+        }
+        return `Finalizing ${processedResults} ${platformName.toLowerCase()} creators & preparing export${speed}`;
       }
-      if (displayProgress < 50) {
-        return `Analyzing ${processedResults} ${platformName.toLowerCase()} profiles & engagement${speed}`;
-      }
-      if (displayProgress < 75) {
-        return `Processing ${processedResults} creator profiles & extracting contact info${speed}`;
-      }
-      return `Finalizing ${processedResults} ${platformName.toLowerCase()} creators & preparing export${speed}`;
     } else {
       // No results yet - show search-type-specific messages
       if (isSimilarSearch && targetUser) {
@@ -563,6 +589,11 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
         if (displayProgress < 50) return `Analyzing ${platformName.toLowerCase()} creator relationships...`;
         if (displayProgress < 75) return `Processing similar ${platformName.toLowerCase()} profiles...`;
         return 'Finalizing similar creator results...';
+      } else if (isInstagramReels) {
+        // Instagram reels specific messages
+        if (displayProgress < 10) return `Searching Instagram reels for your keywords...`;
+        if (displayProgress < 25) return `Found Instagram reels, getting creator profiles...`;
+        return `Enhancing creator profiles with bio & email data...`;
       } else {
         // Keyword search messages (existing)
         if (displayProgress < 25) return `Searching ${platformName.toLowerCase()} database...`;
@@ -649,7 +680,16 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
               </div>
               {processedResults > 0 && (
                 <span className="text-sm font-medium text-blue-800 bg-blue-100 px-2 py-1 rounded">
-                  {processedResults} found so far
+                  {(() => {
+                    const platformName = platform || 'TikTok';
+                    const isInstagramReels = platformName.toLowerCase() === 'instagram' && !searchData?.targetUsername;
+                    
+                    if (isInstagramReels) {
+                      return `${processedResults} profiles enhanced`;
+                    } else {
+                      return `${processedResults} found so far`;
+                    }
+                  })()}
                 </span>
               )}
             </div>

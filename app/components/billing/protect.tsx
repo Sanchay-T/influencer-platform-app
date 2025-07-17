@@ -99,6 +99,7 @@ function UpgradePrompt({
   plan?: string 
   currentPlan?: string
 }) {
+  const { isPaidUser, isTrialing } = useBilling();
   const getPromptContent = () => {
     if (feature) {
       const featureDetails = {
@@ -171,12 +172,14 @@ function UpgradePrompt({
       </CardHeader>
       <CardContent className="text-center space-y-4">
         <div className="text-sm text-gray-600">
-          Current plan: <span className="font-medium capitalize">{currentPlan || 'Free'}</span>
+          Current plan: <span className="font-medium capitalize">
+            {isPaidUser ? currentPlan : (isTrialing ? 'Free Trial' : 'Free')}
+          </span>
         </div>
         <div className="flex gap-2 justify-center">
           <Link href="/pricing">
             <Button>
-              Upgrade to {content.requiredPlan}
+              {isPaidUser ? `Upgrade to ${content.requiredPlan}` : `Get ${content.requiredPlan}`}
             </Button>
           </Link>
           <Link href="/pricing">
@@ -185,6 +188,14 @@ function UpgradePrompt({
             </Button>
           </Link>
         </div>
+        {/* Additional context for trial users */}
+        {isTrialing && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
+            <p className="text-sm text-blue-800">
+              ✨ You&apos;re currently on a free trial. Upgrade to unlock all features and continue using the platform after your trial ends.
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   )

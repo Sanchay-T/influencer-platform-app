@@ -31,13 +31,13 @@ graph TD
 | Platform | Keyword Search | Similar Search | Bio/Email Extraction | Image Support | API Endpoint |
 |----------|---------------|----------------|---------------------|---------------|--------------|
 | **TikTok** | ✅ | ✅ | ✅ Universal Enhanced Profile Fetching | HEIC → JPEG | `/api/scraping/tiktok`, `/api/scraping/tiktok-similar` |
-| **Instagram** | ✅ Hashtag Search | ✅ | ✅ Direct from API | Standard | `/api/scraping/instagram-hashtag`, `/api/scraping/instagram` |
+| **Instagram** | ✅ Reels Search | ✅ | ✅ Direct from API | Standard | `/api/scraping/instagram-reels`, `/api/scraping/instagram` |
 | **YouTube** | ✅ | ✅ | ✅ Enhanced Profile Fetching | Thumbnails | `/api/scraping/youtube`, `/api/scraping/youtube-similar` |
 
 **Total Platform Combinations Supported: 6**
 - TikTok Keyword Search
 - TikTok Similar Search  
-- Instagram Hashtag Search
+- Instagram Reels Search
 - Instagram Similar Search
 - YouTube Keyword Search
 - YouTube Similar Search
@@ -53,11 +53,14 @@ graph TD
 - ✅ **Subscriber count and engagement metrics**
 - ✅ **API Endpoint**: `/api/scraping/youtube-similar`
 
-#### **Instagram Hashtag Search**  
-- ✅ **Hashtag-based content discovery** for Instagram creators
-- ✅ **Posts and creators analysis** from hashtag feeds
-- ✅ **Enhanced profile data extraction**
-- ✅ **API Endpoint**: `/api/scraping/instagram-hashtag`
+#### **Instagram Reels Search**  
+- ✅ **Reels-based content discovery** for Instagram creators
+- ✅ **Posts and creators analysis** from reels feeds
+- ✅ **Enhanced profile data extraction** with bio/email enhancement
+- ✅ **Live intermediate results** with real-time preview cards
+- ✅ **Parallel batch processing** for faster bio/email extraction
+- ✅ **Follower count extraction** from profile API calls
+- ✅ **API Endpoint**: `/api/scraping/instagram-reels`
 
 #### **Advanced Bio & Email Extraction System**
 - ✅ **Universal enhanced profile fetching** for TikTok keyword and similar search
@@ -284,18 +287,25 @@ The platform now includes comprehensive documentation covering all systems:
 3. **GET `/api/scraping/tiktok?jobId=xxx`**
    - Returns job status and results for frontend polling
 
-### Data Transformation
+### Data Transformation with Image Caching
 ```javascript
-// TikTok API Response → Common Format
-const creators = apiResponse.search_item_list.map((item) => {
+// TikTok API Response → Common Format with Cached Images
+const imageCache = new ImageCache();
+
+const creators = await Promise.all(apiResponse.search_item_list.map(async (item) => {
   const awemeInfo = item.aweme_info || {};
   const author = awemeInfo.author || {};
+  
+  // Cache the profile image during processing
+  const originalImageUrl = author.avatar_medium?.url_list?.[0] || '';
+  const cachedImageUrl = await imageCache.getCachedImageUrl(originalImageUrl, 'TikTok', author.unique_id);
   
   return {
     creator: {
       name: author.nickname || author.unique_id,
       followers: author.follower_count || 0,
-      avatarUrl: author.avatar_medium?.url_list?.[0]?.replace('.heic', '.jpeg'),
+      avatarUrl: cachedImageUrl,        // ✅ Now uses cached blob URL
+      profilePicUrl: cachedImageUrl,    // ✅ Permanent, never expires
     },
     video: {
       description: awemeInfo.desc || 'No description',
@@ -309,7 +319,7 @@ const creators = apiResponse.search_item_list.map((item) => {
     hashtags: awemeInfo.text_extra?.filter(e => e.type === 1).map(e => e.hashtag_name) || [],
     platform: 'TikTok'
   };
-});
+}));
 ```
 
 ## TikTok Similar Search Implementation
@@ -328,7 +338,7 @@ const creators = apiResponse.search_item_list.map((item) => {
   └── similar-search-progress.jsx                    # Progress component
 ```
 
-### Enhanced Bio/Email Extraction Architecture
+### Enhanced Bio/Email Extraction + Image Caching Architecture
 ```javascript
 // lib/platforms/tiktok-similar/handler.ts
 export async function processTikTokSimilarJob(job: any, jobId: string) {
@@ -341,7 +351,7 @@ export async function processTikTokSimilarJob(job: any, jobId: string) {
   // Step 3: Search for similar users using keywords
   const searchResults = await searchTikTokUsers(keywords[0]);
   
-  // Step 4: Enhanced transformation with individual profile API calls
+  // Step 4: Enhanced transformation with bio enhancement + image caching
   const creators = await Promise.all(
     searchResults.users.map(user => transformTikTokUserWithEnhancedBio(user, keyword))
   );
@@ -352,6 +362,40 @@ export async function processTikTokSimilarJob(job: any, jobId: string) {
   } else {
     await markJobCompleted(jobId);
   }
+}
+```
+
+### Image Caching in TikTok Similar Search
+```javascript
+// lib/platforms/tiktok-similar/transformer.ts
+export async function transformTikTokUserWithEnhancedBio(userItem, searchKeyword) {
+  const imageCache = new ImageCache();
+  const userInfo = userItem.user_info;
+  
+  // Enhanced bio fetching
+  let bio = userInfo.search_user_desc || '';
+  try {
+    const profileData = await getTikTokProfile(userInfo.unique_id);
+    bio = profileData.user?.signature || bio;
+  } catch (error) {
+    // Continue with basic bio
+  }
+  
+  // Cache the profile image during processing
+  const originalImageUrl = userInfo.avatar_medium?.url_list?.[0] || '';
+  const cachedImageUrl = await imageCache.getCachedImageUrl(originalImageUrl, 'TikTok', userInfo.unique_id);
+  
+  return {
+    id: userInfo.uid,
+    username: userInfo.unique_id,
+    full_name: userInfo.nickname,
+    is_verified: userInfo.verification_type > 0,
+    profile_pic_url: cachedImageUrl,        // ✅ Cached blob URL
+    profilePicUrl: cachedImageUrl,          // ✅ Never expires
+    bio: bio,                               // ✅ Enhanced bio
+    emails: bio.match(emailRegex) || [],    // ✅ Email extraction
+    platform: 'TikTok'
+  };
 }
 ```
 
@@ -458,6 +502,351 @@ if (job.platform === 'Instagram' && job.targetUsername) {
   await saveResults(jobId, relatedProfiles);
   await markJobCompleted(jobId);
 }
+```
+
+## Instagram Reels Search Implementation
+
+### File Structure
+```
+/app/api/scraping/instagram-reels/route.ts               # Instagram reels API endpoint
+/app/api/qstash/process-scraping/route.ts               # Background processing (lines 400-700)
+/app/components/campaigns/keyword-search/
+  ├── keyword-search-form.jsx                           # Platform + keyword selection
+  ├── search-results.jsx                                # Results display with bio/email
+  └── search-progress.jsx                               # Progress UI with live preview
+```
+
+### Advanced Implementation Features
+
+#### 1. **RapidAPI Integration**
+```javascript
+// RapidAPI Instagram Reels Search
+const RAPIDAPI_KEY = process.env.RAPIDAPI_INSTAGRAM_KEY;
+const RAPIDAPI_HOST = 'instagram-premium-api-2023.p.rapidapi.com';
+
+const searchReels = async (keywords) => {
+  const response = await fetch(`https://${RAPIDAPI_HOST}/reels/search`, {
+    method: 'POST',
+    headers: {
+      'X-RapidAPI-Key': RAPIDAPI_KEY,
+      'X-RapidAPI-Host': RAPIDAPI_HOST,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      keywords: keywords,
+      count: 50
+    })
+  });
+  
+  return await response.json();
+};
+```
+
+#### 2. **Parallel Bio/Email Enhancement**
+```javascript
+// Batch processing with parallel API calls
+const BATCH_SIZE = 3;
+const batches = [];
+
+for (let i = 0; i < creators.length; i += BATCH_SIZE) {
+  batches.push(creators.slice(i, i + BATCH_SIZE));
+}
+
+// Process each batch in parallel
+for (const [batchIndex, batch] of batches.entries()) {
+  const batchPromises = batch.map(async ([userId, creatorData]) => {
+    let enhancedBio = '';
+    let enhancedEmails = [];
+    
+    // Enhanced profile fetching with timeout
+    try {
+      const profileResponse = await fetch(`${RAPIDAPI_BASE_URL}/v2/user/by/id?id=${userId}`, {
+        headers: {
+          'X-RapidAPI-Key': RAPIDAPI_KEY,
+          'X-RapidAPI-Host': RAPIDAPI_HOST
+        }
+      });
+      
+      if (profileResponse.ok) {
+        const profileData = await profileResponse.json();
+        const userProfile = profileData.user || {};
+        
+        // Extract bio and email
+        enhancedBio = userProfile.biography || userProfile.bio || '';
+        const emailMatches = enhancedBio.match(emailRegex) || [];
+        enhancedEmails = emailMatches;
+        
+        // Extract follower count
+        const followerCount = userProfile.follower_count || userProfile.followers || 0;
+        if (followerCount > 0) {
+          creatorData.followerCount = followerCount;
+        }
+      }
+    } catch (error) {
+      console.log(`❌ [BIO-ENHANCEMENT] Error for @${creatorData.username}:`, error.message);
+    }
+    
+    return {
+      creator: {
+        name: creatorData.fullName || creatorData.username,
+        uniqueId: creatorData.username,
+        followers: creatorData.followerCount || 0,
+        avatarUrl: creatorData.profilePicUrl || '',
+        bio: enhancedBio,
+        emails: enhancedEmails
+      },
+      video: {
+        description: media.caption?.text || '',
+        url: `https://www.instagram.com/reel/${media.code}`,
+        statistics: {
+          likes: media.like_count || 0,
+          comments: media.comment_count || 0,
+          views: media.play_count || 0
+        }
+      },
+      platform: 'Instagram'
+    };
+  });
+  
+  const batchResults = await Promise.all(batchPromises);
+  transformedCreators.push(...batchResults);
+  
+  // 🔄 INTERMEDIATE RESULTS: Save cumulative results for live preview
+  await db.insert(scrapingResults).values({
+    jobId: job.id,
+    creators: transformedCreators,
+    createdAt: new Date()
+  });
+  
+  // Update progress
+  const currentProgress = Math.round(40 + ((processedCreators / totalCreators) * 50));
+  await db.update(scrapingJobs).set({
+    progress: currentProgress.toString(),
+    processedResults: processedCreators
+  }).where(eq(scrapingJobs.id, job.id));
+}
+```
+
+#### 3. **Live Preview System**
+```javascript
+// Frontend automatically detects intermediate results
+if (currentStatus === 'processing' && data.results && data.results.length > 0) {
+  const foundCreators = data.results.reduce((acc, result) => {
+    return [...acc, ...(result.creators || [])];
+  }, []);
+  
+  // Update intermediate results for live preview
+  setIntermediateCreators(foundCreators);
+  setShowIntermediateResults(true);
+}
+```
+
+#### 4. **Enhanced Data Structure**
+```javascript
+// Complete Instagram reel creator data
+const instagramCreator = {
+  creator: {
+    name: 'Creator Name',
+    uniqueId: 'username',
+    followers: 12500,           // ✅ Enhanced from profile API
+    avatarUrl: 'profile_pic_url',
+    bio: 'Creator bio text...',  // ✅ Enhanced from profile API
+    emails: ['email@domain.com'] // ✅ Enhanced from bio extraction
+  },
+  video: {
+    description: 'Reel description',
+    url: 'https://www.instagram.com/reel/ABC123',
+    statistics: {
+      likes: 1234,
+      comments: 56,
+      views: 12500
+    }
+  },
+  hashtags: ['#trending', '#viral'],
+  platform: 'Instagram',
+  postType: 'Video',
+  enhancementStatus: 'completed'
+};
+```
+
+### Performance Optimizations
+
+#### 1. **Request Limiting**
+```javascript
+// Single request for testing
+const INSTAGRAM_REELS_MAX_REQUESTS = 1;
+```
+
+#### 2. **Progress Tracking**
+```javascript
+// Real-time progress updates
+const progressStages = {
+  0-10: 'Searching Instagram reels...',
+  10-25: 'Found reels, getting creator profiles...',
+  25-40: 'Processing reels data...',
+  40-100: 'Enhancing X/Y creators (Z%)'
+};
+```
+
+#### 3. **Error Recovery**
+```javascript
+// Graceful error handling
+try {
+  // Profile API call
+} catch (profileError) {
+  console.log('⚠️ Profile enhancement failed, using basic data');
+  // Continue with basic creator data
+}
+```
+
+### Key Features
+
+- ✅ **Live Preview Cards**: Real-time intermediate results display
+- ✅ **Bio/Email Enhancement**: Individual profile API calls for complete data
+- ✅ **Follower Count Extraction**: Accurate follower counts from profile API
+- ✅ **Parallel Processing**: Batch processing for 3x faster performance
+- ✅ **Error Recovery**: Graceful handling of failed API calls
+- ✅ **Progress Tracking**: Detailed progress messages and percentages
+- ✅ **Single Request Testing**: Configurable API limits for development
+
+## Universal Image Cache Service - Production Ready
+
+### Overview
+The platform features a comprehensive image caching system that downloads and stores creator profile images in Vercel Blob Storage, eliminating dependencies on external CDNs and ensuring permanent image URLs.
+
+### File Structure
+```
+/lib/services/image-cache.ts                         # Universal image caching service
+/app/api/proxy/image/route.ts                        # Fallback image proxy with HEIC conversion
+```
+
+### Core Features
+- **Permanent Storage**: Images cached in Vercel Blob Storage never expire
+- **HEIC Conversion**: Automatic conversion of HEIC images to JPEG format
+- **Platform Agnostic**: Works with TikTok, Instagram, YouTube, and future platforms
+- **Intelligent Caching**: Checks cache before downloading, avoids duplicates
+- **Graceful Fallbacks**: Falls back to proxy system if caching fails
+
+### Implementation
+```javascript
+// lib/services/image-cache.ts
+export class ImageCache {
+  async getCachedImageUrl(originalUrl: string, platform: string, userId?: string): Promise<string> {
+    if (!originalUrl) return '';
+    
+    const cacheKey = await this.generateCacheKey(originalUrl, platform, userId);
+    
+    // Check if already cached
+    const { blobs } = await list({ prefix: cacheKey.split('/')[0] + '/', limit: 1000 });
+    const existing = blobs.find(blob => blob.pathname === cacheKey);
+    if (existing) {
+      return existing.url; // Return cached blob URL
+    }
+
+    // Download and cache
+    return await this.downloadAndCache(originalUrl, cacheKey, platform);
+  }
+
+  private async downloadAndCache(url: string, cacheKey: string, platform: string): Promise<string> {
+    // Platform-specific headers
+    const headers = platform === 'TikTok' ? {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      'Referer': 'https://www.tiktok.com/',
+      'Origin': 'https://www.tiktok.com'
+    } : {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    };
+
+    const response = await fetch(url, { headers });
+    let buffer = Buffer.from(await response.arrayBuffer());
+    
+    // Convert HEIC to JPEG if needed
+    if (url.includes('.heic')) {
+      const convert = require('heic-convert');
+      buffer = Buffer.from(await convert({ buffer, format: 'JPEG', quality: 0.85 }));
+    }
+
+    // Store in Vercel Blob
+    const blob = await put(cacheKey, buffer, {
+      access: 'public',
+      contentType: 'image/jpeg'
+    });
+
+    return blob.url; // Return permanent blob URL
+  }
+}
+```
+
+### Platform Integration
+
+#### TikTok Keyword Search
+```javascript
+// app/api/qstash/process-scraping/route.ts
+const imageCache = new ImageCache();
+const originalImageUrl = author.avatar_medium?.url_list?.[0] || '';
+const cachedImageUrl = await imageCache.getCachedImageUrl(originalImageUrl, 'TikTok', author.unique_id);
+
+const creatorData = {
+  creator: {
+    avatarUrl: cachedImageUrl,        // ✅ Permanent blob URL
+    profilePicUrl: cachedImageUrl,    // ✅ Never expires
+  }
+};
+```
+
+#### TikTok Similar Search
+```javascript
+// lib/platforms/tiktok-similar/transformer.ts
+export async function transformTikTokUserWithEnhancedBio(userItem, searchKeyword) {
+  const imageCache = new ImageCache();
+  const originalImageUrl = userInfo.avatar_medium?.url_list?.[0] || '';
+  const cachedImageUrl = await imageCache.getCachedImageUrl(originalImageUrl, 'TikTok', userInfo.unique_id);
+  
+  return {
+    profile_pic_url: cachedImageUrl,     // ✅ Cached blob URL
+    profilePicUrl: cachedImageUrl,       // ✅ Never expires
+  };
+}
+```
+
+### Environment Configuration
+```bash
+# .env.local
+BLOB_READ_WRITE_TOKEN=vercel_blob_rw_xxx...
+
+# Vercel Dashboard
+# Storage → search-profile-pics → API → Read/Write Token
+```
+
+### Benefits
+- **Reliability**: No more broken images from expired TikTok signatures
+- **Performance**: Faster loading from Vercel's global CDN
+- **Consistency**: All platforms use the same caching strategy
+- **Cost Efficiency**: Reduced external API calls for repeated image requests
+- **Scalability**: Vercel Blob handles global distribution automatically
+
+### Cache Structure
+```
+Blob Storage Structure:
+├── tiktok/
+│   ├── abc123.jpg (user: @creator1)
+│   ├── def456.jpg (user: @creator2)
+│   └── ...
+├── instagram/
+│   ├── xyz789.jpg
+│   └── ...
+└── youtube/
+    ├── uvw012.jpg
+    └── ...
+```
+
+### URL Transformation
+```javascript
+// Before (External CDN - expires)
+"https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/abc123~c5_720x720.jpeg?x-expires=1640995200&x-signature=xyz"
+
+// After (Vercel Blob - permanent)
+"https://uqsunxfcuh4kck1e.public.blob.vercel-storage.com/tiktok/abc123.jpg"
 ```
 
 ## Image Proxy System - Universal HEIC & CDN Handling
@@ -1087,10 +1476,14 @@ QSTASH_NEXT_SIGNING_KEY=xxx
 SCRAPECREATORS_API_URL=https://api.scrapecreators.com/v1/tiktok/search/keyword
 SCRAPECREATORS_TIKTOK_SIMILAR_API_URL=https://api.scrapecreators.com/v1/tiktok/similar  # NEW
 SCRAPECREATORS_INSTAGRAM_API_URL=https://api.scrapecreators.com/v1/instagram/profile
-SCRAPECREATORS_INSTAGRAM_HASHTAG_API_URL=https://api.scrapecreators.com/v1/instagram/hashtag  # NEW
+SCRAPECREATORS_INSTAGRAM_REELS_API_URL=https://api.scrapecreators.com/v1/instagram/reels  # NEW
 SCRAPECREATORS_YOUTUBE_API_URL=https://api.scrapecreators.com/v1/youtube/search  # NEW
-SCRAPECREATORS_YOUTUBE_SIMILAR_API_URL=https://api.scrapecreators.com/v1/youtube/similar  # NEW
 SCRAPECREATORS_API_KEY=xxx
+
+# Vercel Blob Storage (Image Caching)
+BLOB_READ_WRITE_TOKEN=vercel_blob_rw_xxx...  # NEW: Universal image caching
+
+SCRAPECREATORS_YOUTUBE_SIMILAR_API_URL=https://api.scrapecreators.com/v1/youtube/similar  # NEW
 
 # Email System (Trial & Admin Features)
 RESEND_API_KEY=re_xxx  # NEW: Email service for trial system
@@ -1240,10 +1633,10 @@ Check response headers for debugging:
 
 ## Troubleshooting Common Issues
 
-### 0. Instagram Hashtag Jobs Stuck at 99%
-**Symptoms**: Instagram hashtag search gets stuck at 99% progress on Vercel
+### 0. Instagram Reels Jobs Stuck at 99%
+**Symptoms**: Instagram reels search gets stuck at 99% progress on Vercel
 **Root Cause**: Frontend-backend data structure mismatch in job status polling
-**Solution**: See detailed analysis in [`docs/instagram-hashtag-troubleshooting.md`](./docs/instagram-hashtag-troubleshooting.md)
+**Solution**: See detailed analysis in [`docs/instagram-reels-troubleshooting.md`](./docs/instagram-reels-troubleshooting.md)
 
 ### 1. HEIC Images Not Converting
 **Symptoms**: Images show as broken or don't load
@@ -1360,13 +1753,14 @@ The platform has evolved into a **comprehensive, production-ready system** suppo
 
 #### **🌐 Platform Coverage (6 Total Combinations)**
 - ✅ **TikTok**: Keyword + Similar Search with enhanced bio/email extraction
-- ✅ **Instagram**: Hashtag + Similar Search with full profile data
+- ✅ **Instagram**: Reels + Similar Search with full profile data
 - ✅ **YouTube**: Keyword + Similar Search with channel analysis
 
 #### **🚀 Core Systems (All Production-Ready)**
 - ✅ **Authentication**: Clerk integration with dual admin system
 - ✅ **Database**: 6-table schema with JSONB support and indexing
 - ✅ **Background Processing**: QStash-powered async job system
+- ✅ **Image Caching**: Universal Vercel Blob Storage with permanent URLs
 - ✅ **Image Handling**: Universal HEIC conversion and CDN bypass
 - ✅ **Email System**: 7-day trial automation with Resend integration
 - ✅ **Admin Panel**: Complete system management and configuration
@@ -1375,6 +1769,7 @@ The platform has evolved into a **comprehensive, production-ready system** suppo
 #### **🔧 Advanced Features**
 - ✅ **Dynamic Configuration**: Hot-reloadable system settings
 - ✅ **Bio/Email Extraction**: Automated contact information discovery
+- ✅ **Image Caching**: Permanent storage eliminating CDN dependencies
 - ✅ **Trial Management**: Complete 7-day trial flow with email sequences
 - ✅ **Real-time Updates**: Live progress tracking and status updates
 - ✅ **Comprehensive Logging**: Full debugging and monitoring capabilities
@@ -1394,6 +1789,7 @@ The platform has evolved into a **comprehensive, production-ready system** suppo
 - **Background Jobs**: QStash for serverless processing
 - **Email**: Resend with template system
 - **Image Processing**: HEIC conversion and CDN bypass
+- **Image Storage**: Vercel Blob Storage for permanent URLs
 - **Monitoring**: Comprehensive logging and error tracking
 
 ### **🎯 Business Impact**

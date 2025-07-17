@@ -4,6 +4,7 @@ import { headers } from 'next/headers';
 import { db } from '@/lib/db';
 import { userProfiles } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { cancelTrialEmailsOnSubscription, scheduleSubscriptionWelcomeEmail } from '@/lib/email/trial-email-triggers';
 
 export async function POST(req: Request) {
   // Verify the webhook
@@ -107,18 +108,48 @@ async function handleSubscriptionCreated(data: any) {
 
   const planId = subscription.plan?.id;
   const currentPlan = mapClerkPlanToInternalPlan(planId);
+  const isActiveSubscription = subscription.status === 'active';
+  const isTrialing = subscription.status === 'trialing';
 
+  // Update user billing status
   await updateUserBillingStatus(userId, {
     clerkSubscriptionId: subscription.id,
     currentPlan,
-    subscriptionStatus: subscription.status === 'trialing' ? 'trialing' : 'active',
-    trialStatus: subscription.status === 'trialing' ? 'active' : 'converted'
+    subscriptionStatus: isTrialing ? 'trialing' : 'active',
+    trialStatus: isTrialing ? 'active' : 'converted'
   });
+
+  // If subscription is active (not trialing), handle trial-to-paid conversion
+  if (isActiveSubscription && currentPlan !== 'free') {
+    console.log('🎯 [CLERK-BILLING-WEBHOOK] Active subscription detected - converting trial to paid');
+    
+    // Get user profile for email personalization
+    const userProfile = await db.query.userProfiles.findFirst({
+      where: eq(userProfiles.userId, userId)
+    });
+    
+    if (userProfile) {
+      // Cancel scheduled trial emails
+      const cancelResult = await cancelTrialEmailsOnSubscription(userId);
+      console.log('📧 [CLERK-BILLING-WEBHOOK] Trial email cancellation result:', cancelResult);
+      
+      // Schedule subscription welcome email
+      const welcomeResult = await scheduleSubscriptionWelcomeEmail(userId, {
+        plan: currentPlan,
+        fullName: userProfile.fullName || 'User',
+        businessName: userProfile.businessName || 'Your Business'
+      });
+      console.log('📧 [CLERK-BILLING-WEBHOOK] Subscription welcome email result:', welcomeResult);
+    }
+  }
 
   console.log('✅ [CLERK-BILLING-WEBHOOK] Subscription created processed:', {
     userId,
     subscriptionId: subscription.id,
-    plan: currentPlan
+    plan: currentPlan,
+    status: subscription.status,
+    isActiveSubscription,
+    emailsProcessed: isActiveSubscription
   });
 }
 
@@ -130,24 +161,59 @@ async function handleSubscriptionUpdated(data: any) {
   
   const userId = data.user_id;
   const subscription = data.subscription;
+  const previousAttributes = data.previous_attributes || {};
   
   if (!userId || !subscription) return;
 
   const planId = subscription.plan?.id;
   const currentPlan = mapClerkPlanToInternalPlan(planId);
+  const isActiveSubscription = subscription.status === 'active';
+  const wasTrialing = previousAttributes.status === 'trialing';
+  const isTrialing = subscription.status === 'trialing';
+  
+  // Check if this is a trial-to-paid conversion
+  const isTrialToPaidConversion = wasTrialing && isActiveSubscription;
 
+  // Update user billing status
   await updateUserBillingStatus(userId, {
     clerkSubscriptionId: subscription.id,
     currentPlan,
     subscriptionStatus: subscription.status,
-    trialStatus: subscription.status === 'trialing' ? 'active' : 'converted'
+    trialStatus: isTrialing ? 'active' : 'converted'
   });
+
+  // If this is a trial-to-paid conversion, handle email updates
+  if (isTrialToPaidConversion && currentPlan !== 'free') {
+    console.log('🎯 [CLERK-BILLING-WEBHOOK] Trial-to-paid conversion detected');
+    
+    // Get user profile for email personalization
+    const userProfile = await db.query.userProfiles.findFirst({
+      where: eq(userProfiles.userId, userId)
+    });
+    
+    if (userProfile) {
+      // Cancel scheduled trial emails
+      const cancelResult = await cancelTrialEmailsOnSubscription(userId);
+      console.log('📧 [CLERK-BILLING-WEBHOOK] Trial email cancellation result:', cancelResult);
+      
+      // Schedule subscription welcome email
+      const welcomeResult = await scheduleSubscriptionWelcomeEmail(userId, {
+        plan: currentPlan,
+        fullName: userProfile.fullName || 'User',
+        businessName: userProfile.businessName || 'Your Business'
+      });
+      console.log('📧 [CLERK-BILLING-WEBHOOK] Subscription welcome email result:', welcomeResult);
+    }
+  }
 
   console.log('✅ [CLERK-BILLING-WEBHOOK] Subscription updated processed:', {
     userId,
     subscriptionId: subscription.id,
     plan: currentPlan,
-    status: subscription.status
+    status: subscription.status,
+    previousStatus: previousAttributes.status,
+    isTrialToPaidConversion,
+    emailsProcessed: isTrialToPaidConversion
   });
 }
 

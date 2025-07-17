@@ -187,6 +187,35 @@ export async function getTrialStatus(userId: string): Promise<TrialData | null> 
 
     // Get current billing status from Clerk
     const billingStatus = await ClerkBillingService.getUserBillingStatus(userId);
+    
+    // Check if user has an active paid subscription
+    const hasActiveSubscription = billingStatus.isActive && !billingStatus.isTrialing;
+    const isPaidUser = hasActiveSubscription && billingStatus.currentPlan !== 'free';
+    
+    // If user has active paid subscription, return subscription data instead of trial data
+    if (isPaidUser) {
+      console.log('✅ [TRIAL-SERVICE] Active paid subscription detected, returning subscription status');
+      return {
+        userId,
+        trialStatus: 'converted' as TrialStatus,
+        trialStartDate: userProfile.trialStartDate,
+        trialEndDate: userProfile.trialEndDate,
+        daysRemaining: 0,
+        hoursRemaining: 0,
+        minutesRemaining: 0,
+        totalDaysElapsed: 7, // Trial completed
+        progressPercentage: 100,
+        isExpired: false, // Not expired, converted to paid
+        timeUntilExpiry: 'Converted to paid subscription',
+        stripeCustomerId: userProfile.stripeCustomerId,
+        stripeSubscriptionId: userProfile.stripeSubscriptionId,
+        subscriptionStatus: 'active' as SubscriptionStatus,
+        clerkCustomerId: userProfile.clerkCustomerId,
+        clerkSubscriptionId: userProfile.clerkSubscriptionId,
+        currentPlan: billingStatus.currentPlan,
+        hasActiveSubscription: true
+      };
+    }
 
     // If no trial dates, create default trial data with billing info
     if (!userProfile.trialStartDate || !userProfile.trialEndDate) {
@@ -209,7 +238,7 @@ export async function getTrialStatus(userId: string): Promise<TrialData | null> 
         clerkCustomerId: userProfile.clerkCustomerId,
         clerkSubscriptionId: userProfile.clerkSubscriptionId,
         currentPlan: billingStatus.currentPlan,
-        hasActiveSubscription: billingStatus.isActive && !billingStatus.isTrialing
+        hasActiveSubscription: hasActiveSubscription
       };
     }
 

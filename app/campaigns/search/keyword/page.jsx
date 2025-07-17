@@ -110,7 +110,7 @@ export default function KeywordSearch() {
       // For now, we'll handle one platform at a time - prioritize the first selected platform
       let apiEndpoint = '/api/scraping/tiktok'; // Default to TikTok
       if (searchData.platforms.includes('instagram')) {
-        apiEndpoint = '/api/scraping/instagram-hashtag';
+        apiEndpoint = '/api/scraping/instagram-reels';
       } else if (searchData.platforms.includes('youtube')) {
         apiEndpoint = '/api/scraping/youtube';
       }

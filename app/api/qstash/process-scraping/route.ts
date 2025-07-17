@@ -11,10 +11,14 @@ import { processTikTokSimilarJob } from '@/lib/platforms/tiktok-similar/handler'
 import { processInstagramSimilarJob } from '@/lib/platforms/instagram-similar/handler'
 import { processYouTubeSimilarJob } from '@/lib/platforms/youtube-similar/handler'
 import { SystemConfig } from '@/lib/config/system-config'
+import { ImageCache } from '@/lib/services/image-cache'
 
 // Inline API logging function (Vercel-compatible)
 const fs = require('fs');
 const path = require('path');
+
+// Initialize image cache
+const imageCache = new ImageCache();
 
 function logApiCall(platform: string, searchType: string, request: any, response: any) {
   try {
@@ -116,7 +120,12 @@ export async function POST(req: Request) {
   const signature = req.headers.get('Upstash-Signature')
   console.log('🔑 Firma QStash recibida:', signature ? 'Sí' : 'No');
   
-  if (!signature) {
+  // DEVELOPMENT: Skip signature verification for ngrok
+  const isDevelopment = process.env.NODE_ENV === 'development' || 
+                       (req.headers.get('host') || '').includes('ngrok') ||
+                       (req.headers.get('host') || '').includes('localhost');
+  
+  if (!signature && !isDevelopment) {
     console.error('❌ Firma QStash no proporcionada');
     return NextResponse.json({ error: 'Missing signature' }, { status: 401 })
   }
@@ -141,28 +150,32 @@ export async function POST(req: Request) {
     let jobId: string
 
     console.log('🔍 Paso 3: Verificando firma QStash');
-    // Verificar firma usando la URL actual
-    try {
-      console.log('🔐 Verificando firma con URL:', `${baseUrl}/api/qstash/process-scraping`);
-      const isValid = await receiver.verify({
-        signature,
-        body,
-        url: `${baseUrl}/api/qstash/process-scraping`
-      })
+    // Skip signature verification in development
+    if (!isDevelopment && signature) {
+      try {
+        console.log('🔐 Verificando firma con URL:', `${baseUrl}/api/qstash/process-scraping`);
+        const isValid = await receiver.verify({
+          signature,
+          body,
+          url: `${baseUrl}/api/qstash/process-scraping`
+        })
 
-      console.log('🔐 Resultado de verificación de firma:', isValid ? 'Válida' : 'Inválida');
+        console.log('🔐 Resultado de verificación de firma:', isValid ? 'Válida' : 'Inválida');
 
-      if (!isValid) {
-        console.error('❌ Firma QStash inválida');
-        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+        if (!isValid) {
+          console.error('❌ Firma QStash inválida');
+          return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+        }
+      } catch (verifyError: any) {
+        console.error('❌ Error al verificar la firma:', verifyError);
+        console.error('❌ Mensaje de error:', verifyError.message);
+        console.error('❌ Stack trace:', verifyError.stack);
+        return NextResponse.json({ 
+          error: `Signature verification error: ${verifyError.message || 'Unknown error'}` 
+        }, { status: 401 })
       }
-    } catch (verifyError: any) {
-      console.error('❌ Error al verificar la firma:', verifyError);
-      console.error('❌ Mensaje de error:', verifyError.message);
-      console.error('❌ Stack trace:', verifyError.stack);
-      return NextResponse.json({ 
-        error: `Signature verification error: ${verifyError.message || 'Unknown error'}` 
-      }, { status: 401 })
+    } else {
+      console.log('⚠️ [DEVELOPMENT] Skipping QStash signature verification');
     }
 
     console.log('🔍 Paso 4: Parseando cuerpo JSON');
@@ -187,6 +200,10 @@ export async function POST(req: Request) {
     }
 
     console.log('🔍 Paso 5: Obteniendo job de la base de datos');
+    
+    // Email extraction regex (used across all platforms)
+    const emailRegex = /[\w\.-]+@[\w\.-]+\.\w+/g;
+    
     // Obtener job de la base de datos
     let job;
     try {
@@ -229,11 +246,11 @@ export async function POST(req: Request) {
     const MAX_API_CALLS_FOR_TESTING = await SystemConfig.get('api_limits', 'max_api_calls_for_testing');
     const TIKTOK_CONTINUATION_DELAY_MS = await SystemConfig.get('qstash_delays', 'tiktok_continuation_delay');
     const TIKTOK_CONTINUATION_DELAY = `${TIKTOK_CONTINUATION_DELAY_MS}ms`;
-    const INSTAGRAM_HASHTAG_DELAY_MS = await SystemConfig.get('qstash_delays', 'instagram_hashtag_delay');
-    const INSTAGRAM_HASHTAG_DELAY = `${INSTAGRAM_HASHTAG_DELAY_MS}ms`;
+    const INSTAGRAM_REELS_DELAY_MS = await SystemConfig.get('qstash_delays', 'instagram_reels_delay');
+    const INSTAGRAM_REELS_DELAY = `${INSTAGRAM_REELS_DELAY_MS}ms`;
     console.log('🔧 [CONFIG] Max API calls for testing:', MAX_API_CALLS_FOR_TESTING);
     console.log('🔧 [CONFIG] TikTok continuation delay:', TIKTOK_CONTINUATION_DELAY);
-    console.log('🔧 [CONFIG] Instagram hashtag delay:', INSTAGRAM_HASHTAG_DELAY);
+    console.log('🔧 [CONFIG] Instagram reels delay:', INSTAGRAM_REELS_DELAY);
 
     // CRITICAL DIAGNOSTIC: Check platform detection logic
     console.log('\n🔍🔍🔍 [PLATFORM-DETECTION] DIAGNOSTIC CHECK 🔍🔍🔍');
@@ -242,7 +259,7 @@ export async function POST(req: Request) {
     console.log('📋 [PLATFORM-DETECTION] job.runId:', JSON.stringify(job.runId));
     console.log('📋 [PLATFORM-DETECTION] job.targetUsername:', JSON.stringify(job.targetUsername));
     console.log('📋 [PLATFORM-DETECTION] Platform exact match tests:');
-    console.log('  - Instagram hashtag:', job.platform === 'Instagram' && job.keywords && job.runId);
+    console.log('  - Instagram reels:', job.platform === 'Instagram' && job.keywords && job.runId);
     console.log('  - Instagram similar:', job.platform === 'Instagram' && job.targetUsername);
     console.log('  - TikTok keyword (Tiktok):', job.platform === 'Tiktok');
     console.log('  - TikTok similar:', job.platform === 'TikTok' && job.targetUsername);
@@ -260,14 +277,17 @@ export async function POST(req: Request) {
       })
     }
 
-    // DETECTAR SI ES UN JOB DE INSTAGRAM HASHTAG
-    if (job.platform === 'Instagram' && job.keywords && job.runId) {
-      console.log('✅ [PLATFORM-DETECTION] Instagram hashtag job detected!');
-      console.log('\n\n========== INSTAGRAM HASHTAG JOB PROCESSING ==========');
-      console.log('🔄 [APIFY-INSTAGRAM] Processing hashtag job:', job.id);
-      console.log('📋 [APIFY-INSTAGRAM] Job details:', {
+    // DETECTAR SI ES UN JOB DE INSTAGRAM REELS SEARCH
+    if (job.platform === 'Instagram' && job.keywords && !job.runId) {
+      console.log('✅ [PLATFORM-DETECTION] Instagram reels job detected!');
+      console.log('\n\n========== INSTAGRAM REELS JOB PROCESSING ==========');
+      console.log('🔄 [RAPIDAPI-INSTAGRAM] Processing reels job:', job.id);
+      
+      // Instagram Reels specific configuration: Always stop after 1 request for quick testing
+      // This allows you to see results immediately without waiting for multiple API calls
+      const INSTAGRAM_REELS_MAX_REQUESTS = 1;
+      console.log('📋 [RAPIDAPI-INSTAGRAM] Job details:', {
         jobId: job.id,
-        runId: job.runId,
         keywords: job.keywords,
         status: job.status,
         progress: job.progress,
@@ -280,431 +300,491 @@ export async function POST(req: Request) {
       const processingStartTime = Date.now(); // Track total processing time
       
       try {
-        console.log('🔧 [APIFY-INSTAGRAM] Initializing Apify client...');
-        const { ApifyClient } = await import('apify-client');
-        const apifyClient = new ApifyClient({ token: process.env.APIFY_TOKEN! });
-        console.log('✅ [APIFY-INSTAGRAM] Apify client initialized');
-        
-        // Check Apify run status
-        console.log('🔍 [APIFY-INSTAGRAM] Fetching Apify run status for runId:', job.runId);
-        const runStartTime = Date.now();
-        const run = await apifyClient.run(job.runId).get();
-        const runFetchTime = Date.now() - runStartTime;
-        
-        console.log('📊 [APIFY-INSTAGRAM] Run status retrieved in', runFetchTime, 'ms');
-        console.log('📊 [APIFY-INSTAGRAM] Detailed run status:', {
-          jobId: job.id,
-          runId: job.runId,
-          status: run.status,
-          startedAt: run.startedAt,
-          finishedAt: run.finishedAt,
-          buildNumber: run.buildNumber,
-          exitCode: run.exitCode,
-          defaultDatasetId: run.defaultDatasetId,
-          defaultKeyValueStoreId: run.defaultKeyValueStoreId,
-          statusMessage: run.statusMessage,
-          isStatusMessageTerminal: run.isStatusMessageTerminal,
-          stats: run.stats
+        console.log('🔧 [RAPIDAPI-INSTAGRAM] Initializing RapidAPI configuration...');
+        console.log('🔧 [RAPIDAPI-INSTAGRAM] Environment check:', {
+          hasRapidApiKey: !!process.env.RAPIDAPI_INSTAGRAM_KEY,
+          keyLength: process.env.RAPIDAPI_INSTAGRAM_KEY?.length,
+          nodeEnv: process.env.NODE_ENV
         });
         
-        if (run.status === 'SUCCEEDED') {
-          console.log('\n🎉 [APIFY-INSTAGRAM] Run SUCCEEDED! Fetching results...');
-          console.log('📂 [APIFY-INSTAGRAM] Dataset ID:', run.defaultDatasetId);
-          
-          // Get results from dataset
-          const datasetStartTime = Date.now();
-          const { items } = await apifyClient.dataset(run.defaultDatasetId).listItems();
-          const datasetFetchTime = Date.now() - datasetStartTime;
-          
-          console.log('✅ [APIFY-INSTAGRAM] Retrieved results in', datasetFetchTime, 'ms');
-          console.log('📊 [APIFY-INSTAGRAM] Results summary:', {
-            jobId: job.id,
-            itemCount: items.length,
-            expectedResults: job.targetResults,
-            currentProgress: job.progress
+        const RAPIDAPI_KEY = process.env.RAPIDAPI_INSTAGRAM_KEY!;
+        const RAPIDAPI_HOST = 'instagram-premium-api-2023.p.rapidapi.com';
+        const RAPIDAPI_BASE_URL = `https://${RAPIDAPI_HOST}`;
+        console.log('✅ [RAPIDAPI-INSTAGRAM] RapidAPI configured:', {
+          host: RAPIDAPI_HOST,
+          baseUrl: RAPIDAPI_BASE_URL,
+          hasKey: !!RAPIDAPI_KEY
+        });
+        
+        // Check if we've reached the API call limit for Instagram Reels (1 request only)
+        if (job.processedRuns >= INSTAGRAM_REELS_MAX_REQUESTS) {
+          console.log('🚨 [RAPIDAPI-INSTAGRAM] API call limit reached:', {
+            processedRuns: job.processedRuns,
+            maxCallsForInstagramReels: INSTAGRAM_REELS_MAX_REQUESTS
           });
           
-          // DEBUG: Log actual Apify response structure to understand what we're getting
-          if (items.length > 0) {
-            console.log('🔍 [APIFY-DEBUG] First item structure:', JSON.stringify(items[0], null, 2));
-            console.log('🔍 [APIFY-DEBUG] All available fields:', Object.keys(items[0]));
+          await db.update(scrapingJobs)
+            .set({
+              status: 'completed',
+              progress: '100',
+              completedAt: new Date(),
+              updatedAt: new Date()
+            })
+            .where(eq(scrapingJobs.id, job.id));
+          
+          return NextResponse.json({
+            success: true,
+            message: 'Instagram reels search completed (API limit reached)'
+          });
+        }
+        
+        // Phase 1: Search Instagram Reels by keyword
+        console.log('🔍 [RAPIDAPI-INSTAGRAM] Phase 1: Searching Instagram Reels...');
+        
+        // Update progress: Starting reels search
+        await db.update(scrapingJobs)
+          .set({
+            status: 'processing',
+            progress: '10',
+            updatedAt: new Date()
+          })
+          .where(eq(scrapingJobs.id, job.id));
+        console.log('📊 [PROGRESS] Updated to 10% - Starting reels search');
+        
+        const keyword = job.keywords[0]; // Use first keyword for search
+        const reelsSearchUrl = `${RAPIDAPI_BASE_URL}/v2/search/reels?query=${encodeURIComponent(keyword)}`;
+        
+        console.log('📊 [RAPIDAPI-INSTAGRAM] Making reels search API call:', {
+          url: reelsSearchUrl,
+          keyword: keyword,
+          callNumber: job.processedRuns + 1,
+          maxCallsForInstagramReels: INSTAGRAM_REELS_MAX_REQUESTS
+        });
+        
+        const reelsStartTime = Date.now();
+        const reelsResponse = await fetch(reelsSearchUrl, {
+          headers: {
+            'x-rapidapi-key': RAPIDAPI_KEY,
+            'x-rapidapi-host': RAPIDAPI_HOST
           }
-          
-          // Simple logging - just request and response
-          console.log('🔍 [DEBUG-LOGGING] About to call simpleLogApiCall:', {
-            available: !!simpleLogApiCall,
-            itemsLength: items.length
-          });
-          
-          if (simpleLogApiCall) {
-            const request = {
-              keywords: job.keywords,
-              targetResults: job.targetResults,
-              runId: job.runId,
-              platform: 'Instagram'
-            };
-            
-            console.log('📝 [DEBUG-LOGGING] Calling simpleLogApiCall with:', {
-              platform: 'instagram',
-              searchType: 'keyword',
-              request: request
-            });
-            
-            try {
-              simpleLogApiCall('instagram', 'keyword', request, { items });
-              console.log('✅ [DEBUG-LOGGING] Successfully logged Instagram data');
-            } catch (logError: any) {
-              console.error('❌ [DEBUG-LOGGING] Error logging Instagram data:', logError.message);
+        });
+        const reelsFetchTime = Date.now() - reelsStartTime;
+        
+        console.log('📊 [RAPIDAPI-INSTAGRAM] Reels search completed in', reelsFetchTime, 'ms');
+        
+        if (!reelsResponse.ok) {
+          throw new Error(`Instagram Reels API error: ${reelsResponse.status} ${reelsResponse.statusText}`);
+        }
+        
+        const reelsData = await reelsResponse.json();
+        console.log('✅ [RAPIDAPI-INSTAGRAM] Reels data received:', {
+          hasReelsModules: !!reelsData?.reels_serp_modules,
+          moduleCount: reelsData?.reels_serp_modules?.length || 0
+        });
+        
+        // Extract reels from the search results
+        const allReels = [];
+        if (reelsData?.reels_serp_modules && reelsData.reels_serp_modules.length > 0) {
+          for (const module of reelsData.reels_serp_modules) {
+            if (module.module_type === 'clips' && module.clips) {
+              allReels.push(...module.clips);
             }
-          } else {
-            console.log('⚠️ [DEBUG-LOGGING] simpleLogApiCall not available');
           }
+        }
+        
+        console.log('📊 [RAPIDAPI-INSTAGRAM] Extracted reels:', {
+          totalReels: allReels.length,
+          hasReels: allReels.length > 0
+        });
+        
+        // Update progress: Reels fetched
+        await db.update(scrapingJobs)
+          .set({
+            progress: '25',
+            updatedAt: new Date()
+          })
+          .where(eq(scrapingJobs.id, job.id));
+        console.log('📊 [PROGRESS] Updated to 25% - Reels fetched, extracting creators');
+        
+        if (allReels.length === 0) {
+          console.log('⚠️ [RAPIDAPI-INSTAGRAM] No reels found for keyword:', keyword);
           
-          // Transform Apify data to your format
-          const transformedCreators = items.map((post: any) => {
-            // Check for various possible profile picture field names
-            const possibleAvatarFields = [
-              post.ownerProfilePicUrl,
-              post.ownerAvatar,
-              post.userProfilePic,
-              post.profilePicUrl,
-              post.ownerProfilePic,
-              post.avatar,
-              post.profilePic,
-              post.ownerImage,
-              post.userImage,
-              post.authorProfilePic,
-              post.authorAvatar
-            ];
+          // Mark job as completed with no results
+          await db.update(scrapingJobs)
+            .set({
+              status: 'completed',
+              processedResults: 0,
+              progress: '100',
+              completedAt: new Date(),
+              updatedAt: new Date(),
+              processedRuns: job.processedRuns + 1
+            })
+            .where(eq(scrapingJobs.id, job.id));
+          
+          return NextResponse.json({
+            success: true,
+            message: 'Instagram reels search completed (no results found)'
+          });
+        }
+        
+        // Phase 2: Get unique creators and fetch their profiles
+        console.log('\n🔍 [RAPIDAPI-INSTAGRAM] Phase 2: Extracting unique creators...');
+        const uniqueCreators = new Map();
+        
+        // Extract unique creators from reels
+        for (const reel of allReels) {
+          const media = reel.media;
+          const user = media?.user || {};
+          const userId = user.pk || user.id;
+          
+          if (userId && !uniqueCreators.has(userId)) {
+            uniqueCreators.set(userId, {
+              userId: userId,
+              username: user.username || '',
+              fullName: user.full_name || '',
+              isVerified: user.is_verified || false,
+              isPrivate: user.is_private || false,
+              profilePicUrl: user.profile_pic_url || '',
+              followerCount: user.follower_count || 0,
+              reel: reel // Keep reference to original reel
+            });
+          }
+        }
+        
+        console.log('📊 [RAPIDAPI-INSTAGRAM] Unique creators found:', uniqueCreators.size);
+        
+        // Update progress: Creators extracted
+        await db.update(scrapingJobs)
+          .set({
+            progress: '40',
+            updatedAt: new Date()
+          })
+          .where(eq(scrapingJobs.id, job.id));
+        console.log('📊 [PROGRESS] Updated to 40% - Starting bio/email enhancement');
+        
+        // Phase 3: Transform reels data with COMPLETE bio/email enhancement
+        console.log('\n🚀 [RAPIDAPI-INSTAGRAM] Phase 3: Transforming reels data with full bio/email enhancement...');
+        console.log('🔄 [COMPLETE-PROCESSING] Getting full profile data for all creators...');
+        const transformedCreators = [];
+        
+        // Progress tracking variables
+        const totalCreators = uniqueCreators.size;
+        let processedCreators = 0;
+        
+        console.log(`📊 [PROGRESS-SETUP] Starting bio/email enhancement for ${totalCreators} creators`);
+        console.log(`🚀 [PARALLEL-PROCESSING] Using parallel batch processing for faster enhancement`);
+        
+        // Convert to array for parallel processing
+        const creatorsArray = Array.from(uniqueCreators.entries());
+        const BATCH_SIZE = 3; // Process 3 creators in parallel
+        const batches = [];
+        
+        // Split into batches
+        for (let i = 0; i < creatorsArray.length; i += BATCH_SIZE) {
+          batches.push(creatorsArray.slice(i, i + BATCH_SIZE));
+        }
+        
+        console.log(`📊 [BATCH-SETUP] Processing ${totalCreators} creators in ${batches.length} parallel batches of ${BATCH_SIZE}`);
+        
+        // Process each batch in parallel
+        for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+          const batch = batches[batchIndex];
+          console.log(`🚀 [BATCH-${batchIndex + 1}] Processing batch ${batchIndex + 1}/${batches.length} with ${batch.length} creators`);
+          
+          // Process creators in this batch in parallel
+          const batchPromises = batch.map(async ([userId, creatorData]) => {
+            const reel = creatorData.reel;
+            const media = reel.media;
             
-            const avatarUrl = possibleAvatarFields.find(field => field && field.length > 0) || '';
-            
-            // DEBUG: Log what influencer/creator data we can extract
-            console.log('🔍 [INFLUENCER-DATA] Creator extraction for post:', {
-              ownerUsername: post.ownerUsername,
-              ownerFullName: post.ownerFullName,
-              ownerId: post.ownerId,
-              caption: (post.caption || '').substring(0, 100) + '...',
-              hashtags: post.hashtags,
-              likesCount: post.likesCount,
-              commentsCount: post.commentsCount,
-              foundAvatar: avatarUrl,
-              postUrl: post.url,
-              allFields: Object.keys(post)
+            console.log(`🔄 [PARALLEL-CREATOR] Processing creator:`, {
+              userId: userId,
+              username: creatorData.username,
+              fullName: creatorData.fullName
             });
             
-            return {
-              creator: {
-                name: post.ownerFullName || post.ownerUsername || 'Unknown',
-                uniqueId: post.ownerUsername || '',
-                followers: 0, // Not available in hashtag search
-                avatarUrl: avatarUrl,
-                profilePicUrl: avatarUrl,
-                verified: false, // Not available
-                bio: '', // Not available  
-                emails: [] // Not available
-              },
-              video: {
-                description: post.caption || '',
-                url: post.url || `https://instagram.com/p/${post.shortCode}`,
-                statistics: {
-                  likes: post.likesCount || 0,
-                  comments: post.commentsCount || 0,
-                  views: 0, // Not available for Instagram
-                  shares: 0 // Not available
+            // Get enhanced bio/email data
+            let enhancedBio = '';
+            let enhancedEmails = [];
+          
+          if (userId && creatorData.username) {
+            try {
+              console.log(`🔍 [BIO-ENHANCEMENT] Fetching profile for @${creatorData.username}`);
+              console.log(`🔍 [BIO-ENHANCEMENT] Profile URL: ${RAPIDAPI_BASE_URL}/v2/user/by/id?user_id=${userId}`);
+              console.log(`🔍 [BIO-ENHANCEMENT] Headers:`, {
+                'x-rapidapi-key': RAPIDAPI_KEY?.substring(0, 10) + '...',
+                'x-rapidapi-host': RAPIDAPI_HOST
+              });
+              
+              const profileUrl = `${RAPIDAPI_BASE_URL}/v2/user/by/id?id=${userId}`;
+              const profileResponse = await fetch(profileUrl, {
+                headers: {
+                  'x-rapidapi-key': RAPIDAPI_KEY,
+                  'x-rapidapi-host': RAPIDAPI_HOST
                 }
-              },
-              hashtags: post.hashtags || [],
-              publishedTime: post.timestamp || new Date().toISOString(),
-              platform: 'Instagram',
-              // Instagram-specific fields
-              postType: post.type, // Image, Video, Sidecar
-              mediaUrl: post.displayUrl,
-              postId: post.id,
-              shortCode: post.shortCode,
-              ownerUsername: post.ownerUsername,
-              ownerFullName: post.ownerFullName,
-              ownerId: post.ownerId,
-              dimensions: {
-                height: post.dimensionsHeight,
-                width: post.dimensionsWidth
-              },
-              // Additional media for carousels/videos
-              images: post.images || [],
-              videoUrl: post.videoUrl || null,
-              videoDuration: post.videoDuration || null,
-              childPosts: post.childPosts || [],
-              musicInfo: post.musicInfo || null
-            };
-          });
+              });
+              
+              console.log(`🔍 [BIO-ENHANCEMENT] Profile API response: ${profileResponse.status} ${profileResponse.statusText}`);
+              
+              if (profileResponse.ok) {
+                const profileData = await profileResponse.json();
+                console.log(`🔍 [BIO-ENHANCEMENT] Profile data structure:`, {
+                  hasUser: !!profileData.user,
+                  userKeys: profileData.user ? Object.keys(profileData.user) : 'no user',
+                  biography: profileData.user?.biography || 'no biography',
+                  bio: profileData.user?.bio || 'no bio',
+                  followerCount: profileData.user?.follower_count || 'no follower_count',
+                  followers: profileData.user?.followers || 'no followers',
+                  edgeFollowedBy: profileData.user?.edge_followed_by?.count || 'no edge_followed_by'
+                });
+                
+                const userProfile = profileData.user || {};
+                
+                enhancedBio = userProfile.biography || userProfile.bio || '';
+                const emailMatches = enhancedBio.match(emailRegex) || [];
+                enhancedEmails = emailMatches;
+                
+                // Extract follower count from profile API response
+                const followerCount = userProfile.follower_count || userProfile.followers || userProfile.edge_followed_by?.count || 0;
+                if (followerCount > 0) {
+                  creatorData.followerCount = followerCount;
+                }
+                
+                console.log(`✅ [BIO-ENHANCEMENT] Enhanced @${creatorData.username}:`, {
+                  bioLength: enhancedBio.length,
+                  emailsFound: enhancedEmails.length,
+                  followerCount: followerCount,
+                  bio: enhancedBio,
+                  emails: enhancedEmails
+                });
+              } else {
+                const errorText = await profileResponse.text();
+                console.log(`⚠️ [BIO-ENHANCEMENT] Failed to fetch profile for @${creatorData.username}: ${profileResponse.status}`);
+                console.log(`⚠️ [BIO-ENHANCEMENT] Error response:`, errorText);
+              }
+              
+              // Add delay between profile API calls to avoid rate limiting
+              await new Promise(resolve => setTimeout(resolve, 100));
+              
+            } catch (profileError) {
+              console.log(`❌ [BIO-ENHANCEMENT] Error fetching profile for @${creatorData.username}:`, profileError.message);
+            }
+          }
           
-          // Save results to database
-          console.log('\n💾 [APIFY-INSTAGRAM] Saving results to database...');
-          const dbSaveStartTime = Date.now();
+          // Transform reel data with COMPLETE profile info including bio/email
+          const transformedReel = {
+            creator: {
+              name: creatorData.fullName || creatorData.username || 'Unknown',
+              uniqueId: creatorData.username || '',
+              followers: creatorData.followerCount || 0,
+              avatarUrl: creatorData.profilePicUrl || '',
+              profilePicUrl: creatorData.profilePicUrl || '',
+              verified: creatorData.isVerified || false,
+              bio: enhancedBio, // Complete bio data
+              emails: enhancedEmails // Complete email data
+            },
+            video: {
+              description: media.caption?.text || '',
+              url: `https://www.instagram.com/reel/${media.code}`,
+              statistics: {
+                likes: media.like_count || 0,
+                comments: media.comment_count || 0,
+                views: media.play_count || media.ig_play_count || 0,
+                shares: 0 // Not available
+              }
+            },
+            hashtags: media.caption?.text ? media.caption.text.match(/#\w+/g) || [] : [],
+            publishedTime: media.taken_at ? new Date(media.taken_at * 1000).toISOString() : new Date().toISOString(),
+            platform: 'Instagram',
+            // Instagram-specific fields
+            postType: media.media_type === 2 ? 'Video' : 'Image',
+            mediaUrl: media.image_versions2?.candidates?.[0]?.url || '',
+            postId: media.id,
+            shortCode: media.code,
+            ownerUsername: creatorData.username,
+            ownerFullName: creatorData.fullName,
+            ownerId: userId,
+            // Complete processing
+            enhancementStatus: 'completed' // All data enhanced
+          };
           
+          return transformedReel;
+        });
+        
+        // Wait for all creators in this batch to complete
+        const batchResults = await Promise.all(batchPromises);
+        transformedCreators.push(...batchResults);
+        
+        // Update progress after batch completion
+        processedCreators += batch.length;
+        const currentProgress = Math.round(40 + ((processedCreators / totalCreators) * 50)); // 40% start + 50% for enhancement
+        
+        console.log(`📈 [BATCH-PROGRESS] Batch ${batchIndex + 1} complete: ${processedCreators}/${totalCreators} creators (${currentProgress}%)`);
+        
+        // Update job progress in database after each batch
+        try {
+          await db.update(scrapingJobs)
+            .set({
+              progress: currentProgress.toString(),
+              processedResults: processedCreators,
+              updatedAt: new Date()
+            })
+            .where(eq(scrapingJobs.id, job.id));
+          
+          console.log(`📊 [PROGRESS-UPDATE] Database updated: ${processedCreators}/${totalCreators} (${currentProgress}%)`);
+        } catch (progressError) {
+          console.log('⚠️ [PROGRESS-UPDATE] Failed to update progress:', progressError.message);
+        }
+        
+        // 🔄 INTERMEDIATE RESULTS: Save cumulative results after each batch for live preview
+        if (transformedCreators.length > 0) {
           try {
+            console.log(`💾 [INTERMEDIATE-SAVE] Saving ${transformedCreators.length} cumulative results for live preview...`);
+            
+            // Save cumulative results (all creators enhanced so far)
             await db.insert(scrapingResults).values({
               jobId: job.id,
               creators: transformedCreators,
               createdAt: new Date()
             });
             
-            const dbSaveTime = Date.now() - dbSaveStartTime;
-            console.log('✅ [APIFY-INSTAGRAM] Results saved to DB in', dbSaveTime, 'ms');
-          } catch (dbSaveError) {
-            console.error('❌ [APIFY-INSTAGRAM] Failed to save results to DB:', dbSaveError);
-            throw dbSaveError;
+            console.log(`✅ [INTERMEDIATE-SAVE] Saved ${transformedCreators.length} creators for live preview (${currentProgress}%)`);
+          } catch (intermediateError) {
+            console.log('⚠️ [INTERMEDIATE-SAVE] Failed to save intermediate results:', intermediateError.message);
+            // Don't throw - this is optional for live preview
           }
-          
-          // Mark job as completed
-          console.log('\n📝 [APIFY-INSTAGRAM] Updating job status to completed...');
-          const jobUpdateStartTime = Date.now();
-          
-          try {
-            // First, let's check current job state before updating
-            const currentJob = await db.query.scrapingJobs.findFirst({
-              where: eq(scrapingJobs.id, job.id)
-            });
-            console.log('🔍 [APIFY-INSTAGRAM] Current job state before update:', {
-              status: currentJob?.status,
-              progress: currentJob?.progress,
-              processedResults: currentJob?.processedResults
-            });
-            
-            await db.update(scrapingJobs)
-              .set({
-                status: 'completed',
-                processedResults: items.length,
-                progress: '100',
-                completedAt: new Date(),
-                updatedAt: new Date()
-              })
-              .where(eq(scrapingJobs.id, job.id));
-            
-            const jobUpdateTime = Date.now() - jobUpdateStartTime;
-            console.log('✅ [APIFY-INSTAGRAM] Job status updated in', jobUpdateTime, 'ms');
-            
-            // Verify the update
-            const updatedJob = await db.query.scrapingJobs.findFirst({
-              where: eq(scrapingJobs.id, job.id)
-            });
-            console.log('🔍 [APIFY-INSTAGRAM] Job state after update:', {
-              status: updatedJob?.status,
-              progress: updatedJob?.progress,
-              processedResults: updatedJob?.processedResults,
-              completedAt: updatedJob?.completedAt
-            });
-            
-          } catch (jobUpdateError) {
-            console.error('❌ [APIFY-INSTAGRAM] Failed to update job status:', jobUpdateError);
-            throw jobUpdateError;
-          }
-          
-          console.log('\n🎉 [APIFY-INSTAGRAM] Job completed successfully:', {
-            jobId: job.id,
-            resultsCount: items.length,
-            totalProcessingTime: Date.now() - processingStartTime + 'ms'
-          });
-          console.log('========== END INSTAGRAM HASHTAG PROCESSING ==========\n\n');
-          
-          return NextResponse.json({ 
-            status: 'completed',
-            processedResults: items.length,
-            message: 'Instagram hashtag search completed'
-          });
-          
-        } else if (run.status === 'RUNNING') {
-          // Still processing, check for timeout and reschedule
-          const runStartTime = run.startedAt ? new Date(run.startedAt).getTime() : Date.now();
-          const runningTimeSeconds = Math.floor((Date.now() - runStartTime) / 1000);
-          const timeoutThresholdSeconds = 300; // 5 minutes timeout
-          
-          console.log('\n⏳ [APIFY-INSTAGRAM] Still running, checking for timeout');
-          console.log('📊 [APIFY-INSTAGRAM] Run progress:', {
-            stats: run.stats,
-            currentTime: new Date().toISOString(),
-            runStartedAt: run.startedAt,
-            runningForSeconds: runningTimeSeconds,
-            timeoutThreshold: timeoutThresholdSeconds,
-            isTimeout: runningTimeSeconds > timeoutThresholdSeconds
-          });
-          
-          // Check if job has been running too long (timeout detection)
-          if (runningTimeSeconds > timeoutThresholdSeconds) {
-            console.warn('⚠️ [APIFY-INSTAGRAM] Instagram job running too long, checking if it actually finished');
-            
-            // Force check the dataset even if status is still RUNNING
-            try {
-              const { items } = await apifyClient.dataset(run.defaultDatasetId).listItems();
-              
-              if (items && items.length > 0) {
-                console.log('🔧 [APIFY-INSTAGRAM] Found results in "running" job! Forcing completion...');
-                
-                // Transform and save results (same as completion logic)
-                const transformedCreators = items.map((post: any) => {
-                  const possibleAvatarFields = [
-                    post.ownerProfilePicUrl, post.ownerAvatar, post.userProfilePic,
-                    post.profilePicUrl, post.ownerProfilePic, post.avatar,
-                    post.profilePic, post.ownerImage, post.userImage,
-                    post.authorProfilePic, post.authorAvatar
-                  ];
-                  const avatarUrl = possibleAvatarFields.find(field => field && field.length > 0) || '';
-                  
-                  return {
-                    creator: {
-                      name: post.ownerFullName || post.ownerUsername || 'Unknown',
-                      uniqueId: post.ownerUsername || '',
-                      followers: 0,
-                      avatarUrl: avatarUrl,
-                      profilePicUrl: avatarUrl,
-                      verified: false,
-                      bio: '',
-                      emails: []
-                    },
-                    video: {
-                      description: post.caption || '',
-                      url: post.url || `https://instagram.com/p/${post.shortCode}`,
-                      statistics: {
-                        likes: post.likesCount || 0,
-                        comments: post.commentsCount || 0,
-                        views: 0,
-                        shares: 0
-                      }
-                    },
-                    hashtags: post.hashtags || [],
-                    publishedTime: post.timestamp || new Date().toISOString(),
-                    platform: 'Instagram',
-                    postType: post.type,
-                    mediaUrl: post.displayUrl,
-                    postId: post.id,
-                    shortCode: post.shortCode,
-                    ownerUsername: post.ownerUsername,
-                    ownerFullName: post.ownerFullName,
-                    ownerId: post.ownerId
-                  };
-                });
-                
-                // Save results and mark as completed
-                await db.insert(scrapingResults).values({
-                  jobId: job.id,
-                  creators: transformedCreators,
-                  createdAt: new Date()
-                });
-                
-                await db.update(scrapingJobs)
-                  .set({
-                    status: 'completed',
-                    processedResults: items.length,
-                    progress: '100',
-                    completedAt: new Date(),
-                    updatedAt: new Date()
-                  })
-                  .where(eq(scrapingJobs.id, job.id));
-                
-                console.log('✅ [APIFY-INSTAGRAM] Forced completion with', items.length, 'results');
-                
-                return NextResponse.json({ 
-                  status: 'completed',
-                  processedResults: items.length,
-                  message: 'Instagram hashtag search completed (recovered from timeout)'
-                });
-                
-              } else {
-                console.log('⚠️ [APIFY-INSTAGRAM] No results found in timeout check, continuing to wait');
-              }
-            } catch (timeoutCheckError) {
-              console.error('❌ [APIFY-INSTAGRAM] Error checking for timeout completion:', timeoutCheckError);
-            }
-          }
-          
-          // Update progress in DB based on Apify stats if available
-          if (run.stats && run.stats.inputBodyLen > 0) {
-            const estimatedProgress = Math.min(99, Math.floor((run.stats.requestsFinished / run.stats.requestsTotal) * 100));
-            console.log('📈 [APIFY-INSTAGRAM] Updating progress to:', estimatedProgress + '%');
-            
-            await db.update(scrapingJobs)
-              .set({
-                progress: estimatedProgress.toString(),
-                updatedAt: new Date()
-              })
-              .where(eq(scrapingJobs.id, job.id));
-          }
-          
-          console.log('🔄 [APIFY-INSTAGRAM] Publishing to QStash for next check...');
-          await qstash.publishJSON({
-            url: `${baseUrl}/api/qstash/process-scraping`,
-            body: { jobId: job.id },
-            delay: INSTAGRAM_HASHTAG_DELAY
-          });
-          console.log('✅ [APIFY-INSTAGRAM] QStash message published');
-          
-          return NextResponse.json({ 
-            status: 'processing',
-            message: 'Instagram hashtag search still running',
-            apifyRunStatus: run.status,
-            stats: run.stats
-          });
-          
-        } else if (run.status === 'FAILED' || run.status === 'ABORTED' || run.status === 'TIMED-OUT') {
-          // Handle failure
-          const errorMessage = `Apify run ${run.status.toLowerCase()}: ${run.statusMessage || 'Unknown error'}`;
-          
-          await db.update(scrapingJobs)
-            .set({
-              status: 'error',
-              error: errorMessage,
-              updatedAt: new Date()
-            })
-            .where(eq(scrapingJobs.id, job.id));
-          
-          console.error('❌ [APIFY-INSTAGRAM] Job failed:', {
-            jobId: job.id,
-            runStatus: run.status,
-            error: errorMessage
-          });
-          
-          return NextResponse.json({ 
-            status: 'error',
-            error: errorMessage
-          });
         }
         
-      } catch (error: any) {
-        console.error('\n❌ [APIFY-INSTAGRAM] Processing error occurred');
-        console.error('❌ [APIFY-INSTAGRAM] Error type:', error.constructor.name);
-        console.error('❌ [APIFY-INSTAGRAM] Error message:', error.message);
-        console.error('❌ [APIFY-INSTAGRAM] Error stack:', error.stack);
-        console.error('❌ [APIFY-INSTAGRAM] Full error object:', JSON.stringify(error, null, 2));
+        // Small delay between batches to avoid overwhelming the API
+        if (batchIndex < batches.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+      }
         
-        const errorMessage = error instanceof Error ? error.message : 'Processing failed';
+        console.log('✅ [RAPIDAPI-INSTAGRAM] Transformed creators:', transformedCreators.length);
+        
+        // Simple logging - just request and response
+        try {
+          const request = {
+            keywords: job.keywords,
+            targetResults: job.targetResults,
+            platform: 'Instagram'
+          };
+          
+          logApiCall('instagram', 'keyword', request, { items: transformedCreators });
+          console.log('✅ [RAPIDAPI-INSTAGRAM] Successfully logged Instagram data');
+        } catch (logError: any) {
+          console.error('❌ [RAPIDAPI-INSTAGRAM] Error logging Instagram data:', logError.message);
+        }
+          
+        // ℹ️ INTERMEDIATE RESULTS: Results already saved after each batch for live preview
+        // Final results are the cumulative results from the last batch
+        console.log('\n💾 [RAPIDAPI-INSTAGRAM] Final results already saved during batch processing...');
+        console.log('✅ [RAPIDAPI-INSTAGRAM] Total creators processed:', transformedCreators.length);
+        
+        // Update job progress and stats
+        const newProcessedRuns = job.processedRuns + 1;
+        const newProcessedResults = job.processedResults + transformedCreators.length;
+        const currentProgress = Math.min(100, (newProcessedResults / job.targetResults) * 100);
+        
+        console.log('\n📝 [RAPIDAPI-INSTAGRAM] Updating job progress...');
+        const jobUpdateStartTime = Date.now();
         
         try {
           await db.update(scrapingJobs)
             .set({
-              status: 'error',
-              error: errorMessage,
-              updatedAt: new Date(),
-              completedAt: new Date()
+              processedRuns: newProcessedRuns,
+              processedResults: newProcessedResults,
+              progress: currentProgress.toFixed(1),
+              updatedAt: new Date()
             })
             .where(eq(scrapingJobs.id, job.id));
-          console.log('✅ [APIFY-INSTAGRAM] Error status saved to DB');
-        } catch (dbError) {
-          console.error('❌ [APIFY-INSTAGRAM] Failed to update error status in DB:', dbError);
-        }
           
-        console.log('========== END INSTAGRAM HASHTAG PROCESSING (ERROR) ==========\n\n');
+          const jobUpdateTime = Date.now() - jobUpdateStartTime;
+          console.log('✅ [RAPIDAPI-INSTAGRAM] Job progress updated in', jobUpdateTime, 'ms');
+          
+        } catch (jobUpdateError) {
+          console.error('❌ [RAPIDAPI-INSTAGRAM] Failed to update job progress:', jobUpdateError);
+          throw jobUpdateError;
+        }
         
-        return NextResponse.json({ 
-          status: 'error',
-          error: errorMessage,
-          details: {
-            jobId: job.id,
-            runId: job.runId,
-            errorType: error.constructor.name
-          }
+        // COMPLETE: Mark job as completed with full bio/email data
+        console.log('\n🎉 [COMPLETE] Instagram reels search with bio/email enhancement completed!');
+        
+        await db.update(scrapingJobs)
+          .set({
+            status: 'completed',
+            progress: '100',
+            completedAt: new Date(),
+            updatedAt: new Date()
+          })
+          .where(eq(scrapingJobs.id, job.id));
+        
+        console.log('✅ [COMPLETE] Job marked as completed with full data!');
+        
+        console.log('\n🎉 [COMPLETE] Search completed successfully:', {
+          jobId: job.id,
+          resultsCount: newProcessedResults,
+          totalTime: Date.now() - processingStartTime + 'ms',
+          bioEmailEnhanced: true
+        });
+        
+        console.log('========== END COMPLETE PROCESSING ==========\n\n');
+        
+        return NextResponse.json({
+          success: true,
+          message: 'Instagram reels search completed with bio/email data',
+          stage: 'completed',
+          enhancementCompleted: true
+        });
+      } catch (instagramReelsError: any) {
+        console.error('❌ Error processing Instagram reels job:', instagramReelsError);
+        
+        // Mark job as failed
+        await db.update(scrapingJobs)
+          .set({
+            status: 'error',
+            error: instagramReelsError.message || 'Unknown Instagram reels processing error',
+            completedAt: new Date()
+          })
+          .where(eq(scrapingJobs.id, job.id));
+        
+        return NextResponse.json({
+          success: false,
+          error: 'Instagram reels search failed',
+          details: instagramReelsError.message
         });
       }
     }
+    
+    
+    // DETECTAR SI ES UN JOB DE INSTAGRAM SIMILAR
+    if (job.platform === 'Instagram' && job.targetUsername) {
+      console.log('✅ [PLATFORM-DETECTION] Instagram similar job detected!');
+      console.log('📱 Processing Instagram similar job for username:', job.targetUsername);
+      
+      try {
+        const result = await processInstagramSimilarJob(job, jobId);
+        return NextResponse.json(result);
+      } catch (instagramError: any) {
+        console.error('❌ Error processing Instagram similar job:', instagramError);
+        
+        // Mark job as failed
+        await db.update(scrapingJobs)
+          .set({
+            status: 'error',
+            error: instagramError.message || 'Unknown Instagram similar processing error',
+            completedAt: new Date()
+          })
+          .where(eq(scrapingJobs.id, jobId));
+        
+        return NextResponse.json({
+          success: false,
+          error: 'Instagram similar search failed',
+          details: instagramError.message
+        });
+      }
+    }
+    
     // DETECTAR SI ES UN JOB DE INSTAGRAM SIMILAR
     else if (job.platform === 'Instagram' && job.targetUsername) {
       console.log('✅ [PLATFORM-DETECTION] Instagram similar job detected!');
@@ -848,9 +928,6 @@ export async function POST(req: Request) {
         console.log('🔄 [GRANULAR-PROGRESS] Processing', rawResults.length, 'TikTok results in batches of', batchSize);
         console.log('🔍 [PROFILE-ENHANCEMENT] Starting enhanced profile data fetching for creators with missing bio data');
         
-        // Email extraction regex
-        const emailRegex = /[\w\.-]+@[\w\.-]+\.\w+/g;
-        
         for (let i = 0; i < rawResults.length; i += batchSize) {
           const batch = rawResults.slice(i, i + batchSize);
           
@@ -917,12 +994,15 @@ export async function POST(req: Request) {
               emailCount: enhancedEmails.length
             });
 
+            const originalImageUrl = author.avatar_medium?.url_list?.[0] || '';
+            const cachedImageUrl = await imageCache.getCachedImageUrl(originalImageUrl, 'TikTok', author.unique_id);
+
             const creatorData = {
               creator: {
                 name: author.nickname || author.unique_id || 'Unknown Creator',
                 followers: author.follower_count || 0,
-                avatarUrl: (author.avatar_medium?.url_list?.[0] || '').replace('.heic', '.jpeg'),
-                profilePicUrl: (author.avatar_medium?.url_list?.[0] || '').replace('.heic', '.jpeg'),
+                avatarUrl: cachedImageUrl,
+                profilePicUrl: cachedImageUrl,
                 bio: enhancedBio,
                 emails: enhancedEmails,
                 uniqueId: author.unique_id || '',
@@ -1197,23 +1277,24 @@ export async function POST(req: Request) {
         
         throw youtubeError;
       }
-    } else {
-      console.log('❌ [PLATFORM-DETECTION] NO MATCHING CONDITION FOUND!');
-      console.log('❌ [PLATFORM-DETECTION] Job details for debugging:', {
-        platform: job.platform,
-        platformType: typeof job.platform,
-        platformLength: job.platform?.length,
-        keywords: job.keywords,
-        keywordsType: typeof job.keywords,
-        targetUsername: job.targetUsername,
-        runId: job.runId,
-        status: job.status
-      });
-      console.log('❌ [PLATFORM-DETECTION] This job will not be processed!');
-      // Si no es ninguna plataforma soportada
-      console.error('❌ Plataforma no soportada:', job.platform);
-      return NextResponse.json({ error: `Unsupported platform: ${job.platform}` }, { status: 400 });
     }
+    
+    // If no platform matches, return error
+    console.log('❌ [PLATFORM-DETECTION] NO MATCHING CONDITION FOUND!');
+    console.log('❌ [PLATFORM-DETECTION] Job details for debugging:', {
+      platform: job.platform,
+      platformType: typeof job.platform,
+      platformLength: job.platform?.length,
+      keywords: job.keywords,
+      keywordsType: typeof job.keywords,
+      targetUsername: job.targetUsername,
+      runId: job.runId,
+      status: job.status
+    });
+    console.log('❌ [PLATFORM-DETECTION] This job will not be processed!');
+    // Si no es ninguna plataforma soportada
+    console.error('❌ Plataforma no soportada:', job.platform);
+    return NextResponse.json({ error: `Unsupported platform: ${job.platform}` }, { status: 400 });
   } catch (error: any) {
     console.error('❌ Error general en la solicitud POST a /api/qstash/process-scraping:', error);
     console.error('❌ Mensaje de error:', error.message);
@@ -1221,8 +1302,6 @@ export async function POST(req: Request) {
     console.error('❌ Detalles del error:', JSON.stringify(error, null, 2));
     return NextResponse.json({ 
       error: error instanceof Error ? error.message : 'Unknown error' 
-    }, { status: 500 })
+    }, { status: 500 });
   }
 }
-
-// Hola desde dev

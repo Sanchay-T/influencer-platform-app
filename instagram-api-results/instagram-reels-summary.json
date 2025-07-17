@@ -1,0 +1,50 @@
+{
+  "totalQueries": 5,
+  "successfulQueries": 5,
+  "failedQueries": 0,
+  "timestamp": "2025-07-16T16:44:24.086Z",
+  "queries": [
+    "AirPods",
+    "Nike",
+    "food",
+    "travel",
+    "fitness"
+  ],
+  "results": [
+    {
+      "query": "AirPods",
+      "statusCode": 200,
+      "hasData": true,
+      "dataType": "object",
+      "error": null
+    },
+    {
+      "query": "Nike",
+      "statusCode": 200,
+      "hasData": true,
+      "dataType": "object",
+      "error": null
+    },
+    {
+      "query": "food",
+      "statusCode": 200,
+      "hasData": true,
+      "dataType": "object",
+      "error": null
+    },
+    {
+      "query": "travel",
+      "statusCode": 200,
+      "hasData": true,
+      "dataType": "object",
+      "error": null
+    },
+    {
+      "query": "fitness",
+      "statusCode": 200,
+      "hasData": true,
+      "dataType": "object",
+      "error": null
+    }
+  ]
+}

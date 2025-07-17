@@ -24,6 +24,7 @@ import { useFormattedCountdown } from '@/lib/hooks/useTrialCountdown';
 import DashboardLayout from '../components/layout/dashboard-layout';
 import Link from 'next/link';
 import { PricingTable } from '@clerk/nextjs';
+import UpgradeButton from '@/app/components/billing/upgrade-button';
 
 function BillingContent() {
   const { currentPlan, isTrialing, trialStatus, usageInfo, needsUpgrade } = useBilling();
@@ -64,33 +65,39 @@ function BillingContent() {
 
   const getPlanIcon = (plan: string) => {
     switch (plan) {
-      case 'free_trial': return Shield;
-      case 'basic': return Star;
-      case 'premium': return Zap;
-      case 'enterprise': return Crown;
+      case 'free': return Shield;
+      case 'glow_up': return Star;
+      case 'viral_surge': return Zap;
+      case 'fame_flex': return Crown;
       default: return Shield;
     }
   };
 
   const getPlanColor = (plan: string) => {
     switch (plan) {
-      case 'free_trial': return 'text-gray-600 bg-gray-100';
-      case 'basic': return 'text-blue-600 bg-blue-100';
-      case 'premium': return 'text-blue-700 bg-blue-200';
-      case 'enterprise': return 'text-purple-600 bg-purple-100';
+      case 'free': return 'text-gray-600 bg-gray-100';
+      case 'glow_up': return 'text-blue-600 bg-blue-100';
+      case 'viral_surge': return 'text-purple-600 bg-purple-100';
+      case 'fame_flex': return 'text-yellow-600 bg-yellow-100';
       default: return 'text-gray-600 bg-gray-100';
     }
   };
 
   const formatPlanName = (plan: string) => {
-    return plan.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+    const planNames = {
+      'free': 'Free Trial',
+      'glow_up': 'Glow Up',
+      'viral_surge': 'Viral Surge',
+      'fame_flex': 'Fame Flex'
+    };
+    return planNames[plan as keyof typeof planNames] || plan.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   const planDetails = {
-    free_trial: { price: '$0', period: '7 days', description: 'Trial with limited features' },
-    basic: { price: '$19', period: 'per month', description: 'Perfect for individuals' },
-    premium: { price: '$49', period: 'per month', description: 'Best for growing businesses' },
-    enterprise: { price: '$199', period: 'per month', description: 'For large teams' }
+    free: { price: '$0', period: '7 days', description: 'Trial with limited features' },
+    glow_up: { price: '$99', period: 'per month', description: 'Up to 3 campaigns, 1,000 creators' },
+    viral_surge: { price: '$249', period: 'per month', description: 'Up to 10 campaigns, 10,000 creators' },
+    fame_flex: { price: '$499', period: 'per month', description: 'Unlimited campaigns and creators' }
   };
 
   const quickActions = [
@@ -147,8 +154,8 @@ function BillingContent() {
                 </CardDescription>
               </div>
             </div>
-            <Badge variant={currentPlan === 'free_trial' ? 'secondary' : 'default'}>
-              {currentPlan === 'free_trial' ? 'Trial' : 'Active'}
+            <Badge variant={currentPlan === 'free' ? 'secondary' : 'default'}>
+              {currentPlan === 'free' ? 'Trial' : 'Active'}
             </Badge>
           </div>
         </CardHeader>
@@ -229,21 +236,38 @@ function BillingContent() {
           {usageInfo && (
             <div className="space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
               <div className="flex items-center justify-between">
-                <h3 className="font-medium text-gray-900">Search Usage</h3>
+                <h3 className="font-medium text-gray-900">Plan Usage</h3>
                 <span className="text-sm text-gray-700">
-                  {usageInfo.searchesUsed} / {usageInfo.searchesLimit} searches used
+                  {usageInfo.campaignsUsed} / {usageInfo.campaignsLimit === -1 ? '∞' : usageInfo.campaignsLimit} campaigns • {usageInfo.creatorsUsed} / {usageInfo.creatorsLimit === -1 ? '∞' : usageInfo.creatorsLimit} creators
                 </span>
               </div>
-              <Progress 
-                value={usageInfo.progressPercentage || 0} 
-                className="h-2"
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>Campaigns</span>
+                    <span>{usageInfo.campaignsUsed} / {usageInfo.campaignsLimit === -1 ? '∞' : usageInfo.campaignsLimit}</span>
+                  </div>
+                  <Progress 
+                    value={usageInfo.campaignsLimit === -1 ? 0 : (usageInfo.campaignsUsed / usageInfo.campaignsLimit) * 100} 
+                    className="h-2"
+                  />
+                </div>
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>Creators</span>
+                    <span>{usageInfo.creatorsUsed} / {usageInfo.creatorsLimit === -1 ? '∞' : usageInfo.creatorsLimit}</span>
+                  </div>
+                  <Progress 
+                    value={usageInfo.creatorsLimit === -1 ? 0 : (usageInfo.creatorsUsed / usageInfo.creatorsLimit) * 100} 
+                    className="h-2"
+                  />
+                </div>
+              </div>
               {usageInfo.progressPercentage >= 50 && (
                 <div className="flex items-center gap-2 text-orange-700 text-sm">
                   <AlertTriangle className="h-4 w-4" />
                   <span>
-                    You&apos;ve used {usageInfo.progressPercentage}% of your trial searches. 
-                    Consider upgrading for unlimited access.
+                    You&apos;re approaching your plan limits. Consider upgrading for more access.
                   </span>
                 </div>
               )}
@@ -278,6 +302,52 @@ function BillingContent() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Quick Upgrade Options */}
+      {needsUpgrade && (
+        <Card className="border-zinc-200 bg-gradient-to-r from-blue-50 to-purple-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Crown className="h-5 w-5 text-purple-600" />
+              Upgrade Your Plan
+            </CardTitle>
+            <CardDescription>
+              Get more campaigns, creators, and advanced features
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center">
+                <UpgradeButton 
+                  targetPlan="glow_up" 
+                  size="lg" 
+                  className="w-full"
+                  showModal={true}
+                />
+                <p className="text-sm text-gray-600 mt-2">3 campaigns • 1K creators</p>
+              </div>
+              <div className="text-center">
+                <UpgradeButton 
+                  targetPlan="viral_surge" 
+                  size="lg" 
+                  className="w-full"
+                  showModal={true}
+                />
+                <p className="text-sm text-gray-600 mt-2">10 campaigns • 10K creators</p>
+              </div>
+              <div className="text-center">
+                <UpgradeButton 
+                  targetPlan="fame_flex" 
+                  size="lg" 
+                  className="w-full"
+                  showModal={true}
+                />
+                <p className="text-sm text-gray-600 mt-2">Unlimited everything</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Subscription Management */}
       <div className="space-y-8" id="subscription-management">

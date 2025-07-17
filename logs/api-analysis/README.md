@@ -21,7 +21,7 @@ Files are named using the pattern:
 - `tiktok-keyword` - TikTok keyword search
 - `tiktok-similar` - TikTok similar search  
 - `instagram-similar` - Instagram similar search
-- `instagram-hashtag` - Instagram hashtag search
+- `instagram-reels` - Instagram reels search
 - `youtube-keyword` - YouTube keyword search
 - `youtube-similar` - YouTube similar search
 

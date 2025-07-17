@@ -6,9 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, ArrowRight, User, Building, Target, Sparkles, X, CheckCircle } from 'lucide-react';
+import { AlertCircle, ArrowRight, User, Building, Target, Sparkles, X, CheckCircle, CreditCard } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'react-hot-toast';
+import PaymentStep from './payment-step';
 
 interface OnboardingModalProps {
   isOpen: boolean;
@@ -116,6 +117,11 @@ export default function OnboardingModal({
     }
   };
 
+  const handleStep3Submit = async () => {
+    // Step 3 is now plan selection - move to step 4 for completion
+    setStep(4);
+  };
+
   const handleComplete = async () => {
     setIsLoading(true);
     
@@ -170,9 +176,20 @@ export default function OnboardingModal({
             }`}>
               {step > 3 ? '✓' : '3'}
             </div>
+            <div className={`w-16 h-1 rounded ${step >= 4 ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+              step >= 4 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'
+            }`}>
+              {step > 4 ? '✓' : '4'}
+            </div>
           </div>
           <p className="text-center text-sm text-gray-600">
-            Step {step} of 3: {step === 1 ? 'Tell us about yourself' : step === 2 ? 'Tell us about your brand' : 'Ready to start!'}
+            Step {step} of 4: {
+              step === 1 ? 'Tell us about yourself' : 
+              step === 2 ? 'Tell us about your brand' : 
+              step === 3 ? 'Choose your plan' :
+              'Ready to start!'
+            }
           </p>
         </div>
 
@@ -354,6 +371,26 @@ export default function OnboardingModal({
           {step === 3 && (
             <>
               <CardHeader>
+                <div className="mx-auto mb-4 w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+                  <CreditCard className="w-8 h-8 text-blue-600" />
+                </div>
+                <CardTitle className="text-2xl font-bold text-gray-900 text-center">
+                  Choose Your Plan 💳
+                </CardTitle>
+                <CardDescription className="text-gray-600 text-center">
+                  Select the perfect plan for your influencer marketing needs.
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent>
+                <PaymentStep onComplete={handleStep3Submit} />
+              </CardContent>
+            </>
+          )}
+
+          {step === 4 && (
+            <>
+              <CardHeader>
                 <div className="mx-auto mb-4 w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
                   <CheckCircle className="w-8 h-8 text-green-600" />
                 </div>
@@ -404,7 +441,8 @@ export default function OnboardingModal({
 
                 <Button
                   onClick={handleComplete}
-                  className="w-full h-12 text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  size="lg"
+                  className="w-full h-12 text-lg font-semibold"
                   disabled={isLoading}
                 >
                   {isLoading ? (

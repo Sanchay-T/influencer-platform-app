@@ -11,6 +11,8 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { useFormattedCountdown, type TrialData } from '@/lib/hooks/useTrialCountdown';
+import { useBilling } from '@/lib/hooks/use-billing';
+import SubscriptionStatusCard from './subscription-status-card';
 
 interface TrialStatusCardProps {
   trialData: TrialData | null;
@@ -19,6 +21,17 @@ interface TrialStatusCardProps {
 
 export function TrialStatusCard({ trialData, className = '' }: TrialStatusCardProps) {
   const countdown = useFormattedCountdown(trialData);
+  const { isPaidUser, hasActiveSubscription, currentPlan } = useBilling();
+
+  // If user has active paid subscription, show subscription status instead
+  if (isPaidUser && hasActiveSubscription && currentPlan !== 'free_trial') {
+    return (
+      <SubscriptionStatusCard 
+        currentPlan={currentPlan as 'basic' | 'premium' | 'enterprise'}
+        className={className}
+      />
+    );
+  }
 
   if (!trialData) {
     return null; // Don't show card if no trial data - handled by parent component

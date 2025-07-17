@@ -397,7 +397,8 @@ export default function OnboardingComplete() {
             <div className="space-y-4">
               <Button
                 onClick={handleStartTrial}
-                className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                size="lg"
+                className="w-full h-14 text-lg font-semibold"
                 disabled={isLoading}
               >
                 {isLoading ? (

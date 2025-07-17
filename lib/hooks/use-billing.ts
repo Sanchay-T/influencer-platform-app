@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 
 export interface BillingStatus {
   isLoaded: boolean
-  currentPlan: 'free_trial' | 'basic' | 'premium' | 'enterprise'
+  currentPlan: 'free' | 'glow_up' | 'viral_surge' | 'fame_flex'
   hasFeature: (feature: string) => boolean
   hasPlan: (plan: string) => boolean
   canAccessFeature: (feature: string) => boolean
@@ -13,10 +13,20 @@ export interface BillingStatus {
   needsUpgrade: boolean
   trialStatus?: 'active' | 'expired' | 'converted' | 'cancelled'
   daysRemaining?: number
+  hasActiveSubscription?: boolean
+  isPaidUser?: boolean
   usageInfo?: {
-    searchesUsed: number
-    searchesLimit: number
+    campaignsUsed: number
+    campaignsLimit: number
+    creatorsUsed: number
+    creatorsLimit: number
     progressPercentage: number
+  }
+  planFeatures?: {
+    campaigns: number
+    creators: number
+    features: string[]
+    price: number
   }
 }
 
@@ -27,7 +37,7 @@ export function useBilling(): BillingStatus {
   const { isLoaded, has } = useAuth()
   const [billingStatus, setBillingStatus] = useState<BillingStatus>({
     isLoaded: false,
-    currentPlan: 'free_trial',
+    currentPlan: 'free',
     hasFeature: () => false,
     hasPlan: () => false,
     canAccessFeature: () => false,
@@ -45,7 +55,7 @@ export function useBilling(): BillingStatus {
       // If billing is disabled, allow access to all features
       setBillingStatus({
         isLoaded: true,
-        currentPlan: 'enterprise', // Full access when billing disabled
+        currentPlan: 'fame_flex', // Full access when billing disabled
         hasFeature: () => true,
         hasPlan: () => true,
         canAccessFeature: () => true,
@@ -56,28 +66,47 @@ export function useBilling(): BillingStatus {
     }
 
     // Determine current plan using exact Clerk plan names from your dashboard
-    let currentPlan: 'free_trial' | 'basic' | 'premium' | 'enterprise' = 'free_trial'
+    let currentPlan: 'free' | 'glow_up' | 'viral_surge' | 'fame_flex' = 'free'
     let isTrialing = false
+    let hasActiveSubscription = false
+    let isPaidUser = false
     
     console.log('💳 [CLERK-BILLING] Getting billing status for user:', has ? 'authenticated' : 'not authenticated')
     
-    if (has && has({ plan: 'Enterprise' })) {
-      currentPlan = 'enterprise'
-      console.log('💳 [CLERK-BILLING] User has Enterprise plan')
+    // Check for your actual Clerk plans
+    if (has && has({ plan: 'Fame Flex' })) {
+      currentPlan = 'fame_flex'
+      hasActiveSubscription = true
+      isPaidUser = true
+      console.log('💳 [CLERK-BILLING] User has Fame Flex plan ($499/month)')
+    } else if (has && has({ plan: 'Viral Surge' })) {
+      currentPlan = 'viral_surge'
+      hasActiveSubscription = true
+      isPaidUser = true
+      console.log('💳 [CLERK-BILLING] User has Viral Surge plan ($249/month)')
+    } else if (has && has({ plan: 'Glow Up' })) {
+      currentPlan = 'glow_up'
+      hasActiveSubscription = true
+      isPaidUser = true
+      console.log('💳 [CLERK-BILLING] User has Glow Up plan ($99/month)')
     } else if (has && has({ plan: 'Premium' })) {
-      currentPlan = 'premium'
-      console.log('💳 [CLERK-BILLING] User has Premium plan')
-    } else if (has && has({ plan: 'Basic' })) {
-      currentPlan = 'basic'
-      console.log('💳 [CLERK-BILLING] User has Basic plan')
+      // Handle the unwanted Premium plan - treat as glow_up
+      currentPlan = 'glow_up'
+      hasActiveSubscription = true
+      isPaidUser = true
+      console.log('💳 [CLERK-BILLING] User has Premium plan ($10/month) - treating as Glow Up')
     } else if (has && has({ plan: 'Free' })) {
-      currentPlan = 'free_trial'
+      currentPlan = 'free'
       isTrialing = true
+      hasActiveSubscription = false
+      isPaidUser = false
       console.log('💳 [CLERK-BILLING] User has Free plan (trial)')
     } else {
       // Default to free trial if no plan found
-      currentPlan = 'free_trial'
+      currentPlan = 'free'
       isTrialing = true
+      hasActiveSubscription = false
+      isPaidUser = false
       console.log('💳 [CLERK-BILLING] No plan found, defaulting to free trial')
     }
 
@@ -93,10 +122,10 @@ export function useBilling(): BillingStatus {
       if (!has) return false
       // Convert our internal plan names to Clerk plan names
       const clerkPlanNames = {
-        'free_trial': 'Free',
-        'basic': 'Basic', 
-        'premium': 'Premium',
-        'enterprise': 'Enterprise'
+        'free': 'Free',
+        'glow_up': 'Glow Up',
+        'viral_surge': 'Viral Surge', 
+        'fame_flex': 'Fame Flex'
       }
       const clerkPlanName = clerkPlanNames[plan as keyof typeof clerkPlanNames] || plan
       const result = has({ plan: clerkPlanName })
@@ -114,16 +143,18 @@ export function useBilling(): BillingStatus {
         return true
       }
       
-      // Fallback: Basic plan hierarchy for common features
-      const planHierarchy = ['free_trial', 'basic', 'premium', 'enterprise']
+      // Fallback: Plan hierarchy for your actual plans
+      const planHierarchy = ['free', 'glow_up', 'viral_surge', 'fame_flex']
       const currentPlanIndex = planHierarchy.indexOf(currentPlan)
       
-      // Define minimum plan requirements for key features
+      // Define minimum plan requirements for key features based on your pricing
       const featureMinimumPlans = {
-        'csv_export': 1, // Basic and above
-        'unlimited_search': 2, // Premium and above
-        'api_access': 3, // Enterprise only
-        'priority_support': 3 // Enterprise only
+        'csv_export': 1, // Glow Up and above
+        'bio_extraction': 1, // Glow Up and above
+        'unlimited_search': 1, // Glow Up and above
+        'advanced_analytics': 2, // Viral Surge and above
+        'api_access': 3, // Fame Flex only
+        'priority_support': 3 // Fame Flex only
       }
       
       const requiredPlanIndex = featureMinimumPlans[feature as keyof typeof featureMinimumPlans]
@@ -138,6 +169,36 @@ export function useBilling(): BillingStatus {
       return true
     }
 
+    // Define plan features based on your actual pricing structure
+    const planFeatures = {
+      'free': {
+        campaigns: 0,
+        creators: 0,
+        features: ['trial_access'],
+        price: 0
+      },
+      'glow_up': {
+        campaigns: 3,
+        creators: 1000,
+        features: ['unlimited_search', 'csv_export', 'bio_extraction'],
+        price: 99
+      },
+      'viral_surge': {
+        campaigns: 10,
+        creators: 10000,
+        features: ['unlimited_search', 'csv_export', 'bio_extraction', 'advanced_analytics'],
+        price: 249
+      },
+      'fame_flex': {
+        campaigns: -1, // unlimited
+        creators: -1,  // unlimited
+        features: ['unlimited_search', 'csv_export', 'bio_extraction', 'advanced_analytics', 'api_access', 'priority_support'],
+        price: 499
+      }
+    }
+
+    const currentPlanFeatures = planFeatures[currentPlan]
+
     setBillingStatus({
       isLoaded: true,
       currentPlan,
@@ -145,14 +206,19 @@ export function useBilling(): BillingStatus {
       hasPlan,
       canAccessFeature,
       isTrialing,
-      needsUpgrade: currentPlan === 'free_trial',
-      trialStatus: isTrialing ? 'active' : undefined,
-      daysRemaining: isTrialing ? 7 : undefined, // This should come from actual trial data
-      usageInfo: currentPlan === 'free_trial' ? {
-        searchesUsed: 0, // This should come from actual usage tracking
-        searchesLimit: 3,
+      hasActiveSubscription,
+      isPaidUser,
+      needsUpgrade: !isPaidUser, // Only need upgrade if not a paid user
+      trialStatus: isPaidUser ? 'converted' : (isTrialing ? 'active' : undefined),
+      daysRemaining: isPaidUser ? 0 : (isTrialing ? 7 : undefined), // No countdown for paid users
+      planFeatures: currentPlanFeatures,
+      usageInfo: {
+        campaignsUsed: 0, // This should come from actual usage tracking
+        campaignsLimit: currentPlanFeatures.campaigns,
+        creatorsUsed: 0, // This should come from actual usage tracking
+        creatorsLimit: currentPlanFeatures.creators,
         progressPercentage: 0
-      } : undefined
+      }
     })
 
   }, [isLoaded, has])

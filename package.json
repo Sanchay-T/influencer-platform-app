@@ -13,7 +13,11 @@
     "db:studio": "drizzle-kit studio",
     "drop": "drizzle-kit drop",
     "test:tiktok-similar": "node run-tiktok-test.js",
-    "test:tiktok-similar-api": "node test-tiktok-similar.js"
+    "test:tiktok-similar-api": "node test-tiktok-similar.js",
+    "reset-user": "node scripts/reset-user-onboarding.js",
+    "reset-user:simple": "node scripts/reset-user-simple.js",
+    "reset-user:ts": "tsx scripts/reset-user-onboarding.ts",
+    "find-user-id": "node scripts/find-user-id.js"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.23.3",
@@ -26,9 +30,12 @@
     "@radix-ui/react-slider": "^1.2.3",
     "@radix-ui/react-slot": "^1.1.2",
     "@react-email/components": "^0.0.38",
+    "@stripe/react-stripe-js": "^3.7.0",
+    "@stripe/stripe-js": "^7.4.0",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.49.1",
     "@upstash/qstash": "^2.7.22",
+    "@vercel/blob": "^1.1.1",
     "apify-client": "^2.12.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -46,6 +53,7 @@
     "react-hot-toast": "^2.5.2",
     "resend": "^4.5.1",
     "sharp": "^0.33.2",
+    "stripe": "^18.3.0",
     "svix": "^1.69.0",
     "tailwind-merge": "^3.0.1",
     "tailwindcss-animate": "^1.0.7"
