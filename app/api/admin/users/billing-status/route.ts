@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
-import { ClerkBillingService } from '@/lib/billing/clerk-billing';
 import { isAdminUser } from '@/lib/auth/admin-utils';
+import { db } from '@/lib/db';
+import { userProfiles } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 
 export async function GET(request: Request) {
   try {
@@ -25,24 +27,52 @@ export async function GET(request: Request) {
 
     console.log('🔍 [ADMIN-BILLING] Getting billing status for user:', userId);
 
-    // Get billing status from Clerk
-    const billingStatus = await ClerkBillingService.getUserBillingStatus(userId);
+    // Get billing status from database
+    const userProfile = await db.query.userProfiles.findFirst({
+      where: eq(userProfiles.userId, userId)
+    });
+
+    if (!userProfile) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    // Calculate billing status
+    const currentPlan = userProfile.currentPlan || 'free';
+    const subscriptionStatus = userProfile.subscriptionStatus || 'none';
+    const trialStatus = userProfile.trialStatus || 'pending';
+    const isActive = subscriptionStatus === 'active' || trialStatus === 'active';
+    const isTrialing = trialStatus === 'active';
+
+    // Calculate days remaining for trial
+    let daysRemaining = 0;
+    if (isTrialing && userProfile.trialEndDate) {
+      const now = new Date();
+      const trialEnd = new Date(userProfile.trialEndDate);
+      const timeDiff = trialEnd.getTime() - now.getTime();
+      daysRemaining = Math.max(0, Math.ceil(timeDiff / (1000 * 60 * 60 * 24)));
+    }
 
     console.log('✅ [ADMIN-BILLING] Billing status retrieved:', {
       userId,
-      currentPlan: billingStatus.currentPlan,
-      isActive: billingStatus.isActive,
-      isTrialing: billingStatus.isTrialing
+      currentPlan,
+      isActive,
+      isTrialing,
+      daysRemaining
     });
 
     return NextResponse.json({
       userId,
-      currentPlan: billingStatus.currentPlan,
-      isActive: billingStatus.isActive,
-      isTrialing: billingStatus.isTrialing,
-      daysRemaining: billingStatus.daysRemaining,
-      subscriptionId: billingStatus.subscriptionId,
-      customerId: billingStatus.customerId
+      currentPlan,
+      isActive,
+      isTrialing,
+      daysRemaining,
+      subscriptionId: userProfile.stripeSubscriptionId,
+      customerId: userProfile.stripeCustomerId,
+      subscriptionStatus,
+      trialStatus
     });
 
   } catch (error) {

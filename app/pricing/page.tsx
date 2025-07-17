@@ -375,7 +375,7 @@ const PricingPageContent = () => {
                         console.log('🔥 [PRICING-CLICK] Plan mapping:', { planName, clerkPlanName });
                         
                         if (clerkPlanName) {
-                          // Simple redirect to billing page - let Clerk PricingTable handle the checkout
+                          // Redirect to billing page with Stripe checkout
                           const billingUrl = `/billing?plan=${clerkPlanName}`;
                           console.log('🔥 [PRICING-CLICK] Redirecting to billing page:', billingUrl);
                           window.location.href = billingUrl;

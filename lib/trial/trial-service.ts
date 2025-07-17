@@ -1,7 +1,7 @@
 import { db } from '@/lib/db';
 import { userProfiles } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import { ClerkBillingService } from '@/lib/billing/clerk-billing';
+// Removed Clerk billing dependency - using Stripe only
 
 // Trial status types
 export type TrialStatus = 'pending' | 'active' | 'expired' | 'cancelled' | 'converted';
@@ -23,9 +23,7 @@ export interface TrialData {
   subscriptionStatus: SubscriptionStatus;
   isExpired: boolean;
   timeUntilExpiry: string;
-  // Clerk billing fields
-  clerkCustomerId: string | null;
-  clerkSubscriptionId: string | null;
+  // Removed Clerk billing fields
   currentPlan: 'free' | 'premium' | 'enterprise';
   hasActiveSubscription: boolean;
 }
@@ -112,19 +110,13 @@ export async function startTrial(userId: string, clerkBillingData?: {
       endDate: trialEndDate.toISOString()
     });
 
-    // Get current billing status from Clerk
-    const billingStatus = await ClerkBillingService.getUserBillingStatus(userId);
-
-    // Update user profile with trial information
+    // Update user profile with trial information (do NOT override currentPlan - it's set by background job)
     await db.update(userProfiles)
       .set({
         trialStartDate: now,
         trialEndDate: trialEndDate,
         trialStatus: 'active',
         subscriptionStatus: 'trialing',
-        clerkCustomerId: clerkBillingData?.customerId || null,
-        clerkSubscriptionId: clerkBillingData?.subscriptionId || null,
-        currentPlan: billingStatus.currentPlan,
         // Keep legacy Stripe fields for compatibility
         stripeCustomerId: clerkBillingData?.customerId || null,
         stripeSubscriptionId: clerkBillingData?.subscriptionId || null,
@@ -134,7 +126,7 @@ export async function startTrial(userId: string, clerkBillingData?: {
 
     console.log('✅ [TRIAL-SERVICE] Trial started successfully');
     console.log('💳 [TRIAL-SERVICE] Clerk billing data:', clerkBillingData || 'None');
-    console.log('📋 [TRIAL-SERVICE] Current plan:', billingStatus.currentPlan);
+    console.log('📋 [TRIAL-SERVICE] Current plan: (preserved from background job)');
 
     // Calculate countdown data
     const countdown = calculateCountdown(trialEndDate);
@@ -148,10 +140,9 @@ export async function startTrial(userId: string, clerkBillingData?: {
       stripeCustomerId: clerkBillingData?.customerId || null,
       stripeSubscriptionId: clerkBillingData?.subscriptionId || null,
       subscriptionStatus: 'trialing',
-      clerkCustomerId: clerkBillingData?.customerId || null,
-      clerkSubscriptionId: clerkBillingData?.subscriptionId || null,
+      // Removed Clerk billing fields
       currentPlan: billingStatus.currentPlan,
-      hasActiveSubscription: billingStatus.isActive && !billingStatus.isTrialing
+      hasActiveSubscription: false // Trial users don't have active subscriptions
     };
 
     console.log('⏰ [TRIAL-SERVICE] Countdown calculated:', {
@@ -185,8 +176,8 @@ export async function getTrialStatus(userId: string): Promise<TrialData | null> 
       return null;
     }
 
-    // Get current billing status from Clerk
-    const billingStatus = await ClerkBillingService.getUserBillingStatus(userId);
+    // Default billing status for trial users
+    const billingStatus = { currentPlan: 'free' };
     
     // Check if user has an active paid subscription
     const hasActiveSubscription = billingStatus.isActive && !billingStatus.isTrialing;
@@ -210,8 +201,7 @@ export async function getTrialStatus(userId: string): Promise<TrialData | null> 
         stripeCustomerId: userProfile.stripeCustomerId,
         stripeSubscriptionId: userProfile.stripeSubscriptionId,
         subscriptionStatus: 'active' as SubscriptionStatus,
-        clerkCustomerId: userProfile.clerkCustomerId,
-        clerkSubscriptionId: userProfile.clerkSubscriptionId,
+        // Removed Clerk billing fields
         currentPlan: billingStatus.currentPlan,
         hasActiveSubscription: true
       };
@@ -235,8 +225,7 @@ export async function getTrialStatus(userId: string): Promise<TrialData | null> 
         stripeCustomerId: userProfile.stripeCustomerId,
         stripeSubscriptionId: userProfile.stripeSubscriptionId,
         subscriptionStatus: userProfile.subscriptionStatus as SubscriptionStatus,
-        clerkCustomerId: userProfile.clerkCustomerId,
-        clerkSubscriptionId: userProfile.clerkSubscriptionId,
+        // Removed Clerk billing fields
         currentPlan: billingStatus.currentPlan,
         hasActiveSubscription: hasActiveSubscription
       };
@@ -271,10 +260,9 @@ export async function getTrialStatus(userId: string): Promise<TrialData | null> 
       stripeCustomerId: userProfile.stripeCustomerId,
       stripeSubscriptionId: userProfile.stripeSubscriptionId,
       subscriptionStatus: userProfile.subscriptionStatus as SubscriptionStatus,
-      clerkCustomerId: userProfile.clerkCustomerId,
-      clerkSubscriptionId: userProfile.clerkSubscriptionId,
+      // Removed Clerk billing fields
       currentPlan: billingStatus.currentPlan,
-      hasActiveSubscription: billingStatus.isActive && !billingStatus.isTrialing
+      hasActiveSubscription: false // Trial users don't have active subscriptions
     };
 
     console.log('📊 [TRIAL-SERVICE] Trial status retrieved:', {

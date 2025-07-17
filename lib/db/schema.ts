@@ -107,9 +107,7 @@ export const userProfiles = pgTable('user_profiles', {
   stripeCustomerId: text('stripe_customer_id'), // Repurposed for Clerk billing customer ID
   stripeSubscriptionId: text('stripe_subscription_id'), // Repurposed for Clerk billing subscription ID
   subscriptionStatus: varchar('subscription_status', { length: 20 }).default('none'), // 'none', 'trialing', 'active', 'past_due', 'canceled'
-  // Clerk billing fields
-  clerkCustomerId: text('clerk_customer_id'),
-  clerkSubscriptionId: text('clerk_subscription_id'),
+  // Removed Clerk billing fields - using Stripe only
   currentPlan: varchar('current_plan', { length: 50 }).default('free'), // 'free', 'glow_up', 'viral_surge', 'fame_flex'
   // Payment method fields
   paymentMethodId: text('payment_method_id'),
@@ -154,6 +152,46 @@ export const systemConfigurations = pgTable('system_configurations', {
 }, (table) => ({
   uniqueCategoryKey: unique().on(table.category, table.key),
 }));
+
+// Event Sourcing table for tracking all state changes (Industry Standard)
+export const events = pgTable('events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  aggregateId: text('aggregate_id').notNull(), // User ID, Job ID, etc.
+  aggregateType: varchar('aggregate_type', { length: 50 }).notNull(), // 'user', 'subscription', 'onboarding'
+  eventType: varchar('event_type', { length: 100 }).notNull(), // 'subscription_created', 'onboarding_completed'
+  eventVersion: integer('event_version').notNull().default(1),
+  eventData: jsonb('event_data').notNull(), // Full event payload
+  metadata: jsonb('metadata'), // Request ID, source, user agent, etc.
+  timestamp: timestamp('timestamp').notNull().defaultNow(),
+  processedAt: timestamp('processed_at'), // When background job processed this event
+  processingStatus: varchar('processing_status', { length: 20 }).notNull().default('pending'), // 'pending', 'processing', 'completed', 'failed'
+  retryCount: integer('retry_count').notNull().default(0),
+  error: text('error'), // Error message if processing failed
+  idempotencyKey: text('idempotency_key').notNull().unique(), // Prevent duplicate processing
+  sourceSystem: varchar('source_system', { length: 50 }).notNull(), // 'stripe_webhook', 'admin_action', 'user_action'
+  correlationId: text('correlation_id'), // Track related events
+  causationId: text('causation_id'), // What caused this event
+});
+
+// Background Jobs table for QStash job tracking (Industry Standard)
+export const backgroundJobs = pgTable('background_jobs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  jobType: varchar('job_type', { length: 100 }).notNull(), // 'complete_onboarding', 'send_trial_email'
+  payload: jsonb('payload').notNull(), // Job data
+  status: varchar('status', { length: 20 }).notNull().default('pending'), // 'pending', 'processing', 'completed', 'failed'
+  qstashMessageId: text('qstash_message_id'), // QStash message ID for tracking
+  priority: integer('priority').notNull().default(100), // Lower = higher priority
+  maxRetries: integer('max_retries').notNull().default(3),
+  retryCount: integer('retry_count').notNull().default(0),
+  scheduledFor: timestamp('scheduled_for').notNull().defaultNow(),
+  startedAt: timestamp('started_at'),
+  completedAt: timestamp('completed_at'),
+  failedAt: timestamp('failed_at'),
+  error: text('error'),
+  result: jsonb('result'), // Job execution result
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
 
 // Relations
 export const campaignRelations = relations(campaigns, ({ many }) => ({
@@ -206,3 +244,7 @@ export type UserProfile = typeof userProfiles.$inferSelect;
 export type NewUserProfile = typeof userProfiles.$inferInsert;
 export type SystemConfiguration = typeof systemConfigurations.$inferSelect;
 export type NewSystemConfiguration = typeof systemConfigurations.$inferInsert;
+export type Event = typeof events.$inferSelect;
+export type NewEvent = typeof events.$inferInsert;
+export type BackgroundJob = typeof backgroundJobs.$inferSelect;
+export type NewBackgroundJob = typeof backgroundJobs.$inferInsert;

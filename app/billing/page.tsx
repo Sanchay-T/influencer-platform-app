@@ -23,7 +23,7 @@ import { useBilling } from '@/lib/hooks/use-billing';
 import { useFormattedCountdown } from '@/lib/hooks/useTrialCountdown';
 import DashboardLayout from '../components/layout/dashboard-layout';
 import Link from 'next/link';
-import { PricingTable } from '@clerk/nextjs';
+// Removed Clerk PricingTable - using custom Stripe pricing
 import UpgradeButton from '@/app/components/billing/upgrade-button';
 
 function BillingContent() {
@@ -364,7 +364,58 @@ function BillingContent() {
             <div className="space-y-8">
               <div className="bg-gradient-to-br from-zinc-50 to-blue-50 rounded-xl p-6 border border-zinc-200">
                 <div className="max-w-5xl mx-auto">
-                  <PricingTable />
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Glow Up Plan */}
+                    <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                      <div className="text-center">
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">Glow Up</h3>
+                        <div className="text-3xl font-bold text-blue-600 mb-1">$99</div>
+                        <div className="text-sm text-gray-600 mb-6">per month</div>
+                        <ul className="space-y-3 text-sm text-gray-600 mb-6">
+                          <li>✓ Up to 3 campaigns</li>
+                          <li>✓ 1,000 creators</li>
+                          <li>✓ CSV export</li>
+                          <li>✓ Bio extraction</li>
+                        </ul>
+                        <UpgradeButton targetPlan="glow_up" className="w-full" />
+                      </div>
+                    </div>
+
+                    {/* Viral Surge Plan */}
+                    <div className="bg-white rounded-lg p-6 shadow-sm border-2 border-blue-500 relative">
+                      <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                        <span className="bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-medium">Most Popular</span>
+                      </div>
+                      <div className="text-center">
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">Viral Surge</h3>
+                        <div className="text-3xl font-bold text-blue-600 mb-1">$249</div>
+                        <div className="text-sm text-gray-600 mb-6">per month</div>
+                        <ul className="space-y-3 text-sm text-gray-600 mb-6">
+                          <li>✓ Up to 10 campaigns</li>
+                          <li>✓ 10,000 creators</li>
+                          <li>✓ Advanced analytics</li>
+                          <li>✓ All Glow Up features</li>
+                        </ul>
+                        <UpgradeButton targetPlan="viral_surge" className="w-full" />
+                      </div>
+                    </div>
+
+                    {/* Fame Flex Plan */}
+                    <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                      <div className="text-center">
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">Fame Flex</h3>
+                        <div className="text-3xl font-bold text-blue-600 mb-1">$499</div>
+                        <div className="text-sm text-gray-600 mb-6">per month</div>
+                        <ul className="space-y-3 text-sm text-gray-600 mb-6">
+                          <li>✓ Unlimited campaigns</li>
+                          <li>✓ Unlimited creators</li>
+                          <li>✓ API access</li>
+                          <li>✓ Priority support</li>
+                        </ul>
+                        <UpgradeButton targetPlan="fame_flex" className="w-full" />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

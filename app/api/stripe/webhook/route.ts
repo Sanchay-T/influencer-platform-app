@@ -4,6 +4,8 @@ import { db } from '@/lib/db';
 import { userProfiles } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import Stripe from 'stripe';
+import { EventService, EVENT_TYPES, AGGREGATE_TYPES, SOURCE_SYSTEMS } from '@/lib/events/event-service';
+import { JobProcessor } from '@/lib/jobs/job-processor';
 
 export async function POST(req: NextRequest) {
   try {
@@ -70,7 +72,26 @@ export async function POST(req: NextRequest) {
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   try {
     const customerId = subscription.customer as string;
-    const planId = subscription.metadata.plan || 'unknown';
+    const planId = subscription.metadata.plan || 'glow_up';
+
+    console.log('🎯 [STRIPE-WEBHOOK] Processing subscription created (Event-Driven):', {
+      subscriptionId: subscription.id,
+      customerId,
+      planId,
+      status: subscription.status,
+      trialEnd: subscription.trial_end,
+      timestamp: new Date().toISOString()
+    });
+
+    // 🔍 DIAGNOSTIC LOGS - Check if event sourcing system is available
+    try {
+      console.log('🔍 [STRIPE-WEBHOOK-DIAGNOSTICS] Checking event sourcing system availability...');
+      const { EventService, EVENT_TYPES } = await import('@/lib/events/event-service');
+      console.log('✅ [STRIPE-WEBHOOK-DIAGNOSTICS] Event sourcing system imported successfully');
+    } catch (importError) {
+      console.error('❌ [STRIPE-WEBHOOK-DIAGNOSTICS] Event sourcing system import failed:', importError);
+      console.error('🚨 [STRIPE-WEBHOOK-DIAGNOSTICS] CRITICAL: Event sourcing not available - falling back to direct DB update');
+    }
 
     // Find user by Stripe customer ID
     const user = await db.query.userProfiles.findFirst({
@@ -82,7 +103,36 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
       return;
     }
 
-    // Update user profile
+    console.log('✅ [STRIPE-WEBHOOK] User found:', user.userId);
+
+    // Generate correlation ID for tracking related events
+    const correlationId = EventService.generateCorrelationId();
+    
+    // Create event for audit trail (Industry Standard)
+    const subscriptionEvent = await EventService.createEvent({
+      aggregateId: user.userId,
+      aggregateType: AGGREGATE_TYPES.SUBSCRIPTION,
+      eventType: EVENT_TYPES.SUBSCRIPTION_CREATED,
+      eventData: {
+        subscriptionId: subscription.id,
+        customerId,
+        planId,
+        status: subscription.status,
+        trialEnd: subscription.trial_end,
+        metadata: subscription.metadata,
+        stripeRaw: subscription
+      },
+      metadata: {
+        stripeEventId: subscription.id,
+        webhookSource: 'stripe',
+        requestId: `stripe_webhook_${Date.now()}`
+      },
+      sourceSystem: SOURCE_SYSTEMS.STRIPE_WEBHOOK,
+      correlationId,
+      idempotencyKey: EventService.generateIdempotencyKey('stripe', subscription.id, 'subscription_created')
+    });
+
+    // Update subscription info immediately (non-controversial changes)
     await db.update(userProfiles)
       .set({
         stripeSubscriptionId: subscription.id,
@@ -95,7 +145,70 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
       })
       .where(eq(userProfiles.userId, user.userId));
 
-    console.log('✅ [STRIPE-WEBHOOK] Subscription created for user:', user.userId);
+    // If subscription has trial, queue background job to complete onboarding (Industry Standard)
+    if (subscription.trial_end && subscription.status === 'trialing') {
+      console.log('🚀 [STRIPE-WEBHOOK] Queueing background job to complete onboarding');
+      
+      try {
+        // 🔍 DIAGNOSTIC LOGS - Check JobProcessor availability
+        console.log('🔍 [STRIPE-WEBHOOK-DIAGNOSTICS] Importing JobProcessor...');
+        const { JobProcessor } = await import('@/lib/jobs/job-processor');
+        console.log('✅ [STRIPE-WEBHOOK-DIAGNOSTICS] JobProcessor imported successfully');
+        
+        const jobId = await JobProcessor.queueJob({
+          jobType: 'complete_onboarding',
+          payload: {
+            userId: user.userId,
+            stripeSubscriptionId: subscription.id,
+            stripeCustomerId: customerId,
+            planId,
+            trialEndTimestamp: subscription.trial_end,
+            eventId: subscriptionEvent?.id,
+            correlationId
+          },
+          delay: 2000, // 2 second delay to ensure webhook completes first
+          priority: 10 // High priority
+        });
+
+        console.log('✅ [STRIPE-WEBHOOK] Background job queued successfully:', {
+          jobId,
+          jobType: 'complete_onboarding',
+          userId: user.userId,
+          queuedAt: new Date().toISOString()
+        });
+
+        // 🔍 DIAGNOSTIC LOGS - Verify job was created in database
+        console.log('🔍 [STRIPE-WEBHOOK-DIAGNOSTICS] Verifying job creation in database...');
+        
+      } catch (jobError) {
+        console.error('❌ [STRIPE-WEBHOOK-DIAGNOSTICS] JobProcessor failed:', jobError);
+        console.error('🚨 [STRIPE-WEBHOOK-DIAGNOSTICS] CRITICAL: Background job not queued - onboarding will not complete automatically');
+        
+        // FALLBACK: Direct onboarding completion (temporary emergency fix)
+        console.log('🔧 [STRIPE-WEBHOOK-DIAGNOSTICS] EMERGENCY FALLBACK: Completing onboarding directly');
+        const trialStartDate = new Date();
+        const trialEndDate = new Date(subscription.trial_end * 1000);
+        
+        await db.update(userProfiles)
+          .set({
+            onboardingStep: 'completed',
+            trialStatus: 'active',
+            trialStartDate,
+            trialEndDate,
+            billingSyncStatus: 'webhook_emergency_fallback',
+            updatedAt: new Date()
+          })
+          .where(eq(userProfiles.userId, user.userId));
+          
+        console.log('🔧 [STRIPE-WEBHOOK-DIAGNOSTICS] Emergency fallback completed - onboarding set to completed');
+      }
+    }
+
+    console.log('✅ [STRIPE-WEBHOOK] Subscription created event processed (Event-Driven):', {
+      userId: user.userId,
+      eventId: subscriptionEvent?.id,
+      hasTrialJob: !!(subscription.trial_end && subscription.status === 'trialing')
+    });
 
   } catch (error) {
     console.error('❌ [STRIPE-WEBHOOK] Error handling subscription created:', error);

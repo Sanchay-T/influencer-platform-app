@@ -4,6 +4,7 @@ import Stripe from 'stripe';
 import { db } from '@/lib/db';
 import { userProfiles } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { getClientUrl } from '@/lib/utils/url-utils';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-06-20',
@@ -104,8 +105,8 @@ export async function POST(req: NextRequest) {
           source: 'onboarding'
         }
       },
-      success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/onboarding/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/onboarding?step=3`,
+      success_url: `${getClientUrl()}/onboarding/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${getClientUrl()}/onboarding?step=3`,
       metadata: {
         userId,
         planId,

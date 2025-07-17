@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,7 +29,7 @@ interface SessionData {
   payment_status: string;
 }
 
-export default function OnboardingSuccess() {
+function OnboardingSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
@@ -51,29 +51,23 @@ export default function OnboardingSuccess() {
           setSessionData(data);
           console.log('✅ [SUCCESS-PAGE] Session data loaded:', data);
           
-          // Sync subscription with database
-          if (data.planId) {
-            try {
-              const syncResponse = await fetch('/api/stripe/sync-subscription', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  sessionId: data.sessionId,
-                  planId: data.planId,
-                  billing: data.billing
-                })
-              });
-              
-              if (syncResponse.ok) {
-                console.log('✅ [SUCCESS-PAGE] Subscription synced successfully');
-              } else {
-                console.error('❌ [SUCCESS-PAGE] Failed to sync subscription');
-              }
-            } catch (syncError) {
-              console.error('❌ [SUCCESS-PAGE] Error syncing subscription:', syncError);
+          // 🚀 NEW: Complete onboarding with Mock Stripe webhook simulation
+          console.log('🔔 [SUCCESS-PAGE] Triggering onboarding completion with Mock Stripe simulation...');
+          try {
+            const completeResponse = await fetch('/api/onboarding/complete', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ completed: true, sessionId })
+            });
+            
+            if (completeResponse.ok) {
+              const completeData = await completeResponse.json();
+              console.log('✅ [SUCCESS-PAGE] Onboarding completed successfully:', completeData);
+            } else {
+              console.error('❌ [SUCCESS-PAGE] Failed to complete onboarding:', completeResponse.status);
             }
+          } catch (completeError) {
+            console.error('❌ [SUCCESS-PAGE] Error completing onboarding:', completeError);
           }
         } else {
           console.error('❌ [SUCCESS-PAGE] Failed to fetch session data:', response.status);
@@ -289,5 +283,20 @@ export default function OnboardingSuccess() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function OnboardingSuccess() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <OnboardingSuccessContent />
+    </Suspense>
   );
 }

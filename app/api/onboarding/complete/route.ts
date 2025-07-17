@@ -74,8 +74,9 @@ export async function PATCH(request: Request) {
     console.log('💳💳💳 [ONBOARDING-COMPLETE] ===============================');
     console.log('💳 [ONBOARDING-COMPLETE] User Email:', userEmail);
     console.log('💳 [ONBOARDING-COMPLETE] User ID:', userId);
+    console.log('💳 [ONBOARDING-COMPLETE] User Selected Plan:', userProfile.currentPlan || 'glow_up');
     const stripeStartTime = Date.now();
-    const stripeSetup = await MockStripeService.setupTrial(userEmail, userId);
+    const stripeSetup = await MockStripeService.setupTrial(userEmail, userId, userProfile.currentPlan || 'glow_up');
     console.log('⏱️ [ONBOARDING-COMPLETE] Stripe setup completed in:', Date.now() - stripeStartTime, 'ms');
     
     console.log('✅ [ONBOARDING-COMPLETE] Mock Stripe setup complete:', {
@@ -84,10 +85,12 @@ export async function PATCH(request: Request) {
       checkoutSessionId: stripeSetup.checkoutSession.id
     });
 
-    // Step 2: Start the production trial system
+    // Step 2: Start trial system (background job will set plan asynchronously)
     console.log('🎯🎯🎯 [ONBOARDING-COMPLETE] ===============================');
     console.log('🎯🎯🎯 [ONBOARDING-COMPLETE] STARTING PRODUCTION TRIAL SYSTEM');
     console.log('🎯🎯🎯 [ONBOARDING-COMPLETE] ===============================');
+    console.log('📝 [ONBOARDING-COMPLETE] Note: Background job will set plan asynchronously');
+    
     console.log('🎯 [ONBOARDING-COMPLETE] Input data:', {
       userId,
       customerId: stripeSetup.customer.id,
