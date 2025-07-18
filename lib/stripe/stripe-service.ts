@@ -5,20 +5,23 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-06-20',
 });
 
-// Plan mapping for your actual Clerk plans
+// Plan mapping for your actual Stripe plans
 const PLAN_MAPPING = {
   'glow_up': {
-    priceId: process.env.STRIPE_GLOW_UP_PRICE_ID!,
+    priceId: process.env.STRIPE_GLOW_UP_MONTHLY_PRICE_ID!,
+    yearlyPriceId: process.env.STRIPE_GLOW_UP_YEARLY_PRICE_ID!,
     amount: 9900, // $99.00
     name: 'Glow Up'
   },
   'viral_surge': {
-    priceId: process.env.STRIPE_VIRAL_SURGE_PRICE_ID!,
+    priceId: process.env.STRIPE_VIRAL_SURGE_MONTHLY_PRICE_ID!,
+    yearlyPriceId: process.env.STRIPE_VIRAL_SURGE_YEARLY_PRICE_ID!,
     amount: 24900, // $249.00
     name: 'Viral Surge'
   },
   'fame_flex': {
-    priceId: process.env.STRIPE_FAME_FLEX_PRICE_ID!,
+    priceId: process.env.STRIPE_FAME_FLEX_MONTHLY_PRICE_ID!,
+    yearlyPriceId: process.env.STRIPE_FAME_FLEX_YEARLY_PRICE_ID!,
     amount: 49900, // $499.00
     name: 'Fame Flex'
   }
@@ -329,6 +332,104 @@ export class StripeService {
    */
   static getAllPlanConfigs() {
     return PLAN_MAPPING;
+  }
+
+  /**
+   * Create a customer portal session for subscription management
+   */
+  static async createCustomerPortalSession(
+    customerId: string,
+    returnUrl: string
+  ): Promise<Stripe.BillingPortal.Session> {
+    try {
+      const session = await stripe.billingPortal.sessions.create({
+        customer: customerId,
+        return_url: returnUrl,
+        configuration: {
+          business_profile: {
+            privacy_policy_url: `${process.env.NEXT_PUBLIC_SITE_URL}/privacy`,
+            terms_of_service_url: `${process.env.NEXT_PUBLIC_SITE_URL}/terms`,
+          },
+          features: {
+            payment_method_update: {
+              enabled: true,
+            },
+            subscription_cancel: {
+              enabled: true,
+              mode: 'at_period_end',
+              proration_behavior: 'none',
+            },
+            subscription_update: {
+              enabled: true,
+              default_allowed_updates: ['price', 'quantity', 'promotion_code'],
+              proration_behavior: 'create_prorations',
+            },
+            invoice_history: {
+              enabled: true,
+            },
+          },
+        },
+      });
+
+      console.log('✅ [STRIPE] Created customer portal session:', session.id);
+      return session;
+    } catch (error) {
+      console.error('❌ [STRIPE] Error creating customer portal session:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get customer details with payment methods
+   */
+  static async getCustomerDetails(customerId: string): Promise<{
+    customer: Stripe.Customer;
+    paymentMethods: Stripe.PaymentMethod[];
+    subscriptions: Stripe.Subscription[];
+  }> {
+    try {
+      const [customer, paymentMethods, subscriptions] = await Promise.all([
+        stripe.customers.retrieve(customerId),
+        stripe.paymentMethods.list({ customer: customerId, type: 'card' }),
+        stripe.subscriptions.list({ customer: customerId, limit: 10 })
+      ]);
+
+      console.log('✅ [STRIPE] Retrieved customer details:', {
+        customerId,
+        paymentMethodCount: paymentMethods.data.length,
+        subscriptionCount: subscriptions.data.length
+      });
+
+      return {
+        customer: customer as Stripe.Customer,
+        paymentMethods: paymentMethods.data,
+        subscriptions: subscriptions.data
+      };
+    } catch (error) {
+      console.error('❌ [STRIPE] Error retrieving customer details:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get upcoming invoice for customer
+   */
+  static async getUpcomingInvoice(customerId: string): Promise<Stripe.Invoice | null> {
+    try {
+      const invoice = await stripe.invoices.upcoming({
+        customer: customerId,
+      });
+
+      console.log('✅ [STRIPE] Retrieved upcoming invoice:', invoice.id);
+      return invoice;
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('No upcoming invoice')) {
+        console.log('ℹ️ [STRIPE] No upcoming invoice found for customer:', customerId);
+        return null;
+      }
+      console.error('❌ [STRIPE] Error retrieving upcoming invoice:', error);
+      throw error;
+    }
   }
 }
 

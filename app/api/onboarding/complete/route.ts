@@ -68,15 +68,76 @@ export async function PATCH(request: Request) {
     }
     console.log('✅ [ONBOARDING-COMPLETE] User email retrieved:', userEmail);
 
-    // Step 1: Create mock Stripe customer and subscription
+    // Step 1: Create Stripe customer and subscription (Real or Mock based on environment)
     console.log('💳💳💳 [ONBOARDING-COMPLETE] ===============================');
-    console.log('💳💳💳 [ONBOARDING-COMPLETE] SETTING UP MOCK STRIPE TRIAL');
+    console.log('💳💳💳 [ONBOARDING-COMPLETE] SETTING UP STRIPE TRIAL');
     console.log('💳💳💳 [ONBOARDING-COMPLETE] ===============================');
     console.log('💳 [ONBOARDING-COMPLETE] User Email:', userEmail);
     console.log('💳 [ONBOARDING-COMPLETE] User ID:', userId);
     console.log('💳 [ONBOARDING-COMPLETE] User Selected Plan:', userProfile.currentPlan || 'glow_up');
+    console.log('💳 [ONBOARDING-COMPLETE] Environment:', process.env.NODE_ENV);
+    console.log('💳 [ONBOARDING-COMPLETE] Use Real Stripe:', process.env.USE_REAL_STRIPE);
+    
     const stripeStartTime = Date.now();
-    const stripeSetup = await MockStripeService.setupTrial(userEmail, userId, userProfile.currentPlan || 'glow_up');
+    
+    let stripeSetup;
+    if (process.env.NODE_ENV === 'production' || process.env.USE_REAL_STRIPE === 'true') {
+      // Use real Stripe for production-ready testing
+      console.log('🏭 [ONBOARDING-COMPLETE] Using REAL Stripe integration');
+      
+      try {
+        const StripeService = (await import('@/lib/stripe/stripe-service')).default;
+        
+        // Create real Stripe customer
+        console.log('👤 [ONBOARDING-COMPLETE] Creating real Stripe customer...');
+        const customer = await StripeService.createCustomer(
+          userEmail, 
+          userProfile.fullName || userProfile.businessName || 'User', 
+          userId
+        );
+        
+        console.log('✅ [ONBOARDING-COMPLETE] Stripe customer created:', customer.id);
+        
+        // Create trial subscription
+        console.log('📋 [ONBOARDING-COMPLETE] Creating trial subscription...');
+        const subscription = await StripeService.createTrialSubscription(
+          customer.id, 
+          userProfile.currentPlan || 'glow_up'
+        );
+        
+        console.log('✅ [ONBOARDING-COMPLETE] Trial subscription created:', subscription.id);
+        
+        stripeSetup = {
+          customer: { id: customer.id },
+          subscription: { id: subscription.id },
+          checkoutSession: { id: `cs_real_${Date.now()}` }
+        };
+        
+        console.log('🎉 [ONBOARDING-COMPLETE] Real Stripe setup completed successfully');
+        
+      } catch (stripeError) {
+        console.error('❌ [ONBOARDING-COMPLETE] Real Stripe setup failed:', stripeError);
+        
+        // Log detailed error for debugging
+        console.error('📋 [ONBOARDING-COMPLETE] Stripe Error Details:', {
+          message: stripeError.message,
+          type: stripeError.type,
+          code: stripeError.code,
+          plan: userProfile.currentPlan || 'glow_up',
+          userEmail,
+          userId
+        });
+        
+        // Fallback to mock if real Stripe fails
+        console.log('🔄 [ONBOARDING-COMPLETE] Falling back to Mock Stripe...');
+        stripeSetup = await MockStripeService.setupTrial(userEmail, userId, userProfile.currentPlan || 'glow_up');
+      }
+    } else {
+      // Use mock Stripe in development
+      console.log('🧪 [ONBOARDING-COMPLETE] Using MOCK Stripe integration');
+      stripeSetup = await MockStripeService.setupTrial(userEmail, userId, userProfile.currentPlan || 'glow_up');
+    }
+    
     console.log('⏱️ [ONBOARDING-COMPLETE] Stripe setup completed in:', Date.now() - stripeStartTime, 'ms');
     
     console.log('✅ [ONBOARDING-COMPLETE] Mock Stripe setup complete:', {

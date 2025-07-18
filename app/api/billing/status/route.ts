@@ -81,12 +81,59 @@ export async function GET(request: NextRequest) {
       daysRemaining = Math.max(0, Math.ceil(timeDiff / (1000 * 60 * 60 * 24)));
     }
 
-    // Usage information (placeholder - should be calculated from actual usage)
+    // Calculate real usage information from database
+    const campaignsUsed = userProfile.usageCampaignsCurrent || 0;
+    const creatorsUsed = userProfile.usageCreatorsCurrentMonth || 0;
+    const campaignsLimit = userProfile.planCampaignsLimit || 0;
+    const creatorsLimit = userProfile.planCreatorsLimit || 0;
+    
+    // Calculate progress percentage based on highest utilization
+    let progressPercentage = 0;
+    if (campaignsLimit > 0 && creatorsLimit > 0) {
+      const campaignProgress = (campaignsUsed / campaignsLimit) * 100;
+      const creatorProgress = (creatorsUsed / creatorsLimit) * 100;
+      progressPercentage = Math.max(campaignProgress, creatorProgress);
+    }
+    
     const usageInfo = {
-      campaignsUsed: userProfile.usageCampaignsCurrent || 0,
-      creatorsUsed: userProfile.usageCreatorsCurrentMonth || 0,
-      progressPercentage: 0 // Calculate based on usage vs limits
+      campaignsUsed,
+      creatorsUsed,
+      progressPercentage: Math.min(100, Math.round(progressPercentage)),
+      campaignsLimit,
+      creatorsLimit
     };
+
+    // Calculate next billing date (for active subscriptions)
+    let nextBillingDate: string | undefined;
+    if (hasActiveSubscription) {
+      // For active subscriptions, next billing is typically 30 days from last payment
+      const nextBilling = new Date();
+      nextBilling.setDate(nextBilling.getDate() + 30);
+      nextBillingDate = nextBilling.toISOString().split('T')[0];
+    }
+
+    // Calculate trial end date for display
+    let trialEndsAt: string | undefined;
+    if (isTrialing && userProfile.trialEndDate) {
+      trialEndsAt = userProfile.trialEndDate.toISOString().split('T')[0];
+    }
+
+    // Get payment method info
+    const paymentMethod = userProfile.paymentMethodId ? {
+      brand: userProfile.cardBrand || 'card',
+      last4: userProfile.cardLast4 || '0000',
+      expiryMonth: userProfile.cardExpMonth || 12,
+      expiryYear: userProfile.cardExpYear || 2025
+    } : undefined;
+
+    // Calculate billing amount based on plan
+    const billingAmounts = {
+      'free': 0,
+      'glow_up': 99,
+      'viral_surge': 249,
+      'fame_flex': 499
+    };
+    const billingAmount = billingAmounts[currentPlan as keyof typeof billingAmounts] || 0;
 
     const billingStatus = {
       currentPlan,
@@ -97,7 +144,20 @@ export async function GET(request: NextRequest) {
       subscriptionStatus,
       usageInfo,
       stripeCustomerId: userProfile.stripeCustomerId,
-      stripeSubscriptionId: userProfile.stripeSubscriptionId
+      stripeSubscriptionId: userProfile.stripeSubscriptionId,
+      // Enhanced subscription management data
+      nextBillingDate,
+      billingAmount,
+      billingCycle: 'monthly' as const,
+      paymentMethod,
+      trialEndsAt,
+      canManageSubscription: !!userProfile.stripeCustomerId,
+      // Additional metadata
+      trialStartDate: userProfile.trialStartDate?.toISOString(),
+      trialEndDate: userProfile.trialEndDate?.toISOString(),
+      lastWebhookEvent: userProfile.lastWebhookEvent,
+      lastWebhookTimestamp: userProfile.lastWebhookTimestamp?.toISOString(),
+      billingSyncStatus: userProfile.billingSyncStatus
     };
 
     console.log('✅ [BILLING-STATUS] Billing status retrieved:', {

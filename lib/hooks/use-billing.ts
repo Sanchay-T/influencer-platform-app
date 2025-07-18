@@ -139,7 +139,10 @@ export function useBilling(): BillingStatus {
           }
         }
 
+        // Use database limits if available, otherwise fall back to static plan features
         const currentPlanFeatures = planFeatures[currentPlan as keyof typeof planFeatures]
+        const actualCampaignsLimit = data.usageInfo?.campaignsLimit || currentPlanFeatures.campaigns
+        const actualCreatorsLimit = data.usageInfo?.creatorsLimit || currentPlanFeatures.creators
 
         setBillingStatus({
           isLoaded: true,
@@ -156,9 +159,9 @@ export function useBilling(): BillingStatus {
           planFeatures: currentPlanFeatures,
           usageInfo: {
             campaignsUsed: data.usageInfo?.campaignsUsed || 0,
-            campaignsLimit: currentPlanFeatures.campaigns,
+            campaignsLimit: actualCampaignsLimit,
             creatorsUsed: data.usageInfo?.creatorsUsed || 0,
-            creatorsLimit: currentPlanFeatures.creators,
+            creatorsLimit: actualCreatorsLimit,
             progressPercentage: data.usageInfo?.progressPercentage || 0
           }
         })

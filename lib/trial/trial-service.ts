@@ -23,8 +23,8 @@ export interface TrialData {
   subscriptionStatus: SubscriptionStatus;
   isExpired: boolean;
   timeUntilExpiry: string;
-  // Removed Clerk billing fields
-  currentPlan: 'free' | 'premium' | 'enterprise';
+  // Updated to match database schema
+  currentPlan: 'free' | 'glow_up' | 'viral_surge' | 'fame_flex';
   hasActiveSubscription: boolean;
 }
 
@@ -102,18 +102,37 @@ export async function startTrial(userId: string, clerkBillingData?: {
   try {
     console.log('🎯 [TRIAL-SERVICE] Starting trial for user:', userId);
 
-    const now = new Date();
-    const trialEndDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
-
-    console.log('📅 [TRIAL-SERVICE] Trial dates:', {
-      startDate: now.toISOString(),
-      endDate: trialEndDate.toISOString()
+    // First, get existing user profile to check for existing trial dates
+    const existingProfile = await db.query.userProfiles.findFirst({
+      where: eq(userProfiles.userId, userId)
     });
+
+    let trialStartDate: Date;
+    let trialEndDate: Date;
+
+    if (existingProfile?.trialStartDate && existingProfile?.trialEndDate) {
+      // Preserve existing trial dates to avoid resetting progress
+      trialStartDate = existingProfile.trialStartDate;
+      trialEndDate = existingProfile.trialEndDate;
+      console.log('📅 [TRIAL-SERVICE] Preserving existing trial dates:', {
+        startDate: trialStartDate.toISOString(),
+        endDate: trialEndDate.toISOString(),
+        daysRemaining: Math.ceil((trialEndDate.getTime() - Date.now()) / (24 * 60 * 60 * 1000))
+      });
+    } else {
+      // Create new trial dates if none exist
+      trialStartDate = new Date();
+      trialEndDate = new Date(trialStartDate.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
+      console.log('📅 [TRIAL-SERVICE] Creating new trial dates:', {
+        startDate: trialStartDate.toISOString(),
+        endDate: trialEndDate.toISOString()
+      });
+    }
 
     // Update user profile with trial information (do NOT override currentPlan - it's set by background job)
     await db.update(userProfiles)
       .set({
-        trialStartDate: now,
+        trialStartDate: trialStartDate,
         trialEndDate: trialEndDate,
         trialStatus: 'active',
         subscriptionStatus: 'trialing',
@@ -128,19 +147,37 @@ export async function startTrial(userId: string, clerkBillingData?: {
     console.log('💳 [TRIAL-SERVICE] Clerk billing data:', clerkBillingData || 'None');
     console.log('📋 [TRIAL-SERVICE] Current plan: (preserved from background job)');
 
+    // Fetch updated user profile to get current plan (set by background job)
+    const userProfile = await db.query.userProfiles.findFirst({
+      where: eq(userProfiles.userId, userId)
+    });
+
+    if (!userProfile) {
+      throw new Error('User profile not found after trial update');
+    }
+
+    // Create billing status object with current plan from database
+    const billingStatus = { 
+      currentPlan: (userProfile.currentPlan || 'free') as 'free' | 'glow_up' | 'viral_surge' | 'fame_flex',
+      isActive: false,
+      isTrialing: true
+    };
+
+    console.log('📋 [TRIAL-SERVICE] Retrieved current plan:', billingStatus.currentPlan);
+
     // Calculate countdown data
     const countdown = calculateCountdown(trialEndDate);
 
     const trialData: TrialData = {
       userId,
       trialStatus: 'active',
-      trialStartDate: now,
+      trialStartDate: trialStartDate,
       trialEndDate: trialEndDate,
       ...countdown,
       stripeCustomerId: clerkBillingData?.customerId || null,
       stripeSubscriptionId: clerkBillingData?.subscriptionId || null,
       subscriptionStatus: 'trialing',
-      // Removed Clerk billing fields
+      // Use current plan from database (set by background job)
       currentPlan: billingStatus.currentPlan,
       hasActiveSubscription: false // Trial users don't have active subscriptions
     };
@@ -176,8 +213,12 @@ export async function getTrialStatus(userId: string): Promise<TrialData | null> 
       return null;
     }
 
-    // Default billing status for trial users
-    const billingStatus = { currentPlan: 'free' };
+    // Get current plan from database (set by background job)
+    const billingStatus = { 
+      currentPlan: (userProfile.currentPlan || 'free') as 'free' | 'glow_up' | 'viral_surge' | 'fame_flex',
+      isActive: false,
+      isTrialing: true
+    };
     
     // Check if user has an active paid subscription
     const hasActiveSubscription = billingStatus.isActive && !billingStatus.isTrialing;

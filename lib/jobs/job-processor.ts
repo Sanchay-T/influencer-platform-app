@@ -226,9 +226,28 @@ export class JobProcessor {
         return { success: true, data: { message: 'Already completed' } };
       }
 
-      // Calculate trial dates
-      const trialStartDate = new Date();
-      const trialEndDate = new Date(trialStartDate.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
+      // Calculate trial dates - preserve existing trial dates if they exist
+      let trialStartDate: Date;
+      let trialEndDate: Date;
+      
+      if (userProfile.trialStartDate && userProfile.trialEndDate) {
+        // Preserve existing trial dates to avoid resetting progress
+        trialStartDate = userProfile.trialStartDate;
+        trialEndDate = userProfile.trialEndDate;
+        console.log('📅 [JOB-PROCESSOR] Preserving existing trial dates:', {
+          trialStartDate: trialStartDate.toISOString(),
+          trialEndDate: trialEndDate.toISOString(),
+          daysRemaining: Math.ceil((trialEndDate.getTime() - Date.now()) / (24 * 60 * 60 * 1000))
+        });
+      } else {
+        // Create new trial dates if none exist
+        trialStartDate = new Date();
+        trialEndDate = new Date(trialStartDate.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
+        console.log('📅 [JOB-PROCESSOR] Creating new trial dates:', {
+          trialStartDate: trialStartDate.toISOString(),
+          trialEndDate: trialEndDate.toISOString()
+        });
+      }
 
       // Create event for audit trail
       const correlationId = EventService.generateCorrelationId();
