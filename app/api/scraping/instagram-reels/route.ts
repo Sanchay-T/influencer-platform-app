@@ -265,7 +265,9 @@ export async function GET(req: NextRequest) {
             jobId: true,
             creators: true,
             createdAt: true
-          }
+          },
+          orderBy: (scrapingResults, { desc }) => [desc(scrapingResults.createdAt)],
+          limit: 1 // Get only the most recent results
         }
       }
     });
@@ -328,7 +330,14 @@ export async function GET(req: NextRequest) {
       jobProgress: job.progress,
       jobProcessedResults: job.processedResults,
       responseStructure: Object.keys(responseData),
-      hasResults: !!(job.results && job.results.length > 0)
+      hasResults: !!(job.results && job.results.length > 0),
+      resultsCount: job.results?.length || 0,
+      creatorsInResults: job.results?.[0]?.creators?.length || 0,
+      allResultsEntries: job.results?.map(r => ({
+        id: r.id,
+        createdAt: r.createdAt,
+        creatorCount: r.creators?.length || 0
+      })) || []
     });
     
     return NextResponse.json(responseData);
