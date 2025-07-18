@@ -27,7 +27,7 @@ interface PaymentStepProps {
 
 // Removed complex card collection - using Stripe hosted checkout
 
-export default function PaymentStep({ onComplete, existingPlan }: PaymentStepProps) {
+export default function PaymentStep({ onComplete }: PaymentStepProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
@@ -156,10 +156,6 @@ export default function PaymentStep({ onComplete, existingPlan }: PaymentStepPro
     }
   };
 
-  const handleSkipForNow = () => {
-    // Allow users to skip payment collection and choose later
-    onComplete();
-  };
 
   // Simple plan selection - no complex steps
 
@@ -209,15 +205,18 @@ export default function PaymentStep({ onComplete, existingPlan }: PaymentStepPro
           const isSelected = selectedPlan === plan.id;
           
           return (
-            <Card 
+            <div 
               key={plan.id}
-              className={`cursor-pointer transition-all duration-200 ${
-                isSelected 
-                  ? 'ring-2 ring-blue-500 border-blue-500 shadow-lg' 
-                  : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
-              }`}
+              className="cursor-pointer"
               onClick={() => handlePlanSelect(plan.id)}
             >
+              <Card 
+                className={`transition-all duration-200 ${
+                  isSelected 
+                    ? 'ring-2 ring-blue-500 border-blue-500 shadow-lg' 
+                    : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
+                }`}
+              >
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -262,6 +261,7 @@ export default function PaymentStep({ onComplete, existingPlan }: PaymentStepPro
                 </div>
               </CardContent>
             </Card>
+            </div>
           );
         })}
       </div>
@@ -331,14 +331,6 @@ export default function PaymentStep({ onComplete, existingPlan }: PaymentStepPro
           )}
         </Button>
 
-        <Button
-          variant="outline"
-          onClick={handleSkipForNow}
-          className="w-full"
-          disabled={isLoading}
-        >
-          Skip for now, I'll choose later
-        </Button>
       </div>
 
       {/* Additional Information */}

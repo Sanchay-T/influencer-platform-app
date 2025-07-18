@@ -55,6 +55,7 @@
     "sharp": "^0.33.2",
     "stripe": "^18.3.0",
     "svix": "^1.69.0",
+    "swr": "^2.3.4",
     "tailwind-merge": "^3.0.1",
     "tailwindcss-animate": "^1.0.7"
   },

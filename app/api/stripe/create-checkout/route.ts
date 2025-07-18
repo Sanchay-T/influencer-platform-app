@@ -60,7 +60,9 @@ export async function POST(req: NextRequest) {
       planId,
       billing,
       priceId,
-      userId
+      userId,
+      allPriceIds: planPrices,
+      selectedPath: `${planId}.${billing}`
     });
 
     // Verify the price exists and is recurring

@@ -228,64 +228,6 @@ export default function OnboardingComplete() {
     }
   };
 
-  const handleSkipForNow = async () => {
-    const skipStartTime = Date.now();
-    
-    logUserAction('trial_skip_initiated', {
-      action: 'skip_trial_button_clicked',
-      timestamp: new Date().toISOString(),
-      reason: 'user_chose_to_skip_trial'
-    }, {
-      userId,
-      userEmail: user?.primaryEmailAddress?.emailAddress,
-      step: 'trial-activation'
-    });
-    
-    try {
-      // Mark onboarding as completed even when skipping
-      const response = await loggedApiCall('/api/onboarding/complete', {
-        method: 'PATCH',
-        body: { completed: true }
-      }, {
-        userId,
-        userEmail: user?.primaryEmailAddress?.emailAddress,
-        step: 'trial-skip',
-        action: 'complete_onboarding_without_trial'
-      });
-      
-      logSuccess('onboarding_completed_without_trial', {
-        onboardingCompleted: true,
-        trialSkipped: true,
-        userCanAccessPlatform: true
-      }, {
-        userId,
-        userEmail: user?.primaryEmailAddress?.emailAddress,
-        step: 'trial-skip'
-      });
-      
-    } catch (error) {
-      logError('onboarding_skip_error', error, {
-        userId,
-        userEmail: user?.primaryEmailAddress?.emailAddress,
-        step: 'trial-skip'
-      });
-    }
-    
-    logNavigation('/onboarding/complete', '/', 'trial_skipped', {
-      userId,
-      userEmail: user?.primaryEmailAddress?.emailAddress,
-      step: 'trial-skip',
-      trialSkipped: true
-    });
-    
-    logTiming('trial_skip_operation', skipStartTime, {
-      userId,
-      step: 'trial-skip',
-      action: 'skip_button_complete'
-    });
-    
-    router.push('/');
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
@@ -415,14 +357,6 @@ export default function OnboardingComplete() {
                 )}
               </Button>
 
-              <Button
-                variant="outline"
-                onClick={handleSkipForNow}
-                className="w-full h-12 text-base border-gray-300 text-gray-600 hover:bg-gray-50"
-                disabled={isLoading}
-              >
-                Skip for now, explore the platform
-              </Button>
             </div>
 
             {/* Trial note */}
