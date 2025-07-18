@@ -1,0 +1,60 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "f59eeb28-02e2-42c0-ba71-104b9c7231c9",
+  "apiCall": 1,
+  "batchNumber": 2,
+  "timestamp": "2025-07-18T16:41:20.364Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 10
+  },
+  "validCreators": [
+    {
+      "username": "hasankarimiofficial",
+      "fullName": "Hasan Karimi",
+      "followers": 184752,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "همه چی در مورد رسانه های اجتماعی\nmosalah iranian ⚽️\nSocial media expert | Content Creator...",
+      "emails": []
+    },
+    {
+      "username": "darktechofficial",
+      "fullName": "Dark Tech",
+      "followers": 7844,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Dark Tech is a leading provider of premium mobile accessories designed to elevate your tech experien...",
+      "emails": []
+    },
+    {
+      "username": "ecasetech",
+      "fullName": "E Case Tecnology",
+      "followers": 17086,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Referencia en Garantía de la Ciudad de Santiago🔰\nEst. 2012©️\nTelefonos\n-Accesorios \n-Servicio tecni...",
+      "emails": []
+    },
+    {
+      "username": "titaniumcaseske",
+      "fullName": "Cases | Chargers | Screen Protector | Straps",
+      "followers": 8179,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "(Formerly known as ‘Titanium Cases’)\n✨In our phone accessories era\n📍Pioneer House Kimathi, Kimathi ...",
+      "emails": []
+    },
+    {
+      "username": "easy_shop_new",
+      "fullName": "АКСЕССУАРЫ/ ГАДЖЕТЫ/ НАУШНИКИ",
+      "followers": 73337,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🔥Smart Watch⌚️все виды AirPods 😍\n📍ТЦ \"EURASIA\" (Советская/Киевская) 1 - этаж\n🚀Доставка по всему ...",
+      "emails": []
+    }
+  ]
+}

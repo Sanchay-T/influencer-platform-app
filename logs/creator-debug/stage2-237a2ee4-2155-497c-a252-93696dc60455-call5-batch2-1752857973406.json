@@ -1,0 +1,51 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "237a2ee4-2155-497c-a252-93696dc60455",
+  "apiCall": 5,
+  "batchNumber": 2,
+  "timestamp": "2025-07-18T16:59:33.406Z",
+  "counts": {
+    "rawResults": 4,
+    "validResults": 4,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 9
+  },
+  "validCreators": [
+    {
+      "username": "darktechofficial",
+      "fullName": "Dark Tech",
+      "followers": 7844,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Dark Tech is a leading provider of premium mobile accessories designed to elevate your tech experien...",
+      "emails": []
+    },
+    {
+      "username": "imepoa",
+      "fullName": "Imepoa | Charger | Airpods",
+      "followers": 20969,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🛒 Tunauza bidhaa mbalimbali zenye ubora zaidi. Charger, Airpods, na nyingine.\n➡️ ODA HAPA: 0677 890...",
+      "emails": []
+    },
+    {
+      "username": "hd_mongolia",
+      "fullName": "hd_mongolia",
+      "followers": 3721,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Буцаалт байхгүй . Захиалга 7-10хоногт ирнэ Бараа хайж өгнө🦋...",
+      "emails": []
+    },
+    {
+      "username": "wtfreak.in",
+      "fullName": "Wtfreak Store",
+      "followers": 2824,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "👐 Handpacked with love \n✨ Assured Quality and Service\n🚛 Shipping all over India...",
+      "emails": []
+    }
+  ]
+}

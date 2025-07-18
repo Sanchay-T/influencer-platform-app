@@ -1,0 +1,24 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "e1a63af9-6034-4823-80bd-96b2075f83a6",
+  "apiCall": 2,
+  "batchNumber": 3,
+  "timestamp": "2025-07-18T17:17:55.048Z",
+  "counts": {
+    "rawResults": 2,
+    "validResults": 1,
+    "filteredOutInBatch": 1,
+    "cumulativeValidCreators": 11
+  },
+  "validCreators": [
+    {
+      "username": "happyhomes.retail",
+      "fullName": "Happy Homes",
+      "followers": 303905,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "📍Goregaon West\n📍Kandivali West\n📲 WhatsApp Support 9004795023\n⬇️ Website Link...",
+      "emails": []
+    }
+  ]
+}

@@ -1,0 +1,110 @@
+{
+  "stage": "after_initial_quality_filter",
+  "jobId": "f59eeb28-02e2-42c0-ba71-104b9c7231c9",
+  "apiCall": 5,
+  "timestamp": "2025-07-18T16:43:32.230Z",
+  "counts": {
+    "totalCreatorsFound": 12,
+    "qualityCreatorsAdded": 12,
+    "filteredOutCreators": 0,
+    "finalUniqueCreators": 12
+  },
+  "creators": [
+    {
+      "username": "hasankarimiofficial",
+      "fullName": "Hasan Karimi",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "casepoint._",
+      "fullName": "PHONE ACCESSORIES, COVERS,CHARGERS, AIRPODS 📍",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "hd_mongolia",
+      "fullName": "",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "darktechofficial",
+      "fullName": "Dark Tech",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "wtfreak.in",
+      "fullName": "Wtfreak Store",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "ecasetech",
+      "fullName": "E Case Tecnology",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "imsamkohl",
+      "fullName": "Sam Kohl",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "custom_adventurist",
+      "fullName": "Custom Adventurist",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "phonesvendor",
+      "fullName": "PHONE VENDOR - phones📱laptops 💻 games 🎮 accessories 🔌",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "lumi_technology",
+      "fullName": "LUMI TECH ⌚️🎧",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "babphone1",
+      "fullName": "تعمیرات تخصصی",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "nawabnabeel",
+      "fullName": "Nabeel Nawab",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    }
+  ]
+}

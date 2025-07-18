@@ -1,0 +1,60 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "237a2ee4-2155-497c-a252-93696dc60455",
+  "apiCall": 4,
+  "batchNumber": 2,
+  "timestamp": "2025-07-18T16:59:07.592Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 10
+  },
+  "validCreators": [
+    {
+      "username": "ulresch",
+      "fullName": "Ulrich Esch",
+      "followers": 0,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "no bio",
+      "emails": []
+    },
+    {
+      "username": "cellbuddyistoressss",
+      "fullName": "MEGA CELLBUDDY",
+      "followers": 244258,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "IPHONE, AIRPOD, IWATCH, IMAC,\nAPPLE BULK SUPPLIER\nMUMBAI 1500SQFT STORE\nEXCLUSIVE DEALS ONLY DISCOUN...",
+      "emails": []
+    },
+    {
+      "username": "case__mobilee",
+      "fullName": "کیس موبایل  / قاب موبایل 📱",
+      "followers": 363692,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "انواع قاب و تجهيزات موبايل  📱\nارسال به تمام نقاط ايران ✈️\nجهت سفارش به دايركت مراجعه فرماييد 📥\nپی...",
+      "emails": []
+    },
+    {
+      "username": "happyhomes.retail",
+      "fullName": "Happy Homes",
+      "followers": 303884,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "📍Goregaon West\n📍Kandivali West\n📲 WhatsApp Support 9004795023\n⬇️ Website Link...",
+      "emails": []
+    },
+    {
+      "username": "sellerdg_",
+      "fullName": "SellerDG🎓",
+      "followers": 5862,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "💰 + 6k Con La Reventa\n🎥 + 127k En Tik Tok\n📱 Empieza Con Proveedores Confiables\n👇 Aquí Abajo...",
+      "emails": []
+    }
+  ]
+}

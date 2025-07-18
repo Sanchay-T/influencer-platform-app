@@ -1,0 +1,110 @@
+{
+  "stage": "after_initial_quality_filter",
+  "jobId": "f59eeb28-02e2-42c0-ba71-104b9c7231c9",
+  "apiCall": 1,
+  "timestamp": "2025-07-18T16:41:09.642Z",
+  "counts": {
+    "totalCreatorsFound": 12,
+    "qualityCreatorsAdded": 12,
+    "filteredOutCreators": 0,
+    "finalUniqueCreators": 12
+  },
+  "creators": [
+    {
+      "username": "hasankarimiofficial",
+      "fullName": "Hasan Karimi",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "darktechofficial",
+      "fullName": "Dark Tech",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "ecasetech",
+      "fullName": "E Case Tecnology",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "imsamkohl",
+      "fullName": "Sam Kohl",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "phonesvendor",
+      "fullName": "PHONE VENDOR - phones📱laptops 💻 games 🎮 accessories 🔌",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "titaniumcaseske",
+      "fullName": "Cases | Chargers | Screen Protector | Straps",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "appledsign",
+      "fullName": "Niels | Apple & iPhone Expert",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "nawabnabeel",
+      "fullName": "Nabeel Nawab",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "easy_shop_new",
+      "fullName": "АКСЕССУАРЫ/ ГАДЖЕТЫ/ НАУШНИКИ",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "red_mobile_tashkent",
+      "fullName": "𝐑𝐄𝐃 𝐌𝐎𝐁𝐈𝐋𝐄",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "hitomidocameraroll",
+      "fullName": "Tyler",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "case__mobilee",
+      "fullName": "کیس موبایل  / قاب موبایل 📱",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    }
+  ]
+}

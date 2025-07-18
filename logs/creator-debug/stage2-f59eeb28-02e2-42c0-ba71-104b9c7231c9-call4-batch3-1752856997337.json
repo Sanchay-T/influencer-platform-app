@@ -1,0 +1,33 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "f59eeb28-02e2-42c0-ba71-104b9c7231c9",
+  "apiCall": 4,
+  "batchNumber": 3,
+  "timestamp": "2025-07-18T16:43:17.337Z",
+  "counts": {
+    "rawResults": 2,
+    "validResults": 2,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 12
+  },
+  "validCreators": [
+    {
+      "username": "happyhomes.retail",
+      "fullName": "Happy Homes",
+      "followers": 303876,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "📍Goregaon West\n📍Kandivali West\n📲 WhatsApp Support 9004795023\n⬇️ Website Link...",
+      "emails": []
+    },
+    {
+      "username": "hd_mongolia",
+      "fullName": "hd_mongolia",
+      "followers": 3721,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Буцаалт байхгүй . Захиалга 7-10хоногт ирнэ Бараа хайж өгнө🦋...",
+      "emails": []
+    }
+  ]
+}

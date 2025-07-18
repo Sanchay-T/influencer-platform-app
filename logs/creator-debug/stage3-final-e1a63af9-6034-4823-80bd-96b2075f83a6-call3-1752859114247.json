@@ -1,0 +1,165 @@
+{
+  "stage": "final_transformed_creators",
+  "jobId": "e1a63af9-6034-4823-80bd-96b2075f83a6",
+  "apiCall": 3,
+  "timestamp": "2025-07-18T17:18:34.247Z",
+  "counts": {
+    "finalTransformedCreators": 12,
+    "processedRuns": 3,
+    "maxRuns": 8
+  },
+  "finalCreators": [
+    {
+      "index": 1,
+      "username": "entendendoiphone",
+      "fullName": "Marília Guimarães",
+      "followers": 696946,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "✋Chega de depender da ajuda dos mais novos!\nA sua Independência Tecnológica começa aqui! ⤵️...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DFJDZAISKfq",
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "imsamkohl",
+      "fullName": "Sam Kohl",
+      "followers": 8477,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Lead Apple shepherd @appltrack, inquires at hello@appletrack.com...",
+      "emails": [
+        "hello@appletrack.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DMFU-a9u8cp",
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "ulresch",
+      "fullName": "Ulrich Esch",
+      "followers": 100457,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "▪️Obsessed w/ Tech. Built to level up. \n▪️Based in Cologne, Germany\n▪️kontakt@ulrichesch.de...",
+      "emails": [
+        "kontakt@ulrichesch.de"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DLm8VcNNxct",
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "iliasbsd",
+      "fullName": "Ilias Bousaidi",
+      "followers": 64812,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "tech content creator 📸📱\n📧 ilias@vertical-influence.com\nCreative Console: ⤵️...",
+      "emails": [
+        "ilias@vertical-influence.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DAWQX3vsOT7",
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "hitomidocameraroll",
+      "fullName": "Tyler",
+      "followers": 508449,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Don’t be a <^#+\n🇬🇧 +🇯🇵\n✉️ hitomidobusiness@gmail.com...",
+      "emails": [
+        "hitomidobusiness@gmail.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DLosiuDOTYc",
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "sandmarc",
+      "fullName": "SANDMARC®",
+      "followers": 286423,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "To Empower & Inspire Creators.\nPremium Tech & Travel Gear📱🎥\n📍San Diego, California\nExplore our pr...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DDPz05NhmvQ",
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "nicolay.t",
+      "fullName": "Nicolay Tarashchenko",
+      "followers": 52817,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Curating Premium Tech & Lifestyle Gear for Modern Living.\nSecret profile @beautyoftechnology\n📍Munic...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DL-jGZ6sTKz",
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "luluu.oct",
+      "fullName": "Alaa Hassan",
+      "followers": 552042,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "اسمـي آلاء ، نادونــي لــولــو   \n🇰🇼 | 🇵🇸\n𝚂𝚗𝚊𝚙𝚌𝚑𝚊𝚝 | 𝚕𝚞𝚕𝚞𝚞.𝚘𝚌𝚝\n𝚏𝚘𝚛 𝚒𝚗𝚚𝚞𝚒...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DLfEiNgCOrz",
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "hasankarimiofficial",
+      "fullName": "Hasan Karimi",
+      "followers": 184752,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "همه چی در مورد رسانه های اجتماعی\nmosalah iranian ⚽️\nSocial media expert | Content Creator...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DKP9KI7PlpC",
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "amitmobilesamana",
+      "fullName": "Amit Kalra",
+      "followers": 28614,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "available all Types premium accessories Wholesale Price Address Near Post Office city Samana dis. Pa...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DHnOkwEp7xt",
+      "platform": "Instagram"
+    },
+    {
+      "index": 11,
+      "username": "luxevendors_",
+      "fullName": "ChicOnABudget",
+      "followers": 385,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "✨ Bougie on a budget 💖 | Living my soft life 🌸 | Chic styles, smart choices | Embracing luxury wit...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DFDk8vyRfnm",
+      "platform": "Instagram"
+    },
+    {
+      "index": 12,
+      "username": "case__mobilee",
+      "fullName": "کیس موبایل  / قاب موبایل 📱",
+      "followers": 363704,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "انواع قاب و تجهيزات موبايل  📱\nارسال به تمام نقاط ايران ✈️\nجهت سفارش به دايركت مراجعه فرماييد 📥\nپی...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DMIkIBQNc7k",
+      "platform": "Instagram"
+    }
+  ]
+}

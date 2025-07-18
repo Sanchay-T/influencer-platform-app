@@ -1,0 +1,27 @@
+{
+  "stage": "accumulation_tracking",
+  "jobId": "e1a63af9-6034-4823-80bd-96b2075f83a6",
+  "apiCall": 2,
+  "timestamp": "2025-07-18T17:17:50.217Z",
+  "accumulation": {
+    "previousCreatorsCount": 12,
+    "newCreatorsCount": 10,
+    "totalAccumulatedCount": 13,
+    "duplicatesRemoved": 9
+  },
+  "usernames": [
+    "imsamkohl",
+    "phonesvendor",
+    "nawabnabeel",
+    "hasankarimiofficial",
+    "casepoint._",
+    "ecasetech",
+    "darktechofficial",
+    "imepoa",
+    "wtfreak.in",
+    "gee_stores_",
+    "hd_mongolia",
+    "happyhomes.retail",
+    "lumi_technology"
+  ]
+}

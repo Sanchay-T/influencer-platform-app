@@ -1,0 +1,33 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "f59eeb28-02e2-42c0-ba71-104b9c7231c9",
+  "apiCall": 1,
+  "batchNumber": 3,
+  "timestamp": "2025-07-18T16:41:25.326Z",
+  "counts": {
+    "rawResults": 2,
+    "validResults": 2,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 12
+  },
+  "validCreators": [
+    {
+      "username": "red_mobile_tashkent",
+      "fullName": "𝐑𝐄𝐃 𝐌𝐎𝐁𝐈𝐋𝐄",
+      "followers": 29334,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "☎️ ● +𝟗𝟗𝟖 (𝟑𝟑) 𝟎𝟎𝟓 𝟑𝟎𝟑𝟎\n⚜️ ● 𝐍𝐚𝐪𝐝 𝐯𝐚 𝐍𝐚𝐬𝐢𝐲𝐚 𝐬𝐚𝐯𝐝𝐨 \n⚜️ ● 𝐓𝐫𝐚𝐝𝐞 𝐢𝐧...",
+      "emails": []
+    },
+    {
+      "username": "case__mobilee",
+      "fullName": "کیس موبایل  / قاب موبایل 📱",
+      "followers": 363689,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "انواع قاب و تجهيزات موبايل  📱\nارسال به تمام نقاط ايران ✈️\nجهت سفارش به دايركت مراجعه فرماييد 📥\nپی...",
+      "emails": []
+    }
+  ]
+}

@@ -1,0 +1,109 @@
+{
+  "stage": "database_save_final",
+  "jobId": "237a2ee4-2155-497c-a252-93696dc60455",
+  "apiCall": 1,
+  "timestamp": "2025-07-18T16:57:55.199Z",
+  "counts": {
+    "creatorsBeingPersisted": 12,
+    "newProcessedRuns": 1,
+    "newProcessedResults": 12
+  },
+  "finalDatabaseCreators": [
+    {
+      "index": 1,
+      "username": "emkwan",
+      "followers": 166644,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "imsamkohl",
+      "followers": 8474,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "enfliquecreative",
+      "followers": 332434,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "ulresch",
+      "followers": 100457,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "luxevendors_",
+      "followers": 385,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "pro_asar",
+      "followers": 27811,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "ivenue_gadgets",
+      "followers": 22332,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "_.get_me_now",
+      "followers": 445,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "themobiistore",
+      "followers": 15050,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "city.phone_tn",
+      "followers": 1177331,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 11,
+      "username": "amitmobilesamana",
+      "followers": 28612,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 12,
+      "username": "sellerdg_",
+      "followers": 5862,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    }
+  ]
+}

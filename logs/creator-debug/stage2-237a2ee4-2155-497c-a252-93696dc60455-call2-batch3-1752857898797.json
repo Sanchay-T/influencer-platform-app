@@ -1,0 +1,33 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "237a2ee4-2155-497c-a252-93696dc60455",
+  "apiCall": 2,
+  "batchNumber": 3,
+  "timestamp": "2025-07-18T16:58:18.797Z",
+  "counts": {
+    "rawResults": 2,
+    "validResults": 2,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 12
+  },
+  "validCreators": [
+    {
+      "username": "amitmobilesamana",
+      "fullName": "Amit Kalra",
+      "followers": 28612,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "available all Types premium accessories Wholesale Price Address Near Post Office city Samana dis. Pa...",
+      "emails": []
+    },
+    {
+      "username": "case__mobilee",
+      "fullName": "کیس موبایل  / قاب موبایل 📱",
+      "followers": 363692,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "انواع قاب و تجهيزات موبايل  📱\nارسال به تمام نقاط ايران ✈️\nجهت سفارش به دايركت مراجعه فرماييد 📥\nپی...",
+      "emails": []
+    }
+  ]
+}

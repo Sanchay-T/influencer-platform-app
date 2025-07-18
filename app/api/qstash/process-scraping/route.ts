@@ -1,7 +1,7 @@
 import { db } from '@/lib/db'
 import { scrapingJobs, scrapingResults, campaigns } from '@/lib/db/schema'
 import { qstash } from '@/lib/queue/qstash'
-import { eq } from 'drizzle-orm'
+import { eq, desc } from 'drizzle-orm'
 import { NextResponse } from 'next/server'
 import { Receiver } from "@upstash/qstash"
 import { Resend } from 'resend'
@@ -430,11 +430,12 @@ export async function POST(req: Request) {
         if (allReels.length === 0) {
           console.log('⚠️ [RAPIDAPI-INSTAGRAM] No reels found for keyword:', keyword);
           
-          // Mark job as completed with no results
+          // Mark job as completed preserving accumulated results
+          console.log('🔧 [ZERO-RESULT-FIX] Preserving accumulated results:', job.processedResults);
           await db.update(scrapingJobs)
             .set({
               status: 'completed',
-              processedResults: 0,
+              processedResults: job.processedResults, // ✅ PRESERVE accumulated count
               progress: '100',
               completedAt: new Date(),
               updatedAt: new Date(),
@@ -534,6 +535,40 @@ export async function POST(req: Request) {
           filteringRate: totalCreatorsFound > 0 ? Math.round((filteredOutCreators / totalCreatorsFound) * 100) + '%' : '0%',
           finalUniqueCreators: uniqueCreators.size
         });
+
+        // 🔍 STAGE 1 LOGGING: Save initial creators to JSON file for debugging
+        const stage1Data = {
+          stage: 'after_initial_quality_filter',
+          jobId: job.id,
+          apiCall: job.processedRuns + 1,
+          timestamp: new Date().toISOString(),
+          counts: {
+            totalCreatorsFound: totalCreatorsFound,
+            qualityCreatorsAdded: qualityCreatorsAdded,
+            filteredOutCreators: filteredOutCreators,
+            finalUniqueCreators: uniqueCreators.size
+          },
+          creators: Array.from(uniqueCreators.values()).map(creator => ({
+            username: creator.username,
+            fullName: creator.fullName,
+            isVerified: creator.isVerified,
+            isPrivate: creator.isPrivate,
+            followerCount: creator.followerCount,
+            qualityScore: creator.qualityScore
+          }))
+        };
+        
+        try {
+          const fs = require('fs');
+          const path = require('path');
+          const logsDir = path.join(process.cwd(), 'logs', 'creator-debug');
+          fs.mkdirSync(logsDir, { recursive: true });
+          const filename = `stage1-${job.id}-call${job.processedRuns + 1}-${Date.now()}.json`;
+          fs.writeFileSync(path.join(logsDir, filename), JSON.stringify(stage1Data, null, 2));
+          console.log(`📁 [STAGE1-DEBUG] Saved stage 1 data to: logs/creator-debug/${filename}`);
+        } catch (err) {
+          console.log('⚠️ [STAGE1-DEBUG] Failed to save debug file:', err.message);
+        }
         
         console.log('📊 [RAPIDAPI-INSTAGRAM] Quality creators found:', uniqueCreators.size);
         
@@ -675,12 +710,12 @@ export async function POST(req: Request) {
             }
           }
           
-          // 🔍 SECONDARY QUALITY CHECK: Only include creators who pass final quality standards
+          // 🔍 SECONDARY QUALITY CHECK: More lenient filtering to get more results
           const realFollowerCount = creatorData.followerCount || 0;
           const passesSecondaryQuality = (
             creatorData.isVerified || // Verified accounts always pass
-            realFollowerCount >= 1000 || // At least 1K real followers
-            (!creatorData.isPrivate && realFollowerCount >= 500) // Public accounts with 500+ followers
+            realFollowerCount >= 500 || // Lowered to 500+ followers (from 1000)
+            (!creatorData.isPrivate && realFollowerCount >= 100) // Public accounts with 100+ followers
           );
           
           // Skip creators who don't meet secondary quality standards
@@ -747,6 +782,42 @@ export async function POST(req: Request) {
           validResults: validResults.length,
           filteredOut: batchResults.length - validResults.length
         });
+
+        // 🔍 STAGE 2 LOGGING: Track secondary quality filtering
+        const stage2Data = {
+          stage: 'after_secondary_quality_filter',
+          jobId: job.id,
+          apiCall: job.processedRuns + 1,
+          batchNumber: batchIndex + 1,
+          timestamp: new Date().toISOString(),
+          counts: {
+            rawResults: batchResults.length,
+            validResults: validResults.length,
+            filteredOutInBatch: batchResults.length - validResults.length,
+            cumulativeValidCreators: transformedCreators.length
+          },
+          validCreators: validResults.map(creator => creator ? {
+            username: creator.creator?.uniqueId || 'unknown',
+            fullName: creator.creator?.name || 'unknown',
+            followers: creator.creator?.followers || 0,
+            verified: creator.creator?.verified || false,
+            qualityScore: creator.creator?.qualityScore || 0,
+            bio: creator.creator?.bio ? creator.creator.bio.substring(0, 100) + '...' : 'no bio',
+            emails: creator.creator?.emails || []
+          } : null).filter(Boolean)
+        };
+        
+        try {
+          const fs = require('fs');
+          const path = require('path');
+          const logsDir = path.join(process.cwd(), 'logs', 'creator-debug');
+          fs.mkdirSync(logsDir, { recursive: true });
+          const filename = `stage2-${job.id}-call${job.processedRuns + 1}-batch${batchIndex + 1}-${Date.now()}.json`;
+          fs.writeFileSync(path.join(logsDir, filename), JSON.stringify(stage2Data, null, 2));
+          console.log(`📁 [STAGE2-DEBUG] Saved stage 2 data to: logs/creator-debug/${filename}`);
+        } catch (err) {
+          console.log('⚠️ [STAGE2-DEBUG] Failed to save debug file:', err.message);
+        }
         
         // Update progress after batch completion
         processedCreators += batch.length;
@@ -772,16 +843,80 @@ export async function POST(req: Request) {
         // 🔄 INTERMEDIATE RESULTS: Save cumulative results after each batch for live preview
         if (transformedCreators.length > 0) {
           try {
-            console.log(`💾 [INTERMEDIATE-SAVE] Saving ${transformedCreators.length} cumulative results for live preview...`);
-            
-            // Save cumulative results (all creators enhanced so far)
-            await db.insert(scrapingResults).values({
-              jobId: job.id,
-              creators: transformedCreators,
-              createdAt: new Date()
+            // 🔍 FIX: Get ALL previous creators from this job to accumulate results
+            console.log('✅ [DESC-FIX] desc function imported successfully, querying previous results');
+            const previousResults = await db.query.scrapingResults.findMany({
+              where: eq(scrapingResults.jobId, job.id),
+              orderBy: [desc(scrapingResults.createdAt)]
             });
             
-            console.log(`✅ [INTERMEDIATE-SAVE] Saved ${transformedCreators.length} creators for live preview (${currentProgress}%)`);
+            // Accumulate all previous creators
+            let allAccumulatedCreators = [...transformedCreators];
+            
+            if (previousResults.length > 0) {
+              // Get the most recent result entry and extract all previous creators
+              const previousCreators = previousResults[0].creators || [];
+              
+              // Create a map to avoid duplicates by username
+              const creatorMap = new Map();
+              
+              // Add previous creators first
+              previousCreators.forEach(creator => {
+                const username = creator.creator?.uniqueId || creator.creator?.username || '';
+                if (username) {
+                  creatorMap.set(username, creator);
+                }
+              });
+              
+              // Add new creators (will overwrite if duplicate username)
+              transformedCreators.forEach(creator => {
+                const username = creator.creator?.uniqueId || creator.creator?.username || '';
+                if (username) {
+                  creatorMap.set(username, creator);
+                }
+              });
+              
+              // Convert back to array
+              allAccumulatedCreators = Array.from(creatorMap.values());
+            }
+            
+            console.log(`💾 [INTERMEDIATE-SAVE] Saving ${allAccumulatedCreators.length} cumulative results (${transformedCreators.length} new + ${allAccumulatedCreators.length - transformedCreators.length} previous)...`);
+            
+            // Save ALL accumulated results
+            await db.insert(scrapingResults).values({
+              jobId: job.id,
+              creators: allAccumulatedCreators,
+              createdAt: new Date()
+            });
+            console.log('✅ [INTERMEDIATE-SAVE] Successfully saved cumulative results with desc orderBy fix!');
+            
+            console.log(`✅ [INTERMEDIATE-SAVE] Saved ${allAccumulatedCreators.length} total creators for live preview (${currentProgress}%)`);
+            
+            // 🔍 ACCUMULATION DEBUG: Track how results are accumulating
+            const accumulationDebug = {
+              stage: 'accumulation_tracking',
+              jobId: job.id,
+              apiCall: job.processedRuns + 1,
+              timestamp: new Date().toISOString(),
+              accumulation: {
+                previousCreatorsCount: previousResults.length > 0 ? previousResults[0].creators.length : 0,
+                newCreatorsCount: transformedCreators.length,
+                totalAccumulatedCount: allAccumulatedCreators.length,
+                duplicatesRemoved: (previousResults.length > 0 ? previousResults[0].creators.length : 0) + transformedCreators.length - allAccumulatedCreators.length
+              },
+              usernames: allAccumulatedCreators.map(c => c.creator?.uniqueId || c.creator?.username || 'unknown')
+            };
+            
+            try {
+              const fs = require('fs');
+              const path = require('path');
+              const logsDir = path.join(process.cwd(), 'logs', 'creator-debug');
+              const filename = `accumulation-${job.id}-call${job.processedRuns + 1}-${Date.now()}.json`;
+              fs.writeFileSync(path.join(logsDir, filename), JSON.stringify(accumulationDebug, null, 2));
+              console.log(`📁 [ACCUMULATION-DEBUG] Saved accumulation tracking to: logs/creator-debug/${filename}`);
+            } catch (err) {
+              console.log('⚠️ [ACCUMULATION-DEBUG] Failed to save debug file:', err.message);
+            }
           } catch (intermediateError) {
             console.log('⚠️ [INTERMEDIATE-SAVE] Failed to save intermediate results:', intermediateError.message);
             // Don't throw - this is optional for live preview
@@ -795,6 +930,43 @@ export async function POST(req: Request) {
       }
         
         console.log('✅ [RAPIDAPI-INSTAGRAM] Transformed creators:', transformedCreators.length);
+
+        // 🔍 STAGE 3 LOGGING: Final transformed creators before database save
+        const stage3Data = {
+          stage: 'final_transformed_creators',
+          jobId: job.id,
+          apiCall: job.processedRuns + 1,
+          timestamp: new Date().toISOString(),
+          counts: {
+            finalTransformedCreators: transformedCreators.length,
+            processedRuns: job.processedRuns + 1,
+            maxRuns: INSTAGRAM_REELS_MAX_REQUESTS
+          },
+          finalCreators: transformedCreators.map((creator, index) => ({
+            index: index + 1,
+            username: creator.creator?.uniqueId || 'unknown',
+            fullName: creator.creator?.name || 'unknown',
+            followers: creator.creator?.followers || 0,
+            verified: creator.creator?.verified || false,
+            qualityScore: creator.creator?.qualityScore || 0,
+            bio: creator.creator?.bio ? creator.creator.bio.substring(0, 100) + '...' : 'no bio',
+            emails: creator.creator?.emails || [],
+            videoUrl: creator.video?.url || '',
+            platform: creator.platform || 'Instagram'
+          }))
+        };
+        
+        try {
+          const fs = require('fs');
+          const path = require('path');
+          const logsDir = path.join(process.cwd(), 'logs', 'creator-debug');
+          fs.mkdirSync(logsDir, { recursive: true });
+          const filename = `stage3-final-${job.id}-call${job.processedRuns + 1}-${Date.now()}.json`;
+          fs.writeFileSync(path.join(logsDir, filename), JSON.stringify(stage3Data, null, 2));
+          console.log(`📁 [STAGE3-DEBUG] Saved final stage data to: logs/creator-debug/${filename}`);
+        } catch (err) {
+          console.log('⚠️ [STAGE3-DEBUG] Failed to save debug file:', err.message);
+        }
         
         // Simple logging - just request and response
         try {
@@ -814,10 +986,60 @@ export async function POST(req: Request) {
         // Final results are the cumulative results from the last batch
         console.log('\n💾 [RAPIDAPI-INSTAGRAM] Final results already saved during batch processing...');
         console.log('✅ [RAPIDAPI-INSTAGRAM] Total creators processed:', transformedCreators.length);
+
+        // 🔍 STAGE 4 LOGGING: Track what gets saved to database as final results
+        const stage4Data = {
+          stage: 'database_save_final',
+          jobId: job.id,
+          apiCall: job.processedRuns + 1,
+          timestamp: new Date().toISOString(),
+          counts: {
+            creatorsBeingPersisted: transformedCreators.length,
+            newProcessedRuns: job.processedRuns + 1,
+            newProcessedResults: job.processedResults + transformedCreators.length
+          },
+          finalDatabaseCreators: transformedCreators.map((creator, index) => ({
+            index: index + 1,
+            username: creator.creator?.uniqueId || 'unknown',
+            followers: creator.creator?.followers || 0,
+            verified: creator.creator?.verified || false,
+            hasEmail: (creator.creator?.emails?.length || 0) > 0,
+            platform: creator.platform || 'Instagram'
+          }))
+        };
+        
+        try {
+          const fs = require('fs');
+          const path = require('path');
+          const logsDir = path.join(process.cwd(), 'logs', 'creator-debug');
+          fs.mkdirSync(logsDir, { recursive: true });
+          const filename = `stage4-database-${job.id}-call${job.processedRuns + 1}-${Date.now()}.json`;
+          fs.writeFileSync(path.join(logsDir, filename), JSON.stringify(stage4Data, null, 2));
+          console.log(`📁 [STAGE4-DEBUG] Saved database stage data to: logs/creator-debug/${filename}`);
+        } catch (err) {
+          console.log('⚠️ [STAGE4-DEBUG] Failed to save debug file:', err.message);
+        }
         
         // Update job progress and stats
         const newProcessedRuns = job.processedRuns + 1;
-        const newProcessedResults = job.processedResults + transformedCreators.length;
+        
+        // 🔍 FIX: Count ALL accumulated creators for accurate processedResults
+        let totalAccumulatedCount = transformedCreators.length;
+        try {
+          const latestResults = await db.query.scrapingResults.findFirst({
+            where: eq(scrapingResults.jobId, job.id),
+            orderBy: [desc(scrapingResults.createdAt)]
+          });
+          
+          if (latestResults && latestResults.creators) {
+            totalAccumulatedCount = latestResults.creators.length;
+            console.log(`📊 [RESULTS-COUNT] Total accumulated creators: ${totalAccumulatedCount}`);
+          }
+        } catch (err) {
+          console.log('⚠️ [RESULTS-COUNT] Could not get accumulated count:', err.message);
+        }
+        
+        const newProcessedResults = totalAccumulatedCount;
         const currentProgress = Math.min(100, (newProcessedResults / job.targetResults) * 100);
         
         console.log('\n📝 [RAPIDAPI-INSTAGRAM] Updating job progress...');

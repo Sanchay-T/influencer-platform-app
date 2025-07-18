@@ -1,0 +1,24 @@
+{
+  "stage": "accumulation_tracking",
+  "jobId": "e1a63af9-6034-4823-80bd-96b2075f83a6",
+  "apiCall": 1,
+  "timestamp": "2025-07-18T17:17:16.884Z",
+  "accumulation": {
+    "previousCreatorsCount": 5,
+    "newCreatorsCount": 10,
+    "totalAccumulatedCount": 10,
+    "duplicatesRemoved": 5
+  },
+  "usernames": [
+    "imsamkohl",
+    "phonesvendor",
+    "nawabnabeel",
+    "hasankarimiofficial",
+    "casepoint._",
+    "ecasetech",
+    "darktechofficial",
+    "imepoa",
+    "wtfreak.in",
+    "gee_stores_"
+  ]
+}

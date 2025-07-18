@@ -1,0 +1,60 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "237a2ee4-2155-497c-a252-93696dc60455",
+  "apiCall": 1,
+  "batchNumber": 2,
+  "timestamp": "2025-07-18T16:57:51.489Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 10
+  },
+  "validCreators": [
+    {
+      "username": "pro_asar",
+      "fullName": "Продажа телефонов",
+      "followers": 27811,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Алматы Тел: +7705 214 84 90 Бага \n•Рассрочки и кредита нет \n•Только оригинальная продукция\n•Гарантия...",
+      "emails": []
+    },
+    {
+      "username": "ivenue_gadgets",
+      "fullName": "IVENUE GADGETS",
+      "followers": 22332,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "PREMIUM SELLER...",
+      "emails": []
+    },
+    {
+      "username": "_.get_me_now",
+      "fullName": "GETMENOW",
+      "followers": 445,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Selling different types of trending gadgets🔥 COD available💸                                       ...",
+      "emails": []
+    },
+    {
+      "username": "themobiistore",
+      "fullName": "THE MOBii STORE",
+      "followers": 15050,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "THE_MoBii_StOrE\nComplete store of Mobile accessories📲\nWe provide wholesale price😊 \nMob No: 8968565...",
+      "emails": []
+    },
+    {
+      "username": "city.phone_tn",
+      "fullName": "City Phone",
+      "followers": 1177331,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "📍Rue Yesser Arafet Sahloul, Sousse ( En face AQUA Coiff ) \n📍Rue Khelifa Karoui Sahloul, Sousse ( À...",
+      "emails": []
+    }
+  ]
+}

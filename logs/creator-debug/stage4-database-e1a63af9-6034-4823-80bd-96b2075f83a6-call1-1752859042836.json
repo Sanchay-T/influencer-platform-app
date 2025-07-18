@@ -1,0 +1,109 @@
+{
+  "stage": "database_save_final",
+  "jobId": "e1a63af9-6034-4823-80bd-96b2075f83a6",
+  "apiCall": 1,
+  "timestamp": "2025-07-18T17:17:22.836Z",
+  "counts": {
+    "creatorsBeingPersisted": 12,
+    "newProcessedRuns": 1,
+    "newProcessedResults": 12
+  },
+  "finalDatabaseCreators": [
+    {
+      "index": 1,
+      "username": "imsamkohl",
+      "followers": 8477,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "phonesvendor",
+      "followers": 135493,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "nawabnabeel",
+      "followers": 389713,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "hasankarimiofficial",
+      "followers": 184752,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "casepoint._",
+      "followers": 12254,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "ecasetech",
+      "followers": 17086,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "darktechofficial",
+      "followers": 7844,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "imepoa",
+      "followers": 20969,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "wtfreak.in",
+      "followers": 2824,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "gee_stores_",
+      "followers": 19790,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 11,
+      "username": "hd_mongolia",
+      "followers": 3721,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 12,
+      "username": "happyhomes.retail",
+      "followers": 303906,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    }
+  ]
+}

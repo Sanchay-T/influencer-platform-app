@@ -1,0 +1,68 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "237a2ee4-2155-497c-a252-93696dc60455",
+  "apiCall": 2,
+  "batchNumber": 1,
+  "timestamp": "2025-07-18T16:58:10.571Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 5
+  },
+  "validCreators": [
+    {
+      "username": "imsamkohl",
+      "fullName": "Sam Kohl",
+      "followers": 8474,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Lead Apple shepherd @appltrack, inquires at hello@appletrack.com...",
+      "emails": [
+        "hello@appletrack.com"
+      ]
+    },
+    {
+      "username": "entendendoiphone",
+      "fullName": "Marília Guimarães",
+      "followers": 696945,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "✋Chega de depender da ajuda dos mais novos!\nA sua Independência Tecnológica começa aqui! ⤵️...",
+      "emails": []
+    },
+    {
+      "username": "iliasbsd",
+      "fullName": "Ilias Bousaidi",
+      "followers": 64813,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "tech content creator 📸📱\n📧 ilias@vertical-influence.com\nCreative Console: ⤵️...",
+      "emails": [
+        "ilias@vertical-influence.com"
+      ]
+    },
+    {
+      "username": "hitomidocameraroll",
+      "fullName": "Tyler",
+      "followers": 508446,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Don’t be a <^#+\n🇬🇧 +🇯🇵\n✉️ hitomidobusiness@gmail.com...",
+      "emails": [
+        "hitomidobusiness@gmail.com"
+      ]
+    },
+    {
+      "username": "ulresch",
+      "fullName": "Ulrich Esch",
+      "followers": 100457,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "▪️Obsessed w/ Tech. Built to level up. \n▪️Based in Cologne, Germany\n▪️kontakt@ulrichesch.de...",
+      "emails": [
+        "kontakt@ulrichesch.de"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+{
+  "stage": "database_save_final",
+  "jobId": "237a2ee4-2155-497c-a252-93696dc60455",
+  "apiCall": 5,
+  "timestamp": "2025-07-18T16:59:33.947Z",
+  "counts": {
+    "creatorsBeingPersisted": 9,
+    "newProcessedRuns": 5,
+    "newProcessedResults": 20
+  },
+  "finalDatabaseCreators": [
+    {
+      "index": 1,
+      "username": "imsamkohl",
+      "followers": 8474,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "nawabnabeel",
+      "followers": 389715,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "casper.capital",
+      "followers": 2589959,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "hasankarimiofficial",
+      "followers": 184752,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "casepoint._",
+      "followers": 12254,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "darktechofficial",
+      "followers": 7844,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "imepoa",
+      "followers": 20969,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "hd_mongolia",
+      "followers": 3721,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "wtfreak.in",
+      "followers": 2824,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    }
+  ]
+}

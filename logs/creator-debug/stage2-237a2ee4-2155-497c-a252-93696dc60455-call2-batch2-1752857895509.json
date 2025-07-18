@@ -1,0 +1,60 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "237a2ee4-2155-497c-a252-93696dc60455",
+  "apiCall": 2,
+  "batchNumber": 2,
+  "timestamp": "2025-07-18T16:58:15.509Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 10
+  },
+  "validCreators": [
+    {
+      "username": "sandmarc",
+      "fullName": "SANDMARC®",
+      "followers": 286421,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "To Empower & Inspire Creators.\nPremium Tech & Travel Gear📱🎥\n📍San Diego, California\nExplore our pr...",
+      "emails": []
+    },
+    {
+      "username": "luluu.oct",
+      "fullName": "Alaa Hassan",
+      "followers": 552036,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "اسمـي آلاء ، نادونــي لــولــو   \n🇰🇼 | 🇵🇸\n𝚂𝚗𝚊𝚙𝚌𝚑𝚊𝚝 | 𝚕𝚞𝚕𝚞𝚞.𝚘𝚌𝚝\n𝚏𝚘𝚛 𝚒𝚗𝚚𝚞𝚒...",
+      "emails": []
+    },
+    {
+      "username": "nicolay.t",
+      "fullName": "Nicolay Tarashchenko",
+      "followers": 52817,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Curating Premium Tech & Lifestyle Gear for Modern Living.\nSecret profile @beautyoftechnology\n📍Munic...",
+      "emails": []
+    },
+    {
+      "username": "toooystore",
+      "fullName": "📦玩具一號倉庫💖🎀🩷💗🦄🌸",
+      "followers": 142194,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "販賣快樂的供應商 📮🧰🛠️\n#詢價➕訂購請直接私訊💭小幫手快速回覆你\n🎬盲盒、公仔、卡通動漫週邊開箱分享\n讓生活中充滿可愛才會心情好💛🧡❤️🩷🩵💚\n可愛的東西不嫌多 每個都給我來一...",
+      "emails": []
+    },
+    {
+      "username": "hasankarimiofficial",
+      "fullName": "Hasan Karimi",
+      "followers": 184752,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "همه چی در مورد رسانه های اجتماعی\nmosalah iranian ⚽️\nSocial media expert | Content Creator...",
+      "emails": []
+    }
+  ]
+}

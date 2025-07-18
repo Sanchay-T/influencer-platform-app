@@ -1,0 +1,109 @@
+{
+  "stage": "database_save_final",
+  "jobId": "e1a63af9-6034-4823-80bd-96b2075f83a6",
+  "apiCall": 3,
+  "timestamp": "2025-07-18T17:18:34.248Z",
+  "counts": {
+    "creatorsBeingPersisted": 12,
+    "newProcessedRuns": 3,
+    "newProcessedResults": 25
+  },
+  "finalDatabaseCreators": [
+    {
+      "index": 1,
+      "username": "entendendoiphone",
+      "followers": 696946,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "imsamkohl",
+      "followers": 8477,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "ulresch",
+      "followers": 100457,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "iliasbsd",
+      "followers": 64812,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "hitomidocameraroll",
+      "followers": 508449,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "sandmarc",
+      "followers": 286423,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "nicolay.t",
+      "followers": 52817,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "luluu.oct",
+      "followers": 552042,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "hasankarimiofficial",
+      "followers": 184752,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "amitmobilesamana",
+      "followers": 28614,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 11,
+      "username": "luxevendors_",
+      "followers": 385,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 12,
+      "username": "case__mobilee",
+      "followers": 363704,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    }
+  ]
+}

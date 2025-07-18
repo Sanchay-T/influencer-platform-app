@@ -1,0 +1,33 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "f59eeb28-02e2-42c0-ba71-104b9c7231c9",
+  "apiCall": 5,
+  "batchNumber": 3,
+  "timestamp": "2025-07-18T16:44:12.706Z",
+  "counts": {
+    "rawResults": 2,
+    "validResults": 2,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 11
+  },
+  "validCreators": [
+    {
+      "username": "lumi_technology",
+      "fullName": "LUMI TECH ⌚️🎧",
+      "followers": 5513,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Creadora : @lauraguerreroq \nTienda virtual ✨\nSmartwatch⌚️\nAudífonos 🎧\nY mucho más ✨\nGARANTÍA  🔥\nBo...",
+      "emails": []
+    },
+    {
+      "username": "babphone1",
+      "fullName": "تعمیرات تخصصی",
+      "followers": 18592,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "تعمیرات تخصصی موبایل | ایفون |سامسونگ |شیائومی|    \nآموزش تعمیرات موبایل \nتهران ،میدان فردوسی \n  شما...",
+      "emails": []
+    }
+  ]
+}
