@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
 import { userProfiles } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { getTrialStatus } from '@/lib/trial/trial-service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -63,6 +64,9 @@ export async function GET(request: NextRequest) {
     // All state changes are handled via event-driven background jobs triggered by webhooks
     // If inconsistent state is detected, it should be logged for investigation
 
+    // 🔧 FIX: Use trial service for consistent progress calculation
+    const trialData = await getTrialStatus(userId);
+    
     // Determine billing status based on Stripe subscription
     const currentPlan = userProfile.currentPlan || 'free';
     const subscriptionStatus = userProfile.subscriptionStatus || 'none';
@@ -72,14 +76,9 @@ export async function GET(request: NextRequest) {
     const hasActiveSubscription = subscriptionStatus === 'active' && userProfile.stripeSubscriptionId;
     const isTrialing = trialStatus === 'active' && !hasActiveSubscription;
     
-    // Calculate days remaining for trial
-    let daysRemaining = 0;
-    if (isTrialing && userProfile.trialEndDate) {
-      const now = new Date();
-      const trialEnd = new Date(userProfile.trialEndDate);
-      const timeDiff = trialEnd.getTime() - now.getTime();
-      daysRemaining = Math.max(0, Math.ceil(timeDiff / (1000 * 60 * 60 * 24)));
-    }
+    // Use trial service data for consistent progress calculation
+    const daysRemaining = trialData?.daysRemaining || 0;
+    const trialProgressPercentage = trialData?.progressPercentage || 0;
 
     // Calculate real usage information from database
     const campaignsUsed = userProfile.usageCampaignsCurrent || 0;
@@ -87,18 +86,18 @@ export async function GET(request: NextRequest) {
     const campaignsLimit = userProfile.planCampaignsLimit || 0;
     const creatorsLimit = userProfile.planCreatorsLimit || 0;
     
-    // Calculate progress percentage based on highest utilization
-    let progressPercentage = 0;
+    // Calculate plan usage percentage based on highest utilization
+    let planUsagePercentage = 0;
     if (campaignsLimit > 0 && creatorsLimit > 0) {
       const campaignProgress = (campaignsUsed / campaignsLimit) * 100;
       const creatorProgress = (creatorsUsed / creatorsLimit) * 100;
-      progressPercentage = Math.max(campaignProgress, creatorProgress);
+      planUsagePercentage = Math.max(campaignProgress, creatorProgress);
     }
     
     const usageInfo = {
       campaignsUsed,
       creatorsUsed,
-      progressPercentage: Math.min(100, Math.round(progressPercentage)),
+      progressPercentage: Math.min(100, Math.round(planUsagePercentage)),
       campaignsLimit,
       creatorsLimit
     };
@@ -152,6 +151,9 @@ export async function GET(request: NextRequest) {
       paymentMethod,
       trialEndsAt,
       canManageSubscription: !!userProfile.stripeCustomerId,
+      // 🔧 FIX: Add consistent trial progress data
+      trialProgressPercentage,
+      trialTimeRemaining: trialData?.timeUntilExpiry || 'N/A',
       // Additional metadata
       trialStartDate: userProfile.trialStartDate?.toISOString(),
       trialEndDate: userProfile.trialEndDate?.toISOString(),

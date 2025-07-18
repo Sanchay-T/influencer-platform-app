@@ -80,67 +80,63 @@ export async function PATCH(request: Request) {
     
     const stripeStartTime = Date.now();
     
+    // 🔧 ALWAYS USE REAL STRIPE (test mode) - no more mock fallbacks
+    console.log('🏭 [ONBOARDING-COMPLETE] Using REAL Stripe integration (test mode)');
+    
     let stripeSetup;
-    if (process.env.NODE_ENV === 'production' || process.env.USE_REAL_STRIPE === 'true') {
-      // Use real Stripe for production-ready testing
-      console.log('🏭 [ONBOARDING-COMPLETE] Using REAL Stripe integration');
+    try {
+      const StripeService = (await import('@/lib/stripe/stripe-service')).default;
       
-      try {
-        const StripeService = (await import('@/lib/stripe/stripe-service')).default;
-        
-        // Create real Stripe customer
-        console.log('👤 [ONBOARDING-COMPLETE] Creating real Stripe customer...');
-        const customer = await StripeService.createCustomer(
-          userEmail, 
-          userProfile.fullName || userProfile.businessName || 'User', 
-          userId
-        );
-        
-        console.log('✅ [ONBOARDING-COMPLETE] Stripe customer created:', customer.id);
-        
-        // Create trial subscription
-        console.log('📋 [ONBOARDING-COMPLETE] Creating trial subscription...');
-        const subscription = await StripeService.createTrialSubscription(
-          customer.id, 
-          userProfile.currentPlan || 'glow_up'
-        );
-        
-        console.log('✅ [ONBOARDING-COMPLETE] Trial subscription created:', subscription.id);
-        
-        stripeSetup = {
-          customer: { id: customer.id },
-          subscription: { id: subscription.id },
-          checkoutSession: { id: `cs_real_${Date.now()}` }
-        };
-        
-        console.log('🎉 [ONBOARDING-COMPLETE] Real Stripe setup completed successfully');
-        
-      } catch (stripeError) {
-        console.error('❌ [ONBOARDING-COMPLETE] Real Stripe setup failed:', stripeError);
-        
-        // Log detailed error for debugging
-        console.error('📋 [ONBOARDING-COMPLETE] Stripe Error Details:', {
-          message: stripeError.message,
-          type: stripeError.type,
-          code: stripeError.code,
-          plan: userProfile.currentPlan || 'glow_up',
-          userEmail,
-          userId
-        });
-        
-        // Fallback to mock if real Stripe fails
-        console.log('🔄 [ONBOARDING-COMPLETE] Falling back to Mock Stripe...');
-        stripeSetup = await MockStripeService.setupTrial(userEmail, userId, userProfile.currentPlan || 'glow_up');
-      }
-    } else {
-      // Use mock Stripe in development
-      console.log('🧪 [ONBOARDING-COMPLETE] Using MOCK Stripe integration');
-      stripeSetup = await MockStripeService.setupTrial(userEmail, userId, userProfile.currentPlan || 'glow_up');
+      // Create real Stripe customer
+      console.log('👤 [ONBOARDING-COMPLETE] Creating real Stripe customer...');
+      const customer = await StripeService.createCustomer(
+        userEmail, 
+        userProfile.fullName || userProfile.businessName || 'User', 
+        userId
+      );
+      
+      console.log('✅ [ONBOARDING-COMPLETE] Stripe customer created:', customer.id);
+      
+      // Create trial subscription
+      console.log('📋 [ONBOARDING-COMPLETE] Creating trial subscription...');
+      const subscription = await StripeService.createTrialSubscription(
+        customer.id, 
+        userProfile.currentPlan || 'glow_up'
+      );
+      
+      console.log('✅ [ONBOARDING-COMPLETE] Trial subscription created:', subscription.id);
+      
+      stripeSetup = {
+        customer: { id: customer.id },
+        subscription: { id: subscription.id },
+        checkoutSession: { id: `cs_real_${Date.now()}` }
+      };
+      
+      console.log('🎉 [ONBOARDING-COMPLETE] Real Stripe setup completed successfully');
+      
+    } catch (stripeError) {
+      console.error('❌ [ONBOARDING-COMPLETE] Real Stripe setup failed:', stripeError);
+      
+      // Log detailed error for debugging
+      console.error('📋 [ONBOARDING-COMPLETE] Stripe Error Details:', {
+        message: stripeError.message,
+        type: stripeError.type,
+        code: stripeError.code,
+        plan: userProfile.currentPlan || 'glow_up',
+        userEmail,
+        userId
+      });
+      
+      // 🚨 NO MORE MOCK FALLBACK - Real Stripe required
+      return NextResponse.json({ 
+        error: 'Failed to set up Stripe subscription. Please try again or contact support.',
+        details: stripeError.message
+      }, { status: 500 });
     }
     
     console.log('⏱️ [ONBOARDING-COMPLETE] Stripe setup completed in:', Date.now() - stripeStartTime, 'ms');
     
-    console.log('✅ [ONBOARDING-COMPLETE] Mock Stripe setup complete:', {
+    console.log('✅ [ONBOARDING-COMPLETE] Real Stripe setup complete:', {
       customerId: stripeSetup.customer.id,
       subscriptionId: stripeSetup.subscription.id,
       checkoutSessionId: stripeSetup.checkoutSession.id

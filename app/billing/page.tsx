@@ -10,7 +10,8 @@ import {
   Shield, 
   Star,
   ArrowRight,
-  TrendingUp
+  TrendingUp,
+  CheckCircle
 } from 'lucide-react';
 import { useBilling } from '@/lib/hooks/use-billing';
 import DashboardLayout from '../components/layout/dashboard-layout';
@@ -18,7 +19,6 @@ import Link from 'next/link';
 // Removed Clerk PricingTable - using custom Stripe pricing
 import UpgradeButton from '@/app/components/billing/upgrade-button';
 import SubscriptionManagement from '@/app/components/billing/subscription-management';
-import { UpdatePaymentMethodButton, ViewBillingHistoryButton } from '@/app/components/billing/customer-portal-button';
 
 function BillingContent() {
   const { currentPlan, needsUpgrade } = useBilling();
@@ -79,15 +79,15 @@ function BillingContent() {
       {/* Subscription Management - Single Unified Card */}
       <SubscriptionManagement />
 
-      {/* Quick Actions */}
+      {/* Quick Actions - Simplified */}
       <Card className="border-zinc-200">
         <CardHeader>
           <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>Manage your subscription and account</CardDescription>
+          <CardDescription>Manage your account and view analytics</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {quickActions.map((action) => (
+            {quickActions.slice(0, 2).map((action) => (
               <Link key={action.name} href={action.href}>
                 <Button 
                   variant="outline" 
@@ -102,188 +102,162 @@ function BillingContent() {
                 </Button>
               </Link>
             ))}
-            
-            {/* Stripe Customer Portal Actions */}
-            <div className="h-auto">
-              <UpdatePaymentMethodButton 
-                className="w-full justify-start h-auto p-4 hover:bg-zinc-50"
-                size="md"
-              />
-            </div>
-            
-            <div className="h-auto">
-              <ViewBillingHistoryButton 
-                className="w-full justify-start h-auto p-4 hover:bg-zinc-50"
-                size="md"
-              />
-            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Quick Upgrade Options */}
-      {needsUpgrade && (
-        <Card className="border-zinc-200 bg-gradient-to-r from-blue-50 to-purple-50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Crown className="h-5 w-5 text-purple-600" />
-              Upgrade Your Plan
-            </CardTitle>
-            <CardDescription>
-              Get more campaigns, creators, and advanced features
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center">
-                <UpgradeButton 
-                  targetPlan="glow_up" 
-                  size="lg" 
-                  className="w-full"
-                  showModal={true}
-                />
-                <p className="text-sm text-gray-600 mt-2">3 campaigns • 1K creators</p>
-              </div>
-              <div className="text-center">
-                <UpgradeButton 
-                  targetPlan="viral_surge" 
-                  size="lg" 
-                  className="w-full"
-                  showModal={true}
-                />
-                <p className="text-sm text-gray-600 mt-2">10 campaigns • 10K creators</p>
-              </div>
-              <div className="text-center">
-                <UpgradeButton 
-                  targetPlan="fame_flex" 
-                  size="lg" 
-                  className="w-full"
-                  showModal={true}
-                />
-                <p className="text-sm text-gray-600 mt-2">Unlimited everything</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Visual Separator */}
-      <div className="border-t border-zinc-200 pt-8">
-        <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-zinc-900 mb-2">Want to upgrade?</h2>
-          <p className="text-zinc-600">Explore our other plans with more features and higher limits</p>
+      {/* Plan Comparison - Always Show All Plans */}
+      <div className="space-y-6" id="plan-comparison">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-zinc-900 mb-2">
+            {needsUpgrade ? 'Upgrade Your Plan' : 'All Available Plans'}
+          </h2>
+          <p className="text-zinc-600">
+            {needsUpgrade ? 'Choose the plan that fits your needs' : 'Compare all plans and upgrade anytime'}
+          </p>
         </div>
-      </div>
-
-      {/* Subscription Management */}
-      <div className="space-y-8" id="subscription-management">
-        <Card className="border-zinc-200 shadow-lg">
-          <CardHeader className="text-center pb-6">
-            <CardTitle className="text-xl font-semibold text-zinc-900">
-              All Available Plans
-            </CardTitle>
-            <CardDescription className="text-zinc-600">
-              Compare all plans and upgrade anytime - no commitment required
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-8">
-              <div className="bg-gradient-to-br from-zinc-50 to-blue-50 rounded-xl p-6 border border-zinc-200">
-                <div className="max-w-5xl mx-auto">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Glow Up Plan */}
-                    <div className={`bg-white rounded-lg p-6 shadow-sm relative ${
-                      currentPlan === 'glow_up' 
-                        ? 'border-2 border-blue-500 bg-blue-50' 
-                        : 'border border-gray-200'
-                    }`}>
-                      {currentPlan === 'glow_up' && (
-                        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                          <span className="bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-medium">Current Plan</span>
-                        </div>
-                      )}
-                      <div className="text-center">
-                        <h3 className="text-xl font-semibold text-gray-900 mb-2">Glow Up</h3>
-                        <div className="text-3xl font-bold text-blue-600 mb-1">$99</div>
-                        <div className="text-sm text-gray-600 mb-6">per month</div>
-                        <ul className="space-y-3 text-sm text-gray-600 mb-6">
-                          <li>✓ Up to 3 campaigns</li>
-                          <li>✓ 1,000 creators</li>
-                          <li>✓ CSV export</li>
-                          <li>✓ Bio extraction</li>
-                        </ul>
-                        {currentPlan === 'glow_up' ? (
-                          <div className="w-full bg-blue-100 text-blue-800 py-2 px-4 rounded-lg font-medium">
-                            Your Current Plan
-                          </div>
-                        ) : (
-                          <UpgradeButton targetPlan="glow_up" className="w-full" />
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Viral Surge Plan */}
-                    <div className={`bg-white rounded-lg p-6 shadow-sm relative ${
-                      currentPlan === 'viral_surge' 
-                        ? 'border-2 border-blue-500 bg-blue-50' 
-                        : 'border-2 border-blue-500'
-                    }`}>
-                      <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                        <span className="bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-medium">
-                          {currentPlan === 'viral_surge' ? 'Current Plan' : 'Most Popular'}
-                        </span>
-                      </div>
-                      <div className="text-center">
-                        <h3 className="text-xl font-semibold text-gray-900 mb-2">Viral Surge</h3>
-                        <div className="text-3xl font-bold text-blue-600 mb-1">$249</div>
-                        <div className="text-sm text-gray-600 mb-6">per month</div>
-                        <ul className="space-y-3 text-sm text-gray-600 mb-6">
-                          <li>✓ Up to 10 campaigns</li>
-                          <li>✓ 10,000 creators</li>
-                          <li>✓ Advanced analytics</li>
-                          <li>✓ All Glow Up features</li>
-                        </ul>
-                        {currentPlan === 'viral_surge' ? (
-                          <div className="w-full bg-blue-100 text-blue-800 py-2 px-4 rounded-lg font-medium">
-                            Your Current Plan
-                          </div>
-                        ) : (
-                          <UpgradeButton targetPlan="viral_surge" className="w-full" />
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Fame Flex Plan */}
-                    <div className={`bg-white rounded-lg p-6 shadow-sm relative ${
-                      currentPlan === 'fame_flex' 
-                        ? 'border-2 border-blue-500 bg-blue-50' 
-                        : 'border border-gray-200'
-                    }`}>
-                      {currentPlan === 'fame_flex' && (
-                        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                          <span className="bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-medium">Current Plan</span>
-                        </div>
-                      )}
-                      <div className="text-center">
-                        <h3 className="text-xl font-semibold text-gray-900 mb-2">Fame Flex</h3>
-                        <div className="text-3xl font-bold text-blue-600 mb-1">$499</div>
-                        <div className="text-sm text-gray-600 mb-6">per month</div>
-                        <ul className="space-y-3 text-sm text-gray-600 mb-6">
-                          <li>✓ Unlimited campaigns</li>
-                          <li>✓ Unlimited creators</li>
-                          <li>✓ API access</li>
-                          <li>✓ Priority support</li>
-                        </ul>
-                        {currentPlan === 'fame_flex' ? (
-                          <div className="w-full bg-blue-100 text-blue-800 py-2 px-4 rounded-lg font-medium">
-                            Your Current Plan
-                          </div>
-                        ) : (
-                          <UpgradeButton targetPlan="fame_flex" className="w-full" />
-                        )}
-                      </div>
-                    </div>
+        
+        <Card className="border-zinc-200">
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Glow Up Plan */}
+              <div className={`bg-white rounded-lg p-6 border-2 transition-all relative ${
+                currentPlan === 'glow_up' 
+                  ? 'border-green-500 bg-green-50 shadow-lg' 
+                  : 'border-gray-200 hover:border-blue-300'
+              }`}>
+                {currentPlan === 'glow_up' && (
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                    <span className="bg-green-500 text-white px-4 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                      <CheckCircle className="h-3 w-3" />
+                      Your Current Plan
+                    </span>
                   </div>
+                )}
+                <div className="text-center">
+                  <div className="flex items-center justify-center mb-3">
+                    <Star className={`h-6 w-6 mr-2 ${
+                      currentPlan === 'glow_up' ? 'text-green-600' : 'text-blue-600'
+                    }`} />
+                    <h3 className={`text-xl font-semibold ${
+                      currentPlan === 'glow_up' ? 'text-green-900' : 'text-gray-900'
+                    }`}>Glow Up</h3>
+                  </div>
+                  <div className={`text-3xl font-bold mb-1 ${
+                    currentPlan === 'glow_up' ? 'text-green-600' : 'text-blue-600'
+                  }`}>$99</div>
+                  <div className="text-sm text-gray-600 mb-6">per month</div>
+                  <ul className="space-y-2 text-sm text-gray-600 mb-6">
+                    <li>✓ 3 campaigns</li>
+                    <li>✓ 1,000 creators</li>
+                    <li>✓ CSV export</li>
+                    <li>✓ Bio extraction</li>
+                  </ul>
+                  {currentPlan === 'glow_up' ? (
+                    <div className="w-full bg-green-100 text-green-800 py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2">
+                      <CheckCircle className="h-4 w-4" />
+                      Your Current Plan
+                    </div>
+                  ) : (
+                    <UpgradeButton targetPlan="glow_up" className="w-full" />
+                  )}
+                </div>
+              </div>
+
+              {/* Viral Surge Plan */}
+              <div className={`bg-white rounded-lg p-6 border-2 transition-all relative ${
+                currentPlan === 'viral_surge' 
+                  ? 'border-green-500 bg-green-50 shadow-lg' 
+                  : 'border-blue-500'
+              }`}>
+                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                  <span className={`px-4 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${
+                    currentPlan === 'viral_surge' 
+                      ? 'bg-green-500 text-white' 
+                      : 'bg-blue-500 text-white'
+                  }`}>
+                    {currentPlan === 'viral_surge' ? (
+                      <>
+                        <CheckCircle className="h-3 w-3" />
+                        Your Current Plan
+                      </>
+                    ) : (
+                      'Most Popular'
+                    )}
+                  </span>
+                </div>
+                <div className="text-center">
+                  <div className="flex items-center justify-center mb-3">
+                    <Zap className={`h-6 w-6 mr-2 ${
+                      currentPlan === 'viral_surge' ? 'text-green-600' : 'text-purple-600'
+                    }`} />
+                    <h3 className={`text-xl font-semibold ${
+                      currentPlan === 'viral_surge' ? 'text-green-900' : 'text-gray-900'
+                    }`}>Viral Surge</h3>
+                  </div>
+                  <div className={`text-3xl font-bold mb-1 ${
+                    currentPlan === 'viral_surge' ? 'text-green-600' : 'text-blue-600'
+                  }`}>$249</div>
+                  <div className="text-sm text-gray-600 mb-6">per month</div>
+                  <ul className="space-y-2 text-sm text-gray-600 mb-6">
+                    <li>✓ 10 campaigns</li>
+                    <li>✓ 10,000 creators</li>
+                    <li>✓ Advanced analytics</li>
+                    <li>✓ All Glow Up features</li>
+                  </ul>
+                  {currentPlan === 'viral_surge' ? (
+                    <div className="w-full bg-green-100 text-green-800 py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2">
+                      <CheckCircle className="h-4 w-4" />
+                      Your Current Plan
+                    </div>
+                  ) : (
+                    <UpgradeButton targetPlan="viral_surge" className="w-full" />
+                  )}
+                </div>
+              </div>
+
+              {/* Fame Flex Plan */}
+              <div className={`bg-white rounded-lg p-6 border-2 transition-all relative ${
+                currentPlan === 'fame_flex' 
+                  ? 'border-green-500 bg-green-50 shadow-lg' 
+                  : 'border-gray-200 hover:border-blue-300'
+              }`}>
+                {currentPlan === 'fame_flex' && (
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                    <span className="bg-green-500 text-white px-4 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                      <CheckCircle className="h-3 w-3" />
+                      Your Current Plan
+                    </span>
+                  </div>
+                )}
+                <div className="text-center">
+                  <div className="flex items-center justify-center mb-3">
+                    <Crown className={`h-6 w-6 mr-2 ${
+                      currentPlan === 'fame_flex' ? 'text-green-600' : 'text-yellow-600'
+                    }`} />
+                    <h3 className={`text-xl font-semibold ${
+                      currentPlan === 'fame_flex' ? 'text-green-900' : 'text-gray-900'
+                    }`}>Fame Flex</h3>
+                  </div>
+                  <div className={`text-3xl font-bold mb-1 ${
+                    currentPlan === 'fame_flex' ? 'text-green-600' : 'text-blue-600'
+                  }`}>$499</div>
+                  <div className="text-sm text-gray-600 mb-6">per month</div>
+                  <ul className="space-y-2 text-sm text-gray-600 mb-6">
+                    <li>✓ Unlimited campaigns</li>
+                    <li>✓ Unlimited creators</li>
+                    <li>✓ API access</li>
+                    <li>✓ Priority support</li>
+                  </ul>
+                  {currentPlan === 'fame_flex' ? (
+                    <div className="w-full bg-green-100 text-green-800 py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2">
+                      <CheckCircle className="h-4 w-4" />
+                      Your Current Plan
+                    </div>
+                  ) : (
+                    <UpgradeButton targetPlan="fame_flex" className="w-full" />
+                  )}
                 </div>
               </div>
             </div>

@@ -38,6 +38,8 @@ interface SubscriptionData {
   };
   trialEndsAt?: string;
   daysRemaining?: number;
+  trialProgressPercentage?: number;
+  trialTimeRemaining?: string;
   canAccessPortal: boolean;
   isMockCustomer?: boolean;
 }
@@ -82,6 +84,8 @@ export default function SubscriptionManagement() {
         paymentMethod: billingData.paymentMethod,
         trialEndsAt: billingData.trialEndsAt,
         daysRemaining: billingData.daysRemaining,
+        trialProgressPercentage: billingData.trialProgressPercentage,
+        trialTimeRemaining: billingData.trialTimeRemaining,
         canAccessPortal: portalData.canAccessPortal || false,
         isMockCustomer: portalData.isMockCustomer || false,
       };
@@ -284,11 +288,11 @@ export default function SubscriptionManagement() {
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-medium text-blue-900">Trial Progress</h3>
               <span className="text-sm text-blue-700">
-                {Math.round(((7 - (subscriptionData.daysRemaining || 0)) / 7) * 100)}% complete
+                {Math.round(subscriptionData.trialProgressPercentage || 0)}% complete
               </span>
             </div>
             <Progress 
-              value={((7 - (subscriptionData.daysRemaining || 0)) / 7) * 100} 
+              value={subscriptionData.trialProgressPercentage || 0} 
               className="h-2 bg-blue-100 mb-3"
             />
             <div className="flex justify-between text-sm text-blue-600">
@@ -364,60 +368,46 @@ export default function SubscriptionManagement() {
 
         {/* Subscription Management Actions */}
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-zinc-900">Subscription Management</h3>
+          <h3 className="text-lg font-semibold text-zinc-900">Billing Management</h3>
           
           {subscriptionData.canAccessPortal ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <ManageSubscriptionButton 
-                size="lg" 
-                className="w-full h-14 text-base font-medium"
-                returnUrl={window.location.href}
-              />
-              <UpdatePaymentMethodButton 
-                size="lg" 
-                className="w-full h-14 text-base font-medium"
-                returnUrl={window.location.href}
-              />
-              <ViewBillingHistoryButton 
-                size="lg" 
-                className="w-full h-14 text-base font-medium"
-                returnUrl={window.location.href}
-              />
-            </div>
-          ) : subscriptionData.isMockCustomer ? (
-            // Show different message based on USE_REAL_STRIPE setting
-            process.env.NEXT_PUBLIC_USE_REAL_STRIPE === 'true' ? (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-green-900">
-                      Production-Ready Testing Mode
-                    </p>
-                    <p className="text-sm text-green-700 mt-1">
-                      You're testing with real Stripe integration! The customer portal and subscription management features are fully functional.
-                    </p>
-                    <p className="text-xs text-green-600 mt-2">
-                      Note: This uses Stripe test mode, so no real charges will occur.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ) : (
+            // Real Stripe customer - full portal access
+            <div className="space-y-4">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div className="flex items-start gap-3">
                   <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
                   <div>
                     <p className="font-medium text-blue-900">
-                      Mock Stripe Integration
+                      Stripe Billing Portal
                     </p>
                     <p className="text-sm text-blue-700 mt-1">
-                      This is a development account using mock Stripe data. In production, you would have full access to Stripe's customer portal.
+                      Manage all billing aspects through Stripe's secure customer portal. Update payment methods, view invoices, and control subscriptions.
                     </p>
                   </div>
                 </div>
               </div>
-            )
+              
+              <ManageSubscriptionButton 
+                size="lg" 
+                className="w-full h-14 text-base font-medium"
+                returnUrl={typeof window !== 'undefined' ? window.location.href : '/billing'}
+              />
+            </div>
+          ) : subscriptionData.isMockCustomer ? (
+            // Mock customer needs real Stripe setup
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
+                <div>
+                  <p className="font-medium text-amber-900">
+                    Setup Required
+                  </p>
+                  <p className="text-sm text-amber-700 mt-1">
+                    Your account needs to be set up with Stripe to access billing features. Please complete the subscription setup.
+                  </p>
+                </div>
+              </div>
+            </div>
           ) : (
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
               <div className="flex items-start gap-3">
@@ -435,21 +425,6 @@ export default function SubscriptionManagement() {
           )}
         </div>
 
-        {/* Security Notice */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
-            <div>
-              <p className="font-medium text-blue-900">
-                Secure Billing Management
-              </p>
-              <p className="text-sm text-blue-700 mt-1">
-                All subscription changes are handled securely through Stripe. 
-                Your payment information is protected with industry-standard encryption.
-              </p>
-            </div>
-          </div>
-        </div>
       </CardContent>
     </Card>
   );

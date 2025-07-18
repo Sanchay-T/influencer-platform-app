@@ -54,15 +54,23 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Check if this is a mock customer (for development/testing)
+    // Check if this is a mock customer (needs migration to real Stripe)
     const isMockCustomer = userProfile.stripeCustomerId.startsWith('cus_mock_');
-    if (isMockCustomer && process.env.USE_REAL_STRIPE !== 'true') {
-      console.log('🧪 [CUSTOMER-PORTAL] Mock customer detected, providing mock portal experience');
+    
+    console.log('🔍 [CUSTOMER-PORTAL] Customer analysis:', {
+      customerId: userProfile.stripeCustomerId,
+      isMockCustomer,
+      needsRealStripeCustomer: isMockCustomer
+    });
+    
+    // 🔧 REAL STRIPE ONLY: If user has mock customer, they need a real Stripe customer
+    if (isMockCustomer) {
+      console.log('🚨 [CUSTOMER-PORTAL] Mock customer detected - need to create real Stripe customer');
       return NextResponse.json({ 
         success: false,
-        error: 'Subscription management is not available for test accounts. This is a mock trial system.',
-        isMockCustomer: true,
-        mockMessage: 'This is a development/test account using mock Stripe data. In production, this would redirect to the real Stripe customer portal for subscription management.'
+        error: 'Please complete your subscription setup to access billing management.',
+        needsSetup: true,
+        message: 'Your account needs to be set up with Stripe to access billing features.'
       }, { status: 400 });
     }
     
@@ -85,40 +93,18 @@ export async function POST(request: NextRequest) {
     });
 
     // Create Stripe customer portal session
+    // ✅ Use default configuration from Stripe Dashboard (no inline config)
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: userProfile.stripeCustomerId,
       return_url: portalReturnUrl,
-      configuration: {
-        business_profile: {
-          privacy_policy_url: `${process.env.NEXT_PUBLIC_SITE_URL}/privacy`,
-          terms_of_service_url: `${process.env.NEXT_PUBLIC_SITE_URL}/terms`,
-        },
-        features: {
-          payment_method_update: {
-            enabled: true,
-          },
-          subscription_cancel: {
-            enabled: true,
-            mode: 'at_period_end',
-            proration_behavior: 'none',
-          },
-          subscription_update: {
-            enabled: true,
-            default_allowed_updates: ['price', 'quantity', 'promotion_code'],
-            proration_behavior: 'create_prorations',
-          },
-          invoice_history: {
-            enabled: true,
-          },
-        },
-      },
+      // Note: Using default configuration from Stripe Dashboard
+      // Configure portal features in Stripe Dashboard → Settings → Customer Portal
     });
 
     console.log('✅ [CUSTOMER-PORTAL] Portal session created successfully:', {
       sessionId: portalSession.id,
       customerId: portalSession.customer,
       url: portalSession.url,
-      expiresAt: new Date(portalSession.expires_at * 1000).toISOString(),
       requestId
     });
 
@@ -130,7 +116,6 @@ export async function POST(request: NextRequest) {
       success: true,
       portalUrl: portalSession.url,
       sessionId: portalSession.id,
-      expiresAt: portalSession.expires_at,
       returnUrl: portalReturnUrl,
       requestId
     });
@@ -159,7 +144,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     console.log('🔍 [CUSTOMER-PORTAL-GET] Checking customer portal access');
     
@@ -179,16 +164,17 @@ export async function GET(request: NextRequest) {
 
     const hasStripeCustomer = !!userProfile.stripeCustomerId;
     const isMockCustomer = userProfile.stripeCustomerId?.startsWith('cus_mock_') || false;
-    // Allow portal access for real Stripe customers OR mock customers when USE_REAL_STRIPE is true
-    const canAccessPortal = hasStripeCustomer && userProfile.subscriptionStatus !== 'none' && 
-                           (!isMockCustomer || process.env.USE_REAL_STRIPE === 'true');
+    
+    // 🔧 REAL STRIPE ONLY: Only real Stripe customers can access portal
+    const canAccessPortal = hasStripeCustomer && !isMockCustomer && userProfile.subscriptionStatus !== 'none';
 
     console.log('📊 [CUSTOMER-PORTAL-GET] Portal access check:', {
       userId,
       hasStripeCustomer,
       isMockCustomer,
       canAccessPortal,
-      subscriptionStatus: userProfile.subscriptionStatus
+      subscriptionStatus: userProfile.subscriptionStatus,
+      needsRealStripeCustomer: isMockCustomer
     });
 
     return NextResponse.json({
