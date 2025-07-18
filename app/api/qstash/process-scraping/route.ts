@@ -283,9 +283,24 @@ export async function POST(req: Request) {
       console.log('\n\n========== INSTAGRAM REELS JOB PROCESSING ==========');
       console.log('🔄 [RAPIDAPI-INSTAGRAM] Processing reels job:', job.id);
       
-      // Instagram Reels specific configuration: Always stop after 1 request for quick testing
-      // This allows you to see results immediately without waiting for multiple API calls
-      const INSTAGRAM_REELS_MAX_REQUESTS = 1;
+      // 🔍 JOB STATUS DEBUG LOGGING
+      console.log('\n🔍 [JOB-STATUS-DEBUG] Current job status at start:');
+      console.log('📊 [JOB-STATUS-DEBUG] Runs:', {
+        processedRuns: job.processedRuns,
+        maxRuns: 8, // INSTAGRAM_REELS_MAX_REQUESTS
+        isFirstRun: job.processedRuns === 0,
+        runsRemaining: 8 - job.processedRuns
+      });
+      console.log('📊 [JOB-STATUS-DEBUG] Results:', {
+        processedResults: job.processedResults,
+        targetResults: job.targetResults,
+        resultsRemaining: job.targetResults - job.processedResults
+      });
+      console.log('📊 [JOB-STATUS-DEBUG] This should be API call number:', job.processedRuns + 1);
+      
+      // Instagram Reels specific configuration: Allow multiple requests for more results
+      // This allows you to get 50-100 high-quality results
+      const INSTAGRAM_REELS_MAX_REQUESTS = 8;
       console.log('📋 [RAPIDAPI-INSTAGRAM] Job details:', {
         jobId: job.id,
         keywords: job.keywords,
@@ -352,13 +367,19 @@ export async function POST(req: Request) {
         console.log('📊 [PROGRESS] Updated to 10% - Starting reels search');
         
         const keyword = job.keywords[0]; // Use first keyword for search
-        const reelsSearchUrl = `${RAPIDAPI_BASE_URL}/v2/search/reels?query=${encodeURIComponent(keyword)}`;
+        
+        // Add pagination/offset for different results on each call
+        const currentRun = job.processedRuns || 0;
+        const offset = currentRun * 50; // Offset by 50 for each call to get different results
+        const reelsSearchUrl = `${RAPIDAPI_BASE_URL}/v2/search/reels?query=${encodeURIComponent(keyword)}&offset=${offset}&count=50`;
         
         console.log('📊 [RAPIDAPI-INSTAGRAM] Making reels search API call:', {
           url: reelsSearchUrl,
           keyword: keyword,
           callNumber: job.processedRuns + 1,
-          maxCallsForInstagramReels: INSTAGRAM_REELS_MAX_REQUESTS
+          maxCallsForInstagramReels: INSTAGRAM_REELS_MAX_REQUESTS,
+          offset: offset,
+          expectedNewResults: '~10-20 quality creators'
         });
         
         const reelsStartTime = Date.now();
@@ -431,29 +452,104 @@ export async function POST(req: Request) {
         console.log('\n🔍 [RAPIDAPI-INSTAGRAM] Phase 2: Extracting unique creators...');
         const uniqueCreators = new Map();
         
-        // Extract unique creators from reels
+        // Extract unique creators from reels with quality filtering
+        console.log('\n🔍 [QUALITY-FILTER-DEBUG] Starting quality filtering analysis...');
+        let totalCreatorsFound = 0;
+        let qualityCreatorsAdded = 0;
+        let filteredOutCreators = 0;
+        
         for (const reel of allReels) {
           const media = reel.media;
           const user = media?.user || {};
           const userId = user.pk || user.id;
           
           if (userId && !uniqueCreators.has(userId)) {
-            uniqueCreators.set(userId, {
-              userId: userId,
-              username: user.username || '',
-              fullName: user.full_name || '',
-              isVerified: user.is_verified || false,
-              isPrivate: user.is_private || false,
-              profilePicUrl: user.profile_pic_url || '',
-              followerCount: user.follower_count || 0,
-              reel: reel // Keep reference to original reel
-            });
+            totalCreatorsFound++;
+            const followerCount = user.follower_count || 0;
+            const isVerified = user.is_verified || false;
+            const isPrivate = user.is_private || false;
+            const hasUsername = !!(user.username || '').trim();
+            
+            // QUALITY FILTERING: Instagram API returns 0 followers initially, so we need different logic
+            const meetsQualityStandards = (
+              isVerified || // Verified accounts (priority)
+              (!isPrivate && hasUsername) // Public accounts with usernames (we'll check followers in profile enhancement)
+            );
+            
+            if (meetsQualityStandards) {
+              qualityCreatorsAdded++;
+              
+              // Calculate quality score for sorting
+              let qualityScore = 0;
+              if (isVerified) qualityScore += 1000; // Verified = huge boost
+              qualityScore += Math.min(followerCount / 1000, 500); // Follower score (capped at 500K)
+              if (!isPrivate) qualityScore += 50; // Public account bonus
+              if (hasUsername) qualityScore += 25; // Has username bonus
+              
+              // Get engagement metrics from the reel
+              const likes = media?.like_count || 0;
+              const comments = media?.comment_count || 0;
+              const views = media?.play_count || media?.ig_play_count || 0;
+              const engagementRate = followerCount > 0 ? ((likes + comments) / followerCount) * 100 : 0;
+              
+              qualityScore += Math.min(engagementRate * 10, 100); // Engagement bonus
+              
+              uniqueCreators.set(userId, {
+                userId: userId,
+                username: user.username || '',
+                fullName: user.full_name || '',
+                isVerified: isVerified,
+                isPrivate: isPrivate,
+                profilePicUrl: user.profile_pic_url || '',
+                followerCount: followerCount,
+                qualityScore: qualityScore,
+                engagementRate: engagementRate,
+                reel: reel // Keep reference to original reel
+              });
+              
+              console.log(`✅ [QUALITY-FILTER] Added quality creator: @${user.username}`, {
+                followers: followerCount,
+                verified: isVerified,
+                private: isPrivate,
+                qualityScore: Math.round(qualityScore),
+                engagementRate: Math.round(engagementRate * 100) / 100 + '%'
+              });
+            } else {
+              filteredOutCreators++;
+              console.log(`❌ [QUALITY-FILTER] Filtered out low-quality creator: @${user.username}`, {
+                followers: followerCount,
+                verified: isVerified,
+                private: isPrivate,
+                hasUsername: hasUsername,
+                reason: !isVerified && isPrivate ? 'private_account' : 'missing_username'
+              });
+            }
           }
         }
         
-        console.log('📊 [RAPIDAPI-INSTAGRAM] Unique creators found:', uniqueCreators.size);
+        console.log('📊 [QUALITY-FILTER-DEBUG] Quality filtering summary:', {
+          totalCreatorsFound: totalCreatorsFound,
+          qualityCreatorsAdded: qualityCreatorsAdded,
+          filteredOutCreators: filteredOutCreators,
+          filteringRate: totalCreatorsFound > 0 ? Math.round((filteredOutCreators / totalCreatorsFound) * 100) + '%' : '0%',
+          finalUniqueCreators: uniqueCreators.size
+        });
         
-        // Update progress: Creators extracted
+        console.log('📊 [RAPIDAPI-INSTAGRAM] Quality creators found:', uniqueCreators.size);
+        
+        // QUALITY SORTING: Sort creators by quality score (highest first)
+        const creatorsArray = Array.from(uniqueCreators.entries())
+          .sort((a, b) => b[1].qualityScore - a[1].qualityScore); // Sort by quality score descending
+        
+        console.log('🏆 [QUALITY-SORTING] Top quality creators:', creatorsArray.slice(0, 5).map(([userId, creator]) => ({
+          username: creator.username,
+          followers: creator.followerCount,
+          verified: creator.isVerified,
+          qualityScore: Math.round(creator.qualityScore),
+          engagementRate: Math.round(creator.engagementRate * 100) / 100 + '%'
+        })));
+        
+        // Update progress: Creators extracted and sorted
         await db.update(scrapingJobs)
           .set({
             progress: '40',
@@ -471,12 +567,11 @@ export async function POST(req: Request) {
         const totalCreators = uniqueCreators.size;
         let processedCreators = 0;
         
-        console.log(`📊 [PROGRESS-SETUP] Starting bio/email enhancement for ${totalCreators} creators`);
+        console.log(`📊 [PROGRESS-SETUP] Starting bio/email enhancement for ${totalCreators} quality creators`);
         console.log(`🚀 [PARALLEL-PROCESSING] Using parallel batch processing for faster enhancement`);
         
-        // Convert to array for parallel processing
-        const creatorsArray = Array.from(uniqueCreators.entries());
-        const BATCH_SIZE = 3; // Process 3 creators in parallel
+        // creatorsArray is already created and sorted above by quality score
+        const BATCH_SIZE = 5; // Process 5 creators in parallel for better performance
         const batches = [];
         
         // Split into batches
@@ -549,10 +644,20 @@ export async function POST(req: Request) {
                   creatorData.followerCount = followerCount;
                 }
                 
+                // 🔍 SECONDARY QUALITY CHECK: Now we have real follower counts
+                const realFollowerCount = followerCount || creatorData.followerCount || 0;
+                const passesSecondaryQuality = (
+                  creatorData.isVerified || // Verified accounts always pass
+                  realFollowerCount >= 1000 || // At least 1K real followers
+                  (!creatorData.isPrivate && realFollowerCount >= 500) // Public accounts with 500+ followers
+                );
+                
                 console.log(`✅ [BIO-ENHANCEMENT] Enhanced @${creatorData.username}:`, {
                   bioLength: enhancedBio.length,
                   emailsFound: enhancedEmails.length,
-                  followerCount: followerCount,
+                  followerCount: realFollowerCount,
+                  verified: creatorData.isVerified,
+                  passesSecondaryQuality: passesSecondaryQuality,
                   bio: enhancedBio,
                   emails: enhancedEmails
                 });
@@ -570,17 +675,38 @@ export async function POST(req: Request) {
             }
           }
           
+          // 🔍 SECONDARY QUALITY CHECK: Only include creators who pass final quality standards
+          const realFollowerCount = creatorData.followerCount || 0;
+          const passesSecondaryQuality = (
+            creatorData.isVerified || // Verified accounts always pass
+            realFollowerCount >= 1000 || // At least 1K real followers
+            (!creatorData.isPrivate && realFollowerCount >= 500) // Public accounts with 500+ followers
+          );
+          
+          // Skip creators who don't meet secondary quality standards
+          if (!passesSecondaryQuality) {
+            console.log(`❌ [SECONDARY-QUALITY] Skipping creator @${creatorData.username}:`, {
+              followers: realFollowerCount,
+              verified: creatorData.isVerified,
+              private: creatorData.isPrivate,
+              reason: 'insufficient_followers_after_profile_check'
+            });
+            return null; // Skip this creator
+          }
+          
           // Transform reel data with COMPLETE profile info including bio/email
           const transformedReel = {
             creator: {
               name: creatorData.fullName || creatorData.username || 'Unknown',
               uniqueId: creatorData.username || '',
-              followers: creatorData.followerCount || 0,
+              followers: realFollowerCount,
               avatarUrl: creatorData.profilePicUrl || '',
               profilePicUrl: creatorData.profilePicUrl || '',
               verified: creatorData.isVerified || false,
               bio: enhancedBio, // Complete bio data
-              emails: enhancedEmails // Complete email data
+              emails: enhancedEmails, // Complete email data
+              qualityScore: Math.round(creatorData.qualityScore || 0), // Quality score for reference
+              engagementRate: Math.round((creatorData.engagementRate || 0) * 100) / 100 // Engagement rate %
             },
             video: {
               description: media.caption?.text || '',
@@ -612,7 +738,15 @@ export async function POST(req: Request) {
         
         // Wait for all creators in this batch to complete
         const batchResults = await Promise.all(batchPromises);
-        transformedCreators.push(...batchResults);
+        // Filter out null values (creators who didn't pass secondary quality check)
+        const validResults = batchResults.filter(result => result !== null);
+        transformedCreators.push(...validResults);
+        
+        console.log(`📊 [BATCH-QUALITY] Batch ${batchIndex + 1} results:`, {
+          rawResults: batchResults.length,
+          validResults: validResults.length,
+          filteredOut: batchResults.length - validResults.length
+        });
         
         // Update progress after batch completion
         processedCreators += batch.length;
@@ -707,35 +841,98 @@ export async function POST(req: Request) {
           throw jobUpdateError;
         }
         
-        // COMPLETE: Mark job as completed with full bio/email data
-        console.log('\n🎉 [COMPLETE] Instagram reels search with bio/email enhancement completed!');
+        // CHECK: Should we continue with more API calls for more results?
+        // Continue until we have good number of results (target 100 quality creators) or hit API limit
+        const targetQualityCreators = 100; // Reasonable target for quality creators
+        const shouldContinue = newProcessedRuns < INSTAGRAM_REELS_MAX_REQUESTS && newProcessedResults < targetQualityCreators;
         
-        await db.update(scrapingJobs)
-          .set({
-            status: 'completed',
-            progress: '100',
-            completedAt: new Date(),
-            updatedAt: new Date()
-          })
-          .where(eq(scrapingJobs.id, job.id));
-        
-        console.log('✅ [COMPLETE] Job marked as completed with full data!');
-        
-        console.log('\n🎉 [COMPLETE] Search completed successfully:', {
-          jobId: job.id,
-          resultsCount: newProcessedResults,
-          totalTime: Date.now() - processingStartTime + 'ms',
-          bioEmailEnhanced: true
+        // 🔍 DETAILED CONTINUATION LOGGING
+        console.log('\n🔍 [CONTINUATION-DEBUG] Detailed continuation analysis:');
+        console.log('📊 [CONTINUATION-DEBUG] API Call Status:', {
+          currentRuns: newProcessedRuns,
+          maxRuns: INSTAGRAM_REELS_MAX_REQUESTS,
+          runsRemaining: INSTAGRAM_REELS_MAX_REQUESTS - newProcessedRuns,
+          apiCallsCondition: newProcessedRuns < INSTAGRAM_REELS_MAX_REQUESTS
+        });
+        console.log('📊 [CONTINUATION-DEBUG] Results Status:', {
+          currentResults: newProcessedResults,
+          targetResults: targetQualityCreators,
+          resultsRemaining: targetQualityCreators - newProcessedResults,
+          resultsCondition: newProcessedResults < targetQualityCreators
+        });
+        console.log('📊 [CONTINUATION-DEBUG] Final Decision:', {
+          shouldContinue: shouldContinue,
+          reason: shouldContinue ? 'MORE_CALLS_NEEDED' : 'STOPPING',
+          stoppingReason: !shouldContinue ? 
+            (newProcessedRuns >= INSTAGRAM_REELS_MAX_REQUESTS ? 'API_LIMIT_REACHED' : 'TARGET_REACHED') 
+            : null
         });
         
-        console.log('========== END COMPLETE PROCESSING ==========\n\n');
-        
-        return NextResponse.json({
-          success: true,
-          message: 'Instagram reels search completed with bio/email data',
-          stage: 'completed',
-          enhancementCompleted: true
-        });
+        if (shouldContinue) {
+          console.log('\n🔄 [CONTINUATION] Scheduling next API call for more results...');
+          console.log('📊 [CONTINUATION] Current status:', {
+            processedRuns: newProcessedRuns,
+            maxRuns: INSTAGRAM_REELS_MAX_REQUESTS,
+            processedResults: newProcessedResults,
+            targetQualityCreators: targetQualityCreators,
+            willContinue: true
+          });
+          
+          // Schedule next API call with QStash
+          const callbackUrl = `${baseUrl}/api/qstash/process-scraping`;
+          await qstash.publishJSON({
+            url: callbackUrl,
+            body: { jobId: job.id },
+            delay: '3s' // 3 second delay between calls
+          });
+          
+          return NextResponse.json({
+            success: true,
+            message: `Instagram reels search continuing - ${newProcessedResults} quality creators so far`,
+            stage: 'continuing',
+            processedRuns: newProcessedRuns,
+            maxRuns: INSTAGRAM_REELS_MAX_REQUESTS,
+            processedResults: newProcessedResults,
+            targetQualityCreators: targetQualityCreators
+          });
+        } else {
+          // COMPLETE: Mark job as completed with full bio/email data
+          console.log('\n🎉 [COMPLETE] Instagram reels search with bio/email enhancement completed!');
+          console.log('📊 [COMPLETE] Final status:', {
+            processedRuns: newProcessedRuns,
+            maxRuns: INSTAGRAM_REELS_MAX_REQUESTS,
+            processedResults: newProcessedResults,
+            targetQualityCreators: targetQualityCreators,
+            completed: true
+          });
+          
+          await db.update(scrapingJobs)
+            .set({
+              status: 'completed',
+              progress: '100',
+              completedAt: new Date(),
+              updatedAt: new Date()
+            })
+            .where(eq(scrapingJobs.id, job.id));
+          
+          console.log('✅ [COMPLETE] Job marked as completed with full data!');
+          
+          console.log('\n🎉 [COMPLETE] Search completed successfully:', {
+            jobId: job.id,
+            resultsCount: newProcessedResults,
+            totalTime: Date.now() - processingStartTime + 'ms',
+            bioEmailEnhanced: true
+          });
+          
+          console.log('========== END COMPLETE PROCESSING ==========\n\n');
+          
+          return NextResponse.json({
+            success: true,
+            message: 'Instagram reels search completed with bio/email data',
+            stage: 'completed',
+            enhancementCompleted: true
+          });
+        }
       } catch (instagramReelsError: any) {
         console.error('❌ Error processing Instagram reels job:', instagramReelsError);
         

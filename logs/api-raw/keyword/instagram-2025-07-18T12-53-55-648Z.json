@@ -1,0 +1,92 @@
+{
+  "timestamp": "2025-07-18T12:53:55.648Z",
+  "platform": "instagram",
+  "searchType": "keyword",
+  "request": {
+    "keywords": [
+      "airpods pro"
+    ],
+    "targetResults": 100,
+    "platform": "Instagram"
+  },
+  "response": {
+    "items": [
+      {
+        "creator": {
+          "name": "Sam Kohl",
+          "uniqueId": "imsamkohl",
+          "followers": 8471,
+          "avatarUrl": "https://scontent-sjc3-1.cdninstagram.com/v/t51.2885-19/450845122_494167976340851_5536232985279398246_n.jpg?stp=dst-jpg_e0_s150x150_tt6&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_cat=111&_nc_oc=Q6cZ2QHVmWSkpZ6R3favkcVJ6dnir2maKaM9eOMtDcB5PWDiNdBVvXMFhuwqx1f8YCqdD0I&_nc_ohc=YPmllJ1U_IUQ7kNvwFdqqk_&_nc_gid=-AYQm3fE0p1vBiVGrgnRbw&edm=AL2I2h8BAAAA&ccb=7-5&ig_cache_key=GMJZ3xpzbbByccEBAGYBYWGRptRMbkULAAAB-ccb7-5&oh=00_AfQXTm-iCoxbUdLB5rpty7lYyeDTtHdD5kNPPQLkz6LW5A&oe=688010E4&_nc_sid=026283",
+          "profilePicUrl": "https://scontent-sjc3-1.cdninstagram.com/v/t51.2885-19/450845122_494167976340851_5536232985279398246_n.jpg?stp=dst-jpg_e0_s150x150_tt6&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_cat=111&_nc_oc=Q6cZ2QHVmWSkpZ6R3favkcVJ6dnir2maKaM9eOMtDcB5PWDiNdBVvXMFhuwqx1f8YCqdD0I&_nc_ohc=YPmllJ1U_IUQ7kNvwFdqqk_&_nc_gid=-AYQm3fE0p1vBiVGrgnRbw&edm=AL2I2h8BAAAA&ccb=7-5&ig_cache_key=GMJZ3xpzbbByccEBAGYBYWGRptRMbkULAAAB-ccb7-5&oh=00_AfQXTm-iCoxbUdLB5rpty7lYyeDTtHdD5kNPPQLkz6LW5A&oe=688010E4&_nc_sid=026283",
+          "verified": true,
+          "bio": "Lead Apple shepherd @appltrack, inquires at hello@appletrack.com",
+          "emails": [
+            "hello@appletrack.com"
+          ],
+          "qualityScore": 1075,
+          "engagementRate": 0
+        },
+        "video": {
+          "description": "AirPods Pro 3 might not have stems #apple #airpods #rumors",
+          "url": "https://www.instagram.com/reel/DMFU-a9u8cp",
+          "statistics": {
+            "likes": 3020,
+            "comments": 20,
+            "views": 84052,
+            "shares": 0
+          }
+        },
+        "hashtags": [
+          "#apple",
+          "#airpods",
+          "#rumors"
+        ],
+        "publishedTime": "2025-07-14T09:31:46.000Z",
+        "platform": "Instagram",
+        "postType": "Video",
+        "mediaUrl": "https://scontent-sjc3-1.cdninstagram.com/v/t51.71878-15/519411991_1915464112581893_8258031037878199285_n.jpg?stp=dst-jpg_e15_tt6&_nc_cat=1&ig_cache_key=MzY3NjQzNjkyMTMwODY2MTU0NQ%3D%3D.3-ccb1-7&ccb=1-7&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6InhwaWRzLjY0MHgxMTM2LnNkciJ9&_nc_ohc=3hjlckuuc3cQ7kNvwEqellM&_nc_oc=Adki4GUW6jicaXbijvumXNILeD8VtpcJeNW5NixMZEZQoI4YrbaSJ_aAqMAczxNXy0E&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=-AYQm3fE0p1vBiVGrgnRbw&oh=00_AfSj25ffI9DoPZvb2prS4H1gwIoQ4TAoH9WeaXhTKYfdvg&oe=68801605",
+        "postId": "3676436921308661545_9003918521",
+        "shortCode": "DMFU-a9u8cp",
+        "ownerUsername": "imsamkohl",
+        "ownerFullName": "Sam Kohl",
+        "ownerId": 9003918521,
+        "enhancementStatus": "completed"
+      },
+      {
+        "creator": {
+          "name": "PHONE VENDOR - phones📱laptops 💻 games 🎮 accessories 🔌",
+          "uniqueId": "phonesvendor",
+          "followers": 135509,
+          "avatarUrl": "https://scontent-sjc3-1.cdninstagram.com/v/t51.2885-19/468080954_1248456376484777_2089239628641208632_n.jpg?stp=dst-jpg_e0_s150x150_tt6&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_cat=105&_nc_oc=Q6cZ2QHVmWSkpZ6R3favkcVJ6dnir2maKaM9eOMtDcB5PWDiNdBVvXMFhuwqx1f8YCqdD0I&_nc_ohc=0ZWZIht3c1kQ7kNvwHT7z6S&_nc_gid=-AYQm3fE0p1vBiVGrgnRbw&edm=AL2I2h8BAAAA&ccb=7-5&ig_cache_key=GDpZ5hupg9bmdm8EADgJ1HtfeP4cbkULAAAB-ccb7-5&oh=00_AfQ-8CzdQlzE2pAb9ZoSYdsTkpPDrYOKjJFJrPaV_Y6g7A&oe=688008F5&_nc_sid=026283",
+          "profilePicUrl": "https://scontent-sjc3-1.cdninstagram.com/v/t51.2885-19/468080954_1248456376484777_2089239628641208632_n.jpg?stp=dst-jpg_e0_s150x150_tt6&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_cat=105&_nc_oc=Q6cZ2QHVmWSkpZ6R3favkcVJ6dnir2maKaM9eOMtDcB5PWDiNdBVvXMFhuwqx1f8YCqdD0I&_nc_ohc=0ZWZIht3c1kQ7kNvwHT7z6S&_nc_gid=-AYQm3fE0p1vBiVGrgnRbw&edm=AL2I2h8BAAAA&ccb=7-5&ig_cache_key=GDpZ5hupg9bmdm8EADgJ1HtfeP4cbkULAAAB-ccb7-5&oh=00_AfQ-8CzdQlzE2pAb9ZoSYdsTkpPDrYOKjJFJrPaV_Y6g7A&oe=688008F5&_nc_sid=026283",
+          "verified": true,
+          "bio": "- Your reliable source for all things tech!\n- Smartphones, laptops, games & accessories\n- 08035347560 | 08059091113 | 07013222030",
+          "emails": [],
+          "qualityScore": 1075,
+          "engagementRate": 0
+        },
+        "video": {
+          "description": "Affordable Airpods Pro 2 \nStill Selling Fast \n\n₦60,000",
+          "url": "https://www.instagram.com/reel/DI4VTgJsGY0",
+          "statistics": {
+            "likes": 42,
+            "comments": 4,
+            "views": 5084,
+            "shares": 0
+          }
+        },
+        "hashtags": [],
+        "publishedTime": "2025-04-25T18:52:31.000Z",
+        "platform": "Instagram",
+        "postType": "Video",
+        "mediaUrl": "https://scontent-sjc3-1.cdninstagram.com/v/t51.75761-15/491235175_18502325368015148_6964612918238192395_n.jpg?stp=dst-jpg_e15_tt6&_nc_cat=103&ig_cache_key=MzYxODczNTk5OTc2MTI3ODUxNg%3D%3D.3-ccb1-7&ccb=1-7&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6InhwaWRzLjcyMHgxMjgwLnNkciJ9&_nc_ohc=EjhBnZgTf1YQ7kNvwH1LF65&_nc_oc=AdkHmliM35UP39pBvwbSGC-t9_R6k_ElH9SijunqAiXYdXmyQtLO3P_2k7CSR1OsI6k&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=-AYQm3fE0p1vBiVGrgnRbw&oh=00_AfSsuHIpJrkCJsusp8VoOXRHlUMiMgJHQ1ctfZvDN1KiWA&oe=688026DD",
+        "postId": "3618735999761278516_748687147",
+        "shortCode": "DI4VTgJsGY0",
+        "ownerUsername": "phonesvendor",
+        "ownerFullName": "PHONE VENDOR - phones📱laptops 💻 games 🎮 accessories 🔌",
+        "ownerId": 748687147,
+        "enhancementStatus": "completed"
+      }
+    ]
+  }
+}
