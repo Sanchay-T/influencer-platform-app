@@ -145,7 +145,7 @@ export async function POST(req: NextRequest) {
           processedRuns: 0,
           processedResults: 0,
           platform: 'Instagram',
-          region: 'US',
+          region: 'GLOBAL',
           campaignId,
           createdAt: new Date(),
           updatedAt: new Date(),

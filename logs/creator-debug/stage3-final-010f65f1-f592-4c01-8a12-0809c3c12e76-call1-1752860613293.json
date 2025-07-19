@@ -1,0 +1,165 @@
+{
+  "stage": "final_transformed_creators",
+  "jobId": "010f65f1-f592-4c01-8a12-0809c3c12e76",
+  "apiCall": 1,
+  "timestamp": "2025-07-18T17:43:33.293Z",
+  "counts": {
+    "finalTransformedCreators": 12,
+    "processedRuns": 1,
+    "maxRuns": 15
+  },
+  "finalCreators": [
+    {
+      "index": 1,
+      "username": "entendendoiphone",
+      "fullName": "Marília Guimarães",
+      "followers": 696947,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "✋Chega de depender da ajuda dos mais novos!\nA sua Independência Tecnológica começa aqui! ⤵️...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DFJDZAISKfq",
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "imsamkohl",
+      "fullName": "Sam Kohl",
+      "followers": 8477,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Lead Apple shepherd @appltrack, inquires at hello@appletrack.com...",
+      "emails": [
+        "hello@appletrack.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DMFU-a9u8cp",
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "ulresch",
+      "fullName": "Ulrich Esch",
+      "followers": 100457,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "▪️Obsessed w/ Tech. Built to level up. \n▪️Based in Cologne, Germany\n▪️kontakt@ulrichesch.de...",
+      "emails": [
+        "kontakt@ulrichesch.de"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DLm8VcNNxct",
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "nicolay.t",
+      "fullName": "Nicolay Tarashchenko",
+      "followers": 52817,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Curating Premium Tech & Lifestyle Gear for Modern Living.\nSecret profile @beautyoftechnology\n📍Munic...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DL-jGZ6sTKz",
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "hitomidocameraroll",
+      "fullName": "Tyler",
+      "followers": 508452,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Don’t be a <^#+\n🇬🇧 +🇯🇵\n✉️ hitomidobusiness@gmail.com...",
+      "emails": [
+        "hitomidobusiness@gmail.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DLosiuDOTYc",
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "bbinko",
+      "fullName": "BINKO",
+      "followers": 471752,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Apple  \nLeica Ambassador (Thailand)\n@bbinkojourney | @bbinkoartdiary...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DMKmuhxSc_I",
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "toooystore",
+      "fullName": "📦玩具一號倉庫💖🎀🩷💗🦄🌸",
+      "followers": 142205,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "販賣快樂的供應商 📮🧰🛠️\n#詢價➕訂購請直接私訊💭小幫手快速回覆你\n🎬盲盒、公仔、卡通動漫週邊開箱分享\n讓生活中充滿可愛才會心情好💛🧡❤️🩷🩵💚\n可愛的東西不嫌多 每個都給我來一...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DLuXRn9pWSI",
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "sandmarc",
+      "fullName": "SANDMARC®",
+      "followers": 286426,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "To Empower & Inspire Creators.\nPremium Tech & Travel Gear📱🎥\n📍San Diego, California\nExplore our pr...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DDPz05NhmvQ",
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "appledsign",
+      "fullName": "Niels | Apple & iPhone Expert",
+      "followers": 4832165,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "I teach you the best iPhone & Apple Tricks!\nYour #1 iPhone, MacBook, iPad & Apple Expert!\nBusiness: ...",
+      "emails": [
+        "appledsign@gmail.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DL8QjUcMxks",
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "hasankarimiofficial",
+      "fullName": "Hasan Karimi",
+      "followers": 184752,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "همه چی در مورد رسانه های اجتماعی\nmosalah iranian ⚽️\nSocial media expert | Content Creator...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DKP9KI7PlpC",
+      "platform": "Instagram"
+    },
+    {
+      "index": 11,
+      "username": "amitmobilesamana",
+      "fullName": "Amit Kalra",
+      "followers": 28618,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "available all Types premium accessories Wholesale Price Address Near Post Office city Samana dis. Pa...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DHnOkwEp7xt",
+      "platform": "Instagram"
+    },
+    {
+      "index": 12,
+      "username": "case__mobilee",
+      "fullName": "کیس موبایل  / قاب موبایل 📱",
+      "followers": 363721,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "انواع قاب و تجهيزات موبايل  📱\nارسال به تمام نقاط ايران ✈️\nجهت سفارش به دايركت مراجعه فرماييد 📥\nپی...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DMIkIBQNc7k",
+      "platform": "Instagram"
+    }
+  ]
+}

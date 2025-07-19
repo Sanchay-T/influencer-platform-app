@@ -1,0 +1,86 @@
+{
+  "stage": "after_initial_quality_filter",
+  "jobId": "010f65f1-f592-4c01-8a12-0809c3c12e76",
+  "apiCall": 5,
+  "timestamp": "2025-07-18T17:44:59.445Z",
+  "counts": {
+    "totalCreatorsFound": 9,
+    "qualityCreatorsAdded": 9,
+    "filteredOutCreators": 0,
+    "finalUniqueCreators": 9
+  },
+  "creators": [
+    {
+      "username": "hasankarimiofficial",
+      "fullName": "Hasan Karimi",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "casepoint._",
+      "fullName": "PHONE ACCESSORIES, COVERS,CHARGERS, AIRPODS 📍",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "darktechofficial",
+      "fullName": "Dark Tech",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "imepoa",
+      "fullName": "Imepoa | Charger | Airpods",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "hd_mongolia",
+      "fullName": "",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "wtfreak.in",
+      "fullName": "Wtfreak Store",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "imsamkohl",
+      "fullName": "Sam Kohl",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "casper.capital",
+      "fullName": "Casper Opala | Personal Finance",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "nawabnabeel",
+      "fullName": "Nabeel Nawab",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    }
+  ]
+}

@@ -1,0 +1,110 @@
+{
+  "stage": "after_initial_quality_filter",
+  "jobId": "010f65f1-f592-4c01-8a12-0809c3c12e76",
+  "apiCall": 1,
+  "timestamp": "2025-07-18T17:43:18.041Z",
+  "counts": {
+    "totalCreatorsFound": 12,
+    "qualityCreatorsAdded": 12,
+    "filteredOutCreators": 0,
+    "finalUniqueCreators": 12
+  },
+  "creators": [
+    {
+      "username": "hasankarimiofficial",
+      "fullName": "Hasan Karimi",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "entendendoiphone",
+      "fullName": "Marília Guimarães",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "imsamkohl",
+      "fullName": "Sam Kohl",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "ulresch",
+      "fullName": "Ulrich Esch",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "nicolay.t",
+      "fullName": "Nicolay Tarashchenko",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "amitmobilesamana",
+      "fullName": "Amit Kalra",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "hitomidocameraroll",
+      "fullName": "Tyler",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "bbinko",
+      "fullName": "BINKO",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "toooystore",
+      "fullName": "📦玩具一號倉庫💖🎀🩷💗🦄🌸",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "case__mobilee",
+      "fullName": "کیس موبایل  / قاب موبایل 📱",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "sandmarc",
+      "fullName": "SANDMARC®",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "appledsign",
+      "fullName": "Niels | Apple & iPhone Expert",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    }
+  ]
+}

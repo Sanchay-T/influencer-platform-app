@@ -1,0 +1,33 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "ec5ad4fe-c410-4033-bd22-638187d3e722",
+  "apiCall": 8,
+  "batchNumber": 3,
+  "timestamp": "2025-07-18T17:55:00.432Z",
+  "counts": {
+    "rawResults": 2,
+    "validResults": 2,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 12
+  },
+  "validCreators": [
+    {
+      "username": "markellisreviews",
+      "fullName": "Mark Ellis",
+      "followers": 9266,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Tech reviewer. Car reviewer. Might review you, if you stand still for too long....",
+      "emails": []
+    },
+    {
+      "username": "techknow_biz",
+      "fullName": "TechKnow Biz",
+      "followers": 10718,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "That 🎧 Guy\n🙋 90K+ on TikTok...",
+      "emails": []
+    }
+  ]
+}

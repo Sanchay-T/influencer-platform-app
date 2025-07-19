@@ -1,0 +1,60 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "ec5ad4fe-c410-4033-bd22-638187d3e722",
+  "apiCall": 5,
+  "batchNumber": 2,
+  "timestamp": "2025-07-18T17:53:03.591Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 10
+  },
+  "validCreators": [
+    {
+      "username": "luxevendors_",
+      "fullName": "ChicOnABudget",
+      "followers": 385,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "✨ Bougie on a budget 💖 | Living my soft life 🌸 | Chic styles, smart choices | Embracing luxury wit...",
+      "emails": []
+    },
+    {
+      "username": "shiv_mobile_hisar",
+      "fullName": "Shiv mobile Hisar",
+      "followers": 91632,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "8053091131☎️ Deals Ac- @dealsbyshakti \nSale |Purchase |Exchange of used-New| Iphones | Mobile phones...",
+      "emails": []
+    },
+    {
+      "username": "amitmobilesamana",
+      "fullName": "Amit Kalra",
+      "followers": 28619,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "available all Types premium accessories Wholesale Price Address Near Post Office city Samana dis. Pa...",
+      "emails": []
+    },
+    {
+      "username": "sellerdg_",
+      "fullName": "SellerDG🎓",
+      "followers": 5867,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "💰 + 6k Con La Reventa\n🎥 + 127k En Tik Tok\n📱 Empieza Con Proveedores Confiables\n👇 Aquí Abajo...",
+      "emails": []
+    },
+    {
+      "username": "lagnipanchall",
+      "fullName": "Lagni Panchall🎀",
+      "followers": 823632,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Fashion | Beauty | Lifestyle | Travel\nManaged by @backstage.creator \n💬DM for collaboration...",
+      "emails": []
+    }
+  ]
+}

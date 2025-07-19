@@ -1,0 +1,64 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "ec5ad4fe-c410-4033-bd22-638187d3e722",
+  "apiCall": 9,
+  "batchNumber": 2,
+  "timestamp": "2025-07-18T17:55:35.430Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 10
+  },
+  "validCreators": [
+    {
+      "username": "hitomidocameraroll",
+      "fullName": "Tyler",
+      "followers": 508454,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Don’t be a <^#+\n🇬🇧 +🇯🇵\n✉️ hitomidobusiness@gmail.com...",
+      "emails": [
+        "hitomidobusiness@gmail.com"
+      ]
+    },
+    {
+      "username": "bbinko",
+      "fullName": "BINKO",
+      "followers": 471752,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Apple  \nLeica Ambassador (Thailand)\n@bbinkojourney | @bbinkoartdiary...",
+      "emails": []
+    },
+    {
+      "username": "iliasbsd",
+      "fullName": "Ilias Bousaidi",
+      "followers": 64810,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "tech content creator 📸📱\n📧 ilias@vertical-influence.com\nCreative Console: ⤵️...",
+      "emails": [
+        "ilias@vertical-influence.com"
+      ]
+    },
+    {
+      "username": "toooystore",
+      "fullName": "📦玩具一號倉庫💖🎀🩷💗🦄🌸",
+      "followers": 142206,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "販賣快樂的供應商 📮🧰🛠️\n#詢價➕訂購請直接私訊💭小幫手快速回覆你\n🎬盲盒、公仔、卡通動漫週邊開箱分享\n讓生活中充滿可愛才會心情好💛🧡❤️🩷🩵💚\n可愛的東西不嫌多 每個都給我來一...",
+      "emails": []
+    },
+    {
+      "username": "hasankarimiofficial",
+      "fullName": "Hasan Karimi",
+      "followers": 184752,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "همه چی در مورد رسانه های اجتماعی\nmosalah iranian ⚽️\nSocial media expert | Content Creator...",
+      "emails": []
+    }
+  ]
+}

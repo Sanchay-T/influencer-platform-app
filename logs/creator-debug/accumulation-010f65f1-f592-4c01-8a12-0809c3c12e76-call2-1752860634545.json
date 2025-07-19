@@ -1,0 +1,31 @@
+{
+  "stage": "accumulation_tracking",
+  "jobId": "010f65f1-f592-4c01-8a12-0809c3c12e76",
+  "apiCall": 2,
+  "timestamp": "2025-07-18T17:43:54.545Z",
+  "accumulation": {
+    "previousCreatorsCount": 12,
+    "newCreatorsCount": 5,
+    "totalAccumulatedCount": 17,
+    "duplicatesRemoved": 0
+  },
+  "usernames": [
+    "entendendoiphone",
+    "imsamkohl",
+    "ulresch",
+    "nicolay.t",
+    "hitomidocameraroll",
+    "bbinko",
+    "toooystore",
+    "sandmarc",
+    "appledsign",
+    "hasankarimiofficial",
+    "amitmobilesamana",
+    "case__mobilee",
+    "foodpangali",
+    "techplusgadgets",
+    "irina.tech",
+    "beebomco",
+    "hemantmahto._"
+  ]
+}

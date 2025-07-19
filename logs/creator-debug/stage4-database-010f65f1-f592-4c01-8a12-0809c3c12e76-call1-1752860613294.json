@@ -1,0 +1,109 @@
+{
+  "stage": "database_save_final",
+  "jobId": "010f65f1-f592-4c01-8a12-0809c3c12e76",
+  "apiCall": 1,
+  "timestamp": "2025-07-18T17:43:33.294Z",
+  "counts": {
+    "creatorsBeingPersisted": 12,
+    "newProcessedRuns": 1,
+    "newProcessedResults": 12
+  },
+  "finalDatabaseCreators": [
+    {
+      "index": 1,
+      "username": "entendendoiphone",
+      "followers": 696947,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "imsamkohl",
+      "followers": 8477,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "ulresch",
+      "followers": 100457,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "nicolay.t",
+      "followers": 52817,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "hitomidocameraroll",
+      "followers": 508452,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "bbinko",
+      "followers": 471752,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "toooystore",
+      "followers": 142205,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "sandmarc",
+      "followers": 286426,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "appledsign",
+      "followers": 4832165,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "hasankarimiofficial",
+      "followers": 184752,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 11,
+      "username": "amitmobilesamana",
+      "followers": 28618,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 12,
+      "username": "case__mobilee",
+      "followers": 363721,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    }
+  ]
+}

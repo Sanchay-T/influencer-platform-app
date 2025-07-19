@@ -1,0 +1,102 @@
+{
+  "stage": "after_initial_quality_filter",
+  "jobId": "ec5ad4fe-c410-4033-bd22-638187d3e722",
+  "apiCall": 14,
+  "timestamp": "2025-07-18T17:58:43.807Z",
+  "counts": {
+    "totalCreatorsFound": 11,
+    "qualityCreatorsAdded": 11,
+    "filteredOutCreators": 0,
+    "finalUniqueCreators": 11
+  },
+  "creators": [
+    {
+      "username": "lighkeep_headphones",
+      "fullName": "Lighkeep Headphones",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "pradeep__technical",
+      "fullName": "Pradeep Joshi",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "appledsign",
+      "fullName": "Niels | Apple & iPhone Expert",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "market.yandex.go.obzor",
+      "fullName": "Market Yandex Go da obzor",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "wholesale.gallery",
+      "fullName": "Wholesale gallery",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "lucky_mbb",
+      "fullName": "M BARKAT | Tech, Ai",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "thejrnyofficial",
+      "fullName": "JOURNEY",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "applefix.cl",
+      "fullName": "Servicio Técnico Apple  📲🛠️",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "alxscasse",
+      "fullName": "Alxs Case",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "ilya_blanko",
+      "fullName": "Илья Бланко",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "technoshop.kaz",
+      "fullName": "СМАРТ ЧАСЫ/НАУШНИКИ/АЛМАТЫ📍",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    }
+  ]
+}

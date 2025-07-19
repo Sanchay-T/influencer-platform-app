@@ -1,0 +1,64 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "ec5ad4fe-c410-4033-bd22-638187d3e722",
+  "apiCall": 9,
+  "batchNumber": 1,
+  "timestamp": "2025-07-18T17:55:21.915Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 5
+  },
+  "validCreators": [
+    {
+      "username": "entendendoiphone",
+      "fullName": "Marília Guimarães",
+      "followers": 696947,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "✋Chega de depender da ajuda dos mais novos!\nA sua Independência Tecnológica começa aqui! ⤵️...",
+      "emails": []
+    },
+    {
+      "username": "imsamkohl",
+      "fullName": "Sam Kohl",
+      "followers": 8477,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Lead Apple shepherd @appltrack, inquires at hello@appletrack.com...",
+      "emails": [
+        "hello@appletrack.com"
+      ]
+    },
+    {
+      "username": "sandmarc",
+      "fullName": "SANDMARC®",
+      "followers": 286431,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "To Empower & Inspire Creators.\nPremium Tech & Travel Gear📱🎥\n📍San Diego, California\nExplore our pr...",
+      "emails": []
+    },
+    {
+      "username": "ulresch",
+      "fullName": "Ulrich Esch",
+      "followers": 100458,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "▪️Obsessed w/ Tech. Built to level up. \n▪️Based in Cologne, Germany\n▪️kontakt@ulrichesch.de...",
+      "emails": [
+        "kontakt@ulrichesch.de"
+      ]
+    },
+    {
+      "username": "nicolay.t",
+      "fullName": "Nicolay Tarashchenko",
+      "followers": 52817,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Curating Premium Tech & Lifestyle Gear for Modern Living.\nSecret profile @beautyoftechnology\n📍Munic...",
+      "emails": []
+    }
+  ]
+}

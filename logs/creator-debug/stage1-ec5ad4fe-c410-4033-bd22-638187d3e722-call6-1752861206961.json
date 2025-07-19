@@ -1,0 +1,110 @@
+{
+  "stage": "after_initial_quality_filter",
+  "jobId": "ec5ad4fe-c410-4033-bd22-638187d3e722",
+  "apiCall": 6,
+  "timestamp": "2025-07-18T17:53:26.961Z",
+  "counts": {
+    "totalCreatorsFound": 12,
+    "qualityCreatorsAdded": 12,
+    "filteredOutCreators": 0,
+    "finalUniqueCreators": 12
+  },
+  "creators": [
+    {
+      "username": "earpods_kenya",
+      "fullName": "EARPODS KENYA",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "ecasetech",
+      "fullName": "E Case Tecnology",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "kuxiutech",
+      "fullName": "KUXIU",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "technoshop.kaz",
+      "fullName": "СМАРТ ЧАСЫ/НАУШНИКИ/АЛМАТЫ📍",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "irina.tech",
+      "fullName": "Irina",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "mybasketmrkt",
+      "fullName": "My basket market",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "applefix.cl",
+      "fullName": "Servicio Técnico Apple  📲🛠️",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "foodpangali",
+      "fullName": "Gokul R",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "chollo.man",
+      "fullName": "Alejandro Morcillo Bermudo",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "hemantmahto._",
+      "fullName": "HEMANT MAHTO",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "techplusgadgets",
+      "fullName": "Naman Deshmukh",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "bossmobilebaku",
+      "fullName": "Apple | iPhone | MacBook | iPad | AirPods",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    }
+  ]
+}

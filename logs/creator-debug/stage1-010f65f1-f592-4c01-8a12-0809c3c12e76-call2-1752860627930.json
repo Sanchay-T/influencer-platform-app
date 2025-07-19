@@ -1,0 +1,110 @@
+{
+  "stage": "after_initial_quality_filter",
+  "jobId": "010f65f1-f592-4c01-8a12-0809c3c12e76",
+  "apiCall": 2,
+  "timestamp": "2025-07-18T17:43:47.930Z",
+  "counts": {
+    "totalCreatorsFound": 12,
+    "qualityCreatorsAdded": 12,
+    "filteredOutCreators": 0,
+    "finalUniqueCreators": 12
+  },
+  "creators": [
+    {
+      "username": "earpods_kenya",
+      "fullName": "EARPODS KENYA",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "ecasetech",
+      "fullName": "E Case Tecnology",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "foodpangali",
+      "fullName": "Gokul R",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "technoshop.kaz",
+      "fullName": "СМАРТ ЧАСЫ/НАУШНИКИ/АЛМАТЫ📍",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "techplusgadgets",
+      "fullName": "Naman Deshmukh",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "mybasketmrkt",
+      "fullName": "My basket market",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "irina.tech",
+      "fullName": "Irina",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "beebomco",
+      "fullName": "Beebom",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "ak_adventure_94",
+      "fullName": "Aahil Khan",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "justcasp_",
+      "fullName": "Casp",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "hemantmahto._",
+      "fullName": "HEMANT MAHTO",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "bossmobilebaku",
+      "fullName": "Apple | iPhone | MacBook | iPad | AirPods",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    }
+  ]
+}

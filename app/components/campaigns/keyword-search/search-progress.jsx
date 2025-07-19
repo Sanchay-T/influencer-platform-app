@@ -115,11 +115,31 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
           apiEndpoint: apiEndpoint
         });
         
-        const response = await fetch(apiEndpoint, {
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
+        // Try fetch with browser-compatible timeout
+        let response;
+        try {
+          // Check if AbortSignal.timeout is supported (newer browsers only)
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+          
+          response = await fetch(apiEndpoint, {
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            signal: controller.signal
+          });
+          
+          clearTimeout(timeoutId);
+        } catch (fetchError) {
+          // If fetch fails with timeout/network error, try simple fetch as fallback
+          console.log('⚠️ [FETCH-FALLBACK] First fetch failed, trying simple fallback...', fetchError.message);
+          response = await fetch(apiEndpoint, {
+            headers: {
+              'Content-Type': 'application/json'
+            }
+            // No timeout for fallback
+          });
+        }
         
         // Check for API errors and log them
         if (!response.ok) {
@@ -433,25 +453,44 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
       } catch (error) {
         console.error('❌ [POLL-ERROR] Error polling job status:', error);
         
+        // Enhanced error handling for different error types
+        let errorMessage = error.message;
+        let shouldRetry = true;
+        
+        if (error.name === 'AbortError' || error.message.includes('timeout')) {
+          errorMessage = 'Request timeout - server may be processing';
+          console.log('⏱️ [POLL-TIMEOUT] Request timed out, will retry...');
+        } else if (error.message.includes('Failed to fetch')) {
+          errorMessage = 'Network error - checking connection';
+          console.log('🌐 [NETWORK-ERROR] Network connectivity issue, will retry...');
+        } else if (error.message.includes('NetworkError')) {
+          errorMessage = 'Server temporarily unavailable';
+          console.log('🚫 [SERVER-ERROR] Server connection failed, will retry...');
+        }
+        
         // 🚨 VALIDATION LOG: Check if component shows stale data during connection errors
         console.log('🚨 [ERROR-STATE-CHECK] Component state during polling error:', {
           errorType: error.name,
-          errorMessage: error.message,
+          errorMessage: errorMessage,
+          originalError: error.message,
           currentIntermediateCreators: intermediateCreators.length,
           currentRenderKey: renderKey,
           showingStaleData: intermediateCreators.length > 0,
           staleDataNames: intermediateCreators.slice(0, 3).map(c => c.creator?.name),
           jobId: jobId,
-          retryCount: retryCount
+          retryCount: retryCount,
+          willRetry: retryCount < maxRetries
         });
         
         if (retryCount >= maxRetries) {
           clearTimeout(pollIntervalRef.current);
-          setError("Unable to connect to the server. Please check your campaign status later.");
+          setError(`Connection failed after ${maxRetries} retries: ${errorMessage}`);
         } else {
           setRetryCount(prev => prev + 1);
-          // Retry with normal interval on error
-          pollIntervalRef.current = setTimeout(poll, 3000);
+          // Exponential backoff for retries
+          const retryDelay = Math.min(3000 * Math.pow(2, retryCount), 15000); // Max 15 seconds
+          console.log(`🔄 [RETRY] Retrying in ${retryDelay}ms (attempt ${retryCount + 1}/${maxRetries})`);
+          pollIntervalRef.current = setTimeout(poll, retryDelay);
         }
       }
     };
@@ -564,11 +603,27 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
     
     // Special handling for Instagram reels bio/email enhancement progress
     const isInstagramReels = platformName.toLowerCase() === 'instagram' && !isSimilarSearch;
+    const isTikTokKeyword = platformName.toLowerCase() === 'tiktok' && !isSimilarSearch;
     
     if (processedResults > 0) {
       if (isInstagramReels) {
         // Show real enhancement progress for Instagram reels
         return `Enhancing ${processedResults} Instagram creator profiles (${Math.round(displayProgress)}%)`;
+      } else if (isTikTokKeyword) {
+        // Enhanced messages for TikTok keyword search to show immediate activity
+        if (displayProgress < 15) {
+          return `Searching TikTok for "${searchData?.keywords?.[0] || 'creators'}"...`;
+        }
+        if (displayProgress < 30) {
+          return `Found ${processedResults} creators, fetching profile bios...`;
+        }
+        if (displayProgress < 60) {
+          return `Extracting emails from ${processedResults} TikTok profiles...`;
+        }
+        if (displayProgress < 90) {
+          return `Caching images for ${processedResults} creators...`;
+        }
+        return `Finalizing ${processedResults} TikTok creator profiles`;
       } else {
         // Standard messages for other platforms
         if (displayProgress < 25) {
@@ -594,6 +649,16 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
         if (displayProgress < 10) return `Searching Instagram reels for your keywords...`;
         if (displayProgress < 25) return `Found Instagram reels, getting creator profiles...`;
         return `Enhancing creator profiles with bio & email data...`;
+      } else if (isTikTokKeyword) {
+        // TikTok keyword specific messages to show immediate activity
+        const keyword = searchData?.keywords?.[0] || 'creators';
+        if (displayProgress < 5) return `Initializing TikTok search for "${keyword}"...`;
+        if (displayProgress < 10) return `Connecting to TikTok API...`;
+        if (displayProgress < 15) return `Searching TikTok videos for "${keyword}"...`;
+        if (displayProgress < 25) return `Processing TikTok search results...`;
+        if (displayProgress < 50) return `Fetching creator profiles from TikTok...`;
+        if (displayProgress < 75) return `Extracting bio & contact information...`;
+        return 'Preparing final results...';
       } else {
         // Keyword search messages (existing)
         if (displayProgress < 25) return `Searching ${platformName.toLowerCase()} database...`;

@@ -1,0 +1,66 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "010f65f1-f592-4c01-8a12-0809c3c12e76",
+  "apiCall": 2,
+  "batchNumber": 1,
+  "timestamp": "2025-07-18T17:43:52.720Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 5
+  },
+  "validCreators": [
+    {
+      "username": "foodpangali",
+      "fullName": "Gokul R",
+      "followers": 200985,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "👑Since 1999⚡️| Digital Creator🍿\n|Food🍔•Invention👨‍🍳• Travel 🌎|\n📍✨COIMBATORE 👑✨\n@ecr__studio...",
+      "emails": []
+    },
+    {
+      "username": "techplusgadgets",
+      "fullName": "Naman Deshmukh",
+      "followers": 3598789,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "🏆 National Creator Awardee \n🥇Forbes Top 100 Creators 23 & 24✨\n🔥Powered by: @socialsauce.in \n📩 Fo...",
+      "emails": [
+        "naman@socialsauce.in"
+      ]
+    },
+    {
+      "username": "irina.tech",
+      "fullName": "Irina",
+      "followers": 49402,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Tech/Lifestyle📱💻⚙️...",
+      "emails": []
+    },
+    {
+      "username": "beebomco",
+      "fullName": "Beebom",
+      "followers": 3241091,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Tech that matters.\nFor business enquiries: contact@beebom.com\n👇🏻Buy the viral gadgets!...",
+      "emails": [
+        "contact@beebom.com"
+      ]
+    },
+    {
+      "username": "hemantmahto._",
+      "fullName": "HEMANT MAHTO",
+      "followers": 5491956,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Main Ac. @hr_mahto_official\n📱Hack and Tricks\n🇮🇳 Education is the key that unlocks the golden door...",
+      "emails": [
+        ".realwood67@gmail.com"
+      ]
+    }
+  ]
+}

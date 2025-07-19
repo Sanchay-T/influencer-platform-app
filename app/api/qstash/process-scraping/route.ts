@@ -251,6 +251,15 @@ export async function POST(req: Request) {
     console.log('🔧 [CONFIG] Max API calls for testing:', MAX_API_CALLS_FOR_TESTING);
     console.log('🔧 [CONFIG] TikTok continuation delay:', TIKTOK_CONTINUATION_DELAY);
     console.log('🔧 [CONFIG] Instagram reels delay:', INSTAGRAM_REELS_DELAY);
+    
+    // 🚀 SYSTEM ENHANCEMENTS ACTIVE
+    console.log('\n🚀 [ENHANCED-SYSTEM] Instagram Reels Maximization Features Active:');
+    console.log('🌍 [ENHANCEMENT] Global search (removed US region restriction)');
+    console.log('🔍 [ENHANCEMENT] Smart keyword expansion (4 variations per input)');
+    console.log('📊 [ENHANCEMENT] Increased limits: 15 API calls → 200+ target creators');
+    console.log('✨ [ENHANCEMENT] Relaxed quality filtering: 300+ followers or verified/business');
+    console.log('🧠 [ENHANCEMENT] Smart continuation with keyword fallbacks');
+    console.log('🎯 [ENHANCEMENT] Expected results: 50-200+ creators (vs previous 3-11)\n');
 
     // CRITICAL DIAGNOSTIC: Check platform detection logic
     console.log('\n🔍🔍🔍 [PLATFORM-DETECTION] DIAGNOSTIC CHECK 🔍🔍🔍');
@@ -287,9 +296,9 @@ export async function POST(req: Request) {
       console.log('\n🔍 [JOB-STATUS-DEBUG] Current job status at start:');
       console.log('📊 [JOB-STATUS-DEBUG] Runs:', {
         processedRuns: job.processedRuns,
-        maxRuns: 8, // INSTAGRAM_REELS_MAX_REQUESTS
+        maxRuns: 15, // INSTAGRAM_REELS_MAX_REQUESTS
         isFirstRun: job.processedRuns === 0,
-        runsRemaining: 8 - job.processedRuns
+        runsRemaining: 15 - job.processedRuns
       });
       console.log('📊 [JOB-STATUS-DEBUG] Results:', {
         processedResults: job.processedResults,
@@ -299,8 +308,8 @@ export async function POST(req: Request) {
       console.log('📊 [JOB-STATUS-DEBUG] This should be API call number:', job.processedRuns + 1);
       
       // Instagram Reels specific configuration: Allow multiple requests for more results
-      // This allows you to get 50-100 high-quality results
-      const INSTAGRAM_REELS_MAX_REQUESTS = 8;
+      // Enhanced for maximized results: 50-200+ high-quality creators
+      const INSTAGRAM_REELS_MAX_REQUESTS = 15;
       console.log('📋 [RAPIDAPI-INSTAGRAM] Job details:', {
         jobId: job.id,
         keywords: job.keywords,
@@ -366,7 +375,50 @@ export async function POST(req: Request) {
           .where(eq(scrapingJobs.id, job.id));
         console.log('📊 [PROGRESS] Updated to 10% - Starting reels search');
         
-        const keyword = job.keywords[0]; // Use first keyword for search
+        // 🚀 KEYWORD EXPANSION: Generate variations for maximum coverage
+        function expandKeywords(originalKeyword) {
+          const keyword = originalKeyword.toLowerCase().trim();
+          const expansions = [originalKeyword]; // Start with original
+          
+          // Tech product variations
+          if (keyword.includes('airpods')) {
+            expansions.push('airpods', 'wireless earbuds', 'apple earbuds', 'bluetooth headphones');
+          } else if (keyword.includes('iphone')) {
+            expansions.push('iphone', 'apple phone', 'smartphone', 'mobile phone');
+          } else if (keyword.includes('tech review')) {
+            expansions.push('tech review', 'tech unboxing', 'gadget review', 'tech comparison');
+          } else if (keyword.includes('gaming')) {
+            expansions.push('gaming', 'game review', 'gaming setup', 'pc gaming');
+          } else if (keyword.includes('laptop')) {
+            expansions.push('laptop', 'notebook', 'computer review', 'laptop review');
+          } else {
+            // Generic expansions for any keyword
+            const words = keyword.split(' ');
+            if (words.length > 1) {
+              expansions.push(words[0]); // First word only
+              expansions.push(words.join(' ') + ' review'); // Add "review"
+              expansions.push(words.join(' ') + ' unboxing'); // Add "unboxing"
+            }
+          }
+          
+          // Remove duplicates and return first 4 unique keywords
+          return [...new Set(expansions)].slice(0, 4);
+        }
+        
+        const originalKeyword = job.keywords[0];
+        const expandedKeywords = expandKeywords(originalKeyword);
+        
+        // Smart keyword rotation: Use different keywords for different API calls
+        const keywordIndex = job.processedRuns % expandedKeywords.length;
+        const keyword = expandedKeywords[keywordIndex];
+        
+        console.log('🔍 [KEYWORD-EXPANSION] Keyword strategy:', {
+          originalKeyword: originalKeyword,
+          expandedKeywords: expandedKeywords,
+          currentAPICall: job.processedRuns + 1,
+          selectedKeyword: keyword,
+          keywordRotation: `Using keyword ${keywordIndex + 1}/${expandedKeywords.length}`
+        });
         
         // Add pagination/offset for different results on each call
         const currentRun = job.processedRuns || 0;
@@ -376,10 +428,12 @@ export async function POST(req: Request) {
         console.log('📊 [RAPIDAPI-INSTAGRAM] Making reels search API call:', {
           url: reelsSearchUrl,
           keyword: keyword,
+          keywordType: keywordIndex === 0 ? 'original' : 'expanded',
           callNumber: job.processedRuns + 1,
           maxCallsForInstagramReels: INSTAGRAM_REELS_MAX_REQUESTS,
           offset: offset,
-          expectedNewResults: '~10-20 quality creators'
+          globalSearch: 'enabled',
+          expectedNewResults: '~15-30 quality creators (enhanced)'
         });
         
         const reelsStartTime = Date.now();
@@ -430,6 +484,47 @@ export async function POST(req: Request) {
         if (allReels.length === 0) {
           console.log('⚠️ [RAPIDAPI-INSTAGRAM] No reels found for keyword:', keyword);
           
+          // 🚀 SMART CONTINUATION: Try with broader keywords or continue if we haven't hit limits
+          const hasMoreKeywords = (job.processedRuns + 1) < expandedKeywords.length * 3; // Try each keyword multiple times
+          const hasMoreAPICalls = (job.processedRuns + 1) < INSTAGRAM_REELS_MAX_REQUESTS;
+          const hasAccumulatedResults = job.processedResults > 0;
+          
+          console.log('🔍 [SMART-CONTINUATION] Zero-result analysis:', {
+            currentKeyword: keyword,
+            expandedKeywords: expandedKeywords,
+            hasMoreKeywords: hasMoreKeywords,
+            hasMoreAPICalls: hasMoreAPICalls,
+            hasAccumulatedResults: hasAccumulatedResults,
+            shouldContinue: hasMoreAPICalls && (hasMoreKeywords || hasAccumulatedResults < 50)
+          });
+          
+          // Continue if we have more API calls and haven't tried all keyword combinations
+          if (hasMoreAPICalls && (hasMoreKeywords || job.processedResults < 50)) {
+            console.log('🔄 [SMART-CONTINUATION] Continuing with next keyword variation...');
+            
+            // Update job for continuation
+            await db.update(scrapingJobs)
+              .set({
+                processedRuns: job.processedRuns + 1,
+                progress: Math.round((job.processedRuns + 1) / INSTAGRAM_REELS_MAX_REQUESTS * 100).toString(),
+                updatedAt: new Date()
+              })
+              .where(eq(scrapingJobs.id, job.id));
+            
+            // Schedule next attempt with different keyword
+            const callbackUrl = `${baseUrl}/api/qstash/process-scraping`;
+            await qstash.publishJSON({
+              url: callbackUrl,
+              body: { jobId: job.id },
+              delay: '2s'
+            });
+            
+            return NextResponse.json({
+              success: true,
+              message: `Instagram reels search continuing with keyword variations - ${job.processedResults} creators found so far`
+            });
+          }
+          
           // Mark job as completed preserving accumulated results
           console.log('🔧 [ZERO-RESULT-FIX] Preserving accumulated results:', job.processedResults);
           await db.update(scrapingJobs)
@@ -445,7 +540,7 @@ export async function POST(req: Request) {
           
           return NextResponse.json({
             success: true,
-            message: 'Instagram reels search completed (no results found)'
+            message: `Instagram reels search completed - ${job.processedResults} total creators found`
           });
         }
         
@@ -683,8 +778,9 @@ export async function POST(req: Request) {
                 const realFollowerCount = followerCount || creatorData.followerCount || 0;
                 const passesSecondaryQuality = (
                   creatorData.isVerified || // Verified accounts always pass
-                  realFollowerCount >= 1000 || // At least 1K real followers
-                  (!creatorData.isPrivate && realFollowerCount >= 500) // Public accounts with 500+ followers
+                  realFollowerCount >= 300 || // Lowered to 300+ real followers
+                  (!creatorData.isPrivate && realFollowerCount >= 50) || // Public accounts with 50+ followers
+                  (creatorData.isBusinessAccount) // Business accounts pass
                 );
                 
                 console.log(`✅ [BIO-ENHANCEMENT] Enhanced @${creatorData.username}:`, {
@@ -710,12 +806,13 @@ export async function POST(req: Request) {
             }
           }
           
-          // 🔍 SECONDARY QUALITY CHECK: More lenient filtering to get more results
+          // 🔍 SECONDARY QUALITY CHECK: Maximum leniency for more results
           const realFollowerCount = creatorData.followerCount || 0;
           const passesSecondaryQuality = (
             creatorData.isVerified || // Verified accounts always pass
-            realFollowerCount >= 500 || // Lowered to 500+ followers (from 1000)
-            (!creatorData.isPrivate && realFollowerCount >= 100) // Public accounts with 100+ followers
+            realFollowerCount >= 300 || // Further lowered to 300+ followers
+            (!creatorData.isPrivate && realFollowerCount >= 50) || // Public accounts with 50+ followers
+            (creatorData.isBusinessAccount) // Business accounts pass
           );
           
           // Skip creators who don't meet secondary quality standards
@@ -1064,8 +1161,8 @@ export async function POST(req: Request) {
         }
         
         // CHECK: Should we continue with more API calls for more results?
-        // Continue until we have good number of results (target 100 quality creators) or hit API limit
-        const targetQualityCreators = 100; // Reasonable target for quality creators
+        // Continue until we have good number of results (target 200+ quality creators) or hit API limit
+        const targetQualityCreators = 200; // Enhanced target for maximum quality creators
         const shouldContinue = newProcessedRuns < INSTAGRAM_REELS_MAX_REQUESTS && newProcessedResults < targetQualityCreators;
         
         // 🔍 DETAILED CONTINUATION LOGGING
@@ -1110,12 +1207,13 @@ export async function POST(req: Request) {
           
           return NextResponse.json({
             success: true,
-            message: `Instagram reels search continuing - ${newProcessedResults} quality creators so far`,
+            message: `Instagram reels search continuing (enhanced) - ${newProcessedResults} quality creators so far`,
             stage: 'continuing',
             processedRuns: newProcessedRuns,
             maxRuns: INSTAGRAM_REELS_MAX_REQUESTS,
             processedResults: newProcessedResults,
-            targetQualityCreators: targetQualityCreators
+            targetQualityCreators: targetQualityCreators,
+            enhancedFeatures: 'global_search + keyword_expansion + relaxed_filtering'
           });
         } else {
           // COMPLETE: Mark job as completed with full bio/email data
@@ -1240,6 +1338,16 @@ export async function POST(req: Request) {
         // This matches the pattern described in Claude.md
         console.log('🔄 [TIKTOK-KEYWORD] Starting TikTok keyword search processing');
         
+        // 🚀 IMMEDIATE PROGRESS: Update to show we're starting
+        await db.update(scrapingJobs)
+          .set({
+            status: 'processing',
+            progress: '5', // Start at 5% to show immediate activity
+            updatedAt: new Date()
+          })
+          .where(eq(scrapingJobs.id, job.id));
+        console.log('🚀 [IMMEDIATE-PROGRESS] Set initial progress to 5% - Job is active!');
+        
         // 📊 PROGRESS LOGGING: Current job state
         console.log('📊 [PROGRESS-CHECK] Current job state:', {
           jobId: job.id,
@@ -1296,6 +1404,15 @@ export async function POST(req: Request) {
           cursor: job.cursor || 0
         });
         
+        // 🚀 IMMEDIATE PROGRESS: Update to show API call started
+        await db.update(scrapingJobs)
+          .set({
+            progress: '10', // API call in progress
+            updatedAt: new Date()
+          })
+          .where(eq(scrapingJobs.id, job.id));
+        console.log('🚀 [IMMEDIATE-PROGRESS] Updated progress to 10% - API call started!');
+        
         const response = await fetch(apiUrl, {
           headers: { 'x-api-key': process.env.SCRAPECREATORS_API_KEY! }
         });
@@ -1346,6 +1463,15 @@ export async function POST(req: Request) {
         
         console.log('🔄 [GRANULAR-PROGRESS] Processing', rawResults.length, 'TikTok results in batches of', batchSize);
         console.log('🔍 [PROFILE-ENHANCEMENT] Starting enhanced profile data fetching for creators with missing bio data');
+        
+        // 🚀 IMMEDIATE PROGRESS: Update to show processing started
+        await db.update(scrapingJobs)
+          .set({
+            progress: '15', // Started processing creators
+            updatedAt: new Date()
+          })
+          .where(eq(scrapingJobs.id, job.id));
+        console.log('🚀 [IMMEDIATE-PROGRESS] Updated progress to 15% - Processing creators!');
         
         for (let i = 0; i < rawResults.length; i += batchSize) {
           const batch = rawResults.slice(i, i + batchSize);
@@ -1460,28 +1586,31 @@ export async function POST(req: Request) {
           
           // Update granular progress for this batch
           const currentBatchProgress = ((i + batch.length) / rawResults.length) * 100;
-          const baseProgress = (job.processedRuns / MAX_API_CALLS_FOR_TESTING) * 100;
-          const granularProgress = baseProgress + (currentBatchProgress / MAX_API_CALLS_FOR_TESTING);
+          
+          // 🚀 IMPROVED PROGRESS: More responsive calculation
+          // Start from 15% (processing started) and go up to 90% during creator processing
+          const processingRange = 75; // 15% to 90%
+          const processingProgress = 15 + (currentBatchProgress / 100 * processingRange);
           
           console.log('📊 [GRANULAR-PROGRESS] Batch', Math.floor(i/batchSize) + 1, 'processed:', {
             batchSize: batch.length,
             totalProcessed: creators.length,
             batchProgress: Math.round(currentBatchProgress),
-            granularProgress: Math.round(granularProgress)
+            processingProgress: Math.round(processingProgress)
           });
           
-          // Update database with granular progress (only for significant batches)
-          if (i > 0 && (i % (batchSize * 2) === 0 || i + batchSize >= rawResults.length)) {
+          // Update database with granular progress (update more frequently for better UX)
+          if (i % batchSize === 0 || i + batchSize >= rawResults.length) {
             const tempProcessedResults = job.processedResults + creators.length;
             await db.update(scrapingJobs)
               .set({
                 processedResults: tempProcessedResults,
-                progress: Math.min(granularProgress, 100).toString(),
+                progress: Math.min(Math.round(processingProgress), 90).toString(), // Cap at 90% during processing
                 updatedAt: new Date()
               })
               .where(eq(scrapingJobs.id, jobId));
             
-            console.log('💾 [GRANULAR-PROGRESS] Updated database with granular progress:', Math.round(granularProgress) + '%');
+            console.log('💾 [GRANULAR-PROGRESS] Updated database with processing progress:', Math.round(processingProgress) + '%');
           }
           
           // Small delay between batches to make progress visible

@@ -1,0 +1,64 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "ec5ad4fe-c410-4033-bd22-638187d3e722",
+  "apiCall": 13,
+  "batchNumber": 1,
+  "timestamp": "2025-07-18T17:58:08.258Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 5
+  },
+  "validCreators": [
+    {
+      "username": "phonesvendor",
+      "fullName": "PHONE VENDOR - phones📱laptops 💻 games 🎮 accessories 🔌",
+      "followers": 135492,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "- Your reliable source for all things tech!\n- Smartphones, laptops, games & accessories\n- 0803534756...",
+      "emails": []
+    },
+    {
+      "username": "imsamkohl",
+      "fullName": "Sam Kohl",
+      "followers": 8477,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Lead Apple shepherd @appltrack, inquires at hello@appletrack.com...",
+      "emails": [
+        "hello@appletrack.com"
+      ]
+    },
+    {
+      "username": "appledsign",
+      "fullName": "Niels | Apple & iPhone Expert",
+      "followers": 4832197,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "I teach you the best iPhone & Apple Tricks!\nYour #1 iPhone, MacBook, iPad & Apple Expert!\nBusiness: ...",
+      "emails": [
+        "appledsign@gmail.com"
+      ]
+    },
+    {
+      "username": "hasankarimiofficial",
+      "fullName": "Hasan Karimi",
+      "followers": 184752,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "همه چی در مورد رسانه های اجتماعی\nmosalah iranian ⚽️\nSocial media expert | Content Creator...",
+      "emails": []
+    },
+    {
+      "username": "casepoint._",
+      "fullName": "PHONE ACCESSORIES, COVERS,CHARGERS, AIRPODS 📍",
+      "followers": 12255,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "𝗖𝗮𝘀𝗲𝗣𝗼𝗶𝗻𝘁 – 𝗠𝗼𝗿𝗲 𝗧𝗵𝗮𝗻 𝗝𝘂𝘀𝘁 𝗮 𝗖𝗮𝘀𝗲!\n✨ 𝗣𝗿𝗼𝘁𝗲𝗰𝘁 𝗶𝗻 𝗦𝘁𝘆𝗹𝗲 | 𝗧𝗿...",
+      "emails": []
+    }
+  ]
+}

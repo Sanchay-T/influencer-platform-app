@@ -1,0 +1,19 @@
+{
+  "stage": "accumulation_tracking",
+  "jobId": "ec5ad4fe-c410-4033-bd22-638187d3e722",
+  "apiCall": 2,
+  "timestamp": "2025-07-18T17:51:38.024Z",
+  "accumulation": {
+    "previousCreatorsCount": 0,
+    "newCreatorsCount": 5,
+    "totalAccumulatedCount": 5,
+    "duplicatesRemoved": 0
+  },
+  "usernames": [
+    "irina.tech",
+    "applefix.cl",
+    "earpods_kenya",
+    "mybasketmrkt",
+    "technoshop.kaz"
+  ]
+}

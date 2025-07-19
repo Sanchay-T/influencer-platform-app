@@ -1,0 +1,64 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "ec5ad4fe-c410-4033-bd22-638187d3e722",
+  "apiCall": 5,
+  "batchNumber": 1,
+  "timestamp": "2025-07-18T17:52:57.567Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 5
+  },
+  "validCreators": [
+    {
+      "username": "emkwan",
+      "fullName": "EMKWAN",
+      "followers": 166645,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "📲 Tech, AI, Cars & Watches from Dubai 🇦🇪\n🌴 Top 10 Tech Influencer Dubai 2025\n🚀 500M+ Views\n تاب...",
+      "emails": []
+    },
+    {
+      "username": "imsamkohl",
+      "fullName": "Sam Kohl",
+      "followers": 8477,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Lead Apple shepherd @appltrack, inquires at hello@appletrack.com...",
+      "emails": [
+        "hello@appletrack.com"
+      ]
+    },
+    {
+      "username": "appledsign",
+      "fullName": "Niels | Apple & iPhone Expert",
+      "followers": 4832186,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "I teach you the best iPhone & Apple Tricks!\nYour #1 iPhone, MacBook, iPad & Apple Expert!\nBusiness: ...",
+      "emails": [
+        "appledsign@gmail.com"
+      ]
+    },
+    {
+      "username": "avyuktamobile",
+      "fullName": "Avyukta Mobile",
+      "followers": 228521,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "🛒 Wholesale prices for single-piece orders\n🛫 Next-day delivery in metro cities\n📦 Order on our web...",
+      "emails": []
+    },
+    {
+      "username": "hasankarimiofficial",
+      "fullName": "Hasan Karimi",
+      "followers": 184752,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "همه چی در مورد رسانه های اجتماعی\nmosalah iranian ⚽️\nSocial media expert | Content Creator...",
+      "emails": []
+    }
+  ]
+}

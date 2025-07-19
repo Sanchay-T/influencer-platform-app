@@ -1,0 +1,109 @@
+{
+  "stage": "database_save_final",
+  "jobId": "ec5ad4fe-c410-4033-bd22-638187d3e722",
+  "apiCall": 4,
+  "timestamp": "2025-07-18T17:52:37.446Z",
+  "counts": {
+    "creatorsBeingPersisted": 12,
+    "newProcessedRuns": 4,
+    "newProcessedResults": 31
+  },
+  "finalDatabaseCreators": [
+    {
+      "index": 1,
+      "username": "karlconrad",
+      "followers": 135583,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "trendyntrust",
+      "followers": 1382,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "jonimperial",
+      "followers": 48977,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "superscientific",
+      "followers": 442307,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "jaimerivera",
+      "followers": 50982,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "jabulani_express",
+      "followers": 33914,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "gadgetxpress_india",
+      "followers": 1044,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "zahcomputers.pk",
+      "followers": 33509,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "smartgadgetcoach",
+      "followers": 773,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "jai_ambey_world",
+      "followers": 557,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 11,
+      "username": "2024gadgetsbazaar",
+      "followers": 4402,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 12,
+      "username": "milestelecom",
+      "followers": 6776,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    }
+  ]
+}

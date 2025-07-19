@@ -1,0 +1,161 @@
+{
+  "stage": "final_transformed_creators",
+  "jobId": "010f65f1-f592-4c01-8a12-0809c3c12e76",
+  "apiCall": 4,
+  "timestamp": "2025-07-18T17:44:46.515Z",
+  "counts": {
+    "finalTransformedCreators": 12,
+    "processedRuns": 4,
+    "maxRuns": 15
+  },
+  "finalCreators": [
+    {
+      "index": 1,
+      "username": "trendyntrust",
+      "fullName": "Trendy&Trust",
+      "followers": 1382,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Where Trends Meet Trust ✨  \nHigh-quality products since 2002 🛍️  \nDelivery all over Lebanon 🇱🇧  \n...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DKHGQjiM0Em",
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "karlconrad",
+      "fullName": "Karl Conrad",
+      "followers": 135583,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Follow for more content + across all platforms!...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DAJOI3WuxMH",
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "nathanespinozayt",
+      "fullName": "Nathan Espinoza",
+      "followers": 179840,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "†\n20\ntech, gadgets, and stuff\nnathanespinoza@rakugomedia.com...",
+      "emails": [
+        "nathanespinoza@rakugomedia.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DMEVESDxyAG",
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "techoob_saaquib",
+      "fullName": "Saaquib Neyazi",
+      "followers": 307520,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "YouTuber 🎥 | Entrepreneur 📊\nCrazyy Fun Video With Tech ka Tadka🔥\nWork with us: business@techoob.c...",
+      "emails": [
+        "business@techoob.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/C5nE-8xvIWY",
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "jabulani_express",
+      "fullName": "JABULANI EXPRESS LLC",
+      "followers": 33914,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Turn your old device into cash! Order, pay,& receive hassle-free.We offer unbeatable prices in Niger...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DLpD8I0MjVl",
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "gadgetxpress_india",
+      "fullName": "GadgetXpress",
+      "followers": 1044,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Websit link 👉http://gadgetxpress.in\n*Wholesale and retail*\nDM/WhatsApp👉7240688392\nCash on delivery...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DLnBsu8v3eT",
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "jai_ambey_world",
+      "fullName": "MR.PRITAM MAHAWAR",
+      "followers": 557,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "SMART SHOP 4 SMART PEPOLE😍\n9610542570\nKRESHAR ROAD near SETH RAMCHANDRA HOTEL🔥\nA to Z प्रोडक्ट 🔥\ud83d...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DMN1XQ2hPC_",
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "milestelecom",
+      "fullName": "Miles Telecom Trading LLC",
+      "followers": 6776,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "📱Your one-stop shop for the Latest\nMobiles | Gadgets | Accessories | Repair...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DFIrDxNSKuw",
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "2024gadgetsbazaar",
+      "fullName": "Gadgets Bazaar",
+      "followers": 4402,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🎧⌚️I Deals in smart gadgets\n🚚📦I All india delivery\n💬📨I wtsno.7566243621\n🏤🏣I main page:@immoni...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/C7yVB9GM0F0",
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "zahcomputers.pk",
+      "fullName": "ZahComputers.pk",
+      "followers": 33509,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Pakistan's #1 store for gaming & professional monitors.\nWith the largest inventory & trusted since 2...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DEhpmRjqnvZ",
+      "platform": "Instagram"
+    },
+    {
+      "index": 11,
+      "username": "smartgadgetcoach",
+      "fullName": "SmartGadgetCoach",
+      "followers": 773,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "📦 Gadget Seller | 💰 Digital Coach  \n🎯 New eBook: ₹1L/month plan  \n👇 DM “START” for full guide...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DLEciSHx_ti",
+      "platform": "Instagram"
+    },
+    {
+      "index": 12,
+      "username": "parappa.da.trapper",
+      "fullName": "AJ",
+      "followers": 304,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "I post memes, but maybe someday I'll do something productive on here\nmurray '22...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DMQdTMFsLC9",
+      "platform": "Instagram"
+    }
+  ]
+}

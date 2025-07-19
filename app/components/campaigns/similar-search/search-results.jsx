@@ -244,24 +244,25 @@ export default function SimilarSearchResults({ searchData }) {
         </div>
       </div>
 
-      <div className="border rounded-lg relative">
+      <div className="border rounded-lg relative w-full overflow-hidden">
         {isPageLoading && (
           <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-50">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
           </div>
         )}
-        <Table>
+        <div className="w-full overflow-x-auto">
+          <Table className="w-full">
           <TableHeader>
             <TableRow>
-              <TableHead>Profile</TableHead>
-              <TableHead>{searchData.platform === 'youtube' ? 'Channel Name' : 'Username'}</TableHead>
-              <TableHead>Full Name</TableHead>
-              <TableHead>Bio</TableHead>
-              <TableHead>Email</TableHead>
+              <TableHead className="w-[50px]">Profile</TableHead>
+              <TableHead className="w-[15%] min-w-[120px]">{searchData.platform === 'youtube' ? 'Channel Name' : 'Username'}</TableHead>
+              <TableHead className="w-[15%] min-w-[120px]">Full Name</TableHead>
+              <TableHead className="w-[25%] min-w-[180px]">Bio</TableHead>
+              <TableHead className="w-[20%] min-w-[150px]">Email</TableHead>
               {searchData.platform !== 'youtube' && (
                 <>
-                  <TableHead>Private</TableHead>
-                  <TableHead>Verified</TableHead>
+                  <TableHead className="w-[60px]">Private</TableHead>
+                  <TableHead className="w-[60px]">Verified</TableHead>
                 </>
               )}
             </TableRow>
@@ -311,8 +312,8 @@ export default function SimilarSearchResults({ searchData }) {
                       {creator.full_name || creator.name || 'N/A'}
                     </span>
                   </TableCell>
-                  <TableCell>
-                    <div className="max-w-[200px] truncate" title={creator.bio || 'No bio available'}>
+                  <TableCell className="max-w-0">
+                    <div className="truncate" title={creator.bio || 'No bio available'}>
                       {creator.bio && creator.bio.length > 0 ? (
                         <span className="text-sm text-gray-700">{creator.bio}</span>
                       ) : (
@@ -320,14 +321,14 @@ export default function SimilarSearchResults({ searchData }) {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="max-w-0">
                     {creator.emails && creator.emails.length > 0 ? (
                       <div className="space-y-1">
                         {creator.emails.map((email, emailIndex) => (
                           <div key={emailIndex} className="flex items-center gap-1">
                             <a 
                               href={`mailto:${email}`}
-                              className="text-blue-600 hover:underline text-sm"
+                              className="text-blue-600 hover:underline text-sm truncate block"
                               title={`Send email to ${email}`}
                             >
                               {email}
@@ -353,6 +354,7 @@ export default function SimilarSearchResults({ searchData }) {
             })}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       <div className="flex items-center justify-center gap-2">

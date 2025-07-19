@@ -1,0 +1,35 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "ec5ad4fe-c410-4033-bd22-638187d3e722",
+  "apiCall": 13,
+  "batchNumber": 3,
+  "timestamp": "2025-07-18T17:58:25.035Z",
+  "counts": {
+    "rawResults": 2,
+    "validResults": 2,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 12
+  },
+  "validCreators": [
+    {
+      "username": "hd_mongolia",
+      "fullName": "hd_mongolia",
+      "followers": 3721,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Буцаалт байхгүй . Захиалга 7-10хоногт ирнэ Бараа хайж өгнө🦋...",
+      "emails": []
+    },
+    {
+      "username": "custom_adventurist",
+      "fullName": "Custom Adventurist",
+      "followers": 70488,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Ben Kimball\nTech Enthusiast\nFake Vs Real Specialist\nFor business inquiries benskimball555@gmail.com...",
+      "emails": [
+        "benskimball555@gmail.com"
+      ]
+    }
+  ]
+}

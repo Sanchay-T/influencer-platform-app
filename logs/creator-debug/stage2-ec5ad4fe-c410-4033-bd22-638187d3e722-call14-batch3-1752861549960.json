@@ -1,0 +1,24 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "ec5ad4fe-c410-4033-bd22-638187d3e722",
+  "apiCall": 14,
+  "batchNumber": 3,
+  "timestamp": "2025-07-18T17:59:09.959Z",
+  "counts": {
+    "rawResults": 1,
+    "validResults": 1,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 11
+  },
+  "validCreators": [
+    {
+      "username": "technoshop.kaz",
+      "fullName": "СМАРТ ЧАСЫ/НАУШНИКИ/АЛМАТЫ📍",
+      "followers": 27981,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "💯 KASPI RED | 0•0•12\n🛡️ С 2022 года работаем\n🔝 Гарантия на все товары \n📌 Бесплатная доставка  \n\ud83d...",
+      "emails": []
+    }
+  ]
+}

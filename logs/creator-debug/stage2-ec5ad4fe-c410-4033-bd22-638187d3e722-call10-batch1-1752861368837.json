@@ -1,0 +1,64 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "ec5ad4fe-c410-4033-bd22-638187d3e722",
+  "apiCall": 10,
+  "batchNumber": 1,
+  "timestamp": "2025-07-18T17:56:08.837Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 5
+  },
+  "validCreators": [
+    {
+      "username": "appledsign",
+      "fullName": "Niels | Apple & iPhone Expert",
+      "followers": 4832195,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "I teach you the best iPhone & Apple Tricks!\nYour #1 iPhone, MacBook, iPad & Apple Expert!\nBusiness: ...",
+      "emails": [
+        "appledsign@gmail.com"
+      ]
+    },
+    {
+      "username": "applefix.cl",
+      "fullName": "Servicio Técnico Apple  📲🛠️",
+      "followers": 46415,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "CALIDAD, RAPIDEZ Y CONFIANZA\n• Reparaciones & Tips \n• Repuestos Originales & Certificados\n• iPhone -...",
+      "emails": []
+    },
+    {
+      "username": "chollo.man",
+      "fullName": "Alejandro Morcillo Bermudo",
+      "followers": 526699,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "✈️Cuenta de viajes: @cholloman.viajes \n✉️Colaboraciones: DM 📨\n👇🏼👇🏼TODOS LOS LINKS AQUÍ 👇🏼👇🏼...",
+      "emails": []
+    },
+    {
+      "username": "irina.tech",
+      "fullName": "Irina",
+      "followers": 49402,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Tech/Lifestyle📱💻⚙️...",
+      "emails": []
+    },
+    {
+      "username": "hemantmahto._",
+      "fullName": "HEMANT MAHTO",
+      "followers": 5491980,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Main Ac. @hr_mahto_official\n📱Hack and Tricks\n🇮🇳 Education is the key that unlocks the golden door...",
+      "emails": [
+        ".realwood67@gmail.com"
+      ]
+    }
+  ]
+}

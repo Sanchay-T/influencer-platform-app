@@ -1,0 +1,94 @@
+{
+  "stage": "after_initial_quality_filter",
+  "jobId": "ec5ad4fe-c410-4033-bd22-638187d3e722",
+  "apiCall": 11,
+  "timestamp": "2025-07-18T17:56:44.132Z",
+  "counts": {
+    "totalCreatorsFound": 10,
+    "qualityCreatorsAdded": 10,
+    "filteredOutCreators": 0,
+    "finalUniqueCreators": 10
+  },
+  "creators": [
+    {
+      "username": "healthcenters",
+      "fullName": "Health Centers",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "gadgetboy4u",
+      "fullName": "Gadget Boy",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "limreviews",
+      "fullName": "SM Lim",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "acefast.official",
+      "fullName": "Acefast Official",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "goussve.km",
+      "fullName": "GOUSSVE TECH",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "eurekahnb",
+      "fullName": "Eureka",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "insta.__show",
+      "fullName": "INSTA SHOW",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "kawaiishopbangladeshofficial",
+      "fullName": "⋆｡𖦹°‧★kawaii shop official⋆｡𖦹°‧★",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "lexiv_trends",
+      "fullName": "LEXIV | MOBILE ACCESSORIES | GADGETS | WATCHES",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "chic_trendxz",
+      "fullName": "Nitish Kumar",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    }
+  ]
+}

@@ -113,10 +113,10 @@ export default function Sidebar() {
       <div className="space-y-4">
         {user && (
           <div className="px-3 py-2 bg-zinc-100 rounded-lg">
-            <p className="text-sm font-medium text-zinc-800">
+            <p className="text-sm font-medium text-zinc-800 break-all">
               {user.emailAddresses[0]?.emailAddress}
             </p>
-            <p className="text-xs text-zinc-600">
+            <p className="text-xs text-zinc-600 truncate">
               {user.firstName} {user.lastName}
             </p>
           </div>

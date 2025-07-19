@@ -6,6 +6,17 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true
   },
+  webpack: (config, { isServer }) => {
+    // Suppress the libheif-js warning
+    config.ignoreWarnings = [
+      {
+        module: /libheif-js/,
+        message: /Critical dependency/,
+      },
+    ];
+    
+    return config;
+  },
   async rewrites() {
     return [
       {

@@ -1,0 +1,64 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "ec5ad4fe-c410-4033-bd22-638187d3e722",
+  "apiCall": 8,
+  "batchNumber": 1,
+  "timestamp": "2025-07-18T17:54:44.375Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 5
+  },
+  "validCreators": [
+    {
+      "username": "nathanespinozayt",
+      "fullName": "Nathan Espinoza",
+      "followers": 179851,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "†\n20\ntech, gadgets, and stuff\nnathanespinoza@rakugomedia.com...",
+      "emails": [
+        "nathanespinoza@rakugomedia.com"
+      ]
+    },
+    {
+      "username": "trendyntrust",
+      "fullName": "Trendy&Trust",
+      "followers": 1383,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Where Trends Meet Trust ✨  \nHigh-quality products since 2002 🛍️  \nDelivery all over Lebanon 🇱🇧  \n...",
+      "emails": []
+    },
+    {
+      "username": "techoob_saaquib",
+      "fullName": "Saaquib Neyazi",
+      "followers": 307521,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "YouTuber 🎥 | Entrepreneur 📊\nCrazyy Fun Video With Tech ka Tadka🔥\nWork with us: business@techoob.c...",
+      "emails": [
+        "business@techoob.com"
+      ]
+    },
+    {
+      "username": "karlconrad",
+      "fullName": "Karl Conrad",
+      "followers": 135583,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Follow for more content + across all platforms!...",
+      "emails": []
+    },
+    {
+      "username": "andrew.wadid",
+      "fullName": "Andrew Wadid - أندرو وديد",
+      "followers": 352071,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "هنا باتكلم معاك عن اكتر حاجات باحب أتكلم عنها\n🇪🇬 تكنولوچيا و إختراعات و سفر و غيرهم\n 1.4M+ Followe...",
+      "emails": []
+    }
+  ]
+}

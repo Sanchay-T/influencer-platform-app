@@ -1,0 +1,109 @@
+{
+  "stage": "database_save_final",
+  "jobId": "ec5ad4fe-c410-4033-bd22-638187d3e722",
+  "apiCall": 5,
+  "timestamp": "2025-07-18T17:53:12.803Z",
+  "counts": {
+    "creatorsBeingPersisted": 12,
+    "newProcessedRuns": 5,
+    "newProcessedResults": 43
+  },
+  "finalDatabaseCreators": [
+    {
+      "index": 1,
+      "username": "emkwan",
+      "followers": 166645,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "imsamkohl",
+      "followers": 8477,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "appledsign",
+      "followers": 4832186,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "avyuktamobile",
+      "followers": 228521,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "hasankarimiofficial",
+      "followers": 184752,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "luxevendors_",
+      "followers": 385,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "shiv_mobile_hisar",
+      "followers": 91632,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "amitmobilesamana",
+      "followers": 28619,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "sellerdg_",
+      "followers": 5867,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "lagnipanchall",
+      "followers": 823632,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 11,
+      "username": "sstraders_14",
+      "followers": 701,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 12,
+      "username": "themobiistore",
+      "followers": 15049,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    }
+  ]
+}

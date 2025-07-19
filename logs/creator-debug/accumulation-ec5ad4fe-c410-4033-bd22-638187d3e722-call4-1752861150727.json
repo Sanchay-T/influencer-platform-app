@@ -1,0 +1,43 @@
+{
+  "stage": "accumulation_tracking",
+  "jobId": "ec5ad4fe-c410-4033-bd22-638187d3e722",
+  "apiCall": 4,
+  "timestamp": "2025-07-18T17:52:30.727Z",
+  "accumulation": {
+    "previousCreatorsCount": 24,
+    "newCreatorsCount": 10,
+    "totalAccumulatedCount": 29,
+    "duplicatesRemoved": 5
+  },
+  "usernames": [
+    "irina.tech",
+    "applefix.cl",
+    "earpods_kenya",
+    "mybasketmrkt",
+    "technoshop.kaz",
+    "babigadgets.store",
+    "sahabat.gajet11",
+    "thejrnyofficial",
+    "kuxiutech",
+    "limreviews",
+    "healthcenters",
+    "gadgetboy4u",
+    "acefast.official",
+    "goussve.km",
+    "eurekahnb",
+    "insta.__show",
+    "kawaiishopbangladeshofficial",
+    "lexiv_trends",
+    "chic_trendxz",
+    "karlconrad",
+    "trendyntrust",
+    "jonimperial",
+    "superscientific",
+    "jaimerivera",
+    "jabulani_express",
+    "gadgetxpress_india",
+    "zahcomputers.pk",
+    "smartgadgetcoach",
+    "jai_ambey_world"
+  ]
+}

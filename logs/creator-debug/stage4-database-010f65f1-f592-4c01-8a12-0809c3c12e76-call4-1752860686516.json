@@ -1,0 +1,109 @@
+{
+  "stage": "database_save_final",
+  "jobId": "010f65f1-f592-4c01-8a12-0809c3c12e76",
+  "apiCall": 4,
+  "timestamp": "2025-07-18T17:44:46.516Z",
+  "counts": {
+    "creatorsBeingPersisted": 12,
+    "newProcessedRuns": 4,
+    "newProcessedResults": 36
+  },
+  "finalDatabaseCreators": [
+    {
+      "index": 1,
+      "username": "trendyntrust",
+      "followers": 1382,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "karlconrad",
+      "followers": 135583,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "nathanespinozayt",
+      "followers": 179840,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "techoob_saaquib",
+      "followers": 307520,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "jabulani_express",
+      "followers": 33914,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "gadgetxpress_india",
+      "followers": 1044,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "jai_ambey_world",
+      "followers": 557,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "milestelecom",
+      "followers": 6776,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "2024gadgetsbazaar",
+      "followers": 4402,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "zahcomputers.pk",
+      "followers": 33509,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 11,
+      "username": "smartgadgetcoach",
+      "followers": 773,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 12,
+      "username": "parappa.da.trapper",
+      "followers": 304,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    }
+  ]
+}

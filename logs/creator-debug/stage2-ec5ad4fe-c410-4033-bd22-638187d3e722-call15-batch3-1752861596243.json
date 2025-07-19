@@ -1,0 +1,24 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "ec5ad4fe-c410-4033-bd22-638187d3e722",
+  "apiCall": 15,
+  "batchNumber": 3,
+  "timestamp": "2025-07-18T17:59:56.243Z",
+  "counts": {
+    "rawResults": 1,
+    "validResults": 1,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 11
+  },
+  "validCreators": [
+    {
+      "username": "kawaiishopbangladeshofficial",
+      "fullName": "⋆｡𖦹°‧★kawaii shop official⋆｡𖦹°‧★",
+      "followers": 20030,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "★your favourite shop★\n⋆｡𖦹taking pre order from shopee malaysia and thailand, shein malaysia, aliexp...",
+      "emails": []
+    }
+  ]
+}

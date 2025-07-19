@@ -1,0 +1,35 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "010f65f1-f592-4c01-8a12-0809c3c12e76",
+  "apiCall": 2,
+  "batchNumber": 3,
+  "timestamp": "2025-07-18T17:44:02.979Z",
+  "counts": {
+    "rawResults": 2,
+    "validResults": 2,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 12
+  },
+  "validCreators": [
+    {
+      "username": "justcasp_",
+      "fullName": "Casp",
+      "followers": 18301,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "18 || 180k+ on Youtube | 160k+ on Tiktok | Just A Kid With A Dream 🌿☕️ email - Justcasp23@gmail.com...",
+      "emails": [
+        "Justcasp23@gmail.com"
+      ]
+    },
+    {
+      "username": "bossmobilebaku",
+      "fullName": "Apple | iPhone | MacBook | iPad | AirPods",
+      "followers": 105976,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🇦🇿 Apple məhsullarının rəsmi satış məntəqəsi 🇺🇸\n📍 28 May, Azadlıq Ave 37B\n📞 +994 070 600 00 22...",
+      "emails": []
+    }
+  ]
+}
