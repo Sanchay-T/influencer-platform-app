@@ -1,0 +1,116 @@
+{
+  "api_request": {
+    "url": "https://api.scrapecreators.com/v1/tiktok/search/keyword",
+    "method": "GET",
+    "headers": {
+      "x-api-key": "YOUR_API_KEY"
+    },
+    "params": {
+      "query": "apple tech gaming",
+      "cursor": 0
+    }
+  },
+  "api_response_structure": {
+    "cursor": 30,
+    "has_more": 1,
+    "total": 0,
+    "search_item_list": [
+      {
+        "_comment": "Each item represents one creator/video",
+        "aweme_info": {
+          "aweme_id": "7278069391756070190",
+          "desc": "Video description/caption text",
+          "share_url": "https://www.tiktok.com/@username/video/7278069391756070190",
+          "author": {
+            "uid": "6772989967364637701",
+            "unique_id": "qndzy",
+            "nickname": "QNDZY",
+            "follower_count": 320626,
+            "following_count": 1523,
+            "signature": "",
+            "_bio_note": "⚠️ SIGNATURE IS OFTEN EMPTY - Need profile API call",
+            "is_verified": false,
+            "verification_type": 0,
+            "avatar_medium": {
+              "url_list": [
+                "https://p16-pu-sign-useast8.tiktokcdn-us.com/..."
+              ]
+            }
+          },
+          "statistics": {
+            "digg_count": 12345,
+            "comment_count": 234,
+            "play_count": 56789,
+            "share_count": 123,
+            "download_count": 45,
+            "forward_count": 67,
+            "lose_count": 8,
+            "lose_comment_count": 2,
+            "collect_count": 890
+          },
+          "text_extra": [
+            {
+              "type": 1,
+              "hashtag_name": "gaming",
+              "hashtag_id": "16057"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "profile_api_enhancement": {
+    "_comment": "When author.signature is empty, make this call",
+    "url": "https://api.scrapecreators.com/v1/tiktok/profile",
+    "params": {
+      "handle": "qndzy"
+    },
+    "response": {
+      "user": {
+        "signature": "Full bio text with potential email@example.com",
+        "bio": "Alternative bio field",
+        "desc": "Another bio field"
+      }
+    }
+  },
+  "pagination_example": {
+    "initial_request": {
+      "cursor": 0,
+      "results": 28
+    },
+    "second_request": {
+      "cursor": 30,
+      "results": 25
+    },
+    "third_request": {
+      "cursor": 55,
+      "results": 22
+    },
+    "_note": "Continue until has_more=0 or target count reached"
+  },
+  "typical_results_per_call": {
+    "minimum": 10,
+    "average": 25,
+    "maximum": 30
+  },
+  "cost_estimates": {
+    "100_creators": {
+      "search_api_calls": 4,
+      "profile_api_calls": 100,
+      "total_api_calls": 104,
+      "estimated_cost": "$0.14"
+    },
+    "500_creators": {
+      "search_api_calls": 20,
+      "profile_api_calls": 500,
+      "total_api_calls": 520,
+      "estimated_cost": "$0.70"
+    },
+    "1000_creators": {
+      "search_api_calls": 40,
+      "profile_api_calls": 1000,
+      "total_api_calls": 1040,
+      "estimated_cost": "$1.40"
+    }
+  }
+}

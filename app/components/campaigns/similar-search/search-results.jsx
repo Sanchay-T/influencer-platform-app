@@ -254,15 +254,15 @@ export default function SimilarSearchResults({ searchData }) {
           <Table className="w-full">
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[8%]">Profile</TableHead>
-              <TableHead className="w-[18%]">{searchData.platform === 'youtube' ? 'Channel Name' : 'Username'}</TableHead>
-              <TableHead className="w-[15%]">Full Name</TableHead>
-              <TableHead className="w-[25%]">Bio</TableHead>
-              <TableHead className="w-[20%]">Email</TableHead>
+              <TableHead className="w-[50px]">Profile</TableHead>
+              <TableHead className="w-[15%] min-w-[120px]">{searchData.platform === 'youtube' ? 'Channel Name' : 'Username'}</TableHead>
+              <TableHead className="w-[15%] min-w-[100px]">Full Name</TableHead>
+              <TableHead className="w-[25%] min-w-[200px]">Bio</TableHead>
+              <TableHead className="w-[20%] min-w-[150px]">Email</TableHead>
               {searchData.platform !== 'youtube' && (
                 <>
-                  <TableHead className="w-[7%]">Private</TableHead>
-                  <TableHead className="w-[7%]">Verified</TableHead>
+                  <TableHead className="w-[7%] min-w-[60px]">Private</TableHead>
+                  <TableHead className="w-[7%] min-w-[60px]">Verified</TableHead>
                 </>
               )}
             </TableRow>
@@ -312,23 +312,23 @@ export default function SimilarSearchResults({ searchData }) {
                       {creator.full_name || creator.name || 'N/A'}
                     </span>
                   </TableCell>
-                  <TableCell>
-                    <div className="truncate text-sm" title={creator.bio || 'No bio available'}>
+                  <TableCell className="max-w-0">
+                    <div className="truncate" title={creator.bio || 'No bio available'}>
                       {creator.bio && creator.bio.length > 0 ? (
-                        <span className="text-gray-700">{creator.bio}</span>
+                        <span className="text-sm text-gray-700">{creator.bio}</span>
                       ) : (
-                        <span className="text-gray-400">Not available</span>
+                        <span className="text-gray-400 text-sm">Not available</span>
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="max-w-0">
                     {creator.emails && creator.emails.length > 0 ? (
                       <div className="space-y-1">
                         {creator.emails.map((email, emailIndex) => (
                           <div key={emailIndex} className="flex items-center gap-1">
                             <a 
                               href={`mailto:${email}`}
-                              className="text-blue-600 hover:underline text-sm break-all"
+                              className="text-blue-600 hover:underline text-sm truncate block"
                               title={`Send email to ${email}`}
                             >
                               {email}

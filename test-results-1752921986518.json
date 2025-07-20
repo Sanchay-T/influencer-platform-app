@@ -1,0 +1,218 @@
+{
+  "timestamp": "2025-07-19T10:43:24.175Z",
+  "config": {
+    "baseUrl": "http://localhost:3000",
+    "testCampaignId": "test-unit-economics-1752921804175",
+    "searchTests": [
+      {
+        "name": "TikTok Keyword Search",
+        "endpoint": "/api/scraping/tiktok",
+        "payload": {
+          "keywords": [
+            "apple",
+            "tech"
+          ],
+          "targetResults": 100,
+          "campaignId": null
+        },
+        "expectedApiCalls": 1,
+        "platform": "TikTok",
+        "searchType": "keyword"
+      },
+      {
+        "name": "TikTok Similar Search",
+        "endpoint": "/api/scraping/tiktok-similar",
+        "payload": {
+          "targetUsername": "apple",
+          "targetResults": 100,
+          "campaignId": null
+        },
+        "expectedApiCalls": 1,
+        "platform": "TikTok",
+        "searchType": "similar"
+      },
+      {
+        "name": "Instagram Reels Search",
+        "endpoint": "/api/scraping/instagram-reels",
+        "payload": {
+          "keywords": [
+            "apple",
+            "tech"
+          ],
+          "targetResults": 50,
+          "campaignId": null
+        },
+        "expectedApiCalls": 1,
+        "platform": "Instagram",
+        "searchType": "reels"
+      },
+      {
+        "name": "Instagram Similar Search",
+        "endpoint": "/api/scraping/instagram",
+        "payload": {
+          "targetUsername": "apple",
+          "targetResults": 50,
+          "campaignId": null
+        },
+        "expectedApiCalls": 1,
+        "platform": "Instagram",
+        "searchType": "similar"
+      },
+      {
+        "name": "YouTube Keyword Search",
+        "endpoint": "/api/scraping/youtube",
+        "payload": {
+          "keywords": [
+            "apple",
+            "tech"
+          ],
+          "targetResults": 100,
+          "campaignId": null
+        },
+        "expectedApiCalls": 1,
+        "platform": "YouTube",
+        "searchType": "keyword"
+      },
+      {
+        "name": "YouTube Similar Search",
+        "endpoint": "/api/scraping/youtube-similar",
+        "payload": {
+          "targetUsername": "apple",
+          "targetResults": 100,
+          "campaignId": null
+        },
+        "expectedApiCalls": 1,
+        "platform": "YouTube",
+        "searchType": "similar"
+      }
+    ]
+  },
+  "results": [
+    {
+      "testCase": {
+        "name": "TikTok Keyword Search",
+        "endpoint": "/api/scraping/tiktok",
+        "payload": {
+          "keywords": [
+            "apple",
+            "tech"
+          ],
+          "targetResults": 100,
+          "campaignId": null
+        },
+        "expectedApiCalls": 1,
+        "platform": "TikTok",
+        "searchType": "keyword"
+      },
+      "jobId": null,
+      "duration": 219,
+      "error": "Init failed: 401 Unauthorized",
+      "analysis": null,
+      "success": false
+    },
+    {
+      "testCase": {
+        "name": "TikTok Similar Search",
+        "endpoint": "/api/scraping/tiktok-similar",
+        "payload": {
+          "targetUsername": "apple",
+          "targetResults": 100,
+          "campaignId": null
+        },
+        "expectedApiCalls": 1,
+        "platform": "TikTok",
+        "searchType": "similar"
+      },
+      "jobId": null,
+      "duration": 283,
+      "error": "Init failed: 401 Unauthorized",
+      "analysis": null,
+      "success": false
+    },
+    {
+      "testCase": {
+        "name": "Instagram Reels Search",
+        "endpoint": "/api/scraping/instagram-reels",
+        "payload": {
+          "keywords": [
+            "apple",
+            "tech"
+          ],
+          "targetResults": 50,
+          "campaignId": null
+        },
+        "expectedApiCalls": 1,
+        "platform": "Instagram",
+        "searchType": "reels"
+      },
+      "jobId": null,
+      "duration": 313,
+      "error": "Init failed: 401 Unauthorized",
+      "analysis": null,
+      "success": false
+    },
+    {
+      "testCase": {
+        "name": "Instagram Similar Search",
+        "endpoint": "/api/scraping/instagram",
+        "payload": {
+          "targetUsername": "apple",
+          "targetResults": 50,
+          "campaignId": null
+        },
+        "expectedApiCalls": 1,
+        "platform": "Instagram",
+        "searchType": "similar"
+      },
+      "jobId": null,
+      "duration": 181,
+      "error": "Init failed: 401 Unauthorized",
+      "analysis": null,
+      "success": false
+    },
+    {
+      "testCase": {
+        "name": "YouTube Keyword Search",
+        "endpoint": "/api/scraping/youtube",
+        "payload": {
+          "keywords": [
+            "apple",
+            "tech"
+          ],
+          "targetResults": 100,
+          "campaignId": null
+        },
+        "expectedApiCalls": 1,
+        "platform": "YouTube",
+        "searchType": "keyword"
+      },
+      "jobId": null,
+      "duration": 175,
+      "error": "Init failed: 401 Unauthorized",
+      "analysis": null,
+      "success": false
+    },
+    {
+      "testCase": {
+        "name": "YouTube Similar Search",
+        "endpoint": "/api/scraping/youtube-similar",
+        "payload": {
+          "targetUsername": "apple",
+          "targetResults": 100,
+          "campaignId": null
+        },
+        "expectedApiCalls": 1,
+        "platform": "YouTube",
+        "searchType": "similar"
+      },
+      "jobId": null,
+      "duration": 182,
+      "error": "Init failed: 401 Unauthorized",
+      "analysis": null,
+      "success": false
+    }
+  ],
+  "summary": {
+    "error": "No successful tests to analyze"
+  }
+}

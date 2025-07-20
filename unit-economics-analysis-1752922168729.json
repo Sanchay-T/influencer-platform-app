@@ -1,0 +1,101 @@
+{
+  "timestamp": "2025-07-19T10:49:28.728Z",
+  "totalPlatformsCombinations": 4,
+  "results": [
+    {
+      "platform": "TikTok",
+      "searchType": "keyword",
+      "rawApiResults": 25,
+      "finalCreators": 25,
+      "creatorsWithBio": 18,
+      "creatorsWithEmail": 3,
+      "creatorsNeedingEnhancement": 16,
+      "enhancementSuccessRate": 0.72,
+      "efficiencyRate": 1,
+      "estimatedCallsFor100": 4,
+      "estimatedCallsFor500": 20,
+      "estimatedCallsFor1000": 40
+    },
+    {
+      "platform": "Instagram",
+      "searchType": "reels",
+      "rawApiResults": 50,
+      "afterPrimaryFilter": 37,
+      "afterSecondaryFilter": 37,
+      "finalCreators": 37,
+      "creatorsWithBio": 20,
+      "creatorsWithEmail": 6,
+      "primaryFilterRate": 0.26,
+      "secondaryFilterRate": 0,
+      "overallFilterRate": 0.26,
+      "efficiencyRate": 0.74,
+      "estimatedCallsFor100": 3,
+      "estimatedCallsFor500": 14,
+      "estimatedCallsFor1000": 28
+    },
+    {
+      "platform": "TikTok",
+      "searchType": "similar",
+      "keywordsSearched": 4,
+      "rawApiResults": 60,
+      "afterDeduplication": 60,
+      "afterPrivacyFilter": 46,
+      "finalCreators": 10,
+      "creatorsWithBio": 10,
+      "creatorsWithEmail": 3,
+      "deduplicationRate": 0,
+      "privacyFilterRate": 0.23333333333333328,
+      "overallFilterRate": 0.8333333333333334,
+      "efficiencyRate": 2.5,
+      "estimatedCallsFor100": 10,
+      "estimatedCallsFor500": 50,
+      "estimatedCallsFor1000": 100
+    },
+    {
+      "platform": "YouTube",
+      "searchType": "keyword",
+      "rawApiResults": 20,
+      "finalCreators": 20,
+      "channelsWithBio": 17,
+      "channelsWithEmail": 5,
+      "enhancementSuccessRate": 0.85,
+      "efficiencyRate": 1,
+      "estimatedCallsFor100": 5,
+      "estimatedCallsFor500": 25,
+      "estimatedCallsFor1000": 50
+    }
+  ],
+  "recommendations": [
+    "⚠️  TikTok_similar: Need 100 calls for 1000 creators (>50 limit)"
+  ],
+  "productionEstimates": {
+    "TikTok_keyword": {
+      "creatorsPerCall": 25,
+      "callsFor100": 4,
+      "callsFor500": 20,
+      "callsFor1000": 40,
+      "recommendedMaxCalls": 40
+    },
+    "Instagram_reels": {
+      "creatorsPerCall": 37,
+      "callsFor100": 3,
+      "callsFor500": 14,
+      "callsFor1000": 28,
+      "recommendedMaxCalls": 28
+    },
+    "TikTok_similar": {
+      "creatorsPerCall": 10,
+      "callsFor100": 10,
+      "callsFor500": 50,
+      "callsFor1000": 100,
+      "recommendedMaxCalls": 50
+    },
+    "YouTube_keyword": {
+      "creatorsPerCall": 20,
+      "callsFor100": 5,
+      "callsFor500": 25,
+      "callsFor1000": 50,
+      "recommendedMaxCalls": 50
+    }
+  }
+}

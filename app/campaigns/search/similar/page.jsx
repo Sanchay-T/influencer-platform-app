@@ -13,7 +13,7 @@ export default function SimilarCreatorSearch() {
     platform: 'tiktok',
     targetUsername: ''
   });
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false); // Start with false - no need to wait
 
   useEffect(() => {
     console.log('🔄 [SIMILAR-SEARCH-PAGE] Initializing similar creator search page');
@@ -42,7 +42,6 @@ export default function SimilarCreatorSearch() {
         console.error('💥 [SIMILAR-SEARCH-PAGE] Error parsing URL params:', error);
       }
     }
-    setIsLoading(false);
     console.log('✅ [SIMILAR-SEARCH-PAGE] Initialization complete');
   }, []);
 

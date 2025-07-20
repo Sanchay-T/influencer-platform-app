@@ -1,0 +1,10 @@
+{
+  "timestamp": "2025-07-20T13:15:24.634Z",
+  "platform": "TikTok",
+  "apiType": "Profile",
+  "handle": "barstoolphilly",
+  "requestUrl": "https://api.scrapecreators.com/v1/tiktok/profile?handle=barstoolphilly",
+  "responseStatus": 200,
+  "responseTime": 1495,
+  "rawResponse": "{\"account_private\":true,\"handle\":\"barstoolphilly\"}"
+}

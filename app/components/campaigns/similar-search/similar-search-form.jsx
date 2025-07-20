@@ -1,28 +1,17 @@
 'use client'
 
 import { useState } from 'react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Avatar } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "react-hot-toast";
-import { Loader2, Lock } from "lucide-react";
-import { FeatureGate } from '@/app/components/billing/protect';
+import { Loader2 } from "lucide-react";
 
 export function SimilarSearchForm({ campaignId, onSuccess }) {
   const [username, setUsername] = useState("");
-  const [platform, setPlatform] = useState("tiktok"); // tiktok, instagram, or youtube
+  const [selectedPlatform, setSelectedPlatform] = useState("tiktok"); // tiktok, instagram, or youtube
   const [searchState, setSearchState] = useState({
     status: 'idle', // idle, searching, processing
     message: '',
@@ -77,8 +66,8 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
     try {
       // Determine API endpoint based on platform
       const apiEndpoint = 
-        platform === 'tiktok' ? '/api/scraping/tiktok-similar' : 
-        platform === 'youtube' ? '/api/scraping/youtube-similar' : 
+        selectedPlatform === 'tiktok' ? '/api/scraping/tiktok-similar' : 
+        selectedPlatform === 'youtube' ? '/api/scraping/youtube-similar' : 
         '/api/scraping/instagram';
       console.log(`🔄 [SIMILAR-SEARCH-FORM] Making API request to ${apiEndpoint}`);
       
@@ -104,12 +93,12 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
       if (onSuccess) {
         onSuccess({
           jobId: data.jobId,
-          platform: platform,
+          platform: selectedPlatform,
           targetUsername: username
         });
       }
       
-      toast.success(`${platform === 'tiktok' ? 'TikTok' : 'Instagram'} similar search started!`);
+      toast.success(`${selectedPlatform === 'tiktok' ? 'TikTok' : selectedPlatform === 'youtube' ? 'YouTube' : 'Instagram'} similar search started!`);
       
     } catch (error) {
       console.error('💥 [SIMILAR-SEARCH-FORM] Error during submission:', error);
@@ -144,72 +133,38 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
             <div className="flex space-x-4">
               <div className="flex items-center">
                 <Checkbox
-                  checked={platform === "tiktok"}
-                  onCheckedChange={() => setPlatform("tiktok")}
+                  checked={selectedPlatform === "tiktok"}
+                  onCheckedChange={() => setSelectedPlatform("tiktok")}
                 />
                 <span className="ml-2">TikTok</span>
               </div>
-              <FeatureGate 
-                feature="instagram_search"
-                fallback={
-                  <div className="flex items-center opacity-50">
-                    <Checkbox
-                      checked={false}
-                      disabled
-                    />
-                    <span className="ml-2 flex items-center gap-1">
-                      Instagram 
-                      <Lock className="h-3 w-3" />
-                      <span className="text-xs text-blue-600">(Premium)</span>
-                    </span>
-                  </div>
-                }
-              >
-                <div className="flex items-center">
-                  <Checkbox
-                    checked={platform === "instagram"}
-                    onCheckedChange={() => setPlatform("instagram")}
-                  />
-                  <span className="ml-2">Instagram</span>
-                </div>
-              </FeatureGate>
-              <FeatureGate 
-                feature="youtube_search"
-                fallback={
-                  <div className="flex items-center opacity-50">
-                    <Checkbox
-                      checked={false}
-                      disabled
-                    />
-                    <span className="ml-2 flex items-center gap-1">
-                      YouTube 
-                      <Lock className="h-3 w-3" />
-                      <span className="text-xs text-blue-600">(Premium)</span>
-                    </span>
-                  </div>
-                }
-              >
-                <div className="flex items-center">
-                  <Checkbox
-                    checked={platform === "youtube"}
-                    onCheckedChange={() => setPlatform("youtube")}
-                  />
-                  <span className="ml-2">YouTube</span>
-                </div>
-              </FeatureGate>
+              <div className="flex items-center">
+                <Checkbox
+                  checked={selectedPlatform === "instagram"}
+                  onCheckedChange={() => setSelectedPlatform("instagram")}
+                />
+                <span className="ml-2">Instagram</span>
+              </div>
+              <div className="flex items-center">
+                <Checkbox
+                  checked={selectedPlatform === "youtube"}
+                  onCheckedChange={() => setSelectedPlatform("youtube")}
+                />
+                <span className="ml-2">YouTube</span>
+              </div>
             </div>
           </div>
 
           <div className="space-y-4">
             <label className="text-sm font-medium">
-              {platform === 'tiktok' ? 'TikTok' : platform === 'youtube' ? 'YouTube' : 'Instagram'} Username
+              {selectedPlatform === 'tiktok' ? 'TikTok' : selectedPlatform === 'youtube' ? 'YouTube' : 'Instagram'} Username
             </label>
             <Input
               value={username}
               onChange={handleUsernameChange}
               placeholder={
-                platform === 'tiktok' ? "e.g. stoolpresidente" : 
-                platform === 'youtube' ? "e.g. mkbhd" : 
+                selectedPlatform === 'tiktok' ? "e.g. stoolpresidente" : 
+                selectedPlatform === 'youtube' ? "e.g. mkbhd" : 
                 "e.g. gainsbybrains"
               }
               required

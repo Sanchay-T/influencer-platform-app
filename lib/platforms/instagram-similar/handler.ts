@@ -8,6 +8,7 @@ import { eq } from 'drizzle-orm';
 import { getInstagramProfile, getEnhancedInstagramProfile, extractUsername } from './api';
 import { transformInstagramProfile, transformEnhancedProfile, extractProfileInfo } from './transformer';
 import { InstagramSimilarJobResult } from './types';
+import { calculateApiCallLimit } from '@/lib/utils/api-limits';
 
 // Add simple API logging
 let simpleLogApiCall: any = null;
@@ -18,8 +19,8 @@ try {
     // Logging not available
 }
 
-// Same testing limits as other platforms
-const MAX_API_CALLS_FOR_TESTING = 1;
+// Dynamic API limits based on target results and environment mode
+// const MAX_API_CALLS_FOR_TESTING = 1; // OLD: Hard-coded limit
 
 /**
  * Process Instagram similar creator search job
@@ -27,15 +28,28 @@ const MAX_API_CALLS_FOR_TESTING = 1;
 export async function processInstagramSimilarJob(job: any, jobId: string): Promise<InstagramSimilarJobResult> {
   console.log('📱 [INSTAGRAM-SIMILAR] Processing Instagram similar job for username:', job.targetUsername);
   
-  // Check testing limits (same as other platforms)
+  // Check current runs first
   const currentRuns = job.processedRuns || 0;
-  if (currentRuns >= MAX_API_CALLS_FOR_TESTING) {
-    console.log(`🚫 [INSTAGRAM-SIMILAR] Reached maximum API calls for testing (${MAX_API_CALLS_FOR_TESTING}). Completing job.`);
+  
+  // Calculate dynamic API limits based on target results and environment
+  const targetResults = job.targetResults || 50; // Default for Instagram
+  const MAX_API_CALLS = calculateApiCallLimit(targetResults, 'Instagram', 'similar');
+  
+  console.log('🔧 [INSTAGRAM-SIMILAR] Dynamic API limits calculated:', {
+    targetResults,
+    maxApiCalls: MAX_API_CALLS,
+    apiMode: process.env.API_MODE,
+    estimatedCreatorsPerCall: 35,
+    currentRun: currentRuns + 1,
+    isRetryCall: currentRuns > 0
+  });
+  if (currentRuns >= MAX_API_CALLS) {
+    console.log(`🚫 [INSTAGRAM-SIMILAR] Reached maximum API calls (${MAX_API_CALLS}). Completing job.`);
     await db.update(scrapingJobs).set({ 
       status: 'completed',
       completedAt: new Date(),
       updatedAt: new Date(),
-      error: `Test limit reached: Maximum ${MAX_API_CALLS_FOR_TESTING} API calls made`
+      error: `API limit reached: Maximum ${MAX_API_CALLS} calls made for ${targetResults} target results`
     }).where(eq(scrapingJobs.id, jobId));
     return { status: 'completed' };
   }
@@ -92,12 +106,53 @@ export async function processInstagramSimilarJob(job: any, jobId: string): Promi
 
     // Step 3: Transform related profiles to basic format
     console.log('🔍 [INSTAGRAM-SIMILAR] Step 3: Transforming related profiles');
-    let transformedCreators = transformInstagramProfile(profileData);
+    let newTransformedCreators = transformInstagramProfile(profileData);
     
     console.log('📊 [INSTAGRAM-SIMILAR] Basic transformation complete:', {
-      relatedProfilesFound: transformedCreators.length,
-      targetUsername: username
+      newRelatedProfilesFound: newTransformedCreators.length,
+      targetUsername: username,
+      currentRun: currentRuns + 1
     });
+    
+    // Step 3b: Merge with existing results if this is a continuation call
+    let transformedCreators = newTransformedCreators;
+    let existingCreatorIds = new Set();
+    
+    if (currentRuns > 0) {
+      // This is a continuation - get existing results and merge
+      console.log('🔄 [CONTINUATION] This is continuation call, merging with existing results...');
+      
+      const existingResults = await db.query.scrapingResults.findFirst({
+        where: eq(scrapingResults.jobId, jobId)
+      });
+      
+      if (existingResults && existingResults.creators) {
+        const existingCreators = existingResults.creators as any[];
+        console.log(`📊 [MERGE] Found ${existingCreators.length} existing creators from previous calls`);
+        
+        // Create set of existing IDs to avoid duplicates
+        existingCreators.forEach(creator => {
+          const id = creator.id || creator.username || creator.creator?.username;
+          if (id) existingCreatorIds.add(id);
+        });
+        
+        // Filter new creators to avoid duplicates
+        const uniqueNewCreators = newTransformedCreators.filter(creator => {
+          const id = creator.id || creator.username || creator.creator?.username;
+          return id && !existingCreatorIds.has(id);
+        });
+        
+        // Combine existing + unique new creators
+        transformedCreators = [...existingCreators, ...uniqueNewCreators];
+        
+        console.log('📊 [MERGE] Results after deduplication:', {
+          existingCreators: existingCreators.length,
+          newUniqueCreators: uniqueNewCreators.length,
+          totalAfterMerge: transformedCreators.length,
+          duplicatesFiltered: newTransformedCreators.length - uniqueNewCreators.length
+        });
+      }
+    }
 
     // Update progress after basic transformation
     await db.update(scrapingJobs).set({ 
@@ -346,28 +401,79 @@ export async function processInstagramSimilarJob(job: any, jobId: string): Promi
       }
     }
 
-    // Step 6: Update job as completed (FORCED COMPLETION - ensure job never gets stuck)
+    // Step 6: Check if we need more API calls or can complete
     const newProcessedRuns = currentRuns + 1;
     const finalCreatorCount = finalResults ? (finalResults.creators as any[]).length : transformedCreators.length;
     
-    console.log('🔄 [INSTAGRAM-SIMILAR] FORCING JOB COMPLETION:', {
+    console.log('🔄 [INSTAGRAM-SIMILAR] Checking completion status:', {
       jobId: jobId,
       finalCreatorCount: finalCreatorCount,
-      transformedCreatorsLength: transformedCreators.length,
+      targetResults: targetResults,
       newProcessedRuns: newProcessedRuns,
-      reason: 'Ensuring job never gets stuck in processing state'
+      maxApiCalls: MAX_API_CALLS,
+      hasEnoughResults: finalCreatorCount >= targetResults,
+      canMakeMoreCalls: newProcessedRuns < MAX_API_CALLS
     });
     
-    await db.update(scrapingJobs).set({
-      status: 'completed',
-      processedRuns: newProcessedRuns,
-      processedResults: finalCreatorCount,
-      progress: '100',
-      completedAt: new Date(),
-      updatedAt: new Date()
-    }).where(eq(scrapingJobs.id, jobId));
+    // Check if we have enough results or reached max calls
+    const hasEnoughResults = finalCreatorCount >= targetResults;
+    const reachedMaxCalls = newProcessedRuns >= MAX_API_CALLS;
     
-    console.log('✅ [INSTAGRAM-SIMILAR] JOB COMPLETION FORCED - Status updated to completed');
+    if (hasEnoughResults || reachedMaxCalls) {
+      // Complete the job
+      await db.update(scrapingJobs).set({
+        status: 'completed',
+        processedRuns: newProcessedRuns,
+        processedResults: finalCreatorCount,
+        progress: '100',
+        completedAt: new Date(),
+        updatedAt: new Date()
+      }).where(eq(scrapingJobs.id, jobId));
+      
+      console.log('✅ [INSTAGRAM-SIMILAR] Job completed:', {
+        reason: hasEnoughResults ? 'Target results achieved' : 'Max API calls reached',
+        finalResults: finalCreatorCount,
+        apiCallsMade: newProcessedRuns
+      });
+    } else {
+      // Need more results - we can try different strategies
+      console.log('🔄 [INSTAGRAM-SIMILAR] Need more results. Implementing retry strategy...');
+      console.log(`📊 [RETRY-ANALYSIS] Current: ${finalCreatorCount}, Target: ${targetResults}, Remaining calls: ${MAX_API_CALLS - newProcessedRuns}`);
+      
+      // Strategy: Try to get more profiles by re-running the search
+      // Instagram Similar can sometimes return different related profiles on subsequent calls
+      
+      // Update job progress and schedule next call
+      await db.update(scrapingJobs).set({
+        processedRuns: newProcessedRuns,
+        processedResults: finalCreatorCount,
+        progress: '80', // Keep some progress room for additional calls
+        updatedAt: new Date()
+      }).where(eq(scrapingJobs.id, jobId));
+      
+      console.log(`🔄 [INSTAGRAM-SIMILAR] Scheduling additional call ${newProcessedRuns + 1}/${MAX_API_CALLS} to reach target`);
+      
+      // Import QStash for scheduling next call
+      const { qstash } = await import('@/lib/queue/qstash');
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+      const callbackUrl = `${baseUrl}/api/qstash/process-scraping`;
+      
+      await qstash.publishJSON({
+        url: callbackUrl,
+        body: { jobId },
+        delay: '3s' // 3 second delay before next attempt
+      });
+      
+      console.log('✅ [INSTAGRAM-SIMILAR] Next call scheduled - continuing search for more results');
+      
+      return {
+        status: 'processing',
+        message: `Processed ${finalCreatorCount}/${targetResults} results. Scheduling call ${newProcessedRuns + 1}/${MAX_API_CALLS}`,
+        processedResults: finalCreatorCount,
+        targetResults: targetResults,
+        remainingCalls: MAX_API_CALLS - newProcessedRuns
+      };
+    }
 
     console.log('✅ [INSTAGRAM-SIMILAR] Job completed successfully:', {
       jobId: jobId,

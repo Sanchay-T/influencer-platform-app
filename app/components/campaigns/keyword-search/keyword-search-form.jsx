@@ -27,7 +27,19 @@ export default function KeywordSearchForm({ onSubmit }) {
   }, []);
 
   if (!isLoaded || !user) {
-    return null; // o un componente de carga
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Configure Keyword Search</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex justify-center items-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            <span className="ml-3 text-gray-600">Loading...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
   const handlePlatformChange = (platform) => {
