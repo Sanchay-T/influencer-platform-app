@@ -1,0 +1,153 @@
+{
+  "stage": "final_transformed_creators",
+  "jobId": "d223d421-7aef-41db-9e69-b700e418f763",
+  "apiCall": 3,
+  "timestamp": "2025-07-21T10:26:49.249Z",
+  "counts": {
+    "finalTransformedCreators": 11,
+    "processedRuns": 3,
+    "maxRuns": 15
+  },
+  "finalCreators": [
+    {
+      "index": 1,
+      "username": "mrperfecttech",
+      "fullName": "Nitin Raj",
+      "followers": 883651,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Follow for Latest Tech, Tips and Gadgets\nTedx Speaker\n✉️mrperfecttechofficial@gmail.com\nClick below ...",
+      "emails": [
+        "mrperfecttechofficial@gmail.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DL9pDWbv76a",
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "viral_king_aayush",
+      "fullName": "Shivchand Kumar",
+      "followers": 67202,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Collab : itsaayushaayush@gmail.com\nYoutube : 100k+ Family ❤️\nLove For Exploring \nFor Video shoot 837...",
+      "emails": [
+        "itsaayushaayush@gmail.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DKsDtwMvA7t",
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "chic_trendxz",
+      "fullName": "Ankit Kumar",
+      "followers": 148535,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Men's fashion। Lifestyle। Outfit's ideas\nAll products links here👇...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DKmrf0apb1Y",
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "lexiv_trends",
+      "fullName": "LEXIV | MOBILE ACCESSORIES | GADGETS | WATCHES",
+      "followers": 18828,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🛍️ Selling Luxury Goods Since 2012\n🚀 Helping Gen Z Get Luxury In Affordable \n🎁 Follow Now For Wee...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DMNiNt-vr0G",
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "arli_deo",
+      "fullName": "Arli_deo",
+      "followers": 4789,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Influencer...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DMKtHauthBm",
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "derekjelliott",
+      "fullName": "3D Product Animation",
+      "followers": 60581,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "3D Design + Animation in Austin, Texas.\nCheck out my course on Skillshare!\n@fattypackco @charachorde...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DMJ6vJctuCt",
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "insta.__show",
+      "fullName": "INSTA SHOW",
+      "followers": 29241,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "• 👕 Best Men’s Fashion Picks  \n• 👖 Trendy Fashion and gadgets \n• 🧥 Honest Reviews & Tips  \n• 🔥 S...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DMJxBQcBJd4",
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "gadgetbhaii",
+      "fullName": "Himanshu Verma",
+      "followers": 185865,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🕹️ Making life better with Gadgets \n🤖 iPhone & Android | Tips | Tricks \n💼 For Collab: gadgetbhaim...",
+      "emails": [
+        "gadgetbhaimedia@gmail.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DMI_lxZhZmM",
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "eurekahnb",
+      "fullName": "Eureka",
+      "followers": 84651,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "This page provides you with daily interesting  facts, knowledge & Information. 🌍 \n: ™ \nDM For Credi...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DKz9WOWy4VX",
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "technical_sky",
+      "fullName": "Akash Pal ℹ",
+      "followers": 1129206,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "I'm A Tech Content Creator\n📍 Agartala,Tripura,North-East India\n🤝🏼 For Collab - technicalsky@nexme...",
+      "emails": [
+        "technicalsky@nexmedia.in"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DKmSmT-Py-c",
+      "platform": "Instagram"
+    },
+    {
+      "index": 11,
+      "username": "ganeshmobilegalaxy",
+      "fullName": "Ganesh Mobile Galaxy",
+      "followers": 2173971,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🛍 STORE TIMINGS: 10:30 AM-9:15 PM\n💥 AESI OFFERS KAHI NAHI MILEGI!\n📍 Visit Us: Odhav & Shastrinaga...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DKgHlK1I4ZI",
+      "platform": "Instagram"
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "stage": "database_save_final",
+  "jobId": "126eb820-4f3a-4b16-9250-f7d346ea75a5",
+  "apiCall": 7,
+  "timestamp": "2025-07-21T10:06:53.339Z",
+  "counts": {
+    "creatorsBeingPersisted": 5,
+    "newProcessedRuns": 7,
+    "newProcessedResults": 48
+  },
+  "finalDatabaseCreators": [
+    {
+      "index": 1,
+      "username": "limreviews",
+      "followers": 0,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "fivebelow",
+      "followers": 861993,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "electrovilla.shop",
+      "followers": 14651,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "gadgetboy4u",
+      "followers": 1007398,
+      "verified": false,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "insta.__show",
+      "followers": 29243,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "0604a397-e444-4b09-a619-3d20690c0c89",
+  "apiCall": 1,
+  "batchNumber": 2,
+  "timestamp": "2025-07-21T08:07:22.223Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 10
+  },
+  "validCreators": [
+    {
+      "username": "thatsodsoho",
+      "fullName": "Thats OD Soho",
+      "followers": 55556,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "153 Prince Street New York 10012 📍\nOpen Everyday 12-8pm\n📲1 (347) 698-8971\n ⬇️CLICK LINK FOR FULL A...",
+      "emails": []
+    },
+    {
+      "username": "minicostore.in",
+      "fullName": "Minico 🩵",
+      "followers": 815,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Owner- @mr.harshfx\n🚚 Cash on Delivery available in all over India🇮🇳\nWhatsapp no - 9685287996📱\nWe...",
+      "emails": []
+    },
+    {
+      "username": "imanshop_tr",
+      "fullName": "imanonline_shop tr",
+      "followers": 12453,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "خرید از ترکیه،اروپا،کانادا،آمریکا\nDirect  📥\nwhatsapp : 09154449891\nپیج دوم( زنونه) : @ninoshop_tr \n...",
+      "emails": []
+    },
+    {
+      "username": "c.kickss",
+      "fullName": "Sneaker Reseller / c.kicks",
+      "followers": 545334,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "-100% Authentic 👟\n- Ship to USA & PR🇵🇷\n- Business: c.kickss1@gmail.com...",
+      "emails": [
+        "c.kickss1@gmail.com"
+      ]
+    },
+    {
+      "username": "doubleboxed",
+      "fullName": "Double Boxed",
+      "followers": 57224,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Specialising in exclusive footwear and apparel. Guaranteed Authenticity. Next Day Delivery....",
+      "emails": []
+    }
+  ]
+}

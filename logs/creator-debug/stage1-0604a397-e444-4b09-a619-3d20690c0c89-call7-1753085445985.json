@@ -1,0 +1,102 @@
+{
+  "stage": "after_initial_quality_filter",
+  "jobId": "0604a397-e444-4b09-a619-3d20690c0c89",
+  "apiCall": 7,
+  "timestamp": "2025-07-21T08:10:45.984Z",
+  "counts": {
+    "totalCreatorsFound": 11,
+    "qualityCreatorsAdded": 11,
+    "filteredOutCreators": 0,
+    "finalUniqueCreators": 11
+  },
+  "creators": [
+    {
+      "username": "itsyourdb",
+      "fullName": "dB",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "dropinfos",
+      "fullName": "#1 Sneakers/Fashion News Source",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "sneakr_tweakr",
+      "fullName": "SneakrTweakr",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "suhanasethiofficial",
+      "fullName": "Suhana Sethi",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "chenxiami99",
+      "fullName": "Xiami",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "bosscosgoodiez",
+      "fullName": "Bossco",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "kronickstyle",
+      "fullName": "Miguel Angel",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "stockxkicks_net",
+      "fullName": "stockxkicksvip.com",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "ridhi.culous",
+      "fullName": "Ridhi Sharma",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "cxstiillo",
+      "fullName": "Dᴀᴠɪᴅ Cᴀsᴛɪʟʟᴏ Esϙᴜɪᴠᴇʟ",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "hockeytutorial",
+      "fullName": "Hockeytutorial",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    }
+  ]
+}

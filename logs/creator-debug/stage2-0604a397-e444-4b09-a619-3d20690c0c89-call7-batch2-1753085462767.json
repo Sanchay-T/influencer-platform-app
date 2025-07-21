@@ -1,0 +1,60 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "0604a397-e444-4b09-a619-3d20690c0c89",
+  "apiCall": 7,
+  "batchNumber": 2,
+  "timestamp": "2025-07-21T08:11:02.767Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 10
+  },
+  "validCreators": [
+    {
+      "username": "cxstiillo",
+      "fullName": "Dᴀᴠɪᴅ Cᴀsᴛɪʟʟᴏ Esϙᴜɪᴠᴇʟ",
+      "followers": 144736,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "🤳 | Cʀᴇᴀᴅᴏʀ ᴅᴇ Cᴏɴᴛᴇɴɪᴅᴏ ʏ Eᴍᴘʀᴇɴᴅᴇᴅᴏʀ\n🪐 | @darthkasty \n👇🏼 | YᴏᴜTᴜʙᴇ, Cᴏɴᴛᴀᴄᴛᴏ, Rᴇᴅᴇs...",
+      "emails": []
+    },
+    {
+      "username": "itsyourdb",
+      "fullName": "dB",
+      "followers": 45444,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🔘 Fashion | Lifestyle | Vlogs\n📍 UP25 | Email for Collaboration 📩\n🔸 Shop my Outfits & Style picks...",
+      "emails": []
+    },
+    {
+      "username": "chenxiami99",
+      "fullName": "Xiami",
+      "followers": 46734,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "More content here @doris_dk1 \nShare packaging, quality, shoelace tutorials\n🌍 Worldwide Delivery\n🛒 ...",
+      "emails": []
+    },
+    {
+      "username": "stockxkicks_net",
+      "fullName": "stockxkicksvip.com",
+      "followers": 5247,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "✈️ | worldwide shipping\n📸 | More QC pictures @stockxkicks_qc\n🇨🇳 | Our factory @stockxkicksfactory...",
+      "emails": []
+    },
+    {
+      "username": "ridhi.culous",
+      "fullName": "Ridhi Sharma",
+      "followers": 111965,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "we heal, glow & figure out life here 💖\nif “I can do it, you can too” was a person\nfitness • beauty ...",
+      "emails": []
+    }
+  ]
+}

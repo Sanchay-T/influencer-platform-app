@@ -1,0 +1,161 @@
+{
+  "stage": "final_transformed_creators",
+  "jobId": "50307430-9c22-48e1-a526-9cf13c8eede0",
+  "apiCall": 8,
+  "timestamp": "2025-07-21T10:24:44.876Z",
+  "counts": {
+    "finalTransformedCreators": 12,
+    "processedRuns": 8,
+    "maxRuns": 15
+  },
+  "finalCreators": [
+    {
+      "index": 1,
+      "username": "cnet",
+      "fullName": "CNET",
+      "followers": 1305686,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Your guide to a better future....",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/C9QambLPDrY",
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "trendyntrust",
+      "fullName": "Trendy&Trust",
+      "followers": 1404,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Where Trends Meet Trust ✨  \nHigh-quality products since 2002 🛍️  \nDelivery all over Lebanon 🇱🇧  \n...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DKHGQjiM0Em",
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "carlcrusher",
+      "fullName": "Carl Andreasen",
+      "followers": 219474,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Carl the Crusher and the Crusher Crew! Exploring mysteries UFOs & Paranormal 🤟🏼 Crushing LIFE with...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DD0hU99MKm3",
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "gadgethome1",
+      "fullName": "Vikram Raj",
+      "followers": 112047,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "👨‍💻 Tech | Info | Gadgets | Ai\n💡Sharing Smart Tools To Simplify Life\n🤝 collabgadgethome1@gmail.c...",
+      "emails": [
+        "collabgadgethome1@gmail.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DLkEMyRTb_H",
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "emkwan",
+      "fullName": "EMKWAN",
+      "followers": 166583,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "📲 Tech, AI, Cars & Watches from Dubai 🇦🇪\n🌴 Top 10 Tech Influencer Dubai 2025\n🚀 500M+ Views\n تاب...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/CsWMnJAMblM",
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "_priyaachaudhary01",
+      "fullName": "Priya Collection",
+      "followers": 24868,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Priya Collection Girl's Ethnic Wear \nOrder On WhatsApp 👉8114453230...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DENVLk9yHw-",
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "jai_ambey_world",
+      "fullName": "MR.PRITAM MAHAWAR",
+      "followers": 569,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "SMART SHOP 4 SMART PEPOLE😍\n9610542570\nKRESHAR ROAD near SETH RAMCHANDRA HOTEL🔥\nA to Z प्रोडक्ट 🔥\ud83d...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DMN1XQ2hPC_",
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "mrvaibhavpatwal",
+      "fullName": "Vaibhav Patwal",
+      "followers": 3093,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Food | Restaurant | Stores [Honest Review]👍\n📍Lucknow \n1M Club Reels 🤩🤩\nDM For Collaboration/Paid...",
+      "emails": [
+        "vaibhav.patwal.official@gmail.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DMNabE4pi_i",
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "mobilak.lb",
+      "fullName": "Mobilak",
+      "followers": 31891,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "• Specialized in High-End brands of mobile accessories.\n• Contact us for your inquiries.\n• Delivery ...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DL2Ip_kCKDj",
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "godhamobilebijaynagar",
+      "fullName": "Godha Mobiles Sonu Godha",
+      "followers": 781734,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "godha mobiles, bijainagar, rajasthan\nMo.8058061112\nMo.7587522222\nMo.7070701614\nMo.7733006666\nMo.7891...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DJY9-SGp5VS",
+      "platform": "Instagram"
+    },
+    {
+      "index": 11,
+      "username": "vishalfitarmy",
+      "fullName": "Vishal Fit Army",
+      "followers": 678,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Saharanpur 📍\nWelcome to Vishal Fit Army\n🚘 Car Modifications\n💪 Fitness Motivation & Workouts\n🎥 Da...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DLbidg-T0fe",
+      "platform": "Instagram"
+    },
+    {
+      "index": 12,
+      "username": "matrix_escapes__",
+      "fullName": "Conspiracies/Truths | Informed Eating | Toxic Free Living",
+      "followers": 1045,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Join us on this journey of awakening & discovery with every click 🔴🐇\nEach post is a step further o...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/C5wS7H-S-jR",
+      "platform": "Instagram"
+    }
+  ]
+}

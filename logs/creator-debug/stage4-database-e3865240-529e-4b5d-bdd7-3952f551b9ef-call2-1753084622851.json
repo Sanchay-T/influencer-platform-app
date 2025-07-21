@@ -1,0 +1,93 @@
+{
+  "stage": "database_save_final",
+  "jobId": "e3865240-529e-4b5d-bdd7-3952f551b9ef",
+  "apiCall": 2,
+  "timestamp": "2025-07-21T07:57:02.851Z",
+  "counts": {
+    "creatorsBeingPersisted": 10,
+    "newProcessedRuns": 2,
+    "newProcessedResults": 21
+  },
+  "finalDatabaseCreators": [
+    {
+      "index": 1,
+      "username": "nike",
+      "followers": 300034897,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "wethenew",
+      "followers": 863571,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "shoes.lks",
+      "followers": 34187,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "footlockermalaysia",
+      "followers": 140693,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "stylerunner",
+      "followers": 625669,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "maisonstuff.co",
+      "followers": 22966,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "nikefootball",
+      "followers": 46361821,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "bennetts_",
+      "followers": 403789,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "twitsaaa__1",
+      "followers": 31926,
+      "verified": false,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "momento_women",
+      "followers": 181517,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    }
+  ]
+}

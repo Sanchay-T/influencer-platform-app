@@ -1,0 +1,62 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "0604a397-e444-4b09-a619-3d20690c0c89",
+  "apiCall": 5,
+  "batchNumber": 2,
+  "timestamp": "2025-07-21T08:09:46.079Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 10
+  },
+  "validCreators": [
+    {
+      "username": "kckd_rosko",
+      "fullName": "Trevor Roskovensky",
+      "followers": 46896,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "👟Helping people cop shoes for retail \n📱49k On YouTube! (Daily Live Streams)\n🚨Need my help I got y...",
+      "emails": []
+    },
+    {
+      "username": "iamharshkale",
+      "fullName": "𝐇𝐀𝐑𝐒𝐇 ✰ 𝐌𝐄𝐍'𝐒 𝐅𝐀𝐒𝐇𝐈𝐎𝐍 |🇮🇳",
+      "followers": 13716,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "•💡Menswear\n•📍Mumbai\n•🔹Follow for daily fashion content!...",
+      "emails": []
+    },
+    {
+      "username": "noahxblack",
+      "fullName": "Noah black",
+      "followers": 12907,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Fashion inspo \nSocial media manager @dontxgate\n🔴 @noah2black2 🔴\n⚫ @noahxgate     ⚫\nPartnerships: n...",
+      "emails": [
+        "noahxblack@gmail.com"
+      ]
+    },
+    {
+      "username": "svweeart",
+      "fullName": "Sveta",
+      "followers": 9437,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "by @sun_apanasovich \nCastomizer shoes 👟 🇱🇹\nCat mom 🐱🐱\nTelegram: TSDcustoms...",
+      "emails": []
+    },
+    {
+      "username": "gj5_suratcity",
+      "fullName": "Vaibhav Seth",
+      "followers": 26432,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Exploring flavors, sights, and secrets. \nJoin the adventure today! 🌆🍽️🌍\nTarget 50k🎯...",
+      "emails": []
+    }
+  ]
+}

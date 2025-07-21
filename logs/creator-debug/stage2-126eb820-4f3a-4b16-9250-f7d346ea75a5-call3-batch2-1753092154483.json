@@ -1,0 +1,53 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "126eb820-4f3a-4b16-9250-f7d346ea75a5",
+  "apiCall": 3,
+  "batchNumber": 2,
+  "timestamp": "2025-07-21T10:02:34.483Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 4,
+    "filteredOutInBatch": 1,
+    "cumulativeValidCreators": 9
+  },
+  "validCreators": [
+    {
+      "username": "gadgetboy4u",
+      "fullName": "Gadget Boy",
+      "followers": 1007388,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Useful Gadgets\nFor business 📧 sahilpathang7@gmail.com \nBuy Link 👇👇👇...",
+      "emails": [
+        "sahilpathang7@gmail.com"
+      ]
+    },
+    {
+      "username": "eurekahnb",
+      "fullName": "Eureka",
+      "followers": 84645,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "This page provides you with daily interesting  facts, knowledge & Information. 🌍 \n: ™ \nDM For Credi...",
+      "emails": []
+    },
+    {
+      "username": "8list.ph",
+      "fullName": "8List.ph",
+      "followers": 22199,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "8List.ph delivers your daily dose of useful and entertaining lists!...",
+      "emails": []
+    },
+    {
+      "username": "lexiv_trends",
+      "fullName": "LEXIV | MOBILE ACCESSORIES | GADGETS | WATCHES",
+      "followers": 18828,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🛍️ Selling Luxury Goods Since 2012\n🚀 Helping Gen Z Get Luxury In Affordable \n🎁 Follow Now For Wee...",
+      "emails": []
+    }
+  ]
+}

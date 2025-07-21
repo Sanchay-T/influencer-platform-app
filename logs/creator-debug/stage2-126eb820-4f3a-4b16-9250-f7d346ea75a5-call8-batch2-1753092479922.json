@@ -1,0 +1,60 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "126eb820-4f3a-4b16-9250-f7d346ea75a5",
+  "apiCall": 8,
+  "batchNumber": 2,
+  "timestamp": "2025-07-21T10:07:59.922Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 10
+  },
+  "validCreators": [
+    {
+      "username": "cnet",
+      "fullName": "CNET",
+      "followers": 1305687,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Your guide to a better future....",
+      "emails": []
+    },
+    {
+      "username": "gadgetxpress_india",
+      "fullName": "GadgetXpress",
+      "followers": 1040,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Websit link 👉http://gadgetxpress.in\n*Wholesale and retail*\nDM/WhatsApp👉7240688392\nCash on delivery...",
+      "emails": []
+    },
+    {
+      "username": "zahcomputers.pk",
+      "fullName": "ZahComputers.pk",
+      "followers": 33794,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Pakistan's #1 store for gaming & professional monitors.\nWith the largest inventory & trusted since 2...",
+      "emails": []
+    },
+    {
+      "username": "milestelecom",
+      "fullName": "Miles Telecom Trading LLC",
+      "followers": 6777,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "📱Your one-stop shop for the Latest\nMobiles | Gadgets | Accessories | Repair...",
+      "emails": []
+    },
+    {
+      "username": "2024gadgetsbazaar",
+      "fullName": "Gadgets Bazaar",
+      "followers": 4403,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🎧⌚️I Deals in smart gadgets\n🚚📦I All india delivery\n💬📨I wtsno.7566243621\n🏤🏣I main page:@immoni...",
+      "emails": []
+    }
+  ]
+}

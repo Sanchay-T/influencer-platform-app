@@ -307,9 +307,31 @@ export async function POST(req: Request) {
       });
       console.log('📊 [JOB-STATUS-DEBUG] This should be API call number:', job.processedRuns + 1);
       
-      // Instagram Reels specific configuration: Allow multiple requests for more results
-      // Enhanced for maximized results: 50-200+ high-quality creators
-      const INSTAGRAM_REELS_MAX_REQUESTS = 15;
+      // 🎯 TARGET VERIFICATION: Verify target is read correctly from job.targetResults
+      const userTargetResults = job.targetResults || 100; // Default to 100 if not set
+      console.log('🎯 [TARGET-VERIFICATION] Job target verification:', {
+        rawTargetResults: job.targetResults,
+        finalUserTarget: userTargetResults,
+        isDefaultUsed: !job.targetResults,
+        jobId: job.id
+      });
+      
+      // 🎯 DYNAMIC API LIMITS: Calculate based on user's target results
+      const avgCreatorsPerCall = 10; // Based on our analysis: 10-12 creators per call
+      const estimatedCallsNeeded = Math.ceil(userTargetResults / avgCreatorsPerCall);
+      const bufferMultiplier = 1.5; // 50% buffer for variation
+      const dynamicMaxCalls = Math.ceil(estimatedCallsNeeded * bufferMultiplier);
+      const INSTAGRAM_REELS_MAX_REQUESTS = Math.min(dynamicMaxCalls, 100); // Cap at 100 calls max
+      
+      console.log('🎯 [DYNAMIC-LIMITS] Calculated API limits:', {
+        userTargetResults: userTargetResults,
+        avgCreatorsPerCall: avgCreatorsPerCall,
+        estimatedCallsNeeded: estimatedCallsNeeded,
+        bufferMultiplier: bufferMultiplier,
+        dynamicMaxCalls: dynamicMaxCalls,
+        finalMaxRequests: INSTAGRAM_REELS_MAX_REQUESTS,
+        reasoning: 'Based on 10 creators per call average from analysis'
+      });
       console.log('📋 [RAPIDAPI-INSTAGRAM] Job details:', {
         jobId: job.id,
         keywords: job.keywords,
@@ -338,6 +360,16 @@ export async function POST(req: Request) {
           host: RAPIDAPI_HOST,
           baseUrl: RAPIDAPI_BASE_URL,
           hasKey: !!RAPIDAPI_KEY
+        });
+        
+        // 🔍 API CALL DECISION: Before each API call - verify continuation logic
+        console.log('🔍 [API-CALL-DECISION] Pre-call analysis:', {
+          currentRuns: job.processedRuns,
+          maxAllowedRuns: INSTAGRAM_REELS_MAX_REQUESTS,
+          currentResults: job.processedResults,
+          targetResults: userTargetResults,
+          shouldStop: job.processedRuns >= INSTAGRAM_REELS_MAX_REQUESTS,
+          decision: job.processedRuns >= INSTAGRAM_REELS_MAX_REQUESTS ? 'STOP_API_LIMIT' : 'CONTINUE_API_CALL'
         });
         
         // Check if we've reached the API call limit for Instagram Reels (1 request only)
@@ -437,18 +469,130 @@ export async function POST(req: Request) {
         });
         
         const reelsStartTime = Date.now();
-        const reelsResponse = await fetch(reelsSearchUrl, {
-          headers: {
-            'x-rapidapi-key': RAPIDAPI_KEY,
-            'x-rapidapi-host': RAPIDAPI_HOST
-          }
-        });
-        const reelsFetchTime = Date.now() - reelsStartTime;
+        let reelsResponse;
+        let reelsFetchTime;
         
-        console.log('📊 [RAPIDAPI-INSTAGRAM] Reels search completed in', reelsFetchTime, 'ms');
+        try {
+          reelsResponse = await fetch(reelsSearchUrl, {
+            headers: {
+              'x-rapidapi-key': RAPIDAPI_KEY,
+              'x-rapidapi-host': RAPIDAPI_HOST
+            }
+          });
+          reelsFetchTime = Date.now() - reelsStartTime;
+          
+          console.log('📊 [RAPIDAPI-INSTAGRAM] Reels search completed in', reelsFetchTime, 'ms');
+        } catch (fetchError) {
+          console.error('❌ [RAPIDAPI-INSTAGRAM] Network error during API call:', fetchError);
+          throw new Error(`Network error: ${fetchError.message}`);
+        }
         
+        // 🛡️ ENHANCED ERROR HANDLING: Handle different API error types
         if (!reelsResponse.ok) {
-          throw new Error(`Instagram Reels API error: ${reelsResponse.status} ${reelsResponse.statusText}`);
+          const errorText = await reelsResponse.text().catch(() => 'Unable to read error response');
+          
+          console.error('❌ [RAPIDAPI-INSTAGRAM] API Error Details:', {
+            status: reelsResponse.status,
+            statusText: reelsResponse.statusText,
+            errorBody: errorText,
+            url: reelsSearchUrl,
+            currentRun: job.processedRuns + 1,
+            totalResults: job.processedResults || 0
+          });
+          
+          // Handle specific error types
+          if (reelsResponse.status === 429) {
+            // Rate limit - schedule retry with longer delay
+            console.log('⏳ [RATE-LIMIT] Instagram API rate limited, scheduling retry...');
+            
+            await db.update(scrapingJobs)
+              .set({
+                progress: '15', // Keep some progress to show activity
+                updatedAt: new Date()
+              })
+              .where(eq(scrapingJobs.id, job.id));
+            
+            // Schedule retry with 30 second delay
+            const callbackUrl = `${baseUrl}/api/qstash/process-scraping`;
+            await qstash.publishJSON({
+              url: callbackUrl,
+              body: { jobId: job.id },
+              delay: '30s' // Longer delay for rate limits
+            });
+            
+            return NextResponse.json({
+              success: true,
+              message: 'Instagram API rate limited, retrying in 30 seconds...',
+              stage: 'rate_limited',
+              willRetry: true
+            });
+          } else if (reelsResponse.status === 500 || reelsResponse.status === 502 || reelsResponse.status === 503) {
+            // Server errors - check if we have enough results to complete
+            const currentResults = job.processedResults || 0;
+            const isCloseToTarget = currentResults >= (userTargetResults * 0.8); // 80% of target
+            
+            console.log('🔧 [SERVER-ERROR] Instagram API server error, analyzing options:', {
+              apiStatus: reelsResponse.status,
+              currentResults: currentResults,
+              targetResults: userTargetResults,
+              percentComplete: Math.round((currentResults / userTargetResults) * 100),
+              isCloseToTarget: isCloseToTarget,
+              canCompleteWithCurrentResults: currentResults > 0
+            });
+            
+            if (isCloseToTarget && currentResults > 0) {
+              // We're close to target, complete with current results
+              console.log('✅ [GRACEFUL-COMPLETION] Completing job with current results due to API issues');
+              
+              await db.update(scrapingJobs)
+                .set({
+                  status: 'completed',
+                  progress: '100',
+                  processedResults: currentResults,
+                  completedAt: new Date(),
+                  updatedAt: new Date()
+                })
+                .where(eq(scrapingJobs.id, job.id));
+              
+              return NextResponse.json({
+                success: true,
+                message: `Instagram search completed with ${currentResults} creators (API issues prevented reaching full target)`,
+                stage: 'completed',
+                gracefulCompletion: true,
+                finalCount: currentResults,
+                targetRequested: userTargetResults
+              });
+            } else {
+              // Not enough results yet, schedule retry
+              console.log('🔄 [SERVER-ERROR-RETRY] Scheduling retry due to server error...');
+              
+              await db.update(scrapingJobs)
+                .set({
+                  progress: Math.max('10', Math.round((currentResults / userTargetResults) * 100).toString()),
+                  updatedAt: new Date()
+                })
+                .where(eq(scrapingJobs.id, job.id));
+              
+              // Schedule retry with 15 second delay
+              const callbackUrl = `${baseUrl}/api/qstash/process-scraping`;
+              await qstash.publishJSON({
+                url: callbackUrl,
+                body: { jobId: job.id },
+                delay: '15s'
+              });
+              
+              return NextResponse.json({
+                success: true,
+                message: `Instagram API experiencing issues (${reelsResponse.status}), retrying...`,
+                stage: 'server_error_retry',
+                willRetry: true,
+                currentResults: currentResults
+              });
+            }
+          } else {
+            // Other errors - throw to be handled by outer catch
+            throw new Error(`Instagram Reels API error: ${reelsResponse.status} ${reelsResponse.statusText} - ${errorText}`);
+          }
         }
         
         const reelsData = await reelsResponse.json();
@@ -1137,7 +1281,8 @@ export async function POST(req: Request) {
         }
         
         const newProcessedResults = totalAccumulatedCount;
-        const currentProgress = Math.min(100, (newProcessedResults / job.targetResults) * 100);
+        // 🎯 ACCURATE PROGRESS: Based on creator count vs user's target (never show 100% until complete)
+        const currentProgress = Math.min(99, (newProcessedResults / userTargetResults) * 100);
         
         console.log('\n📝 [RAPIDAPI-INSTAGRAM] Updating job progress...');
         const jobUpdateStartTime = Date.now();
@@ -1160,40 +1305,61 @@ export async function POST(req: Request) {
           throw jobUpdateError;
         }
         
-        // CHECK: Should we continue with more API calls for more results?
-        // Continue until we have good number of results (target 200+ quality creators) or hit API limit
-        const targetQualityCreators = 200; // Enhanced target for maximum quality creators
-        const shouldContinue = newProcessedRuns < INSTAGRAM_REELS_MAX_REQUESTS && newProcessedResults < targetQualityCreators;
+        // 🎯 EXACT COUNT CHECK: Stop if we've reached or exceeded target
+        const exactCountCheck = {
+          currentResults: newProcessedResults,
+          targetResults: userTargetResults,
+          hasReachedTarget: newProcessedResults >= userTargetResults,
+          needsMoreResults: newProcessedResults < userTargetResults,
+          callsRemaining: INSTAGRAM_REELS_MAX_REQUESTS - newProcessedRuns,
+          stillNeeded: Math.max(0, userTargetResults - newProcessedResults),
+          isWithinBuffer: newProcessedResults >= (userTargetResults * 0.95) // 95% of target is acceptable
+        };
+
+        console.log('🎯 [EXACT-COUNT-CHECK] Target analysis:', exactCountCheck);
+
+        // Decision logic: Continue only if we need more AND can make more calls
+        const shouldContinue = exactCountCheck.needsMoreResults && 
+                              newProcessedRuns < INSTAGRAM_REELS_MAX_REQUESTS &&
+                              exactCountCheck.callsRemaining > 0;
         
-        // 🔍 DETAILED CONTINUATION LOGGING
-        console.log('\n🔍 [CONTINUATION-DEBUG] Detailed continuation analysis:');
-        console.log('📊 [CONTINUATION-DEBUG] API Call Status:', {
+        // 🔍 ENHANCED CONTINUATION LOGGING  
+        console.log('\n🔍 [EXACT-COUNT-DECISION] Continuation analysis:');
+        console.log('🎯 [EXACT-COUNT-DECISION] Target Status:', {
+          userTarget: userTargetResults,
+          currentResults: newProcessedResults,
+          stillNeeded: exactCountCheck.stillNeeded,
+          progress: `${newProcessedResults}/${userTargetResults} (${((newProcessedResults/userTargetResults)*100).toFixed(1)}%)`,
+          hasReachedTarget: exactCountCheck.hasReachedTarget
+        });
+        console.log('📊 [EXACT-COUNT-DECISION] API Call Status:', {
           currentRuns: newProcessedRuns,
           maxRuns: INSTAGRAM_REELS_MAX_REQUESTS,
-          runsRemaining: INSTAGRAM_REELS_MAX_REQUESTS - newProcessedRuns,
-          apiCallsCondition: newProcessedRuns < INSTAGRAM_REELS_MAX_REQUESTS
+          callsRemaining: exactCountCheck.callsRemaining,
+          estimatedCallsNeeded: Math.ceil(exactCountCheck.stillNeeded / avgCreatorsPerCall)
         });
-        console.log('📊 [CONTINUATION-DEBUG] Results Status:', {
-          currentResults: newProcessedResults,
-          targetResults: targetQualityCreators,
-          resultsRemaining: targetQualityCreators - newProcessedResults,
-          resultsCondition: newProcessedResults < targetQualityCreators
-        });
-        console.log('📊 [CONTINUATION-DEBUG] Final Decision:', {
+        console.log('🚦 [EXACT-COUNT-DECISION] Final Decision:', {
           shouldContinue: shouldContinue,
-          reason: shouldContinue ? 'MORE_CALLS_NEEDED' : 'STOPPING',
-          stoppingReason: !shouldContinue ? 
-            (newProcessedRuns >= INSTAGRAM_REELS_MAX_REQUESTS ? 'API_LIMIT_REACHED' : 'TARGET_REACHED') 
-            : null
+          decision: shouldContinue ? 'CONTINUE' : 'STOP',
+          reason: shouldContinue ? 'More creators needed' : 
+                  (exactCountCheck.hasReachedTarget ? 'Target reached or exceeded' : 'API limit reached'),
+          nextAction: shouldContinue ? 'Schedule next API call' : 'Complete job and trim if needed'
         });
         
         if (shouldContinue) {
-          console.log('\n🔄 [CONTINUATION] Scheduling next API call for more results...');
+          console.log('\n🔍 [EARLY-STOPPING-VERIFICATION] Early stopping analysis:', {
+            shouldContinue: shouldContinue,
+            decision: 'CONTINUE_API_CALLS',
+            reason: 'Target not reached and API calls remaining',
+            nextAction: 'Schedule next API call'
+          });
+          console.log('\n🔄 [CONTINUATION] Scheduling next API call for exact count delivery...');
           console.log('📊 [CONTINUATION] Current status:', {
             processedRuns: newProcessedRuns,
             maxRuns: INSTAGRAM_REELS_MAX_REQUESTS,
             processedResults: newProcessedResults,
-            targetQualityCreators: targetQualityCreators,
+            userTargetResults: userTargetResults,
+            stillNeeded: exactCountCheck.stillNeeded,
             willContinue: true
           });
           
@@ -1207,22 +1373,89 @@ export async function POST(req: Request) {
           
           return NextResponse.json({
             success: true,
-            message: `Instagram reels search continuing (enhanced) - ${newProcessedResults} quality creators so far`,
+            message: `Instagram reels search continuing - ${newProcessedResults}/${userTargetResults} creators found`,
             stage: 'continuing',
             processedRuns: newProcessedRuns,
             maxRuns: INSTAGRAM_REELS_MAX_REQUESTS,
             processedResults: newProcessedResults,
-            targetQualityCreators: targetQualityCreators,
-            enhancedFeatures: 'global_search + keyword_expansion + relaxed_filtering'
+            targetResults: userTargetResults,
+            stillNeeded: exactCountCheck.stillNeeded,
+            exactCountDelivery: 'active'
           });
         } else {
-          // COMPLETE: Mark job as completed with full bio/email data
-          console.log('\n🎉 [COMPLETE] Instagram reels search with bio/email enhancement completed!');
+          // 🎯 EXACT COUNT DELIVERY: Trim results to exact target if over-delivered
+          let finalCreatorCount = newProcessedResults;
+          
+          if (newProcessedResults > userTargetResults) {
+            console.log(`\n✂️ [RESULT-TRIMMING-VERIFICATION] Trimming analysis:`, {
+              currentResults: newProcessedResults,
+              targetResults: userTargetResults,
+              overDelivered: newProcessedResults - userTargetResults,
+              willTrim: true,
+              reason: 'Over-delivered results need trimming to exact target'
+            });
+            console.log(`\n✂️ [TRIM-RESULTS] Over-delivered: ${newProcessedResults}, trimming to exact ${userTargetResults}`);
+            
+            try {
+              // Get current results and trim to exact count
+              const latestResults = await db.query.scrapingResults.findFirst({
+                where: eq(scrapingResults.jobId, job.id),
+                orderBy: [desc(scrapingResults.createdAt)]
+              });
+              
+              if (latestResults && latestResults.creators) {
+                const allCreators = latestResults.creators as any[];
+                const trimmedCreators = allCreators.slice(0, userTargetResults);
+                
+                console.log('✂️ [TRIM-RESULTS] Trimming details:', {
+                  originalCount: allCreators.length,
+                  targetCount: userTargetResults,
+                  trimmedCount: trimmedCreators.length,
+                  removedCount: allCreators.length - trimmedCreators.length
+                });
+                
+                // Update database with exact count
+                await db.update(scrapingResults)
+                  .set({ 
+                    creators: trimmedCreators,
+                    createdAt: new Date()
+                  })
+                  .where(eq(scrapingResults.jobId, job.id));
+                
+                finalCreatorCount = trimmedCreators.length;
+                console.log(`✅ [EXACT-DELIVERY] Successfully trimmed to exactly ${finalCreatorCount} creators`);
+              }
+            } catch (trimError) {
+              console.error('❌ [TRIM-RESULTS] Error trimming results:', trimError);
+              // Continue with original count if trimming fails
+            }
+          }
+
+          // COMPLETE: Mark job as completed with exact count
+          console.log('\n🔍 [EARLY-STOPPING-VERIFICATION] Early stopping analysis:', {
+            shouldContinue: shouldContinue,
+            decision: 'STOP_PROCESSING',
+            reason: exactCountCheck.hasReachedTarget ? 'Target reached or exceeded' : 'API limit reached',
+            nextAction: 'Complete job and trim if needed'
+          });
+          
+          console.log('\n🎉 [COMPLETE] Instagram reels search with exact count delivery completed!');
+          console.log('📊 [FINAL-COUNT-VERIFICATION] Job completion analysis:', {
+            finalCreatorCount: finalCreatorCount,
+            userTargetResults: userTargetResults,
+            exactMatch: finalCreatorCount === userTargetResults,
+            deliveryStatus: finalCreatorCount === userTargetResults ? 'EXACT_TARGET_ACHIEVED' : 
+                           finalCreatorCount > userTargetResults ? 'OVER_DELIVERED_TRIMMED' : 'UNDER_DELIVERED',
+            processedRuns: newProcessedRuns,
+            maxRuns: INSTAGRAM_REELS_MAX_REQUESTS,
+            completionReason: exactCountCheck.hasReachedTarget ? 'Target reached' : 'API limit reached'
+          });
           console.log('📊 [COMPLETE] Final status:', {
             processedRuns: newProcessedRuns,
             maxRuns: INSTAGRAM_REELS_MAX_REQUESTS,
-            processedResults: newProcessedResults,
-            targetQualityCreators: targetQualityCreators,
+            processedResults: finalCreatorCount,
+            targetResults: userTargetResults,
+            exactDelivery: finalCreatorCount === userTargetResults,
             completed: true
           });
           
@@ -1230,6 +1463,7 @@ export async function POST(req: Request) {
             .set({
               status: 'completed',
               progress: '100',
+              processedResults: finalCreatorCount, // Update with exact count
               completedAt: new Date(),
               updatedAt: new Date()
             })
@@ -1239,37 +1473,83 @@ export async function POST(req: Request) {
           
           console.log('\n🎉 [COMPLETE] Search completed successfully:', {
             jobId: job.id,
-            resultsCount: newProcessedResults,
+            resultsCount: finalCreatorCount,
+            targetResults: userTargetResults,
+            exactDelivery: finalCreatorCount === userTargetResults,
             totalTime: Date.now() - processingStartTime + 'ms',
             bioEmailEnhanced: true
           });
           
-          console.log('========== END COMPLETE PROCESSING ==========\n\n');
+          console.log('========== END EXACT COUNT PROCESSING ==========\n\n');
           
           return NextResponse.json({
             success: true,
-            message: 'Instagram reels search completed with bio/email data',
+            message: `Instagram reels search completed - delivered exactly ${finalCreatorCount} creators`,
             stage: 'completed',
-            enhancementCompleted: true
+            exactCountDelivered: finalCreatorCount,
+            targetRequested: userTargetResults,
+            exactMatch: finalCreatorCount === userTargetResults
           });
         }
       } catch (instagramReelsError: any) {
         console.error('❌ Error processing Instagram reels job:', instagramReelsError);
         
-        // Mark job as failed
-        await db.update(scrapingJobs)
-          .set({
-            status: 'error',
-            error: instagramReelsError.message || 'Unknown Instagram reels processing error',
-            completedAt: new Date()
-          })
-          .where(eq(scrapingJobs.id, job.id));
+        // 🛡️ SMART ERROR HANDLING: Check if we have partial results to salvage
+        const currentResults = job.processedResults || 0;
+        const hasPartialResults = currentResults > 0;
+        const isReasonableProgress = currentResults >= Math.min(20, userTargetResults * 0.3); // At least 20 creators or 30% of target
         
-        return NextResponse.json({
-          success: false,
-          error: 'Instagram reels search failed',
-          details: instagramReelsError.message
+        console.log('🔧 [ERROR-RECOVERY] Analyzing error recovery options:', {
+          error: instagramReelsError.message,
+          currentResults: currentResults,
+          targetResults: userTargetResults,
+          hasPartialResults: hasPartialResults,
+          isReasonableProgress: isReasonableProgress,
+          canSalvage: hasPartialResults && isReasonableProgress
         });
+        
+        if (hasPartialResults && isReasonableProgress) {
+          // We have reasonable partial results, complete with what we have
+          console.log('🚑 [GRACEFUL-RECOVERY] Completing job with partial results due to API error');
+          
+          await db.update(scrapingJobs)
+            .set({
+              status: 'completed',
+              progress: '100',
+              processedResults: currentResults,
+              completedAt: new Date(),
+              updatedAt: new Date(),
+              error: `Completed with partial results due to API issues: ${instagramReelsError.message}`
+            })
+            .where(eq(scrapingJobs.id, job.id));
+          
+          return NextResponse.json({
+            success: true,
+            message: `Instagram search completed with ${currentResults} creators (API issues prevented full completion)`,
+            stage: 'completed',
+            partialCompletion: true,
+            finalCount: currentResults,
+            targetRequested: userTargetResults,
+            errorRecovered: true
+          });
+        } else {
+          // Not enough results to salvage, mark as failed
+          await db.update(scrapingJobs)
+            .set({
+              status: 'error',
+              error: instagramReelsError.message || 'Unknown Instagram reels processing error',
+              completedAt: new Date(),
+              updatedAt: new Date()
+            })
+            .where(eq(scrapingJobs.id, job.id));
+          
+          return NextResponse.json({
+            success: false,
+            error: 'Instagram reels search failed',
+            details: instagramReelsError.message,
+            partialResults: currentResults
+          });
+        }
       }
     }
     

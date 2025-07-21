@@ -1,0 +1,24 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "126eb820-4f3a-4b16-9250-f7d346ea75a5",
+  "apiCall": 6,
+  "batchNumber": 3,
+  "timestamp": "2025-07-21T10:05:21.505Z",
+  "counts": {
+    "rawResults": 2,
+    "validResults": 1,
+    "filteredOutInBatch": 1,
+    "cumulativeValidCreators": 11
+  },
+  "validCreators": [
+    {
+      "username": "alloyarmorcase",
+      "fullName": "AlloyArmor",
+      "followers": 25420,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "FINAL SALE IS LIVE (TODAY ONLY) 👇👀...",
+      "emails": []
+    }
+  ]
+}

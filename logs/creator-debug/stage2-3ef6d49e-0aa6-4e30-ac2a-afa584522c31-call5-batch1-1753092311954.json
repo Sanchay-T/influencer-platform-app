@@ -1,0 +1,64 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "3ef6d49e-0aa6-4e30-ac2a-afa584522c31",
+  "apiCall": 5,
+  "batchNumber": 1,
+  "timestamp": "2025-07-21T10:05:11.954Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 5
+  },
+  "validCreators": [
+    {
+      "username": "phonesvendor",
+      "fullName": "PHONE VENDOR - phones📱laptops 💻 games 🎮 accessories 🔌",
+      "followers": 135465,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "- Your reliable source for all things tech!\n- Smartphones, laptops, games & accessories\n- 0803534756...",
+      "emails": []
+    },
+    {
+      "username": "imaaduuddin",
+      "fullName": "Imaad Uddin 🇵🇰",
+      "followers": 15133,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "🧑🏽‍💻 SWE & Tech YouTuber\n📱 Apple | Tech | Tesla | Lifestyle\n✉️ imaaduddincontact@gmail.com\n📍Hou...",
+      "emails": [
+        "imaaduddincontact@gmail.com"
+      ]
+    },
+    {
+      "username": "selfiecbaa",
+      "fullName": "SELFIE",
+      "followers": 43277,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "xɪᴀᴏᴍɪ ɪᴘʜᴏɴᴇ sᴀᴍsᴜɴɢ ᴍᴏᴛᴏʀᴏʟᴀ\nSucursales\n📍Belgrano 425 local 2 AG\n📍San Martín 119 local 6 AG\n📍ca...",
+      "emails": []
+    },
+    {
+      "username": "jonimperial",
+      "fullName": "Jon Imperial",
+      "followers": 48955,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Architect turned Content Creator 🇵🇭🇺🇸\n» Design • Tech • Lifestyle\n» YouTube 60k+ | TikTok 44k+\nh...",
+      "emails": [
+        "hello@jonimperial.com"
+      ]
+    },
+    {
+      "username": "hasankarimiofficial",
+      "fullName": "Hasan Karimi",
+      "followers": 185216,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "همه چی در مورد رسانه های اجتماعی\nmosalah iranian ⚽️\nSocial media expert | Content Creator...",
+      "emails": []
+    }
+  ]
+}

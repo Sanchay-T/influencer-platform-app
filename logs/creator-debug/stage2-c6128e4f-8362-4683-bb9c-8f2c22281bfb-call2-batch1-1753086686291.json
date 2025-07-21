@@ -1,0 +1,62 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "c6128e4f-8362-4683-bb9c-8f2c22281bfb",
+  "apiCall": 2,
+  "batchNumber": 1,
+  "timestamp": "2025-07-21T08:31:26.291Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 5
+  },
+  "validCreators": [
+    {
+      "username": "phonesvendor",
+      "fullName": "PHONE VENDOR - phones📱laptops 💻 games 🎮 accessories 🔌",
+      "followers": 135467,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "- Your reliable source for all things tech!\n- Smartphones, laptops, games & accessories\n- 0803534756...",
+      "emails": []
+    },
+    {
+      "username": "imaaduuddin",
+      "fullName": "Imaad Uddin 🇵🇰",
+      "followers": 15131,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "🧑🏽‍💻 SWE & Tech YouTuber\n📱 Apple | Tech | Tesla | Lifestyle\n✉️ imaaduddincontact@gmail.com\n📍Hou...",
+      "emails": [
+        "imaaduddincontact@gmail.com"
+      ]
+    },
+    {
+      "username": "irina.tech",
+      "fullName": "Irina",
+      "followers": 49377,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Tech/Lifestyle📱💻⚙️...",
+      "emails": []
+    },
+    {
+      "username": "trend.yourstyle",
+      "fullName": "Deepak Thakur",
+      "followers": 32588,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Cod- 200 extra advance.All smart gadgets/ Smartwatches/airpods/ games etc. 🕹️Google- Trend Yourstyl...",
+      "emails": []
+    },
+    {
+      "username": "chollo.man",
+      "fullName": "Alejandro Morcillo Bermudo",
+      "followers": 526761,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "✈️Cuenta de viajes: @cholloman.viajes \n✉️Colaboraciones: DM 📨\n👇🏼👇🏼TODOS LOS LINKS AQUÍ 👇🏼👇🏼...",
+      "emails": []
+    }
+  ]
+}

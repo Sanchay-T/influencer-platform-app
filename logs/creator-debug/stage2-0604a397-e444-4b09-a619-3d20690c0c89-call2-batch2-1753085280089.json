@@ -1,0 +1,44 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "0604a397-e444-4b09-a619-3d20690c0c89",
+  "apiCall": 2,
+  "batchNumber": 2,
+  "timestamp": "2025-07-21T08:08:00.089Z",
+  "counts": {
+    "rawResults": 4,
+    "validResults": 3,
+    "filteredOutInBatch": 1,
+    "cumulativeValidCreators": 8
+  },
+  "validCreators": [
+    {
+      "username": "bennetts_",
+      "fullName": "Bennetts",
+      "followers": 403789,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "We SECURE you the BEST deal online. 🏆\nOnly 100% authentic products, retailers & links.\nShop Now! 👇...",
+      "emails": []
+    },
+    {
+      "username": "c.kickss",
+      "fullName": "Sneaker Reseller / c.kicks",
+      "followers": 545333,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "-100% Authentic 👟\n- Ship to USA & PR🇵🇷\n- Business: c.kickss1@gmail.com...",
+      "emails": [
+        "c.kickss1@gmail.com"
+      ]
+    },
+    {
+      "username": "ikaatoni",
+      "fullName": "👟آی کتونی",
+      "followers": 405853,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "تمامی کارا با ۵۰ تومن سو-د فروخته میشه✌🏻\nصفحه ساعت @iiwaatch\n📍گلستان،گرگان،نبش کاشانی11.2 \nسفارش ا...",
+      "emails": []
+    }
+  ]
+}

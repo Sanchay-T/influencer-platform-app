@@ -1,0 +1,77 @@
+{
+  "stage": "database_save_final",
+  "jobId": "0604a397-e444-4b09-a619-3d20690c0c89",
+  "apiCall": 2,
+  "timestamp": "2025-07-21T08:08:02.669Z",
+  "counts": {
+    "creatorsBeingPersisted": 8,
+    "newProcessedRuns": 2,
+    "newProcessedResults": 20
+  },
+  "finalDatabaseCreators": [
+    {
+      "index": 1,
+      "username": "nike",
+      "followers": 300034922,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "instakicksz",
+      "followers": 90994,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "sneakerfreakermag",
+      "followers": 1514659,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "klekt",
+      "followers": 918805,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "lindamont",
+      "followers": 2666809,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "bennetts_",
+      "followers": 403789,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "c.kickss",
+      "followers": 545333,
+      "verified": false,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "ikaatoni",
+      "followers": 405853,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    }
+  ]
+}

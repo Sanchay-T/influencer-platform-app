@@ -1,0 +1,35 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "50307430-9c22-48e1-a526-9cf13c8eede0",
+  "apiCall": 2,
+  "batchNumber": 3,
+  "timestamp": "2025-07-21T10:20:16.681Z",
+  "counts": {
+    "rawResults": 2,
+    "validResults": 2,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 11
+  },
+  "validCreators": [
+    {
+      "username": "custom_adventurist",
+      "fullName": "Custom Adventurist",
+      "followers": 71445,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Ben Kimball\nTech Enthusiast\nFake Vs Real Specialist\nFor business inquiries benskimball555@gmail.com...",
+      "emails": [
+        "benskimball555@gmail.com"
+      ]
+    },
+    {
+      "username": "smart_watch_dz16",
+      "fullName": "smart_watch_dz16",
+      "followers": 5142,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "بيع أفخم الساعات الذكية و الهدايا ⌚️🎁 \nالتوصيل متوفر في 58 ولاية 🇩🇿\n0559585082 📞 WhatsApp/ viber...",
+      "emails": []
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "stage": "after_initial_quality_filter",
+  "jobId": "e3865240-529e-4b5d-bdd7-3952f551b9ef",
+  "apiCall": 2,
+  "timestamp": "2025-07-21T07:56:48.240Z",
+  "counts": {
+    "totalCreatorsFound": 10,
+    "qualityCreatorsAdded": 10,
+    "filteredOutCreators": 0,
+    "finalUniqueCreators": 10
+  },
+  "creators": [
+    {
+      "username": "nike",
+      "fullName": "Nike",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "wethenew",
+      "fullName": "Wethenew",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "bennetts_",
+      "fullName": "Bennetts",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "shoes.lks",
+      "fullName": "Shoes.Lks🌟",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "footlockermalaysia",
+      "fullName": "Foot Locker Malaysia",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "stylerunner",
+      "fullName": "STYLERUNNER",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "maisonstuff.co",
+      "fullName": "จำหน่ายรองเท้า พรีออเดอร์ - ซื้อสด - วางดาวน์",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "twitsaaa__1",
+      "fullName": "Twitsaaa | VMC creator 🍇✨🫶🏻",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "nikefootball",
+      "fullName": "Nike Football",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "momento_women",
+      "fullName": "Momento.Women👸",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    }
+  ]
+}

@@ -1,0 +1,102 @@
+{
+  "stage": "after_initial_quality_filter",
+  "jobId": "126eb820-4f3a-4b16-9250-f7d346ea75a5",
+  "apiCall": 7,
+  "timestamp": "2025-07-21T10:05:42.030Z",
+  "counts": {
+    "totalCreatorsFound": 11,
+    "qualityCreatorsAdded": 11,
+    "filteredOutCreators": 0,
+    "finalUniqueCreators": 11
+  },
+  "creators": [
+    {
+      "username": "gadgetboy4u",
+      "fullName": "Gadget Boy",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "limreviews",
+      "fullName": "SM Lim",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "acefast.official",
+      "fullName": "Acefast Official",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "insta.__show",
+      "fullName": "INSTA SHOW",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "goussve.km",
+      "fullName": "GOUSSVE TECH",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "eurekahnb",
+      "fullName": "Eureka",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "fivebelow",
+      "fullName": "Five Below",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "custom_adventurist",
+      "fullName": "Custom Adventurist",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "lexiv_trends",
+      "fullName": "LEXIV | MOBILE ACCESSORIES | GADGETS | WATCHES",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "banartsy",
+      "fullName": "banartsy 🌸",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "electrovilla.shop",
+      "fullName": "Electro Villa ™",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    }
+  ]
+}

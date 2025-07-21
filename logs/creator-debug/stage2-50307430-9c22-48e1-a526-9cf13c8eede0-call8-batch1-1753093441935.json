@@ -1,0 +1,62 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "50307430-9c22-48e1-a526-9cf13c8eede0",
+  "apiCall": 8,
+  "batchNumber": 1,
+  "timestamp": "2025-07-21T10:24:01.935Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 5
+  },
+  "validCreators": [
+    {
+      "username": "cnet",
+      "fullName": "CNET",
+      "followers": 1305686,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Your guide to a better future....",
+      "emails": []
+    },
+    {
+      "username": "trendyntrust",
+      "fullName": "Trendy&Trust",
+      "followers": 1404,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Where Trends Meet Trust ✨  \nHigh-quality products since 2002 🛍️  \nDelivery all over Lebanon 🇱🇧  \n...",
+      "emails": []
+    },
+    {
+      "username": "carlcrusher",
+      "fullName": "Carl Andreasen",
+      "followers": 219474,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Carl the Crusher and the Crusher Crew! Exploring mysteries UFOs & Paranormal 🤟🏼 Crushing LIFE with...",
+      "emails": []
+    },
+    {
+      "username": "gadgethome1",
+      "fullName": "Vikram Raj",
+      "followers": 112047,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "👨‍💻 Tech | Info | Gadgets | Ai\n💡Sharing Smart Tools To Simplify Life\n🤝 collabgadgethome1@gmail.c...",
+      "emails": [
+        "collabgadgethome1@gmail.com"
+      ]
+    },
+    {
+      "username": "emkwan",
+      "fullName": "EMKWAN",
+      "followers": 166583,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "📲 Tech, AI, Cars & Watches from Dubai 🇦🇪\n🌴 Top 10 Tech Influencer Dubai 2025\n🚀 500M+ Views\n تاب...",
+      "emails": []
+    }
+  ]
+}

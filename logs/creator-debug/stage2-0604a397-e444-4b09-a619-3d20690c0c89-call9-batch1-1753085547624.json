@@ -1,0 +1,64 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "0604a397-e444-4b09-a619-3d20690c0c89",
+  "apiCall": 9,
+  "batchNumber": 1,
+  "timestamp": "2025-07-21T08:12:27.624Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 5
+  },
+  "validCreators": [
+    {
+      "username": "klekt",
+      "fullName": "KLEKT",
+      "followers": 918805,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Buy & sell authentic sneakers, streetwear & accessories. \nWorldwide Shipping.\nEst. 2013\n#klekttakeov...",
+      "emails": []
+    },
+    {
+      "username": "livingthehype_",
+      "fullName": "Anderson Nakashima | Living The Hype",
+      "followers": 103181,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "🇯🇵 • sneakers • outfits • lifestyle \n📨 anderson@blickhaus.com | @blickhaus...",
+      "emails": [
+        "anderson@blickhaus.com"
+      ]
+    },
+    {
+      "username": "vs.shiva",
+      "fullName": "Vikalp Shrivas",
+      "followers": 11757,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Founder of a Lifestyle brand & investor \nActor & Filmaker \n📩TheShivaay.Business@gmail.com...",
+      "emails": [
+        "TheShivaay.Business@gmail.com"
+      ]
+    },
+    {
+      "username": "crepdogcrew",
+      "fullName": "CREPDOG CREW | CDC",
+      "followers": 228960,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "India’s Biggest Platform for Sneakers, Designer Apparels and Hype \nIn-store DEL | MUM | HYD...",
+      "emails": []
+    },
+    {
+      "username": "platinumshoecare",
+      "fullName": "Platinum Shoe Care",
+      "followers": 22725,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Hand crafted custom sneakers, build to last and stand out in the crowd 🥶👟\nWorldwide delivery 🌎...",
+      "emails": []
+    }
+  ]
+}

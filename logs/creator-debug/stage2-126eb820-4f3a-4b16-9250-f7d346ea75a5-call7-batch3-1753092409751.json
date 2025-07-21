@@ -1,0 +1,14 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "126eb820-4f3a-4b16-9250-f7d346ea75a5",
+  "apiCall": 7,
+  "batchNumber": 3,
+  "timestamp": "2025-07-21T10:06:49.751Z",
+  "counts": {
+    "rawResults": 1,
+    "validResults": 0,
+    "filteredOutInBatch": 1,
+    "cumulativeValidCreators": 5
+  },
+  "validCreators": []
+}

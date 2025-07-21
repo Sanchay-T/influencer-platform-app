@@ -1,0 +1,78 @@
+{
+  "stage": "after_initial_quality_filter",
+  "jobId": "0604a397-e444-4b09-a619-3d20690c0c89",
+  "apiCall": 6,
+  "timestamp": "2025-07-21T08:10:13.626Z",
+  "counts": {
+    "totalCreatorsFound": 8,
+    "qualityCreatorsAdded": 8,
+    "filteredOutCreators": 0,
+    "finalUniqueCreators": 8
+  },
+  "creators": [
+    {
+      "username": "nike",
+      "fullName": "Nike",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "shoes.lks",
+      "fullName": "Shoes.Lks🌟",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "hooky.id",
+      "fullName": "JASTIP SEJAK 2019 👛🩰🦋✨",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "wethenew",
+      "fullName": "Wethenew",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "sneakerfreakermag",
+      "fullName": "Sneaker Freaker",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "stylerunner",
+      "fullName": "STYLERUNNER",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "shoppinkivy",
+      "fullName": "P I N K   I V Y",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "nikefootball",
+      "fullName": "Nike Football",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    }
+  ]
+}

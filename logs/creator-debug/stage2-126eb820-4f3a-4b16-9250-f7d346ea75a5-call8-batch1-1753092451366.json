@@ -1,0 +1,64 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "126eb820-4f3a-4b16-9250-f7d346ea75a5",
+  "apiCall": 8,
+  "batchNumber": 1,
+  "timestamp": "2025-07-21T10:07:31.366Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 5
+  },
+  "validCreators": [
+    {
+      "username": "trendyntrust",
+      "fullName": "Trendy&Trust",
+      "followers": 1404,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Where Trends Meet Trust ✨  \nHigh-quality products since 2002 🛍️  \nDelivery all over Lebanon 🇱🇧  \n...",
+      "emails": []
+    },
+    {
+      "username": "karlconrad",
+      "fullName": "Karl Conrad",
+      "followers": 0,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "no bio",
+      "emails": []
+    },
+    {
+      "username": "jonimperial",
+      "fullName": "Jon Imperial",
+      "followers": 48955,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Architect turned Content Creator 🇵🇭🇺🇸\n» Design • Tech • Lifestyle\n» YouTube 60k+ | TikTok 44k+\nh...",
+      "emails": [
+        "hello@jonimperial.com"
+      ]
+    },
+    {
+      "username": "synkrosoft",
+      "fullName": "Synkrosoft - Your Tech Source",
+      "followers": 29459,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "NEW PAGE - REBUILDING FROM 63.4K\nCLOSED OUR PHYSICAL STORES\nJamaica's #1 Online Tech Store🎧📱💻🖥\n8...",
+      "emails": []
+    },
+    {
+      "username": "nathanespinozayt",
+      "fullName": "Nathan Espinoza",
+      "followers": 181404,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "†\n20\ntech, gadgets, and stuff\nnathanespinoza@rakugomedia.com...",
+      "emails": [
+        "nathanespinoza@rakugomedia.com"
+      ]
+    }
+  ]
+}

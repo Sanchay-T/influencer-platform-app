@@ -1,0 +1,69 @@
+{
+  "stage": "database_save_final",
+  "jobId": "3ef6d49e-0aa6-4e30-ac2a-afa584522c31",
+  "apiCall": 6,
+  "timestamp": "2025-07-21T10:07:00.524Z",
+  "counts": {
+    "creatorsBeingPersisted": 7,
+    "newProcessedRuns": 6,
+    "newProcessedResults": 44
+  },
+  "finalDatabaseCreators": [
+    {
+      "index": 1,
+      "username": "phonesvendor",
+      "followers": 135465,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "imaaduuddin",
+      "followers": 15133,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "chollo.man",
+      "followers": 526764,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "trend.yourstyle",
+      "followers": 32600,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "irina.tech",
+      "followers": 49377,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "everything_iphone_ios",
+      "followers": 0,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "alloyarmorcase",
+      "followers": 25420,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    }
+  ]
+}

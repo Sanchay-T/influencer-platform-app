@@ -1,0 +1,161 @@
+{
+  "stage": "final_transformed_creators",
+  "jobId": "0604a397-e444-4b09-a619-3d20690c0c89",
+  "apiCall": 1,
+  "timestamp": "2025-07-21T08:07:30.593Z",
+  "counts": {
+    "finalTransformedCreators": 12,
+    "processedRuns": 1,
+    "maxRuns": 15
+  },
+  "finalCreators": [
+    {
+      "index": 1,
+      "username": "livingthehype_",
+      "fullName": "Anderson Nakashima | Living The Hype",
+      "followers": 103181,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "🇯🇵 • sneakers • outfits • lifestyle \n📨 anderson@blickhaus.com | @blickhaus...",
+      "emails": [
+        "anderson@blickhaus.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DF8fHUPSoqf",
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "crepdogcrew",
+      "fullName": "CREPDOG CREW | CDC",
+      "followers": 228959,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "India’s Biggest Platform for Sneakers, Designer Apparels and Hype \nIn-store DEL | MUM | HYD...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DBdV0yfoWwj",
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "hide.and.sneak",
+      "fullName": "Hide & Sneak",
+      "followers": 7658,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Pune’s first store for authentic sneakers & streetwear\nIn collaboration with @shoe_kings_classique \n...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DDcJCuCIuql",
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "klekt",
+      "fullName": "KLEKT",
+      "followers": 918805,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Buy & sell authentic sneakers, streetwear & accessories. \nWorldwide Shipping.\nEst. 2013\n#klekttakeov...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DBJU6VPvglH",
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "platinumshoecare",
+      "fullName": "Platinum Shoe Care",
+      "followers": 22725,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Hand crafted custom sneakers, build to last and stand out in the crowd 🥶👟\nWorldwide delivery 🌎...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DICKOjysZ8E",
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "thatsodsoho",
+      "fullName": "Thats OD Soho",
+      "followers": 55556,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "153 Prince Street New York 10012 📍\nOpen Everyday 12-8pm\n📲1 (347) 698-8971\n ⬇️CLICK LINK FOR FULL A...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DHEODrNRNJR",
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "minicostore.in",
+      "fullName": "Minico 🩵",
+      "followers": 815,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Owner- @mr.harshfx\n🚚 Cash on Delivery available in all over India🇮🇳\nWhatsapp no - 9685287996📱\nWe...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/C-pK35YS2xU",
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "imanshop_tr",
+      "fullName": "imanonline_shop tr",
+      "followers": 12453,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "خرید از ترکیه،اروپا،کانادا،آمریکا\nDirect  📥\nwhatsapp : 09154449891\nپیج دوم( زنونه) : @ninoshop_tr \n...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DL-XbvdMYPL",
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "c.kickss",
+      "fullName": "Sneaker Reseller / c.kicks",
+      "followers": 545334,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "-100% Authentic 👟\n- Ship to USA & PR🇵🇷\n- Business: c.kickss1@gmail.com...",
+      "emails": [
+        "c.kickss1@gmail.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DGy6PEzpehe",
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "doubleboxed",
+      "fullName": "Double Boxed",
+      "followers": 57224,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Specialising in exclusive footwear and apparel. Guaranteed Authenticity. Next Day Delivery....",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/Cw19ZL1rask",
+      "platform": "Instagram"
+    },
+    {
+      "index": 11,
+      "username": "arlegend2",
+      "fullName": "AR HJ",
+      "followers": 50486,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Not Sneaker seller 🤷🏻‍♂️ \nCollecting Sneaker \nSneakerhead ❤️👟❤️\n🤝 #teamklekt \n🌐@klekt \n👨🏿‍🦲 ...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DDUYFzVKWp0",
+      "platform": "Instagram"
+    },
+    {
+      "index": 12,
+      "username": "nenoo_store.official",
+      "fullName": "NenOoo.Store.Official",
+      "followers": 4837,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "footwear Store &morre\nOriginal & Mirror Original \n📍Alexandria, Ramel Station 113 Salah Salem street...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DCBKKfxtxDI",
+      "platform": "Instagram"
+    }
+  ]
+}

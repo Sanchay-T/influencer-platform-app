@@ -1,0 +1,77 @@
+{
+  "stage": "database_save_final",
+  "jobId": "0604a397-e444-4b09-a619-3d20690c0c89",
+  "apiCall": 6,
+  "timestamp": "2025-07-21T08:10:31.391Z",
+  "counts": {
+    "creatorsBeingPersisted": 8,
+    "newProcessedRuns": 6,
+    "newProcessedResults": 59
+  },
+  "finalDatabaseCreators": [
+    {
+      "index": 1,
+      "username": "nike",
+      "followers": 300034934,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "shoes.lks",
+      "followers": 34187,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "wethenew",
+      "followers": 863567,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "sneakerfreakermag",
+      "followers": 1514659,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "stylerunner",
+      "followers": 625670,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "nikefootball",
+      "followers": 0,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "hooky.id",
+      "followers": 14199,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "shoppinkivy",
+      "followers": 269731,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    }
+  ]
+}

@@ -1,0 +1,109 @@
+{
+  "stage": "database_save_final",
+  "jobId": "c6128e4f-8362-4683-bb9c-8f2c22281bfb",
+  "apiCall": 2,
+  "timestamp": "2025-07-21T08:31:44.424Z",
+  "counts": {
+    "creatorsBeingPersisted": 12,
+    "newProcessedRuns": 2,
+    "newProcessedResults": 23
+  },
+  "finalDatabaseCreators": [
+    {
+      "index": 1,
+      "username": "phonesvendor",
+      "followers": 135467,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "imaaduuddin",
+      "followers": 15131,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "irina.tech",
+      "followers": 49377,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "trend.yourstyle",
+      "followers": 32588,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "chollo.man",
+      "followers": 526761,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "earpods_kenya",
+      "followers": 31179,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "ecasetech",
+      "followers": 17081,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "technoshop.kaz",
+      "followers": 27982,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "sahabat.gajet11",
+      "followers": 69184,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "bossmobilebaku",
+      "followers": 105959,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 11,
+      "username": "alloyarmorcase",
+      "followers": 25424,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 12,
+      "username": "kuxiutech",
+      "followers": 113301,
+      "verified": false,
+      "hasEmail": true,
+      "platform": "Instagram"
+    }
+  ]
+}

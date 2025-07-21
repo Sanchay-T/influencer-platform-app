@@ -1,0 +1,151 @@
+{
+  "stage": "final_transformed_creators",
+  "jobId": "50307430-9c22-48e1-a526-9cf13c8eede0",
+  "apiCall": 2,
+  "timestamp": "2025-07-21T10:20:18.514Z",
+  "counts": {
+    "finalTransformedCreators": 11,
+    "processedRuns": 2,
+    "maxRuns": 15
+  },
+  "finalCreators": [
+    {
+      "index": 1,
+      "username": "imaaduuddin",
+      "fullName": "Imaad Uddin 🇵🇰",
+      "followers": 15134,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "🧑🏽‍💻 SWE & Tech YouTuber\n📱 Apple | Tech | Tesla | Lifestyle\n✉️ imaaduddincontact@gmail.com\n📍Hou...",
+      "emails": [
+        "imaaduddincontact@gmail.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DKcol6pgl7Q",
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "phonesvendor",
+      "fullName": "PHONE VENDOR - phones📱laptops 💻 games 🎮 accessories 🔌",
+      "followers": 135465,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "- Your reliable source for all things tech!\n- Smartphones, laptops, games & accessories\n- 0803534756...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DI4VTgJsGY0",
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "irina.tech",
+      "fullName": "Irina",
+      "followers": 49377,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Tech/Lifestyle📱💻⚙️...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DAj4G-6vs6n",
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "applefix.cl",
+      "fullName": "Servicio Técnico Apple  📲🛠️",
+      "followers": 46559,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "CALIDAD, RAPIDEZ Y CONFIANZA\n• Reparaciones & Tips \n• Repuestos Originales & Certificados\n• iPhone -...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DKsGLeVxVOT",
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "earpods_kenya",
+      "fullName": "EARPODS KENYA",
+      "followers": 31183,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Get quality earbuds from us\nWe deliver countrywide\nPay on delivery🆗\n☎0751301013\n7days free replacem...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DHnPKQDiKph",
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "technoshop.kaz",
+      "fullName": "СМАРТ ЧАСЫ/НАУШНИКИ/АЛМАТЫ📍",
+      "followers": 27980,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "💯 KASPI RED | 0•0•12\n🛡️ С 2022 года работаем\n🔝 Гарантия на все товары \n📌 Бесплатная доставка  \n\ud83d...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DJ1Y_PiNwkT",
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "ecasetech",
+      "fullName": "E Case Tecnology",
+      "followers": 17081,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Referencia en Garantía de la Ciudad de Santiago🔰\nEst. 2012©️\nTelefonos\n-Accesorios \n-Servicio tecni...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/C_OKwVwOJUu",
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "kuxiutech",
+      "fullName": "KUXIU",
+      "followers": 113306,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🚀 Creating Cooler Lifestyles \n📩 Collab: alex@kuxiu.co\n👇 Shop Links and Discounts...",
+      "emails": [
+        "alex@kuxiu.co"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DCNnHQAJscd",
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "sahabat.gajet11",
+      "fullName": "sahabat.gajet",
+      "followers": 69185,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "📌 SSM : WAFFIQ TECH (003087226-V) \n📦 Ship : 2/3 days (J&T Express)\n🔍 Item : 💯 Original item with...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DBklVAsyOFl",
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "custom_adventurist",
+      "fullName": "Custom Adventurist",
+      "followers": 71445,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Ben Kimball\nTech Enthusiast\nFake Vs Real Specialist\nFor business inquiries benskimball555@gmail.com...",
+      "emails": [
+        "benskimball555@gmail.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DESxL-ctsyb",
+      "platform": "Instagram"
+    },
+    {
+      "index": 11,
+      "username": "smart_watch_dz16",
+      "fullName": "smart_watch_dz16",
+      "followers": 5142,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "بيع أفخم الساعات الذكية و الهدايا ⌚️🎁 \nالتوصيل متوفر في 58 ولاية 🇩🇿\n0559585082 📞 WhatsApp/ viber...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DJAVGQYAVms",
+      "platform": "Instagram"
+    }
+  ]
+}

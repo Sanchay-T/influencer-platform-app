@@ -1,0 +1,33 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "126eb820-4f3a-4b16-9250-f7d346ea75a5",
+  "apiCall": 5,
+  "batchNumber": 3,
+  "timestamp": "2025-07-21T10:04:23.941Z",
+  "counts": {
+    "rawResults": 2,
+    "validResults": 2,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 12
+  },
+  "validCreators": [
+    {
+      "username": "imepoa",
+      "fullName": "Imepoa | Charger | Airpods",
+      "followers": 20967,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🛒 Tunauza bidhaa mbalimbali zenye ubora zaidi. Charger, Airpods, na nyingine.\n➡️ ODA HAPA: 0677 890...",
+      "emails": []
+    },
+    {
+      "username": "gee_stores_",
+      "fullName": "ABUJA AIRPODS AND PHONES",
+      "followers": 19789,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "IPHONE,SAMSUNG AND ACCESSORIES \nTO ORDER SEND A DM OR CALL FOR FAST RESPOND.\n☎️:WhatsApp or call 070...",
+      "emails": []
+    }
+  ]
+}

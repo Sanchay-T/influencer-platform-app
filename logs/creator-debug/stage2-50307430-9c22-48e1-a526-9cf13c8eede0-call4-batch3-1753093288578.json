@@ -1,0 +1,33 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "50307430-9c22-48e1-a526-9cf13c8eede0",
+  "apiCall": 4,
+  "batchNumber": 3,
+  "timestamp": "2025-07-21T10:21:28.578Z",
+  "counts": {
+    "rawResults": 2,
+    "validResults": 2,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 12
+  },
+  "validCreators": [
+    {
+      "username": "smartgadgetcoach",
+      "fullName": "SmartGadgetCoach",
+      "followers": 772,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "📦 Gadget Seller | 💰 Digital Coach  \n🎯 New eBook: ₹1L/month plan  \n👇 DM “START” for full guide...",
+      "emails": []
+    },
+    {
+      "username": "milestelecom",
+      "fullName": "Miles Telecom Trading LLC",
+      "followers": 6777,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "📱Your one-stop shop for the Latest\nMobiles | Gadgets | Accessories | Repair...",
+      "emails": []
+    }
+  ]
+}

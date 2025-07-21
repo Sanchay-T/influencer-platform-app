@@ -1,0 +1,109 @@
+{
+  "stage": "database_save_final",
+  "jobId": "50307430-9c22-48e1-a526-9cf13c8eede0",
+  "apiCall": 14,
+  "timestamp": "2025-07-21T10:29:30.471Z",
+  "counts": {
+    "creatorsBeingPersisted": 12,
+    "newProcessedRuns": 14,
+    "newProcessedResults": 107
+  },
+  "finalDatabaseCreators": [
+    {
+      "index": 1,
+      "username": "imaaduuddin",
+      "followers": 15134,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "phonesvendor",
+      "followers": 135466,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "irina.tech",
+      "followers": 49377,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "hemantmahto._",
+      "followers": 5495321,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "earpods_kenya",
+      "followers": 31183,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "technoshop.kaz",
+      "followers": 27980,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "bossmobilebaku",
+      "followers": 105959,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "ecasetech",
+      "followers": 17081,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "custom_adventurist",
+      "followers": 71448,
+      "verified": false,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "alloyarmorcase",
+      "followers": 25420,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 11,
+      "username": "smart_watch_dz16",
+      "followers": 5141,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 12,
+      "username": "kuxiutech",
+      "followers": 113306,
+      "verified": false,
+      "hasEmail": true,
+      "platform": "Instagram"
+    }
+  ]
+}

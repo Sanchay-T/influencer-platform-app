@@ -1,0 +1,147 @@
+{
+  "stage": "final_transformed_creators",
+  "jobId": "126eb820-4f3a-4b16-9250-f7d346ea75a5",
+  "apiCall": 6,
+  "timestamp": "2025-07-21T10:05:26.727Z",
+  "counts": {
+    "finalTransformedCreators": 11,
+    "processedRuns": 6,
+    "maxRuns": 15
+  },
+  "finalCreators": [
+    {
+      "index": 1,
+      "username": "phonesvendor",
+      "fullName": "PHONE VENDOR - phones📱laptops 💻 games 🎮 accessories 🔌",
+      "followers": 135465,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "- Your reliable source for all things tech!\n- Smartphones, laptops, games & accessories\n- 0803534756...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DI4VTgJsGY0",
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "imaaduuddin",
+      "fullName": "Imaad Uddin 🇵🇰",
+      "followers": 15133,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "🧑🏽‍💻 SWE & Tech YouTuber\n📱 Apple | Tech | Tesla | Lifestyle\n✉️ imaaduddincontact@gmail.com\n📍Hou...",
+      "emails": [
+        "imaaduddincontact@gmail.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DKcol6pgl7Q",
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "irina.tech",
+      "fullName": "Irina",
+      "followers": 49377,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Tech/Lifestyle📱💻⚙️...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DAj4G-6vs6n",
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "chollo.man",
+      "fullName": "Alejandro Morcillo Bermudo",
+      "followers": 526764,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "✈️Cuenta de viajes: @cholloman.viajes \n✉️Colaboraciones: DM 📨\n👇🏼👇🏼TODOS LOS LINKS AQUÍ 👇🏼👇🏼...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DCcJ-3Mu6dP",
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "trend.yourstyle",
+      "fullName": "Deepak Thakur",
+      "followers": 32600,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Cod- 200 extra advance.All smart gadgets/ Smartwatches/airpods/ games etc. 🕹️Google- Trend Yourstyl...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DJehpm-hAq9",
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "everything_iphone_ios",
+      "fullName": "𝐢𝐏𝐇𝐎𝐍𝐄𝐒 𝐅𝐎𝐑 𝐒𝐀𝐋𝐄 🍏🇯🇲",
+      "followers": 22741,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "🍏BACKUP PAGE @everything_iphone_ios_backup \n🍏FACE TO FACE TRANSACTION ONLY 👥\n🍏HALF WAY TREE📍& S...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DIxI2_6x190",
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "earpods_kenya",
+      "fullName": "EARPODS KENYA",
+      "followers": 31184,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Get quality earbuds from us\nWe deliver countrywide\nPay on delivery🆗\n☎0751301013\n7days free replacem...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DHnPKQDiKph",
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "ecasetech",
+      "fullName": "E Case Tecnology",
+      "followers": 17081,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Referencia en Garantía de la Ciudad de Santiago🔰\nEst. 2012©️\nTelefonos\n-Accesorios \n-Servicio tecni...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/C_OKwVwOJUu",
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "technoshop.kaz",
+      "fullName": "СМАРТ ЧАСЫ/НАУШНИКИ/АЛМАТЫ📍",
+      "followers": 27980,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "💯 KASPI RED | 0•0•12\n🛡️ С 2022 года работаем\n🔝 Гарантия на все товары \n📌 Бесплатная доставка  \n\ud83d...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DJ1Y_PiNwkT",
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "sahabat.gajet11",
+      "fullName": "sahabat.gajet",
+      "followers": 69184,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "📌 SSM : WAFFIQ TECH (003087226-V) \n📦 Ship : 2/3 days (J&T Express)\n🔍 Item : 💯 Original item with...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DBklVAsyOFl",
+      "platform": "Instagram"
+    },
+    {
+      "index": 11,
+      "username": "alloyarmorcase",
+      "fullName": "AlloyArmor",
+      "followers": 25420,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "FINAL SALE IS LIVE (TODAY ONLY) 👇👀...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DBHRuVfxLbA",
+      "platform": "Instagram"
+    }
+  ]
+}

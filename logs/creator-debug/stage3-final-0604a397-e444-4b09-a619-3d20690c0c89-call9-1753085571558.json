@@ -1,0 +1,151 @@
+{
+  "stage": "final_transformed_creators",
+  "jobId": "0604a397-e444-4b09-a619-3d20690c0c89",
+  "apiCall": 9,
+  "timestamp": "2025-07-21T08:12:51.558Z",
+  "counts": {
+    "finalTransformedCreators": 11,
+    "processedRuns": 9,
+    "maxRuns": 15
+  },
+  "finalCreators": [
+    {
+      "index": 1,
+      "username": "klekt",
+      "fullName": "KLEKT",
+      "followers": 918805,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Buy & sell authentic sneakers, streetwear & accessories. \nWorldwide Shipping.\nEst. 2013\n#klekttakeov...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DBJU6VPvglH",
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "livingthehype_",
+      "fullName": "Anderson Nakashima | Living The Hype",
+      "followers": 103181,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "🇯🇵 • sneakers • outfits • lifestyle \n📨 anderson@blickhaus.com | @blickhaus...",
+      "emails": [
+        "anderson@blickhaus.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DF8fHUPSoqf",
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "vs.shiva",
+      "fullName": "Vikalp Shrivas",
+      "followers": 11757,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Founder of a Lifestyle brand & investor \nActor & Filmaker \n📩TheShivaay.Business@gmail.com...",
+      "emails": [
+        "TheShivaay.Business@gmail.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DCwXK2yCY0B",
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "crepdogcrew",
+      "fullName": "CREPDOG CREW | CDC",
+      "followers": 228960,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "India’s Biggest Platform for Sneakers, Designer Apparels and Hype \nIn-store DEL | MUM | HYD...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DBdV0yfoWwj",
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "platinumshoecare",
+      "fullName": "Platinum Shoe Care",
+      "followers": 22725,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Hand crafted custom sneakers, build to last and stand out in the crowd 🥶👟\nWorldwide delivery 🌎...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DICKOjysZ8E",
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "doubleboxed",
+      "fullName": "Double Boxed",
+      "followers": 57224,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Specialising in exclusive footwear and apparel. Guaranteed Authenticity. Next Day Delivery....",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/Cw19ZL1rask",
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "minicostore.in",
+      "fullName": "Minico 🩵",
+      "followers": 815,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Owner- @mr.harshfx\n🚚 Cash on Delivery available in all over India🇮🇳\nWhatsapp no - 9685287996📱\nWe...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/C-pK35YS2xU",
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "itsyourdb",
+      "fullName": "dB",
+      "followers": 45445,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🔘 Fashion | Lifestyle | Vlogs\n📍 UP25 | Email for Collaboration 📩\n🔸 Shop my Outfits & Style picks...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DGBKQq0yHT5",
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "flightkickz.xyz",
+      "fullName": "Flightkickz Studio",
+      "followers": 396776,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "The official Instagram for Flightkickz \nThe #1 sneaker manufactuer show in the world. \n⬇️CLICK HERE ...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DIVP3W_pNeo",
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "c.kickss",
+      "fullName": "Sneaker Reseller / c.kicks",
+      "followers": 545333,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "-100% Authentic 👟\n- Ship to USA & PR🇵🇷\n- Business: c.kickss1@gmail.com...",
+      "emails": [
+        "c.kickss1@gmail.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DGy6PEzpehe",
+      "platform": "Instagram"
+    },
+    {
+      "index": 11,
+      "username": "iatulnegi",
+      "fullName": "KAOR",
+      "followers": 65561,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "FASHION || TRAVEL || LIFESTYLE...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DCbqhkmyZmG",
+      "platform": "Instagram"
+    }
+  ]
+}

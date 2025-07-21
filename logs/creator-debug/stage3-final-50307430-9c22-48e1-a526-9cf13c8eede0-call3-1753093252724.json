@@ -1,0 +1,149 @@
+{
+  "stage": "final_transformed_creators",
+  "jobId": "50307430-9c22-48e1-a526-9cf13c8eede0",
+  "apiCall": 3,
+  "timestamp": "2025-07-21T10:20:52.724Z",
+  "counts": {
+    "finalTransformedCreators": 11,
+    "processedRuns": 3,
+    "maxRuns": 15
+  },
+  "finalCreators": [
+    {
+      "index": 1,
+      "username": "emkwan",
+      "fullName": "EMKWAN",
+      "followers": 166583,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "📲 Tech, AI, Cars & Watches from Dubai 🇦🇪\n🌴 Top 10 Tech Influencer Dubai 2025\n🚀 500M+ Views\n تاب...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/C0_tlFTv7iZ",
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "temu",
+      "fullName": "Temu Official",
+      "followers": 10173785,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Earn commission with Temu ⭐️...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DAbnsrdsP_b",
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "mrperfecttech",
+      "fullName": "Nitin Raj",
+      "followers": 883652,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Follow for Latest Tech, Tips and Gadgets\nTedx Speaker\n✉️mrperfecttechofficial@gmail.com\nClick below ...",
+      "emails": [
+        "mrperfecttechofficial@gmail.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DL9pDWbv76a",
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "praveenbhat",
+      "fullName": "Praveen Bhat Photography",
+      "followers": 1112997,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Indian fashion Photographer + Tech🇮🇳\n🌟YouTube [550K+]\n🔅my photography page 🔻\n@praveenbhatphotog...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DL_fWIyJccI",
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "tableeefortwo_",
+      "fullName": "Malaika Qasim",
+      "followers": 60565,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "📍 A DUO in UAE 🇦🇪 \n🍴: Food & Lifestyle\n🚵🏻‍♀️: Travel & Activities...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DL3V4uizhAq",
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "fivebelow",
+      "fullName": "Five Below",
+      "followers": 861994,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "hot stuff. cool prices. extreme $1-$5 value & trends + some incredible finds in our five beyond shop...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DHW0tfwokKm",
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "sonyelectronics",
+      "fullName": "Sony Electronics",
+      "followers": 8177992,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "The official Instagram for Sony Electronics North America.\nCheck out our most recent product drops \ud83d...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DHoNk5UhULe",
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "insta.__show",
+      "fullName": "INSTA SHOW",
+      "followers": 29242,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "• 👕 Best Men’s Fashion Picks  \n• 👖 Trendy Fashion and gadgets \n• 🧥 Honest Reviews & Tips  \n• 🔥 S...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DLWP719hGkm",
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "healthcenters",
+      "fullName": "Health Centers",
+      "followers": 38742,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Get Answers NOW: Discover the HIDDEN reason you or your clients suffer from low energy, brain fog, a...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DCu7WJuNQbH",
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "lexiv_trends",
+      "fullName": "LEXIV | MOBILE ACCESSORIES | GADGETS | WATCHES",
+      "followers": 18828,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🛍️ Selling Luxury Goods Since 2012\n🚀 Helping Gen Z Get Luxury In Affordable \n🎁 Follow Now For Wee...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DMNiNt-vr0G",
+      "platform": "Instagram"
+    },
+    {
+      "index": 11,
+      "username": "techwithparvez",
+      "fullName": "PARVEZ",
+      "followers": 254984,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🚀 Tech Unleashed | Gadgets | Reviews 🔥\n💡 Making Tech Simple & Smart\n📩 For Collab : business.tech...",
+      "emails": [
+        "business.techwithparvez@gmail.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DMVJ_qHzFL_",
+      "platform": "Instagram"
+    }
+  ]
+}

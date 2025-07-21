@@ -1,0 +1,62 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "50307430-9c22-48e1-a526-9cf13c8eede0",
+  "apiCall": 14,
+  "batchNumber": 2,
+  "timestamp": "2025-07-21T10:29:02.760Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 10
+  },
+  "validCreators": [
+    {
+      "username": "technoshop.kaz",
+      "fullName": "СМАРТ ЧАСЫ/НАУШНИКИ/АЛМАТЫ📍",
+      "followers": 27980,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "💯 KASPI RED | 0•0•12\n🛡️ С 2022 года работаем\n🔝 Гарантия на все товары \n📌 Бесплатная доставка  \n\ud83d...",
+      "emails": []
+    },
+    {
+      "username": "bossmobilebaku",
+      "fullName": "Apple | iPhone | MacBook | iPad | AirPods",
+      "followers": 105959,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🇦🇿 Apple məhsullarının rəsmi satış məntəqəsi 🇺🇸\n📍 28 May, Azadlıq Ave 37B\n📞 +994 070 600 00 22...",
+      "emails": []
+    },
+    {
+      "username": "ecasetech",
+      "fullName": "E Case Tecnology",
+      "followers": 17081,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Referencia en Garantía de la Ciudad de Santiago🔰\nEst. 2012©️\nTelefonos\n-Accesorios \n-Servicio tecni...",
+      "emails": []
+    },
+    {
+      "username": "custom_adventurist",
+      "fullName": "Custom Adventurist",
+      "followers": 71448,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Ben Kimball\nTech Enthusiast\nFake Vs Real Specialist\nFor business inquiries benskimball555@gmail.com...",
+      "emails": [
+        "benskimball555@gmail.com"
+      ]
+    },
+    {
+      "username": "alloyarmorcase",
+      "fullName": "AlloyArmor",
+      "followers": 25420,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "FINAL SALE IS LIVE (TODAY ONLY) 👇👀...",
+      "emails": []
+    }
+  ]
+}

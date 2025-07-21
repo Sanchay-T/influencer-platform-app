@@ -1,0 +1,64 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "d223d421-7aef-41db-9e69-b700e418f763",
+  "apiCall": 8,
+  "batchNumber": 1,
+  "timestamp": "2025-07-21T10:29:45.757Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 5
+  },
+  "validCreators": [
+    {
+      "username": "karlconrad",
+      "fullName": "Karl Conrad",
+      "followers": 135614,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Follow for more content + across all platforms!...",
+      "emails": []
+    },
+    {
+      "username": "trendyntrust",
+      "fullName": "Trendy&Trust",
+      "followers": 1404,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Where Trends Meet Trust ✨  \nHigh-quality products since 2002 🛍️  \nDelivery all over Lebanon 🇱🇧  \n...",
+      "emails": []
+    },
+    {
+      "username": "superscientific",
+      "fullName": "Danny Winget",
+      "followers": 442443,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Content Creator. Unboxing all things Tech with a mix of Travel + Family. www.youtube.com/dannywinget...",
+      "emails": [
+        "superscientific@gmail.com"
+      ]
+    },
+    {
+      "username": "cnet",
+      "fullName": "CNET",
+      "followers": 1305684,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Your guide to a better future....",
+      "emails": []
+    },
+    {
+      "username": "nathanespinozayt",
+      "fullName": "Nathan Espinoza",
+      "followers": 181408,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "†\n20\ntech, gadgets, and stuff\nnathanespinoza@rakugomedia.com...",
+      "emails": [
+        "nathanespinoza@rakugomedia.com"
+      ]
+    }
+  ]
+}

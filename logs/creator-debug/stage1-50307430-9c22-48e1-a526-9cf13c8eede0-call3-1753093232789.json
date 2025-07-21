@@ -1,0 +1,102 @@
+{
+  "stage": "after_initial_quality_filter",
+  "jobId": "50307430-9c22-48e1-a526-9cf13c8eede0",
+  "apiCall": 3,
+  "timestamp": "2025-07-21T10:20:32.789Z",
+  "counts": {
+    "totalCreatorsFound": 11,
+    "qualityCreatorsAdded": 11,
+    "filteredOutCreators": 0,
+    "finalUniqueCreators": 11
+  },
+  "creators": [
+    {
+      "username": "emkwan",
+      "fullName": "EMKWAN",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "insta.__show",
+      "fullName": "INSTA SHOW",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "healthcenters",
+      "fullName": "Health Centers",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "temu",
+      "fullName": "Temu Official",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "mrperfecttech",
+      "fullName": "Nitin Raj",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "praveenbhat",
+      "fullName": "Praveen Bhat Photography",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "lexiv_trends",
+      "fullName": "LEXIV | MOBILE ACCESSORIES | GADGETS | WATCHES",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "tableeefortwo_",
+      "fullName": "Malaika Qasim",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "techwithparvez",
+      "fullName": "PARVEZ",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "fivebelow",
+      "fullName": "Five Below",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "sonyelectronics",
+      "fullName": "Sony Electronics",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    }
+  ]
+}

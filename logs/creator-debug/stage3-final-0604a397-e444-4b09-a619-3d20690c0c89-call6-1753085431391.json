@@ -1,0 +1,109 @@
+{
+  "stage": "final_transformed_creators",
+  "jobId": "0604a397-e444-4b09-a619-3d20690c0c89",
+  "apiCall": 6,
+  "timestamp": "2025-07-21T08:10:31.391Z",
+  "counts": {
+    "finalTransformedCreators": 8,
+    "processedRuns": 6,
+    "maxRuns": 15
+  },
+  "finalCreators": [
+    {
+      "index": 1,
+      "username": "nike",
+      "fullName": "Nike",
+      "followers": 300034934,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Just Do It....",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/CzwhdteP99x",
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "shoes.lks",
+      "fullName": "Shoes.Lks🌟",
+      "followers": 34187,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "📈| +3000 FEEDBACK POSITIVOS🏆🔥\n📲|ENCARGOS 24/7 Y ENTREGA INMEDIATA⚡️\n🥇|LOS N1 EN CALIDAD Y CONFI...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DIzIaFoun35",
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "wethenew",
+      "fullName": "Wethenew",
+      "followers": 863567,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "We curate sneakers & streetwear daily, \nFor you.🖤...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/Cvz17xyIxDd",
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "sneakerfreakermag",
+      "fullName": "Sneaker Freaker",
+      "followers": 1514659,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "The world’s first international sneaker magazine. Since 2002....",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DG8U_XiOpft",
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "stylerunner",
+      "fullName": "STYLERUNNER",
+      "followers": 625670,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "A destination of style. Curated exclusively for her....",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DCTP_ppyoVn",
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "nikefootball",
+      "fullName": "Nike Football",
+      "followers": 0,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "no bio",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/C3R7W8moTbK",
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "hooky.id",
+      "fullName": "JASTIP SEJAK 2019 👛🩰🦋✨",
+      "followers": 14199,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "👨🏻 Man @hookyman.id \nWA : 0856-9704-2120 \n100% ORIGINAL & TERPERCAYA \n📍Jakarta\nOrder klik 👇...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/C2RA5bpyvSi",
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "shoppinkivy",
+      "fullName": "P I N K   I V Y",
+      "followers": 269731,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Authentic Hand Customized Shoes with Swarovski crystals💎💎@megannn_harrison \n⬇️ SHOP HERE ⬇️...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DGtufUFx2L-",
+      "platform": "Instagram"
+    }
+  ]
+}

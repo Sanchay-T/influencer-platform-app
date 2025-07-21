@@ -1,0 +1,25 @@
+{
+  "stage": "accumulation_tracking",
+  "jobId": "e3865240-529e-4b5d-bdd7-3952f551b9ef",
+  "apiCall": 1,
+  "timestamp": "2025-07-21T07:56:35.422Z",
+  "accumulation": {
+    "previousCreatorsCount": 9,
+    "newCreatorsCount": 11,
+    "totalAccumulatedCount": 11,
+    "duplicatesRemoved": 9
+  },
+  "usernames": [
+    "livingthehype_",
+    "crepdogcrew",
+    "hide.and.sneak",
+    "platinumshoecare",
+    "thatsodsoho",
+    "sneakherscanada",
+    "minicostore.in",
+    "dkfen2024",
+    "flightkickz.xyz",
+    "dk.qi5",
+    "doubleboxed"
+  ]
+}

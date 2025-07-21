@@ -1,0 +1,161 @@
+{
+  "stage": "final_transformed_creators",
+  "jobId": "3ef6d49e-0aa6-4e30-ac2a-afa584522c31",
+  "apiCall": 3,
+  "timestamp": "2025-07-21T10:03:53.663Z",
+  "counts": {
+    "finalTransformedCreators": 12,
+    "processedRuns": 3,
+    "maxRuns": 15
+  },
+  "finalCreators": [
+    {
+      "index": 1,
+      "username": "limreviews",
+      "fullName": "SM Lim",
+      "followers": 81709,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "🇲🇾 | Just your average nerd. \nFormer @ximmerse | @microsoft\nAlso on TikTok (250K) & YouTube (300K)...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/C08aFV-SsSP",
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "fivebelow",
+      "fullName": "Five Below",
+      "followers": 861992,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "hot stuff. cool prices. extreme $1-$5 value & trends + some incredible finds in our five beyond shop...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DHW0tfwokKm",
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "superscientific",
+      "fullName": "Danny Winget",
+      "followers": 442439,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Content Creator. Unboxing all things Tech with a mix of Travel + Family. www.youtube.com/dannywinget...",
+      "emails": [
+        "superscientific@gmail.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/C9XKP5gOPuX",
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "electrovilla.shop",
+      "fullName": "Electro Villa ™",
+      "followers": 14650,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "⌚️ Smartwatches | Analog Watches\n🎧 Earbuds\n🎁 Premium Gifts \n🏡 Home Essentials & Many More\n👀 Visi...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DDSn0YrM6wj",
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "sonyelectronics",
+      "fullName": "Sony Electronics",
+      "followers": 8177994,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "The official Instagram for Sony Electronics North America.\nCheck out our most recent product drops \ud83d...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DELAKFvOqf0",
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "gadgetboy4u",
+      "fullName": "Gadget Boy",
+      "followers": 1007390,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Useful Gadgets\nFor business 📧 sahilpathang7@gmail.com \nBuy Link 👇👇👇...",
+      "emails": [
+        "sahilpathang7@gmail.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/C5BIzqFoyx3",
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "acefast.official",
+      "fullName": "Acefast Official",
+      "followers": 75145,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🔥New audiovisual experience 💕\n👇Shop here:...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/C_DHGrcxyNs",
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "goussve.km",
+      "fullName": "GOUSSVE TECH",
+      "followers": 310426,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🖥 | Gaming | Tech Enthusiast \n📧 | huoledfer.gmail.com\n🛰 | abang6199\n🛒 | Product link in my bio ⬇...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DHv1AEIpCLr",
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "insta.__show",
+      "fullName": "INSTA SHOW",
+      "followers": 29243,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "• 👕 Best Men’s Fashion Picks  \n• 👖 Trendy Fashion and gadgets \n• 🧥 Honest Reviews & Tips  \n• 🔥 S...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DLWP719hGkm",
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "banartsy",
+      "fullName": "banartsy 🌸",
+      "followers": 28889,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🎀 life in pink\n💗 yesstyle code: BANARTSY123\n🌸 ⇣ Tap this link for discount codes & product links ...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/Cjc4_4mgs6r",
+      "platform": "Instagram"
+    },
+    {
+      "index": 11,
+      "username": "arli_deo",
+      "fullName": "Arli_deo",
+      "followers": 4789,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Influencer...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DMKtHauthBm",
+      "platform": "Instagram"
+    },
+    {
+      "index": 12,
+      "username": "lexiv_trends",
+      "fullName": "LEXIV | MOBILE ACCESSORIES | GADGETS | WATCHES",
+      "followers": 18828,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🛍️ Selling Luxury Goods Since 2012\n🚀 Helping Gen Z Get Luxury In Affordable \n🎁 Follow Now For Wee...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DMNiNt-vr0G",
+      "platform": "Instagram"
+    }
+  ]
+}

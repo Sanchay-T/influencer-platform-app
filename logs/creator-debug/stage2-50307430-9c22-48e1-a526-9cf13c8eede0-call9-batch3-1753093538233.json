@@ -1,0 +1,33 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "50307430-9c22-48e1-a526-9cf13c8eede0",
+  "apiCall": 9,
+  "batchNumber": 3,
+  "timestamp": "2025-07-21T10:25:38.233Z",
+  "counts": {
+    "rawResults": 2,
+    "validResults": 2,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 12
+  },
+  "validCreators": [
+    {
+      "username": "gee_stores_",
+      "fullName": "ABUJA AIRPODS AND PHONES",
+      "followers": 19789,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "IPHONE,SAMSUNG AND ACCESSORIES \nTO ORDER SEND A DM OR CALL FOR FAST RESPOND.\n☎️:WhatsApp or call 070...",
+      "emails": []
+    },
+    {
+      "username": "_.get_me_now",
+      "fullName": "GETMENOW",
+      "followers": 448,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Selling different types of trending gadgets🔥 COD available💸                                       ...",
+      "emails": []
+    }
+  ]
+}

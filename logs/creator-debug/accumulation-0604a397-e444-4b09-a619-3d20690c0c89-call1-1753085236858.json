@@ -1,0 +1,19 @@
+{
+  "stage": "accumulation_tracking",
+  "jobId": "0604a397-e444-4b09-a619-3d20690c0c89",
+  "apiCall": 1,
+  "timestamp": "2025-07-21T08:07:16.858Z",
+  "accumulation": {
+    "previousCreatorsCount": 0,
+    "newCreatorsCount": 5,
+    "totalAccumulatedCount": 5,
+    "duplicatesRemoved": 0
+  },
+  "usernames": [
+    "livingthehype_",
+    "crepdogcrew",
+    "hide.and.sneak",
+    "klekt",
+    "platinumshoecare"
+  ]
+}

@@ -1,0 +1,102 @@
+{
+  "stage": "after_initial_quality_filter",
+  "jobId": "50307430-9c22-48e1-a526-9cf13c8eede0",
+  "apiCall": 13,
+  "timestamp": "2025-07-21T10:27:55.381Z",
+  "counts": {
+    "totalCreatorsFound": 11,
+    "qualityCreatorsAdded": 11,
+    "filteredOutCreators": 0,
+    "finalUniqueCreators": 11
+  },
+  "creators": [
+    {
+      "username": "ayami__room",
+      "fullName": "あやみるーむ ☽",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "case__mobilee",
+      "fullName": "کیس موبایل  / قاب موبایل 📱",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "imsamkohl",
+      "fullName": "Sam Kohl",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "ferdi_telefon",
+      "fullName": "Telefon alışı və satışı",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "appledsign",
+      "fullName": "Niels | Apple & iPhone Expert",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "toooystore",
+      "fullName": "📦玩具一號倉庫💖🎀🩷💗🦄🌸",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "hitomidocameraroll",
+      "fullName": "Tyler",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "sellerdg_",
+      "fullName": "SellerDG🎓",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "happyhomes.retail",
+      "fullName": "Happy Homes",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "cellbuddyistoressss",
+      "fullName": "MEGA CELLBUDDY",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "rebekkahfinds",
+      "fullName": "Rebekkah Kaur",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    }
+  ]
+}

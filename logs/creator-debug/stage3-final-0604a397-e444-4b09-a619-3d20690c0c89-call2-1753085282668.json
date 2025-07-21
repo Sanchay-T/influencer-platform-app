@@ -1,0 +1,111 @@
+{
+  "stage": "final_transformed_creators",
+  "jobId": "0604a397-e444-4b09-a619-3d20690c0c89",
+  "apiCall": 2,
+  "timestamp": "2025-07-21T08:08:02.668Z",
+  "counts": {
+    "finalTransformedCreators": 8,
+    "processedRuns": 2,
+    "maxRuns": 15
+  },
+  "finalCreators": [
+    {
+      "index": 1,
+      "username": "nike",
+      "fullName": "Nike",
+      "followers": 300034922,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Just Do It....",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/CzwhdteP99x",
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "instakicksz",
+      "fullName": "INSTAKICKSZ",
+      "followers": 90994,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Exclusive Sneaker Store 👟  \n🌐 | Worldwide Shipping\n📱 | Snapchat: instakicksz \n✖️ | Not affiliated...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/CvkQf5KI464",
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "sneakerfreakermag",
+      "fullName": "Sneaker Freaker",
+      "followers": 1514659,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "The world’s first international sneaker magazine. Since 2002....",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/CoTFidaBmRR",
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "klekt",
+      "fullName": "KLEKT",
+      "followers": 918805,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Buy & sell authentic sneakers, streetwear & accessories. \nWorldwide Shipping.\nEst. 2013\n#klekttakeov...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/CmiucjZBdDc",
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "lindamont",
+      "fullName": "Linda Montoya",
+      "followers": 2666809,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "@nike Trainer /📍🇲🇽\nProgramas: alimentación, entrenamiento guiados y personalizados...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/CvNkEnUO5nL",
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "bennetts_",
+      "fullName": "Bennetts",
+      "followers": 403789,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "We SECURE you the BEST deal online. 🏆\nOnly 100% authentic products, retailers & links.\nShop Now! 👇...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/C4dwzjsMgjm",
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "c.kickss",
+      "fullName": "Sneaker Reseller / c.kicks",
+      "followers": 545333,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "-100% Authentic 👟\n- Ship to USA & PR🇵🇷\n- Business: c.kickss1@gmail.com...",
+      "emails": [
+        "c.kickss1@gmail.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/CnaaDoJpNMi",
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "ikaatoni",
+      "fullName": "👟آی کتونی",
+      "followers": 405853,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "تمامی کارا با ۵۰ تومن سو-د فروخته میشه✌🏻\nصفحه ساعت @iiwaatch\n📍گلستان،گرگان،نبش کاشانی11.2 \nسفارش ا...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DJHRuivMJTn",
+      "platform": "Instagram"
+    }
+  ]
+}

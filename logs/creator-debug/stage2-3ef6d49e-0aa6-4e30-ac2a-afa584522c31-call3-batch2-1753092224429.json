@@ -1,0 +1,62 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "3ef6d49e-0aa6-4e30-ac2a-afa584522c31",
+  "apiCall": 3,
+  "batchNumber": 2,
+  "timestamp": "2025-07-21T10:03:44.429Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 10
+  },
+  "validCreators": [
+    {
+      "username": "gadgetboy4u",
+      "fullName": "Gadget Boy",
+      "followers": 1007390,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Useful Gadgets\nFor business 📧 sahilpathang7@gmail.com \nBuy Link 👇👇👇...",
+      "emails": [
+        "sahilpathang7@gmail.com"
+      ]
+    },
+    {
+      "username": "acefast.official",
+      "fullName": "Acefast Official",
+      "followers": 75145,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🔥New audiovisual experience 💕\n👇Shop here:...",
+      "emails": []
+    },
+    {
+      "username": "goussve.km",
+      "fullName": "GOUSSVE TECH",
+      "followers": 310426,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🖥 | Gaming | Tech Enthusiast \n📧 | huoledfer.gmail.com\n🛰 | abang6199\n🛒 | Product link in my bio ⬇...",
+      "emails": []
+    },
+    {
+      "username": "insta.__show",
+      "fullName": "INSTA SHOW",
+      "followers": 29243,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "• 👕 Best Men’s Fashion Picks  \n• 👖 Trendy Fashion and gadgets \n• 🧥 Honest Reviews & Tips  \n• 🔥 S...",
+      "emails": []
+    },
+    {
+      "username": "banartsy",
+      "fullName": "banartsy 🌸",
+      "followers": 28889,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🎀 life in pink\n💗 yesstyle code: BANARTSY123\n🌸 ⇣ Tap this link for discount codes & product links ...",
+      "emails": []
+    }
+  ]
+}

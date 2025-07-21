@@ -51,35 +51,42 @@ function logApiCall(platform: string, searchType: string, request: any, response
   }
 }
 
-// Testing limit - same as TikTok
-const MAX_API_CALLS_FOR_TESTING = 1;
+// Dynamic while loop approach - keep calling until target is reached
+const MAX_SAFETY_LIMIT = 20; // Safety limit to prevent infinite loops
 
 /**
- * Unified progress calculation for consistent progress across platforms
- * Formula: (apiCalls × 0.3) + (results × 0.7)
+ * SMART APPROACH: No hardcoded calculations, just keep calling until target reached!
+ * Uses safety limit to prevent infinite loops
  */
-function calculateUnifiedProgress(processedRuns, maxRuns, processedResults, targetResults) {
-  // API calls progress (30% weight)
-  const apiCallsProgress = maxRuns > 0 ? (processedRuns / maxRuns) * 100 * 0.3 : 0;
+function shouldContinueApiCalls(currentResults: number, targetResults: number, currentRuns: number): boolean {
+  const hasReachedTarget = currentResults >= targetResults;
+  const withinSafetyLimit = currentRuns < MAX_SAFETY_LIMIT;
   
-  // Results progress (70% weight)
-  const resultsProgress = targetResults > 0 ? (processedResults / targetResults) * 100 * 0.7 : 0;
-  
-  // Combined progress, capped at 100%
-  const totalProgress = Math.min(apiCallsProgress + resultsProgress, 100);
-  
-  console.log('📊 [UNIFIED-PROGRESS] YouTube calculation:', {
-    processedRuns,
-    maxRuns,
-    processedResults,
+  console.log('🎯 [DYNAMIC-CONTINUATION] Should continue API calls?:', {
+    currentResults,
     targetResults,
-    apiCallsProgress: Math.round(apiCallsProgress * 10) / 10,
-    resultsProgress: Math.round(resultsProgress * 10) / 10,
-    totalProgress: Math.round(totalProgress * 10) / 10,
-    formula: `(${processedRuns}/${maxRuns} × 30%) + (${processedResults}/${targetResults} × 70%) = ${Math.round(totalProgress)}%`
+    currentRuns,
+    maxSafetyLimit: MAX_SAFETY_LIMIT,
+    hasReachedTarget,
+    withinSafetyLimit,
+    decision: !hasReachedTarget && withinSafetyLimit ? 'CONTINUE' : 'STOP'
   });
   
-  return totalProgress;
+  return !hasReachedTarget && withinSafetyLimit;
+}
+
+/**
+ * EXACT COUNT PROGRESS: Simple percentage based on results
+ */
+function calculateExactCountProgress(processedResults: number, targetResults: number): number {
+  const progress = Math.min((processedResults / targetResults) * 100, 100);
+  console.log('📊 [EXACT-COUNT-PROGRESS] YouTube calculation:', {
+    processedResults,
+    targetResults,
+    progress: Math.round(progress),
+    formula: `(${processedResults} / ${targetResults}) × 100 = ${Math.round(progress)}%`
+  });
+  return progress;
 }
 
 /**
@@ -88,6 +95,15 @@ function calculateUnifiedProgress(processedRuns, maxRuns, processedResults, targ
  */
 export async function processYouTubeJob(job: any, jobId: string): Promise<any> {
   console.log('🎬 Processing YouTube job:', jobId);
+  
+  // EXACT COUNT STEP 1: Target Verification
+  const targetResults = job.targetResults || 100; // Default to 100 if not specified
+  console.log('\n🎯🎯🎯 [TARGET-VERIFICATION] YouTube Job Target:', {
+    jobId,
+    targetResults,
+    targetSource: job.targetResults ? 'from job' : 'default',
+    timestamp: new Date().toISOString()
+  });
   
   // Validate job has required fields
   if (!job.keywords || job.keywords.length === 0) {
@@ -103,32 +119,51 @@ export async function processYouTubeJob(job: any, jobId: string): Promise<any> {
 
   console.log('✅ Keywords found for YouTube:', job.keywords);
 
-  // Check if we've reached the maximum number of API calls for testing
+  // EXACT COUNT STEP 2: Dynamic While Loop Approach
   const currentRuns = job.processedRuns || 0;
-  if (currentRuns >= MAX_API_CALLS_FOR_TESTING) {
-    console.log(`🚫 YouTube: Reached maximum API calls for testing (${MAX_API_CALLS_FOR_TESTING}). Completing job.`);
+  const currentResults = job.processedResults || 0;
+  
+  // Check if we should continue making API calls (dynamic decision)
+  if (!shouldContinueApiCalls(currentResults, targetResults, currentRuns)) {
+    const reason = currentResults >= targetResults ? 'Target reached' : 'Safety limit reached';
+    console.log(`🛑 [DYNAMIC-STOP] YouTube: Stopping API calls - ${reason}`);
     await db.update(scrapingJobs).set({ 
       status: 'completed',
       completedAt: new Date(),
       updatedAt: new Date(),
-      error: `Test limit reached: Maximum ${MAX_API_CALLS_FOR_TESTING} API calls made`
+      progress: '100'
     }).where(eq(scrapingJobs.id, jobId));
-    return { status: 'completed', message: `Test limit reached: Maximum ${MAX_API_CALLS_FOR_TESTING} API calls made.` };
+    return { 
+      status: 'completed', 
+      message: `${reason}: ${currentResults} results collected in ${currentRuns} API calls.` 
+    };
   }
 
-  // Update job status to processing if not already
+  // Update job status to processing (reset from any previous state)
   if (job.status !== 'processing') {
     await db.update(scrapingJobs)
       .set({ 
         status: 'processing',
         startedAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        error: null // Clear any previous error
       })
       .where(eq(scrapingJobs.id, jobId));
-    console.log('✅ YouTube job status updated to processing');
+    console.log('✅ YouTube job status updated to processing (reset from previous state)');
   }
 
   try {
+    // EXACT COUNT STEP 3: API Call Decision
+    console.log('\n🎲🎲🎲 [API-CALL-DECISION] YouTube API Call:', {
+      apiCall: currentRuns + 1,
+      safetyLimit: MAX_SAFETY_LIMIT,
+      currentResults,
+      targetResults,
+      remainingResults: targetResults - currentResults,
+      decision: 'PROCEED (dynamic approach)',
+      timestamp: new Date().toISOString()
+    });
+    
     console.log('🔍 Calling YouTube API');
     
     // Prepare search parameters
@@ -181,7 +216,7 @@ export async function processYouTubeJob(job: any, jobId: string): Promise<any> {
 
     // Increment the processedRuns counter after successful API call
     const newProcessedRuns = (job.processedRuns || 0) + 1;
-    console.log(`📊 YouTube: API call ${newProcessedRuns}/${MAX_API_CALLS_FOR_TESTING} completed`);
+    console.log(`📊 YouTube: API call ${newProcessedRuns} completed (dynamic approach)`);
     
     // Update the job with new processedRuns count
     await db.update(scrapingJobs)
@@ -191,6 +226,9 @@ export async function processYouTubeJob(job: any, jobId: string): Promise<any> {
         status: 'processing'
       })
       .where(eq(scrapingJobs.id, jobId));
+
+    // Initialize totalProcessedResults for cases where no results are found
+    let totalProcessedResults = job.processedResults || 0;
 
     // Process the API response and save results
     if (youtubeResponse && youtubeResponse.videos && youtubeResponse.videos.length > 0) {
@@ -312,13 +350,32 @@ export async function processYouTubeJob(job: any, jobId: string): Promise<any> {
       
       console.log(`✅ [PROFILE-ENHANCEMENT] Completed enhanced profile fetching for ${creators.length} channels`);
       
-      // Save results to database (append to existing results)
+      // EXACT COUNT STEP 4: Result Trimming
+      let creatorsToSave = creators;
+      
       if (creators.length > 0) {
+        // Check if adding these results would exceed the target
+        const totalAfterAdding = currentResults + creators.length;
+        
+        if (totalAfterAdding > targetResults) {
+          const remainingSlots = targetResults - currentResults;
+          creatorsToSave = creators.slice(0, remainingSlots);
+          console.log(`✂️ [EXACT-COUNT] Trimming results to exact target:`, {
+            originalCount: creators.length,
+            trimmedCount: creatorsToSave.length,
+            currentResults,
+            targetResults,
+            totalAfterTrim: currentResults + creatorsToSave.length
+          });
+        }
+        
         console.log('💾 [YOUTUBE] Saving results to database:', {
-          creatorCount: creators.length,
+          creatorCount: creatorsToSave.length,
           jobId: job.id,
           apiCall: newProcessedRuns,
-          isPartialResult: newProcessedRuns < MAX_API_CALLS_FOR_TESTING
+          currentTotal: currentResults,
+          newTotal: currentResults + creatorsToSave.length,
+          targetResults
         });
         
         // Check if there are existing results to append to
@@ -329,7 +386,7 @@ export async function processYouTubeJob(job: any, jobId: string): Promise<any> {
         if (existingResults) {
           // Append new creators to existing results
           const existingCreators = Array.isArray(existingResults.creators) ? existingResults.creators : [];
-          const updatedCreators = [...existingCreators, ...creators];
+          const updatedCreators = [...existingCreators, ...creatorsToSave];
           
           await db.update(scrapingResults)
             .set({
@@ -337,29 +394,24 @@ export async function processYouTubeJob(job: any, jobId: string): Promise<any> {
             })
             .where(eq(scrapingResults.jobId, job.id));
             
-          console.log('✅ [YOUTUBE] Appended', creators.length, 'new creators to existing', existingCreators.length, 'results');
+          console.log('✅ [YOUTUBE] Appended', creatorsToSave.length, 'new creators to existing', existingCreators.length, 'results');
         } else {
           // Create first result entry
           await db.insert(scrapingResults).values({
             jobId: job.id,
-            creators: creators,
+            creators: creatorsToSave,
             createdAt: new Date()
           });
           
-          console.log('✅ [YOUTUBE] Created first result entry with', creators.length, 'creators');
+          console.log('✅ [YOUTUBE] Created first result entry with', creatorsToSave.length, 'creators');
         }
       }
       
-      // Update job with processed results count and unified progress
-      const totalProcessedResults = (job.processedResults || 0) + creators.length;
+      // Update total processed results after trimming
+      totalProcessedResults = (job.processedResults || 0) + (creatorsToSave?.length || 0);
       
-      // Calculate unified progress
-      const progress = calculateUnifiedProgress(
-        newProcessedRuns,
-        MAX_API_CALLS_FOR_TESTING,
-        totalProcessedResults,
-        job.targetResults || 1000
-      );
+      // Calculate exact count progress
+      const progress = calculateExactCountProgress(totalProcessedResults, targetResults);
       
       await db.update(scrapingJobs)
         .set({ 
@@ -368,11 +420,59 @@ export async function processYouTubeJob(job: any, jobId: string): Promise<any> {
           updatedAt: new Date()
         })
         .where(eq(scrapingJobs.id, jobId));
+        
+      // EXACT COUNT STEP 5: Check if target reached
+      if (totalProcessedResults >= targetResults) {
+        console.log(`🎯 [EXACT-COUNT] YouTube: Target reached! Completing job.`, {
+          totalProcessedResults,
+          targetResults,
+          apiCalls: newProcessedRuns,
+          timestamp: new Date().toISOString()
+        });
+        
+        await db.update(scrapingJobs).set({ 
+          status: 'completed',
+          completedAt: new Date(),
+          updatedAt: new Date(),
+          progress: '100'
+        }).where(eq(scrapingJobs.id, jobId));
+        
+        return { 
+          status: 'completed', 
+          message: `Target reached: ${totalProcessedResults} results collected in ${newProcessedRuns} API calls.`,
+          processedRuns: newProcessedRuns,
+          processedResults: totalProcessedResults
+        };
+      }
     }
     
-    // Check if we've reached the test limit
-    if (newProcessedRuns >= MAX_API_CALLS_FOR_TESTING) {
-      console.log(`🏁 YouTube: Reached test limit of ${MAX_API_CALLS_FOR_TESTING} API calls. Completing job.`);
+    // Old hardcoded limit check removed - now using dynamic approach below
+    
+    // DYNAMIC DECISION: Should we continue or stop?
+    if (shouldContinueApiCalls(totalProcessedResults, targetResults, newProcessedRuns)) {
+      // Continue - schedule next API call
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL || 'http://localhost:3000';
+      console.log(`🔄 [DYNAMIC-CONTINUE] YouTube: Scheduling next API call (${totalProcessedResults}/${targetResults} results)`);
+      
+      await qstash.publishJSON({
+        url: `${baseUrl}/api/qstash/process-scraping`,
+        body: { jobId: job.id },
+        delay: '2s',
+        retries: 3,
+        notifyOnFailure: true
+      });
+      
+      return { 
+        status: 'processing', 
+        message: `API call ${newProcessedRuns} completed. ${totalProcessedResults}/${targetResults} results collected. Continuing...`,
+        processedRuns: newProcessedRuns,
+        processedResults: totalProcessedResults
+      };
+    } else {
+      // Stop - we've reached target or safety limit
+      const reason = totalProcessedResults >= targetResults ? 'Target reached' : 'Safety limit reached';
+      console.log(`🏁 [DYNAMIC-COMPLETE] YouTube: ${reason} (${totalProcessedResults}/${targetResults}).`);
+      
       await db.update(scrapingJobs).set({ 
         status: 'completed',
         completedAt: new Date(),
@@ -382,28 +482,11 @@ export async function processYouTubeJob(job: any, jobId: string): Promise<any> {
       
       return { 
         status: 'completed', 
-        message: `Test completed: Made ${newProcessedRuns} API calls as configured.`,
-        processedRuns: newProcessedRuns
+        message: `${reason}: ${totalProcessedResults} results collected in ${newProcessedRuns} API calls.`,
+        processedRuns: newProcessedRuns,
+        processedResults: totalProcessedResults
       };
     }
-    
-    // If we haven't reached the limit, schedule another run with delay
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL || 'http://localhost:3000';
-    console.log(`🔄 YouTube: Scheduling next API call (${newProcessedRuns + 1}/${MAX_API_CALLS_FOR_TESTING})`);
-    
-    await qstash.publishJSON({
-      url: `${baseUrl}/api/qstash/process-scraping`,
-      body: { jobId: job.id },
-      delay: '2s', // Short delay for testing
-      retries: 3,
-      notifyOnFailure: true
-    });
-    
-    return { 
-      status: 'processing', 
-      message: `API call ${newProcessedRuns}/${MAX_API_CALLS_FOR_TESTING} completed. Next call scheduled.`,
-      processedRuns: newProcessedRuns
-    };
 
   } catch (apiError: any) {
     const errorMessage = `Failed to call YouTube API or process its response: ${apiError.message}`;

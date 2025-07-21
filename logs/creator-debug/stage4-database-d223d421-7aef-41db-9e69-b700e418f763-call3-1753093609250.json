@@ -1,0 +1,101 @@
+{
+  "stage": "database_save_final",
+  "jobId": "d223d421-7aef-41db-9e69-b700e418f763",
+  "apiCall": 3,
+  "timestamp": "2025-07-21T10:26:49.250Z",
+  "counts": {
+    "creatorsBeingPersisted": 11,
+    "newProcessedRuns": 3,
+    "newProcessedResults": 33
+  },
+  "finalDatabaseCreators": [
+    {
+      "index": 1,
+      "username": "mrperfecttech",
+      "followers": 883651,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "viral_king_aayush",
+      "followers": 67202,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "chic_trendxz",
+      "followers": 148535,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "lexiv_trends",
+      "followers": 18828,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "arli_deo",
+      "followers": 4789,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "derekjelliott",
+      "followers": 60581,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "insta.__show",
+      "followers": 29241,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "gadgetbhaii",
+      "followers": 185865,
+      "verified": false,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "eurekahnb",
+      "followers": 84651,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "technical_sky",
+      "followers": 1129206,
+      "verified": false,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 11,
+      "username": "ganeshmobilegalaxy",
+      "followers": 2173971,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    }
+  ]
+}

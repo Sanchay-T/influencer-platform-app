@@ -1,0 +1,60 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "e3865240-529e-4b5d-bdd7-3952f551b9ef",
+  "apiCall": 2,
+  "batchNumber": 1,
+  "timestamp": "2025-07-21T07:56:52.472Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 5
+  },
+  "validCreators": [
+    {
+      "username": "nike",
+      "fullName": "Nike",
+      "followers": 300034897,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Just Do It....",
+      "emails": []
+    },
+    {
+      "username": "wethenew",
+      "fullName": "Wethenew",
+      "followers": 863571,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "We curate sneakers & streetwear daily, \nFor you.🖤...",
+      "emails": []
+    },
+    {
+      "username": "shoes.lks",
+      "fullName": "Shoes.Lks🌟",
+      "followers": 34187,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "📈| +3000 FEEDBACK POSITIVOS🏆🔥\n📲|ENCARGOS 24/7 Y ENTREGA INMEDIATA⚡️\n🥇|LOS N1 EN CALIDAD Y CONFI...",
+      "emails": []
+    },
+    {
+      "username": "footlockermalaysia",
+      "fullName": "Foot Locker Malaysia",
+      "followers": 140693,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "#TheHeartOfSneakers Malaysia\nTag #FootLockerMalaysia to be featured 👟\n-\nFOOT LOCKER MALAYSIA SDN BH...",
+      "emails": []
+    },
+    {
+      "username": "stylerunner",
+      "fullName": "STYLERUNNER",
+      "followers": 625669,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "A destination of style. Curated exclusively for her....",
+      "emails": []
+    }
+  ]
+}

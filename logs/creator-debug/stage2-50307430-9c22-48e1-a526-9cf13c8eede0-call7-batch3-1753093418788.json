@@ -1,0 +1,35 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "50307430-9c22-48e1-a526-9cf13c8eede0",
+  "apiCall": 7,
+  "batchNumber": 3,
+  "timestamp": "2025-07-21T10:23:38.788Z",
+  "counts": {
+    "rawResults": 2,
+    "validResults": 2,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 12
+  },
+  "validCreators": [
+    {
+      "username": "arli_deo",
+      "fullName": "Arli_deo",
+      "followers": 4789,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Influencer...",
+      "emails": []
+    },
+    {
+      "username": "iam_shirleyt",
+      "fullName": "Shirley 🇸🇬 | Food | Travel | Lifestyle",
+      "followers": 12742,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "✈️ Mar’25 🇮🇩 | Jun’25 🇹🇭\n💌 iiam.shirleyt@gmail.com\n💜 YouTrip <SHIRLEYT> FREE $5\n🧡 Klook <SHIR...",
+      "emails": [
+        "iiam.shirleyt@gmail.com"
+      ]
+    }
+  ]
+}

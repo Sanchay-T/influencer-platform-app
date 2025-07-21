@@ -1,0 +1,42 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "0604a397-e444-4b09-a619-3d20690c0c89",
+  "apiCall": 6,
+  "batchNumber": 2,
+  "timestamp": "2025-07-21T08:10:27.696Z",
+  "counts": {
+    "rawResults": 3,
+    "validResults": 3,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 8
+  },
+  "validCreators": [
+    {
+      "username": "nikefootball",
+      "fullName": "Nike Football",
+      "followers": 0,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "no bio",
+      "emails": []
+    },
+    {
+      "username": "hooky.id",
+      "fullName": "JASTIP SEJAK 2019 👛🩰🦋✨",
+      "followers": 14199,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "👨🏻 Man @hookyman.id \nWA : 0856-9704-2120 \n100% ORIGINAL & TERPERCAYA \n📍Jakarta\nOrder klik 👇...",
+      "emails": []
+    },
+    {
+      "username": "shoppinkivy",
+      "fullName": "P I N K   I V Y",
+      "followers": 269731,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Authentic Hand Customized Shoes with Swarovski crystals💎💎@megannn_harrison \n⬇️ SHOP HERE ⬇️...",
+      "emails": []
+    }
+  ]
+}

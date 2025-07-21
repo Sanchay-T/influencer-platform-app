@@ -1,0 +1,109 @@
+{
+  "stage": "database_save_final",
+  "jobId": "3ef6d49e-0aa6-4e30-ac2a-afa584522c31",
+  "apiCall": 3,
+  "timestamp": "2025-07-21T10:03:53.663Z",
+  "counts": {
+    "creatorsBeingPersisted": 12,
+    "newProcessedRuns": 3,
+    "newProcessedResults": 23
+  },
+  "finalDatabaseCreators": [
+    {
+      "index": 1,
+      "username": "limreviews",
+      "followers": 81709,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "fivebelow",
+      "followers": 861992,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "superscientific",
+      "followers": 442439,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "electrovilla.shop",
+      "followers": 14650,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "sonyelectronics",
+      "followers": 8177994,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "gadgetboy4u",
+      "followers": 1007390,
+      "verified": false,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "acefast.official",
+      "followers": 75145,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "goussve.km",
+      "followers": 310426,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "insta.__show",
+      "followers": 29243,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "banartsy",
+      "followers": 28889,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 11,
+      "username": "arli_deo",
+      "followers": 4789,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 12,
+      "username": "lexiv_trends",
+      "followers": 18828,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    }
+  ]
+}

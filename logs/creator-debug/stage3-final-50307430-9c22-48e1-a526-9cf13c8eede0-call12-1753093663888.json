@@ -1,0 +1,101 @@
+{
+  "stage": "final_transformed_creators",
+  "jobId": "50307430-9c22-48e1-a526-9cf13c8eede0",
+  "apiCall": 12,
+  "timestamp": "2025-07-21T10:27:43.888Z",
+  "counts": {
+    "finalTransformedCreators": 7,
+    "processedRuns": 12,
+    "maxRuns": 15
+  },
+  "finalCreators": [
+    {
+      "index": 1,
+      "username": "nathanespinozayt",
+      "fullName": "Nathan Espinoza",
+      "followers": 181407,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "†\n20\ntech, gadgets, and stuff\nnathanespinoza@rakugomedia.com...",
+      "emails": [
+        "nathanespinoza@rakugomedia.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DMEVESDxyAG",
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "extratechlimitedtt",
+      "fullName": "ExtraTechLimited™",
+      "followers": 10190,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🇹🇹 Your #1 Trusted Source for Certified Pre-Owned Imports and Amazing Deals!\nContact📱: 475-7310 /...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DMQpRO1Sc8p",
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "mrvaibhavpatwal",
+      "fullName": "Vaibhav Patwal",
+      "followers": 3093,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Food | Restaurant | Stores [Honest Review]👍\n📍Lucknow \n1M Club Reels 🤩🤩\nDM For Collaboration/Paid...",
+      "emails": [
+        "vaibhav.patwal.official@gmail.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DMNabE4pi_i",
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "techknow_biz",
+      "fullName": "TechKnow Biz",
+      "followers": 10859,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "That 🎧 Guy\n🙋 100K+ on TikTok...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DMIFpaMhUNu",
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "pranish_store",
+      "fullName": "Pranish Store",
+      "followers": 110183,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "STORE OPENING TIME: 10AM TO 9PM  CLOSED.  \nGoogle maps: Pranish Store, Jawalakhel Lalitpur.\nPhone nu...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DMDHPfnymhO",
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "gadgetxpress_india",
+      "fullName": "GadgetXpress",
+      "followers": 1040,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Websit link 👉http://gadgetxpress.in\n*Wholesale and retail*\nDM/WhatsApp👉7240688392\nCash on delivery...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DLnBsu8v3eT",
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "bad_boy_krishnam_mp17rewa_wale",
+      "fullName": "♥༒, 🅷🅴🅰🆁🆃🅺🅸🅻🅻🅴🆁♥༒",
+      "followers": 7862,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "☠︎༆ 🆁🅾🆈🅰🅻 🅴🅽🆃🆁🆈 🅾🅽  16 November \nMy mom ❤dad is my life\n9981858664@paytm...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DLbmh6gBfUh",
+      "platform": "Instagram"
+    }
+  ]
+}

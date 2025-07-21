@@ -1,0 +1,62 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "50307430-9c22-48e1-a526-9cf13c8eede0",
+  "apiCall": 3,
+  "batchNumber": 1,
+  "timestamp": "2025-07-21T10:20:37.581Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 5
+  },
+  "validCreators": [
+    {
+      "username": "emkwan",
+      "fullName": "EMKWAN",
+      "followers": 166583,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "📲 Tech, AI, Cars & Watches from Dubai 🇦🇪\n🌴 Top 10 Tech Influencer Dubai 2025\n🚀 500M+ Views\n تاب...",
+      "emails": []
+    },
+    {
+      "username": "temu",
+      "fullName": "Temu Official",
+      "followers": 10173785,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Earn commission with Temu ⭐️...",
+      "emails": []
+    },
+    {
+      "username": "mrperfecttech",
+      "fullName": "Nitin Raj",
+      "followers": 883652,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Follow for Latest Tech, Tips and Gadgets\nTedx Speaker\n✉️mrperfecttechofficial@gmail.com\nClick below ...",
+      "emails": [
+        "mrperfecttechofficial@gmail.com"
+      ]
+    },
+    {
+      "username": "praveenbhat",
+      "fullName": "Praveen Bhat Photography",
+      "followers": 1112997,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Indian fashion Photographer + Tech🇮🇳\n🌟YouTube [550K+]\n🔅my photography page 🔻\n@praveenbhatphotog...",
+      "emails": []
+    },
+    {
+      "username": "tableeefortwo_",
+      "fullName": "Malaika Qasim",
+      "followers": 60565,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "📍 A DUO in UAE 🇦🇪 \n🍴: Food & Lifestyle\n🚵🏻‍♀️: Travel & Activities...",
+      "emails": []
+    }
+  ]
+}

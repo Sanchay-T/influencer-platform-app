@@ -1,0 +1,33 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "d223d421-7aef-41db-9e69-b700e418f763",
+  "apiCall": 4,
+  "batchNumber": 3,
+  "timestamp": "2025-07-21T10:27:29.595Z",
+  "counts": {
+    "rawResults": 2,
+    "validResults": 2,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 12
+  },
+  "validCreators": [
+    {
+      "username": "2024gadgetsbazaar",
+      "fullName": "Gadgets Bazaar",
+      "followers": 4403,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🎧⌚️I Deals in smart gadgets\n🚚📦I All india delivery\n💬📨I wtsno.7566243621\n🏤🏣I main page:@immoni...",
+      "emails": []
+    },
+    {
+      "username": "banjara_electronics",
+      "fullName": "Banjara Electronics",
+      "followers": 19893,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "•We deal in all kind of electronics & accessories •Guaranteed 100% original •Amazon/Flipkart clearan...",
+      "emails": []
+    }
+  ]
+}

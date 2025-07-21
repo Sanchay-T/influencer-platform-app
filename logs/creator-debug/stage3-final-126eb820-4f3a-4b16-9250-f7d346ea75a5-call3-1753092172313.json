@@ -1,0 +1,137 @@
+{
+  "stage": "final_transformed_creators",
+  "jobId": "126eb820-4f3a-4b16-9250-f7d346ea75a5",
+  "apiCall": 3,
+  "timestamp": "2025-07-21T10:02:52.313Z",
+  "counts": {
+    "finalTransformedCreators": 10,
+    "processedRuns": 3,
+    "maxRuns": 15
+  },
+  "finalCreators": [
+    {
+      "index": 1,
+      "username": "limreviews",
+      "fullName": "SM Lim",
+      "followers": 81709,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "🇲🇾 | Just your average nerd. \nFormer @ximmerse | @microsoft\nAlso on TikTok (250K) & YouTube (300K)...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/C08aFV-SsSP",
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "fivebelow",
+      "fullName": "Five Below",
+      "followers": 861992,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "hot stuff. cool prices. extreme $1-$5 value & trends + some incredible finds in our five beyond shop...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DHW0tfwokKm",
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "viral_king_aayush",
+      "fullName": "Shivchand Kumar",
+      "followers": 67200,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Collab : itsaayushaayush@gmail.com\nYoutube : 100k+ Family ❤️\nLove For Exploring \nFor Video shoot 837...",
+      "emails": [
+        "itsaayushaayush@gmail.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DKsDtwMvA7t",
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "thestylelistings",
+      "fullName": "Amanpreet Kaur",
+      "followers": 176695,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Tech in Style ✨\nLatest Smartphones, Apps, Tips, Tricks, and More\n🤖Prompt \"Hey Stylexa\" \nPowered by ...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/C6yVebFS6mr",
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "acefast.official",
+      "fullName": "Acefast Official",
+      "followers": 75145,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🔥New audiovisual experience 💕\n👇Shop here:...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/C_DHGrcxyNs",
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "gadgetboy4u",
+      "fullName": "Gadget Boy",
+      "followers": 1007388,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Useful Gadgets\nFor business 📧 sahilpathang7@gmail.com \nBuy Link 👇👇👇...",
+      "emails": [
+        "sahilpathang7@gmail.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/C5BIzqFoyx3",
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "eurekahnb",
+      "fullName": "Eureka",
+      "followers": 84645,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "This page provides you with daily interesting  facts, knowledge & Information. 🌍 \n: ™ \nDM For Credi...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DKz9WOWy4VX",
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "8list.ph",
+      "fullName": "8List.ph",
+      "followers": 22199,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "8List.ph delivers your daily dose of useful and entertaining lists!...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DCx1sJ5TSHl",
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "lexiv_trends",
+      "fullName": "LEXIV | MOBILE ACCESSORIES | GADGETS | WATCHES",
+      "followers": 18828,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🛍️ Selling Luxury Goods Since 2012\n🚀 Helping Gen Z Get Luxury In Affordable \n🎁 Follow Now For Wee...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DMNiNt-vr0G",
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "goussve.km",
+      "fullName": "GOUSSVE TECH",
+      "followers": 310426,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🖥 | Gaming | Tech Enthusiast \n📧 | huoledfer.gmail.com\n🛰 | abang6199\n🛒 | Product link in my bio ⬇...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DHv1AEIpCLr",
+      "platform": "Instagram"
+    }
+  ]
+}

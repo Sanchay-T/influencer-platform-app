@@ -1,0 +1,42 @@
+{
+  "stage": "accumulation_tracking",
+  "jobId": "0604a397-e444-4b09-a619-3d20690c0c89",
+  "apiCall": 3,
+  "timestamp": "2025-07-21T08:08:32.108Z",
+  "accumulation": {
+    "previousCreatorsCount": 23,
+    "newCreatorsCount": 10,
+    "totalAccumulatedCount": 28,
+    "duplicatesRemoved": 5
+  },
+  "usernames": [
+    "livingthehype_",
+    "crepdogcrew",
+    "hide.and.sneak",
+    "klekt",
+    "platinumshoecare",
+    "thatsodsoho",
+    "minicostore.in",
+    "imanshop_tr",
+    "c.kickss",
+    "doubleboxed",
+    "arlegend2",
+    "nenoo_store.official",
+    "nike",
+    "instakicksz",
+    "sneakerfreakermag",
+    "lindamont",
+    "bennetts_",
+    "ikaatoni",
+    "dropinfos",
+    "suhanasethiofficial",
+    "bosscosgoodiez",
+    "sneakr_tweakr",
+    "kronickstyle",
+    "mercurialkicks",
+    "cxstiillo",
+    "itsyourdb",
+    "chenxiami99",
+    "stockxkicks_net"
+  ]
+}

@@ -1,0 +1,163 @@
+{
+  "stage": "final_transformed_creators",
+  "jobId": "0604a397-e444-4b09-a619-3d20690c0c89",
+  "apiCall": 5,
+  "timestamp": "2025-07-21T08:09:58.192Z",
+  "counts": {
+    "finalTransformedCreators": 12,
+    "processedRuns": 5,
+    "maxRuns": 15
+  },
+  "finalCreators": [
+    {
+      "index": 1,
+      "username": "zahwaqilah",
+      "fullName": "zahwa aqilah",
+      "followers": 429977,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "보라해 \n♡ contact person : +62 856-9121-7678 \n♡ social media inquiries : +62 812-1920-0719\n♡ endorsemen...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DMXMWm5xcRi",
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "untiedau",
+      "fullName": "UNTIED AU",
+      "followers": 13025,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "🇦🇺 Leading Australian Sneaker Store \n👟 100% Authentic Guaranteed, Always.\n🛍️ Afterpay / Zip / Kl...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DMXBleUJ5W9",
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "freudonidas",
+      "fullName": "Freudondas Chartpong",
+      "followers": 478502,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "BAD BASTARD\n☎️WORK CALL ⬇️ \n@nordarun @selfcoffeechiangmai @pawpawpaw321 @f_u_g_s @shadowtheclaws #w...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DMTpTECzxCZ",
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "nbcnewyork",
+      "fullName": "NBC New York",
+      "followers": 350185,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "The official account for NBC New York. \nSee something crazy? DM us, tag us, email tips@nbcnewyork.co...",
+      "emails": [
+        "tips@nbcnewyork.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DMRUGjuJhjd",
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "freshwitblossom",
+      "fullName": "Fresh & Blossom| Footwear Fashion & Couple Goals",
+      "followers": 520727,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "@freshwitfresh @blossomwitblossom \nShoe Inspo | His & Hers Outfits | Lifestyle \nAll Inquiries📧: Boo...",
+      "emails": [
+        "Bookings@FreshwitBlossom.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DMOG1BdRRnh",
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "kckd_rosko",
+      "fullName": "Trevor Roskovensky",
+      "followers": 46896,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "👟Helping people cop shoes for retail \n📱49k On YouTube! (Daily Live Streams)\n🚨Need my help I got y...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DMLEVThMud2",
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "iamharshkale",
+      "fullName": "𝐇𝐀𝐑𝐒𝐇 ✰ 𝐌𝐄𝐍'𝐒 𝐅𝐀𝐒𝐇𝐈𝐎𝐍 |🇮🇳",
+      "followers": 13716,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "•💡Menswear\n•📍Mumbai\n•🔹Follow for daily fashion content!...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DMXGY40o1s0",
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "noahxblack",
+      "fullName": "Noah black",
+      "followers": 12907,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Fashion inspo \nSocial media manager @dontxgate\n🔴 @noah2black2 🔴\n⚫ @noahxgate     ⚫\nPartnerships: n...",
+      "emails": [
+        "noahxblack@gmail.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/DMVDgRIt8uX",
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "svweeart",
+      "fullName": "Sveta",
+      "followers": 9437,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "by @sun_apanasovich \nCastomizer shoes 👟 🇱🇹\nCat mom 🐱🐱\nTelegram: TSDcustoms...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DMSHaL4xMV3",
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "gj5_suratcity",
+      "fullName": "Vaibhav Seth",
+      "followers": 26432,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Exploring flavors, sights, and secrets. \nJoin the adventure today! 🌆🍽️🌍\nTarget 50k🎯...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DMP8QizTd6E",
+      "platform": "Instagram"
+    },
+    {
+      "index": 11,
+      "username": "bbcx0102",
+      "fullName": "fakeking",
+      "followers": 13478,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🌍全球貨運均可寄送✈️📦，廣納代理經銷商\n👟自有工廠，專業球鞋團隊，讓您實現代理價買到好球鞋！\n👔@putian9999 柏柏精品衣服頻道\n👟@line_bb0102 鞋子實拍都在這裡\n@f...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DMPfS_szIy5",
+      "platform": "Instagram"
+    },
+    {
+      "index": 12,
+      "username": "grwvineeth",
+      "fullName": "Get Ready With Vineeth",
+      "followers": 14427,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Fashion you can buy, but style you possess😎💯\nFitness: @gfwvineeth \nJoin me on YOUTUBE & Shop My Lo...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DMPLgsgxrnW",
+      "platform": "Instagram"
+    }
+  ]
+}

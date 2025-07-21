@@ -1,0 +1,64 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "d223d421-7aef-41db-9e69-b700e418f763",
+  "apiCall": 3,
+  "batchNumber": 2,
+  "timestamp": "2025-07-21T10:26:36.275Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 10
+  },
+  "validCreators": [
+    {
+      "username": "derekjelliott",
+      "fullName": "3D Product Animation",
+      "followers": 60581,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "3D Design + Animation in Austin, Texas.\nCheck out my course on Skillshare!\n@fattypackco @charachorde...",
+      "emails": []
+    },
+    {
+      "username": "insta.__show",
+      "fullName": "INSTA SHOW",
+      "followers": 29241,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "• 👕 Best Men’s Fashion Picks  \n• 👖 Trendy Fashion and gadgets \n• 🧥 Honest Reviews & Tips  \n• 🔥 S...",
+      "emails": []
+    },
+    {
+      "username": "gadgetbhaii",
+      "fullName": "Himanshu Verma",
+      "followers": 185865,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🕹️ Making life better with Gadgets \n🤖 iPhone & Android | Tips | Tricks \n💼 For Collab: gadgetbhaim...",
+      "emails": [
+        "gadgetbhaimedia@gmail.com"
+      ]
+    },
+    {
+      "username": "eurekahnb",
+      "fullName": "Eureka",
+      "followers": 84651,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "This page provides you with daily interesting  facts, knowledge & Information. 🌍 \n: ™ \nDM For Credi...",
+      "emails": []
+    },
+    {
+      "username": "technical_sky",
+      "fullName": "Akash Pal ℹ",
+      "followers": 1129206,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "I'm A Tech Content Creator\n📍 Agartala,Tripura,North-East India\n🤝🏼 For Collab - technicalsky@nexme...",
+      "emails": [
+        "technicalsky@nexmedia.in"
+      ]
+    }
+  ]
+}

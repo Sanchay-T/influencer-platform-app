@@ -1,0 +1,26 @@
+{
+  "stage": "accumulation_tracking",
+  "jobId": "d223d421-7aef-41db-9e69-b700e418f763",
+  "apiCall": 1,
+  "timestamp": "2025-07-21T10:25:21.325Z",
+  "accumulation": {
+    "previousCreatorsCount": 10,
+    "newCreatorsCount": 12,
+    "totalAccumulatedCount": 12,
+    "duplicatesRemoved": 10
+  },
+  "usernames": [
+    "phonesvendor",
+    "imaaduuddin",
+    "selfiecbaa",
+    "hasankarimiofficial",
+    "casepoint._",
+    "ecasetech",
+    "hd_mongolia",
+    "estoremultan",
+    "gee_stores_",
+    "imepoa",
+    "custom_adventurist",
+    "easy_shop_new"
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "stage": "accumulation_tracking",
+  "jobId": "126eb820-4f3a-4b16-9250-f7d346ea75a5",
+  "apiCall": 3,
+  "timestamp": "2025-07-21T10:02:52.313Z",
+  "accumulation": {
+    "previousCreatorsCount": 21,
+    "newCreatorsCount": 10,
+    "totalAccumulatedCount": 22,
+    "duplicatesRemoved": 9
+  },
+  "usernames": [
+    "phonesvendor",
+    "imaaduuddin",
+    "hasankarimiofficial",
+    "casepoint._",
+    "hd_mongolia",
+    "ecasetech",
+    "estoremultan",
+    "gee_stores_",
+    "imepoa",
+    "custom_adventurist",
+    "easy_shop_new",
+    "_.get_me_now",
+    "limreviews",
+    "fivebelow",
+    "viral_king_aayush",
+    "thestylelistings",
+    "acefast.official",
+    "gadgetboy4u",
+    "eurekahnb",
+    "8list.ph",
+    "lexiv_trends",
+    "goussve.km"
+  ]
+}

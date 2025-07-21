@@ -1,0 +1,62 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "d223d421-7aef-41db-9e69-b700e418f763",
+  "apiCall": 10,
+  "batchNumber": 2,
+  "timestamp": "2025-07-21T10:31:00.375Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 10
+  },
+  "validCreators": [
+    {
+      "username": "pradeep__technical",
+      "fullName": "Pradeep Joshi",
+      "followers": 1704,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "💻Unbiased Laptop Reviews & Buying Guides | Making Tech Easy to Find & Use | YouTuber...",
+      "emails": []
+    },
+    {
+      "username": "market.yandex.go.obzor",
+      "fullName": "Market Yandex Go da obzor",
+      "followers": 127808,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🛑 YANDEX MARKET MAHSULOTLARI\n🛑 CHEGIRMADA HARID QILING\n🛑 MAHSULOTLAR OBZORLARI SHUYERDA\n♻️ TELEGR...",
+      "emails": []
+    },
+    {
+      "username": "wholesale.gallery",
+      "fullName": "Wholesale gallery",
+      "followers": 2544,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Add :- Wholesale gallery, Road No. 2, Singh Eastate, Opp, Basera Studio, Kandivali East \n📞 - 771588...",
+      "emails": []
+    },
+    {
+      "username": "lucky_mbb",
+      "fullName": "M BARKAT | Tech, Ai",
+      "followers": 94769,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "\"🔥 Tech & AI Insights | 🎯 Honest Reviews | 📲 Genuine Content Only | 📩 Collabs: brktlibrary@gmail...",
+      "emails": [
+        "brktlibrary@gmail.com"
+      ]
+    },
+    {
+      "username": "thejrnyofficial",
+      "fullName": "JOURNEY",
+      "followers": 155033,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Chargers, wallets, finders, cases and lifestyle essentials🔋🗺️\nMade for every #JOURNEY\nDesigned in ...",
+      "emails": []
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "d223d421-7aef-41db-9e69-b700e418f763",
+  "apiCall": 3,
+  "batchNumber": 3,
+  "timestamp": "2025-07-21T10:26:41.544Z",
+  "counts": {
+    "rawResults": 1,
+    "validResults": 1,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 11
+  },
+  "validCreators": [
+    {
+      "username": "ganeshmobilegalaxy",
+      "fullName": "Ganesh Mobile Galaxy",
+      "followers": 2173971,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🛍 STORE TIMINGS: 10:30 AM-9:15 PM\n💥 AESI OFFERS KAHI NAHI MILEGI!\n📍 Visit Us: Odhav & Shastrinaga...",
+      "emails": []
+    }
+  ]
+}

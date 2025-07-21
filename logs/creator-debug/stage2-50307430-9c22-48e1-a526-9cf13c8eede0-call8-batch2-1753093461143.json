@@ -1,0 +1,62 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "50307430-9c22-48e1-a526-9cf13c8eede0",
+  "apiCall": 8,
+  "batchNumber": 2,
+  "timestamp": "2025-07-21T10:24:21.143Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 10
+  },
+  "validCreators": [
+    {
+      "username": "_priyaachaudhary01",
+      "fullName": "Priya Collection",
+      "followers": 24868,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Priya Collection Girl's Ethnic Wear \nOrder On WhatsApp 👉8114453230...",
+      "emails": []
+    },
+    {
+      "username": "jai_ambey_world",
+      "fullName": "MR.PRITAM MAHAWAR",
+      "followers": 569,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "SMART SHOP 4 SMART PEPOLE😍\n9610542570\nKRESHAR ROAD near SETH RAMCHANDRA HOTEL🔥\nA to Z प्रोडक्ट 🔥\ud83d...",
+      "emails": []
+    },
+    {
+      "username": "mrvaibhavpatwal",
+      "fullName": "Vaibhav Patwal",
+      "followers": 3093,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Food | Restaurant | Stores [Honest Review]👍\n📍Lucknow \n1M Club Reels 🤩🤩\nDM For Collaboration/Paid...",
+      "emails": [
+        "vaibhav.patwal.official@gmail.com"
+      ]
+    },
+    {
+      "username": "mobilak.lb",
+      "fullName": "Mobilak",
+      "followers": 31891,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "• Specialized in High-End brands of mobile accessories.\n• Contact us for your inquiries.\n• Delivery ...",
+      "emails": []
+    },
+    {
+      "username": "godhamobilebijaynagar",
+      "fullName": "Godha Mobiles Sonu Godha",
+      "followers": 781734,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "godha mobiles, bijainagar, rajasthan\nMo.8058061112\nMo.7587522222\nMo.7070701614\nMo.7733006666\nMo.7891...",
+      "emails": []
+    }
+  ]
+}

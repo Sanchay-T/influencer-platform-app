@@ -1,0 +1,60 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "3ef6d49e-0aa6-4e30-ac2a-afa584522c31",
+  "apiCall": 4,
+  "batchNumber": 2,
+  "timestamp": "2025-07-21T10:04:24.269Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 10
+  },
+  "validCreators": [
+    {
+      "username": "cnet",
+      "fullName": "CNET",
+      "followers": 1305687,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Your guide to a better future....",
+      "emails": []
+    },
+    {
+      "username": "synkrosoft",
+      "fullName": "Synkrosoft - Your Tech Source",
+      "followers": 29459,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "NEW PAGE - REBUILDING FROM 63.4K\nCLOSED OUR PHYSICAL STORES\nJamaica's #1 Online Tech Store🎧📱💻🖥\n8...",
+      "emails": []
+    },
+    {
+      "username": "gadgetxpress_india",
+      "fullName": "GadgetXpress",
+      "followers": 1040,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Websit link 👉http://gadgetxpress.in\n*Wholesale and retail*\nDM/WhatsApp👉7240688392\nCash on delivery...",
+      "emails": []
+    },
+    {
+      "username": "smartgadgetcoach",
+      "fullName": "SmartGadgetCoach",
+      "followers": 772,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "📦 Gadget Seller | 💰 Digital Coach  \n🎯 New eBook: ₹1L/month plan  \n👇 DM “START” for full guide...",
+      "emails": []
+    },
+    {
+      "username": "zahcomputers.pk",
+      "fullName": "ZahComputers.pk",
+      "followers": 33794,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Pakistan's #1 store for gaming & professional monitors.\nWith the largest inventory & trusted since 2...",
+      "emails": []
+    }
+  ]
+}

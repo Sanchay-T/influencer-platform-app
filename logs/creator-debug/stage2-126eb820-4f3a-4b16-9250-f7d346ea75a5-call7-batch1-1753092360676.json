@@ -1,0 +1,53 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "126eb820-4f3a-4b16-9250-f7d346ea75a5",
+  "apiCall": 7,
+  "batchNumber": 1,
+  "timestamp": "2025-07-21T10:06:00.676Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 4,
+    "filteredOutInBatch": 1,
+    "cumulativeValidCreators": 4
+  },
+  "validCreators": [
+    {
+      "username": "limreviews",
+      "fullName": "SM Lim",
+      "followers": 0,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "no bio",
+      "emails": []
+    },
+    {
+      "username": "fivebelow",
+      "fullName": "Five Below",
+      "followers": 861993,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "hot stuff. cool prices. extreme $1-$5 value & trends + some incredible finds in our five beyond shop...",
+      "emails": []
+    },
+    {
+      "username": "electrovilla.shop",
+      "fullName": "Electro Villa ™",
+      "followers": 14651,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "⌚️ Smartwatches | Analog Watches\n🎧 Earbuds\n🎁 Premium Gifts \n🏡 Home Essentials & Many More\n👀 Visi...",
+      "emails": []
+    },
+    {
+      "username": "gadgetboy4u",
+      "fullName": "Gadget Boy",
+      "followers": 1007398,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Useful Gadgets\nFor business 📧 sahilpathang7@gmail.com \nBuy Link 👇👇👇...",
+      "emails": [
+        "sahilpathang7@gmail.com"
+      ]
+    }
+  ]
+}

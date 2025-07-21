@@ -1,0 +1,62 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "d223d421-7aef-41db-9e69-b700e418f763",
+  "apiCall": 6,
+  "batchNumber": 2,
+  "timestamp": "2025-07-21T10:28:07.570Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 10
+  },
+  "validCreators": [
+    {
+      "username": "ibexmobile",
+      "fullName": "آیبکس موبایل | ایرفون - ساعت هوشمند - گجت",
+      "followers": 118036,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "معرفـی و عـرضـــه انواع لوازم جانبی هوشمنــد 🤖\nکلمه «منو» رو دایـ/ـرکت برامون بفرست 🫡📥\n لینک ها و...",
+      "emails": []
+    },
+    {
+      "username": "05ru",
+      "fullName": "05ru",
+      "followers": 309258,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🚚Доставляем до дома\n⏰С 9:00 до 21:00\n☎️ 8-800-511-05-05...",
+      "emails": []
+    },
+    {
+      "username": "applesfresh",
+      "fullName": "Apples Fresh",
+      "followers": 647442,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🗞 Apple News & Concept! \n🏷 #applesfresh \n📲 to sponsor write an email: applesfreshoriginal@gmail.c...",
+      "emails": [
+        "applesfreshoriginal@gmail.com"
+      ]
+    },
+    {
+      "username": "pradeep__technical",
+      "fullName": "Pradeep Joshi",
+      "followers": 1704,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "💻Unbiased Laptop Reviews & Buying Guides | Making Tech Easy to Find & Use | YouTuber...",
+      "emails": []
+    },
+    {
+      "username": "sahabat.gajet11",
+      "fullName": "sahabat.gajet",
+      "followers": 69184,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "📌 SSM : WAFFIQ TECH (003087226-V) \n📦 Ship : 2/3 days (J&T Express)\n🔍 Item : 💯 Original item with...",
+      "emails": []
+    }
+  ]
+}

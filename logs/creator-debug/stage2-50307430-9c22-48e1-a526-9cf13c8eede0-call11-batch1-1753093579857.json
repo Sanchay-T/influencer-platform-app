@@ -1,0 +1,60 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "50307430-9c22-48e1-a526-9cf13c8eede0",
+  "apiCall": 11,
+  "batchNumber": 1,
+  "timestamp": "2025-07-21T10:26:19.857Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 5
+  },
+  "validCreators": [
+    {
+      "username": "temu",
+      "fullName": "Temu Official",
+      "followers": 10173903,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Earn commission with Temu ⭐️...",
+      "emails": []
+    },
+    {
+      "username": "fivebelow",
+      "fullName": "Five Below",
+      "followers": 861993,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "hot stuff. cool prices. extreme $1-$5 value & trends + some incredible finds in our five beyond shop...",
+      "emails": []
+    },
+    {
+      "username": "zebronics",
+      "fullName": "Zebronics",
+      "followers": 322916,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Explore immersive sound, stunning visuals, and smart accessories that inspire you to stay #alwaysahe...",
+      "emails": []
+    },
+    {
+      "username": "shoptemu",
+      "fullName": "Shoptemu",
+      "followers": 3518935,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Monetize with Temu 🔥...",
+      "emails": []
+    },
+    {
+      "username": "emkwan",
+      "fullName": "EMKWAN",
+      "followers": 166583,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "📲 Tech, AI, Cars & Watches from Dubai 🇦🇪\n🌴 Top 10 Tech Influencer Dubai 2025\n🚀 500M+ Views\n تاب...",
+      "emails": []
+    }
+  ]
+}

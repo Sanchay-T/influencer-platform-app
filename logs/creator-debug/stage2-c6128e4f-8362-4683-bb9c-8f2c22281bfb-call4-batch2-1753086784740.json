@@ -1,0 +1,51 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "c6128e4f-8362-4683-bb9c-8f2c22281bfb",
+  "apiCall": 4,
+  "batchNumber": 2,
+  "timestamp": "2025-07-21T08:33:04.740Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 4,
+    "filteredOutInBatch": 1,
+    "cumulativeValidCreators": 9
+  },
+  "validCreators": [
+    {
+      "username": "cnet",
+      "fullName": "CNET",
+      "followers": 1305692,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Your guide to a better future....",
+      "emails": []
+    },
+    {
+      "username": "techoob_saaquib",
+      "fullName": "Saaquib Neyazi",
+      "followers": 0,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "no bio",
+      "emails": []
+    },
+    {
+      "username": "zahcomputers.pk",
+      "fullName": "ZahComputers.pk",
+      "followers": 33791,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Pakistan's #1 store for gaming & professional monitors.\nWith the largest inventory & trusted since 2...",
+      "emails": []
+    },
+    {
+      "username": "milestelecom",
+      "fullName": "Miles Telecom Trading LLC",
+      "followers": 6777,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "📱Your one-stop shop for the Latest\nMobiles | Gadgets | Accessories | Repair...",
+      "emails": []
+    }
+  ]
+}

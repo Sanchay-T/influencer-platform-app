@@ -1,0 +1,317 @@
+{
+  "timestamp": "2025-07-21T08:10:31.391Z",
+  "platform": "instagram",
+  "searchType": "keyword",
+  "request": {
+    "keywords": [
+      "nike sneakers"
+    ],
+    "targetResults": 100,
+    "platform": "Instagram"
+  },
+  "response": {
+    "items": [
+      {
+        "creator": {
+          "name": "Nike",
+          "uniqueId": "nike",
+          "followers": 300034934,
+          "avatarUrl": "https://scontent-iad3-1.cdninstagram.com/v/t51.2885-19/476168541_612178675089525_1333583602336081250_n.jpg?stp=dst-jpg_e0_s150x150_tt6&_nc_ht=scontent-iad3-1.cdninstagram.com&_nc_cat=1&_nc_oc=Q6cZ2QHT9POYwXeGxam5kejU1-JBcwaVtsyLFLsc482UIRxDwpmFWZgytCsPfwHiBbcI6f4&_nc_ohc=uLaZim8YfiEQ7kNvwE9KqD_&_nc_gid=XlcdANDztKB_czzcfrS32g&edm=AL2I2h8BAAAA&ccb=7-5&ig_cache_key=GF3BYRx1wHf0xSwCAGIlh38414ESbkULAAAB-ccb7-5&oh=00_AfQHEAATt9--s4ZgrVzonDkosnXdkVgRDOF0PUxZm05tsQ&oe=6883CC63&_nc_sid=026283",
+          "profilePicUrl": "https://scontent-iad3-1.cdninstagram.com/v/t51.2885-19/476168541_612178675089525_1333583602336081250_n.jpg?stp=dst-jpg_e0_s150x150_tt6&_nc_ht=scontent-iad3-1.cdninstagram.com&_nc_cat=1&_nc_oc=Q6cZ2QHT9POYwXeGxam5kejU1-JBcwaVtsyLFLsc482UIRxDwpmFWZgytCsPfwHiBbcI6f4&_nc_ohc=uLaZim8YfiEQ7kNvwE9KqD_&_nc_gid=XlcdANDztKB_czzcfrS32g&edm=AL2I2h8BAAAA&ccb=7-5&ig_cache_key=GF3BYRx1wHf0xSwCAGIlh38414ESbkULAAAB-ccb7-5&oh=00_AfQHEAATt9--s4ZgrVzonDkosnXdkVgRDOF0PUxZm05tsQ&oe=6883CC63&_nc_sid=026283",
+          "verified": true,
+          "bio": "Just Do It.",
+          "emails": [],
+          "qualityScore": 1075,
+          "engagementRate": 0
+        },
+        "video": {
+          "description": "This is a REAL sneaker.\n\nWidely recognized for its world-merging visuals and gaming aesthetic, @RTFKT has reimagined a @Nike icon, the Dunk, for gamers and creators. Ghost and Void Editions dropping November 20th on RTFKT’s storefront.",
+          "url": "https://www.instagram.com/reel/CzwhdteP99x",
+          "statistics": {
+            "likes": 1520661,
+            "comments": 4833,
+            "views": 33767617,
+            "shares": 0
+          }
+        },
+        "hashtags": [],
+        "publishedTime": "2023-11-17T19:02:59.000Z",
+        "platform": "Instagram",
+        "postType": "Video",
+        "mediaUrl": "https://scontent-iad3-1.cdninstagram.com/v/t51.71878-15/499229222_2405215806515465_8489912372306055770_n.jpg?stp=dst-jpg_e15_tt6&_nc_cat=102&ig_cache_key=MzIzODIzNTMwOTMwNDk2MjkyOQ%3D%3D.3-ccb1-7&ccb=1-7&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6InhwaWRzLjcyMHgxMjgwLnNkciJ9&_nc_ohc=zu3SyUV_zIUQ7kNvwEVhY5x&_nc_oc=AdnT9koiUF-yCkwywqnVq5NBZybc1RniijW-1hvwhjdAANjwsrcz2VZ3iVeYOrjjDng&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-iad3-1.cdninstagram.com&_nc_gid=XlcdANDztKB_czzcfrS32g&oh=00_AfRVWkgxJaafqneIfkIDEj2Y5-tP9bLgA9Vg35iBL1SVCw&oe=6883BFB9",
+        "postId": "3238235309304962929_13460080",
+        "shortCode": "CzwhdteP99x",
+        "ownerUsername": "nike",
+        "ownerFullName": "Nike",
+        "ownerId": 13460080,
+        "enhancementStatus": "completed"
+      },
+      {
+        "creator": {
+          "name": "Shoes.Lks🌟",
+          "uniqueId": "shoes.lks",
+          "followers": 34187,
+          "avatarUrl": "https://scontent-iad3-2.cdninstagram.com/v/t51.2885-19/480942691_1154418122753304_1556726777699072353_n.jpg?stp=dst-jpg_e0_s150x150_tt6&_nc_ht=scontent-iad3-2.cdninstagram.com&_nc_cat=100&_nc_oc=Q6cZ2QHT9POYwXeGxam5kejU1-JBcwaVtsyLFLsc482UIRxDwpmFWZgytCsPfwHiBbcI6f4&_nc_ohc=e9GJj7kTDCQQ7kNvwFctCWj&_nc_gid=XlcdANDztKB_czzcfrS32g&edm=AL2I2h8BAAAA&ccb=7-5&ig_cache_key=GGOaqhwYBSHq7xkEAGF5F6XBmpoVbkULAAAB-ccb7-5&oh=00_AfSJyrv-8CtTP3Bxgy_ZjXyZWaojmXktI49mdmVF2ssAlw&oe=6883B6A6&_nc_sid=026283",
+          "profilePicUrl": "https://scontent-iad3-2.cdninstagram.com/v/t51.2885-19/480942691_1154418122753304_1556726777699072353_n.jpg?stp=dst-jpg_e0_s150x150_tt6&_nc_ht=scontent-iad3-2.cdninstagram.com&_nc_cat=100&_nc_oc=Q6cZ2QHT9POYwXeGxam5kejU1-JBcwaVtsyLFLsc482UIRxDwpmFWZgytCsPfwHiBbcI6f4&_nc_ohc=e9GJj7kTDCQQ7kNvwFctCWj&_nc_gid=XlcdANDztKB_czzcfrS32g&edm=AL2I2h8BAAAA&ccb=7-5&ig_cache_key=GGOaqhwYBSHq7xkEAGF5F6XBmpoVbkULAAAB-ccb7-5&oh=00_AfSJyrv-8CtTP3Bxgy_ZjXyZWaojmXktI49mdmVF2ssAlw&oe=6883B6A6&_nc_sid=026283",
+          "verified": true,
+          "bio": "📈| +3000 FEEDBACK POSITIVOS🏆🔥\n📲|ENCARGOS 24/7 Y ENTREGA INMEDIATA⚡️\n🥇|LOS N1 EN CALIDAD Y CONFIABILIDAD 🏆\n🚛|ENVIOS A TODO CHILE🇨🇱\n💳|CREDITO Y DEBITO📌",
+          "emails": [],
+          "qualityScore": 1075,
+          "engagementRate": 0
+        },
+        "video": {
+          "description": "La grasa 🥵 cotízala directamente al Dm con nosotros📲#chile #zapatillas #nike #shox #shoxtl",
+          "url": "https://www.instagram.com/reel/DIzIaFoun35",
+          "statistics": {
+            "likes": 11148,
+            "comments": 25,
+            "views": 177079,
+            "shares": 0
+          }
+        },
+        "hashtags": [
+          "#chile",
+          "#zapatillas",
+          "#nike",
+          "#shox",
+          "#shoxtl"
+        ],
+        "publishedTime": "2025-04-23T18:35:26.000Z",
+        "platform": "Instagram",
+        "postType": "Video",
+        "mediaUrl": "https://scontent-iad3-1.cdninstagram.com/v/t51.75761-15/491443178_17926498572053242_7977830178924480196_n.jpg?stp=dst-jpg_e15_tt6&_nc_cat=108&ig_cache_key=MzYxNzI3MTkwMjgzOTE0MzkyOQ%3D%3D.3-ccb1-7&ccb=1-7&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6InhwaWRzLjcyMHgxMjgwLnNkciJ9&_nc_ohc=pA6WWnbNXCUQ7kNvwF1jbSO&_nc_oc=AdnYnl-b9G1O18mkponIsnLiDI6lMbo5pLiVvQeivBDLFWxbBRbbgZOZiykazXqHG6Q&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-iad3-1.cdninstagram.com&_nc_gid=XlcdANDztKB_czzcfrS32g&oh=00_AfQg6Nht5KZTjL9zaTJ7ofHSBKAW288PnS29ucwqdtQF0A&oe=6883E2EF",
+        "postId": "3617271902839143929_61442229241",
+        "shortCode": "DIzIaFoun35",
+        "ownerUsername": "shoes.lks",
+        "ownerFullName": "Shoes.Lks🌟",
+        "ownerId": 61442229241,
+        "enhancementStatus": "completed"
+      },
+      {
+        "creator": {
+          "name": "Wethenew",
+          "uniqueId": "wethenew",
+          "followers": 863567,
+          "avatarUrl": "https://scontent-iad3-1.cdninstagram.com/v/t51.2885-19/241083079_359126305858306_9018700501717164423_n.jpg?stp=dst-jpg_e0_s150x150_tt6&_nc_ht=scontent-iad3-1.cdninstagram.com&_nc_cat=110&_nc_oc=Q6cZ2QHT9POYwXeGxam5kejU1-JBcwaVtsyLFLsc482UIRxDwpmFWZgytCsPfwHiBbcI6f4&_nc_ohc=V_vWo_kFJskQ7kNvwGEm3wF&_nc_gid=XlcdANDztKB_czzcfrS32g&edm=AL2I2h8BAAAA&ccb=7-5&ig_cache_key=GMeiXg4C4_Obn0YBAIchfbxS3Ch9bkULAAAB-ccb7-5&oh=00_AfSxkr7FB0MpVg7vRZduFToqc4Y77bzdTiFDCS6PPye6_A&oe=6883E3BE&_nc_sid=026283",
+          "profilePicUrl": "https://scontent-iad3-1.cdninstagram.com/v/t51.2885-19/241083079_359126305858306_9018700501717164423_n.jpg?stp=dst-jpg_e0_s150x150_tt6&_nc_ht=scontent-iad3-1.cdninstagram.com&_nc_cat=110&_nc_oc=Q6cZ2QHT9POYwXeGxam5kejU1-JBcwaVtsyLFLsc482UIRxDwpmFWZgytCsPfwHiBbcI6f4&_nc_ohc=V_vWo_kFJskQ7kNvwGEm3wF&_nc_gid=XlcdANDztKB_czzcfrS32g&edm=AL2I2h8BAAAA&ccb=7-5&ig_cache_key=GMeiXg4C4_Obn0YBAIchfbxS3Ch9bkULAAAB-ccb7-5&oh=00_AfSxkr7FB0MpVg7vRZduFToqc4Y77bzdTiFDCS6PPye6_A&oe=6883E3BE&_nc_sid=026283",
+          "verified": true,
+          "bio": "We curate sneakers & streetwear daily, \nFor you.🖤",
+          "emails": [],
+          "qualityScore": 1075,
+          "engagementRate": 0
+        },
+        "video": {
+          "description": "Commentez un 💗 si vous aimez cette paire ! \n⠀⠀⠀⠀⠀⠀⠀⠀⠀\n👟 : Nike Dunk Low Pink Corduroy\n📸 : @fanamss",
+          "url": "https://www.instagram.com/reel/Cvz17xyIxDd",
+          "statistics": {
+            "likes": 14526,
+            "comments": 108,
+            "views": 294796,
+            "shares": 0
+          }
+        },
+        "hashtags": [],
+        "publishedTime": "2023-08-11T15:53:54.000Z",
+        "platform": "Instagram",
+        "postType": "Video",
+        "mediaUrl": "https://scontent-iad3-1.cdninstagram.com/v/t51.71878-15/500118114_693888610044832_3092276050871516395_n.jpg?stp=dst-jpg_e15_tt6&_nc_cat=110&ig_cache_key=MzE2NzExMjE2NzM0MDMxNDg0NQ%3D%3D.3-ccb1-7&ccb=1-7&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6InhwaWRzLjcyMHgxMjgwLnNkciJ9&_nc_ohc=BB975DNSdSMQ7kNvwFrK9f-&_nc_oc=AdnZYh4y7ahseShQlCoMk9ujBKsE92zLQ5tODDpUuAQSDKydKyoRav6kLpMnSaXTikE&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-iad3-1.cdninstagram.com&_nc_gid=XlcdANDztKB_czzcfrS32g&oh=00_AfQyMzF2E0RUCiXoDm1u-B26rT6XjAMSOQVvyC3Ucbf5Lg&oe=6883B51E",
+        "postId": "3167112167340314845_5829469373",
+        "shortCode": "Cvz17xyIxDd",
+        "ownerUsername": "wethenew",
+        "ownerFullName": "Wethenew",
+        "ownerId": 5829469373,
+        "enhancementStatus": "completed"
+      },
+      {
+        "creator": {
+          "name": "Sneaker Freaker",
+          "uniqueId": "sneakerfreakermag",
+          "followers": 1514659,
+          "avatarUrl": "https://scontent-iad3-1.cdninstagram.com/v/t51.2885-19/10932599_727809974008700_489743387_a.jpg?stp=dst-jpg_e0_s150x150_tt6&_nc_ht=scontent-iad3-1.cdninstagram.com&_nc_cat=1&_nc_oc=Q6cZ2QHT9POYwXeGxam5kejU1-JBcwaVtsyLFLsc482UIRxDwpmFWZgytCsPfwHiBbcI6f4&_nc_ohc=L6xin57nlQYQ7kNvwEenp7l&_nc_gid=XlcdANDztKB_czzcfrS32g&edm=AL2I2h8BAAAA&ccb=7-5&ig_cache_key=GHfRpgB8_-Z28JUCABvkMB0AAAAAYUULAAAB-ccb7-5&oh=00_AfRpp_Pzz1RmDfDRC30VMPK0xT37Rvcc6N7HKpc2h927Mg&oe=6883D0FA&_nc_sid=026283",
+          "profilePicUrl": "https://scontent-iad3-1.cdninstagram.com/v/t51.2885-19/10932599_727809974008700_489743387_a.jpg?stp=dst-jpg_e0_s150x150_tt6&_nc_ht=scontent-iad3-1.cdninstagram.com&_nc_cat=1&_nc_oc=Q6cZ2QHT9POYwXeGxam5kejU1-JBcwaVtsyLFLsc482UIRxDwpmFWZgytCsPfwHiBbcI6f4&_nc_ohc=L6xin57nlQYQ7kNvwEenp7l&_nc_gid=XlcdANDztKB_czzcfrS32g&edm=AL2I2h8BAAAA&ccb=7-5&ig_cache_key=GHfRpgB8_-Z28JUCABvkMB0AAAAAYUULAAAB-ccb7-5&oh=00_AfRpp_Pzz1RmDfDRC30VMPK0xT37Rvcc6N7HKpc2h927Mg&oe=6883D0FA&_nc_sid=026283",
+          "verified": true,
+          "bio": "The world’s first international sneaker magazine. Since 2002.",
+          "emails": [],
+          "qualityScore": 1075,
+          "engagementRate": 0
+        },
+        "video": {
+          "description": "Ultimate comfort ☁️ @nike’s Vomero 18 is the latest entry in the series, boasting the tallest stack height in the model's lineup while doubling up with ZoomX and ReactX foams for that extra cushioning in mind 🏃",
+          "url": "https://www.instagram.com/reel/DG8U_XiOpft",
+          "statistics": {
+            "likes": 1684,
+            "comments": 12,
+            "views": 58808,
+            "shares": 0
+          }
+        },
+        "hashtags": [],
+        "publishedTime": "2025-03-08T15:03:24.000Z",
+        "platform": "Instagram",
+        "postType": "Video",
+        "mediaUrl": "https://scontent-iad3-1.cdninstagram.com/v/t51.71878-15/503307731_1458047295337710_877285427751610678_n.jpg?stp=dst-jpg_e15_tt6&_nc_cat=110&ig_cache_key=MzU4MzgzMTcxOTAwNzY1NTkxNzE0NTgwNDcyODg2NzEwNDQ%3D.3-ccb1-7&ccb=1-7&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6InhwaWRzLjcyMHgxMjgwLnNkciJ9&_nc_ohc=QlMH1nGnqZ4Q7kNvwFNTOAS&_nc_oc=Adkv-17w2o_vh39dqGT10xPrb4dr5FEzkxOUWf4xR04I6Eo39N-A93UaC5z2tE9fYSs&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-iad3-1.cdninstagram.com&_nc_gid=XlcdANDztKB_czzcfrS32g&oh=00_AfTyczBFghzDg4ByIvvflwJkuXpRAGSUrJ6pDYibui2TdQ&oe=6883E28C",
+        "postId": "3583831719007655917_175637134",
+        "shortCode": "DG8U_XiOpft",
+        "ownerUsername": "sneakerfreakermag",
+        "ownerFullName": "Sneaker Freaker",
+        "ownerId": 175637134,
+        "enhancementStatus": "completed"
+      },
+      {
+        "creator": {
+          "name": "STYLERUNNER",
+          "uniqueId": "stylerunner",
+          "followers": 625670,
+          "avatarUrl": "https://scontent-iad3-2.cdninstagram.com/v/t51.2885-19/522223390_18516736270017480_218002092146475765_n.jpg?stp=dst-jpg_e0_s150x150_tt6&_nc_ht=scontent-iad3-2.cdninstagram.com&_nc_cat=100&_nc_oc=Q6cZ2QHT9POYwXeGxam5kejU1-JBcwaVtsyLFLsc482UIRxDwpmFWZgytCsPfwHiBbcI6f4&_nc_ohc=fe9LkxrcsXcQ7kNvwHz1m1w&_nc_gid=XlcdANDztKB_czzcfrS32g&edm=AL2I2h8BAAAA&ccb=7-5&ig_cache_key=GB5-IB-II8af38hBAPXCrm6-fwYDbmNDAQAB-ccb7-5&oh=00_AfSh5X2H82UAwf_PyKtO5CR_8UGZG8SogYY8JRXZuJ5PnQ&oe=6883CF2E&_nc_sid=026283",
+          "profilePicUrl": "https://scontent-iad3-2.cdninstagram.com/v/t51.2885-19/522223390_18516736270017480_218002092146475765_n.jpg?stp=dst-jpg_e0_s150x150_tt6&_nc_ht=scontent-iad3-2.cdninstagram.com&_nc_cat=100&_nc_oc=Q6cZ2QHT9POYwXeGxam5kejU1-JBcwaVtsyLFLsc482UIRxDwpmFWZgytCsPfwHiBbcI6f4&_nc_ohc=fe9LkxrcsXcQ7kNvwHz1m1w&_nc_gid=XlcdANDztKB_czzcfrS32g&edm=AL2I2h8BAAAA&ccb=7-5&ig_cache_key=GB5-IB-II8af38hBAPXCrm6-fwYDbmNDAQAB-ccb7-5&oh=00_AfSh5X2H82UAwf_PyKtO5CR_8UGZG8SogYY8JRXZuJ5PnQ&oe=6883CF2E&_nc_sid=026283",
+          "verified": true,
+          "bio": "A destination of style. Curated exclusively for her.",
+          "emails": [],
+          "qualityScore": 1075,
+          "engagementRate": 0
+        },
+        "video": {
+          "description": "The Nike Shox TL up close and personal 🖤 Shop online and instore now.",
+          "url": "https://www.instagram.com/reel/DCTP_ppyoVn",
+          "statistics": {
+            "likes": 70,
+            "comments": 2,
+            "views": 8786,
+            "shares": 0
+          }
+        },
+        "hashtags": [],
+        "publishedTime": "2024-11-13T06:03:03.000Z",
+        "platform": "Instagram",
+        "postType": "Video",
+        "mediaUrl": "https://scontent-iad3-1.cdninstagram.com/v/t51.75761-15/466983888_18469048615017480_2926831955558452351_n.jpg?stp=dst-jpg_e35_p750x750_sh0.08_tt6&_nc_cat=104&ig_cache_key=MzUwMDIxMTY4MDE0NjI2MTM1MQ%3D%3D.3-ccb1-7&ccb=1-7&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6InhwaWRzLjIyNjh4NDAzMi5zZHIifQ%3D%3D&_nc_ohc=n8bZ0hHi5KoQ7kNvwGoDh-X&_nc_oc=AdmJNUdJfQBEnOa-hT-XWMfopUVNUghGkmOIP0b0eTg2yGXFG3j9z29aFeXbrSI_Uvg&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-iad3-1.cdninstagram.com&_nc_gid=XlcdANDztKB_czzcfrS32g&oh=00_AfRSQCEGruuWM6WE1esVOSMwDp_6yYQE0oLHubhqZNR0xg&oe=6883C95F",
+        "postId": "3500211680146261351_215185479",
+        "shortCode": "DCTP_ppyoVn",
+        "ownerUsername": "stylerunner",
+        "ownerFullName": "STYLERUNNER",
+        "ownerId": 215185479,
+        "enhancementStatus": "completed"
+      },
+      {
+        "creator": {
+          "name": "Nike Football",
+          "uniqueId": "nikefootball",
+          "followers": 0,
+          "avatarUrl": "https://scontent-iad3-1.cdninstagram.com/v/t51.2885-19/503693251_18524816107062830_3989383059181647009_n.jpg?stp=dst-jpg_e0_s150x150_tt6&_nc_ht=scontent-iad3-1.cdninstagram.com&_nc_cat=1&_nc_oc=Q6cZ2QHT9POYwXeGxam5kejU1-JBcwaVtsyLFLsc482UIRxDwpmFWZgytCsPfwHiBbcI6f4&_nc_ohc=GarKx6tHTM0Q7kNvwGOWOl-&_nc_gid=XlcdANDztKB_czzcfrS32g&edm=AL2I2h8BAAAA&ccb=7-5&ig_cache_key=GMO-BR4uRpfbONBBAKG0e3PBIl03bvEnAQAB-ccb7-5&oh=00_AfQJ4IS60olklDw5XQTS1G-CEMBhE-ahROVQEqnGznTV_A&oe=6883B573&_nc_sid=026283",
+          "profilePicUrl": "https://scontent-iad3-1.cdninstagram.com/v/t51.2885-19/503693251_18524816107062830_3989383059181647009_n.jpg?stp=dst-jpg_e0_s150x150_tt6&_nc_ht=scontent-iad3-1.cdninstagram.com&_nc_cat=1&_nc_oc=Q6cZ2QHT9POYwXeGxam5kejU1-JBcwaVtsyLFLsc482UIRxDwpmFWZgytCsPfwHiBbcI6f4&_nc_ohc=GarKx6tHTM0Q7kNvwGOWOl-&_nc_gid=XlcdANDztKB_czzcfrS32g&edm=AL2I2h8BAAAA&ccb=7-5&ig_cache_key=GMO-BR4uRpfbONBBAKG0e3PBIl03bvEnAQAB-ccb7-5&oh=00_AfQJ4IS60olklDw5XQTS1G-CEMBhE-ahROVQEqnGznTV_A&oe=6883B573&_nc_sid=026283",
+          "verified": true,
+          "bio": "",
+          "emails": [],
+          "qualityScore": 1075,
+          "engagementRate": 0
+        },
+        "video": {
+          "description": "Overcome obstacles and outpace opponents with the new 𝑴𝒆𝒓𝒄𝒖𝒓𝒊𝒂𝒍 𝑫𝒓𝒆𝒂𝒎 𝑺𝒑𝒆𝒆𝒅 𝟖. \n\nGet yours starting February 15. \n\n#NikeFootball",
+          "url": "https://www.instagram.com/reel/C3R7W8moTbK",
+          "statistics": {
+            "likes": 377109,
+            "comments": 2001,
+            "views": 16586737,
+            "shares": 0
+          }
+        },
+        "hashtags": [
+          "#NikeFootball"
+        ],
+        "publishedTime": "2024-02-13T08:00:12.000Z",
+        "platform": "Instagram",
+        "postType": "Video",
+        "mediaUrl": "https://scontent-iad3-1.cdninstagram.com/v/t51.71878-15/503556023_737414095523953_689696158619624185_n.jpg?stp=dst-jpg_e15_tt6&_nc_cat=109&ig_cache_key=MzMwMTY4MTA2MzQ4NDUzNjUyMg%3D%3D.3-ccb1-7&ccb=1-7&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6InhwaWRzLjcyMHgxMjgwLnNkciJ9&_nc_ohc=cd_4oZiaRbgQ7kNvwFaXwQy&_nc_oc=Adn8jHKCMbZ-xbQabNNr9cLao6zV7FzVKL0KNbetzl_cPcVUAIWGrZbkeTZ333t2dVE&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-iad3-1.cdninstagram.com&_nc_gid=XlcdANDztKB_czzcfrS32g&oh=00_AfRVIvK-OLZFCxTpH4Q5F2e9nMp3hccE7xr12hOOfv8AVw&oe=6883B94F",
+        "postId": "3301681063484536522_23678829",
+        "shortCode": "C3R7W8moTbK",
+        "ownerUsername": "nikefootball",
+        "ownerFullName": "Nike Football",
+        "ownerId": 23678829,
+        "enhancementStatus": "completed"
+      },
+      {
+        "creator": {
+          "name": "JASTIP SEJAK 2019 👛🩰🦋✨",
+          "uniqueId": "hooky.id",
+          "followers": 14199,
+          "avatarUrl": "https://scontent-iad3-2.cdninstagram.com/v/t51.2885-19/55760242_423505718416427_4993108869845614592_n.jpg?stp=dst-jpg_e0_s150x150_tt6&_nc_ht=scontent-iad3-2.cdninstagram.com&_nc_cat=111&_nc_oc=Q6cZ2QHT9POYwXeGxam5kejU1-JBcwaVtsyLFLsc482UIRxDwpmFWZgytCsPfwHiBbcI6f4&_nc_ohc=ivQZDhY0oqMQ7kNvwFnoy6U&_nc_gid=XlcdANDztKB_czzcfrS32g&edm=AL2I2h8BAAAA&ccb=7-5&ig_cache_key=GHLVUgMrFOgbLYEBAAAAAAAQFktFbkULAAAB-ccb7-5&oh=00_AfTI7KpF-SZ2OYmvJrLOTmVT0xJE1nnrzQaJ1U50u-z1og&oe=6883C119&_nc_sid=026283",
+          "profilePicUrl": "https://scontent-iad3-2.cdninstagram.com/v/t51.2885-19/55760242_423505718416427_4993108869845614592_n.jpg?stp=dst-jpg_e0_s150x150_tt6&_nc_ht=scontent-iad3-2.cdninstagram.com&_nc_cat=111&_nc_oc=Q6cZ2QHT9POYwXeGxam5kejU1-JBcwaVtsyLFLsc482UIRxDwpmFWZgytCsPfwHiBbcI6f4&_nc_ohc=ivQZDhY0oqMQ7kNvwFnoy6U&_nc_gid=XlcdANDztKB_czzcfrS32g&edm=AL2I2h8BAAAA&ccb=7-5&ig_cache_key=GHLVUgMrFOgbLYEBAAAAAAAQFktFbkULAAAB-ccb7-5&oh=00_AfTI7KpF-SZ2OYmvJrLOTmVT0xJE1nnrzQaJ1U50u-z1og&oe=6883C119&_nc_sid=026283",
+          "verified": false,
+          "bio": "👨🏻 Man @hookyman.id \nWA : 0856-9704-2120 \n100% ORIGINAL & TERPERCAYA \n📍Jakarta\nOrder klik 👇",
+          "emails": [],
+          "qualityScore": 75,
+          "engagementRate": 0
+        },
+        "video": {
+          "description": "NIKE NEW😻\n➡️355.000\n\n📌Harga sudah jastip\n📌Belum termasuk ongkir\n📌Termasuk  paperbag\n📌Foto real pict hooky.id\n\n❌DILARANG MENCURI FOTO❌\n\nORDER HANYA DM IG/WA\nWA : 0856-9704-2120\n\n#jastipjakarta#jastipnike#nike#tasnike#jastipnikesale",
+          "url": "https://www.instagram.com/reel/C2RA5bpyvSi",
+          "statistics": {
+            "likes": 95,
+            "comments": 16,
+            "views": 4498,
+            "shares": 0
+          }
+        },
+        "hashtags": [
+          "#jastipjakarta",
+          "#jastipnike",
+          "#nike",
+          "#tasnike",
+          "#jastipnikesale"
+        ],
+        "publishedTime": "2024-01-19T02:55:53.000Z",
+        "platform": "Instagram",
+        "postType": "Video",
+        "mediaUrl": "https://scontent-iad3-1.cdninstagram.com/v/t51.71878-15/500725234_24646425264957249_5814565850317089946_n.jpg?stp=dst-jpg_e15_tt6&_nc_cat=101&ig_cache_key=MzI4MzQwOTU1MDAzMjE3MjE5NA%3D%3D.3-ccb1-7&ccb=1-7&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6InhwaWRzLjcyMHgxMjgwLnNkciJ9&_nc_ohc=dbPuxtdSEVUQ7kNvwFQiMO_&_nc_oc=AdmX-TOsEzd-a85bw83t3UZUtLredA4bWlfM9s65hbQOlPM8OIsb8Zp90m2TaB-UNcY&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-iad3-1.cdninstagram.com&_nc_gid=XlcdANDztKB_czzcfrS32g&oh=00_AfTB_NLhew5n1JPf2Sp9gEoE-RdzxYm6N4nAJ3TPrB_L-w&oe=6883E1E1",
+        "postId": "3283409550032172194_12501452807",
+        "shortCode": "C2RA5bpyvSi",
+        "ownerUsername": "hooky.id",
+        "ownerFullName": "JASTIP SEJAK 2019 👛🩰🦋✨",
+        "ownerId": 12501452807,
+        "enhancementStatus": "completed"
+      },
+      {
+        "creator": {
+          "name": "P I N K   I V Y",
+          "uniqueId": "shoppinkivy",
+          "followers": 269731,
+          "avatarUrl": "https://scontent-iad3-1.cdninstagram.com/v/t51.2885-19/383241348_1015648309576816_5174829242505301497_n.jpg?stp=dst-jpg_e0_s150x150_tt6&_nc_ht=scontent-iad3-1.cdninstagram.com&_nc_cat=1&_nc_oc=Q6cZ2QHT9POYwXeGxam5kejU1-JBcwaVtsyLFLsc482UIRxDwpmFWZgytCsPfwHiBbcI6f4&_nc_ohc=YlgVOsV-SiwQ7kNvwHf-3n5&_nc_gid=XlcdANDztKB_czzcfrS32g&edm=AL2I2h8BAAAA&ccb=7-5&ig_cache_key=GITM1xZwhLUMupsDAPkN1VTHr9BHbkULAAAB-ccb7-5&oh=00_AfSWkKQAKILs2v9R0sJSV5ucTKFEg5UPNVCfiK2aDxXPUg&oe=6883AD98&_nc_sid=026283",
+          "profilePicUrl": "https://scontent-iad3-1.cdninstagram.com/v/t51.2885-19/383241348_1015648309576816_5174829242505301497_n.jpg?stp=dst-jpg_e0_s150x150_tt6&_nc_ht=scontent-iad3-1.cdninstagram.com&_nc_cat=1&_nc_oc=Q6cZ2QHT9POYwXeGxam5kejU1-JBcwaVtsyLFLsc482UIRxDwpmFWZgytCsPfwHiBbcI6f4&_nc_ohc=YlgVOsV-SiwQ7kNvwHf-3n5&_nc_gid=XlcdANDztKB_czzcfrS32g&edm=AL2I2h8BAAAA&ccb=7-5&ig_cache_key=GITM1xZwhLUMupsDAPkN1VTHr9BHbkULAAAB-ccb7-5&oh=00_AfSWkKQAKILs2v9R0sJSV5ucTKFEg5UPNVCfiK2aDxXPUg&oe=6883AD98&_nc_sid=026283",
+          "verified": false,
+          "bio": "Authentic Hand Customized Shoes with Swarovski crystals💎💎@megannn_harrison \n⬇️ SHOP HERE ⬇️",
+          "emails": [],
+          "qualityScore": 75,
+          "engagementRate": 0
+        },
+        "video": {
+          "description": "The prettiest pink Nike’s 😍💕\n\n-\n#pink #barbie #springstyle #casualoutfit #pinkshoes #springoutfit",
+          "url": "https://www.instagram.com/reel/DGtufUFx2L-",
+          "statistics": {
+            "likes": 104111,
+            "comments": 454,
+            "views": 1685031,
+            "shares": 0
+          }
+        },
+        "hashtags": [
+          "#pink",
+          "#barbie",
+          "#springstyle",
+          "#casualoutfit",
+          "#pinkshoes",
+          "#springoutfit"
+        ],
+        "publishedTime": "2025-03-02T22:57:12.000Z",
+        "platform": "Instagram",
+        "postType": "Video",
+        "mediaUrl": "https://scontent-iad3-1.cdninstagram.com/v/t51.71878-15/482440659_1678607946423619_3051077367079340315_n.jpg?stp=dst-jpg_e15_tt6&_nc_cat=104&ig_cache_key=MzU3OTcyMTc0MDg0NDQ5MTUxOA%3D%3D.3-ccb1-7&ccb=1-7&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6InhwaWRzLjY0MHgxMTM2LnNkciJ9&_nc_ohc=J1uloumDSP4Q7kNvwEqpa0N&_nc_oc=Adkm5i6JX2iWufQ5qYKb927Vp-MDav8x_REFSRMVp77lx3ZRTu11DxUH8MHBdu7VWi4&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-iad3-1.cdninstagram.com&_nc_gid=XlcdANDztKB_czzcfrS32g&oh=00_AfTaFTpplWjhXWi-PeLqEbmzw0HNuZarK6WrDFKKktugSA&oe=6883B12B",
+        "postId": "3579721740844491518_295749860",
+        "shortCode": "DGtufUFx2L-",
+        "ownerUsername": "shoppinkivy",
+        "ownerFullName": "P I N K   I V Y",
+        "ownerId": 295749860,
+        "enhancementStatus": "completed"
+      }
+    ]
+  }
+}

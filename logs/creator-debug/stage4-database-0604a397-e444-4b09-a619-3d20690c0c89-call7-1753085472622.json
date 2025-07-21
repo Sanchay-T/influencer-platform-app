@@ -1,0 +1,101 @@
+{
+  "stage": "database_save_final",
+  "jobId": "0604a397-e444-4b09-a619-3d20690c0c89",
+  "apiCall": 7,
+  "timestamp": "2025-07-21T08:11:12.622Z",
+  "counts": {
+    "creatorsBeingPersisted": 11,
+    "newProcessedRuns": 7,
+    "newProcessedResults": 68
+  },
+  "finalDatabaseCreators": [
+    {
+      "index": 1,
+      "username": "dropinfos",
+      "followers": 253680,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "sneakr_tweakr",
+      "followers": 63110,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "suhanasethiofficial",
+      "followers": 73150,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "bosscosgoodiez",
+      "followers": 70579,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "kronickstyle",
+      "followers": 167441,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "cxstiillo",
+      "followers": 144736,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "itsyourdb",
+      "followers": 45444,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "chenxiami99",
+      "followers": 46734,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "stockxkicks_net",
+      "followers": 5247,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "ridhi.culous",
+      "followers": 111965,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 11,
+      "username": "hockeytutorial",
+      "followers": 90061,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    }
+  ]
+}

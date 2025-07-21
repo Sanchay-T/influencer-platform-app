@@ -415,14 +415,30 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
 
         // Check for completion
         if (currentStatus === 'completed') {
-          // Standard completion for all platforms
-          console.log('🎉 [SEARCH-PROGRESS] Job completed! Stopping polling.');
+          // 🛡️ ENHANCED COMPLETION: Handle different completion types
+          const isPartialCompletion = data.partialCompletion || data.gracefulCompletion || data.errorRecovered;
+          const finalCount = data.finalCount || data.exactCountDelivered || currentProcessedResults;
+          
+          if (isPartialCompletion) {
+            console.log('⚠️ [PARTIAL-COMPLETION] Job completed with partial results due to API issues:', {
+              finalCount: finalCount,
+              targetRequested: data.targetRequested || currentTargetResults,
+              completionType: data.partialCompletion ? 'partial' : data.gracefulCompletion ? 'graceful' : 'error_recovered',
+              message: data.message
+            });
+          } else {
+            console.log('🎉 [SEARCH-PROGRESS] Job completed successfully! Stopping polling.');
+          }
+          
           clearTimeout(pollIntervalRef.current);
           setProgress(100);
           setDisplayProgress(100);
           onComplete({ 
             status: 'completed',
-            creators: data.results?.[0]?.creators || data.creators || []
+            creators: data.results?.[0]?.creators || data.creators || [],
+            partialCompletion: isPartialCompletion,
+            finalCount: finalCount,
+            errorRecovered: data.errorRecovered
           });
         }
         
@@ -572,9 +588,15 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
   const getProgressStage = () => {
     if (status === 'pending') return 'Preparing search';
     if (status === 'completed') {
-      return `Found ${processedResults} ${platform.toLowerCase()} creators successfully`;
+      // 🎯 EXACT COUNT COMPLETION: Show exact delivery status
+      const targetText = targetResults > 0 ? ` (target: ${targetResults})` : '';
+      const exactMatch = targetResults > 0 && processedResults === targetResults;
+      const statusText = exactMatch ? 'delivered exactly' : 'found';
+      return `Successfully ${statusText} ${processedResults} ${platform.toLowerCase()} creators${targetText}`;
     }
     if (status === 'timeout') return 'Search timed out';
+    if (status === 'rate_limited') return 'API rate limited, retrying...';
+    if (status === 'server_error_retry') return 'API experiencing issues, retrying...';
     if (error) return 'Processing with delays';
     
     // Platform-specific enhanced stage descriptions
@@ -607,35 +629,39 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
     
     if (processedResults > 0) {
       if (isInstagramReels) {
-        // Show real enhancement progress for Instagram reels
-        return `Enhancing ${processedResults} Instagram creator profiles (${Math.round(displayProgress)}%)`;
+        // 🎯 EXACT COUNT MESSAGING: Show progress toward target for Instagram reels
+        const targetText = targetResults > 0 ? ` (${processedResults}/${targetResults})` : '';
+        return `Enhancing Instagram creator profiles${targetText} - ${Math.round(displayProgress)}%`;
       } else if (isTikTokKeyword) {
         // Enhanced messages for TikTok keyword search to show immediate activity
         if (displayProgress < 15) {
           return `Searching TikTok for "${searchData?.keywords?.[0] || 'creators'}"...`;
         }
+        // 🎯 EXACT COUNT MESSAGING: Show progress toward target for TikTok
+        const targetText = targetResults > 0 ? `/${targetResults}` : '';
         if (displayProgress < 30) {
-          return `Found ${processedResults} creators, fetching profile bios...`;
+          return `Found ${processedResults}${targetText} creators, fetching profile bios...`;
         }
         if (displayProgress < 60) {
-          return `Extracting emails from ${processedResults} TikTok profiles...`;
+          return `Extracting emails from ${processedResults}${targetText} TikTok profiles...`;
         }
         if (displayProgress < 90) {
-          return `Caching images for ${processedResults} creators...`;
+          return `Caching images for ${processedResults}${targetText} creators...`;
         }
-        return `Finalizing ${processedResults} TikTok creator profiles`;
+        return `Finalizing ${processedResults}${targetText} TikTok creator profiles`;
       } else {
-        // Standard messages for other platforms
+        // 🎯 EXACT COUNT MESSAGING: Standard messages for other platforms with target info
+        const targetText = targetResults > 0 ? `/${targetResults}` : '';
         if (displayProgress < 25) {
-          return `Found ${processedResults} ${searchTypeText} ${platformName.toLowerCase()} creators, discovering more${speed}`;
+          return `Found ${processedResults}${targetText} ${searchTypeText} ${platformName.toLowerCase()} creators, discovering more${speed}`;
         }
         if (displayProgress < 50) {
-          return `Analyzing ${processedResults} ${platformName.toLowerCase()} profiles & engagement${speed}`;
+          return `Analyzing ${processedResults}${targetText} ${platformName.toLowerCase()} profiles & engagement${speed}`;
         }
         if (displayProgress < 75) {
-          return `Processing ${processedResults} creator profiles & extracting contact info${speed}`;
+          return `Processing ${processedResults}${targetText} creator profiles & extracting contact info${speed}`;
         }
-        return `Finalizing ${processedResults} ${platformName.toLowerCase()} creators & preparing export${speed}`;
+        return `Finalizing ${processedResults}${targetText} ${platformName.toLowerCase()} creators & preparing export${speed}`;
       }
     } else {
       // No results yet - show search-type-specific messages
@@ -750,9 +776,15 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
                     const isInstagramReels = platformName.toLowerCase() === 'instagram' && !searchData?.targetUsername;
                     
                     if (isInstagramReels) {
-                      return `${processedResults} profiles enhanced`;
+                      // 🎯 EXACT COUNT DISPLAY: Show progress toward target for Instagram
+                      return targetResults > 0 
+                        ? `${processedResults}/${targetResults} creators` 
+                        : `${processedResults} profiles enhanced`;
                     } else {
-                      return `${processedResults} found so far`;
+                      // 🎯 EXACT COUNT DISPLAY: Show progress toward target for other platforms
+                      return targetResults > 0 
+                        ? `${processedResults}/${targetResults} creators` 
+                        : `${processedResults} found so far`;
                     }
                   })()}
                 </span>

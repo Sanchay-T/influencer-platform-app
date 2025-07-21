@@ -1,0 +1,62 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "50307430-9c22-48e1-a526-9cf13c8eede0",
+  "apiCall": 15,
+  "batchNumber": 2,
+  "timestamp": "2025-07-21T10:30:21.766Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 10
+  },
+  "validCreators": [
+    {
+      "username": "acefast.official",
+      "fullName": "Acefast Official",
+      "followers": 75145,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🔥New audiovisual experience 💕\n👇Shop here:...",
+      "emails": []
+    },
+    {
+      "username": "insta.__show",
+      "fullName": "INSTA SHOW",
+      "followers": 29240,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "• 👕 Best Men’s Fashion Picks  \n• 👖 Trendy Fashion and gadgets \n• 🧥 Honest Reviews & Tips  \n• 🔥 S...",
+      "emails": []
+    },
+    {
+      "username": "custom_adventurist",
+      "fullName": "Custom Adventurist",
+      "followers": 71447,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Ben Kimball\nTech Enthusiast\nFake Vs Real Specialist\nFor business inquiries benskimball555@gmail.com...",
+      "emails": [
+        "benskimball555@gmail.com"
+      ]
+    },
+    {
+      "username": "banartsy",
+      "fullName": "banartsy 🌸",
+      "followers": 28889,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🎀 life in pink\n💗 yesstyle code: BANARTSY123\n🌸 ⇣ Tap this link for discount codes & product links ...",
+      "emails": []
+    },
+    {
+      "username": "goussve.km",
+      "fullName": "GOUSSVE TECH",
+      "followers": 310428,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🖥 | Gaming | Tech Enthusiast \n📧 | huoledfer.gmail.com\n🛰 | abang6199\n🛒 | Product link in my bio ⬇...",
+      "emails": []
+    }
+  ]
+}

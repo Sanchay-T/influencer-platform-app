@@ -1,0 +1,24 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "0604a397-e444-4b09-a619-3d20690c0c89",
+  "apiCall": 9,
+  "batchNumber": 3,
+  "timestamp": "2025-07-21T08:12:47.645Z",
+  "counts": {
+    "rawResults": 1,
+    "validResults": 1,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 11
+  },
+  "validCreators": [
+    {
+      "username": "iatulnegi",
+      "fullName": "KAOR",
+      "followers": 65561,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "FASHION || TRAVEL || LIFESTYLE...",
+      "emails": []
+    }
+  ]
+}

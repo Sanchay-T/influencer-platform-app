@@ -1,0 +1,101 @@
+{
+  "stage": "database_save_final",
+  "jobId": "50307430-9c22-48e1-a526-9cf13c8eede0",
+  "apiCall": 11,
+  "timestamp": "2025-07-21T10:26:58.469Z",
+  "counts": {
+    "creatorsBeingPersisted": 11,
+    "newProcessedRuns": 11,
+    "newProcessedResults": 91
+  },
+  "finalDatabaseCreators": [
+    {
+      "index": 1,
+      "username": "temu",
+      "followers": 10173903,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "fivebelow",
+      "followers": 861993,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "zebronics",
+      "followers": 322916,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "shoptemu",
+      "followers": 3518935,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "emkwan",
+      "followers": 166583,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "hammerlifestyle_",
+      "followers": 39131,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "tableeefortwo_",
+      "followers": 60565,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "haylsworld",
+      "followers": 285378,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "bishal_dutta78",
+      "followers": 314481,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "insta.__show",
+      "followers": 29241,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 11,
+      "username": "eurekahnb",
+      "followers": 84651,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    }
+  ]
+}

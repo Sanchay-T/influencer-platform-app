@@ -1,0 +1,86 @@
+{
+  "stage": "after_initial_quality_filter",
+  "jobId": "0604a397-e444-4b09-a619-3d20690c0c89",
+  "apiCall": 2,
+  "timestamp": "2025-07-21T08:07:45.449Z",
+  "counts": {
+    "totalCreatorsFound": 9,
+    "qualityCreatorsAdded": 9,
+    "filteredOutCreators": 0,
+    "finalUniqueCreators": 9
+  },
+  "creators": [
+    {
+      "username": "bennetts_",
+      "fullName": "Bennetts",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "nike",
+      "fullName": "Nike",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "c.kickss",
+      "fullName": "Sneaker Reseller / c.kicks",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "instakicksz",
+      "fullName": "INSTAKICKSZ",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "sneakerfreakermag",
+      "fullName": "Sneaker Freaker",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "klekt",
+      "fullName": "KLEKT",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "ikaatoni",
+      "fullName": "👟آی کتونی",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    },
+    {
+      "username": "lindamont",
+      "fullName": "Linda Montoya",
+      "isVerified": true,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 1075
+    },
+    {
+      "username": "prekesayangan",
+      "fullName": "",
+      "isVerified": false,
+      "isPrivate": false,
+      "followerCount": 0,
+      "qualityScore": 75
+    }
+  ]
+}

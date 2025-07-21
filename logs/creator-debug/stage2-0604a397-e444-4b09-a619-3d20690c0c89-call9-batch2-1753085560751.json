@@ -1,0 +1,62 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "0604a397-e444-4b09-a619-3d20690c0c89",
+  "apiCall": 9,
+  "batchNumber": 2,
+  "timestamp": "2025-07-21T08:12:40.751Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 10
+  },
+  "validCreators": [
+    {
+      "username": "doubleboxed",
+      "fullName": "Double Boxed",
+      "followers": 57224,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Specialising in exclusive footwear and apparel. Guaranteed Authenticity. Next Day Delivery....",
+      "emails": []
+    },
+    {
+      "username": "minicostore.in",
+      "fullName": "Minico 🩵",
+      "followers": 815,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Owner- @mr.harshfx\n🚚 Cash on Delivery available in all over India🇮🇳\nWhatsapp no - 9685287996📱\nWe...",
+      "emails": []
+    },
+    {
+      "username": "itsyourdb",
+      "fullName": "dB",
+      "followers": 45445,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🔘 Fashion | Lifestyle | Vlogs\n📍 UP25 | Email for Collaboration 📩\n🔸 Shop my Outfits & Style picks...",
+      "emails": []
+    },
+    {
+      "username": "flightkickz.xyz",
+      "fullName": "Flightkickz Studio",
+      "followers": 396776,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "The official Instagram for Flightkickz \nThe #1 sneaker manufactuer show in the world. \n⬇️CLICK HERE ...",
+      "emails": []
+    },
+    {
+      "username": "c.kickss",
+      "fullName": "Sneaker Reseller / c.kicks",
+      "followers": 545333,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "-100% Authentic 👟\n- Ship to USA & PR🇵🇷\n- Business: c.kickss1@gmail.com...",
+      "emails": [
+        "c.kickss1@gmail.com"
+      ]
+    }
+  ]
+}

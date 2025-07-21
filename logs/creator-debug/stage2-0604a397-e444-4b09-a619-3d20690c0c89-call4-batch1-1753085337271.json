@@ -1,0 +1,60 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "0604a397-e444-4b09-a619-3d20690c0c89",
+  "apiCall": 4,
+  "batchNumber": 1,
+  "timestamp": "2025-07-21T08:08:57.270Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 5
+  },
+  "validCreators": [
+    {
+      "username": "sneakherscanada",
+      "fullName": "SneakHers™ Canada ❀ Female Focused",
+      "followers": 366027,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "As seen in the @globeandmail • 300K+ TikTok\n📍 Toronto sneak(her)head  \n🌸 Guaranteed authentic | cl...",
+      "emails": []
+    },
+    {
+      "username": "klekt",
+      "fullName": "KLEKT",
+      "followers": 918805,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Buy & sell authentic sneakers, streetwear & accessories. \nWorldwide Shipping.\nEst. 2013\n#klekttakeov...",
+      "emails": []
+    },
+    {
+      "username": "madisonpaynestyle",
+      "fullName": "Madison Payne",
+      "followers": 230589,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Budget, but also likes a nice bag 🤭👜\n🛒Walmart, Amazon & a good sale find!\n💛 YouTube, Blog, Outfi...",
+      "emails": []
+    },
+    {
+      "username": "mercurialkicks",
+      "fullName": "Jake Mercieca",
+      "followers": 116031,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "𝙎𝙣𝙚𝙖𝙠𝙚𝙧 𝙘𝙤𝙣𝙩𝙚𝙣𝙩 𝙘𝙧𝙚𝙖𝙩𝙤𝙧 👟\n📍 𝙈𝙚𝙡𝙗𝙤𝙪𝙧𝙣𝙚, 𝘼𝙐\n📩 23𝙢𝙚𝙧𝙘𝙞𝙚𝙘𝙖@𝙜...",
+      "emails": []
+    },
+    {
+      "username": "onechance4u",
+      "fullName": "ANKUSH KUMAR",
+      "followers": 0,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "no bio",
+      "emails": []
+    }
+  ]
+}

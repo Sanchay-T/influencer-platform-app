@@ -1,0 +1,62 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "e3865240-529e-4b5d-bdd7-3952f551b9ef",
+  "apiCall": 1,
+  "batchNumber": 1,
+  "timestamp": "2025-07-21T07:56:22.557Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 5
+  },
+  "validCreators": [
+    {
+      "username": "livingthehype_",
+      "fullName": "Anderson Nakashima | Living The Hype",
+      "followers": 103181,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "🇯🇵 • sneakers • outfits • lifestyle \n📨 anderson@blickhaus.com | @blickhaus...",
+      "emails": [
+        "anderson@blickhaus.com"
+      ]
+    },
+    {
+      "username": "crepdogcrew",
+      "fullName": "CREPDOG CREW | CDC",
+      "followers": 228956,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "India’s Biggest Platform for Sneakers, Designer Apparels and Hype \nIn-store DEL | MUM | HYD...",
+      "emails": []
+    },
+    {
+      "username": "hide.and.sneak",
+      "fullName": "Hide & Sneak",
+      "followers": 7658,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Pune’s first store for authentic sneakers & streetwear\nIn collaboration with @shoe_kings_classique \n...",
+      "emails": []
+    },
+    {
+      "username": "platinumshoecare",
+      "fullName": "Platinum Shoe Care",
+      "followers": 0,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "no bio",
+      "emails": []
+    },
+    {
+      "username": "thatsodsoho",
+      "fullName": "Thats OD Soho",
+      "followers": 55556,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "153 Prince Street New York 10012 📍\nOpen Everyday 12-8pm\n📲1 (347) 698-8971\n ⬇️CLICK LINK FOR FULL A...",
+      "emails": []
+    }
+  ]
+}

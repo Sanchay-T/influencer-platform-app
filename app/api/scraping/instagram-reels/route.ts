@@ -284,7 +284,10 @@ export async function GET(req: NextRequest) {
       jobId: job.id,
       status: job.status,
       progress: job.progress,
-      processedResults: job.processedResults
+      processedResults: job.processedResults,
+      targetResults: job.targetResults,
+      processedRuns: job.processedRuns,
+      shortfall: job.targetResults - job.processedResults
     });
 
     // Check for timeout

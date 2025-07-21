@@ -1,0 +1,33 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "0604a397-e444-4b09-a619-3d20690c0c89",
+  "apiCall": 4,
+  "batchNumber": 3,
+  "timestamp": "2025-07-21T08:09:12.316Z",
+  "counts": {
+    "rawResults": 2,
+    "validResults": 2,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 12
+  },
+  "validCreators": [
+    {
+      "username": "mioteens.sr",
+      "fullName": "MIO TEENS SNEAKERS",
+      "followers": 6130,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "ENVÍOS A TODO EL PAÍS 🇦🇷\n3 cuotas sin interés! \n📍Hipolito Yrigoyen 372 (SR-Mza)\n🛒Tienda Online \ud83d...",
+      "emails": []
+    },
+    {
+      "username": "id4shoes",
+      "fullName": "id4shoes",
+      "followers": 37634,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Latest sneaker news here and always present you guys the best pics....",
+      "emails": []
+    }
+  ]
+}

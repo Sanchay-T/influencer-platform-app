@@ -1,0 +1,75 @@
+{
+  "stage": "final_transformed_creators",
+  "jobId": "126eb820-4f3a-4b16-9250-f7d346ea75a5",
+  "apiCall": 7,
+  "timestamp": "2025-07-21T10:06:53.338Z",
+  "counts": {
+    "finalTransformedCreators": 5,
+    "processedRuns": 7,
+    "maxRuns": 15
+  },
+  "finalCreators": [
+    {
+      "index": 1,
+      "username": "limreviews",
+      "fullName": "SM Lim",
+      "followers": 0,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "no bio",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/C08aFV-SsSP",
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "fivebelow",
+      "fullName": "Five Below",
+      "followers": 861993,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "hot stuff. cool prices. extreme $1-$5 value & trends + some incredible finds in our five beyond shop...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DHW0tfwokKm",
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "electrovilla.shop",
+      "fullName": "Electro Villa ™",
+      "followers": 14651,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "⌚️ Smartwatches | Analog Watches\n🎧 Earbuds\n🎁 Premium Gifts \n🏡 Home Essentials & Many More\n👀 Visi...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DDSn0YrM6wj",
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "gadgetboy4u",
+      "fullName": "Gadget Boy",
+      "followers": 1007398,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Useful Gadgets\nFor business 📧 sahilpathang7@gmail.com \nBuy Link 👇👇👇...",
+      "emails": [
+        "sahilpathang7@gmail.com"
+      ],
+      "videoUrl": "https://www.instagram.com/reel/C5BIzqFoyx3",
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "insta.__show",
+      "fullName": "INSTA SHOW",
+      "followers": 29243,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "• 👕 Best Men’s Fashion Picks  \n• 👖 Trendy Fashion and gadgets \n• 🧥 Honest Reviews & Tips  \n• 🔥 S...",
+      "emails": [],
+      "videoUrl": "https://www.instagram.com/reel/DLWP719hGkm",
+      "platform": "Instagram"
+    }
+  ]
+}

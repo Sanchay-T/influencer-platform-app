@@ -1,0 +1,33 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "e3865240-529e-4b5d-bdd7-3952f551b9ef",
+  "apiCall": 1,
+  "batchNumber": 3,
+  "timestamp": "2025-07-21T07:56:33.051Z",
+  "counts": {
+    "rawResults": 2,
+    "validResults": 2,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 11
+  },
+  "validCreators": [
+    {
+      "username": "dk.qi5",
+      "fullName": "DK_qi",
+      "followers": 22655,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "▪️Worldwide delivery 📦 ✈️\n▪️More series, content\n▪️Curated high-fashion sneakers\n▪️🔗 connect click...",
+      "emails": []
+    },
+    {
+      "username": "doubleboxed",
+      "fullName": "Double Boxed",
+      "followers": 57225,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Specialising in exclusive footwear and apparel. Guaranteed Authenticity. Next Day Delivery....",
+      "emails": []
+    }
+  ]
+}

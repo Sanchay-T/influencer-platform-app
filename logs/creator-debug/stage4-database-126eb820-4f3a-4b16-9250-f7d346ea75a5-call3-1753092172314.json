@@ -1,0 +1,93 @@
+{
+  "stage": "database_save_final",
+  "jobId": "126eb820-4f3a-4b16-9250-f7d346ea75a5",
+  "apiCall": 3,
+  "timestamp": "2025-07-21T10:02:52.314Z",
+  "counts": {
+    "creatorsBeingPersisted": 10,
+    "newProcessedRuns": 3,
+    "newProcessedResults": 22
+  },
+  "finalDatabaseCreators": [
+    {
+      "index": 1,
+      "username": "limreviews",
+      "followers": 81709,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "fivebelow",
+      "followers": 861992,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "viral_king_aayush",
+      "followers": 67200,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "thestylelistings",
+      "followers": 176695,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "acefast.official",
+      "followers": 75145,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "gadgetboy4u",
+      "followers": 1007388,
+      "verified": false,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "eurekahnb",
+      "followers": 84645,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "8list.ph",
+      "followers": 22199,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "lexiv_trends",
+      "followers": 18828,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "goussve.km",
+      "followers": 310426,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    }
+  ]
+}

@@ -1,0 +1,109 @@
+{
+  "stage": "database_save_final",
+  "jobId": "0604a397-e444-4b09-a619-3d20690c0c89",
+  "apiCall": 4,
+  "timestamp": "2025-07-21T08:09:15.156Z",
+  "counts": {
+    "creatorsBeingPersisted": 12,
+    "newProcessedRuns": 4,
+    "newProcessedResults": 41
+  },
+  "finalDatabaseCreators": [
+    {
+      "index": 1,
+      "username": "sneakherscanada",
+      "followers": 366027,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "klekt",
+      "followers": 918805,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "madisonpaynestyle",
+      "followers": 230589,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "mercurialkicks",
+      "followers": 116031,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "onechance4u",
+      "followers": 0,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "qiasomar",
+      "followers": 624196,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "luxury_fty",
+      "followers": 8545,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "commonhype",
+      "followers": 188290,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "centren",
+      "followers": 15336,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "sneakay38",
+      "followers": 33470,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 11,
+      "username": "mioteens.sr",
+      "followers": 6130,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 12,
+      "username": "id4shoes",
+      "followers": 37634,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    }
+  ]
+}

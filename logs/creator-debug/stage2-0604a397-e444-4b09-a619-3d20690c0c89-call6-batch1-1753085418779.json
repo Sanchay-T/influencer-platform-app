@@ -1,0 +1,60 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "0604a397-e444-4b09-a619-3d20690c0c89",
+  "apiCall": 6,
+  "batchNumber": 1,
+  "timestamp": "2025-07-21T08:10:18.779Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 5
+  },
+  "validCreators": [
+    {
+      "username": "nike",
+      "fullName": "Nike",
+      "followers": 300034934,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Just Do It....",
+      "emails": []
+    },
+    {
+      "username": "shoes.lks",
+      "fullName": "Shoes.Lks🌟",
+      "followers": 34187,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "📈| +3000 FEEDBACK POSITIVOS🏆🔥\n📲|ENCARGOS 24/7 Y ENTREGA INMEDIATA⚡️\n🥇|LOS N1 EN CALIDAD Y CONFI...",
+      "emails": []
+    },
+    {
+      "username": "wethenew",
+      "fullName": "Wethenew",
+      "followers": 863567,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "We curate sneakers & streetwear daily, \nFor you.🖤...",
+      "emails": []
+    },
+    {
+      "username": "sneakerfreakermag",
+      "fullName": "Sneaker Freaker",
+      "followers": 1514659,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "The world’s first international sneaker magazine. Since 2002....",
+      "emails": []
+    },
+    {
+      "username": "stylerunner",
+      "fullName": "STYLERUNNER",
+      "followers": 625670,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "A destination of style. Curated exclusively for her....",
+      "emails": []
+    }
+  ]
+}

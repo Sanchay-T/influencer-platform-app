@@ -1,0 +1,23 @@
+{
+  "stage": "accumulation_tracking",
+  "jobId": "50307430-9c22-48e1-a526-9cf13c8eede0",
+  "apiCall": 2,
+  "timestamp": "2025-07-21T10:20:13.551Z",
+  "accumulation": {
+    "previousCreatorsCount": 5,
+    "newCreatorsCount": 9,
+    "totalAccumulatedCount": 9,
+    "duplicatesRemoved": 5
+  },
+  "usernames": [
+    "imaaduuddin",
+    "phonesvendor",
+    "irina.tech",
+    "applefix.cl",
+    "earpods_kenya",
+    "technoshop.kaz",
+    "ecasetech",
+    "kuxiutech",
+    "sahabat.gajet11"
+  ]
+}

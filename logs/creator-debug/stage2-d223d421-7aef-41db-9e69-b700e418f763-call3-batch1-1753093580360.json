@@ -1,0 +1,64 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "d223d421-7aef-41db-9e69-b700e418f763",
+  "apiCall": 3,
+  "batchNumber": 1,
+  "timestamp": "2025-07-21T10:26:20.360Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 5
+  },
+  "validCreators": [
+    {
+      "username": "mrperfecttech",
+      "fullName": "Nitin Raj",
+      "followers": 883651,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Follow for Latest Tech, Tips and Gadgets\nTedx Speaker\n✉️mrperfecttechofficial@gmail.com\nClick below ...",
+      "emails": [
+        "mrperfecttechofficial@gmail.com"
+      ]
+    },
+    {
+      "username": "viral_king_aayush",
+      "fullName": "Shivchand Kumar",
+      "followers": 67202,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Collab : itsaayushaayush@gmail.com\nYoutube : 100k+ Family ❤️\nLove For Exploring \nFor Video shoot 837...",
+      "emails": [
+        "itsaayushaayush@gmail.com"
+      ]
+    },
+    {
+      "username": "chic_trendxz",
+      "fullName": "Ankit Kumar",
+      "followers": 148535,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "Men's fashion। Lifestyle। Outfit's ideas\nAll products links here👇...",
+      "emails": []
+    },
+    {
+      "username": "lexiv_trends",
+      "fullName": "LEXIV | MOBILE ACCESSORIES | GADGETS | WATCHES",
+      "followers": 18828,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🛍️ Selling Luxury Goods Since 2012\n🚀 Helping Gen Z Get Luxury In Affordable \n🎁 Follow Now For Wee...",
+      "emails": []
+    },
+    {
+      "username": "arli_deo",
+      "fullName": "Arli_deo",
+      "followers": 4789,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Influencer...",
+      "emails": []
+    }
+  ]
+}

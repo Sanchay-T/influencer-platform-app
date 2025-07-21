@@ -1,0 +1,109 @@
+{
+  "stage": "database_save_final",
+  "jobId": "0604a397-e444-4b09-a619-3d20690c0c89",
+  "apiCall": 5,
+  "timestamp": "2025-07-21T08:09:58.192Z",
+  "counts": {
+    "creatorsBeingPersisted": 12,
+    "newProcessedRuns": 5,
+    "newProcessedResults": 51
+  },
+  "finalDatabaseCreators": [
+    {
+      "index": 1,
+      "username": "zahwaqilah",
+      "followers": 429977,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "untiedau",
+      "followers": 13025,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "freudonidas",
+      "followers": 478502,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "nbcnewyork",
+      "followers": 350185,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "freshwitblossom",
+      "followers": 520727,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "kckd_rosko",
+      "followers": 46896,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "iamharshkale",
+      "followers": 13716,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "noahxblack",
+      "followers": 12907,
+      "verified": false,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "svweeart",
+      "followers": 9437,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "gj5_suratcity",
+      "followers": 26432,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 11,
+      "username": "bbcx0102",
+      "followers": 13478,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 12,
+      "username": "grwvineeth",
+      "followers": 14427,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    }
+  ]
+}

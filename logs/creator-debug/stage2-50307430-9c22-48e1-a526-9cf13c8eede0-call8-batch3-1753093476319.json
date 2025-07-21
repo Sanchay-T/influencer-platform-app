@@ -1,0 +1,33 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "50307430-9c22-48e1-a526-9cf13c8eede0",
+  "apiCall": 8,
+  "batchNumber": 3,
+  "timestamp": "2025-07-21T10:24:36.319Z",
+  "counts": {
+    "rawResults": 2,
+    "validResults": 2,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 12
+  },
+  "validCreators": [
+    {
+      "username": "vishalfitarmy",
+      "fullName": "Vishal Fit Army",
+      "followers": 678,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Saharanpur 📍\nWelcome to Vishal Fit Army\n🚘 Car Modifications\n💪 Fitness Motivation & Workouts\n🎥 Da...",
+      "emails": []
+    },
+    {
+      "username": "matrix_escapes__",
+      "fullName": "Conspiracies/Truths | Informed Eating | Toxic Free Living",
+      "followers": 1045,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Join us on this journey of awakening & discovery with every click 🔴🐇\nEach post is a step further o...",
+      "emails": []
+    }
+  ]
+}

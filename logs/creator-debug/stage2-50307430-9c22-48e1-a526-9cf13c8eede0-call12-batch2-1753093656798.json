@@ -1,0 +1,33 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "50307430-9c22-48e1-a526-9cf13c8eede0",
+  "apiCall": 12,
+  "batchNumber": 2,
+  "timestamp": "2025-07-21T10:27:36.798Z",
+  "counts": {
+    "rawResults": 2,
+    "validResults": 2,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 7
+  },
+  "validCreators": [
+    {
+      "username": "gadgetxpress_india",
+      "fullName": "GadgetXpress",
+      "followers": 1040,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Websit link 👉http://gadgetxpress.in\n*Wholesale and retail*\nDM/WhatsApp👉7240688392\nCash on delivery...",
+      "emails": []
+    },
+    {
+      "username": "bad_boy_krishnam_mp17rewa_wale",
+      "fullName": "♥༒, 🅷🅴🅰🆁🆃🅺🅸🅻🅻🅴🆁♥༒",
+      "followers": 7862,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "☠︎༆ 🆁🅾🆈🅰🅻 🅴🅽🆃🆁🆈 🅾🅽  16 November \nMy mom ❤dad is my life\n9981858664@paytm...",
+      "emails": []
+    }
+  ]
+}

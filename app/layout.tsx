@@ -5,6 +5,8 @@ import { ClerkProvider } from '@clerk/nextjs';
 import { ToastProvider } from './providers/toast-provider';
 import { AuthLogger } from './components/auth/auth-logger';
 import { NavigationLogger } from './components/navigation/navigation-logger';
+// Import startup validation to prevent environment mismatches
+import '../lib/startup-validation.js';
 
 export const metadata = {
   title: 'usegemz',

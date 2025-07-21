@@ -1,0 +1,109 @@
+{
+  "stage": "database_save_final",
+  "jobId": "126eb820-4f3a-4b16-9250-f7d346ea75a5",
+  "apiCall": 5,
+  "timestamp": "2025-07-21T10:04:28.222Z",
+  "counts": {
+    "creatorsBeingPersisted": 12,
+    "newProcessedRuns": 5,
+    "newProcessedResults": 45
+  },
+  "finalDatabaseCreators": [
+    {
+      "index": 1,
+      "username": "imaaduuddin",
+      "followers": 15133,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "phonesvendor",
+      "followers": 0,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "imsamkohl",
+      "followers": 8518,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "nawabnabeel",
+      "followers": 0,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "hasankarimiofficial",
+      "followers": 185216,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "casepoint._",
+      "followers": 12263,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "hd_mongolia",
+      "followers": 3717,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "ecasetech",
+      "followers": 17081,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "custom_adventurist",
+      "followers": 71438,
+      "verified": false,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "estoremultan",
+      "followers": 5415,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 11,
+      "username": "imepoa",
+      "followers": 20967,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 12,
+      "username": "gee_stores_",
+      "followers": 19789,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    }
+  ]
+}

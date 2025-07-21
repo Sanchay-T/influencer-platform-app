@@ -1,0 +1,64 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "0604a397-e444-4b09-a619-3d20690c0c89",
+  "apiCall": 5,
+  "batchNumber": 1,
+  "timestamp": "2025-07-21T08:09:38.256Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 5
+  },
+  "validCreators": [
+    {
+      "username": "zahwaqilah",
+      "fullName": "zahwa aqilah",
+      "followers": 429977,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "보라해 \n♡ contact person : +62 856-9121-7678 \n♡ social media inquiries : +62 812-1920-0719\n♡ endorsemen...",
+      "emails": []
+    },
+    {
+      "username": "untiedau",
+      "fullName": "UNTIED AU",
+      "followers": 13025,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "🇦🇺 Leading Australian Sneaker Store \n👟 100% Authentic Guaranteed, Always.\n🛍️ Afterpay / Zip / Kl...",
+      "emails": []
+    },
+    {
+      "username": "freudonidas",
+      "fullName": "Freudondas Chartpong",
+      "followers": 478502,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "BAD BASTARD\n☎️WORK CALL ⬇️ \n@nordarun @selfcoffeechiangmai @pawpawpaw321 @f_u_g_s @shadowtheclaws #w...",
+      "emails": []
+    },
+    {
+      "username": "nbcnewyork",
+      "fullName": "NBC New York",
+      "followers": 350185,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "The official account for NBC New York. \nSee something crazy? DM us, tag us, email tips@nbcnewyork.co...",
+      "emails": [
+        "tips@nbcnewyork.com"
+      ]
+    },
+    {
+      "username": "freshwitblossom",
+      "fullName": "Fresh & Blossom| Footwear Fashion & Couple Goals",
+      "followers": 520727,
+      "verified": true,
+      "qualityScore": 1075,
+      "bio": "@freshwitfresh @blossomwitblossom \nShoe Inspo | His & Hers Outfits | Lifestyle \nAll Inquiries📧: Boo...",
+      "emails": [
+        "Bookings@FreshwitBlossom.com"
+      ]
+    }
+  ]
+}

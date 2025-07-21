@@ -1,0 +1,101 @@
+{
+  "stage": "database_save_final",
+  "jobId": "e3865240-529e-4b5d-bdd7-3952f551b9ef",
+  "apiCall": 1,
+  "timestamp": "2025-07-21T07:56:35.423Z",
+  "counts": {
+    "creatorsBeingPersisted": 11,
+    "newProcessedRuns": 1,
+    "newProcessedResults": 11
+  },
+  "finalDatabaseCreators": [
+    {
+      "index": 1,
+      "username": "livingthehype_",
+      "followers": 103181,
+      "verified": true,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "crepdogcrew",
+      "followers": 228956,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "hide.and.sneak",
+      "followers": 7658,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "platinumshoecare",
+      "followers": 0,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "thatsodsoho",
+      "followers": 55556,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "sneakherscanada",
+      "followers": 366026,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "minicostore.in",
+      "followers": 815,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "dkfen2024",
+      "followers": 42328,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "flightkickz.xyz",
+      "followers": 396776,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "dk.qi5",
+      "followers": 22655,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 11,
+      "username": "doubleboxed",
+      "followers": 57225,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    }
+  ]
+}

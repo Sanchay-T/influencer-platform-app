@@ -1,0 +1,60 @@
+{
+  "stage": "after_secondary_quality_filter",
+  "jobId": "d223d421-7aef-41db-9e69-b700e418f763",
+  "apiCall": 11,
+  "batchNumber": 2,
+  "timestamp": "2025-07-21T10:31:54.356Z",
+  "counts": {
+    "rawResults": 5,
+    "validResults": 5,
+    "filteredOutInBatch": 0,
+    "cumulativeValidCreators": 10
+  },
+  "validCreators": [
+    {
+      "username": "acefast.official",
+      "fullName": "Acefast Official",
+      "followers": 75145,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🔥New audiovisual experience 💕\n👇Shop here:...",
+      "emails": []
+    },
+    {
+      "username": "goussve.km",
+      "fullName": "GOUSSVE TECH",
+      "followers": 310429,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "🖥 | Gaming | Tech Enthusiast \n📧 | huoledfer.gmail.com\n🛰 | abang6199\n🛒 | Product link in my bio ⬇...",
+      "emails": []
+    },
+    {
+      "username": "healthcenters",
+      "fullName": "Health Centers",
+      "followers": 38742,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "Get Answers NOW: Discover the HIDDEN reason you or your clients suffer from low energy, brain fog, a...",
+      "emails": []
+    },
+    {
+      "username": "insta.__show",
+      "fullName": "INSTA SHOW",
+      "followers": 29240,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "• 👕 Best Men’s Fashion Picks  \n• 👖 Trendy Fashion and gadgets \n• 🧥 Honest Reviews & Tips  \n• 🔥 S...",
+      "emails": []
+    },
+    {
+      "username": "eurekahnb",
+      "fullName": "Eureka",
+      "followers": 84656,
+      "verified": false,
+      "qualityScore": 75,
+      "bio": "This page provides you with daily interesting  facts, knowledge & Information. 🌍 \n: ™ \nDM For Credi...",
+      "emails": []
+    }
+  ]
+}

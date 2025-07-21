@@ -1,0 +1,19 @@
+{
+  "stage": "accumulation_tracking",
+  "jobId": "d223d421-7aef-41db-9e69-b700e418f763",
+  "apiCall": 1,
+  "timestamp": "2025-07-21T10:25:06.855Z",
+  "accumulation": {
+    "previousCreatorsCount": 0,
+    "newCreatorsCount": 5,
+    "totalAccumulatedCount": 5,
+    "duplicatesRemoved": 0
+  },
+  "usernames": [
+    "phonesvendor",
+    "imaaduuddin",
+    "selfiecbaa",
+    "hasankarimiofficial",
+    "casepoint._"
+  ]
+}

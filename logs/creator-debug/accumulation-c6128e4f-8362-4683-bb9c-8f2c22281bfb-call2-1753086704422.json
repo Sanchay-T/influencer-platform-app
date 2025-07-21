@@ -1,0 +1,34 @@
+{
+  "stage": "accumulation_tracking",
+  "jobId": "c6128e4f-8362-4683-bb9c-8f2c22281bfb",
+  "apiCall": 2,
+  "timestamp": "2025-07-21T08:31:44.422Z",
+  "accumulation": {
+    "previousCreatorsCount": 18,
+    "newCreatorsCount": 12,
+    "totalAccumulatedCount": 20,
+    "duplicatesRemoved": 10
+  },
+  "usernames": [
+    "phonesvendor",
+    "imaaduuddin",
+    "jonimperial",
+    "hasankarimiofficial",
+    "casepoint._",
+    "ecasetech",
+    "hd_mongolia",
+    "estoremultan",
+    "imepoa",
+    "custom_adventurist",
+    "easy_shop_new",
+    "irina.tech",
+    "trend.yourstyle",
+    "chollo.man",
+    "earpods_kenya",
+    "technoshop.kaz",
+    "sahabat.gajet11",
+    "bossmobilebaku",
+    "alloyarmorcase",
+    "kuxiutech"
+  ]
+}

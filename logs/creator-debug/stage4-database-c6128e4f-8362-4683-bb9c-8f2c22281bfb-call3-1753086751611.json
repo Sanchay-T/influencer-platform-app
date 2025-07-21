@@ -1,0 +1,109 @@
+{
+  "stage": "database_save_final",
+  "jobId": "c6128e4f-8362-4683-bb9c-8f2c22281bfb",
+  "apiCall": 3,
+  "timestamp": "2025-07-21T08:32:31.611Z",
+  "counts": {
+    "creatorsBeingPersisted": 12,
+    "newProcessedRuns": 3,
+    "newProcessedResults": 32
+  },
+  "finalDatabaseCreators": [
+    {
+      "index": 1,
+      "username": "limreviews",
+      "followers": 81699,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 2,
+      "username": "fivebelow",
+      "followers": 861986,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 3,
+      "username": "sonyelectronics",
+      "followers": 8178017,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 4,
+      "username": "electrovilla.shop",
+      "followers": 14646,
+      "verified": true,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 5,
+      "username": "acefast.official",
+      "followers": 75145,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 6,
+      "username": "gadgetboy4u",
+      "followers": 1007128,
+      "verified": false,
+      "hasEmail": true,
+      "platform": "Instagram"
+    },
+    {
+      "index": 7,
+      "username": "goussve.km",
+      "followers": 310415,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 8,
+      "username": "insta.__show",
+      "followers": 29239,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 9,
+      "username": "banartsy",
+      "followers": 28889,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 10,
+      "username": "arli_deo",
+      "followers": 4788,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 11,
+      "username": "eurekahnb",
+      "followers": 84647,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    },
+    {
+      "index": 12,
+      "username": "healthcenters",
+      "followers": 38742,
+      "verified": false,
+      "hasEmail": false,
+      "platform": "Instagram"
+    }
+  ]
+}
