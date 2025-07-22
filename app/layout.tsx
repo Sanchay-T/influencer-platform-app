@@ -9,7 +9,7 @@ import { NavigationLogger } from './components/navigation/navigation-logger';
 import '../lib/startup-validation.js';
 
 export const metadata = {
-  title: 'usegemz',
+  title: 'Gemz',
   description: 'Multi-platform influencer campaign management',
 };
 

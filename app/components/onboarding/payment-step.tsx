@@ -161,11 +161,8 @@ export default function PaymentStep({ onComplete }: PaymentStepProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Billing Cycle Toggle - removed duplicate header */}
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          Choose Your Plan
-        </h2>
         <p className="text-gray-600 mb-6">
           Select a plan to start your 7-day free trial. You won't be charged until the trial ends.
         </p>
@@ -337,7 +334,7 @@ export default function PaymentStep({ onComplete }: PaymentStepProps) {
       <div className="text-center">
         <p className="text-xs text-gray-500">
           Questions about plans or pricing?{' '}
-          <a href="mailto:support@usegemz.io" className="text-blue-600 hover:underline">
+          <a href="mailto:support@gemz.io" className="text-blue-600 hover:underline">
             Contact support
           </a>
         </p>

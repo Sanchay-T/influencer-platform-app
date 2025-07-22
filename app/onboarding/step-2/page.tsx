@@ -415,7 +415,7 @@ export default function OnboardingStep2() {
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-500">
             Need help crafting your description?{' '}
-            <a href="mailto:support@usegemz.io" className="text-blue-600 hover:underline">
+            <a href="mailto:support@gemz.io" className="text-blue-600 hover:underline">
               Contact our team
             </a>{' '}
             for personalized guidance.

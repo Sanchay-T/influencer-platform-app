@@ -6,7 +6,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Email service configuration
 export const EMAIL_CONFIG = {
-  fromAddress: process.env.EMAIL_FROM_ADDRESS || 'hello@usegemz.io',
+  fromAddress: process.env.EMAIL_FROM_ADDRESS || 'hello@gemz.io',
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
   delays: {
     welcome: '10m',        // 10 minutes after signup

@@ -245,7 +245,7 @@ export default function OnboardingStep1() {
         <Card className="shadow-sm border border-gray-200">
           <CardHeader>
             <CardTitle className="text-2xl font-bold text-gray-900">
-              Welcome to usegemz! 🎉
+              Welcome to Gemz! 🎉
             </CardTitle>
             <CardDescription className="text-gray-600 mt-2">
               Let's get to know you and your business better. This helps us personalize your experience.
@@ -396,8 +396,8 @@ export default function OnboardingStep1() {
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-500">
             Need help? Contact our support team at{' '}
-            <a href="mailto:support@usegemz.io" className="text-blue-600 hover:underline">
-              support@usegemz.io
+            <a href="mailto:support@gemz.io" className="text-blue-600 hover:underline">
+              support@gemz.io
             </a>
           </p>
         </div>

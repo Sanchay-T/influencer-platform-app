@@ -35,19 +35,19 @@ export const WelcomeEmail = ({
     <Head />
     <Body style={main}>
       <Preview>
-        Welcome to the usegemz! 🎉 Your account is ready to go.
+        Welcome to Gemz! 🎉 Your account is ready to go.
       </Preview>
       <Container style={container}>
         <Img
           src={`${baseUrl}/static/logo.png`}
           width="48"
           height="48"
-          alt="usegemz Logo"
+          alt="Gemz Logo"
           style={logo}
         />
         
         <Text style={title}>
-          Welcome to usegemz! 🎉
+          Welcome to Gemz! 🎉
         </Text>
         
         <Text style={paragraph}>
@@ -93,7 +93,7 @@ export const WelcomeEmail = ({
         
         <Text style={footer}>
           Best regards,<br />
-          The usegemz Team
+          The Gemz Team
         </Text>
 
         {unsubscribeUrl && (

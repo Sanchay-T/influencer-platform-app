@@ -81,7 +81,7 @@ export default function Home() {
           <div className="w-full max-w-md space-y-8 text-center">
             <div>
               <h1 className="text-4xl font-bold tracking-tight text-gray-900">
-                usegemz
+                Gemz
               </h1>
               <p className="mt-4 text-lg text-gray-600">
                 Manage your influencer campaigns across multiple platforms

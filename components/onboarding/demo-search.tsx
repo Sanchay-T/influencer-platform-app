@@ -53,7 +53,7 @@ export default function DemoSearch({ businessName }: { businessName: string }) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Search className="w-5 h-5" />
-          See usegemz in Action
+          See Gemz in Action
         </CardTitle>
         <p className="text-sm text-gray-600">
           Let's find influencers perfect for {businessName} in 30 seconds

@@ -116,7 +116,7 @@ function OnboardingSuccessContent() {
               <CheckCircle className="w-8 h-8 text-green-600" />
             </div>
             <CardTitle className="text-3xl font-bold text-gray-900">
-              Welcome to usegemz! 🎉
+              Welcome to Gemz! 🎉
             </CardTitle>
             <CardDescription className="text-gray-600 mt-2 text-lg">
               {sessionData ? 
@@ -264,7 +264,7 @@ function OnboardingSuccessContent() {
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  Start Using usegemz
+                  Start Using Gemz
                   <ArrowRight className="h-5 w-5" />
                 </div>
               )}
@@ -274,7 +274,7 @@ function OnboardingSuccessContent() {
             <div className="text-center">
               <p className="text-xs text-gray-500">
                 Need help getting started?{' '}
-                <a href="mailto:support@usegemz.io" className="text-blue-600 hover:underline">
+                <a href="mailto:support@gemz.io" className="text-blue-600 hover:underline">
                   Contact our support team
                 </a>
               </p>

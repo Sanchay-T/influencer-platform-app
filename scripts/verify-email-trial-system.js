@@ -110,7 +110,7 @@ async function verifyEmailAndTrialSystem() {
     console.log(`   - QSTASH_CURRENT_SIGNING_KEY: ${process.env.QSTASH_CURRENT_SIGNING_KEY ? '✅ Set' : '❌ Missing'}`);
     console.log(`   - QSTASH_NEXT_SIGNING_KEY: ${process.env.QSTASH_NEXT_SIGNING_KEY ? '✅ Set' : '❌ Missing'}`);
     console.log(`   - RESEND_API_KEY: ${process.env.RESEND_API_KEY ? '✅ Set' : '❌ Missing'}`);
-    console.log(`   - EMAIL_FROM_ADDRESS: ${process.env.EMAIL_FROM_ADDRESS || 'hello@usegemz.io'}`);
+    console.log(`   - EMAIL_FROM_ADDRESS: ${process.env.EMAIL_FROM_ADDRESS || 'hello@gemz.io'}`);
 
     // 8. Trial Logic (Mock)
     console.log('\n🎮 8. TRIAL LOGIC (Mock Implementation):');

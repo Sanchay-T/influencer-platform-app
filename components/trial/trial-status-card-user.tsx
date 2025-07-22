@@ -60,7 +60,7 @@ export function TrialStatusCardUser({ trialData, className = '' }: TrialStatusCa
         </div>
         <CardDescription className="mt-1">
           {countdown.isExpired 
-            ? 'Your trial has ended. Upgrade to continue using usegemz.'
+            ? 'Your trial has ended. Upgrade to continue using Gemz.'
             : 'Full access to all features during your trial period.'
           }
         </CardDescription>

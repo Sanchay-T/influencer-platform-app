@@ -372,7 +372,7 @@ export default function OnboardingComplete() {
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-500">
             Questions about the trial?{' '}
-            <a href="mailto:support@usegemz.io" className="text-blue-600 hover:underline">
+            <a href="mailto:support@gemz.io" className="text-blue-600 hover:underline">
               Contact our team
             </a>{' '}
             for immediate assistance.
