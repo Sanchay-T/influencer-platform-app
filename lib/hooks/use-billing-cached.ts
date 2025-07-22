@@ -3,6 +3,7 @@
 import { useAuth } from '@clerk/nextjs'
 import { useState, useEffect } from 'react'
 import { BillingStatus } from './use-billing'
+import { perfMonitor } from '@/lib/utils/performance-monitor'
 
 // Cache key for localStorage
 const BILLING_CACHE_KEY = 'gemz_billing_cache'
@@ -31,9 +32,11 @@ export function useBillingCached(): BillingStatus & { isLoading: boolean } {
   })
   const [isLoading, setIsLoading] = useState(true)
 
-  // Load cached data immediately on mount
+  // Load cached data immediately on mount with performance tracking
   useEffect(() => {
     if (!userId) return
+
+    const cacheTimer = perfMonitor.startTimer('billing.cache.load', { userId })
 
     try {
       const cached = localStorage.getItem(BILLING_CACHE_KEY)
@@ -46,15 +49,45 @@ export function useBillingCached(): BillingStatus & { isLoading: boolean } {
           Date.now() - parsedCache.timestamp < CACHE_DURATION
         
         if (isValidCache) {
-          console.log('✅ [BILLING-CACHE] Using cached billing data')
+          const cacheAge = Date.now() - parsedCache.timestamp
+          perfMonitor.endTimer(cacheTimer, { 
+            cached: true, 
+            cacheAge: `${(cacheAge / 1000).toFixed(1)}s`,
+            dataSource: 'localStorage'
+          })
+          
+          console.log('✅ [BILLING-CACHE] Using cached billing data', {
+            cacheAge: `${(cacheAge / 1000).toFixed(1)}s`,
+            remainingTime: `${((CACHE_DURATION - cacheAge) / 1000).toFixed(1)}s`
+          })
+          
           setBillingStatus({
             ...parsedCache.data,
             isLoaded: true
           })
           setIsLoading(false)
+        } else {
+          perfMonitor.endTimer(cacheTimer, { 
+            cached: false, 
+            reason: 'cache_expired_or_different_user',
+            dataSource: 'none'
+          })
+          console.log('⚠️ [BILLING-CACHE] Cache invalid or expired')
         }
+      } else {
+        perfMonitor.endTimer(cacheTimer, { 
+          cached: false, 
+          reason: 'no_cache_found',
+          dataSource: 'none'
+        })
+        console.log('ℹ️ [BILLING-CACHE] No cache found')
       }
     } catch (error) {
+      perfMonitor.endTimer(cacheTimer, { 
+        cached: false, 
+        error: error.message,
+        dataSource: 'error'
+      })
       console.error('❌ [BILLING-CACHE] Error loading cache:', error)
     }
   }, [userId])
@@ -62,18 +95,41 @@ export function useBillingCached(): BillingStatus & { isLoading: boolean } {
   useEffect(() => {
     if (!isLoaded || !userId) return
 
-    // Fetch fresh data (in background if we have cache)
+    // Fetch fresh data (in background if we have cache) with performance tracking
     const fetchBillingStatus = async () => {
+      const apiTimer = perfMonitor.startTimer('billing.api.fetch', { 
+        userId,
+        hasExistingData: billingStatus.isLoaded
+      })
+      
       try {
         console.log('🔄 [BILLING-CACHE] Fetching fresh billing data')
         
+        const fetchStartTime = performance.now()
         const response = await fetch('/api/billing/status')
+        const fetchEndTime = performance.now()
+        
         if (!response.ok) {
-          throw new Error('Failed to fetch billing status')
+          throw new Error(`API responded with status: ${response.status}`)
         }
         
+        const parseStartTime = performance.now()
         const data = await response.json()
-        console.log('✅ [BILLING-CACHE] Fresh billing data received')
+        const parseEndTime = performance.now()
+        
+        perfMonitor.endTimer(apiTimer, {
+          networkTime: `${(fetchEndTime - fetchStartTime).toFixed(2)}ms`,
+          parseTime: `${(parseEndTime - parseStartTime).toFixed(2)}ms`,
+          dataSource: 'api',
+          cached: false,
+          backgroundUpdate: billingStatus.isLoaded
+        })
+        
+        console.log('✅ [BILLING-CACHE] Fresh billing data received', {
+          networkTime: `${(fetchEndTime - fetchStartTime).toFixed(2)}ms`,
+          parseTime: `${(parseEndTime - parseStartTime).toFixed(2)}ms`,
+          backgroundUpdate: billingStatus.isLoaded
+        })
         
         // Create feature checking functions
         const hasFeature = (feature: string): boolean => {
@@ -129,21 +185,39 @@ export function useBillingCached(): BillingStatus & { isLoading: boolean } {
         setBillingStatus(newBillingStatus)
         setIsLoading(false)
 
-        // Cache the fresh data
+        // Cache the fresh data with performance tracking
         const cacheData: CachedBillingData = {
           data: newBillingStatus,
           timestamp: Date.now(),
           userId
         }
         
+        const cacheWriteTimer = perfMonitor.startTimer('billing.cache.write', { 
+          dataSize: JSON.stringify(cacheData).length 
+        })
+        
         try {
           localStorage.setItem(BILLING_CACHE_KEY, JSON.stringify(cacheData))
+          perfMonitor.endTimer(cacheWriteTimer, { 
+            success: true,
+            operation: 'localStorage.setItem'
+          })
           console.log('💾 [BILLING-CACHE] Data cached successfully')
         } catch (error) {
+          perfMonitor.endTimer(cacheWriteTimer, { 
+            success: false,
+            error: error.message,
+            operation: 'localStorage.setItem'
+          })
           console.error('❌ [BILLING-CACHE] Error saving cache:', error)
         }
 
       } catch (error) {
+        perfMonitor.endTimer(apiTimer, {
+          error: error.message,
+          dataSource: 'api',
+          cached: false
+        })
         console.error('❌ [BILLING-CACHE] Error fetching billing status:', error)
         setIsLoading(false)
       }

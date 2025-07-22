@@ -26,13 +26,13 @@ import TrialStatusCard from '@/components/trial/trial-status-card';
 import TrialStatusCardUser from '@/components/trial/trial-status-card-user';
 import EmailScheduleDisplay from '@/components/trial/email-schedule-display';
 import { PlanBadge } from '@/app/components/billing/protect';
-import { useBilling } from '@/lib/hooks/use-billing';
+import { useBillingCached } from '@/lib/hooks/use-billing-cached';
 import Link from 'next/link';
 
 export default function ProfileSettingsPage() {
   const { user, isLoaded } = useUser();
   const { isAdmin } = useAdmin();
-  const { currentPlan, needsUpgrade } = useBilling();
+  const { currentPlan, needsUpgrade } = useBillingCached();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [userProfile, setUserProfile] = useState({

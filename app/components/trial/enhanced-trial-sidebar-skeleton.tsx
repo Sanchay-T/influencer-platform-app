@@ -28,9 +28,9 @@ export function EnhancedTrialSidebarSkeleton() {
         <div className="text-2xl font-bold text-blue-900 mb-1">
           <div className="h-8 bg-blue-200 rounded w-20 mx-auto animate-pulse"></div>
         </div>
-        <p className="text-xs text-blue-900 opacity-75">
+        <div className="text-xs text-blue-900 opacity-75">
           <div className="h-3 bg-blue-200 rounded w-24 mx-auto animate-pulse"></div>
-        </p>
+        </div>
       </div>
 
       {/* Enhanced Progress Bar skeleton */}

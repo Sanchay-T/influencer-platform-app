@@ -14,7 +14,9 @@ import {
   ArrowRight,
   Sparkles
 } from 'lucide-react';
-import { useBilling } from '@/lib/hooks/use-billing';
+import { useBillingCached } from '@/lib/hooks/use-billing-cached';
+import { usePerformanceMonitor } from '@/lib/utils/performance-monitor';
+import EnhancedTrialSidebarSkeleton from './enhanced-trial-sidebar-skeleton';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -134,10 +136,20 @@ function SubscriptionBadge({ currentPlan }: { currentPlan: string }) {
 const DEMO_MODE = false;
 
 export function EnhancedTrialSidebarIndicator() {
-  // Use billing hook data directly - consistent with subscription management
-  // This ensures both sidebar and subscription management show identical countdown
-  const { currentPlan, isTrialing, trialStatus, usageInfo, isPaidUser, hasActiveSubscription, daysRemaining, hoursRemaining, minutesRemaining, trialProgressPercentage, trialStartDate, trialEndDate } = useBilling();
+  const { startTimer, endTimer } = usePerformanceMonitor();
   
+  // Use cached billing hook data with performance monitoring
+  const { 
+    currentPlan, isTrialing, trialStatus, usageInfo, isPaidUser, hasActiveSubscription, 
+    daysRemaining, hoursRemaining, minutesRemaining, trialProgressPercentage, 
+    trialStartDate, trialEndDate, isLoading 
+  } = useBillingCached();
+
+  // Performance tracking - component mount
+  const mountTimer = useMemo(() => 
+    startTimer('EnhancedTrialSidebar', 'component_mount'), 
+  []);
+
   // Mock data for demo mode - create once to avoid recreating on every render
   const mockTrialData = useMemo(() => {
     if (!DEMO_MODE) return null;
@@ -216,6 +228,13 @@ export function EnhancedTrialSidebarIndicator() {
     };
   }, [daysRemaining, hoursRemaining, minutesRemaining, isTrialing, trialProgressPercentage]);
 
+  // Complete mount timing once data is available
+  useEffect(() => {
+    if (!isLoading && mountTimer) {
+      endTimer(mountTimer);
+    }
+  }, [isLoading, mountTimer, endTimer]);
+
   const countdown = {
     ...countdownData,
     formatted: {
@@ -227,6 +246,11 @@ export function EnhancedTrialSidebarIndicator() {
       progressWidth: `${countdownData.progressPercentage}%`
     }
   };
+
+  // Show skeleton while loading (moved after all hooks)
+  if (isLoading) {
+    return <EnhancedTrialSidebarSkeleton />;
+  }
 
   // If user has active paid subscription, show subscription badge
   if (isPaidUser && hasActiveSubscription && currentPlan !== 'free_trial') {
