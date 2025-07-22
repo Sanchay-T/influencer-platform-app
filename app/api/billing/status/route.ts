@@ -78,6 +78,8 @@ export async function GET(request: NextRequest) {
     
     // Use trial service data for consistent progress calculation
     const daysRemaining = trialData?.daysRemaining || 0;
+    const hoursRemaining = trialData?.hoursRemaining || 0;
+    const minutesRemaining = trialData?.minutesRemaining || 0;
     const trialProgressPercentage = trialData?.progressPercentage || 0;
 
     // Calculate real usage information from database
@@ -140,6 +142,8 @@ export async function GET(request: NextRequest) {
       hasActiveSubscription,
       trialStatus,
       daysRemaining,
+      hoursRemaining,
+      minutesRemaining,
       subscriptionStatus,
       usageInfo,
       stripeCustomerId: userProfile.stripeCustomerId,

@@ -134,9 +134,8 @@ export default function UpgradeButton({
       <Button
         onClick={handleButtonClick}
         disabled={isLoading}
-        size={size}
         variant={variant}
-        className={className}
+        className={`h-11 px-6 text-sm font-medium ${className}`}
       >
         {isLoading ? (
           <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -153,9 +152,8 @@ export default function UpgradeButton({
       <Button
         onClick={handleButtonClick}
         disabled={isLoading}
-        size={size}
         variant={variant}
-        className={className}
+        className={`h-11 px-6 text-sm font-medium ${className}`}
       >
         {isLoading ? (
           <Loader2 className="h-4 w-4 animate-spin mr-2" />

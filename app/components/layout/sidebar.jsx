@@ -6,7 +6,7 @@ import { LayoutDashboard, Search, PlusCircle, LogOut, UserRoundCog, Settings, Ma
 import { useRouter } from 'next/navigation'
 import { useClerk, useUser } from '@clerk/nextjs'
 import { useAdmin } from '@/lib/hooks/use-admin'
-import { TrialSidebarIndicator } from '@/app/components/trial/trial-sidebar-indicator'
+import { EnhancedTrialSidebarIndicator } from '@/app/components/trial/enhanced-trial-sidebar-indicator'
 
 export default function Sidebar() {
   const router = useRouter()
@@ -106,8 +106,8 @@ export default function Sidebar() {
           )}
         </nav>
         
-        {/* Trial Status Indicator */}
-        <TrialSidebarIndicator />
+        {/* Enhanced Trial Status Indicator */}
+        <EnhancedTrialSidebarIndicator />
       </div>
 
       <div className="space-y-4">

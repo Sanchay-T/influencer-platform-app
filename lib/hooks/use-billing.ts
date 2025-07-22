@@ -13,6 +13,11 @@ export interface BillingStatus {
   needsUpgrade: boolean
   trialStatus?: 'active' | 'expired' | 'converted' | 'cancelled'
   daysRemaining?: number
+  hoursRemaining?: number
+  minutesRemaining?: number
+  trialProgressPercentage?: number
+  trialStartDate?: string
+  trialEndDate?: string
   hasActiveSubscription?: boolean
   isPaidUser?: boolean
   usageInfo?: {
@@ -156,6 +161,11 @@ export function useBilling(): BillingStatus {
           needsUpgrade: !isPaidUser,
           trialStatus: data.trialStatus,
           daysRemaining: data.daysRemaining,
+          hoursRemaining: data.hoursRemaining,
+          minutesRemaining: data.minutesRemaining,
+          trialProgressPercentage: data.trialProgressPercentage,
+          trialStartDate: data.trialStartDate,
+          trialEndDate: data.trialEndDate,
           planFeatures: currentPlanFeatures,
           usageInfo: {
             campaignsUsed: data.usageInfo?.campaignsUsed || 0,
@@ -180,6 +190,11 @@ export function useBilling(): BillingStatus {
           needsUpgrade: true,
           hasActiveSubscription: false,
           isPaidUser: false,
+          trialProgressPercentage: 0,
+          hoursRemaining: 0,
+          minutesRemaining: 0,
+          trialStartDate: undefined,
+          trialEndDate: undefined,
           planFeatures: {
             campaigns: 0,
             creators: 0,

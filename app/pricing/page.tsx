@@ -43,16 +43,16 @@ const PricingPageContent = () => {
     }
     
     // Determine if it's an upgrade or downgrade
-    const planHierarchy = { 'free_trial': 0, 'basic': 1, 'premium': 2, 'enterprise': 3 };
+    const planHierarchy = { 'free_trial': 0, 'glow_up': 1, 'viral_surge': 2, 'fame_flex': 3 };
     const currentLevel = planHierarchy[currentPlan] || 0;
     const targetLevel = planHierarchy[planKey as keyof typeof planHierarchy] || 0;
     
     if (targetLevel > currentLevel) {
       // Upgrade
       return {
-        text: planName === 'Enterprise' ? 'Contact Sales' : `Upgrade to ${planName}`,
+        text: planName === 'Fame Flex' ? 'Contact Sales' : `Upgrade to ${planName}`,
         disabled: false,
-        variant: planName === 'Premium' ? 'default' : 'outline' as const
+        variant: planName === 'Glow Up' ? 'default' : 'outline' as const
       };
     } else {
       // Downgrade
@@ -154,31 +154,31 @@ const PricingPageContent = () => {
       trialNote: "Results are limited during trial"
     },
     {
-      name: "Basic",
-      price: "$19",
+      name: "Glow Up",
+      price: "$99",
       period: "per month", 
-      description: "Perfect for small businesses and individuals",
+      description: "Perfect for growing brands",
       icon: Star,
-      popular: false,
-      badge: null,
-      features: features.map(f => f.basic)
-    },
-    {
-      name: "Premium",
-      price: "$49",
-      period: "per month",
-      description: "Best for growing businesses and agencies",
-      icon: Zap,
       popular: true,
       badge: "Most Popular",
       badgeColor: "bg-blue-600 text-white",
+      features: features.map(f => f.basic)
+    },
+    {
+      name: "Viral Surge",
+      price: "$249",
+      period: "per month",
+      description: "Best for scaling businesses",
+      icon: Zap,
+      popular: false,
+      badge: null,
       features: features.map(f => f.premium)
     },
     {
-      name: "Enterprise",
-      price: "$199",
+      name: "Fame Flex",
+      price: "$499",
       period: "per month",
-      description: "For large teams with custom needs",
+      description: "For large-scale operations",
       icon: Crown,
       popular: false,
       badge: "Advanced", 
@@ -278,15 +278,15 @@ const PricingPageContent = () => {
                 <div className="flex items-center justify-center">
                   <div className={`p-2 rounded-full ${
                     plan.name === 'Free Trial' ? 'bg-gray-100' :
-                    plan.name === 'Basic' ? 'bg-blue-50' :
-                    plan.name === 'Premium' ? 'bg-blue-100' :
-                    'bg-purple-100'
+                    plan.name === 'Glow Up' ? 'bg-blue-50' :
+                    plan.name === 'Viral Surge' ? 'bg-purple-100' :
+                    'bg-amber-100'
                   }`}>
                     <Icon className={`h-5 w-5 ${
                       plan.name === 'Free Trial' ? 'text-gray-600' :
-                      plan.name === 'Basic' ? 'text-blue-600' :
-                      plan.name === 'Premium' ? 'text-blue-700' :
-                      'text-purple-600'
+                      plan.name === 'Glow Up' ? 'text-blue-600' :
+                      plan.name === 'Viral Surge' ? 'text-purple-600' :
+                      'text-amber-600'
                     }`} />
                   </div>
                 </div>
@@ -344,7 +344,7 @@ const PricingPageContent = () => {
 
                 <SignedIn>
                   <Button 
-                    className={`w-full font-medium ${
+                    className={`w-full font-medium h-11 px-6 text-sm ${
                       plan.buttonVariant === 'default'
                         ? 'bg-blue-600 hover:bg-blue-700 text-white' 
                         : plan.disabled 
@@ -366,9 +366,9 @@ const PricingPageContent = () => {
                         
                         // Map plan names to match your Clerk dashboard plans
                         const planMap: Record<string, string> = {
-                          'basic': 'Basic',      // Maps to your $5 Basic plan
-                          'premium': 'Premium',  // Maps to your $10 Premium plan  
-                          'enterprise': 'Enterprise' // Maps to your $100 Enterprise plan
+                          'glow up': 'glow_up',      // Maps to your Glow Up plan
+                          'viral surge': 'viral_surge',  // Maps to your Viral Surge plan  
+                          'fame flex': 'fame_flex' // Maps to your Fame Flex plan
                         };
                         
                         const clerkPlanName = planMap[planName];
@@ -379,10 +379,10 @@ const PricingPageContent = () => {
                           const billingUrl = `/billing?plan=${clerkPlanName}`;
                           console.log('🔥 [PRICING-CLICK] Redirecting to billing page:', billingUrl);
                           window.location.href = billingUrl;
-                        } else if (planName === 'enterprise') {
-                          // Still redirect to billing for enterprise too
-                          console.log('🔥 [PRICING-CLICK] Enterprise plan - redirecting to billing');
-                          window.location.href = `/billing?plan=Enterprise`;
+                        } else if (planName === 'fame flex') {
+                          // Still redirect to billing for Fame Flex too
+                          console.log('🔥 [PRICING-CLICK] Fame Flex plan - redirecting to billing');
+                          window.location.href = `/billing?plan=fame_flex`;
                         } else {
                           console.log('❌ [PRICING-CLICK] No matching plan found for:', planName);
                         }
@@ -399,14 +399,14 @@ const PricingPageContent = () => {
                 <SignedOut>
                   <Link href="/sign-up" className="block">
                     <Button 
-                      className={`w-full font-medium ${
+                      className={`w-full font-medium h-11 px-6 text-sm ${
                         plan.popular 
                           ? 'bg-blue-600 hover:bg-blue-700 text-white' 
                           : 'border-zinc-300 hover:bg-zinc-50'
                       }`}
                       variant={plan.popular ? "default" : "outline"}
                     >
-                      {plan.name === 'Enterprise' ? 'Contact Sales' : 
+                      {plan.name === 'Fame Flex' ? 'Contact Sales' : 
                        plan.name === 'Free Trial' ? 'Start Free Trial' : 'Get Started'}
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
@@ -437,9 +437,9 @@ const PricingPageContent = () => {
                 <tr className="border-b-2 border-zinc-200">
                   <th className="text-left py-4 px-6 font-semibold text-zinc-900">Feature</th>
                   <th className="text-center py-4 px-4 font-semibold text-zinc-900">Free Trial</th>
-                  <th className="text-center py-4 px-4 font-semibold text-zinc-900">Basic</th>
-                  <th className="text-center py-4 px-4 font-semibold text-zinc-900 text-blue-700">Premium</th>
-                  <th className="text-center py-4 px-4 font-semibold text-zinc-900 text-purple-700">Enterprise</th>
+                  <th className="text-center py-4 px-4 font-semibold text-zinc-900 text-blue-700">Glow Up</th>
+                  <th className="text-center py-4 px-4 font-semibold text-zinc-900 text-purple-700">Viral Surge</th>
+                  <th className="text-center py-4 px-4 font-semibold text-zinc-900 text-amber-700">Fame Flex</th>
                 </tr>
               </thead>
               <tbody>
