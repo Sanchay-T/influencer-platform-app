@@ -1,53 +1,103 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import Link from "next/link";
+import { Button } from "@/components/ui/button";
+// Removed Link to avoid nested anchors
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Search, FileText, ExternalLink } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function CampaignCard({ campaign }) {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  const handleClick = async (e) => {
-    e.preventDefault();
+  const handleCardClick = async () => {
+    if (isLoading) return;
     setIsLoading(true);
     router.push(`/campaigns/${campaign.id}`);
   };
 
+  const goTo = (e, href) => {
+    e.preventDefault();
+    e.stopPropagation();
+    router.push(href);
+  };
+
   return (
-    <Link href={`/campaigns/${campaign.id}`} onClick={handleClick}>
-      <Card className={`border-none bg-gray-50 hover:bg-gray-100 transition-all cursor-pointer group relative ${isLoading ? 'opacity-70' : ''}`}>
+    <Card
+      role="button"
+      tabIndex={0}
+      onClick={handleCardClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleCardClick();
+        }
+      }}
+      className={`bg-zinc-900/80 border border-zinc-700/50 hover:bg-zinc-800/40 transition-all cursor-pointer group relative ${isLoading ? 'opacity-70' : ''}`}
+    >
         {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-100/50 rounded-lg z-10">
-            <Loader2 className="h-6 w-6 animate-spin text-gray-600" />
+          <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/50 rounded-lg z-10">
+            <Loader2 className="h-6 w-6 animate-spin text-zinc-300" />
           </div>
         )}
-        <CardHeader className="pb-4">
+        <CardHeader className="p-4 pb-3">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-lg font-semibold text-gray-900 group-hover:text-gray-700">
+              <CardTitle className="text-lg font-semibold text-zinc-100 group-hover:text-zinc-300">
                 {campaign.name}
               </CardTitle>
-              <CardDescription className="mt-1 text-sm text-gray-500">
+              <CardDescription className="mt-1 text-sm text-zinc-400">
                 {campaign.description}
               </CardDescription>
             </div>
-            <Badge variant={campaign.searchType === 'similar' ? 'secondary' : 'default'}>
-              {campaign.searchType === 'similar' ? 'Similar Search' : 'Keyword Search'}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="capitalize">
+                {campaign.status || 'draft'}
+              </Badge>
+              <Badge variant={campaign.searchType === 'similar' ? 'secondary' : 'default'}>
+                {campaign.searchType === 'similar' ? 'Similar Search' : 'Keyword Search'}
+              </Badge>
+            </div>
           </div>
         </CardHeader>
-        <CardContent className="pt-0">
-          <div className="text-xs text-gray-500">
+        <CardContent className="px-4 pt-0 pb-4">
+          <div className="text-xs text-zinc-500">
             Created {new Date(campaign.createdAt).toLocaleDateString('en-US', {
               year: 'numeric',
               month: 'long',
               day: 'numeric'
             })}
           </div>
+          <div className="mt-2 flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="soft"
+              onClick={(e) => goTo(e, `/campaigns/${campaign.id}`)}
+              className="inline-flex"
+            >
+              <ExternalLink className="h-4 w-4 mr-1" /> View
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="soft"
+              onClick={(e) => goTo(e, `/campaigns/search/similar?campaignId=${campaign.id}`)}
+              className="inline-flex"
+            >
+              <Search className="h-4 w-4 mr-1" /> Similar
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="soft"
+              onClick={(e) => goTo(e, `/campaigns/search/keyword?campaignId=${campaign.id}`)}
+              className="inline-flex"
+            >
+              <FileText className="h-4 w-4 mr-1" /> Keyword
+            </Button>
+          </div>
         </CardContent>
-      </Card>
-    </Link>
+    </Card>
   );
 } 

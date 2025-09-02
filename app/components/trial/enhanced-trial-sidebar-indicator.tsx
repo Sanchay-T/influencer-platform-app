@@ -30,41 +30,29 @@ function SubscriptionBadge({ currentPlan }: { currentPlan: string }) {
         return {
           name: 'Glow Up',
           icon: Star,
-          color: 'from-blue-50 to-blue-100',
-          borderColor: 'border-blue-200',
-          textColor: 'text-blue-900',
-          iconColor: 'text-blue-600',
-          glowColor: 'shadow-blue-100'
+          textColor: 'text-zinc-100',
+          iconColor: 'text-emerald-500'
         };
       case 'premium':
         return {
           name: 'Viral Surge',
           icon: Zap,
-          color: 'from-purple-50 to-purple-100',
-          borderColor: 'border-purple-200',
-          textColor: 'text-purple-900',
-          iconColor: 'text-purple-600',
-          glowColor: 'shadow-purple-100'
+          textColor: 'text-zinc-100',
+          iconColor: 'text-emerald-500'
         };
       case 'enterprise':
         return {
           name: 'Fame Flex',
           icon: Crown,
-          color: 'from-amber-50 to-amber-100',
-          borderColor: 'border-amber-200',
-          textColor: 'text-amber-900',
-          iconColor: 'text-amber-600',
-          glowColor: 'shadow-amber-100'
+          textColor: 'text-zinc-100',
+          iconColor: 'text-emerald-500'
         };
       default:
         return {
           name: 'Glow Up',
           icon: Star,
-          color: 'from-blue-50 to-blue-100',
-          borderColor: 'border-blue-200',
-          textColor: 'text-blue-900',
-          iconColor: 'text-blue-600',
-          glowColor: 'shadow-blue-100'
+          textColor: 'text-zinc-100',
+          iconColor: 'text-emerald-500'
         };
     }
   };
@@ -73,26 +61,24 @@ function SubscriptionBadge({ currentPlan }: { currentPlan: string }) {
   const IconComponent = planDetails.icon;
 
   return (
-    <div className={`relative bg-gradient-to-r ${planDetails.color} border ${planDetails.borderColor} rounded-xl p-4 space-y-4 shadow-sm ${planDetails.glowColor} transition-all duration-300 hover:shadow-md`}>
-      {/* Premium Glow Effect */}
-      <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl opacity-0 group-hover:opacity-20 blur-sm transition-opacity duration-300"></div>
+    <div className={`relative bg-zinc-900/80 border border-zinc-700/50 rounded-xl p-4 space-y-4`}>
       
       {/* Header with Plan Badge */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className={`p-1.5 bg-white bg-opacity-60 rounded-lg backdrop-blur-sm`}>
+          <div className={`p-1.5 bg-zinc-800 rounded-lg`}>
             <IconComponent className={`h-4 w-4 ${planDetails.iconColor}`} />
           </div>
           <div>
             <span className={`text-sm font-semibold ${planDetails.textColor}`}>
               {planDetails.name}
             </span>
-            <Badge variant="secondary" className="ml-2 text-xs bg-green-100 text-green-700 border-green-200">
+            <Badge variant="secondary" className="ml-2 text-xs bg-emerald-600/20 text-emerald-400 border border-emerald-600/30">
               Active
             </Badge>
           </div>
         </div>
-        <CheckCircle className="h-4 w-4 text-green-500" />
+        <CheckCircle className="h-4 w-4 text-emerald-500" />
       </div>
 
       {/* Status Display */}
@@ -122,7 +108,7 @@ function SubscriptionBadge({ currentPlan }: { currentPlan: string }) {
         <Button 
           size="sm" 
           variant="outline"
-          className={`w-full text-xs border-white/50 hover:bg-white/20 ${planDetails.textColor} border-opacity-30 transition-colors`}
+          className={`w-full text-xs border-zinc-700/50 hover:bg-zinc-800/50 text-zinc-100`}
         >
           <Settings className="h-3 w-3 mr-1" />
           Manage Subscription
@@ -305,50 +291,40 @@ export function EnhancedTrialSidebarIndicator() {
   const getTrialStyling = () => {
     if (isExpired) {
       return {
-        background: 'from-red-50 to-red-100',
-        border: 'border-red-200',
-        text: 'text-red-900',
-        accent: 'text-red-600',
-        progressBg: 'bg-red-100',
-        progressFill: 'bg-red-500',
-        glow: 'shadow-red-100'
+        container: 'bg-zinc-900/80 border border-zinc-700/50',
+        text: 'text-zinc-100',
+        accent: 'text-red-400',
+        progressBg: 'bg-zinc-800',
+        progressFill: 'bg-red-500'
       };
     }
     if (isUrgent) {
       return {
-        background: 'from-amber-50 to-orange-100',
-        border: 'border-orange-200',
-        text: 'text-orange-900',
-        accent: 'text-orange-600',
-        progressBg: 'bg-orange-100',
-        progressFill: 'bg-orange-500',
-        glow: 'shadow-orange-100'
+        container: 'bg-zinc-900/80 border border-zinc-700/50',
+        text: 'text-zinc-100',
+        accent: 'text-amber-400',
+        progressBg: 'bg-zinc-800',
+        progressFill: 'bg-amber-500'
       };
     }
     return {
-      background: 'from-blue-50 to-indigo-100',
-      border: 'border-blue-200',
-      text: 'text-blue-900',
-      accent: 'text-blue-600',
-      progressBg: 'bg-blue-100',
-      progressFill: 'bg-blue-500',
-      glow: 'shadow-blue-100'
+      container: 'bg-zinc-900/80 border border-zinc-700/50',
+      text: 'text-zinc-100',
+      accent: 'text-emerald-500',
+      progressBg: 'bg-zinc-800',
+      progressFill: 'bg-emerald-500'
     };
   };
 
   const styling = getTrialStyling();
 
   return (
-    <div className={`relative bg-gradient-to-br ${styling.background} border ${styling.border} rounded-xl p-4 space-y-4 shadow-sm ${styling.glow} transition-all duration-300 hover:shadow-md`}>
-      {/* Animated border for urgent states */}
-      {(isUrgent || isExpired) && (
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-orange-400 via-red-400 to-pink-400 rounded-xl opacity-20 animate-pulse"></div>
-      )}
+    <div className={`relative ${styling.container} rounded-xl p-4 space-y-4`}>
       
       {/* Header with Trial Badge */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className={`p-1.5 rounded-lg ${styling.progressBg} backdrop-blur-sm`}>
+          <div className={`p-1.5 rounded-lg ${styling.progressBg}`}>
             {isExpired ? (
               <AlertTriangle className={`h-4 w-4 ${styling.accent}`} />
             ) : (
@@ -365,7 +341,7 @@ export function EnhancedTrialSidebarIndicator() {
               </Badge>
             )}
             {isUrgent && !isExpired && (
-              <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-700 border-orange-200 animate-pulse">
+              <Badge variant="secondary" className="text-xs bg-amber-600/20 text-amber-400 border border-amber-600/30">
                 Urgent
               </Badge>
             )}
@@ -502,8 +478,8 @@ export function EnhancedTrialSidebarIndicator() {
       {displayUsageInfo && displayUsageInfo.progressPercentage >= 50 && (
         <div className={`text-xs p-2 rounded-lg border transition-all duration-300 ${
           displayUsageInfo.progressPercentage >= 100 
-            ? 'text-red-700 bg-red-50 border-red-200'
-            : 'text-orange-700 bg-orange-50 border-orange-200'
+            ? 'text-red-400 bg-red-900/30 border-red-800'
+            : 'text-amber-400 bg-amber-900/30 border-amber-800'
         }`}>
           <div className="flex items-center gap-1 mb-1">
             <AlertTriangle className="h-3 w-3 flex-shrink-0" />
@@ -523,16 +499,12 @@ export function EnhancedTrialSidebarIndicator() {
 
       {/* Special offers or incentives */}
       {progressPercentage >= 70 && !isExpired && (
-        <div className="text-xs p-2 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg">
+        <div className="text-xs p-2 rounded-lg border border-zinc-700/50 bg-zinc-800/60">
           <div className="flex items-center gap-1 mb-1">
-            <Sparkles className="h-3 w-3 text-purple-600" />
-            <span className="font-medium text-purple-900">
-              Early Bird Special
-            </span>
+            <Sparkles className="h-3 w-3 text-emerald-500" />
+            <span className="font-medium text-zinc-100">Early Bird Special</span>
           </div>
-          <p className="text-purple-700 opacity-90">
-            Upgrade now and save 20% on your first month!
-          </p>
+          <p className="text-zinc-300 opacity-90">Upgrade now and save 20% on your first month!</p>
         </div>
       )}
     </div>

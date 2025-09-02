@@ -43,7 +43,6 @@ function BillingContent() {
 
   const quickActions = [
     { name: 'View All Plans', href: '/pricing', icon: TrendingUp, description: 'Compare features and pricing' },
-    { name: 'Usage Analytics', href: '/analytics', icon: TrendingUp, description: 'Track your search usage' },
     { name: 'Account Settings', href: '/profile', icon: Shield, description: 'Manage account details' }
   ];
 
@@ -51,23 +50,23 @@ function BillingContent() {
     <div className="space-y-8">
       {/* Page Header */}
       <div>
-        <h1 className="text-3xl font-bold text-zinc-900">Billing & Subscription</h1>
-        <p className="text-zinc-600 mt-2">Manage your plan, usage, and billing information</p>
+        <h1 className="text-2xl font-bold text-zinc-100">Billing & Subscription</h1>
+        <p className="text-zinc-400 mt-1">Manage your plan, usage, and billing information</p>
         
         {/* Upgrade notification */}
         {(upgradeParam || planParam) && (
-          <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="mt-4 bg-zinc-800/60 border border-zinc-700/50 rounded-lg p-4 text-zinc-200">
             <div className="flex items-center gap-2">
               <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="h-5 w-5 text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
               <div>
-                <p className="text-blue-800 font-medium">
+                <p className="text-zinc-100 font-medium">
                   {planParam ? `Ready to upgrade to ${planParam}!` : 'Ready to upgrade!'}
                 </p>
-                <p className="text-blue-600 text-sm">
+                <p className="text-zinc-300 text-sm">
                   Use the subscription management section below to complete your upgrade with test payment.
                 </p>
               </div>
@@ -80,10 +79,10 @@ function BillingContent() {
       <SubscriptionManagement />
 
       {/* Quick Actions - Simplified */}
-      <Card className="border-zinc-200">
+      <Card className="bg-zinc-900/80 border border-zinc-700/50">
         <CardHeader>
           <CardTitle>Quick Actions</CardTitle>
-          <CardDescription>Manage your account and view analytics</CardDescription>
+          <CardDescription>Manage your account and subscription</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -91,14 +90,14 @@ function BillingContent() {
               <Link key={action.name} href={action.href}>
                 <Button 
                   variant="outline" 
-                  className="w-full justify-start h-auto p-4 hover:bg-zinc-50"
+                  className="w-full justify-start h-auto p-4 hover:bg-zinc-800/50"
                 >
-                  <action.icon className="h-5 w-5 mr-3 text-zinc-500" />
+                  <action.icon className="h-5 w-5 mr-3 text-zinc-400" />
                   <div className="text-left">
-                    <div className="font-medium text-zinc-900">{action.name}</div>
-                    <div className="text-sm text-zinc-600">{action.description}</div>
+                    <div className="font-medium text-zinc-100">{action.name}</div>
+                    <div className="text-sm text-zinc-400">{action.description}</div>
                   </div>
-                  <ArrowRight className="h-4 w-4 ml-auto text-zinc-400" />
+                  <ArrowRight className="h-4 w-4 ml-auto text-zinc-500" />
                 </Button>
               </Link>
             ))}
@@ -110,15 +109,15 @@ function BillingContent() {
       {/* Plan Comparison - Always Show All Plans */}
       <div className="space-y-6" id="plan-comparison">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-zinc-900 mb-2">
+          <h2 className="text-2xl font-bold text-zinc-100 mb-2">
             {needsUpgrade ? 'Upgrade Your Plan' : 'All Available Plans'}
           </h2>
-          <p className="text-zinc-600">
+          <p className="text-zinc-400">
             {needsUpgrade ? 'Choose the plan that fits your needs' : 'Compare all plans and upgrade anytime'}
           </p>
         </div>
         
-        <Card className="border-zinc-200">
+        <Card className="bg-zinc-900/80 border border-zinc-700/50">
           <CardContent className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Glow Up Plan */}

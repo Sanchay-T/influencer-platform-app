@@ -5,23 +5,25 @@ import CampaignCard from "./campaign-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "react-hot-toast";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2, RefreshCw } from "lucide-react";
 
 function CampaignCardSkeleton() {
   return (
-    <Card className="border-none bg-gray-50">
-      <CardHeader className="pb-4">
+    <Card className="bg-zinc-900/80 border border-zinc-700/50">
+      <CardHeader className="p-4 pb-3">
         <div className="flex items-center justify-between">
           <div className="space-y-2 w-full">
-            <Skeleton className="h-6 w-[200px]" />
-            <Skeleton className="h-4 w-[300px]" />
+            <Skeleton className="h-5 w-[180px] bg-zinc-800" />
+            <Skeleton className="h-3.5 w-[260px] bg-zinc-800" />
           </div>
-          <Skeleton className="h-5 w-[60px]" />
+          <Skeleton className="h-5 w-[60px] bg-zinc-800" />
         </div>
       </CardHeader>
-      <CardContent className="pt-0">
-        <Skeleton className="h-4 w-[140px]" />
+      <CardContent className="px-4 pt-0 pb-4">
+        <Skeleton className="h-3.5 w-[120px] bg-zinc-800" />
       </CardContent>
     </Card>
   );
@@ -37,8 +39,11 @@ export default function CampaignList() {
     currentPage: 1,
     total: 0,
     pages: 0,
-    limit: 12
+    limit: 9
   });
+  const [filterStatus, setFilterStatus] = useState('all'); // all | draft | active | completed
+  const [query, setQuery] = useState('');
+  const [sortBy, setSortBy] = useState('newest'); // newest | updated | alpha
 
   const fetchCampaigns = async (page = 1, retry = false) => {
     try {
@@ -141,10 +146,10 @@ export default function CampaignList() {
 
   if (error) {
     return (
-      <Card className="border-none bg-red-50">
+      <Card className="bg-zinc-900/80 border border-zinc-700/50">
         <CardContent className="flex flex-col items-center justify-center h-32 space-y-4">
-          <p className="text-red-600 font-medium">Error al cargar campañas</p>
-          <p className="text-red-500 text-sm">{error}</p>
+          <p className="text-pink-400 font-medium">Failed to load campaigns</p>
+          <p className="text-zinc-400 text-sm">{error}</p>
           <Button 
             variant="outline" 
             size="sm"
@@ -152,18 +157,34 @@ export default function CampaignList() {
             className="flex items-center gap-2"
           >
             <RefreshCw className="h-4 w-4" />
-            Reintentar
+            Retry
           </Button>
         </CardContent>
       </Card>
     );
   }
 
+  const normalized = (s) => (s || '').toString().toLowerCase();
+  const filtered = campaigns
+    .filter(c => filterStatus === 'all' ? true : c.status === filterStatus)
+    .filter(c => {
+      if (!query) return true;
+      const q = normalized(query);
+      return normalized(c.name).includes(q) || normalized(c.description).includes(q);
+    });
+
+  const sorted = [...filtered].sort((a, b) => {
+    if (sortBy === 'alpha') return a.name.localeCompare(b.name);
+    if (sortBy === 'updated') return new Date(b.updatedAt) - new Date(a.updatedAt);
+    // default newest by createdAt
+    return new Date(b.createdAt) - new Date(a.createdAt);
+  });
+
   const renderContent = () => {
     if (loading) {
       return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(12)].map((_, index) => (
+          {[...Array(pagination.limit || 9)].map((_, index) => (
             <CampaignCardSkeleton key={index} />
           ))}
         </div>
@@ -172,17 +193,17 @@ export default function CampaignList() {
 
     if (campaigns.length === 0) {
       return (
-        <Card className="border-none bg-gray-50">
+        <Card className="bg-zinc-900/80 border border-zinc-700/50">
           <CardContent className="flex items-center justify-center h-32">
-            <p className="text-gray-500">No campaigns found</p>
+            <p className="text-zinc-500">No campaigns found</p>
           </CardContent>
         </Card>
       );
     }
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {campaigns.map((campaign) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {sorted.map((campaign) => (
           <CampaignCard key={campaign.id} campaign={campaign} />
         ))}
       </div>
@@ -191,6 +212,54 @@ export default function CampaignList() {
 
   return (
     <div className="space-y-6">
+      {/* Controls: filters, search, sort */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-2">
+          {['all','draft','active','completed'].map((s) => (
+            <Button
+              key={s}
+              variant={filterStatus === s ? 'default' : 'outline'}
+              size="sm"
+              className={filterStatus === s ? 'bg-emerald-600 hover:bg-emerald-500 text-white' : 'border-zinc-700/50 text-zinc-300'}
+              onClick={() => setFilterStatus(s)}
+            >
+              {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
+            </Button>
+          ))}
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Input
+              placeholder="Filter campaigns..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="w-64 bg-zinc-800/60 border-zinc-700/50"
+            />
+          </div>
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-44 bg-zinc-800/60 border-zinc-700/50 text-zinc-200">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent className="bg-zinc-900 border-zinc-700/50">
+              <SelectItem value="newest">Newest</SelectItem>
+              <SelectItem value="updated">Recently Updated</SelectItem>
+              <SelectItem value="alpha">A–Z</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between text-xs text-zinc-400">
+        <div>
+          Showing {sorted.length} of {campaigns.length} on this page
+        </div>
+        {pagination?.pages > 0 && (
+          <div>
+            Page {pagination.currentPage} of {pagination.pages}
+          </div>
+        )}
+      </div>
+
       {renderContent()}
       
       {pagination.pages > 1 && (

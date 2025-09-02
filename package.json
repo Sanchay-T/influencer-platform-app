@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:wt1": "./scripts/dev-wt.sh",
+    "dev:project": "npm --prefix project run dev -- -p 3009",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -29,6 +31,7 @@
     "@radix-ui/react-separator": "^1.1.2",
     "@radix-ui/react-slider": "^1.2.3",
     "@radix-ui/react-slot": "^1.1.2",
+    "@radix-ui/react-tabs": "^1.1.13",
     "@react-email/components": "^0.0.38",
     "@stripe/react-stripe-js": "^3.7.0",
     "@stripe/stripe-js": "^7.4.0",

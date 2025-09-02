@@ -148,11 +148,11 @@ export default function ProfileSettingsPage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="py-6 space-y-8">
         {/* Page Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Profile Settings</h1>
-          <p className="mt-1 text-sm text-gray-600">
+        <div className="mb-2">
+          <h1 className="text-2xl font-bold text-zinc-100">Profile Settings</h1>
+          <p className="mt-1 text-sm text-zinc-400">
             Manage your account information{isAdmin ? ', trial status, and email preferences' : ' and trial status'}
           </p>
         </div>
@@ -188,16 +188,16 @@ export default function ProfileSettingsPage() {
           ) : (
             // No trial data placeholder
             <section className="flex justify-center">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-2xl w-full">
+              <div className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg p-6 max-w-2xl w-full text-zinc-200">
                 <div className="flex items-start">
                   <div className="flex-shrink-0">
-                    <svg className="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="h-6 w-6 text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
                   <div className="ml-3">
-                    <h3 className="text-sm font-medium text-blue-800">No Trial Active</h3>
-                    <div className="mt-2 text-sm text-blue-700">
+                    <h3 className="text-sm font-medium text-zinc-100">No Trial Active</h3>
+                    <div className="mt-2 text-sm text-zinc-300">
                       <p>You haven't started your free trial yet. Complete onboarding or contact support if you've already completed it.</p>
                     </div>
                   </div>
@@ -208,10 +208,10 @@ export default function ProfileSettingsPage() {
 
           {/* Account Information Section */}
           <section>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Account Information</h2>
+            <h2 className="text-lg font-semibold text-zinc-100 mb-4">Account Information</h2>
             <div className="grid gap-6 lg:grid-cols-2">
               {/* Personal Information Card */}
-              <Card className="h-fit">
+              <Card className="h-fit bg-zinc-900/80 border border-zinc-700/50">
                 <CardHeader>
                   <CardTitle>Personal Information</CardTitle>
                   <CardDescription>
@@ -220,46 +220,46 @@ export default function ProfileSettingsPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {error ? (
-                    <div className="text-sm text-red-500 p-4 bg-red-50 rounded-md">
+                    <div className="text-sm text-red-400 p-4 bg-red-900/20 border border-red-800 rounded-md">
                       {error}
                     </div>
                   ) : (
                     <div className="grid gap-4">
                       <div className="flex items-center space-x-4">
-                        <User className="text-gray-500 flex-shrink-0" size={20} />
+                        <User className="text-zinc-400 flex-shrink-0" size={20} />
                         <div className="space-y-0.5 min-w-0">
                           <Label className="text-sm font-medium">Name</Label>
-                          <p className="text-sm text-muted-foreground truncate">
+                          <p className="text-sm text-zinc-400 truncate">
                             {userProfile.name || 'Not available'}
                           </p>
                         </div>
                       </div>
                       
                       <div className="flex items-center space-x-4">
-                        <Mail className="text-gray-500 flex-shrink-0" size={20} />
+                        <Mail className="text-zinc-400 flex-shrink-0" size={20} />
                         <div className="space-y-0.5 min-w-0">
                           <Label className="text-sm font-medium">Email</Label>
-                          <p className="text-sm text-muted-foreground truncate">
+                          <p className="text-sm text-zinc-400 truncate">
                             {userProfile.email || 'Not available'}
                           </p>
                         </div>
                       </div>
                       
                       <div className="flex items-center space-x-4">
-                        <Building2 className="text-gray-500 flex-shrink-0" size={20} />
+                        <Building2 className="text-zinc-400 flex-shrink-0" size={20} />
                         <div className="space-y-0.5 min-w-0">
                           <Label className="text-sm font-medium">Company</Label>
-                          <p className="text-sm text-muted-foreground truncate">
+                          <p className="text-sm text-zinc-400 truncate">
                             {userProfile.companyName || 'Not set'}
                           </p>
                         </div>
                       </div>
 
                       <div className="flex items-center space-x-4">
-                        <Factory className="text-gray-500 flex-shrink-0" size={20} />
+                        <Factory className="text-zinc-400 flex-shrink-0" size={20} />
                         <div className="space-y-0.5 min-w-0">
                           <Label className="text-sm font-medium">Industry</Label>
-                          <p className="text-sm text-muted-foreground truncate">
+                          <p className="text-sm text-zinc-400 truncate">
                             {userProfile.industry || 'Not set'}
                           </p>
                         </div>
@@ -270,7 +270,7 @@ export default function ProfileSettingsPage() {
               </Card>
 
               {/* Subscription Plan Card */}
-              <Card className="h-fit">
+              <Card className="h-fit bg-zinc-900/80 border border-zinc-700/50">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     Subscription Plan
@@ -284,7 +284,7 @@ export default function ProfileSettingsPage() {
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">Current Plan</Label>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-zinc-400">
                         You are currently on the {currentPlan?.charAt(0).toUpperCase() + currentPlan?.slice(1)} plan
                       </p>
                     </div>
@@ -313,7 +313,7 @@ export default function ProfileSettingsPage() {
               </Card>
 
               {/* Account Management Card */}
-              <Card className="h-fit">
+              <Card className="h-fit bg-zinc-900/80 border border-zinc-700/50">
                 <CardHeader>
                   <CardTitle>Account Management</CardTitle>
                   <CardDescription>
@@ -324,7 +324,7 @@ export default function ProfileSettingsPage() {
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">Account Settings</Label>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-zinc-400">
                         Update your email, password, and security preferences
                       </p>
                     </div>
@@ -347,4 +347,4 @@ export default function ProfileSettingsPage() {
       </div>
     </DashboardLayout>
   );
-} 
+}

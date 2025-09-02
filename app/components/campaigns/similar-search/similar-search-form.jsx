@@ -109,7 +109,7 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
 
 
   return (
-    <Card>
+    <Card className="bg-zinc-900/80 border border-zinc-700/50">
       <CardHeader>
         <CardTitle>Find Similar Creators</CardTitle>
         {searchState.message && (

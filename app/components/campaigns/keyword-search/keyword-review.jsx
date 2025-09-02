@@ -85,7 +85,7 @@ export default function KeywordReview({ onSubmit, isLoading }) {
     // Si aún no es momento de mostrar resultados, mostrar el progreso
     if (!showResults) {
       return (
-        <Card>
+        <Card className="bg-zinc-900/80 border border-zinc-700/50">
           <CardHeader>
             <CardTitle>Processing Campaign</CardTitle>
           </CardHeader>
@@ -101,7 +101,7 @@ export default function KeywordReview({ onSubmit, isLoading }) {
   }
 
   return (
-    <Card>
+    <Card className="bg-zinc-900/80 border border-zinc-700/50">
       <CardHeader>
         <CardTitle>Review Your Keywords</CardTitle>
       </CardHeader>

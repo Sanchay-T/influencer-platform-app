@@ -99,8 +99,8 @@ export default async function CampaignPage({ params }: PageProps) {
       <Suspense fallback={
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center space-y-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-900 border-t-transparent"></div>
-            <p className="text-sm text-gray-500">Loading campaign data...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-zinc-200 border-t-transparent"></div>
+            <p className="text-sm text-zinc-400">Loading campaign data...</p>
           </div>
         </div>
       }>

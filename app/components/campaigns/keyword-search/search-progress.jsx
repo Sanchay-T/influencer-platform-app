@@ -861,13 +861,13 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
                 return (
                 <div 
                   key={`progress-creator-${creator.creator?.uniqueId || actualIndex}-${creator.creator?.name || 'unknown'}-${actualIndex}`}
-                  className="flex items-start gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-all duration-500 animate-in fade-in slide-in-from-bottom-4"
+                  className="flex items-start gap-3 p-3 bg-zinc-900/80 border border-zinc-700/50 rounded-lg hover:border-zinc-600 transition-all duration-500 animate-in fade-in slide-in-from-bottom-4"
                   style={{ 
                     animationDelay: `${index * 50}ms`,
-                    borderLeft: index < 5 ? '3px solid #3B82F6' : '3px solid transparent' // Highlight first 5 as "new"
+                    borderLeft: index < 5 ? '3px solid #10B981' : '3px solid transparent' // Highlight first 5 as "new"
                   }}
                 >
-                  <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                  <div className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center">
                     {proxiedImageUrl ? (
                       <img 
                         src={proxiedImageUrl}
@@ -881,7 +881,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
                       />
                     ) : null}
                     <span 
-                      className="text-sm font-medium text-gray-600"
+                      className="text-sm font-medium text-zinc-300"
                       style={{ display: proxiedImageUrl ? 'none' : 'flex' }}
                     >
                       {creator.creator?.name?.charAt(0)?.toUpperCase() || '?'}
@@ -889,18 +889,18 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
                   </div>
                   
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-gray-900 truncate">
+                    <h4 className="font-medium text-zinc-100 truncate">
                       {creator.creator?.name || 'Unknown Creator'}
                       {/* 🔍 VISUAL DEBUG: Show render timestamp */}
-                      <span className="ml-2 text-xs text-blue-500">
+                      <span className="ml-2 text-xs text-emerald-500">
                         #{index + 1} ({new Date().getSeconds()}s)
                       </span>
                     </h4>
-                    <p className="text-sm text-gray-600 line-clamp-2">
+                    <p className="text-sm text-zinc-400 line-clamp-2">
                       {creator.video?.description || 'No description available'}
                     </p>
                     {creator.creator?.followers && (
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-zinc-500 mt-1">
                         {creator.creator.followers.toLocaleString()} followers
                       </p>
                     )}
@@ -910,7 +910,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
               })}
               
               {intermediateCreators.length > 5 && (
-                <div className="text-center py-3 text-sm text-gray-500 bg-gray-50 rounded-lg">
+                <div className="text-center py-3 text-sm text-zinc-400 bg-zinc-800/60 rounded-lg">
                   And {intermediateCreators.length - 5} more results...
                 </div>
               )}

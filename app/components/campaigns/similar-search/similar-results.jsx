@@ -60,37 +60,37 @@ export default function SimilarResults({ data }) {
         </Button>
       </div>
 
-      <div className="border rounded-lg">
+      <div className="rounded-lg border border-zinc-800 bg-zinc-900/30">
         <div className="overflow-x-auto">
           <div className="min-w-[1500px]">
             <div className="max-h-[600px] overflow-y-auto">
               <Table>
-                <TableHeader className="sticky top-0 bg-white z-10">
-                  <TableRow>
-                    <TableHead>Profile</TableHead>
-                    <TableHead>Categories</TableHead>
-                    <TableHead>Platform</TableHead>
-                    <TableHead>Followers</TableHead>
-                    <TableHead>Engagement</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Similarity Score</TableHead>
+                <TableHeader>
+                  <TableRow className="border-b border-zinc-800">
+                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">Profile</TableHead>
+                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">Categories</TableHead>
+                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">Platform</TableHead>
+                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">Followers</TableHead>
+                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">Engagement</TableHead>
+                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">Location</TableHead>
+                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">Similarity Score</TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
+                <TableBody className="divide-y divide-zinc-800">
                   {getCurrentPageData().map((creator) => (
-                    <TableRow key={creator.username}>
-                      <TableCell>
+                    <TableRow key={creator.username} className="table-row">
+                      <TableCell className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <Avatar>
                             <AvatarFallback>{creator.name.charAt(0)}</AvatarFallback>
                           </Avatar>
                           <div>
-                            <div className="font-semibold">{creator.name}</div>
-                            <div className="text-sm text-gray-500">@{creator.username}</div>
+                            <div className="font-semibold text-zinc-100">{creator.name}</div>
+                            <div className="text-sm text-zinc-500">@{creator.username}</div>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="px-6 py-4">
                         <div className="flex gap-1 flex-wrap">
                           {creator.categories.map((category) => (
                             <Badge 
@@ -106,12 +106,12 @@ export default function SimilarResults({ data }) {
                           ))}
                         </div>
                       </TableCell>
-                      <TableCell>{creator.platform}</TableCell>
-                      <TableCell>{creator.followers}</TableCell>
-                      <TableCell>{creator.engagement}</TableCell>
-                      <TableCell>{creator.location}</TableCell>
-                      <TableCell>
-                        <Badge variant="success" className="bg-green-100 text-green-800">
+                      <TableCell className="px-6 py-4 text-zinc-300">{creator.platform}</TableCell>
+                      <TableCell className="px-6 py-4 text-zinc-300">{creator.followers}</TableCell>
+                      <TableCell className="px-6 py-4 text-zinc-300">{creator.engagement}</TableCell>
+                      <TableCell className="px-6 py-4 text-zinc-300">{creator.location}</TableCell>
+                      <TableCell className="px-6 py-4">
+                        <Badge className="bg-emerald-600/20 text-emerald-400 border border-emerald-600/30">
                           {creator.similarityScore}
                         </Badge>
                       </TableCell>

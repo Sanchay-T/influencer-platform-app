@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Crown, Zap, Shield } from 'lucide-react';
 
 export default function AdminUsersPage() {
@@ -59,10 +61,13 @@ export default function AdminUsersPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <Card>
+    <div className="py-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-zinc-100">Admin Users</h1>
+      </div>
+      <Card className="bg-zinc-900/80 border border-zinc-700/50">
         <CardHeader>
-          <CardTitle>Make User Admin</CardTitle>
+          <CardTitle className="text-zinc-100">Make User Admin</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex gap-2">
@@ -78,83 +83,90 @@ export default function AdminUsersPage() {
           </div>
 
           {message && (
-            <div className="p-2 bg-gray-100 rounded text-sm">{message}</div>
+            <div className="p-2 bg-zinc-800/60 border border-zinc-700/50 rounded text-sm text-zinc-200">{message}</div>
           )}
 
-          <div className="space-y-2">
-            {users.map((user) => {
-              const getBillingBadge = (billing) => {
-                if (!billing) return null;
-                
-                const planConfig = {
-                  free: { icon: Shield, color: 'bg-gray-100 text-gray-800' },
-                  premium: { icon: Zap, color: 'bg-blue-100 text-blue-800' },
-                  enterprise: { icon: Crown, color: 'bg-purple-100 text-purple-800' }
-                };
-                
-                const config = planConfig[billing.currentPlan] || planConfig.free;
-                const Icon = config.icon;
-                
-                return (
-                  <Badge className={`${config.color} flex items-center gap-1`}>
-                    <Icon className="h-3 w-3" />
-                    {billing.currentPlan?.charAt(0).toUpperCase() + billing.currentPlan?.slice(1)}
-                    {billing.isTrialing && ' (Trial)'}
-                  </Badge>
-                );
-              };
-              
-              return (
-                <div key={user.user_id || user.id} className="flex items-center justify-between p-3 border rounded">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="font-medium">
-                        {user.full_name || user.fullName || user.firstName + ' ' + user.lastName}
-                      </div>
-                      {getBillingBadge(user.billing)}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {user.email || 'No email'}
-                    </div>
-                    <div className="flex gap-2 text-xs text-gray-500 mt-1">
-                      {user.source === 'clerk' && (
-                        <span className="text-blue-600">Clerk User (No Profile)</span>
-                      )}
-                      {user.billing && (
-                        <span>
-                          {user.billing.isActive ? '✅ Active' : '❌ Inactive'} • 
-                          Plan: {user.billing.currentPlan}
-                          {user.billing.subscriptionId && ` • Sub: ${user.billing.subscriptionId.slice(-8)}`}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    {user.billing && user.billing.currentPlan !== 'enterprise' && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          // TODO: Add plan upgrade functionality
-                          setMessage(`Plan upgrade for ${user.firstName} - Feature coming soon`);
-                        }}
-                      >
-                        Upgrade Plan
-                      </Button>
-                    )}
-                    <Button
-                      size="sm"
-                      onClick={() => promoteToAdmin(
-                        user.user_id || user.id, 
-                        user.full_name || user.fullName || user.firstName
-                      )}
-                    >
-                      Make Admin
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="rounded-lg border border-zinc-800 bg-zinc-900/30 overflow-hidden">
+            <div className="w-full overflow-x-auto">
+              <Table className="w-full">
+                <TableHeader>
+                  <TableRow className="border-b border-zinc-800">
+                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[200px]">User</TableHead>
+                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">Email</TableHead>
+                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">Plan</TableHead>
+                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">Status</TableHead>
+                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[220px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="divide-y divide-zinc-800">
+                  {users.map((user) => {
+                    const billing = user.billing || { currentPlan: 'free', isActive: false };
+                    const planName = billing.currentPlan?.replace('_', ' ') || 'free';
+                    const isActive = billing.isActive;
+                    return (
+                      <TableRow key={user.user_id || user.id} className="table-row">
+                        <TableCell className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-9 w-9">
+                              <AvatarImage src={user.imageUrl} alt={user.full_name || user.fullName || user.firstName} />
+                              <AvatarFallback className="bg-zinc-700 text-zinc-300">
+                                {(user.full_name || user.fullName || user.firstName || 'U').slice(0,1).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-medium text-zinc-100">
+                                {user.full_name || user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim()}
+                              </div>
+                              {user.source === 'clerk' && (
+                                <div className="text-xs text-zinc-500">Clerk User (No Profile)</div>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-6 py-4 text-zinc-300">
+                          {user.email || user.emailAddress || 'No email'}
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          <Badge className="bg-zinc-800 text-zinc-200 border border-zinc-700/50 flex items-center gap-1">
+                            {planName.replace(/\b\w/g, c => c.toUpperCase())}
+                            {billing.isTrialing && ' (Trial)'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          {isActive ? (
+                            <Badge className="bg-emerald-600/20 text-emerald-400 border border-emerald-600/30">Active</Badge>
+                          ) : (
+                            <Badge className="bg-zinc-800 text-zinc-300 border border-zinc-700/50">Inactive</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          <div className="flex gap-2">
+                            {billing && billing.currentPlan !== 'enterprise' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setMessage(`Plan upgrade for ${user.firstName || user.full_name || 'User'} - Feature coming soon`)}
+                              >
+                                Upgrade Plan
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              onClick={() => promoteToAdmin(
+                                user.user_id || user.id,
+                                user.full_name || user.fullName || user.firstName
+                              )}
+                            >
+                              Make Admin
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </CardContent>
       </Card>

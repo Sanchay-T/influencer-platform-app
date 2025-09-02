@@ -105,13 +105,8 @@ export default function Home() {
 
       <SignedIn>
         <DashboardLayout>
-          <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold">Your campaigns</h1>
-            <Link href="/campaigns/new">
-              <Button>
-                <PlusCircle className="mr-2" /> Create campaign
-              </Button>
-            </Link>
+          <div className="flex justify-between items-center mb-4 mt-4">
+            <h1 className="text-2xl font-bold">Your campaigns</h1>
           </div>
           <CampaignList />
           

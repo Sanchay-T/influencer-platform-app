@@ -1,0 +1,495 @@
+
+> influencerplatform@0.1.0 dev
+> next dev
+
+   ▲ Next.js 15.2.3
+   - Local:        http://localhost:3008
+   - Network:      http://192.168.1.14:3008
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1668ms
+ ✓ Compiled /middleware in 180ms (217 modules)
+ ○ Compiling / ...
+ ✓ Compiled / in 2.6s (1536 modules)
+🔍 [STRIPE-VALIDATOR] Environment Detection: {
+  NODE_ENV: 'development',
+  VERCEL_ENV: '',
+  isProduction: false,
+  secretKeyType: 'TEST',
+  publishableKeyType: 'TEST'
+}
+✅ [STRIPE-VALIDATOR] Stripe environment validation passed
+🚀 [STARTUP-VALIDATION] Running environment validation...
+🔍 [STRIPE-VALIDATOR] Environment Detection: {
+  NODE_ENV: 'development',
+  VERCEL_ENV: '',
+  isProduction: false,
+  secretKeyType: 'TEST',
+  publishableKeyType: 'TEST'
+}
+✅ [STRIPE-VALIDATOR] Stripe environment validation passed
+📊 [STARTUP-VALIDATION] Current Configuration:
+   NODE_ENV: development
+   VERCEL_ENV: not set
+   Stripe Mode: TEST
+   Dev Mode: true
+✅ [STARTUP-VALIDATION] Environment validation complete
+ HEAD / 200 in 3144ms
+ ✓ Compiled in 608ms (626 modules)
+ ✓ Compiled in 600ms (1536 modules)
+ ✓ Compiled in 457ms (626 modules)
+ ✓ Compiled in 217ms (626 modules)
+ ✓ Compiled / in 195ms (910 modules)
+🔍 [STRIPE-VALIDATOR] Environment Detection: {
+  NODE_ENV: 'development',
+  VERCEL_ENV: '',
+  isProduction: false,
+  secretKeyType: 'TEST',
+  publishableKeyType: 'TEST'
+}
+✅ [STRIPE-VALIDATOR] Stripe environment validation passed
+🚀 [STARTUP-VALIDATION] Running environment validation...
+🔍 [STRIPE-VALIDATOR] Environment Detection: {
+  NODE_ENV: 'development',
+  VERCEL_ENV: '',
+  isProduction: false,
+  secretKeyType: 'TEST',
+  publishableKeyType: 'TEST'
+}
+✅ [STRIPE-VALIDATOR] Stripe environment validation passed
+📊 [STARTUP-VALIDATION] Current Configuration:
+   NODE_ENV: development
+   VERCEL_ENV: not set
+   Stripe Mode: TEST
+   Dev Mode: true
+✅ [STARTUP-VALIDATION] Environment validation complete
+ GET / 200 in 494ms
+ ✓ Compiled /favicon.ico in 220ms (914 modules)
+ GET /favicon.ico 200 in 518ms
+ ○ Compiling /api/onboarding/status ...
+ ✓ Compiled /_not-found in 1167ms (1678 modules)
+🔍 [STRIPE-VALIDATOR] Environment Detection: {
+  NODE_ENV: 'development',
+  VERCEL_ENV: '',
+  isProduction: false,
+  secretKeyType: 'TEST',
+  publishableKeyType: 'TEST'
+}
+✅ [STRIPE-VALIDATOR] Stripe environment validation passed
+🚀 [STARTUP-VALIDATION] Running environment validation...
+🔍 [STRIPE-VALIDATOR] Environment Detection: {
+  NODE_ENV: 'development',
+  VERCEL_ENV: '',
+  isProduction: false,
+  secretKeyType: 'TEST',
+  publishableKeyType: 'TEST'
+}
+✅ [STRIPE-VALIDATOR] Stripe environment validation passed
+📊 [STARTUP-VALIDATION] Current Configuration:
+   NODE_ENV: development
+   VERCEL_ENV: not set
+   Stripe Mode: TEST
+   Dev Mode: true
+✅ [STARTUP-VALIDATION] Environment validation complete
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+🔍 [ONBOARDING-STATUS] Checking onboarding status
+✅ [ONBOARDING-STATUS] User authenticated: user_2zRnraoVNDAegfHnci1xUMWybwz
+💳 [BILLING-STATUS] Fetching billing status for user: user_2zRnraoVNDAegfHnci1xUMWybwz
+
+
+====== CAMPAIGNS API GET CALLED ======
+🔍 [CAMPAIGNS-API] GET request received at: 2025-09-02T13:23:03.318Z
+🔐 [CAMPAIGNS-API] Getting authenticated user from Clerk
+✅ [CAMPAIGNS-API] User authenticated { userId: 'user_2zRnraoVNDAegfHnci1xUMWybwz' }
+🔍 [CAMPAIGNS-API] Fetching campaigns with pagination { page: 1, limit: 9, offset: 0 }
+🔄 [CAMPAIGNS-API] Executing parallel database queries
+ GET /_next/static/webpack/e8f4e2223b0df48d.webpack.hot-update.json 404 in 857ms
+ GET /api/onboarding/status 200 in 1701ms
+ GET /api/billing/status 200 in 1701ms
+ GET /api/campaigns?page=1&limit=9 200 in 1701ms
+ GET / 200 in 207ms
+ GET /favicon.ico 200 in 216ms
+💳 [BILLING-STATUS] Fetching billing status for user: user_2zRnraoVNDAegfHnci1xUMWybwz
+
+
+====== CAMPAIGNS API GET CALLED ======
+🔍 [CAMPAIGNS-API] GET request received at: 2025-09-02T13:23:04.359Z
+🔐 [CAMPAIGNS-API] Getting authenticated user from Clerk
+🔍 [ONBOARDING-STATUS] Checking onboarding status
+✅ [CAMPAIGNS-API] User authenticated { userId: 'user_2zRnraoVNDAegfHnci1xUMWybwz' }
+🔍 [CAMPAIGNS-API] Fetching campaigns with pagination { page: 1, limit: 9, offset: 0 }
+🔄 [CAMPAIGNS-API] Executing parallel database queries
+✅ [ONBOARDING-STATUS] User authenticated: user_2zRnraoVNDAegfHnci1xUMWybwz
+📊 [ONBOARDING-STATUS] User profile found: {
+  userId: 'user_2zRnraoVNDAegfHnci1xUMWybwz',
+  onboardingStep: 'completed',
+  fullName: 'Sanchay Thalnerkar',
+  businessName: 'Sanchay Trial'
+}
+ GET /api/onboarding/status 200 in 8508ms
+📊 [ONBOARDING-STATUS] User profile found: {
+  userId: 'user_2zRnraoVNDAegfHnci1xUMWybwz',
+  onboardingStep: 'completed',
+  fullName: 'Sanchay Thalnerkar',
+  businessName: 'Sanchay Trial'
+}
+✅ [CAMPAIGNS-API] Campaigns fetched successfully {
+  totalCount: 79,
+  fetchedCount: 9,
+  pagination: { total: 79, pages: 9, currentPage: 1, limit: 9 }
+}
+ GET /api/campaigns?page=1&limit=9 200 in 8673ms
+
+
+====== CAMPAIGNS API GET CALLED ======
+🔍 [CAMPAIGNS-API] GET request received at: 2025-09-02T13:23:13.052Z
+🔐 [CAMPAIGNS-API] Getting authenticated user from Clerk
+✅ [CAMPAIGNS-API] User authenticated { userId: 'user_2zRnraoVNDAegfHnci1xUMWybwz' }
+🔍 [CAMPAIGNS-API] Fetching campaigns with pagination { page: 1, limit: 9, offset: 0 }
+🔄 [CAMPAIGNS-API] Executing parallel database queries
+🔍 [BILLING-STATUS-DIAGNOSTICS] User state analysis: {
+  userId: 'user_2zRnraoVNDAegfHnci1xUMWybwz',
+  currentPlan: 'glow_up',
+  onboardingStep: 'completed',
+  trialStatus: 'expired',
+  subscriptionStatus: 'canceled',
+  hasStripeSubscriptionId: true,
+  hasStripeCustomerId: true,
+  lastWebhookEvent: null,
+  lastWebhookTimestamp: undefined,
+  billingSyncStatus: 'plan_selected',
+  hasInconsistentState: false,
+  trialStartDate: '2025-07-10T04:00:48.031Z',
+  trialEndDate: '2025-07-17T04:00:48.031Z',
+  updatedAt: '2025-08-29T18:56:39.370Z'
+}
+🔍 [TRIAL-SERVICE] Getting trial status for user: user_2zRnraoVNDAegfHnci1xUMWybwz
+🔍 [BILLING-STATUS-DIAGNOSTICS] User state analysis: {
+  userId: 'user_2zRnraoVNDAegfHnci1xUMWybwz',
+  currentPlan: 'glow_up',
+  onboardingStep: 'completed',
+  trialStatus: 'expired',
+  subscriptionStatus: 'canceled',
+  hasStripeSubscriptionId: true,
+  hasStripeCustomerId: true,
+  lastWebhookEvent: null,
+  lastWebhookTimestamp: undefined,
+  billingSyncStatus: 'plan_selected',
+  hasInconsistentState: false,
+  trialStartDate: '2025-07-10T04:00:48.031Z',
+  trialEndDate: '2025-07-17T04:00:48.031Z',
+  updatedAt: '2025-08-29T18:56:39.370Z'
+}
+🔍 [TRIAL-SERVICE] Getting trial status for user: user_2zRnraoVNDAegfHnci1xUMWybwz
+✅ [CAMPAIGNS-API] Campaigns fetched successfully {
+  totalCount: 79,
+  fetchedCount: 9,
+  pagination: { total: 79, pages: 9, currentPage: 1, limit: 9 }
+}
+📊 [TRIAL-SERVICE] Trial status retrieved: {
+  status: 'expired',
+  daysRemaining: 0,
+  progressPercentage: 100,
+  isExpired: true,
+  currentPlan: 'glow_up',
+  hasActiveSubscription: false
+}
+✅ [BILLING-STATUS] Billing status retrieved: {
+  currentPlan: 'glow_up',
+  isTrialing: false,
+  hasActiveSubscription: false,
+  trialStatus: 'expired',
+  daysRemaining: 0
+}
+📊 [TRIAL-SERVICE] Trial status retrieved: {
+  status: 'expired',
+  daysRemaining: 0,
+  progressPercentage: 100,
+  isExpired: true,
+  currentPlan: 'glow_up',
+  hasActiveSubscription: false
+}
+✅ [BILLING-STATUS] Billing status retrieved: {
+  currentPlan: 'glow_up',
+  isTrialing: false,
+  hasActiveSubscription: false,
+  trialStatus: 'expired',
+  daysRemaining: 0
+}
+ GET /api/billing/status 200 in 9317ms
+💳 [BILLING-STATUS] Fetching billing status for user: user_2zRnraoVNDAegfHnci1xUMWybwz
+✅ [CAMPAIGNS-API] Campaigns fetched successfully {
+  totalCount: 79,
+  fetchedCount: 9,
+  pagination: { total: 79, pages: 9, currentPage: 1, limit: 9 }
+}
+ GET /api/campaigns?page=1&limit=9 200 in 625ms
+🔍 [BILLING-STATUS-DIAGNOSTICS] User state analysis: {
+  userId: 'user_2zRnraoVNDAegfHnci1xUMWybwz',
+  currentPlan: 'glow_up',
+  onboardingStep: 'completed',
+  trialStatus: 'expired',
+  subscriptionStatus: 'canceled',
+  hasStripeSubscriptionId: true,
+  hasStripeCustomerId: true,
+  lastWebhookEvent: null,
+  lastWebhookTimestamp: undefined,
+  billingSyncStatus: 'plan_selected',
+  hasInconsistentState: false,
+  trialStartDate: '2025-07-10T04:00:48.031Z',
+  trialEndDate: '2025-07-17T04:00:48.031Z',
+  updatedAt: '2025-08-29T18:56:39.370Z'
+}
+🔍 [TRIAL-SERVICE] Getting trial status for user: user_2zRnraoVNDAegfHnci1xUMWybwz
+📊 [TRIAL-SERVICE] Trial status retrieved: {
+  status: 'expired',
+  daysRemaining: 0,
+  progressPercentage: 100,
+  isExpired: true,
+  currentPlan: 'glow_up',
+  hasActiveSubscription: false
+}
+✅ [BILLING-STATUS] Billing status retrieved: {
+  currentPlan: 'glow_up',
+  isTrialing: false,
+  hasActiveSubscription: false,
+  trialStatus: 'expired',
+  daysRemaining: 0
+}
+ GET /api/billing/status 200 in 1055ms
+ ✓ Compiled in 185ms (630 modules)
+ GET / 200 in 56ms
+ GET /favicon.ico 200 in 223ms
+ ✓ Compiled in 162ms (627 modules)
+ GET / 200 in 22ms
+ ✓ Compiled /_not-found in 269ms (1531 modules)
+ GET /favicon.ico 404 in 488ms
+ ✓ Compiled in 126ms (630 modules)
+🔍 [STRIPE-VALIDATOR] Environment Detection: {
+  NODE_ENV: 'development',
+  VERCEL_ENV: '',
+  isProduction: false,
+  secretKeyType: 'TEST',
+  publishableKeyType: 'TEST'
+}
+✅ [STRIPE-VALIDATOR] Stripe environment validation passed
+🚀 [STARTUP-VALIDATION] Running environment validation...
+🔍 [STRIPE-VALIDATOR] Environment Detection: {
+  NODE_ENV: 'development',
+  VERCEL_ENV: '',
+  isProduction: false,
+  secretKeyType: 'TEST',
+  publishableKeyType: 'TEST'
+}
+✅ [STRIPE-VALIDATOR] Stripe environment validation passed
+📊 [STARTUP-VALIDATION] Current Configuration:
+   NODE_ENV: development
+   VERCEL_ENV: not set
+   Stripe Mode: TEST
+   Dev Mode: true
+✅ [STARTUP-VALIDATION] Environment validation complete
+ GET / 200 in 177ms
+ ✓ Compiled in 183ms (630 modules)
+ GET / 200 in 38ms
+ ✓ Compiled in 121ms (627 modules)
+ GET / 200 in 18ms
+ ✓ Compiled in 312ms (1523 modules)
+🔍 [STRIPE-VALIDATOR] Environment Detection: {
+  NODE_ENV: 'development',
+  VERCEL_ENV: '',
+  isProduction: false,
+  secretKeyType: 'TEST',
+  publishableKeyType: 'TEST'
+}
+✅ [STRIPE-VALIDATOR] Stripe environment validation passed
+🚀 [STARTUP-VALIDATION] Running environment validation...
+🔍 [STRIPE-VALIDATOR] Environment Detection: {
+  NODE_ENV: 'development',
+  VERCEL_ENV: '',
+  isProduction: false,
+  secretKeyType: 'TEST',
+  publishableKeyType: 'TEST'
+}
+✅ [STRIPE-VALIDATOR] Stripe environment validation passed
+📊 [STARTUP-VALIDATION] Current Configuration:
+   NODE_ENV: development
+   VERCEL_ENV: not set
+   Stripe Mode: TEST
+   Dev Mode: true
+✅ [STARTUP-VALIDATION] Environment validation complete
+ GET / 200 in 303ms
+ ✓ Compiled /favicon.ico in 79ms (914 modules)
+ GET /favicon.ico 200 in 374ms
+ ✓ Compiled /api/onboarding/status in 128ms (1057 modules)
+ ✓ Compiled (1061 modules)
+
+
+====== CAMPAIGNS API GET CALLED ======
+🔍 [CAMPAIGNS-API] GET request received at: 2025-09-02T13:27:22.600Z
+🔐 [CAMPAIGNS-API] Getting authenticated user from Clerk
+🔍 [ONBOARDING-STATUS] Checking onboarding status
+✅ [CAMPAIGNS-API] User authenticated { userId: 'user_2zRnraoVNDAegfHnci1xUMWybwz' }
+🔍 [CAMPAIGNS-API] Fetching campaigns with pagination { page: 1, limit: 9, offset: 0 }
+🔄 [CAMPAIGNS-API] Executing parallel database queries
+✅ [ONBOARDING-STATUS] User authenticated: user_2zRnraoVNDAegfHnci1xUMWybwz
+(node:27047) TimeoutNegativeWarning: -219216.19088979473 is a negative number.
+Timeout duration was set to 1.
+(Use `node --trace-warnings ...` to show where the warning was created)
+💳 [BILLING-STATUS] Fetching billing status for user: user_2zRnraoVNDAegfHnci1xUMWybwz
+ ⨯ ./app/dashboard/page.jsx
+Error:   [31mx[0m Expected '> (jsx tag end)', got 'jsx name (div)'
+    ,-[[36;1;4m/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/app/dashboard/page.jsx[0m:66:1]
+ [2m63[0m |               <div className="flex items-center gap-4">
+ [2m64[0m |                 <RadialProgress value={42} />
+ [2m65[0m |                 <div>
+ [2m66[0m |                   <div className="text-xl font-semibold">42%</n div>
+    : [35;1m                                                                ^^^[0m
+ [2m67[0m |                   <div className="text-xs text-zinc-500">last 30 days</div>
+ [2m68[0m |                 </div>
+ [2m69[0m |               </div>
+    `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./app/dashboard/page.jsx
+ ○ Compiling /_not-found ...
+ ⨯ ./app/dashboard/page.jsx
+Error:   [31mx[0m Expected '> (jsx tag end)', got 'jsx name (div)'
+    ,-[[36;1;4m/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/app/dashboard/page.jsx[0m:66:1]
+ [2m63[0m |               <div className="flex items-center gap-4">
+ [2m64[0m |                 <RadialProgress value={42} />
+ [2m65[0m |                 <div>
+ [2m66[0m |                   <div className="text-xl font-semibold">42%</n div>
+    : [35;1m                                                                ^^^[0m
+ [2m67[0m |                   <div className="text-xs text-zinc-500">last 30 days</div>
+ [2m68[0m |                 </div>
+ [2m69[0m |               </div>
+    `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./app/dashboard/page.jsx
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/.next/cache/webpack/client-development-fallback/1.pack.gz_' -> '/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/.next/cache/webpack/client-development-fallback/1.pack.gz'
+ ⨯ ./app/dashboard/page.jsx
+Error:   [31mx[0m Expected '> (jsx tag end)', got 'jsx name (div)'
+    ,-[[36;1;4m/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/app/dashboard/page.jsx[0m:66:1]
+ [2m63[0m |               <div className="flex items-center gap-4">
+ [2m64[0m |                 <RadialProgress value={42} />
+ [2m65[0m |                 <div>
+ [2m66[0m |                   <div className="text-xl font-semibold">42%</n div>
+    : [35;1m                                                                ^^^[0m
+ [2m67[0m |                   <div className="text-xs text-zinc-500">last 30 days</div>
+ [2m68[0m |                 </div>
+ [2m69[0m |               </div>
+    `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./app/dashboard/page.jsx
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at ShadowPortal (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/client/components/react-dev-overlay/ui/components/shadow-portal.tsx:5:32)
+    at DevOverlay (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/client/components/react-dev-overlay/ui/dev-overlay.tsx:14:3)
+    at ReactDevOverlay (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/server/dev/next-dev-server.ts:82:10)
+    at div
+    at Body (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/server/render.tsx:1263:19)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at ShadowPortal (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/client/components/react-dev-overlay/ui/components/shadow-portal.tsx:5:32)
+    at DevOverlay (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/client/components/react-dev-overlay/ui/dev-overlay.tsx:14:3)
+    at ReactDevOverlay (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/server/dev/next-dev-server.ts:82:10)
+    at div
+    at Body (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/server/render.tsx:1263:19)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at ShadowPortal (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/client/components/react-dev-overlay/ui/components/shadow-portal.tsx:5:32)
+    at DevOverlay (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/client/components/react-dev-overlay/ui/dev-overlay.tsx:14:3)
+    at ReactDevOverlay (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/server/dev/next-dev-server.ts:82:10)
+    at div
+    at Body (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/server/render.tsx:1263:19)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at ShadowPortal (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/client/components/react-dev-overlay/ui/components/shadow-portal.tsx:5:32)
+    at DevOverlay (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/client/components/react-dev-overlay/ui/dev-overlay.tsx:14:3)
+    at ReactDevOverlay (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/server/dev/next-dev-server.ts:82:10)
+    at div
+    at Body (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/server/render.tsx:1263:19)
+ GET /_next/static/webpack/40360dfdc3a78871.webpack.hot-update.json 500 in 5992ms
+ GET /dashboard 500 in 6355ms
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at ShadowPortal (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/client/components/react-dev-overlay/ui/components/shadow-portal.tsx:5:32)
+    at DevOverlay (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/client/components/react-dev-overlay/ui/dev-overlay.tsx:14:3)
+    at ReactDevOverlay (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/server/dev/next-dev-server.ts:82:10)
+    at div
+    at Body (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/server/render.tsx:1263:19)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at ShadowPortal (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/client/components/react-dev-overlay/ui/components/shadow-portal.tsx:5:32)
+    at DevOverlay (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/client/components/react-dev-overlay/ui/dev-overlay.tsx:14:3)
+    at ReactDevOverlay (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/server/dev/next-dev-server.ts:82:10)
+    at div
+    at Body (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/server/render.tsx:1263:19)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at ShadowPortal (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/client/components/react-dev-overlay/ui/components/shadow-portal.tsx:5:32)
+    at DevOverlay (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/client/components/react-dev-overlay/ui/dev-overlay.tsx:14:3)
+    at ReactDevOverlay (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/server/dev/next-dev-server.ts:82:10)
+    at div
+    at Body (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/server/render.tsx:1263:19)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at ShadowPortal (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/client/components/react-dev-overlay/ui/components/shadow-portal.tsx:5:32)
+    at DevOverlay (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/client/components/react-dev-overlay/ui/dev-overlay.tsx:14:3)
+    at ReactDevOverlay (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/server/dev/next-dev-server.ts:82:10)
+    at div
+    at Body (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/server/render.tsx:1263:19)
+ GET /dashboard 500 in 135ms
+ GET / 500 in 135ms
+ GET /api/billing/status 200 in 7646ms
+ GET /api/campaigns?page=1&limit=9 200 in 7646ms
+ GET /api/onboarding/status 200 in 7646ms
+ GET /favicon.ico 500 in 44ms
+🔍 [BILLING-STATUS-DIAGNOSTICS] User state analysis: {
+  userId: 'user_2zRnraoVNDAegfHnci1xUMWybwz',
+  currentPlan: 'glow_up',
+  onboardingStep: 'completed',
+  trialStatus: 'expired',
+  subscriptionStatus: 'canceled',
+  hasStripeSubscriptionId: true,
+  hasStripeCustomerId: true,
+  lastWebhookEvent: null,
+  lastWebhookTimestamp: undefined,
+  billingSyncStatus: 'plan_selected',
+  hasInconsistentState: false,
+  trialStartDate: '2025-07-10T04:00:48.031Z',
+  trialEndDate: '2025-07-17T04:00:48.031Z',
+  updatedAt: '2025-08-29T18:56:39.370Z'
+}
+🔍 [TRIAL-SERVICE] Getting trial status for user: user_2zRnraoVNDAegfHnci1xUMWybwz
+📊 [ONBOARDING-STATUS] User profile found: {
+  userId: 'user_2zRnraoVNDAegfHnci1xUMWybwz',
+  onboardingStep: 'completed',
+  fullName: 'Sanchay Thalnerkar',
+  businessName: 'Sanchay Trial'
+}
+✅ [CAMPAIGNS-API] Campaigns fetched successfully {
+  totalCount: 79,
+  fetchedCount: 9,
+  pagination: { total: 79, pages: 9, currentPage: 1, limit: 9 }
+}
+📊 [TRIAL-SERVICE] Trial status retrieved: {
+  status: 'expired',
+  daysRemaining: 0,
+  progressPercentage: 100,
+  isExpired: true,
+  currentPlan: 'glow_up',
+  hasActiveSubscription: false
+}
+✅ [BILLING-STATUS] Billing status retrieved: {
+  currentPlan: 'glow_up',
+  isTrialing: false,
+  hasActiveSubscription: false,
+  trialStatus: 'expired',
+  daysRemaining: 0
+}
