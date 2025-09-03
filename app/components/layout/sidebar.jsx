@@ -104,7 +104,7 @@ export default function Sidebar() {
       <div className="border-t border-zinc-700/50 p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3 min-w-0">
-            <div className="w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-sm font-bold text-white">
+            <div className="w-8 h-8 bg-pink-600 rounded-full flex items-center justify-center text-sm font-bold text-white">
               {user?.firstName?.[0] || 'U'}
             </div>
             <div className="flex-1 min-w-0">

@@ -220,7 +220,7 @@ export default function CampaignList() {
               key={s}
               variant={filterStatus === s ? 'default' : 'outline'}
               size="sm"
-              className={filterStatus === s ? 'bg-emerald-600 hover:bg-emerald-500 text-white' : 'border-zinc-700/50 text-zinc-300'}
+              className={filterStatus === s ? 'bg-pink-600 hover:bg-pink-500 text-white' : 'border-zinc-700/50 text-zinc-300'}
               onClick={() => setFilterStatus(s)}
             >
               {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}

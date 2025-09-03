@@ -21,7 +21,7 @@ export default function DashboardPage() {
             <p className="text-sm text-zinc-400 mt-1">High-level overview and quick actions</p>
           </div>
           <Link href="/campaigns/new" className="inline-flex">
-            <Button className="bg-emerald-600 hover:bg-emerald-500 text-white">
+            <Button className="bg-pink-600 hover:bg-pink-500 text-white">
               <PlusCircle className="h-4 w-4 mr-2" /> New Campaign
             </Button>
           </Link>
@@ -63,7 +63,7 @@ export default function DashboardPage() {
               <div className="flex items-center gap-4">
                 <RadialProgress value={42} />
                 <div>
-                  <div className="text-xl font-semibold">42%</n div>
+                  <div className="text-xl font-semibold">42%</div>
                   <div className="text-xs text-zinc-500">last 30 days</div>
                 </div>
               </div>

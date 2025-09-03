@@ -13,7 +13,7 @@ export default function AnimatedSparkline({
   data = [4, 6, 3, 8, 10, 9, 12],
   width = 180,
   height = 48,
-  strokeClassName = 'stroke-emerald-500'
+  strokeClassName = 'stroke-pink-400'
 }: AnimatedSparklineProps) {
   const [animated, setAnimated] = useState(false)
   const pathRef = useRef<SVGPathElement>(null)
@@ -63,4 +63,3 @@ export default function AnimatedSparkline({
     </svg>
   )
 }
-

@@ -172,7 +172,7 @@ export default function SearchResults({
                   <TableCell className="px-6 py-4 text-zinc-300">{influencer.followers.toLocaleString()}</TableCell>
                   <TableCell className="px-6 py-4 text-zinc-300">{influencer.region}</TableCell>
                   <TableCell className="px-6 py-4 text-zinc-300">{influencer.videos}</TableCell>
-                  <TableCell className="px-6 py-4 text-emerald-400">{influencer.email}</TableCell>
+                  <TableCell className="px-6 py-4 text-pink-400">{influencer.email}</TableCell>
                   <TableCell className="px-6 py-4 text-zinc-300">{influencer.following.toLocaleString()}</TableCell>
                   <TableCell className="px-6 py-4 text-zinc-300">{influencer.accountAge}</TableCell>
                 </TableRow>

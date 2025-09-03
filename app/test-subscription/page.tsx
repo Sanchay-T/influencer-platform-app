@@ -29,7 +29,7 @@ export default function TestSubscriptionPage() {
                 alert('Error fetching subscription status');
               }
             }}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+            className="bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-500"
           >
             Fetch Subscription Status
           </button>

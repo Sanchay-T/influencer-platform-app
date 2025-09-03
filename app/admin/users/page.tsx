@@ -134,7 +134,7 @@ export default function AdminUsersPage() {
                         </TableCell>
                         <TableCell className="px-6 py-4">
                           {isActive ? (
-                            <Badge className="bg-emerald-600/20 text-emerald-400 border border-emerald-600/30">Active</Badge>
+                            <Badge className="bg-pink-600/20 text-pink-400 border border-pink-600/30">Active</Badge>
                           ) : (
                             <Badge className="bg-zinc-800 text-zinc-300 border border-zinc-700/50">Inactive</Badge>
                           )}

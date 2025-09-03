@@ -43,7 +43,7 @@ export default function PaymentStep({ onComplete }: PaymentStepProps) {
       yearlyTotal: '$948',
       description: 'Perfect for growing brands',
       icon: Star,
-      color: 'text-blue-600 bg-blue-100',
+      color: 'text-pink-400 bg-zinc-800',
       features: [
         'Up to 3 active campaigns',
         'Up to 1,000 creators per month',
@@ -62,7 +62,7 @@ export default function PaymentStep({ onComplete }: PaymentStepProps) {
       yearlyTotal: '$2,388',
       description: 'Best for scaling businesses',
       icon: Zap,
-      color: 'text-purple-600 bg-purple-100',
+      color: 'text-pink-400 bg-zinc-800',
       features: [
         'Up to 10 active campaigns',
         'Up to 10,000 creators per month',
@@ -82,7 +82,7 @@ export default function PaymentStep({ onComplete }: PaymentStepProps) {
       yearlyTotal: '$4,788',
       description: 'For large-scale operations',
       icon: Crown,
-      color: 'text-yellow-600 bg-yellow-100',
+      color: 'text-pink-400 bg-zinc-800',
       features: [
         'Unlimited campaigns',
         'Unlimited creators',
@@ -163,19 +163,19 @@ export default function PaymentStep({ onComplete }: PaymentStepProps) {
     <div className="space-y-6">
       {/* Billing Cycle Toggle - removed duplicate header */}
       <div className="text-center">
-        <p className="text-gray-600 mb-6">
+        <p className="text-zinc-400 mb-6">
           Select a plan to start your 7-day free trial. You won't be charged until the trial ends.
         </p>
         
         {/* Billing Cycle Toggle */}
         <div className="flex items-center justify-center gap-4 mb-6">
-          <span className={`text-sm ${billingCycle === 'monthly' ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
+          <span className={`text-sm ${billingCycle === 'monthly' ? 'text-zinc-100 font-medium' : 'text-zinc-500'}`}>
             Monthly
           </span>
           <button
             onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'yearly' : 'monthly')}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              billingCycle === 'yearly' ? 'bg-blue-600' : 'bg-gray-200'
+              billingCycle === 'yearly' ? 'bg-pink-600' : 'bg-zinc-700'
             }`}
           >
             <span
@@ -184,11 +184,11 @@ export default function PaymentStep({ onComplete }: PaymentStepProps) {
               }`}
             />
           </button>
-          <span className={`text-sm ${billingCycle === 'yearly' ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
+          <span className={`text-sm ${billingCycle === 'yearly' ? 'text-zinc-100 font-medium' : 'text-zinc-500'}`}>
             Yearly
           </span>
           {billingCycle === 'yearly' && (
-            <Badge variant="secondary" className="bg-green-100 text-green-700">
+            <Badge variant="secondary" className="bg-zinc-800 text-pink-400 border border-zinc-700/50">
               Save 20%
             </Badge>
           )}
@@ -210,8 +210,8 @@ export default function PaymentStep({ onComplete }: PaymentStepProps) {
               <Card 
                 className={`transition-all duration-200 ${
                   isSelected 
-                    ? 'ring-2 ring-blue-500 border-blue-500 shadow-lg' 
-                    : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
+                    ? 'ring-2 ring-pink-500 border-pink-500 shadow-lg' 
+                    : 'border-zinc-700/50 hover:border-zinc-600 hover:shadow-md'
                 }`}
               >
               <CardHeader className="pb-3">
@@ -223,24 +223,24 @@ export default function PaymentStep({ onComplete }: PaymentStepProps) {
                     <div>
                       <div className="flex items-center gap-2">
                         <CardTitle className="text-lg">{plan.name}</CardTitle>
-                        {plan.popular && (
-                          <Badge variant="default" className="bg-blue-600 text-white">
-                            Popular
-                          </Badge>
-                        )}
+                    {plan.popular && (
+                      <Badge variant="default" className="bg-pink-600 text-white">
+                        Popular
+                      </Badge>
+                    )}
                       </div>
                       <CardDescription>{plan.description}</CardDescription>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-2xl font-bold text-gray-900">
+                    <div className="text-2xl font-bold text-zinc-100">
                       {billingCycle === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice}
                     </div>
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-zinc-500">
                       {billingCycle === 'monthly' ? 'per month' : 'per month'}
                     </div>
                     {billingCycle === 'yearly' && (
-                      <div className="text-xs text-gray-400">
+                      <div className="text-xs text-zinc-400">
                         {plan.yearlyTotal} billed annually
                       </div>
                     )}
@@ -251,7 +251,7 @@ export default function PaymentStep({ onComplete }: PaymentStepProps) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   {plan.features.map((feature, index) => (
                     <div key={index} className="flex items-center gap-2 text-sm">
-                      <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                      <CheckCircle className="h-4 w-4 text-pink-400 flex-shrink-0" />
                       <span>{feature}</span>
                     </div>
                   ))}

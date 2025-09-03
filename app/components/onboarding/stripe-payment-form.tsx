@@ -202,14 +202,14 @@ export default function StripePaymentForm({ selectedPlan, onSuccess, onError }: 
       </div>
 
       {/* Trial Information */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <div className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg p-4">
         <div className="flex items-start gap-3">
-          <Lock className="h-5 w-5 text-blue-600 mt-0.5" />
+          <Lock className="h-5 w-5 text-pink-400 mt-0.5" />
           <div>
-            <h3 className="font-medium text-blue-900 mb-1">
+            <h3 className="font-medium text-zinc-100 mb-1">
               7-Day Free Trial
             </h3>
-            <ul className="text-sm text-blue-700 space-y-1">
+            <ul className="text-sm text-zinc-300 space-y-1">
               <li>• Your trial starts immediately after setup</li>
               <li>• No charge for 7 days</li>
               <li>• Cancel anytime during trial</li>

@@ -40,13 +40,13 @@ export function TrialStatusCard({ trialData, className = '' }: TrialStatusCardPr
   const getStatusBadge = () => {
     switch (trialData.status) {
       case 'active':
-        return <Badge variant="secondary" className="bg-zinc-800 text-emerald-400 border border-zinc-700/50">Active Trial</Badge>;
+        return <Badge variant="secondary" className="bg-zinc-800 text-pink-400 border border-zinc-700/50">Active Trial</Badge>;
       case 'expired':
         return <Badge variant="destructive">Trial Expired</Badge>;
       case 'cancelled':
         return <Badge variant="secondary" className="bg-zinc-800 text-zinc-300 border border-zinc-700/50">Cancelled</Badge>;
       case 'converted':
-        return <Badge variant="secondary" className="bg-zinc-800 text-emerald-400 border border-zinc-700/50">Subscribed</Badge>;
+        return <Badge variant="secondary" className="bg-zinc-800 text-pink-400 border border-zinc-700/50">Subscribed</Badge>;
       default:
         return <Badge variant="outline" className="text-zinc-300 border-zinc-700/50">Pending</Badge>;
     }
@@ -57,9 +57,9 @@ export function TrialStatusCard({ trialData, className = '' }: TrialStatusCardPr
       return <AlertTriangle className="h-6 w-6 text-red-500" />;
     }
     if (trialData.status === 'active') {
-      return <Clock className="h-6 w-6 text-emerald-500" />;
+      return <Clock className="h-6 w-6 text-pink-400" />;
     }
-    return <CheckCircle className="h-6 w-6 text-emerald-500" />;
+    return <CheckCircle className="h-6 w-6 text-pink-400" />;
   };
 
   return (

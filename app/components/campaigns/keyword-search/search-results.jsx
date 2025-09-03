@@ -476,7 +476,7 @@ const SearchResults = ({ searchData }) => {
                           href={renderProfileLink(creator)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-emerald-400 hover:text-emerald-300 hover:underline font-medium transition-colors duration-200 flex items-center gap-1"
+                          className="text-pink-400 hover:text-pink-300 hover:underline font-medium transition-colors duration-200 flex items-center gap-1"
                           title={`View ${creator.creator.name}'s profile on ${searchData.selectedPlatform || "TikTok"}`}
                         >
                           {creator.creator.name}
@@ -523,13 +523,13 @@ const SearchResults = ({ searchData }) => {
                             >
                               <a
                                 href={`mailto:${email}`}
-                                className="text-primary hover:underline text-sm truncate block"
+                              className="text-pink-400 hover:underline text-sm truncate block"
                                 title={`Send email to ${email}`}
                               >
                                 {email}
                               </a>
                               <svg
-                                className="w-3 h-3 opacity-60 text-primary"
+                                className="w-3 h-3 opacity-60 text-pink-400"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -565,7 +565,7 @@ const SearchResults = ({ searchData }) => {
                           href={creator.video.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-primary hover:underline"
+                          className="text-pink-400 hover:underline"
                         >
                           View
                         </a>

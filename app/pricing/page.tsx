@@ -334,7 +334,7 @@ const PricingPageContent = () => {
                   <Button 
                     className={`w-full font-medium h-11 px-6 text-sm ${
                       plan.buttonVariant === 'default'
-                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white' 
+                        ? 'bg-pink-600 hover:bg-pink-500 text-white' 
                         : plan.disabled 
                           ? '' 
                           : 'border-zinc-700/50 hover:bg-zinc-800/50'
@@ -506,7 +506,7 @@ const PricingPageContent = () => {
             </div>
             <div className="flex justify-center gap-6">
               <Link href="/sign-up">
-                <Button size="lg" className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-8 py-3">
+                <Button size="lg" className="bg-pink-600 hover:bg-pink-500 text-white font-semibold px-8 py-3">
                   Start 7-Day Free Trial
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>

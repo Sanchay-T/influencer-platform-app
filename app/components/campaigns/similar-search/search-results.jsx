@@ -298,7 +298,7 @@ export default function SimilarSearchResults({ searchData }) {
                       href={renderProfileLink(creator)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-emerald-400 hover:text-emerald-300 hover:underline font-medium transition-colors duration-200 flex items-center gap-1"
+                      className="text-pink-400 hover:text-pink-300 hover:underline font-medium transition-colors duration-200 flex items-center gap-1"
                       title={`View ${creator.username || creator.name}'s profile on ${creator.platform || searchData.platform || 'Instagram'}`}
                     >
                       {searchData.platform === 'youtube' ? creator.name : `@${creator.username}`}
@@ -328,12 +328,12 @@ export default function SimilarSearchResults({ searchData }) {
                           <div key={emailIndex} className="flex items-center gap-1">
                             <a 
                               href={`mailto:${email}`}
-                              className="text-emerald-400 hover:underline text-sm truncate block"
+                              className="text-pink-400 hover:underline text-sm truncate block"
                               title={`Send email to ${email}`}
                             >
                               {email}
                             </a>
-                            <svg className="w-3 h-3 opacity-60 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-3 h-3 opacity-60 text-pink-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                             </svg>
                           </div>

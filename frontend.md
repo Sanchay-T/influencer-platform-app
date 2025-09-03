@@ -50,3 +50,11 @@ Scope: This document is for UI/UX designers and frontend engineers performing a 
 - Auth: Clerk must be configured locally to view authenticated pages.
 
 For backend/system details, see: `AGENTS.md`.
+
+## UI/UX Handbook (Current State, WT‑1)
+
+For a comprehensive, implementation‑level guide to the current UI system (theme tokens, layout, navigation, tables, trial sidebar, page/component map, and patterns), see:
+
+- docs/ui-ux-handbook.md
+
+This handbook is the source of truth for building new screens and maintaining parity across the app.

@@ -160,25 +160,25 @@ export default function OnboardingModal({
         <div className="mb-6">
           <div className="flex items-center justify-center space-x-2 mb-4">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-              step >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'
+              step >= 1 ? 'bg-pink-600 text-white' : 'bg-zinc-700 text-zinc-300'
             }`}>
               {step > 1 ? '✓' : '1'}
             </div>
-            <div className={`w-16 h-1 rounded ${step >= 2 ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
+            <div className={`w-16 h-1 rounded ${step >= 2 ? 'bg-pink-600' : 'bg-zinc-700'}`}></div>
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-              step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'
+              step >= 2 ? 'bg-pink-600 text-white' : 'bg-zinc-700 text-zinc-300'
             }`}>
               {step > 2 ? '✓' : '2'}
             </div>
-            <div className={`w-16 h-1 rounded ${step >= 3 ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
+            <div className={`w-16 h-1 rounded ${step >= 3 ? 'bg-pink-600' : 'bg-zinc-700'}`}></div>
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-              step >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'
+              step >= 3 ? 'bg-pink-600 text-white' : 'bg-zinc-700 text-zinc-300'
             }`}>
               {step > 3 ? '✓' : '3'}
             </div>
-            <div className={`w-16 h-1 rounded ${step >= 4 ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
+            <div className={`w-16 h-1 rounded ${step >= 4 ? 'bg-pink-600' : 'bg-zinc-700'}`}></div>
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-              step >= 4 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'
+              step >= 4 ? 'bg-pink-600 text-white' : 'bg-zinc-700 text-zinc-300'
             }`}>
               {step > 4 ? '✓' : '4'}
             </div>
@@ -208,7 +208,7 @@ export default function OnboardingModal({
               <CardContent className="space-y-6">
                 {error && (
                   <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
+                  <AlertCircle className="h-4 w-4" />
                     <AlertDescription>{error}</AlertDescription>
                   </Alert>
                 )}
@@ -308,13 +308,13 @@ export default function OnboardingModal({
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg">
-                    <Sparkles className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex items-start gap-2 p-3 bg-zinc-800/60 border border-zinc-700/50 rounded-lg">
+                    <Sparkles className="h-5 w-5 text-pink-400 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-sm text-blue-800 font-medium mb-1">
+                      <p className="text-sm text-zinc-100 font-medium mb-1">
                         Our AI will use this context to:
                       </p>
-                      <ul className="text-xs text-blue-700 space-y-1">
+                      <ul className="text-xs text-zinc-300 space-y-1">
                         <li>• Find influencers that match your brand values</li>
                         <li>• Identify creators with relevant audience demographics</li>
                         <li>• Prioritize accounts with authentic engagement in your niche</li>
@@ -371,8 +371,8 @@ export default function OnboardingModal({
           {step === 3 && (
             <>
               <CardHeader>
-                <div className="mx-auto mb-4 w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                  <CreditCard className="w-8 h-8 text-blue-600" />
+                <div className="mx-auto mb-4 w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center">
+                  <CreditCard className="w-8 h-8 text-pink-400" />
                 </div>
                 <CardTitle className="text-2xl font-bold text-gray-900 text-center">
                   Choose Your Plan 💳

@@ -31,28 +31,28 @@ function SubscriptionBadge({ currentPlan }: { currentPlan: string }) {
           name: 'Glow Up',
           icon: Star,
           textColor: 'text-zinc-100',
-          iconColor: 'text-emerald-500'
+          iconColor: 'text-pink-400'
         };
       case 'premium':
         return {
           name: 'Viral Surge',
           icon: Zap,
           textColor: 'text-zinc-100',
-          iconColor: 'text-emerald-500'
+          iconColor: 'text-pink-400'
         };
       case 'enterprise':
         return {
           name: 'Fame Flex',
           icon: Crown,
           textColor: 'text-zinc-100',
-          iconColor: 'text-emerald-500'
+          iconColor: 'text-pink-400'
         };
       default:
         return {
           name: 'Glow Up',
           icon: Star,
           textColor: 'text-zinc-100',
-          iconColor: 'text-emerald-500'
+          iconColor: 'text-pink-400'
         };
     }
   };
@@ -73,12 +73,12 @@ function SubscriptionBadge({ currentPlan }: { currentPlan: string }) {
             <span className={`text-sm font-semibold ${planDetails.textColor}`}>
               {planDetails.name}
             </span>
-            <Badge variant="secondary" className="ml-2 text-xs bg-emerald-600/20 text-emerald-400 border border-emerald-600/30">
+            <Badge variant="secondary" className="ml-2 text-xs bg-pink-600/20 text-pink-400 border border-pink-600/30">
               Active
             </Badge>
           </div>
         </div>
-        <CheckCircle className="h-4 w-4 text-emerald-500" />
+        <CheckCircle className="h-4 w-4 text-pink-400" />
       </div>
 
       {/* Status Display */}
@@ -293,26 +293,26 @@ export function EnhancedTrialSidebarIndicator() {
       return {
         container: 'bg-zinc-900/80 border border-zinc-700/50',
         text: 'text-zinc-100',
-        accent: 'text-red-400',
+        accent: 'text-pink-400',
         progressBg: 'bg-zinc-800',
-        progressFill: 'bg-red-500'
+        progressFill: 'bg-pink-500'
       };
     }
     if (isUrgent) {
       return {
         container: 'bg-zinc-900/80 border border-zinc-700/50',
         text: 'text-zinc-100',
-        accent: 'text-amber-400',
+        accent: 'text-pink-400',
         progressBg: 'bg-zinc-800',
-        progressFill: 'bg-amber-500'
+        progressFill: 'bg-pink-500'
       };
     }
     return {
       container: 'bg-zinc-900/80 border border-zinc-700/50',
       text: 'text-zinc-100',
-      accent: 'text-emerald-500',
+      accent: 'text-pink-400',
       progressBg: 'bg-zinc-800',
-      progressFill: 'bg-emerald-500'
+      progressFill: 'bg-pink-500'
     };
   };
 
@@ -336,12 +336,12 @@ export function EnhancedTrialSidebarIndicator() {
               7-Day Trial
             </span>
             {isExpired && (
-              <Badge variant="destructive" className="text-xs">
+              <Badge variant="secondary" className="text-xs bg-pink-600/20 text-pink-400 border border-pink-600/30">
                 Expired
               </Badge>
             )}
             {isUrgent && !isExpired && (
-              <Badge variant="secondary" className="text-xs bg-amber-600/20 text-amber-400 border border-amber-600/30">
+              <Badge variant="secondary" className="text-xs bg-pink-600/20 text-pink-400 border border-pink-600/30">
                 Urgent
               </Badge>
             )}
@@ -444,20 +444,14 @@ export function EnhancedTrialSidebarIndicator() {
       {/* Enhanced Upgrade CTA */}
       <div className="space-y-2">
         <Link href="/pricing" className="block">
-          <Button 
-            size="sm" 
-            className={`w-full text-xs font-semibold transition-all duration-300 ${
-              isExpired 
-                ? 'bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl' 
-                : isUrgent
-                ? 'bg-orange-600 hover:bg-orange-700 text-white shadow-lg hover:shadow-xl animate-pulse'
-                : 'bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg'
-            }`}
-          >
-            <Zap className="h-3 w-3 mr-1" />
-            {isExpired ? 'Upgrade Now' : isUrgent ? 'Upgrade Before Expiry' : 'Upgrade Early'}
-            <ArrowRight className="h-3 w-3 ml-1" />
-          </Button>
+            <Button 
+              size="sm" 
+              className={`w-full text-xs font-semibold transition-all duration-300 bg-pink-600 hover:bg-pink-500 text-white shadow-md hover:shadow-lg`}
+            >
+              <Zap className="h-3 w-3 mr-1" />
+            {isExpired ? 'Upgrade Now' : isUrgent ? 'Upgrade Soon' : 'Upgrade Early'}
+              <ArrowRight className="h-3 w-3 ml-1" />
+            </Button>
         </Link>
 
         {/* Additional CTA for expired users */}
@@ -466,7 +460,7 @@ export function EnhancedTrialSidebarIndicator() {
             <Button 
               size="sm" 
               variant="outline"
-              className="w-full text-xs border-red-200 text-red-600 hover:bg-red-50"
+              className="w-full text-xs border-pink-600/30 text-pink-400 hover:bg-pink-600/10"
             >
               View Billing Details
             </Button>
@@ -476,11 +470,7 @@ export function EnhancedTrialSidebarIndicator() {
 
       {/* Usage threshold warning */}
       {displayUsageInfo && displayUsageInfo.progressPercentage >= 50 && (
-        <div className={`text-xs p-2 rounded-lg border transition-all duration-300 ${
-          displayUsageInfo.progressPercentage >= 100 
-            ? 'text-red-400 bg-red-900/30 border-red-800'
-            : 'text-amber-400 bg-amber-900/30 border-amber-800'
-        }`}>
+        <div className={`text-xs p-2 rounded-lg border transition-all duration-300 text-pink-400 bg-pink-900/30 border-pink-800`}>
           <div className="flex items-center gap-1 mb-1">
             <AlertTriangle className="h-3 w-3 flex-shrink-0" />
             <span className="font-medium">

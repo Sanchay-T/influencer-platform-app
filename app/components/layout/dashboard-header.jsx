@@ -16,7 +16,7 @@ export default function DashboardHeader() {
 
   const tabs = [
     { name: 'Dashboard', href: '/dashboard' },
-    { name: 'Campaigns', href: '/' }, // campaigns list on home
+    { name: 'Campaigns', href: '/' },
     { name: 'Influencers', href: '/campaigns/search/similar' },
   ]
 
@@ -55,10 +55,10 @@ export default function DashboardHeader() {
                   key={t.name}
                   href={t.href}
                   className={cn(
-                    'text-sm font-medium px-3 py-1.5 rounded-md transition-colors',
+                    'text-sm font-medium px-3 pb-2 transition-colors border-b-2',
                     isActive
-                      ? 'bg-zinc-800/60 text-zinc-100'
-                      : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+                      ? 'text-zinc-100 border-pink-400'
+                      : 'text-zinc-400 border-transparent hover:text-zinc-200 hover:border-pink-400/50'
                   )}
                 >
                   {t.name}
@@ -76,11 +76,11 @@ export default function DashboardHeader() {
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 onKeyDown={onKeyDown}
-                className="w-72 h-9 pl-10 bg-zinc-800/60 border-zinc-700/50 focus:border-zinc-600 placeholder:text-zinc-500"
+                className="w-72 h-9 pl-10 bg-zinc-800/60 border-zinc-700/50 focus:border-pink-400/60 focus:ring-2 focus:ring-pink-500/20 placeholder:text-zinc-500 transition-all"
               />
             </div>
             <Link href="/campaigns/new">
-              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-500 text-white">
+              <Button size="sm" className="bg-pink-600 hover:bg-pink-500 text-white">
                 <PlusCircle className="h-4 w-4 mr-2" />
                 Create Campaign
               </Button>

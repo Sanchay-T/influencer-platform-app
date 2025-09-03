@@ -227,7 +227,7 @@ export default function OnboardingStep1() {
         {/* Progress indicator */}
         <div className="mb-8">
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+            <div className="w-8 h-8 bg-pink-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
               1
             </div>
             <div className="w-16 h-1 bg-gray-300 rounded"></div>
@@ -385,8 +385,8 @@ export default function OnboardingStep1() {
               </Button>
             </form>
 
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-              <p className="text-xs text-blue-800">
+            <div className="mt-6 p-4 bg-zinc-800/60 border border-zinc-700/50 rounded-lg">
+              <p className="text-xs text-zinc-300">
                 <strong>Privacy note:</strong> Your information is securely stored and will only be used to personalize your experience and provide customer support.
               </p>
             </div>
@@ -396,7 +396,7 @@ export default function OnboardingStep1() {
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-500">
             Need help? Contact our support team at{' '}
-            <a href="mailto:support@gemz.io" className="text-blue-600 hover:underline">
+            <a href="mailto:support@gemz.io" className="text-pink-400 hover:underline">
               support@gemz.io
             </a>
           </p>

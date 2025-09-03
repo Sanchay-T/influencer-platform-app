@@ -232,16 +232,16 @@ export default function OnboardingStep2() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-zinc-900 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
         {/* Progress indicator */}
         <div className="mb-8">
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+          <div className="w-8 h-8 bg-pink-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
               ✓
             </div>
-            <div className="w-16 h-1 bg-green-600 rounded"></div>
-            <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+            <div className="w-16 h-1 bg-pink-600 rounded"></div>
+            <div className="w-8 h-8 bg-pink-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
               2
             </div>
             <div className="w-16 h-1 bg-gray-300 rounded"></div>
@@ -330,13 +330,13 @@ export default function OnboardingStep2() {
                   </div>
                 </div>
 
-                <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg">
-                  <Sparkles className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="flex items-start gap-2 p-3 bg-zinc-800/60 border border-zinc-700/50 rounded-lg">
+                  <Sparkles className="h-5 w-5 text-pink-400 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-sm text-blue-800 font-medium mb-1">
+                    <p className="text-sm text-zinc-100 font-medium mb-1">
                       Our AI will use this context to:
                     </p>
-                    <ul className="text-xs text-blue-700 space-y-1">
+                    <ul className="text-xs text-zinc-300 space-y-1">
                       <li>• Find influencers that match your brand values</li>
                       <li>• Identify creators with relevant audience demographics</li>
                       <li>• Prioritize accounts with authentic engagement in your niche</li>
@@ -380,7 +380,7 @@ export default function OnboardingStep2() {
 
               <Button
                 type="submit"
-                className="w-full h-12 text-base font-semibold bg-blue-600 hover:bg-blue-700 text-white"
+                className="w-full h-12 text-base font-semibold bg-pink-600 hover:bg-pink-500 text-white"
                 disabled={isLoading || brandDescription.trim().length < 50}
               >
                 {isLoading ? (
@@ -397,14 +397,14 @@ export default function OnboardingStep2() {
               </Button>
 
               {brandDescription.trim().length < 50 && brandDescription.trim().length > 0 && (
-                <p className="text-sm text-amber-600 text-center">
+                <p className="text-sm text-pink-400 text-center">
                   Please provide more details (at least 50 characters) for better AI recommendations
                 </p>
               )}
             </form>
 
-            <div className="mt-6 p-4 bg-green-50 rounded-lg">
-              <p className="text-xs text-green-800">
+            <div className="mt-6 p-4 bg-zinc-800/60 border border-zinc-700/50 rounded-lg">
+              <p className="text-xs text-zinc-300">
                 <strong>Privacy note:</strong> This information helps us personalize your search results. 
                 It's never shared with third parties and you can update it anytime in your settings.
               </p>
@@ -415,7 +415,7 @@ export default function OnboardingStep2() {
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-500">
             Need help crafting your description?{' '}
-            <a href="mailto:support@gemz.io" className="text-blue-600 hover:underline">
+            <a href="mailto:support@gemz.io" className="text-pink-400 hover:underline">
               Contact our team
             </a>{' '}
             for personalized guidance.

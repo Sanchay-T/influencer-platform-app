@@ -13,7 +13,7 @@ export function EnhancedTrialSidebarSkeleton() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded-lg bg-zinc-800">
-            <Clock className="h-4 w-4 text-emerald-500 animate-pulse" />
+            <Clock className="h-4 w-4 text-pink-400 animate-pulse" />
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold text-zinc-100">7-Day Trial</span>
@@ -51,13 +51,13 @@ export function EnhancedTrialSidebarSkeleton() {
 
         {/* Timeline Dates skeleton */}
         <div className="grid grid-cols-2 gap-3 text-xs">
-          <div className="text-blue-900 opacity-75 flex items-center gap-1">
-            <div className="h-3 w-3 bg-blue-200 rounded animate-pulse"></div>
-            <div className="h-3 bg-blue-200 rounded w-12 animate-pulse"></div>
+          <div className="text-zinc-500 flex items-center gap-1">
+            <div className="h-3 w-3 bg-zinc-800 rounded animate-pulse"></div>
+            <div className="h-3 bg-zinc-800 rounded w-12 animate-pulse"></div>
           </div>
           <div className="text-blue-900 opacity-75 flex items-center gap-1">
-            <div className="h-3 w-3 bg-blue-200 rounded animate-pulse"></div>
-            <div className="h-3 bg-blue-200 rounded w-12 animate-pulse"></div>
+            <div className="h-3 w-3 bg-zinc-800 rounded animate-pulse"></div>
+            <div className="h-3 bg-zinc-800 rounded w-12 animate-pulse"></div>
           </div>
         </div>
       </div>
@@ -65,10 +65,10 @@ export function EnhancedTrialSidebarSkeleton() {
       {/* Usage Info skeleton */}
       <div className="space-y-2 p-3 bg-zinc-800/60 rounded-lg">
         <div className="flex justify-between items-center text-xs">
-          <span className="text-zinc-400">Searches Used</span>
-          <span className="font-medium text-zinc-200">
-            <div className="h-3 bg-blue-200 rounded w-8 animate-pulse"></div>
-          </span>
+            <span className="text-zinc-400">Searches Used</span>
+            <span className="font-medium text-zinc-200">
+              <div className="h-3 bg-zinc-800 rounded w-8 animate-pulse"></div>
+            </span>
         </div>
         <Progress value={0} className="h-1.5 bg-zinc-800" />
       </div>

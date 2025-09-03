@@ -33,7 +33,7 @@ export default function AnimatedBarChart({
           </div>
           <div className="h-2 bg-zinc-800 rounded">
             <div
-              className="h-2 rounded bg-emerald-600 transition-all duration-700"
+              className="h-2 rounded bg-pink-600 transition-all duration-700"
               style={{ width: mounted ? `${(i.value / max) * 100}%` : '0%' }}
             />
           </div>
@@ -42,4 +42,3 @@ export default function AnimatedBarChart({
     </div>
   )
 }
-

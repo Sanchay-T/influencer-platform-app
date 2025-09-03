@@ -25,7 +25,7 @@ export default function RadialProgress({ value = 64, size = 84 }: RadialProgress
         cx="50"
         cy="50"
         r={radius}
-        className="fill-none stroke-emerald-500"
+        className="fill-none stroke-pink-400"
         strokeWidth={8}
         strokeLinecap="round"
         style={{
@@ -40,4 +40,3 @@ export default function RadialProgress({ value = 64, size = 84 }: RadialProgress
     </svg>
   )
 }
-

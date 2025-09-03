@@ -90,9 +90,9 @@ function OnboardingSuccessContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-zinc-900 flex items-center justify-center p-4">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-8 h-8 border-2 border-pink-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Loading subscription details...</p>
         </div>
       </div>
@@ -108,12 +108,12 @@ function OnboardingSuccessContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-zinc-900 flex items-center justify-center p-4">
       <div className="w-full max-w-3xl">
         <Card className="shadow-xl border-0">
           <CardHeader className="text-center">
-            <div className="mx-auto mb-4 w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-              <CheckCircle className="w-8 h-8 text-green-600" />
+            <div className="mx-auto mb-4 w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center">
+              <CheckCircle className="w-8 h-8 text-pink-400" />
             </div>
             <CardTitle className="text-3xl font-bold text-gray-900">
               Welcome to Gemz! 🎉
@@ -137,7 +137,7 @@ function OnboardingSuccessContent() {
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-2xl font-bold text-gray-900">{sessionData.plan.name}</span>
-                      <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                      <Badge variant="secondary" className="bg-zinc-800 text-pink-400 border border-zinc-700/50">
                         {sessionData.billing === 'yearly' ? 'Annual' : 'Monthly'}
                       </Badge>
                     </div>
@@ -145,7 +145,7 @@ function OnboardingSuccessContent() {
                       {sessionData.billing === 'yearly' ? sessionData.plan.yearlyPrice : sessionData.plan.monthlyPrice}
                       <span className="text-sm text-gray-500 ml-1">per month</span>
                       {sessionData.billing === 'yearly' && (
-                        <Badge variant="secondary" className="bg-green-100 text-green-700 ml-2">
+                        <Badge variant="secondary" className="bg-zinc-800 text-pink-400 border border-zinc-700/50 ml-2">
                           20% off
                         </Badge>
                       )}
@@ -163,7 +163,7 @@ function OnboardingSuccessContent() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-4">
                   {sessionData.plan.features.map((feature, index) => (
                     <div key={index} className="flex items-center gap-2 text-sm">
-                      <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                      <CheckCircle className="h-4 w-4 text-pink-400 flex-shrink-0" />
                       <span>{feature}</span>
                     </div>
                   ))}
@@ -172,19 +172,19 @@ function OnboardingSuccessContent() {
             )}
 
             {/* Trial Information */}
-            <div className="bg-green-50 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-green-900 mb-4 flex items-center gap-2">
+            <div className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-zinc-100 mb-4 flex items-center gap-2">
                 <Sparkles className="h-5 w-5" />
                 Your 7-Day Free Trial is Active
               </h3>
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                    <div className="w-6 h-6 bg-pink-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
                     ✓
                   </div>
                   <div>
-                    <p className="font-medium text-green-900">Payment method secured</p>
-                    <p className="text-sm text-green-700">
+                        <p className="font-medium text-zinc-100">Payment method secured</p>
+                        <p className="text-sm text-zinc-300">
                       {sessionData ? 
                         `You'll be charged ${sessionData.billing === 'yearly' ? sessionData.plan.yearlyPrice : sessionData.plan.monthlyPrice} when trial ends` :
                         "You won't be charged until your trial ends"
@@ -193,12 +193,12 @@ function OnboardingSuccessContent() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                    <div className="w-6 h-6 bg-pink-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
                     ✓
                   </div>
                   <div>
-                    <p className="font-medium text-green-900">Full feature access</p>
-                    <p className="text-sm text-green-700">All platform features are now unlocked</p>
+                        <p className="font-medium text-zinc-100">Full feature access</p>
+                        <p className="text-sm text-zinc-300">All platform features are now unlocked</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">

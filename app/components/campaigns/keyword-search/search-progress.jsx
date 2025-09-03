@@ -892,7 +892,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
                     <h4 className="font-medium text-zinc-100 truncate">
                       {creator.creator?.name || 'Unknown Creator'}
                       {/* 🔍 VISUAL DEBUG: Show render timestamp */}
-                      <span className="ml-2 text-xs text-emerald-500">
+                      <span className="ml-2 text-xs text-pink-400">
                         #{index + 1} ({new Date().getSeconds()}s)
                       </span>
                     </h4>

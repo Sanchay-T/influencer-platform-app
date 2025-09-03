@@ -493,3 +493,217 @@ Warning: useLayoutEffect does nothing on the server, because its effect cannot b
   trialStatus: 'expired',
   daysRemaining: 0
 }
+ ✓ Compiled /_error in 1349ms (2030 modules)
+🔍 [STRIPE-VALIDATOR] Environment Detection: {
+  NODE_ENV: 'development',
+  VERCEL_ENV: '',
+  isProduction: false,
+  secretKeyType: 'TEST',
+  publishableKeyType: 'TEST'
+}
+✅ [STRIPE-VALIDATOR] Stripe environment validation passed
+🚀 [STARTUP-VALIDATION] Running environment validation...
+🔍 [STRIPE-VALIDATOR] Environment Detection: {
+  NODE_ENV: 'development',
+  VERCEL_ENV: '',
+  isProduction: false,
+  secretKeyType: 'TEST',
+  publishableKeyType: 'TEST'
+}
+✅ [STRIPE-VALIDATOR] Stripe environment validation passed
+📊 [STARTUP-VALIDATION] Current Configuration:
+   NODE_ENV: development
+   VERCEL_ENV: not set
+   Stripe Mode: TEST
+   Dev Mode: true
+✅ [STARTUP-VALIDATION] Environment validation complete
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at ShadowPortal (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/client/components/react-dev-overlay/ui/components/shadow-portal.tsx:5:32)
+    at DevOverlay (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/client/components/react-dev-overlay/ui/dev-overlay.tsx:14:3)
+    at ReactDevOverlay (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/server/dev/next-dev-server.ts:82:10)
+    at div
+    at Body (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/server/render.tsx:1263:19)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at ShadowPortal (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/client/components/react-dev-overlay/ui/components/shadow-portal.tsx:5:32)
+    at DevOverlay (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/client/components/react-dev-overlay/ui/dev-overlay.tsx:14:3)
+    at ReactDevOverlay (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/server/dev/next-dev-server.ts:82:10)
+    at div
+    at Body (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/server/render.tsx:1263:19)
+ GET / 200 in 448ms
+ GET /favicon.ico 200 in 219ms
+ GET /api/billing/status 404 in 140ms
+ GET /api/onboarding/status 404 in 144ms
+ GET /api/campaigns?page=1&limit=9 404 in 146ms
+ ⨯ SyntaxError: Unexpected end of JSON input
+    at JSON.parse (<anonymous>)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at ShadowPortal (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/client/components/react-dev-overlay/ui/components/shadow-portal.tsx:5:32)
+    at DevOverlay (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/client/components/react-dev-overlay/ui/dev-overlay.tsx:14:3)
+    at ReactDevOverlay (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/server/dev/next-dev-server.ts:82:10)
+    at div
+    at Body (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/server/render.tsx:1263:19)
+Warning: useLayoutEffect does nothing on the server, because its effect cannot be encoded into the server renderer's output format. This will lead to a mismatch between the initial, non-hydrated UI and the intended UI. To avoid this, useLayoutEffect should only be used in components that render exclusively on the client. See https://reactjs.org/link/uselayouteffect-ssr for common fixes.
+    at ShadowPortal (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/client/components/react-dev-overlay/ui/components/shadow-portal.tsx:5:32)
+    at DevOverlay (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/client/components/react-dev-overlay/ui/dev-overlay.tsx:14:3)
+    at ReactDevOverlay (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/server/dev/next-dev-server.ts:82:10)
+    at div
+    at Body (/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/node_modules/next/src/server/render.tsx:1263:19)
+ GET /api/billing/status 500 in 118ms
+ GET /api/campaigns?page=1&limit=9 404 in 121ms
+ ○ Compiling /api/onboarding/step-1 ...
+ ✓ Compiled /api/onboarding/step-1 in 10.1s (2186 modules)
+🚀🚀🚀 [ONBOARDING-STEP1] ===============================
+🚀🚀🚀 [ONBOARDING-STEP1] STARTING STEP 1 - BASIC INFO CAPTURE
+🚀🚀🚀 [ONBOARDING-STEP1] ===============================
+🆔 [ONBOARDING-STEP1] Request ID: step1_1756836607214_bk34n
+⏰ [ONBOARDING-STEP1] Timestamp: 2025-09-02T18:10:07.214Z
+🔐 [ONBOARDING-STEP1] Getting authenticated user from Clerk
+📥 [ONBOARDING-STEP1] Data received: {
+  fullName: 'John',
+  fullNameLength: 4,
+  businessName: 'asdadf',
+  businessNameLength: 6,
+  userId: 'user_2zRnraoVNDAegfHnci1xUMWybwz',
+  requestId: 'step1_1756836607214_bk34n'
+}
+🔄🔄🔄 [ONBOARDING-STEP1] UPDATING EXISTING PROFILE
+📊 [ONBOARDING-STEP1] Existing profile data: {
+  currentOnboardingStep: 'completed',
+  currentFullName: 'Sanchay Thalnerkar',
+  currentBusinessName: 'Sanchay Trial',
+  profileCreatedAt: 2025-07-09T10:46:55.548Z,
+  hasTrialData: true
+}
+✅✅✅ [ONBOARDING-STEP1] PROFILE UPDATED SUCCESSFULLY
+💾 [ONBOARDING-STEP1] Update completed in: 2589 ms
+🔍 [CLERK-EMAIL] Starting Clerk email retrieval for userId: user_2zRnraoVNDAegfHnci1xUMWybwz
+🔄 [CLERK-EMAIL] Initializing Clerk client...
+✅ [CLERK-EMAIL] Clerk client initialized successfully
+✅ [CLERK-EMAIL] Retrieved user email: sanchaythalnerkar@gmail.com
+⏭️ [EMAIL-CHECK] Email welcome already scheduled for user user_2zRnraoVNDAegfHnci1xUMWybwz
+⏭️ [EMAIL-CHECK] Email abandonment already scheduled for user user_2zRnraoVNDAegfHnci1xUMWybwz
+🎉🎉🎉 [ONBOARDING-STEP1] ===============================
+🎉🎉🎉 [ONBOARDING-STEP1] STEP 1 COMPLETED SUCCESSFULLY
+🎉🎉🎉 [ONBOARDING-STEP1] ===============================
+⏱️ [ONBOARDING-STEP1] Total execution time: 4072 ms
+📊 [ONBOARDING-STEP1] Summary: {
+  action: 'PROFILE_UPDATED',
+  fullName: 'John',
+  businessName: 'asdadf',
+  userId: 'user_2zRnraoVNDAegfHnci1xUMWybwz',
+  requestId: 'step1_1756836607214_bk34n',
+  executionTime: 4072
+}
+➡️ [ONBOARDING-STEP1] Next step: User should proceed to Step 2 (Brand Description)
+ PATCH /api/onboarding/step-1 200 in 16118ms
+ ○ Compiling /api/onboarding/step-2 ...
+ ✓ Compiled /api/onboarding/step-2 in 2.7s (2188 modules)
+🚀🚀🚀 [ONBOARDING-STEP2] ===============================
+🚀🚀🚀 [ONBOARDING-STEP2] STARTING STEP 2 - BRAND DESCRIPTION
+🚀🚀🚀 [ONBOARDING-STEP2] ===============================
+🆔 [ONBOARDING-STEP2] Request ID: step2_1756836616693_r33t4
+⏰ [ONBOARDING-STEP2] Timestamp: 2025-09-02T18:10:16.694Z
+🔐 [ONBOARDING-STEP2] Getting authenticated user from Clerk
+📥 [ONBOARDING-STEP2] Data received: {
+  brandDescription: "We're a sustainable skincare brand targeting eco-conscious millennials. We look for beauty influencers who promote clean living, natural products, and environmental awareness.",
+  brandDescriptionLength: 175,
+  userId: 'user_2zRnraoVNDAegfHnci1xUMWybwz',
+  requestId: 'step2_1756836616693_r33t4',
+  meetsMinLength: true
+}
+📝 [ONBOARDING-STEP2] Brand description preview: We're a sustainable skincare brand targeting eco-conscious millennials. We look for beauty influence...
+🔍 [ONBOARDING-STEP2] Looking up existing user profile...
+📊 [ONBOARDING-STEP2] Profile lookup result: {
+  profileExists: true,
+  currentStep: 'info_captured',
+  hasBasicInfo: true,
+  hasExistingDescription: true
+}
+🔄🔄🔄 [ONBOARDING-STEP2] UPDATING PROFILE WITH BRAND DESCRIPTION
+📝 [ONBOARDING-STEP2] Previous description: We're a sustainable skincare brand targeting eco-conscious millennials. We look for beauty influencers who promote clean living, natural products, and environmental awareness.
+📝 [ONBOARDING-STEP2] New description length: 175
+✅✅✅ [ONBOARDING-STEP2] PROFILE UPDATED SUCCESSFULLY
+💾 [ONBOARDING-STEP2] Update completed in: 917 ms
+📊 [ONBOARDING-STEP2] Profile now ready for completion
+🎉🎉🎉 [ONBOARDING-STEP2] ===============================
+🎉🎉🎉 [ONBOARDING-STEP2] STEP 2 COMPLETED SUCCESSFULLY
+🎉🎉🎉 [ONBOARDING-STEP2] ===============================
+⏱️ [ONBOARDING-STEP2] Total execution time: 917 ms
+📊 [ONBOARDING-STEP2] Summary: {
+  action: 'BRAND_DESCRIPTION_CAPTURED',
+  descriptionLength: 175,
+  userId: 'user_2zRnraoVNDAegfHnci1xUMWybwz',
+  requestId: 'step2_1756836616693_r33t4',
+  executionTime: 917
+}
+➡️ [ONBOARDING-STEP2] Next step: User should complete onboarding to start trial
+ PATCH /api/onboarding/step-2 200 in 4004ms
+ ○ Compiling /api/onboarding/save-plan ...
+ ✓ Compiled /api/onboarding/save-plan in 1681ms (2190 modules)
+ POST /api/onboarding/save-plan 200 in 2332ms
+ ○ Compiling /api/stripe/create-checkout ...
+ ✓ Compiled /api/stripe/create-checkout in 4.1s (2391 modules)
+🔍 [STRIPE-CHECKOUT] Creating session with: {
+  planId: 'glow_up',
+  billing: 'monthly',
+  priceId: 'price_1RlU8lIpgTA78vtxbN9padio',
+  userId: 'user_2zRnraoVNDAegfHnci1xUMWybwz',
+  allPriceIds: {
+    monthly: 'price_1RlU8lIpgTA78vtxbN9padio',
+    yearly: 'price_1Rm8t4IpgTA78vtx1FHxZM6k'
+  },
+  selectedPath: 'glow_up.monthly'
+}
+💰 [STRIPE-PRICE] Price details: {
+  id: 'price_1RlU8lIpgTA78vtxbN9padio',
+  type: 'recurring',
+  recurring: {
+    aggregate_usage: null,
+    interval: 'month',
+    interval_count: 1,
+    meter: null,
+    trial_period_days: null,
+    usage_type: 'licensed'
+  }
+}
+ POST /api/stripe/create-checkout 200 in 6052ms
+ ✓ Compiled in 1189ms (1878 modules)
+ ✓ Compiled in 129ms (881 modules)
+ ✓ Compiled in 147ms (881 modules)
+ ✓ Compiled in 655ms (1878 modules)
+ ✓ Compiled in 284ms (1878 modules)
+ ✓ Compiled in 303ms (1878 modules)
+ ✓ Compiled in 241ms (1878 modules)
+ ✓ Compiled in 118ms (881 modules)
+ ✓ Compiled in 330ms (881 modules)
+ ✓ Compiled in 138ms (881 modules)
+ ✓ Compiled in 252ms (881 modules)
+ ✓ Compiled in 133ms (881 modules)
+ ✓ Compiled in 498ms (881 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/.next/cache/webpack/client-development/2.pack.gz_' -> '/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/.next/cache/webpack/client-development/2.pack.gz'
+ ✓ Compiled in 150ms (881 modules)
+ ✓ Compiled in 450ms (1878 modules)
+ ✓ Compiled in 296ms (1878 modules)
+ ✓ Compiled in 243ms (1878 modules)
+ ✓ Compiled in 155ms (881 modules)
+ ✓ Compiled in 307ms (881 modules)
+ ✓ Compiled in 257ms (1878 modules)
+ ✓ Compiled in 942ms (1878 modules)
+ ✓ Compiled in 820ms (1878 modules)
+ ✓ Compiled in 150ms (881 modules)
+ ✓ Compiled in 155ms (881 modules)
+ ✓ Compiled in 314ms (1878 modules)
+ ✓ Compiled in 453ms (881 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/.next/cache/webpack/client-development/1.pack.gz_' -> '/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/.next/cache/webpack/client-development/1.pack.gz'
+ ✓ Compiled in 226ms (881 modules)
+ ✓ Compiled in 117ms (881 modules)
+ ✓ Compiled in 141ms (881 modules)
+ ✓ Compiled in 301ms (881 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/.next/cache/webpack/client-development/0.pack.gz_' -> '/Users/sanchay/Documents/projects/personal/influencerplatform-wt1/.next/cache/webpack/client-development/0.pack.gz'
+ ✓ Compiled in 398ms (881 modules)
+ ✓ Compiled in 516ms (1878 modules)
+ ✓ Compiled in 163ms (881 modules)
+ ✓ Compiled in 251ms (1878 modules)
+ ✓ Compiled in 262ms (1878 modules)
+ ✓ Compiled in 267ms (1878 modules)

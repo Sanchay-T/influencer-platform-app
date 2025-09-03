@@ -187,7 +187,7 @@ export default function ClientCampaignPage({ campaign }: { campaign: Campaign | 
     return renderCampaignContainer(
       <div className="flex flex-col items-center gap-4 py-8">
         <div className="flex items-center gap-2 text-zinc-400">
-          <Loader2 className="h-4 w-4 animate-spin text-emerald-500" />
+          <Loader2 className="h-4 w-4 animate-spin text-pink-400" />
           <span>Processing search... ({progress}%)</span>
         </div>
         <div className="w-full max-w-md space-y-2">
@@ -432,7 +432,7 @@ export default function ClientCampaignPage({ campaign }: { campaign: Campaign | 
             window.location.href = `/campaigns/search/keyword?campaignId=${campaign.id}`;
           }}
           disabled={isSearching}
-          className="bg-emerald-600 hover:bg-emerald-500 text-white"
+          className="bg-pink-600 hover:bg-pink-500 text-white"
         >
           <Search className="mr-2 h-4 w-4" />
           {isSearching ? 'Starting search...' : 'Start Search'}
