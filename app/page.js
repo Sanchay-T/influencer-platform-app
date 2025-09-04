@@ -19,22 +19,19 @@ export default function Home() {
   useEffect(() => {
     if (userId) {
       checkOnboardingStatus();
-      checkCampaignGate();
+      checkUsageFromBilling();
     }
   }, [userId]);
 
-  const checkCampaignGate = async () => {
+  const checkUsageFromBilling = async () => {
     try {
-      const res = await fetch('/api/campaigns/can-create');
+      const res = await fetch('/api/billing/status');
       if (!res.ok) return;
       const data = await res.json();
-      // Also derive usage summary for count display from gate response
-      if (data.usage) {
-        const used = Number(data.usage.campaignsUsed || 0);
-        const remaining = data.usage.campaignsRemaining;
-        const limit = remaining === Infinity ? null : used + Number(remaining || 0);
-        setUsageSummary({ campaigns: { used, limit } });
-      }
+      const used = Number(data?.usageInfo?.campaignsUsed || 0);
+      const limitRaw = data?.usageInfo?.campaignsLimit;
+      const limit = limitRaw === -1 ? null : Number(limitRaw || 0);
+      setUsageSummary({ campaigns: { used, limit } });
     } catch (e) {
       // ignore gate errors; default allows
     }

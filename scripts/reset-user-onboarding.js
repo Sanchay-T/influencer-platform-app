@@ -24,7 +24,7 @@ const queryClient = postgres(connectionString, {
 });
 
 // Simple schema for the script (just what we need)
-const { pgTable, uuid, text, timestamp, varchar, boolean, jsonb } = require('drizzle-orm/pg-core');
+const { pgTable, uuid, text, timestamp, varchar, boolean, jsonb, integer } = require('drizzle-orm/pg-core');
 
 const userProfiles = pgTable('user_profiles', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -38,7 +38,22 @@ const userProfiles = pgTable('user_profiles', {
   trialStatus: varchar('trial_status', { length: 20 }).default('pending'),
   signupTimestamp: timestamp('signup_timestamp').defaultNow(),
   brandDescription: text('brand_description'),
-  emailScheduleStatus: jsonb('email_schedule_status').default('{}')
+  emailScheduleStatus: jsonb('email_schedule_status').default('{}'),
+  // Stripe/billing fields we need to clear
+  stripeCustomerId: text('stripe_customer_id'),
+  stripeSubscriptionId: text('stripe_subscription_id'),
+  subscriptionStatus: varchar('subscription_status', { length: 20 }).default('none'),
+  currentPlan: varchar('current_plan', { length: 50 }).default('free'),
+  paymentMethodId: text('payment_method_id'),
+  cardLast4: varchar('card_last_4', { length: 4 }),
+  cardBrand: varchar('card_brand', { length: 20 }),
+  cardExpMonth: integer('card_exp_month'),
+  cardExpYear: integer('card_exp_year'),
+  usageCampaignsCurrent: integer('usage_campaigns_current').default(0),
+  usageCreatorsCurrentMonth: integer('usage_creators_current_month').default(0),
+  planCampaignsLimit: integer('plan_campaigns_limit'),
+  planCreatorsLimit: integer('plan_creators_limit'),
+  billingSyncStatus: varchar('billing_sync_status', { length: 20 }).default('pending')
 });
 
 // Note: We do not maintain a separate email queue table in current schema.
@@ -120,7 +135,22 @@ async function resetUserOnboarding(email) {
         brandDescription: null,
         trialStartDate: null,
         trialEndDate: null,
-        trialStatus: 'pending'
+        trialStatus: 'pending',
+        // Clear subscription/billing so flow can restart cleanly
+        stripeCustomerId: null,
+        stripeSubscriptionId: null,
+        subscriptionStatus: 'none',
+        currentPlan: 'free',
+        paymentMethodId: null,
+        cardLast4: null,
+        cardBrand: null,
+        cardExpMonth: null,
+        cardExpYear: null,
+        usageCampaignsCurrent: 0,
+        usageCreatorsCurrentMonth: 0,
+        planCampaignsLimit: 0,
+        planCreatorsLimit: 0,
+        billingSyncStatus: 'reset_by_script'
       })
       .where(eq(userProfiles.userId, userId))
       .returning();

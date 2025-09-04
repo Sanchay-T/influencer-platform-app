@@ -67,7 +67,7 @@ function BillingContent() {
                   {planParam ? `Ready to upgrade to ${planParam}!` : 'Ready to upgrade!'}
                 </p>
                 <p className="text-zinc-300 text-sm">
-                  Use the subscription management section below to complete your upgrade with test payment.
+                  Select a plan below to upgrade. We’ll charge the prorated amount and update your account automatically.
                 </p>
               </div>
             </div>

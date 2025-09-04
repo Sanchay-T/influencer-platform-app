@@ -52,6 +52,16 @@ export async function POST(req: NextRequest) {
         })
         .where(eq(userProfiles.userId, userId));
 
+      // Try to extract payment intent client secret if confirmation is required
+      let paymentIntentClientSecret = null as string | null;
+      const latestInvoice = (subscription as any)?.latest_invoice;
+      if (latestInvoice && typeof latestInvoice === 'object') {
+        const pi = (latestInvoice as any).payment_intent;
+        if (pi && typeof pi === 'object' && 'client_secret' in pi) {
+          paymentIntentClientSecret = (pi as any).client_secret as string;
+        }
+      }
+
       return NextResponse.json({
         success: true,
         type: 'subscription_updated',
@@ -61,7 +71,8 @@ export async function POST(req: NextRequest) {
           currentPeriodEnd: subscription.current_period_end,
           plan: planConfig.name,
           amount: planConfig.amount
-        }
+        },
+        paymentIntentClientSecret
       });
     }
 

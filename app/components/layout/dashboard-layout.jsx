@@ -1,5 +1,8 @@
+"use client";
+
 import Sidebar from "./sidebar";
 import DashboardHeader from "./dashboard-header";
+import AccessGuardOverlay from "../billing/access-guard-overlay";
 
 export default function DashboardLayout({ children }) {
   return (
@@ -12,6 +15,8 @@ export default function DashboardLayout({ children }) {
             {children}
           </div>
         </div>
+        {/* Global access overlay to gate unpaid/expired users */}
+        <AccessGuardOverlay />
       </main>
     </div>
   );

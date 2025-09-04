@@ -174,6 +174,7 @@ export async function GET(request: NextRequest) {
       daysRemaining
     });
 
+    // Return status only; access control handled in-app overlay (no cookies here)
     return NextResponse.json(billingStatus);
 
   } catch (error) {

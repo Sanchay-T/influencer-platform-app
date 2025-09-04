@@ -40,6 +40,15 @@ export interface BillingStatus {
  */
 export function useBilling(): BillingStatus {
   const { isLoaded, userId } = useAuth()
+  // Simple in-memory cache to avoid duplicate fetches and speed up gating
+  // Shared across all hook instances in the same tab
+  // 5s TTL keeps UI fresh but prevents bursty refetches
+  const CACHE_TTL_MS = 5000
+  // @ts-ignore module-level singleton
+  if (!(globalThis as any).__BILLING_CACHE__) {
+    ;(globalThis as any).__BILLING_CACHE__ = { data: null as any, ts: 0, inflight: null as Promise<any> | null }
+  }
+  const cacheRef = (globalThis as any).__BILLING_CACHE__
   const [billingStatus, setBillingStatus] = useState<BillingStatus>({
     isLoaded: false,
     currentPlan: 'free',
@@ -53,18 +62,45 @@ export function useBilling(): BillingStatus {
   useEffect(() => {
     if (!isLoaded || !userId) return
 
-    // Fetch billing status from our API
+    // Fetch billing status from our API (with simple cache + inflight guard)
     const fetchBillingStatus = async () => {
       try {
-        console.log('💳 [STRIPE-BILLING] Fetching billing status for user:', userId)
-        
-        const response = await fetch('/api/billing/status')
-        if (!response.ok) {
-          throw new Error('Failed to fetch billing status')
+        const now = Date.now()
+        if (cacheRef.data && now - cacheRef.ts < CACHE_TTL_MS) {
+          setFromData(cacheRef.data)
+          return
         }
-        
-        const data = await response.json()
+        if (cacheRef.inflight) {
+          const data = await cacheRef.inflight
+          setFromData(data)
+          return
+        }
+        console.log('💳 [STRIPE-BILLING] Fetching billing status for user:', userId)
+
+        cacheRef.inflight = fetch('/api/billing/status').then(async (res: Response) => {
+          if (!res.ok) throw new Error('Failed to fetch billing status')
+          const data = await res.json()
+          cacheRef.data = data
+          cacheRef.ts = Date.now()
+          cacheRef.inflight = null
+          return data
+        }).catch((e: any) => {
+          cacheRef.inflight = null
+          throw e
+        })
+
+        const data = await cacheRef.inflight
         console.log('💳 [STRIPE-BILLING] Received billing data:', data)
+        
+        setFromData(data)
+
+      } catch (error) {
+        console.error('❌ [STRIPE-BILLING] Error fetching billing status:', error)
+        setOnError()
+      }
+    }
+
+    const setFromData = (data: any) => {
         
         const currentPlan = data.currentPlan || 'free'
         const isTrialing = data.isTrialing || false
@@ -175,10 +211,9 @@ export function useBilling(): BillingStatus {
             progressPercentage: data.usageInfo?.progressPercentage || 0
           }
         })
+    }
 
-      } catch (error) {
-        console.error('❌ [STRIPE-BILLING] Error fetching billing status:', error)
-        
+    const setOnError = () => {
         // Default to free plan on error
         setBillingStatus({
           isLoaded: true,
@@ -209,7 +244,6 @@ export function useBilling(): BillingStatus {
             progressPercentage: 0
           }
         })
-      }
     }
 
     fetchBillingStatus()

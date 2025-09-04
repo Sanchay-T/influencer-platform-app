@@ -26,7 +26,7 @@ interface RootLayoutProps {
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <ClerkProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY!}>
+    <ClerkProvider>
       <html lang="en" className="dark">
         <body className={`${inter.variable} font-sans bg-background text-foreground antialiased`}>
           <AuthLogger />

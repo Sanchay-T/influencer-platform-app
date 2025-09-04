@@ -1,7 +1,7 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 
-// Define public routes that don't require authentication
+// Define public routes that don't require authentication (keep '/' public; page handles auth UI)
 const isPublicRoute = createRouteMatcher([
   '/',
   '/sign-in(.*)',
@@ -27,6 +27,12 @@ const isProtectedApiRoute = createRouteMatcher([
 // Admin API routes that require admin access (UI pages rely on API gating)
 const isAdminRoute = createRouteMatcher([
   '/api/admin(.*)',
+])
+
+// Routes allowed even when access is blocked (to let users pay)
+const isBillingAllowedRoute = createRouteMatcher([
+  '/billing(.*)',
+  '/pricing(.*)'
 ])
 
 export default clerkMiddleware(async (auth, request) => {
@@ -55,7 +61,7 @@ export default clerkMiddleware(async (auth, request) => {
     return NextResponse.next()
   }
 
-  // Protect non-public routes
+  // Protect non-public routes (auth only; access gating handled in-app via overlay)
   if (!isPublicRoute(request)) {
     // Get the auth object and check if user is signed in
     const { userId, sessionClaims } = await auth()
@@ -80,6 +86,7 @@ export default clerkMiddleware(async (auth, request) => {
         )
       }
     }
+
   }
 
   return NextResponse.next()

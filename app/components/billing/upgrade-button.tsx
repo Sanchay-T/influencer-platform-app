@@ -16,6 +16,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { useBilling } from '@/lib/hooks/use-billing';
+import getStripe from '@/lib/stripe/stripe-client';
 import { toast } from 'react-hot-toast';
 
 interface UpgradeButtonProps {
@@ -81,35 +82,16 @@ export default function UpgradeButton({
     setError('');
 
     try {
-      const response = await fetch('/api/stripe/upgrade', {
+      // Always redirect to Stripe Checkout to complete payment for upgrades
+      const response = await fetch('/api/stripe/checkout-upgrade', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          planId: targetPlan,
-          useStoredPaymentMethod: true
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId: targetPlan, billing: 'monthly' }),
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to upgrade plan');
-      }
-
-      const result = await response.json();
-
-      if (result.paymentIntentClientSecret) {
-        // Handle payment confirmation if needed
-        toast.success('Payment processing...');
-        // You could integrate with Stripe Elements here for payment confirmation
-      }
-
-      toast.success(`Successfully upgraded to ${plan.name}!`);
-      setShowUpgradeModal(false);
-      
-      // Refresh the page to update billing status
-      window.location.reload();
-
+      if (!response.ok) throw new Error('Failed to initiate upgrade');
+      const data = await response.json();
+      if (!data?.url) throw new Error('Invalid checkout session');
+      window.location.href = data.url;
     } catch (err) {
       console.error('Upgrade error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Upgrade failed';

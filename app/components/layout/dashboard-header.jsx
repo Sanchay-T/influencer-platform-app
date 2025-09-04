@@ -20,7 +20,7 @@ export default function DashboardHeader() {
     // Removed "Influencers" tab to avoid clutter in navbar
   ]
 
-  // Gate: whether user can create more campaigns
+  // Gate: whether user can create more campaigns (single source: billing/status)
   const [canCreateCampaign, setCanCreateCampaign] = useState(true)
   const [loadingGate, setLoadingGate] = useState(false)
 
@@ -28,10 +28,13 @@ export default function DashboardHeader() {
     const run = async () => {
       try {
         setLoadingGate(true)
-        const res = await fetch('/api/campaigns/can-create')
+        const res = await fetch('/api/billing/status')
         if (!res.ok) return
         const data = await res.json()
-        setCanCreateCampaign(Boolean(data.allowed))
+        const used = Number(data?.usageInfo?.campaignsUsed ?? 0)
+        const limit = data?.usageInfo?.campaignsLimit
+        const unlimited = limit === -1 || limit === null || typeof limit === 'undefined'
+        setCanCreateCampaign(unlimited || used < Number(limit))
       } catch (_) {
         // fail-open
         setCanCreateCampaign(true)
