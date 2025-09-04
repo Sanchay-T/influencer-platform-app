@@ -65,28 +65,28 @@ export function EmailScheduleDisplay({ emailScheduleStatus, className = '' }: Em
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'sent':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
+        return <CheckCircle className="h-4 w-4 text-chart-1" />;
       case 'scheduled':
-        return <Clock className="h-4 w-4 text-blue-500" />;
+        return <Clock className="h-4 w-4 text-zinc-300" />;
       case 'failed':
         return <AlertCircle className="h-4 w-4 text-red-500" />;
       case 'cancelled':
-        return <AlertCircle className="h-4 w-4 text-gray-500" />;
+        return <AlertCircle className="h-4 w-4 text-zinc-500" />;
       default:
-        return <Mail className="h-4 w-4 text-gray-400" />;
+        return <Mail className="h-4 w-4 text-zinc-400" />;
     }
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'sent':
-        return <Badge variant="default" className="bg-green-100 text-green-800">Sent</Badge>;
+        return <Badge variant="secondary" className="bg-chart-1/20 text-chart-1 border border-chart-1/30">Sent</Badge>;
       case 'scheduled':
-        return <Badge variant="default" className="bg-blue-100 text-blue-800">Scheduled</Badge>;
+        return <Badge variant="secondary" className="bg-zinc-800/60 text-zinc-200 border border-zinc-700/50">Scheduled</Badge>;
       case 'failed':
         return <Badge variant="destructive">Failed</Badge>;
       case 'cancelled':
-        return <Badge variant="secondary">Cancelled</Badge>;
+        return <Badge variant="secondary" className="bg-zinc-800/60 text-zinc-300 border border-zinc-700/50">Cancelled</Badge>;
       default:
         return <Badge variant="outline">Unknown</Badge>;
     }
@@ -107,13 +107,13 @@ export function EmailScheduleDisplay({ emailScheduleStatus, className = '' }: Em
   }
 
   return (
-    <Card className={`${className} border border-gray-200 shadow-sm hover:shadow-md transition-shadow`}>
+    <Card className={`${className} bg-zinc-900/80 border border-zinc-700/50`}>
       <CardHeader className="pb-4">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Send className="h-5 w-5 text-blue-600" />
+        <CardTitle className="flex items-center gap-2 text-lg text-zinc-100">
+          <Send className="h-5 w-5 text-zinc-300" />
           <span className="font-semibold">Email Schedule</span>
         </CardTitle>
-        <CardDescription className="mt-1">
+        <CardDescription className="mt-1 text-zinc-400">
           Trial email sequence status and timing
         </CardDescription>
       </CardHeader>
@@ -121,38 +121,38 @@ export function EmailScheduleDisplay({ emailScheduleStatus, className = '' }: Em
       <CardContent>
         <div className="space-y-4">
           {emailSchedules.map((schedule, index) => (
-            <div key={index} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+            <div key={index} className="flex items-start gap-3 p-3 bg-zinc-800/50 rounded-lg border border-zinc-700/50">
               <div className="flex-shrink-0 mt-0.5">
                 {getStatusIcon(schedule.status)}
               </div>
               
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-medium text-gray-900">
+                  <h4 className="font-medium text-zinc-100">
                     {getEmailTypeLabel(schedule.type)}
                   </h4>
                   {getStatusBadge(schedule.status)}
                 </div>
                 
-                <div className="space-y-1 text-sm text-gray-600">
+                <div className="space-y-1 text-sm text-zinc-400">
                   {schedule.status === 'sent' && schedule.timestamp && (
                     <div className="flex items-center gap-2">
-                      <CheckCircle className="h-3 w-3 text-green-500" />
+                      <CheckCircle className="h-3 w-3 text-chart-1" />
                       <span>Sent: {formatTimestamp(schedule.timestamp)}</span>
                     </div>
                   )}
                   
                   {schedule.status === 'scheduled' && schedule.scheduledFor && (
                     <div className="flex items-center gap-2">
-                      <Calendar className="h-3 w-3 text-blue-500" />
+                      <Calendar className="h-3 w-3 text-zinc-300" />
                       <span>Scheduled for: {formatTimestamp(schedule.scheduledFor)}</span>
                     </div>
                   )}
                   
                   {schedule.messageId && (
                     <div className="flex items-center gap-2 mt-1">
-                      <Mail className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                      <code className="text-xs bg-white px-2 py-1 rounded border break-all">
+                      <Mail className="h-3 w-3 text-zinc-400 flex-shrink-0" />
+                      <code className="text-xs bg-zinc-900/60 text-zinc-200 px-2 py-1 rounded border border-zinc-700/50 break-all">
                         {schedule.messageId}
                       </code>
                     </div>
@@ -164,25 +164,25 @@ export function EmailScheduleDisplay({ emailScheduleStatus, className = '' }: Em
         </div>
 
         {/* Summary */}
-        <div className="mt-6 pt-4 border-t border-gray-200">
+        <div className="mt-6 pt-4 border-t border-zinc-700/50">
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
-              <div className="text-2xl font-bold text-green-600">
+              <div className="text-2xl font-bold text-chart-1">
                 {emailSchedules.filter(s => s.status === 'sent').length}
               </div>
-              <div className="text-xs text-gray-500">Sent</div>
+              <div className="text-xs text-zinc-500">Sent</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-blue-600">
+              <div className="text-2xl font-bold text-zinc-300">
                 {emailSchedules.filter(s => s.status === 'scheduled').length}
               </div>
-              <div className="text-xs text-gray-500">Scheduled</div>
+              <div className="text-xs text-zinc-500">Scheduled</div>
             </div>
             <div>
               <div className="text-2xl font-bold text-red-600">
                 {emailSchedules.filter(s => s.status === 'failed').length}
               </div>
-              <div className="text-xs text-gray-500">Failed</div>
+              <div className="text-xs text-zinc-500">Failed</div>
             </div>
           </div>
         </div>

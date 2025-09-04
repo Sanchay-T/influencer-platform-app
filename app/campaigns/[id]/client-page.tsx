@@ -109,9 +109,9 @@ export default function ClientCampaignPage({ campaign }: { campaign: Campaign | 
   if (!campaign) {
     return (
       <div className="flex items-center justify-center h-[50vh]">
-        <Card className="w-full max-w-md border-none bg-gray-50">
+        <Card className="w-full max-w-md bg-zinc-900/80 border border-zinc-700/50">
           <CardContent className="pt-6">
-            <div className="text-center text-gray-500">
+            <div className="text-center text-zinc-400">
               Campaign not found
             </div>
           </CardContent>
@@ -123,14 +123,14 @@ export default function ClientCampaignPage({ campaign }: { campaign: Campaign | 
   // Función para renderizar el contenedor base de la campaña
   const renderCampaignContainer = (children: React.ReactNode) => (
     <div className="space-y-8">
-      <Card className="border-none bg-gray-50">
+      <Card className="bg-zinc-900/80 border border-zinc-700/50">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-2xl font-semibold text-gray-900">{campaign.name}</CardTitle>
-              <CardDescription className="mt-1 text-gray-500">{campaign.description}</CardDescription>
+              <CardTitle className="text-2xl font-semibold text-zinc-100">{campaign.name}</CardTitle>
+              <CardDescription className="mt-1 text-zinc-400">{campaign.description}</CardDescription>
             </div>
-            <Badge variant="outline" className="text-gray-600 bg-white">
+            <Badge variant="outline" className="text-zinc-300 bg-zinc-800 border border-zinc-700/50">
               {campaignState === 'active' ? 'PROCESSING' : campaign.status.toUpperCase()}
             </Badge>
           </div>
@@ -138,29 +138,29 @@ export default function ClientCampaignPage({ campaign }: { campaign: Campaign | 
         <CardContent>
           <div className="grid grid-cols-3 gap-6">
             <div className="space-y-1">
-              <p className="text-sm font-medium text-gray-500">Search Type</p>
-              <p className="text-sm text-gray-900">{campaign.searchType}</p>
+              <p className="text-sm font-medium text-zinc-400">Search Type</p>
+              <p className="text-sm text-zinc-100">{campaign.searchType}</p>
             </div>
             {campaign.searchType === 'keyword' ? (
               <>
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-gray-500">Platform</p>
-                  <p className="text-sm text-gray-900">{activeJob?.platform || campaign.scrapingJobs?.[0]?.platform || 'TikTok'}</p>
+                  <p className="text-sm font-medium text-zinc-400">Platform</p>
+                  <p className="text-sm text-zinc-100">{activeJob?.platform || campaign.scrapingJobs?.[0]?.platform || 'TikTok'}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-gray-500">Keywords</p>
-                  <p className="text-sm text-gray-900">{activeJob?.keywords?.join(", ") || campaign.scrapingJobs?.[0]?.keywords?.join(", ") || "-"}</p>
+                  <p className="text-sm font-medium text-zinc-400">Keywords</p>
+                  <p className="text-sm text-zinc-100">{activeJob?.keywords?.join(", ") || campaign.scrapingJobs?.[0]?.keywords?.join(", ") || "-"}</p>
                 </div>
               </>
             ) : (
               <>
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-gray-500">Platform</p>
-                  <p className="text-sm text-gray-900">{activeJob?.platform || campaign.scrapingJobs?.[0]?.platform || 'Instagram'}</p>
+                  <p className="text-sm font-medium text-zinc-400">Platform</p>
+                  <p className="text-sm text-zinc-100">{activeJob?.platform || campaign.scrapingJobs?.[0]?.platform || 'Instagram'}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-gray-500">Target Username</p>
-                  <p className="text-sm text-gray-900">@{activeJob?.targetUsername || campaign.scrapingJobs?.[0]?.targetUsername || "-"}</p>
+                  <p className="text-sm font-medium text-zinc-400">Target Username</p>
+                  <p className="text-sm text-zinc-100">@{activeJob?.targetUsername || campaign.scrapingJobs?.[0]?.targetUsername || "-"}</p>
                 </div>
               </>
             )}
@@ -175,10 +175,10 @@ export default function ClientCampaignPage({ campaign }: { campaign: Campaign | 
   if (campaignState === 'initialLoading') {
     return renderCampaignContainer(
       <div className="flex items-center justify-center py-12">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-600" />
-          <p className="text-sm text-gray-500">Loading results...</p>
-        </div>
+      <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-zinc-300" />
+          <p className="text-sm text-zinc-400">Loading results...</p>
+      </div>
       </div>
     );
   }
@@ -186,8 +186,8 @@ export default function ClientCampaignPage({ campaign }: { campaign: Campaign | 
   if (campaignState === 'active') {
     return renderCampaignContainer(
       <div className="flex flex-col items-center gap-4 py-8">
-        <div className="flex items-center gap-2 text-gray-500">
-          <Loader2 className="h-4 w-4 animate-spin" />
+        <div className="flex items-center gap-2 text-zinc-400">
+          <Loader2 className="h-4 w-4 animate-spin text-pink-400" />
           <span>Processing search... ({progress}%)</span>
         </div>
         <div className="w-full max-w-md space-y-2">
@@ -226,14 +226,14 @@ export default function ClientCampaignPage({ campaign }: { campaign: Campaign | 
 
       return (
         <div className="space-y-8">
-          <Card className="border-none bg-gray-50">
+          <Card className="bg-zinc-900/80 border border-zinc-700/50">
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-2xl font-semibold text-gray-900">{campaign.name}</CardTitle>
-                  <CardDescription className="mt-1 text-gray-500">{campaign.description}</CardDescription>
+                  <CardTitle className="text-2xl font-semibold text-zinc-100">{campaign.name}</CardTitle>
+                  <CardDescription className="mt-1 text-zinc-400">{campaign.description}</CardDescription>
                 </div>
-                <Badge variant="outline" className="text-gray-600 bg-white">
+                <Badge variant="outline" className="text-zinc-300 bg-zinc-800 border border-zinc-700/50">
                   {campaign.status.toUpperCase()}
                 </Badge>
               </div>
@@ -241,16 +241,16 @@ export default function ClientCampaignPage({ campaign }: { campaign: Campaign | 
             <CardContent>
               <div className="grid grid-cols-3 gap-6">
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-gray-500">Search Type</p>
-                  <p className="text-sm text-gray-900">{campaign.searchType}</p>
+                  <p className="text-sm font-medium text-zinc-400">Search Type</p>
+                  <p className="text-sm text-zinc-100">{campaign.searchType}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-gray-500">Platform</p>
-                  <p className="text-sm text-gray-900">{searchData.platform}</p>
+                  <p className="text-sm font-medium text-zinc-400">Platform</p>
+                  <p className="text-sm text-zinc-100">{searchData.platform}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-gray-500">Keywords</p>
-                  <p className="text-sm text-gray-900">{searchData.keywords.join(", ")}</p>
+                  <p className="text-sm font-medium text-zinc-400">Keywords</p>
+                  <p className="text-sm text-zinc-100">{searchData.keywords.join(", ")}</p>
                 </div>
               </div>
             </CardContent>
@@ -258,26 +258,26 @@ export default function ClientCampaignPage({ campaign }: { campaign: Campaign | 
 
           {/* All Completed Runs Section */}
           {completedJobs.length > 1 && (
-            <Card className="border-none bg-white">
+            <Card className="bg-zinc-900/80 border border-zinc-700/50">
               <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-medium text-gray-900">All Runs ({completedJobs.length})</CardTitle>
+                <CardTitle className="text-lg font-medium text-zinc-100">All Runs ({completedJobs.length})</CardTitle>
                 <CardDescription>All completed search runs for this campaign</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   {completedJobs.map((job, index) => (
-                    <div key={job.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div key={job.id} className="flex items-center justify-between p-3 bg-zinc-800/60 border border-zinc-700/50 rounded-lg">
                       <div className="flex items-center space-x-4">
-                        <div className="text-sm font-medium text-gray-900">
+                        <div className="text-sm font-medium text-zinc-100">
                           Run #{completedJobs.length - index}
                         </div>
-                        <div className="text-sm text-gray-500">
+                        <div className="text-sm text-zinc-400">
                           {new Date(job.createdAt).toLocaleDateString()} at {new Date(job.createdAt).toLocaleTimeString()}
                         </div>
-                        <div className="text-sm text-gray-600">
+                        <div className="text-sm text-zinc-400">
                           {job.platform}
                         </div>
-                        <div className="text-sm text-gray-600">
+                        <div className="text-sm text-zinc-400">
                           {job.results?.[0]?.creators?.length || 0} results
                         </div>
                       </div>
@@ -305,8 +305,8 @@ export default function ClientCampaignPage({ campaign }: { campaign: Campaign | 
           <Suspense fallback={
             <div className="flex items-center justify-center py-12">
               <div className="flex flex-col items-center gap-4">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-600" />
-                <p className="text-sm text-gray-500">Loading results...</p>
+                <Loader2 className="h-8 w-8 animate-spin text-zinc-300" />
+                <p className="text-sm text-zinc-400">Loading results...</p>
               </div>
             </div>
           }>
@@ -331,14 +331,14 @@ export default function ClientCampaignPage({ campaign }: { campaign: Campaign | 
 
       return (
         <div className="space-y-8">
-          <Card className="border-none bg-gray-50">
+          <Card className="bg-zinc-900/80 border border-zinc-700/50">
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-2xl font-semibold text-gray-900">{campaign.name}</CardTitle>
-                  <CardDescription className="mt-1 text-gray-500">{campaign.description}</CardDescription>
+                  <CardTitle className="text-2xl font-semibold text-zinc-100">{campaign.name}</CardTitle>
+                  <CardDescription className="mt-1 text-zinc-400">{campaign.description}</CardDescription>
                 </div>
-                <Badge variant="outline" className="text-gray-600 bg-white">
+                <Badge variant="outline" className="text-zinc-300 bg-zinc-800 border border-zinc-700/50">
                   {campaign.status.toUpperCase()}
                 </Badge>
               </div>
@@ -346,16 +346,16 @@ export default function ClientCampaignPage({ campaign }: { campaign: Campaign | 
             <CardContent>
               <div className="grid grid-cols-3 gap-6">
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-gray-500">Search Type</p>
-                  <p className="text-sm text-gray-900">{campaign.searchType}</p>
+                  <p className="text-sm font-medium text-zinc-400">Search Type</p>
+                  <p className="text-sm text-zinc-100">{campaign.searchType}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-gray-500">Platform</p>
-                  <p className="text-sm text-gray-900">{searchData.platform}</p>
+                  <p className="text-sm font-medium text-zinc-400">Platform</p>
+                  <p className="text-sm text-zinc-100">{searchData.platform}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-gray-500">Target Username</p>
-                  <p className="text-sm text-gray-900">@{searchData.targetUsername}</p>
+                  <p className="text-sm font-medium text-zinc-400">Target Username</p>
+                  <p className="text-sm text-zinc-100">@{searchData.targetUsername}</p>
                 </div>
               </div>
             </CardContent>
@@ -363,26 +363,26 @@ export default function ClientCampaignPage({ campaign }: { campaign: Campaign | 
 
           {/* All Completed Runs Section */}
           {completedJobs.length > 1 && (
-            <Card className="border-none bg-white">
+            <Card className="bg-zinc-900/80 border border-zinc-700/50">
               <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-medium text-gray-900">All Runs ({completedJobs.length})</CardTitle>
+                <CardTitle className="text-lg font-medium text-zinc-100">All Runs ({completedJobs.length})</CardTitle>
                 <CardDescription>All completed search runs for this campaign</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   {completedJobs.map((job, index) => (
-                    <div key={job.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div key={job.id} className="flex items-center justify-between p-3 bg-zinc-800/60 border border-zinc-700/50 rounded-lg">
                       <div className="flex items-center space-x-4">
-                        <div className="text-sm font-medium text-gray-900">
+                        <div className="text-sm font-medium text-zinc-100">
                           Run #{completedJobs.length - index}
                         </div>
-                        <div className="text-sm text-gray-500">
+                        <div className="text-sm text-zinc-400">
                           {new Date(job.createdAt).toLocaleDateString()} at {new Date(job.createdAt).toLocaleTimeString()}
                         </div>
-                        <div className="text-sm text-gray-600">
+                        <div className="text-sm text-zinc-400">
                           {job.platform}
                         </div>
-                        <div className="text-sm text-gray-600">
+                        <div className="text-sm text-zinc-400">
                           {job.results?.[0]?.creators?.length || 0} results
                         </div>
                       </div>
@@ -410,8 +410,8 @@ export default function ClientCampaignPage({ campaign }: { campaign: Campaign | 
           <Suspense fallback={
             <div className="flex items-center justify-center py-12">
               <div className="flex flex-col items-center gap-4">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-600" />
-                <p className="text-sm text-gray-500">Loading results...</p>
+                <Loader2 className="h-8 w-8 animate-spin text-zinc-300" />
+                <p className="text-sm text-zinc-400">Loading results...</p>
               </div>
             </div>
           }>
@@ -432,7 +432,7 @@ export default function ClientCampaignPage({ campaign }: { campaign: Campaign | 
             window.location.href = `/campaigns/search/keyword?campaignId=${campaign.id}`;
           }}
           disabled={isSearching}
-          className="bg-gray-900 hover:bg-gray-800 text-white"
+          className="bg-pink-600 hover:bg-pink-500 text-white"
         >
           <Search className="mr-2 h-4 w-4" />
           {isSearching ? 'Starting search...' : 'Start Search'}
@@ -444,9 +444,9 @@ export default function ClientCampaignPage({ campaign }: { campaign: Campaign | 
   // Estado error o sin resultados
   return renderCampaignContainer(
     <div className="flex items-center justify-center py-8">
-      <div className="text-center text-gray-500">
+      <div className="text-center text-zinc-400">
         No results found for this campaign
       </div>
     </div>
   );
-} 
+}

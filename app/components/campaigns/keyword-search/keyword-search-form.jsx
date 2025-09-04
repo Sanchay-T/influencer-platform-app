@@ -28,14 +28,14 @@ export default function KeywordSearchForm({ onSubmit }) {
 
   if (!isLoaded || !user) {
     return (
-      <Card>
+      <Card className="bg-zinc-900/80 border border-zinc-700/50">
         <CardHeader>
           <CardTitle>Configure Keyword Search</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex justify-center items-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-            <span className="ml-3 text-gray-600">Loading...</span>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-200"></div>
+            <span className="ml-3 text-zinc-300">Loading...</span>
           </div>
         </CardContent>
       </Card>
@@ -79,7 +79,7 @@ export default function KeywordSearchForm({ onSubmit }) {
   };
 
   return (
-    <Card>
+    <Card className="bg-zinc-900/80 border border-zinc-700/50">
       <CardHeader>
         <CardTitle>Configure Keyword Search</CardTitle>
       </CardHeader>

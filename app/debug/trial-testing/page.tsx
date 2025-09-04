@@ -71,13 +71,9 @@ export default function TrialTestingPage() {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-green-100 text-green-700';
-      case 'expired': return 'bg-red-100 text-red-700';
-      case 'cancelled': return 'bg-gray-100 text-gray-700';
-      default: return 'bg-blue-100 text-blue-700';
-    }
+  const getStatusColor = (_status: string) => {
+    // Unified brand accent (pink) for badges in this debug view
+    return 'bg-pink-600/20 text-pink-400 border border-pink-600/30';
   };
 
   const formatDate = (dateString: string) => {
@@ -85,20 +81,20 @@ export default function TrialTestingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-zinc-900 p-8">
       <div className="max-w-4xl mx-auto space-y-8">
         {/* Header */}
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl font-bold text-zinc-100 mb-2">
             🧪 Trial System Testing Dashboard
           </h1>
-          <p className="text-gray-600">
+          <p className="text-zinc-400">
             Test trial timer logic without waiting 7 days
           </p>
         </div>
 
         {/* Current Status */}
-        <Card>
+        <Card className="bg-zinc-900/80 border border-zinc-700/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Timer className="h-5 w-5" />
@@ -119,16 +115,16 @@ export default function TrialTestingPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Days Remaining</Label>
-                  <div className="text-2xl font-bold text-blue-600">
+                  <div className="text-2xl font-bold text-pink-400">
                     {trialStatus.daysRemaining}
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Progress</Label>
                   <div className="flex items-center gap-2">
-                    <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="w-full bg-zinc-800 rounded-full h-2">
                       <div 
-                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        className="bg-pink-600 h-2 rounded-full transition-all duration-300"
                         style={{ width: `${trialStatus.progressPercentage}%` }}
                       />
                     </div>
@@ -139,25 +135,25 @@ export default function TrialTestingPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Trial Start</Label>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-zinc-400">
                     {trialStatus.trialStartDate ? formatDate(trialStatus.trialStartDate) : 'Not set'}
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Trial End</Label>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-zinc-400">
                     {trialStatus.trialEndDate ? formatDate(trialStatus.trialEndDate) : 'Not set'}
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label>Time Until Expiry</Label>
-                  <div className="text-sm font-medium text-orange-600">
+                  <div className="text-sm font-medium text-pink-400">
                     {trialStatus.timeUntilExpiry}
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="text-center py-4 text-gray-500">
+              <div className="text-center py-4 text-zinc-500">
                 Loading trial status...
               </div>
             )}
@@ -167,7 +163,7 @@ export default function TrialTestingPage() {
         {/* Testing Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Quick Tests */}
-          <Card>
+          <Card className="bg-zinc-900/80 border border-zinc-700/50">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <PlayCircle className="h-5 w-5" />
@@ -211,7 +207,7 @@ export default function TrialTestingPage() {
           </Card>
 
           {/* Custom Day Simulation */}
-          <Card>
+          <Card className="bg-zinc-900/80 border border-zinc-700/50">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
@@ -255,16 +251,16 @@ export default function TrialTestingPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-green-600" />
+                <CheckCircle className="h-5 w-5 text-pink-400" />
                 Last Test Action
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <p className="text-green-800">
+              <div className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg p-4">
+                <p className="text-zinc-100">
                   ✅ Successfully executed: <strong>{lastAction}</strong>
                 </p>
-                <p className="text-sm text-green-600 mt-1">
+                <p className="text-sm text-zinc-300 mt-1">
                   Trial status has been updated. Check the billing page to see changes.
                 </p>
               </div>
@@ -273,14 +269,14 @@ export default function TrialTestingPage() {
         )}
 
         {/* Instructions */}
-        <Card>
+        <Card className="bg-zinc-900/80 border border-zinc-700/50">
           <CardHeader>
             <CardTitle>Testing Instructions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-medium text-blue-900 mb-2">How to Test:</h4>
-              <ol className="list-decimal list-inside text-sm text-blue-800 space-y-1">
+            <div className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg p-4">
+              <h4 className="font-medium text-zinc-100 mb-2">How to Test:</h4>
+              <ol className="list-decimal list-inside text-sm text-zinc-300 space-y-1">
                 <li>Use the quick test buttons above to simulate different trial states</li>
                 <li>Navigate to <code>/billing</code> or <code>/profile</code> to see the changes in real-time</li>
                 <li>Check the trial progress, countdown, and status updates</li>
@@ -289,9 +285,9 @@ export default function TrialTestingPage() {
               </ol>
             </div>
             
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <h4 className="font-medium text-yellow-900 mb-2">⚠️ Important:</h4>
-              <p className="text-sm text-yellow-800">
+            <div className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg p-4">
+              <h4 className="font-medium text-zinc-100 mb-2">⚠️ Important:</h4>
+              <p className="text-sm text-zinc-300">
                 This only changes the database dates for testing. It doesn't affect actual Stripe billing cycles.
                 In production, Stripe handles the real billing automatically.
               </p>

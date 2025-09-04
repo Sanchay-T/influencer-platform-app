@@ -159,11 +159,11 @@ export default function KeywordSearch() {
   if (isLoading) {
     return (
       <DashboardLayout>
-        <div className="max-w-4xl mx-auto py-8">
-          <div className="flex justify-center items-center min-h-[400px]">
+        <div className="py-8">
+          <div className="flex justify-center items-center min-h-[300px]">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-4"></div>
-              <p>Loading campaign...</p>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-200 mb-4"></div>
+              <p className="text-zinc-300">Loading campaign...</p>
             </div>
           </div>
         </div>
@@ -173,7 +173,14 @@ export default function KeywordSearch() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto py-8">
+      <div className="space-y-6">
+        <div className="flex items-center justify-between mt-2">
+          <div>
+            <h1 className="text-2xl font-bold">Keyword Search</h1>
+            <p className="text-sm text-zinc-400 mt-1">Discover creators using keywords across platforms</p>
+          </div>
+        </div>
+
         {step === 1 && <KeywordSearchForm onSubmit={handleFormSubmit} />}
         {step === 2 && (
           <KeywordReview 
@@ -189,4 +196,4 @@ export default function KeywordSearch() {
       </div>
     </DashboardLayout>
   );
-} 
+}

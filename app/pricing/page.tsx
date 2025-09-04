@@ -149,7 +149,7 @@ const PricingPageContent = () => {
       icon: Shield,
       popular: false,
       badge: "Start Here",
-      badgeColor: "bg-gray-100 text-gray-800",
+      badgeColor: "bg-zinc-800 text-zinc-200 border border-zinc-700/50",
       features: features.map(f => f.free),
       trialNote: "Results are limited during trial"
     },
@@ -161,7 +161,7 @@ const PricingPageContent = () => {
       icon: Star,
       popular: true,
       badge: "Most Popular",
-      badgeColor: "bg-blue-600 text-white",
+      badgeColor: "bg-zinc-800 text-zinc-200 border border-zinc-700/50",
       features: features.map(f => f.basic)
     },
     {
@@ -209,11 +209,11 @@ const PricingPageContent = () => {
   })));
 
   return (
-    <div className="space-y-12 max-w-7xl mx-auto">
+    <div className="space-y-12">
       {/* Header */}
       <div className="text-center space-y-6">
         <div className="flex items-center justify-center gap-3 mb-4">
-          <h1 className="text-4xl font-bold text-zinc-900">Choose Your Plan</h1>
+          <h1 className="text-3xl font-bold text-zinc-100">Choose Your Plan</h1>
           <SignedIn>
             <PlanBadge />
           </SignedIn>
@@ -222,25 +222,25 @@ const PricingPageContent = () => {
         {/* Trial Status Notice */}
         <SignedIn>
           {isTrialing && trialStatus === 'active' && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-2xl mx-auto">
-              <p className="text-blue-800 font-medium">
+            <div className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg p-4 max-w-2xl mx-auto text-zinc-200">
+              <p className="text-zinc-100 font-medium">
                 🎉 You're currently on a free trial! 
-                <span className="text-blue-600 ml-1">Upgrade anytime to unlock full access.</span>
+                <span className="text-zinc-300 ml-1">Upgrade anytime to unlock full access.</span>
               </p>
             </div>
           )}
           
           {currentPlan !== 'free_trial' && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 max-w-2xl mx-auto">
-              <p className="text-green-800 font-medium">
+            <div className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg p-4 max-w-2xl mx-auto text-zinc-200">
+              <p className="text-zinc-100 font-medium">
                 ✨ You're on the {currentPlan.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} plan. 
-                <span className="text-green-600 ml-1">Need to change? Choose an option below.</span>
+                <span className="text-zinc-300 ml-1">Need to change? Choose an option below.</span>
               </p>
             </div>
           )}
         </SignedIn>
         
-        <p className="text-xl text-zinc-600 max-w-3xl mx-auto leading-relaxed">
+        <p className="text-lg text-zinc-400 leading-relaxed">
           {currentPlan === 'free_trial' 
             ? 'Upgrade to unlock unlimited searches and advanced features.'
             : 'Find the perfect plan for your influencer marketing needs.'
@@ -249,26 +249,24 @@ const PricingPageContent = () => {
       </div>
 
       {/* Pricing Cards */}
-      <div className="flex justify-center px-4">
+      <div>
         <div className={`grid gap-6 grid-cols-1 sm:grid-cols-2 ${
           plans.length === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'
-        } max-w-7xl w-full ${
-          plans.length === 3 ? 'lg:max-w-5xl' : ''
-        }`}>
+        } w-full`}>
         {plans.map((plan, index) => {
           const Icon = plan.icon;
           return (
             <Card 
               key={plan.name} 
-              className={`relative border transition-all duration-300 hover:shadow-lg w-full h-fit ${
+              className={`relative border transition-all duration-300 w-full h-fit bg-zinc-900/80 ${
                 plan.popular 
-                  ? 'border-blue-500 shadow-lg ring-2 ring-blue-500 ring-opacity-20' 
-                  : 'border-zinc-200 hover:border-zinc-300'
+                  ? 'border-zinc-600' 
+                  : 'border-zinc-700/50'
               }`}
             >
               {plan.badge && (
                 <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                  <Badge className={`px-3 py-1 font-medium ${plan.badgeColor || 'bg-blue-600 text-white'}`}>
+                  <Badge className={`px-3 py-1 font-medium ${plan.badgeColor || 'bg-zinc-800 text-zinc-200 border border-zinc-700/50'}`}>
                     {plan.badge}
                   </Badge>
                 </div>
@@ -276,31 +274,21 @@ const PricingPageContent = () => {
               
               <CardHeader className="text-center space-y-3 pb-4">
                 <div className="flex items-center justify-center">
-                  <div className={`p-2 rounded-full ${
-                    plan.name === 'Free Trial' ? 'bg-gray-100' :
-                    plan.name === 'Glow Up' ? 'bg-blue-50' :
-                    plan.name === 'Viral Surge' ? 'bg-purple-100' :
-                    'bg-amber-100'
-                  }`}>
-                    <Icon className={`h-5 w-5 ${
-                      plan.name === 'Free Trial' ? 'text-gray-600' :
-                      plan.name === 'Glow Up' ? 'text-blue-600' :
-                      plan.name === 'Viral Surge' ? 'text-purple-600' :
-                      'text-amber-600'
-                    }`} />
+                  <div className={`p-2 rounded-full bg-zinc-800`}>
+                    <Icon className={`h-5 w-5 text-zinc-300`} />
                   </div>
                 </div>
                 <div>
-                  <CardTitle className="text-xl font-semibold text-zinc-900">{plan.name}</CardTitle>
-                  <CardDescription className="text-zinc-600 mt-2 leading-relaxed">
+                  <CardTitle className="text-xl font-semibold text-zinc-100">{plan.name}</CardTitle>
+                  <CardDescription className="text-zinc-400 mt-2 leading-relaxed">
                     {plan.description}
                   </CardDescription>
                 </div>
                 <div className="space-y-1">
-                  <div className="text-3xl font-bold text-zinc-900">{plan.price}</div>
+                  <div className="text-3xl font-bold text-zinc-100">{plan.price}</div>
                   <div className="text-sm text-zinc-500">{plan.period}</div>
                   {plan.trialNote && (
-                    <div className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-md mt-2">
+                    <div className="text-xs text-zinc-300 bg-zinc-800/60 border border-zinc-700/50 px-2 py-1 rounded-md mt-2">
                       {plan.trialNote}
                     </div>
                   )}
@@ -318,20 +306,20 @@ const PricingPageContent = () => {
                       <div key={feature.name} className="flex items-start gap-2">
                         <div className="flex-shrink-0 mt-0.5">
                           {isIncluded ? (
-                            <Check className="h-3 w-3 text-green-600" />
+                            <Check className="h-3 w-3 text-chart-1" />
                           ) : (
                             <X className="h-3 w-3 text-zinc-300" />
                           )}
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className={`text-xs font-medium ${
-                            isIncluded ? 'text-zinc-900' : 'text-zinc-400'
+                            isIncluded ? 'text-zinc-100' : 'text-zinc-500'
                           }`}>
                             {feature.name}
                           </div>
                           {displayValue && (
                             <div className={`text-xs leading-relaxed ${
-                              isIncluded ? 'text-zinc-600' : 'text-zinc-400'
+                              isIncluded ? 'text-zinc-400' : 'text-zinc-500'
                             }`}>
                               {displayValue}
                             </div>
@@ -346,10 +334,10 @@ const PricingPageContent = () => {
                   <Button 
                     className={`w-full font-medium h-11 px-6 text-sm ${
                       plan.buttonVariant === 'default'
-                        ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                        ? 'bg-pink-600 hover:bg-pink-500 text-white' 
                         : plan.disabled 
                           ? '' 
-                          : 'border-zinc-300 hover:bg-zinc-50'
+                          : 'border-zinc-700/50 hover:bg-zinc-800/50'
                     }`}
                     variant={plan.buttonVariant || 'outline'}
                     disabled={plan.disabled}
@@ -401,8 +389,8 @@ const PricingPageContent = () => {
                     <Button 
                       className={`w-full font-medium h-11 px-6 text-sm ${
                         plan.popular 
-                          ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                          : 'border-zinc-300 hover:bg-zinc-50'
+                          ? 'bg-pink-600 hover:bg-pink-500 text-white' 
+                          : 'border-zinc-700/50 hover:bg-zinc-800/40'
                       }`}
                       variant={plan.popular ? "default" : "outline"}
                     >
@@ -421,12 +409,12 @@ const PricingPageContent = () => {
 
 
       {/* Detailed Feature Comparison Table */}
-      <Card className="border-zinc-200 mt-16">
+      <Card className="border-zinc-700/50 mt-16">
         <CardHeader className="text-center pb-8">
-          <CardTitle className="text-2xl font-bold text-zinc-900">
+          <CardTitle className="text-2xl font-bold text-zinc-100">
             Complete Feature Comparison
           </CardTitle>
-          <CardDescription className="text-lg text-zinc-600 mt-2">
+          <CardDescription className="text-lg text-zinc-400 mt-2">
             See exactly what's included in each plan
           </CardDescription>
         </CardHeader>
@@ -434,65 +422,65 @@ const PricingPageContent = () => {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b-2 border-zinc-200">
-                  <th className="text-left py-4 px-6 font-semibold text-zinc-900">Feature</th>
-                  <th className="text-center py-4 px-4 font-semibold text-zinc-900">Free Trial</th>
-                  <th className="text-center py-4 px-4 font-semibold text-zinc-900 text-blue-700">Glow Up</th>
-                  <th className="text-center py-4 px-4 font-semibold text-zinc-900 text-purple-700">Viral Surge</th>
-                  <th className="text-center py-4 px-4 font-semibold text-zinc-900 text-amber-700">Fame Flex</th>
+                <tr className="border-b-2 border-zinc-700/50">
+                  <th className="text-left py-4 px-6 font-semibold text-zinc-100">Feature</th>
+                  <th className="text-center py-4 px-4 font-semibold text-zinc-100">Free Trial</th>
+                  <th className="text-center py-4 px-4 font-semibold text-zinc-100 text-zinc-200">Glow Up</th>
+                  <th className="text-center py-4 px-4 font-semibold text-zinc-100">Viral Surge</th>
+                  <th className="text-center py-4 px-4 font-semibold text-zinc-100">Fame Flex</th>
                 </tr>
               </thead>
               <tbody>
                 {features.map((feature, index) => (
-                  <tr key={feature.name} className="border-b border-zinc-100 hover:bg-zinc-50">
+                  <tr key={feature.name} className="border-b border-zinc-800 hover:bg-zinc-800/40">
                     <td className="py-4 px-6">
                       <div>
-                        <div className="font-medium text-zinc-900 mb-1">{feature.name}</div>
-                        <div className="text-sm text-zinc-600 leading-relaxed">{feature.description}</div>
+                        <div className="font-medium text-zinc-100 mb-1">{feature.name}</div>
+                        <div className="text-sm text-zinc-400 leading-relaxed">{feature.description}</div>
                       </div>
                     </td>
                     <td className="text-center py-4 px-4">
                       {typeof feature.free === 'boolean' ? (
                         feature.free ? (
-                          <Check className="h-5 w-5 text-green-600 mx-auto" />
+                          <Check className="h-5 w-5 text-chart-1 mx-auto" />
                         ) : (
                           <X className="h-5 w-5 text-zinc-300 mx-auto" />
                         )
                       ) : (
-                        <span className="text-sm text-zinc-700 px-2">{feature.free}</span>
+                        <span className="text-sm text-zinc-300 px-2">{feature.free}</span>
                       )}
                     </td>
                     <td className="text-center py-4 px-4">
                       {typeof feature.basic === 'boolean' ? (
                         feature.basic ? (
-                          <Check className="h-5 w-5 text-green-600 mx-auto" />
+                          <Check className="h-5 w-5 text-chart-1 mx-auto" />
                         ) : (
                           <X className="h-5 w-5 text-zinc-300 mx-auto" />
                         )
                       ) : (
-                        <span className="text-sm text-zinc-700 px-2">{feature.basic}</span>
+                        <span className="text-sm text-zinc-300 px-2">{feature.basic}</span>
                       )}
                     </td>
-                    <td className="text-center py-4 px-4 bg-blue-50">
+                    <td className="text-center py-4 px-4 bg-secondary/50">
                       {typeof feature.premium === 'boolean' ? (
                         feature.premium ? (
-                          <Check className="h-5 w-5 text-green-600 mx-auto" />
+                          <Check className="h-5 w-5 text-chart-1 mx-auto" />
                         ) : (
                           <X className="h-5 w-5 text-zinc-300 mx-auto" />
                         )
                       ) : (
-                        <span className="text-sm text-blue-800 font-medium px-2">{feature.premium}</span>
+                        <span className="text-sm text-zinc-200 font-medium px-2">{feature.premium}</span>
                       )}
                     </td>
                     <td className="text-center py-4 px-4">
                       {typeof feature.enterprise === 'boolean' ? (
                         feature.enterprise ? (
-                          <Check className="h-5 w-5 text-green-600 mx-auto" />
+                          <Check className="h-5 w-5 text-chart-1 mx-auto" />
                         ) : (
                           <X className="h-5 w-5 text-zinc-300 mx-auto" />
                         )
                       ) : (
-                        <span className="text-sm text-purple-700 font-medium px-2">{feature.enterprise}</span>
+                        <span className="text-sm text-zinc-200 font-medium px-2">{feature.enterprise}</span>
                       )}
                     </td>
                   </tr>
@@ -505,26 +493,26 @@ const PricingPageContent = () => {
 
       {/* Call to Action */}
       <SignedOut>
-        <Card className="border-zinc-300 bg-gradient-to-r from-blue-600 to-purple-600 text-white mt-16">
+        <Card className="border border-zinc-700/50 bg-zinc-900/80 text-zinc-100 mt-16">
           <CardContent className="text-center space-y-8 p-12">
             <div className="space-y-4">
-              <h2 className="text-3xl font-bold">
+              <h2 className="text-2xl font-bold">
                 Ready to discover amazing influencers?
               </h2>
-              <p className="text-blue-100 max-w-2xl mx-auto text-lg leading-relaxed">
+              <p className="text-zinc-300 max-w-2xl mx-auto text-base leading-relaxed">
                 Join thousands of brands using our platform to find and connect with 
                 the perfect creators for their campaigns. Start your free trial today.
               </p>
             </div>
             <div className="flex justify-center gap-6">
               <Link href="/sign-up">
-                <Button size="lg" className="bg-white text-blue-600 hover:bg-blue-50 font-semibold px-8 py-3">
+                <Button size="lg" className="bg-pink-600 hover:bg-pink-500 text-white font-semibold px-8 py-3">
                   Start 7-Day Free Trial
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
               <Link href="/sign-in">
-                <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-blue-600 font-semibold px-8 py-3">
+                <Button size="lg" variant="outline" className="border-zinc-600 text-zinc-200 hover:bg-zinc-800 font-semibold px-8 py-3">
                   Sign In to Your Account
                 </Button>
               </Link>
@@ -540,8 +528,8 @@ export default function PricingPage() {
   return (
     <>
       <SignedOut>
-        {/* Public pricing page - no sidebar */}
-        <div className="min-h-screen bg-zinc-50 py-12">
+        {/* Public pricing page - no sidebar, dark theme */}
+        <div className="min-h-screen bg-zinc-900 py-12">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <PricingPageContent />
           </div>

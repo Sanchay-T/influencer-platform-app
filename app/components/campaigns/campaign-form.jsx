@@ -89,14 +89,14 @@ export default function CampaignForm() {
 
   if (step === 1) {
     return (
-      <Card className="max-w-lg mx-auto">
+      <Card className="max-w-2xl mx-auto bg-zinc-900/80 border border-zinc-700/50">
         <CardHeader>
-          <CardTitle>Create a Campaign</CardTitle>
+          <CardTitle className="text-zinc-100">Create a Campaign</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmitBasicInfo} className="space-y-4">
+          <form onSubmit={handleSubmitBasicInfo} className="space-y-5">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Campaign Name</label>
+              <label className="text-sm font-medium text-zinc-200">Campaign Name</label>
               <Input
                 required
                 value={formData.name}
@@ -104,11 +104,12 @@ export default function CampaignForm() {
                   console.log('✏️ [CLIENT] Campaign name changed:', e.target.value);
                   setFormData({ ...formData, name: e.target.value });
                 }}
-                placeholder="E.g.: Summer Campaign 2024"
+                placeholder="E.g.: Summer Campaign 2025"
+                className="bg-zinc-800/60 border-zinc-700/50"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Campaign Description</label>
+              <label className="text-sm font-medium text-zinc-200">Campaign Description</label>
               <Textarea
                 required
                 value={formData.description}
@@ -116,8 +117,9 @@ export default function CampaignForm() {
                   console.log('✏️ [CLIENT] Campaign description changed');
                   setFormData({ ...formData, description: e.target.value });
                 }}
-                placeholder="Describe your campaign..."
+                placeholder="Describe your campaign goals and target audience..."
                 rows={4}
+                className="bg-zinc-800/60 border-zinc-700/50"
               />
             </div>
             <Button type="submit" className="w-full">
@@ -130,49 +132,45 @@ export default function CampaignForm() {
   }
 
   return (
-    <Card className="w-full max-w-3xl mx-auto">
+    <Card className="w-full max-w-3xl mx-auto bg-zinc-900/80 border border-zinc-700/50">
       <CardHeader>
-        <CardTitle>Select Search Method</CardTitle>
+        <CardTitle className="text-zinc-100">Select Search Method</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Button
-            variant="outline"
-            className="h-auto min-h-[100px] p-6 text-left hover:bg-accent block w-full relative"
-            onClick={() => handleSearchTypeSelection("keyword")}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <button
+            type="button"
+            onClick={() => handleSearchTypeSelection('keyword')}
             disabled={loadingType !== null}
+            className="h-auto min-h-[110px] p-6 text-left w-full relative rounded-lg border border-zinc-700/50 bg-zinc-900/60 hover:bg-zinc-800/60 transition-all focus:outline-none focus:ring-2 focus:ring-primary/30"
           >
-            <div className="space-y-2">
-              <h3 className="font-semibold text-base">Keyword-Based Search</h3>
-              <p className="text-sm text-muted-foreground whitespace-normal">
-                Find influencers using keywords, hashtags, and phrases
-              </p>
+            <div className="space-y-1">
+              <h3 className="font-semibold text-base text-zinc-100">Keyword-Based Search</h3>
+              <p className="text-sm text-zinc-400 whitespace-normal">Find influencers using keywords, hashtags, and phrases</p>
             </div>
-            {loadingType === "keyword" && (
-              <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
+            {loadingType === 'keyword' && (
+              <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
               </div>
             )}
-          </Button>
+          </button>
 
-          <Button
-            variant="outline"
-            className="h-auto min-h-[100px] p-6 text-left hover:bg-accent block w-full relative"
-            onClick={() => handleSearchTypeSelection("similar")}
+          <button
+            type="button"
+            onClick={() => handleSearchTypeSelection('similar')}
             disabled={loadingType !== null}
+            className="h-auto min-h-[110px] p-6 text-left w-full relative rounded-lg border border-zinc-700/50 bg-zinc-900/60 hover:bg-zinc-800/60 transition-all focus:outline-none focus:ring-2 focus:ring-primary/30"
           >
-            <div className="space-y-2">
-              <h3 className="font-semibold text-base">Similar Creator Search</h3>
-              <p className="text-sm text-muted-foreground whitespace-normal">
-                Discover creators similar to an existing one
-              </p>
+            <div className="space-y-1">
+              <h3 className="font-semibold text-base text-zinc-100">Similar Creator Search</h3>
+              <p className="text-sm text-zinc-400 whitespace-normal">Discover creators similar to an existing one</p>
             </div>
-            {loadingType === "similar" && (
-              <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
+            {loadingType === 'similar' && (
+              <div className="absolute inset-0 bg-background/80 flex items-center justify-center rounded-lg">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
               </div>
             )}
-          </Button>
+          </button>
         </div>
       </CardContent>
     </Card>

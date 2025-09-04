@@ -172,7 +172,7 @@ const SearchResults = ({ searchData }) => {
   if (!creators.length) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
-        <div className="text-center text-gray-500">
+        <div className="text-center text-zinc-400">
           <p>No creators found matching your criteria</p>
           <p className="text-sm mt-2">Try adjusting your search keywords</p>
         </div>
@@ -378,9 +378,9 @@ const SearchResults = ({ searchData }) => {
       />
 
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Results Found</h2>
+        <h2 className="text-2xl font-bold text-zinc-100">Results Found</h2>
         <div className="flex items-center gap-4">
-          <div className="text-sm text-muted-foreground">
+          <div className="text-sm text-zinc-400">
             Page {currentPage} of {Math.ceil(creators.length / itemsPerPage)} •
             Showing {(currentPage - 1) * itemsPerPage + 1}-
             {Math.min(currentPage * itemsPerPage, creators.length)} of{" "}
@@ -404,27 +404,27 @@ const SearchResults = ({ searchData }) => {
         </div>
       </div>
 
-      <div className="border rounded-lg relative w-full overflow-hidden">
+      <div className="rounded-lg border border-zinc-800 bg-zinc-900/30 relative w-full overflow-hidden">
         {isPageLoading && (
-          <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-50">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+          <div className="absolute inset-0 bg-zinc-900/50 flex items-center justify-center z-50">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-200"></div>
           </div>
         )}
 
         <div className="w-full overflow-x-auto">
           <Table className="w-full">
             <TableHeader>
-              <TableRow>
-                <TableHead className="w-[50px]">Profile</TableHead>
-                <TableHead className="w-[15%] min-w-[120px]">Username</TableHead>
-                <TableHead className="w-[20%] min-w-[150px]">Bio</TableHead>
-                <TableHead className="w-[20%] min-w-[150px]">Email</TableHead>
-                <TableHead className="w-[25%] min-w-[200px]">Video Title</TableHead>
-                <TableHead className="w-[10%] min-w-[80px]">Views</TableHead>
-                <TableHead className="w-[60px]">Link</TableHead>
+              <TableRow className="border-b border-zinc-800">
+                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[50px]">Profile</TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[15%] min-w-[120px]">Username</TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[20%] min-w-[150px]">Bio</TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[20%] min-w-[150px]">Email</TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[25%] min-w-[200px]">Video Title</TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[10%] min-w-[80px]">Views</TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[60px]">Link</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
+            <TableBody className="divide-y divide-zinc-800">
               {currentCreators.map((creator, index) => {
                 const avatarUrl =
                   creator.creator?.avatarUrl ||
@@ -438,8 +438,8 @@ const SearchResults = ({ searchData }) => {
                   : "";
 
                 return (
-                  <TableRow key={index}>
-                    <TableCell>
+                  <TableRow key={index} className="table-row">
+                    <TableCell className="px-6 py-4">
                       <Avatar className="w-10 h-10">
                         <AvatarImage
                           src={proxiedUrl}
@@ -469,14 +469,14 @@ const SearchResults = ({ searchData }) => {
                         </AvatarFallback>
                       </Avatar>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="px-6 py-4">
                       {creator.creator?.name &&
                       creator.creator.name !== "N/A" ? (
                         <a
                           href={renderProfileLink(creator)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800 hover:underline font-medium transition-colors duration-200 flex items-center gap-1"
+                          className="text-pink-400 hover:text-pink-300 hover:underline font-medium transition-colors duration-200 flex items-center gap-1"
                           title={`View ${creator.creator.name}'s profile on ${searchData.selectedPlatform || "TikTok"}`}
                         >
                           {creator.creator.name}
@@ -495,24 +495,24 @@ const SearchResults = ({ searchData }) => {
                           </svg>
                         </a>
                       ) : (
-                        <span className="text-gray-500">N/A</span>
+                        <span className="text-zinc-500">N/A</span>
                       )}
                     </TableCell>
-                    <TableCell className="max-w-0">
+                    <TableCell className="px-6 py-4 max-w-0">
                       <div
                         className="truncate"
                         title={creator.creator?.bio || "No bio available"}
                       >
                         {creator.creator?.bio ? (
-                          <span className="text-sm text-gray-700">
+                          <span className="text-sm text-zinc-300">
                             {creator.creator.bio}
                           </span>
                         ) : (
-                          <span className="text-gray-400 text-sm">No bio</span>
+                          <span className="text-zinc-500 text-sm">No bio</span>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="max-w-0">
+                    <TableCell className="px-6 py-4 max-w-0">
                       {creator.creator?.emails &&
                       creator.creator.emails.length > 0 ? (
                         <div className="space-y-1">
@@ -523,13 +523,13 @@ const SearchResults = ({ searchData }) => {
                             >
                               <a
                                 href={`mailto:${email}`}
-                                className="text-blue-600 hover:underline text-sm truncate block"
+                              className="text-pink-400 hover:underline text-sm truncate block"
                                 title={`Send email to ${email}`}
                               >
                                 {email}
                               </a>
                               <svg
-                                className="w-3 h-3 opacity-60 text-blue-600"
+                                className="w-3 h-3 opacity-60 text-pink-400"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -545,7 +545,7 @@ const SearchResults = ({ searchData }) => {
                           ))}
                         </div>
                       ) : (
-                        <span className="text-gray-400 text-sm">No email</span>
+                        <span className="text-zinc-500 text-sm">No email</span>
                       )}
                     </TableCell>
                     <TableCell className="max-w-0">
@@ -565,7 +565,7 @@ const SearchResults = ({ searchData }) => {
                           href={creator.video.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline"
+                          className="text-pink-400 hover:underline"
                         >
                           View
                         </a>

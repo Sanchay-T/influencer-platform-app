@@ -51,13 +51,7 @@ export default function SubscriptionStatusCard({
   };
 
   const getPlanColor = (plan: string) => {
-    switch (plan) {
-      case 'free': return 'text-gray-600 bg-gray-100';
-      case 'glow_up': return 'text-blue-600 bg-blue-100';
-      case 'viral_surge': return 'text-purple-600 bg-purple-100';
-      case 'fame_flex': return 'text-yellow-600 bg-yellow-100';
-      default: return 'text-gray-600 bg-gray-100';
-    }
+    return 'text-zinc-200 bg-zinc-800 border border-zinc-700/50';
   };
 
   const formatPlanName = (plan: string) => {
@@ -75,9 +69,9 @@ export default function SubscriptionStatusCard({
       const isExpiringSoon = daysRemaining <= 2;
       return {
         icon: isExpiringSoon ? AlertTriangle : Clock,
-        color: isExpiringSoon ? 'text-amber-600' : 'text-blue-600',
-        bgColor: isExpiringSoon ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200',
-        badge: { text: 'Trial Active', variant: 'secondary' as const, className: 'bg-blue-100 text-blue-700' },
+        color: isExpiringSoon ? 'text-amber-400' : 'text-emerald-400',
+        bgColor: isExpiringSoon ? 'bg-amber-900/30 border-amber-800' : 'bg-emerald-900/30 border-emerald-800',
+        badge: { text: 'Trial Active', variant: 'secondary' as const, className: 'bg-zinc-800 text-zinc-200 border border-zinc-700/50' },
         title: isExpiringSoon ? 'Trial Expiring Soon' : 'Trial Active',
         message: `${daysRemaining} days remaining in your free trial`,
         showProgress: true
@@ -88,9 +82,9 @@ export default function SubscriptionStatusCard({
       case 'active':
         return {
           icon: CheckCircle,
-          color: 'text-green-600',
-          bgColor: 'bg-green-50 border-green-200',
-          badge: { text: 'Active', variant: 'default' as const, className: 'bg-green-100 text-green-700' },
+          color: 'text-emerald-400',
+          bgColor: 'bg-emerald-900/30 border-emerald-800',
+          badge: { text: 'Active', variant: 'secondary' as const, className: 'bg-emerald-600/20 text-emerald-400 border border-emerald-600/30' },
           title: 'Subscription Active',
           message: nextBillingDate ? `Next billing date: ${formatDate(nextBillingDate)}` : 'Your subscription is active',
           showProgress: false
@@ -98,8 +92,8 @@ export default function SubscriptionStatusCard({
       case 'past_due':
         return {
           icon: AlertTriangle,
-          color: 'text-red-600',
-          bgColor: 'bg-red-50 border-red-200',
+          color: 'text-red-400',
+          bgColor: 'bg-red-900/30 border-red-800',
           badge: { text: 'Past Due', variant: 'destructive' as const, className: '' },
           title: 'Payment Past Due',
           message: 'Please update your payment method to continue service',
@@ -108,9 +102,9 @@ export default function SubscriptionStatusCard({
       case 'canceled':
         return {
           icon: XCircle,
-          color: 'text-gray-600',
-          bgColor: 'bg-gray-50 border-gray-200',
-          badge: { text: 'Canceled', variant: 'outline' as const, className: 'bg-gray-100 text-gray-700' },
+          color: 'text-zinc-400',
+          bgColor: 'bg-zinc-800/60 border-zinc-700/50',
+          badge: { text: 'Canceled', variant: 'outline' as const, className: 'text-zinc-300 border-zinc-700/50' },
           title: 'Subscription Canceled',
           message: 'Your subscription has been canceled',
           showProgress: false
@@ -118,9 +112,9 @@ export default function SubscriptionStatusCard({
       default:
         return {
           icon: Shield,
-          color: 'text-gray-600',
-          bgColor: 'bg-gray-50 border-gray-200',
-          badge: { text: 'Inactive', variant: 'outline' as const, className: '' },
+          color: 'text-zinc-400',
+          bgColor: 'bg-zinc-800/60 border-zinc-700/50',
+          badge: { text: 'Inactive', variant: 'outline' as const, className: 'text-zinc-300 border-zinc-700/50' },
           title: 'No Active Subscription',
           message: 'Start your subscription to access all features',
           showProgress: false
@@ -141,7 +135,7 @@ export default function SubscriptionStatusCard({
   const StatusIcon = statusInfo.icon;
 
   return (
-    <Card className={`border-zinc-200 ${className}`}>
+    <Card className={`bg-zinc-900/80 border border-zinc-700/50 ${className}`}>
       <CardHeader>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -149,8 +143,8 @@ export default function SubscriptionStatusCard({
               <IconComponent className="h-5 w-5" />
             </div>
             <div>
-              <CardTitle className="text-lg">{formatPlanName(currentPlan)}</CardTitle>
-              <p className="text-sm text-zinc-600">Current plan</p>
+              <CardTitle className="text-lg text-zinc-100">{formatPlanName(currentPlan)}</CardTitle>
+              <p className="text-sm text-zinc-400">Current plan</p>
             </div>
           </div>
           <Badge 
@@ -168,10 +162,10 @@ export default function SubscriptionStatusCard({
           <div className="flex items-start gap-3">
             <StatusIcon className={`h-5 w-5 ${statusInfo.color} mt-0.5`} />
             <div className="flex-1">
-              <h3 className={`font-medium ${statusInfo.color.replace('text-', 'text-')} mb-1`}>
+              <h3 className={`font-medium text-zinc-100 mb-1`}>
                 {statusInfo.title}
               </h3>
-              <p className="text-sm text-zinc-600">
+              <p className="text-sm text-zinc-300">
                 {statusInfo.message}
               </p>
             </div>
@@ -182,8 +176,8 @@ export default function SubscriptionStatusCard({
         {statusInfo.showProgress && (
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-zinc-600">Trial Progress</span>
-              <span className="font-medium text-zinc-900">
+              <span className="text-zinc-400">Trial Progress</span>
+              <span className="font-medium text-zinc-200">
                 {progressPercentage}% complete
               </span>
             </div>

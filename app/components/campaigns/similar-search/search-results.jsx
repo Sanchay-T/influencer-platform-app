@@ -149,7 +149,7 @@ export default function SimilarSearchResults({ searchData }) {
     });
     return (
       <div className="text-center py-8">
-        <div className="text-gray-500">
+        <div className="text-zinc-400">
           <p className="text-lg font-medium">No similar creators found</p>
           <p className="text-sm mt-2">Try searching for a different username or platform.</p>
         </div>
@@ -244,37 +244,37 @@ export default function SimilarSearchResults({ searchData }) {
         </div>
       </div>
 
-      <div className="border rounded-lg relative w-full overflow-hidden">
+      <div className="rounded-lg border border-zinc-800 bg-zinc-900/30 relative w-full overflow-hidden">
         {isPageLoading && (
-          <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-50">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+          <div className="absolute inset-0 bg-zinc-900/50 flex items-center justify-center z-50">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-200"></div>
           </div>
         )}
         <div className="w-full overflow-x-auto">
           <Table className="w-full">
           <TableHeader>
-            <TableRow>
-              <TableHead className="w-[50px]">Profile</TableHead>
-              <TableHead className="w-[15%] min-w-[120px]">{searchData.platform === 'youtube' ? 'Channel Name' : 'Username'}</TableHead>
-              <TableHead className="w-[15%] min-w-[100px]">Full Name</TableHead>
-              <TableHead className="w-[25%] min-w-[200px]">Bio</TableHead>
-              <TableHead className="w-[20%] min-w-[150px]">Email</TableHead>
+            <TableRow className="border-b border-zinc-800">
+              <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[50px]">Profile</TableHead>
+              <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[15%] min-w-[120px]">{searchData.platform === 'youtube' ? 'Channel Name' : 'Username'}</TableHead>
+              <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[15%] min-w-[100px]">Full Name</TableHead>
+              <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[25%] min-w-[200px]">Bio</TableHead>
+              <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[20%] min-w-[150px]">Email</TableHead>
               {searchData.platform !== 'youtube' && (
                 <>
-                  <TableHead className="w-[7%] min-w-[60px]">Private</TableHead>
-                  <TableHead className="w-[7%] min-w-[60px]">Verified</TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[7%] min-w-[60px]">Private</TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[7%] min-w-[60px]">Verified</TableHead>
                 </>
               )}
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody className="divide-y divide-zinc-800">
             {currentItems.map((creator) => {
               const imageUrl = getProxiedImageUrl(
                 creator.profile_pic_url || creator.thumbnail || ''
               );
               return (
-                <TableRow key={creator.id}>
-                  <TableCell>
+                <TableRow key={creator.id} className="table-row">
+                  <TableCell className="px-6 py-4">
                     <Avatar className="w-10 h-10">
                       <AvatarImage 
                         src={imageUrl}
@@ -293,12 +293,12 @@ export default function SimilarSearchResults({ searchData }) {
                       </AvatarFallback>
                     </Avatar>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="px-6 py-4">
                     <a 
                       href={renderProfileLink(creator)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 hover:underline font-medium transition-colors duration-200 flex items-center gap-1"
+                      className="text-pink-400 hover:text-pink-300 hover:underline font-medium transition-colors duration-200 flex items-center gap-1"
                       title={`View ${creator.username || creator.name}'s profile on ${creator.platform || searchData.platform || 'Instagram'}`}
                     >
                       {searchData.platform === 'youtube' ? creator.name : `@${creator.username}`}
@@ -307,40 +307,40 @@ export default function SimilarSearchResults({ searchData }) {
                       </svg>
                     </a>
                   </TableCell>
-                  <TableCell>
-                    <span className="text-sm text-gray-700">
+                  <TableCell className="px-6 py-4">
+                    <span className="text-sm text-zinc-300">
                       {creator.full_name || creator.name || 'N/A'}
                     </span>
                   </TableCell>
-                  <TableCell className="max-w-0">
+                  <TableCell className="px-6 py-4 max-w-0">
                     <div className="truncate" title={creator.bio || 'No bio available'}>
                       {creator.bio && creator.bio.length > 0 ? (
-                        <span className="text-sm text-gray-700">{creator.bio}</span>
+                        <span className="text-sm text-zinc-300">{creator.bio}</span>
                       ) : (
-                        <span className="text-gray-400 text-sm">Not available</span>
+                        <span className="text-zinc-500 text-sm">Not available</span>
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="max-w-0">
+                  <TableCell className="px-6 py-4 max-w-0">
                     {creator.emails && creator.emails.length > 0 ? (
                       <div className="space-y-1">
                         {creator.emails.map((email, emailIndex) => (
                           <div key={emailIndex} className="flex items-center gap-1">
                             <a 
                               href={`mailto:${email}`}
-                              className="text-blue-600 hover:underline text-sm truncate block"
+                              className="text-pink-400 hover:underline text-sm truncate block"
                               title={`Send email to ${email}`}
                             >
                               {email}
                             </a>
-                            <svg className="w-3 h-3 opacity-60 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-3 h-3 opacity-60 text-pink-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                             </svg>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <span className="text-gray-400 text-sm">Not available</span>
+                      <span className="text-zinc-500 text-sm">Not available</span>
                     )}
                   </TableCell>
                   {searchData.platform !== 'youtube' && (
