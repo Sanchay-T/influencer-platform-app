@@ -2,8 +2,12 @@ import { defineConfig } from 'drizzle-kit';
 import * as dotenv from 'dotenv';
 import path from 'path';
 
-// Carga específicamente el archivo .env.local
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+// Environment-aware config loading
+const envFile = process.env.NODE_ENV === 'development' ? '.env.development' : '.env.local';
+dotenv.config({ path: path.resolve(process.cwd(), envFile) });
+
+console.log(`🔧 [DRIZZLE CONFIG] Loading environment from: ${envFile}`);
+console.log(`🔧 [DRIZZLE CONFIG] Database URL: ${process.env.DATABASE_URL?.replace(/\/\/.*@/, '//***@')}`);
 
 export default defineConfig({
   schema: './lib/db/schema.ts',

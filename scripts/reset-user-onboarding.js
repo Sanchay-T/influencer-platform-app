@@ -24,7 +24,7 @@ const queryClient = postgres(connectionString, {
 });
 
 // Simple schema for the script (just what we need)
-const { pgTable, uuid, text, timestamp, varchar, boolean } = require('drizzle-orm/pg-core');
+const { pgTable, uuid, text, timestamp, varchar, boolean, jsonb } = require('drizzle-orm/pg-core');
 
 const userProfiles = pgTable('user_profiles', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -36,21 +36,15 @@ const userProfiles = pgTable('user_profiles', {
   trialStartDate: timestamp('trial_start_date'),
   trialEndDate: timestamp('trial_end_date'),
   trialStatus: varchar('trial_status', { length: 20 }).default('pending'),
-  signupTimestamp: timestamp('signup_timestamp').defaultNow()
+  signupTimestamp: timestamp('signup_timestamp').defaultNow(),
+  brandDescription: text('brand_description'),
+  emailScheduleStatus: jsonb('email_schedule_status').default('{}')
 });
 
-const emailQueue = pgTable('email_queue', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  userId: text('user_id').notNull(),
-  emailType: varchar('email_type', { length: 50 }).notNull(),
-  scheduledFor: timestamp('scheduled_for').notNull(),
-  sentAt: timestamp('sent_at'),
-  status: varchar('status', { length: 20 }).default('pending'),
-  qstashMessageId: text('qstash_message_id')
-});
-
+// Note: We do not maintain a separate email queue table in current schema.
+// Scheduled emails are tracked via QStash and user_profiles.email_schedule_status
 const db = drizzle(queryClient, {
-  schema: { userProfiles, emailQueue }
+  schema: { userProfiles }
 });
 
 // Initialize Clerk
@@ -103,6 +97,7 @@ async function resetUserOnboarding(email) {
         fullName: null,
         businessName: null,
         industry: null,
+        brandDescription: null,
         trialStartDate: null,
         trialEndDate: null,
         trialStatus: 'pending'
@@ -119,32 +114,31 @@ async function resetUserOnboarding(email) {
       log('⚠️  No user profile found to reset', 'yellow');
     }
     
-    // Step 4: Delete all scheduled emails
-    log('\n📨 Step 4: Checking for scheduled emails...', 'yellow');
+    // Step 4: Clear email schedule status on user profile
+    log('\n📨 Step 4: Clearing email schedule status on profile...', 'yellow');
     try {
-      // Try to delete from email_queue table if it exists
-      const emailResult = await queryClient`
-        DELETE FROM email_queue 
-        WHERE user_id = ${userId}
-        RETURNING *;
-      `;
-      log(`✅ Deleted ${emailResult.length} scheduled emails`, 'green');
-    } catch (error) {
-      if (error.message.includes('does not exist')) {
-        log('ℹ️  Email queue table does not exist (this is normal)', 'blue');
+      const emailStatusClear = await db
+        .update(userProfiles)
+        .set({ emailScheduleStatus: {}, /* reset schedule tracker */ })
+        .where(eq(userProfiles.userId, userId))
+        .returning();
+      if (emailStatusClear.length > 0) {
+        log('✅ Cleared email_schedule_status in user profile', 'green');
       } else {
-        log('⚠️  Could not check email queue:', error.message, 'yellow');
+        log('ℹ️  No profile found to clear email status', 'blue');
       }
+    } catch (error) {
+      log(`⚠️  Could not clear email schedule status: ${error.message}`, 'yellow');
     }
     
-    // Step 5: Delete all campaigns (optional - uncomment if needed)
+    // Step 5: Check campaigns (informational only; not deleting by default)
     log('\n🎯 Step 5: Checking campaigns...', 'yellow');
     try {
       // We'll use raw SQL for count since we don't have the campaigns table schema
       const campaignCountResult = await queryClient`
         SELECT COUNT(*) as count 
         FROM campaigns 
-        WHERE "userId" = ${userId};
+        WHERE user_id = ${userId};
       `;
       
       if (campaignCountResult[0]?.count > 0) {
@@ -154,7 +148,7 @@ async function resetUserOnboarding(email) {
         // Uncomment to delete campaigns:
         // const campaignResult = await queryClient`
         //   DELETE FROM campaigns 
-        //   WHERE "userId" = ${userId}
+        //   WHERE user_id = ${userId}
         //   RETURNING id;
         // `;
         // log(`✅ Deleted ${campaignResult.length} campaigns`, 'green');
@@ -163,13 +157,13 @@ async function resetUserOnboarding(email) {
       log('⚠️  Could not check campaigns (table may not exist)', 'yellow');
     }
     
-    // Step 6: Delete scraping jobs and results (optional - uncomment if needed)
+    // Step 6: Check scraping jobs (informational only; not deleting by default)
     log('\n🔍 Step 6: Checking scraping jobs...', 'yellow');
     try {
       const jobCountResult = await queryClient`
         SELECT COUNT(*) as count 
-        FROM "scrapingJobs" 
-        WHERE "userId" = ${userId};
+        FROM scraping_jobs 
+        WHERE user_id = ${userId};
       `;
       
       if (jobCountResult[0]?.count > 0) {
@@ -177,9 +171,17 @@ async function resetUserOnboarding(email) {
         log('   (Not deleting jobs - uncomment code if needed)', 'blue');
         
         // Uncomment to delete jobs:
+        // const jobIds = await queryClient`
+        //   SELECT id FROM scraping_jobs WHERE user_id = ${userId};
+        // `;
+        // if (jobIds.length > 0) {
+        //   await queryClient`
+        //     DELETE FROM scraping_results WHERE job_id IN ${queryClient(jobIds.map(j => j.id))};
+        //   `;
+        // }
         // const jobResult = await queryClient`
-        //   DELETE FROM "scrapingJobs" 
-        //   WHERE "userId" = ${userId}
+        //   DELETE FROM scraping_jobs 
+        //   WHERE user_id = ${userId}
         //   RETURNING id;
         // `;
         // log(`✅ Deleted ${jobResult.length} scraping jobs`, 'green');

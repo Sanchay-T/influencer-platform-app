@@ -1,8 +1,13 @@
 #!/usr/bin/env node
 
 /**
- * Delete User from Database
- * Safely removes user and all associated data
+ * Delete User from Database (Full Cleanup)
+ * Safely removes user profile and all associated data for a given email.
+ *
+ * Usage:
+ *   node delete-user.js <email>
+ * Example:
+ *   node delete-user.js sanchaythanerkar@gmail.gov
  */
 
 require('dotenv').config({ path: '.env.local' });
@@ -12,7 +17,12 @@ async function deleteUser() {
   console.log('🗑️  DELETING USER FROM DATABASE');
   console.log('━'.repeat(50));
   
-  const targetEmail = 'trysorzproject@gmail.com';
+  const targetEmail = process.argv[2];
+  if (!targetEmail) {
+    console.log('❌ Please provide an email');
+    console.log('Usage: node delete-user.js <email>');
+    process.exit(1);
+  }
   console.log(`🎯 Target email: ${targetEmail}`);
   
   const client = new Client({
@@ -51,11 +61,11 @@ async function deleteUser() {
       const similarQuery = `
         SELECT email, user_id, name 
         FROM user_profiles 
-        WHERE email ILIKE '%trysorzproject%' OR email ILIKE '%sorz%'
+        WHERE email ILIKE '%' || $1 || '%'
         LIMIT 5;
       `;
       
-      const similarResult = await client.query(similarQuery);
+      const similarResult = await client.query(similarQuery, [targetEmail.split('@')[0]]);
       
       if (similarResult.rows.length > 0) {
         console.log('Found similar emails:');
@@ -84,23 +94,35 @@ async function deleteUser() {
     // Step 2: Check for related data
     console.log('\n🔍 STEP 2: Checking for related data...');
     
-    // Check campaigns
+    // Check campaigns (snake_case user_id)
     const campaignsQuery = `
-      SELECT COUNT(*) as count FROM campaigns WHERE "userId" = $1;
+      SELECT COUNT(*) as count FROM campaigns WHERE user_id = $1;
     `;
     const campaignsResult = await client.query(campaignsQuery, [user.user_id]);
     const campaignCount = parseInt(campaignsResult.rows[0].count);
     
-    // Check scraping jobs
+    // Check scraping jobs (snake_case user_id)
     const jobsQuery = `
-      SELECT COUNT(*) as count FROM scraping_jobs WHERE "userId" = $1;
+      SELECT COUNT(*) as count FROM scraping_jobs WHERE user_id = $1;
     `;
     const jobsResult = await client.query(jobsQuery, [user.user_id]);
     const jobCount = parseInt(jobsResult.rows[0].count);
     
+    // Check events
+    const eventsQuery = `SELECT COUNT(*) as count FROM events WHERE aggregate_id = $1;`;
+    const eventsResult = await client.query(eventsQuery, [user.user_id]);
+    const eventCount = parseInt(eventsResult.rows[0].count);
+    
+    // Check background jobs referencing userId in payload
+    const bgJobsQuery = `SELECT COUNT(*) as count FROM background_jobs WHERE payload->>'userId' = $1;`;
+    const bgJobsResult = await client.query(bgJobsQuery, [user.user_id]);
+    const bgJobCount = parseInt(bgJobsResult.rows[0].count);
+    
     console.log(`📊 Related data:`);
     console.log(`   Campaigns: ${campaignCount}`);
     console.log(`   Scraping jobs: ${jobCount}`);
+    console.log(`   Events: ${eventCount}`);
+    console.log(`   Background jobs: ${bgJobCount}`);
     
     // Step 3: Delete user and related data
     console.log('\n🗑️  STEP 3: Deleting user and all related data...');
@@ -113,30 +135,71 @@ async function deleteUser() {
       if (jobCount > 0) {
         const deleteResultsQuery = `
           DELETE FROM scraping_results 
-          WHERE "jobId" IN (
-            SELECT id FROM scraping_jobs WHERE "userId" = $1
+          WHERE job_id IN (
+            SELECT id FROM scraping_jobs WHERE user_id = $1
           );
         `;
         const deletedResults = await client.query(deleteResultsQuery, [user.user_id]);
         console.log(`   ✅ Deleted ${deletedResults.rowCount} scraping results`);
         
         // Delete scraping jobs
-        const deleteJobsQuery = `DELETE FROM scraping_jobs WHERE "userId" = $1;`;
+        const deleteJobsQuery = `DELETE FROM scraping_jobs WHERE user_id = $1;`;
         const deletedJobs = await client.query(deleteJobsQuery, [user.user_id]);
         console.log(`   ✅ Deleted ${deletedJobs.rowCount} scraping jobs`);
       }
       
+      // Delete search results and search jobs related to user's campaigns (legacy tables)
+      if (campaignCount > 0) {
+        const deleteSearchResultsQuery = `
+          DELETE FROM search_results
+          WHERE job_id IN (
+            SELECT id FROM search_jobs WHERE campaign_id IN (
+              SELECT id FROM campaigns WHERE user_id = $1
+            )
+          );
+        `;
+        const deletedSearchResults = await client.query(deleteSearchResultsQuery, [user.user_id]);
+        if (deletedSearchResults.rowCount) {
+          console.log(`   ✅ Deleted ${deletedSearchResults.rowCount} search results (legacy)`);
+        }
+
+        const deleteSearchJobsQuery = `
+          DELETE FROM search_jobs
+          WHERE campaign_id IN (
+            SELECT id FROM campaigns WHERE user_id = $1
+          );
+        `;
+        const deletedSearchJobs = await client.query(deleteSearchJobsQuery, [user.user_id]);
+        if (deletedSearchJobs.rowCount) {
+          console.log(`   ✅ Deleted ${deletedSearchJobs.rowCount} search jobs (legacy)`);
+        }
+      }
+
       // Delete campaigns
       if (campaignCount > 0) {
-        const deleteCampaignsQuery = `DELETE FROM campaigns WHERE "userId" = $1;`;
+        const deleteCampaignsQuery = `DELETE FROM campaigns WHERE user_id = $1;`;
         const deletedCampaigns = await client.query(deleteCampaignsQuery, [user.user_id]);
         console.log(`   ✅ Deleted ${deletedCampaigns.rowCount} campaigns`);
+      }
+
+      // Delete events
+      if (eventCount > 0) {
+        const deleteEventsQuery = `DELETE FROM events WHERE aggregate_id = $1;`;
+        const deletedEvents = await client.query(deleteEventsQuery, [user.user_id]);
+        console.log(`   ✅ Deleted ${deletedEvents.rowCount} events`);
+      }
+
+      // Delete background jobs referencing user
+      if (bgJobCount > 0) {
+        const deleteBgJobsQuery = `DELETE FROM background_jobs WHERE payload->>'userId' = $1;`;
+        const deletedBgJobs = await client.query(deleteBgJobsQuery, [user.user_id]);
+        console.log(`   ✅ Deleted ${deletedBgJobs.rowCount} background jobs`);
       }
       
       // Delete user profile
       const deleteUserQuery = `DELETE FROM user_profiles WHERE user_id = $1 RETURNING email;`;
       const deletedUser = await client.query(deleteUserQuery, [user.user_id]);
-      console.log(`   ✅ Deleted user profile: ${deletedUser.rows[0].email}`);
+      console.log(`   ✅ Deleted user profile: ${deletedUser.rows[0]?.email || targetEmail}`);
       
       // Commit transaction
       await client.query('COMMIT');
@@ -161,7 +224,7 @@ async function deleteUser() {
   
   console.log('\n🚀 CLEANUP COMPLETE');
   console.log(`✅ User ${targetEmail} has been permanently deleted`);
-  console.log('✅ All associated campaigns and jobs removed');
+  console.log('✅ All associated campaigns, jobs, events, and background jobs removed');
   console.log('✅ Database is clean and optimized');
 }
 
