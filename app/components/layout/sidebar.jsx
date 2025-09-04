@@ -6,7 +6,7 @@ import { LayoutDashboard, LogOut, UserRoundCog, Settings, Mail, CreditCard, Tren
 import { useRouter, usePathname } from 'next/navigation'
 import { useClerk, useUser } from '@clerk/nextjs'
 import { useAdmin } from '@/lib/hooks/use-admin'
-import { EnhancedTrialSidebarIndicator } from '@/app/components/trial/enhanced-trial-sidebar-indicator'
+import TrialSidebarCompact from '@/app/components/trial/trial-sidebar-compact'
 import { cn } from '@/lib/utils'
 
 export default function Sidebar() {
@@ -95,10 +95,8 @@ export default function Sidebar() {
         )}
       </nav>
 
-      <div className="px-4">
-        <div className="rounded-lg bg-zinc-800/60 border border-zinc-700/50 p-4 mb-4">
-          <EnhancedTrialSidebarIndicator />
-        </div>
+      <div className="px-4 mb-4">
+        <TrialSidebarCompact />
       </div>
 
       <div className="border-t border-zinc-700/50 p-4">

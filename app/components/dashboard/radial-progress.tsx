@@ -5,9 +5,10 @@ import React, { useEffect, useState } from 'react'
 interface RadialProgressProps {
   value?: number // 0-100
   size?: number
+  strokeClassName?: string // allows theme previews to override color
 }
 
-export default function RadialProgress({ value = 64, size = 84 }: RadialProgressProps) {
+export default function RadialProgress({ value = 64, size = 84, strokeClassName = "stroke-pink-400" }: RadialProgressProps) {
   const radius = 36
   const circumference = 2 * Math.PI * radius
   const [progress, setProgress] = useState(0)
@@ -25,7 +26,7 @@ export default function RadialProgress({ value = 64, size = 84 }: RadialProgress
         cx="50"
         cy="50"
         r={radius}
-        className="fill-none stroke-pink-400"
+        className={`fill-none ${strokeClassName}`}
         strokeWidth={8}
         strokeLinecap="round"
         style={{

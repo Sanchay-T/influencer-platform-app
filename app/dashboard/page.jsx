@@ -20,11 +20,7 @@ export default function DashboardPage() {
             <h1 className="text-2xl font-bold">Dashboard</h1>
             <p className="text-sm text-zinc-400 mt-1">High-level overview and quick actions</p>
           </div>
-          <Link href="/campaigns/new" className="inline-flex">
-            <Button className="bg-pink-600 hover:bg-pink-500 text-white">
-              <PlusCircle className="h-4 w-4 mr-2" /> New Campaign
-            </Button>
-          </Link>
+          {/* Primary CTA already lives in the global header; remove duplicate here */}
         </div>
 
         {/* Stat cards with sparklines */}

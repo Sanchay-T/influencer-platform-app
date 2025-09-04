@@ -149,7 +149,7 @@ const PricingPageContent = () => {
       icon: Shield,
       popular: false,
       badge: "Start Here",
-      badgeColor: "bg-gray-100 text-gray-800",
+      badgeColor: "bg-zinc-800 text-zinc-200 border border-zinc-700/50",
       features: features.map(f => f.free),
       trialNote: "Results are limited during trial"
     },
@@ -161,7 +161,7 @@ const PricingPageContent = () => {
       icon: Star,
       popular: true,
       badge: "Most Popular",
-      badgeColor: "bg-blue-600 text-white",
+      badgeColor: "bg-zinc-800 text-zinc-200 border border-zinc-700/50",
       features: features.map(f => f.basic)
     },
     {
@@ -306,7 +306,7 @@ const PricingPageContent = () => {
                       <div key={feature.name} className="flex items-start gap-2">
                         <div className="flex-shrink-0 mt-0.5">
                           {isIncluded ? (
-                            <Check className="h-3 w-3 text-green-600" />
+                            <Check className="h-3 w-3 text-chart-1" />
                           ) : (
                             <X className="h-3 w-3 text-zinc-300" />
                           )}
@@ -389,8 +389,8 @@ const PricingPageContent = () => {
                     <Button 
                       className={`w-full font-medium h-11 px-6 text-sm ${
                         plan.popular 
-                          ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                          : 'border-zinc-300 hover:bg-zinc-50'
+                          ? 'bg-pink-600 hover:bg-pink-500 text-white' 
+                          : 'border-zinc-700/50 hover:bg-zinc-800/40'
                       }`}
                       variant={plan.popular ? "default" : "outline"}
                     >
@@ -409,12 +409,12 @@ const PricingPageContent = () => {
 
 
       {/* Detailed Feature Comparison Table */}
-      <Card className="border-zinc-200 mt-16">
+      <Card className="border-zinc-700/50 mt-16">
         <CardHeader className="text-center pb-8">
-          <CardTitle className="text-2xl font-bold text-zinc-900">
+          <CardTitle className="text-2xl font-bold text-zinc-100">
             Complete Feature Comparison
           </CardTitle>
-          <CardDescription className="text-lg text-zinc-600 mt-2">
+          <CardDescription className="text-lg text-zinc-400 mt-2">
             See exactly what's included in each plan
           </CardDescription>
         </CardHeader>
@@ -422,65 +422,65 @@ const PricingPageContent = () => {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b-2 border-zinc-200">
-                  <th className="text-left py-4 px-6 font-semibold text-zinc-900">Feature</th>
-                  <th className="text-center py-4 px-4 font-semibold text-zinc-900">Free Trial</th>
-                  <th className="text-center py-4 px-4 font-semibold text-zinc-900 text-blue-700">Glow Up</th>
-                  <th className="text-center py-4 px-4 font-semibold text-zinc-900 text-purple-700">Viral Surge</th>
-                  <th className="text-center py-4 px-4 font-semibold text-zinc-900 text-amber-700">Fame Flex</th>
+                <tr className="border-b-2 border-zinc-700/50">
+                  <th className="text-left py-4 px-6 font-semibold text-zinc-100">Feature</th>
+                  <th className="text-center py-4 px-4 font-semibold text-zinc-100">Free Trial</th>
+                  <th className="text-center py-4 px-4 font-semibold text-zinc-100 text-zinc-200">Glow Up</th>
+                  <th className="text-center py-4 px-4 font-semibold text-zinc-100">Viral Surge</th>
+                  <th className="text-center py-4 px-4 font-semibold text-zinc-100">Fame Flex</th>
                 </tr>
               </thead>
               <tbody>
                 {features.map((feature, index) => (
-                  <tr key={feature.name} className="border-b border-zinc-100 hover:bg-zinc-50">
+                  <tr key={feature.name} className="border-b border-zinc-800 hover:bg-zinc-800/40">
                     <td className="py-4 px-6">
                       <div>
-                        <div className="font-medium text-zinc-900 mb-1">{feature.name}</div>
-                        <div className="text-sm text-zinc-600 leading-relaxed">{feature.description}</div>
+                        <div className="font-medium text-zinc-100 mb-1">{feature.name}</div>
+                        <div className="text-sm text-zinc-400 leading-relaxed">{feature.description}</div>
                       </div>
                     </td>
                     <td className="text-center py-4 px-4">
                       {typeof feature.free === 'boolean' ? (
                         feature.free ? (
-                          <Check className="h-5 w-5 text-green-600 mx-auto" />
+                          <Check className="h-5 w-5 text-chart-1 mx-auto" />
                         ) : (
                           <X className="h-5 w-5 text-zinc-300 mx-auto" />
                         )
                       ) : (
-                        <span className="text-sm text-zinc-700 px-2">{feature.free}</span>
+                        <span className="text-sm text-zinc-300 px-2">{feature.free}</span>
                       )}
                     </td>
                     <td className="text-center py-4 px-4">
                       {typeof feature.basic === 'boolean' ? (
                         feature.basic ? (
-                          <Check className="h-5 w-5 text-green-600 mx-auto" />
+                          <Check className="h-5 w-5 text-chart-1 mx-auto" />
                         ) : (
                           <X className="h-5 w-5 text-zinc-300 mx-auto" />
                         )
                       ) : (
-                        <span className="text-sm text-zinc-700 px-2">{feature.basic}</span>
+                        <span className="text-sm text-zinc-300 px-2">{feature.basic}</span>
                       )}
                     </td>
-                    <td className="text-center py-4 px-4 bg-blue-50">
+                    <td className="text-center py-4 px-4 bg-secondary/50">
                       {typeof feature.premium === 'boolean' ? (
                         feature.premium ? (
-                          <Check className="h-5 w-5 text-green-600 mx-auto" />
+                          <Check className="h-5 w-5 text-chart-1 mx-auto" />
                         ) : (
                           <X className="h-5 w-5 text-zinc-300 mx-auto" />
                         )
                       ) : (
-                        <span className="text-sm text-blue-800 font-medium px-2">{feature.premium}</span>
+                        <span className="text-sm text-zinc-200 font-medium px-2">{feature.premium}</span>
                       )}
                     </td>
                     <td className="text-center py-4 px-4">
                       {typeof feature.enterprise === 'boolean' ? (
                         feature.enterprise ? (
-                          <Check className="h-5 w-5 text-green-600 mx-auto" />
+                          <Check className="h-5 w-5 text-chart-1 mx-auto" />
                         ) : (
                           <X className="h-5 w-5 text-zinc-300 mx-auto" />
                         )
                       ) : (
-                        <span className="text-sm text-purple-700 font-medium px-2">{feature.enterprise}</span>
+                        <span className="text-sm text-zinc-200 font-medium px-2">{feature.enterprise}</span>
                       )}
                     </td>
                   </tr>

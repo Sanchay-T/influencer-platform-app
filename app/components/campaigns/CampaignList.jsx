@@ -12,18 +12,18 @@ import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2, Refres
 
 function CampaignCardSkeleton() {
   return (
-    <Card className="bg-zinc-900/80 border border-zinc-700/50">
+    <Card className="border border-transparent surface-brand">
       <CardHeader className="p-4 pb-3">
         <div className="flex items-center justify-between">
           <div className="space-y-2 w-full">
-            <Skeleton className="h-5 w-[180px] bg-zinc-800" />
-            <Skeleton className="h-3.5 w-[260px] bg-zinc-800" />
+            <Skeleton className="h-5 w-[180px] bg-zinc-800/60" />
+            <Skeleton className="h-3.5 w-[260px] bg-zinc-800/60" />
           </div>
-          <Skeleton className="h-5 w-[60px] bg-zinc-800" />
+          <Skeleton className="h-5 w-[60px] bg-zinc-800/60" />
         </div>
       </CardHeader>
       <CardContent className="px-4 pt-0 pb-4">
-        <Skeleton className="h-3.5 w-[120px] bg-zinc-800" />
+        <Skeleton className="h-3.5 w-[120px] bg-zinc-800/60" />
       </CardContent>
     </Card>
   );
@@ -215,17 +215,24 @@ export default function CampaignList() {
       {/* Controls: filters, search, sort */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-2">
-          {['all','draft','active','completed'].map((s) => (
-            <Button
-              key={s}
-              variant={filterStatus === s ? 'default' : 'outline'}
-              size="sm"
-              className={filterStatus === s ? 'bg-pink-600 hover:bg-pink-500 text-white' : 'border-zinc-700/50 text-zinc-300'}
-              onClick={() => setFilterStatus(s)}
-            >
-              {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
-            </Button>
-          ))}
+          {['all','draft','active','completed'].map((s) => {
+            const isSelected = filterStatus === s
+            return (
+              <Button
+                key={s}
+                variant="outline"
+                size="sm"
+                className={
+                  isSelected
+                    ? 'relative h-8 px-3 rounded-md bg-secondary/70 text-zinc-100 shadow-sm border-l-2 border-l-primary'
+                    : 'h-8 px-3 rounded-md border-input text-zinc-300 hover:bg-secondary/60'
+                }
+                onClick={() => setFilterStatus(s)}
+              >
+                {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
+              </Button>
+            )
+          })}
         </div>
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -284,20 +291,24 @@ export default function CampaignList() {
 
           <div className="flex items-center space-x-1">
             {getPageNumbers().map((pageNum, index) => (
-              pageNum === '...' ? (
-                <span key={`ellipsis-${index}`} className="px-2">...</span>
-              ) : (
-                <Button
-                  key={pageNum}
-                  variant={pageNum === pagination.currentPage ? "default" : "outline"}
-                  size="sm"
-                  className="min-w-[32px]"
-                  onClick={() => handlePageChange(pageNum)}
-                  disabled={loading}
-                >
-                  {pageNum}
-                </Button>
-              )
+              pageNum === '...'
+                ? <span key={`ellipsis-${index}`} className="px-2">...</span>
+                : (
+                  <Button
+                    key={pageNum}
+                    variant="outline"
+                    size="sm"
+                    className={
+                      pageNum === pagination.currentPage
+                        ? 'min-w-[32px] relative bg-secondary/70 text-zinc-100 shadow-sm border-l-2 border-l-primary'
+                        : 'min-w-[32px] border-input text-zinc-300 hover:bg-secondary/60'
+                    }
+                    onClick={() => handlePageChange(pageNum)}
+                    disabled={loading}
+                  >
+                    {pageNum}
+                  </Button>
+                )
             ))}
           </div>
 

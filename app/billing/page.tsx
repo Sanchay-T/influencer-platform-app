@@ -121,14 +121,14 @@ function BillingContent() {
           <CardContent className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Glow Up Plan */}
-              <div className={`bg-white rounded-lg p-6 border-2 transition-all relative ${
+              <div className={`rounded-lg p-6 border transition-all relative bg-zinc-900/80 ${
                 currentPlan === 'glow_up' 
-                  ? 'border-green-500 bg-green-50 shadow-lg' 
-                  : 'border-gray-200 hover:border-blue-300'
+                  ? 'border-primary/40 shadow-[0_0_0_1px_rgba(255,46,204,0.10)]' 
+                  : 'border-zinc-700/50 hover:border-zinc-600'
               }`}>
                 {currentPlan === 'glow_up' && (
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-green-500 text-white px-4 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                    <span className="bg-primary/20 text-primary border border-primary/30 px-4 py-1 rounded-full text-xs font-medium flex items-center gap-1">
                       <CheckCircle className="h-3 w-3" />
                       Your Current Plan
                     </span>
@@ -137,24 +137,24 @@ function BillingContent() {
                 <div className="text-center">
                   <div className="flex items-center justify-center mb-3">
                     <Star className={`h-6 w-6 mr-2 ${
-                      currentPlan === 'glow_up' ? 'text-green-600' : 'text-blue-600'
+                      currentPlan === 'glow_up' ? 'text-primary' : 'text-zinc-100'
                     }`} />
                     <h3 className={`text-xl font-semibold ${
-                      currentPlan === 'glow_up' ? 'text-green-900' : 'text-gray-900'
+                      currentPlan === 'glow_up' ? 'text-zinc-100' : 'text-zinc-100'
                     }`}>Glow Up</h3>
                   </div>
                   <div className={`text-3xl font-bold mb-1 ${
-                    currentPlan === 'glow_up' ? 'text-green-600' : 'text-blue-600'
+                    currentPlan === 'glow_up' ? 'text-primary' : 'text-zinc-100'
                   }`}>$99</div>
-                  <div className="text-sm text-gray-600 mb-6">per month</div>
-                  <ul className="space-y-2 text-sm text-gray-600 mb-6">
+                  <div className="text-sm text-zinc-500 mb-6">per month</div>
+                  <ul className="space-y-2 text-sm text-zinc-500 mb-6">
                     <li>✓ 3 campaigns</li>
                     <li>✓ 1,000 creators</li>
                     <li>✓ CSV export</li>
                     <li>✓ Bio extraction</li>
                   </ul>
                   {currentPlan === 'glow_up' ? (
-                    <div className="w-full bg-green-100 text-green-800 py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2">
+                    <div className="w-full bg-primary/20 text-primary border border-primary/30 py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2">
                       <CheckCircle className="h-4 w-4" />
                       Your Current Plan
                     </div>
@@ -165,16 +165,16 @@ function BillingContent() {
               </div>
 
               {/* Viral Surge Plan */}
-              <div className={`bg-white rounded-lg p-6 border-2 transition-all relative ${
+              <div className={`rounded-lg p-6 border transition-all relative bg-zinc-900/80 ${
                 currentPlan === 'viral_surge' 
-                  ? 'border-green-500 bg-green-50 shadow-lg' 
-                  : 'border-blue-500'
+                  ? 'border-primary/40 shadow-[0_0_0_1px_rgba(255,46,204,0.10)]' 
+                  : 'border-zinc-700/50 hover:border-zinc-600'
               }`}>
                 <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                   <span className={`px-4 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${
                     currentPlan === 'viral_surge' 
-                      ? 'bg-green-500 text-white' 
-                      : 'bg-blue-500 text-white'
+                      ? 'bg-primary/20 text-primary border border-primary/30' 
+                      : 'bg-zinc-800 text-zinc-200 border border-zinc-700/50'
                   }`}>
                     {currentPlan === 'viral_surge' ? (
                       <>
@@ -189,24 +189,24 @@ function BillingContent() {
                 <div className="text-center">
                   <div className="flex items-center justify-center mb-3">
                     <Zap className={`h-6 w-6 mr-2 ${
-                      currentPlan === 'viral_surge' ? 'text-green-600' : 'text-purple-600'
+                      currentPlan === 'viral_surge' ? 'text-primary' : 'text-zinc-300'
                     }`} />
                     <h3 className={`text-xl font-semibold ${
-                      currentPlan === 'viral_surge' ? 'text-green-900' : 'text-gray-900'
+                      currentPlan === 'viral_surge' ? 'text-zinc-100' : 'text-zinc-100'
                     }`}>Viral Surge</h3>
                   </div>
                   <div className={`text-3xl font-bold mb-1 ${
-                    currentPlan === 'viral_surge' ? 'text-green-600' : 'text-blue-600'
+                    currentPlan === 'viral_surge' ? 'text-primary' : 'text-zinc-100'
                   }`}>$249</div>
-                  <div className="text-sm text-gray-600 mb-6">per month</div>
-                  <ul className="space-y-2 text-sm text-gray-600 mb-6">
+                  <div className="text-sm text-zinc-500 mb-6">per month</div>
+                  <ul className="space-y-2 text-sm text-zinc-500 mb-6">
                     <li>✓ 10 campaigns</li>
                     <li>✓ 10,000 creators</li>
                     <li>✓ Advanced analytics</li>
                     <li>✓ All Glow Up features</li>
                   </ul>
                   {currentPlan === 'viral_surge' ? (
-                    <div className="w-full bg-green-100 text-green-800 py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2">
+                    <div className="w-full bg-primary/20 text-primary border border-primary/30 py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2">
                       <CheckCircle className="h-4 w-4" />
                       Your Current Plan
                     </div>
@@ -217,14 +217,14 @@ function BillingContent() {
               </div>
 
               {/* Fame Flex Plan */}
-              <div className={`bg-white rounded-lg p-6 border-2 transition-all relative ${
+              <div className={`rounded-lg p-6 border transition-all relative bg-zinc-900/80 ${
                 currentPlan === 'fame_flex' 
-                  ? 'border-green-500 bg-green-50 shadow-lg' 
-                  : 'border-gray-200 hover:border-blue-300'
+                  ? 'border-primary/40 shadow-[0_0_0_1px_rgba(255,46,204,0.10)]' 
+                  : 'border-zinc-700/50 hover:border-zinc-600'
               }`}>
                 {currentPlan === 'fame_flex' && (
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-green-500 text-white px-4 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                    <span className="bg-primary/20 text-primary border border-primary/30 px-4 py-1 rounded-full text-xs font-medium flex items-center gap-1">
                       <CheckCircle className="h-3 w-3" />
                       Your Current Plan
                     </span>
@@ -233,24 +233,24 @@ function BillingContent() {
                 <div className="text-center">
                   <div className="flex items-center justify-center mb-3">
                     <Crown className={`h-6 w-6 mr-2 ${
-                      currentPlan === 'fame_flex' ? 'text-green-600' : 'text-yellow-600'
+                      currentPlan === 'fame_flex' ? 'text-primary' : 'text-zinc-300'
                     }`} />
                     <h3 className={`text-xl font-semibold ${
-                      currentPlan === 'fame_flex' ? 'text-green-900' : 'text-gray-900'
+                      currentPlan === 'fame_flex' ? 'text-zinc-100' : 'text-zinc-100'
                     }`}>Fame Flex</h3>
                   </div>
                   <div className={`text-3xl font-bold mb-1 ${
-                    currentPlan === 'fame_flex' ? 'text-green-600' : 'text-blue-600'
+                    currentPlan === 'fame_flex' ? 'text-primary' : 'text-zinc-100'
                   }`}>$499</div>
-                  <div className="text-sm text-gray-600 mb-6">per month</div>
-                  <ul className="space-y-2 text-sm text-gray-600 mb-6">
+                  <div className="text-sm text-zinc-500 mb-6">per month</div>
+                  <ul className="space-y-2 text-sm text-zinc-500 mb-6">
                     <li>✓ Unlimited campaigns</li>
                     <li>✓ Unlimited creators</li>
                     <li>✓ API access</li>
                     <li>✓ Priority support</li>
                   </ul>
                   {currentPlan === 'fame_flex' ? (
-                    <div className="w-full bg-green-100 text-green-800 py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2">
+                    <div className="w-full bg-primary/20 text-primary border border-primary/30 py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2">
                       <CheckCircle className="h-4 w-4" />
                       Your Current Plan
                     </div>

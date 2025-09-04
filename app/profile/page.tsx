@@ -162,7 +162,7 @@ export default function ProfileSettingsPage() {
           {/* Trial Status Section */}
           {userProfile.trialData ? (
             <section>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Trial Status</h2>
+              <h2 className="text-lg font-semibold text-zinc-100 mb-4">Trial Status</h2>
               {isAdmin ? (
                 // Admin view: 2-column grid
                 <div className="grid gap-6 lg:grid-cols-2">

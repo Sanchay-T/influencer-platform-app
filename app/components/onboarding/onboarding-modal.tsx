@@ -183,7 +183,7 @@ export default function OnboardingModal({
               {step > 4 ? '✓' : '4'}
             </div>
           </div>
-          <p className="text-center text-sm text-gray-600">
+          <p className="text-center text-sm text-zinc-400">
             Step {step} of 4: {
               step === 1 ? 'Tell us about yourself' : 
               step === 2 ? 'Tell us about your brand' : 
@@ -193,14 +193,14 @@ export default function OnboardingModal({
           </p>
         </div>
 
-        <Card className="shadow-lg border border-gray-200 bg-white">
+        <Card className="shadow-lg border border-zinc-700/50 bg-zinc-900/80">
           {step === 1 && (
             <>
               <CardHeader>
-                <CardTitle className="text-2xl font-bold text-gray-900">
+                <CardTitle className="text-2xl font-bold text-zinc-100">
                   Welcome to Gemz! 🎉
                 </CardTitle>
-                <CardDescription className="text-gray-600">
+                <CardDescription className="text-zinc-400">
                   Let's get to know you and your business better. This helps us personalize your experience.
                 </CardDescription>
               </CardHeader>
@@ -214,7 +214,7 @@ export default function OnboardingModal({
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="fullName" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <Label htmlFor="fullName" className="text-sm font-medium text-zinc-200 flex items-center gap-2">
                     <User className="h-4 w-4" />
                     Full Name
                   </Label>
@@ -230,7 +230,7 @@ export default function OnboardingModal({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="businessName" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <Label htmlFor="businessName" className="text-sm font-medium text-zinc-200 flex items-center gap-2">
                     <Building className="h-4 w-4" />
                     Business Name
                   </Label>
@@ -243,7 +243,7 @@ export default function OnboardingModal({
                     className="h-12 text-base"
                     disabled={isLoading}
                   />
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-zinc-500">
                     This could be your company name, brand name, or your own name if you're a solo entrepreneur.
                   </p>
                 </div>
@@ -272,10 +272,10 @@ export default function OnboardingModal({
           {step === 2 && (
             <>
               <CardHeader>
-                <CardTitle className="text-2xl font-bold text-gray-900">
+                <CardTitle className="text-2xl font-bold text-zinc-100">
                   Describe Your Brand & Influencer Goals 🎯
                 </CardTitle>
-                <CardDescription className="text-gray-600">
+                <CardDescription className="text-zinc-400">
                   Help our AI understand your brand and the type of influencers you want to work with.
                 </CardDescription>
               </CardHeader>
@@ -289,7 +289,7 @@ export default function OnboardingModal({
                 )}
 
                 <div className="space-y-3">
-                  <Label htmlFor="brandDescription" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <Label htmlFor="brandDescription" className="text-sm font-medium text-zinc-200 flex items-center gap-2">
                     <Target className="h-4 w-4" />
                     Explain your brand and the type of influencers you look to work with
                   </Label>
@@ -303,7 +303,7 @@ export default function OnboardingModal({
                       className="min-h-[120px] text-base resize-none"
                       disabled={isLoading}
                     />
-                    <div className="absolute bottom-2 right-2 text-xs text-gray-400">
+                    <div className="absolute bottom-2 right-2 text-xs text-zinc-500">
                       {brandDescription.length}/500
                     </div>
                   </div>
@@ -324,7 +324,7 @@ export default function OnboardingModal({
                 </div>
 
                 <div className="space-y-3">
-                  <Label className="text-sm font-medium text-gray-700">
+                  <Label className="text-sm font-medium text-zinc-200">
                     Need inspiration? Click any example:
                   </Label>
                   
@@ -332,10 +332,10 @@ export default function OnboardingModal({
                     {examplePrompts.map((prompt, index) => (
                       <div
                         key={index}
-                        className="p-3 bg-gray-50 rounded-md border cursor-pointer hover:bg-gray-100 transition-colors"
+                        className="p-3 bg-zinc-800/60 rounded-md border border-zinc-700/50 cursor-pointer hover:bg-zinc-800/90 transition-colors"
                         onClick={() => setBrandDescription(prompt)}
                       >
-                        <p className="text-sm text-gray-700">{prompt}</p>
+                        <p className="text-sm text-zinc-300">{prompt}</p>
                       </div>
                     ))}
                   </div>
@@ -360,7 +360,7 @@ export default function OnboardingModal({
                 </Button>
 
                 {brandDescription.trim().length < 50 && brandDescription.trim().length > 0 && (
-                  <p className="text-sm text-amber-600 text-center">
+                  <p className="text-sm text-zinc-400 text-center">
                     Please provide more details (at least 50 characters) for better AI recommendations
                   </p>
                 )}
@@ -374,10 +374,10 @@ export default function OnboardingModal({
                 <div className="mx-auto mb-4 w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center">
                   <CreditCard className="w-8 h-8 text-pink-400" />
                 </div>
-                <CardTitle className="text-2xl font-bold text-gray-900 text-center">
+                <CardTitle className="text-2xl font-bold text-zinc-100 text-center">
                   Choose Your Plan 💳
                 </CardTitle>
-                <CardDescription className="text-gray-600 text-center">
+                <CardDescription className="text-zinc-400 text-center">
                   Select the perfect plan for your influencer marketing needs.
                 </CardDescription>
               </CardHeader>
@@ -403,37 +403,37 @@ export default function OnboardingModal({
               </CardHeader>
 
               <CardContent className="space-y-6">
-                <div className="bg-blue-50 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center gap-2">
+                <div className="bg-zinc-800/60 rounded-lg p-6 border border-zinc-700/50">
+                  <h3 className="text-lg font-semibold text-zinc-100 mb-4 flex items-center gap-2">
                     <Sparkles className="h-5 w-5" />
                     What's next?
                   </h3>
                   <div className="space-y-3">
                     <div className="flex items-start gap-3">
-                      <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                      <div className="w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
                         1
                       </div>
                       <div>
-                        <p className="font-medium text-blue-900">Create your first campaign</p>
-                        <p className="text-sm text-blue-700">Search for influencers across TikTok, Instagram & YouTube</p>
+                        <p className="font-medium text-zinc-100">Create your first campaign</p>
+                        <p className="text-sm text-zinc-400">Search for influencers across TikTok, Instagram & YouTube</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                      <div className="w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
                         2
                       </div>
                       <div>
-                        <p className="font-medium text-blue-900">Get detailed insights</p>
-                        <p className="text-sm text-blue-700">Access contact info, analytics, and audience data</p>
+                        <p className="font-medium text-zinc-100">Get detailed insights</p>
+                        <p className="text-sm text-zinc-400">Access contact info, analytics, and audience data</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                      <div className="w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
                         3
                       </div>
                       <div>
-                        <p className="font-medium text-blue-900">Export and contact</p>
-                        <p className="text-sm text-blue-700">Download contact lists and start your campaigns</p>
+                        <p className="font-medium text-zinc-100">Export and contact</p>
+                        <p className="text-sm text-zinc-400">Download contact lists and start your campaigns</p>
                       </div>
                     </div>
                   </div>

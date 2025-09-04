@@ -149,7 +149,7 @@ export default function SimilarSearchResults({ searchData }) {
     });
     return (
       <div className="text-center py-8">
-        <div className="text-gray-500">
+        <div className="text-zinc-400">
           <p className="text-lg font-medium">No similar creators found</p>
           <p className="text-sm mt-2">Try searching for a different username or platform.</p>
         </div>

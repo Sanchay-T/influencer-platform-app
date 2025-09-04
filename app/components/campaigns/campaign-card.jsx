@@ -33,10 +33,10 @@ export default function CampaignCard({ campaign }) {
           handleCardClick();
         }
       }}
-      className={`bg-zinc-900/80 border border-zinc-700/50 hover:bg-zinc-800/40 transition-all cursor-pointer group relative ${isLoading ? 'opacity-70' : ''}`}
+      className={`border border-transparent surface-brand transition-all cursor-pointer group relative ${isLoading ? 'opacity-70' : ''}`}
     >
         {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/50 rounded-lg z-10">
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-lg z-10">
             <Loader2 className="h-6 w-6 animate-spin text-zinc-300" />
           </div>
         )}
@@ -54,9 +54,7 @@ export default function CampaignCard({ campaign }) {
               <Badge variant="secondary" className="capitalize">
                 {campaign.status || 'draft'}
               </Badge>
-              <Badge variant={campaign.searchType === 'similar' ? 'secondary' : 'default'}>
-                {campaign.searchType === 'similar' ? 'Similar Search' : 'Keyword Search'}
-              </Badge>
+              {/* Removed duplicate search-type badge (e.g., "Keyword Search") to avoid redundancy */}
             </div>
           </div>
         </CardHeader>
