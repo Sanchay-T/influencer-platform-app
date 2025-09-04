@@ -11,7 +11,8 @@
 export function getClientUrl(): string {
   // In development, use localhost for Stripe redirects
   if (process.env.NODE_ENV === 'development') {
-    return 'http://localhost:3000';
+    const port = process.env.LOCAL_PORT || process.env.PORT || '3000'
+    return `http://localhost:${port}`;
   }
   
   // In production, use the live domain

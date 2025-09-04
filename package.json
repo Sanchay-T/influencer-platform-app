@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/dev-with-port.js",
+    "dev:wt1": "LOCAL_PORT=3001 node scripts/dev-with-port.js",
+    "dev:wt2": "LOCAL_PORT=3002 node scripts/dev-with-port.js",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
