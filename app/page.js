@@ -4,29 +4,22 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import DashboardLayout from "./components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { useRouter } from 'next/navigation';
-import { toast } from 'react-hot-toast';
 import CampaignList from "./components/campaigns/CampaignList";
-import { PlusCircle } from "lucide-react";
 import { SignedIn, SignedOut, SignInButton, SignUpButton } from '@clerk/nextjs';
 import OnboardingModal from "./components/onboarding/onboarding-modal";
 
 export default function Home() {
   const { userId } = useAuth();
-  const router = useRouter();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(1);
   const [existingData, setExistingData] = useState({});
-  const [canCreateCampaign, setCanCreateCampaign] = useState(true);
-  const [limitMessage, setLimitMessage] = useState('');
+  // CTA (create/upgrade) is handled in header; we only show counts here
   const [usageSummary, setUsageSummary] = useState(null);
 
   useEffect(() => {
     if (userId) {
       checkOnboardingStatus();
       checkCampaignGate();
-      fetchUsageSummary();
     }
   }, [userId]);
 
@@ -35,21 +28,15 @@ export default function Home() {
       const res = await fetch('/api/campaigns/can-create');
       if (!res.ok) return;
       const data = await res.json();
-      setCanCreateCampaign(Boolean(data.allowed));
-      if (!data.allowed && data.message) setLimitMessage(data.message);
+      // Also derive usage summary for count display from gate response
+      if (data.usage) {
+        const used = Number(data.usage.campaignsUsed || 0);
+        const remaining = data.usage.campaignsRemaining;
+        const limit = remaining === Infinity ? null : used + Number(remaining || 0);
+        setUsageSummary({ campaigns: { used, limit } });
+      }
     } catch (e) {
       // ignore gate errors; default allows
-    }
-  };
-
-  const fetchUsageSummary = async () => {
-    try {
-      const res = await fetch('/api/usage/summary');
-      if (!res.ok) return;
-      const data = await res.json();
-      setUsageSummary(data);
-    } catch (e) {
-      // ignore
     }
   };
 
@@ -145,22 +132,6 @@ export default function Home() {
                     ? `${usageSummary.campaigns.used} campaigns`
                     : `${usageSummary.campaigns.used}/${usageSummary.campaigns.limit} campaigns`}
                 </span>
-              )}
-              <Button
-              onClick={() => {
-                if (!canCreateCampaign) {
-                  toast.error(limitMessage || 'Campaign limit reached. Upgrade your plan to create more.');
-                  return;
-                }
-                router.push('/campaigns/new');
-              }}
-            >
-              <PlusCircle className="mr-2" /> Create campaign
-              </Button>
-              {!canCreateCampaign && (
-                <Link href="/billing" className="text-sm text-blue-600 hover:underline">
-                  Upgrade
-                </Link>
               )}
             </div>
           </div>

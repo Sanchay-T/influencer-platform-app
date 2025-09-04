@@ -17,8 +17,30 @@ export default function DashboardHeader() {
   const tabs = [
     { name: 'Dashboard', href: '/dashboard' },
     { name: 'Campaigns', href: '/' },
-    { name: 'Influencers', href: '/campaigns/search/similar' },
+    // Removed "Influencers" tab to avoid clutter in navbar
   ]
+
+  // Gate: whether user can create more campaigns
+  const [canCreateCampaign, setCanCreateCampaign] = useState(true)
+  const [loadingGate, setLoadingGate] = useState(false)
+
+  useEffect(() => {
+    const run = async () => {
+      try {
+        setLoadingGate(true)
+        const res = await fetch('/api/campaigns/can-create')
+        if (!res.ok) return
+        const data = await res.json()
+        setCanCreateCampaign(Boolean(data.allowed))
+      } catch (_) {
+        // fail-open
+        setCanCreateCampaign(true)
+      } finally {
+        setLoadingGate(false)
+      }
+    }
+    run()
+  }, [])
 
   const onKeyDown = (e) => {
     if (e.key === 'Enter') {
@@ -79,12 +101,21 @@ export default function DashboardHeader() {
                 className="w-72 h-9 pl-10 bg-zinc-800/60 border-zinc-700/50 focus:border-pink-400/60 focus:ring-2 focus:ring-pink-500/20 placeholder:text-zinc-500 transition-all"
               />
             </div>
-            <Link href="/campaigns/new">
-              <Button size="sm" className="bg-pink-600 hover:bg-pink-500 text-white">
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Create Campaign
-              </Button>
-            </Link>
+            {/* Single global CTA with plan gating */}
+            {canCreateCampaign ? (
+              <Link href="/campaigns/new">
+                <Button size="sm" className="bg-pink-600 hover:bg-pink-500 text-white" disabled={loadingGate}>
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Create Campaign
+                </Button>
+              </Link>
+            ) : (
+              <Link href="/billing">
+                <Button size="sm" className="bg-pink-600 hover:bg-pink-500 text-white">
+                  Upgrade
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       </div>
