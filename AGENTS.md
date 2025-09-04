@@ -1,16 +1,16 @@
 # Repository Guidelines
 
-Scope: This guide applies to the WT‑1 worktree only. Treat all local instructions as WT‑1 specific.
+Scope: This guide applies to the WT‑2 worktree only. Treat all local instructions as WT‑2 specific.
 
 ## Project Structure & Modules
 - `app/`: Next.js App Router pages and API routes. Auth enforced via `middleware.ts` (Clerk) with admin and webhook exceptions.
 - `lib/`: Core services: `db/` (Drizzle + Postgres), `stripe/`, `queue/qstash.ts`, `events/`, `jobs/`, `platforms/` (TikTok/Instagram/YouTube processors), `utils/`.
 - `drizzle/`: Generated schema/relations and migration metadata.
-- `scripts/`: Operational scripts (includes `dev-wt.sh`).
+- `scripts/`: Operational scripts (includes `dev-with-port.js`).
 - `tests/`, `test-scripts/`: Script‑driven test and research runners.
 - `public/`, `components/`, `types/`: UI assets and shared types.
 
-## Expanded App Tree (WT‑1)
+## Expanded App Tree (WT‑2)
 ```
 app/
   layout.tsx  page.js  globals.css
@@ -89,7 +89,7 @@ app/
 - Scope UI-only edits to: `app/*`, `components/*`, `public/*`, `app/globals.css`, and `tailwind.config.mjs`.
 
 ## Build, Test, and Development
-- Start WT‑1: `npm run dev:wt1` (loads `.env.worktree`, uses `LOCAL_PORT` or `PORT`).
+- Start WT‑2 (preferred for agents): `npm run dev:wt2` (loads `.env.local` then `.env.worktree`, uses `LOCAL_PORT` or `PORT`). Hot reload is enabled; no restart needed for code changes.
 - Start default: `npm run dev`. Build: `npm run build`. Prod: `npm start`. Lint: `npm run lint`.
 - DB: `npm run db:generate`, `npm run db:migrate`, `npm run db:studio`.
 - Examples: `npm run test:tiktok-similar`, `npm run test:tiktok-similar-api` (script‑driven tests).
@@ -108,7 +108,7 @@ app/
 - Imperative messages (“Add…”, “Refactor…”, “Fix…”); avoid vague commits.
 - PRs include: summary, repro steps, screenshots for UI, linked issues, and migration notes.
 
-## Security & Configuration (WT‑1)
-- Never commit secrets. `.env.local`: full set (mirrors main). `.env.worktree`: WT‑1 overrides (e.g., `LOCAL_PORT=3001`).
+## Security & Configuration (WT‑2)
+- Never commit secrets. `.env.local`: full set (mirrors main). `.env.worktree`: WT‑2 overrides (e.g., `LOCAL_PORT=3002`).
 - Required keys include: `DATABASE_URL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_ADMIN_EMAILS`, Stripe keys/price IDs, `QSTASH_*` tokens/keys.
-- Start WT‑1: `npm run dev:wt1`. Override port: `PORT=3005 npm run dev:wt1`.
+- Start WT‑2: `npm run dev:wt2`. Override port: `PORT=3005 npm run dev:wt2`.

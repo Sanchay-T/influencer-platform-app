@@ -6,6 +6,7 @@ import { auth } from '@clerk/nextjs/server';
 import { qstash } from '@/lib/queue/qstash'
 import { Receiver } from "@upstash/qstash"
 import { SystemConfig } from '@/lib/config/system-config'
+import { PlanEnforcementService } from '@/lib/services/plan-enforcement'
 
 // Add API logging if enabled
 let logApiCallSafe: any = null;
@@ -156,12 +157,40 @@ export async function POST(req: Request) {
         }
         console.log('✅ Campaña verificada correctamente');
 
-        console.log('🔍 Paso 7: Validando targetResults');
-        // Validar targetResults
-        if (![100, 500, 1000].includes(targetResults)) {
-            console.error('❌ Target results inválido:', targetResults);
+        // 🛡️ PLAN VALIDATION - Check if user can create scraping jobs
+        console.log('🛡️ [TIKTOK-API] Paso 7: Validating user plan limits for job creation');
+        const jobValidation = await PlanEnforcementService.validateJobCreation(userId, targetResults);
+        
+        if (!jobValidation.allowed) {
+          console.log('❌ [TIKTOK-API] Job creation blocked:', jobValidation.reason);
+          return NextResponse.json({ 
+            error: 'Plan limit exceeded',
+            message: jobValidation.reason,
+            upgrade: true,
+            usage: jobValidation.usage
+          }, { status: 403 });
+        }
+        
+        // If job needs to be adjusted to fit plan limits
+        let adjustedTargetResults = targetResults;
+        if (jobValidation.adjustedLimit && jobValidation.adjustedLimit < targetResults) {
+          adjustedTargetResults = jobValidation.adjustedLimit;
+          console.log(`🔧 [TIKTOK-API] Target results adjusted from ${targetResults} to ${adjustedTargetResults} to fit plan limits`);
+        }
+        
+        console.log('✅ [TIKTOK-API] Plan validation passed', {
+          originalTarget: targetResults,
+          adjustedTarget: adjustedTargetResults,
+          creatorsUsed: jobValidation.usage?.creatorsUsed,
+          creatorsRemaining: jobValidation.usage?.creatorsRemaining
+        });
+
+        console.log('🔍 Paso 8: Validando targetResults');
+        // Validar targetResults (use adjusted value if needed)
+        if (![100, 500, 1000].includes(adjustedTargetResults)) {
+            console.error('❌ Target results inválido:', adjustedTargetResults);
             return NextResponse.json(
-                { error: 'targetResults must be 100, 500, or 1000' },
+                { error: 'adjustedTargetResults must be 100, 500, or 1000' },
                 { status: 400 }
             )
         }
@@ -174,7 +203,7 @@ export async function POST(req: Request) {
                 .values({
                     userId: userId,
                     keywords: sanitizedKeywords,
-                    targetResults,
+                    targetResults: adjustedTargetResults, // Use adjusted value
                     status: 'pending',
                     processedRuns: 0,
                     processedResults: 0,

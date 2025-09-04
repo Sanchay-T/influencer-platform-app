@@ -4,6 +4,7 @@ import { scrapingJobs, scrapingResults, campaigns } from '@/lib/db/schema';
 import { auth } from '@clerk/nextjs/server';
 import { eq, and } from 'drizzle-orm';
 import { qstash } from '@/lib/queue/qstash';
+import { PlanEnforcementService } from '@/lib/services/plan-enforcement';
 
 const TIMEOUT_MINUTES = 60;
 
@@ -73,6 +74,21 @@ export async function POST(req: Request) {
     const timeoutAt = new Date();
     timeoutAt.setMinutes(timeoutAt.getMinutes() + TIMEOUT_MINUTES);
 
+    // Plan validation and adjusted targets
+    const requestedTarget = 100;
+    const jobValidation = await PlanEnforcementService.validateJobCreation(userId, requestedTarget);
+    if (!jobValidation.allowed) {
+      return NextResponse.json({ 
+        error: 'Plan limit exceeded',
+        message: jobValidation.reason,
+        upgrade: true,
+        usage: jobValidation.usage
+      }, { status: 403 });
+    }
+    const adjustedTarget = jobValidation.adjustedLimit && jobValidation.adjustedLimit < requestedTarget
+      ? jobValidation.adjustedLimit
+      : requestedTarget;
+
     // Create scraping job
     console.log('💾 [YOUTUBE-SIMILAR-API] Creating scraping job...');
     const newJob = await db.insert(scrapingJobs).values({
@@ -83,7 +99,7 @@ export async function POST(req: Request) {
       status: 'pending',
       processedRuns: 0,
       processedResults: 0,
-      targetResults: 100, // Default target
+      targetResults: adjustedTarget, // Adjusted to plan limits
       cursor: 0,
       progress: '0',
       timeoutAt: timeoutAt,

@@ -12,6 +12,7 @@ import { processInstagramSimilarJob } from '@/lib/platforms/instagram-similar/ha
 import { processYouTubeSimilarJob } from '@/lib/platforms/youtube-similar/handler'
 import { SystemConfig } from '@/lib/config/system-config'
 import { ImageCache } from '@/lib/services/image-cache'
+import { PlanEnforcementService } from '@/lib/services/plan-enforcement'
 
 // Inline API logging function (Vercel-compatible)
 const fs = require('fs');
@@ -681,6 +682,10 @@ export async function POST(req: Request) {
               processedRuns: job.processedRuns + 1
             })
             .where(eq(scrapingJobs.id, job.id));
+          
+          // Track creators found for plan enforcement
+          await PlanEnforcementService.trackCreatorsFound(job.userId, job.processedResults);
+          console.log(`📊 [PLAN-TRACKING] Tracked ${job.processedResults} creators for user ${job.userId} (accumulated results)`);
           
           return NextResponse.json({
             success: true,
@@ -1471,6 +1476,10 @@ export async function POST(req: Request) {
           
           console.log('✅ [COMPLETE] Job marked as completed with full data!');
           
+          // Track creators found for plan enforcement
+          await PlanEnforcementService.trackCreatorsFound(job.userId, finalCreatorCount);
+          console.log(`📊 [PLAN-TRACKING] Tracked ${finalCreatorCount} creators for user ${job.userId}`);
+          
           console.log('\n🎉 [COMPLETE] Search completed successfully:', {
             jobId: job.id,
             resultsCount: finalCreatorCount,
@@ -1522,6 +1531,10 @@ export async function POST(req: Request) {
               error: `Completed with partial results due to API issues: ${instagramReelsError.message}`
             })
             .where(eq(scrapingJobs.id, job.id));
+          
+          // Track creators found for plan enforcement
+          await PlanEnforcementService.trackCreatorsFound(job.userId, currentResults);
+          console.log(`📊 [PLAN-TRACKING] Tracked ${currentResults} creators for user ${job.userId} (partial results)`);
           
           return NextResponse.json({
             success: true,
@@ -2008,6 +2021,10 @@ export async function POST(req: Request) {
             .where(eq(scrapingJobs.id, jobId));
           
           console.log('✅ [PROGRESS-UPDATE] Final database update complete');
+          
+          // Track creators found for plan enforcement
+          await PlanEnforcementService.trackCreatorsFound(job.userId, newProcessedResults);
+          console.log(`📊 [PLAN-TRACKING] Tracked ${newProcessedResults} creators for user ${job.userId} (TikTok completed)`);
           
           return NextResponse.json({ 
             status: 'completed',

@@ -193,6 +193,31 @@ export const backgroundJobs = pgTable('background_jobs', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
+// Subscription Plans table - Plan configuration and limits
+export const subscriptionPlans = pgTable('subscription_plans', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  planKey: varchar('plan_key', { length: 50 }).notNull().unique(), // 'glow_up', 'viral_surge', 'fame_flex'
+  displayName: text('display_name').notNull(), // 'Glow Up Plan'
+  description: text('description'), // Plan description
+  // Pricing
+  monthlyPrice: integer('monthly_price').notNull(), // Price in cents (9900 = $99.00)
+  yearlyPrice: integer('yearly_price'), // Yearly price in cents (optional)
+  // Stripe Price IDs
+  stripeMonthlaPriceId: text('stripe_monthly_price_id').notNull(),
+  stripeYearlyPriceId: text('stripe_yearly_price_id'),
+  // Plan Limits
+  campaignsLimit: integer('campaigns_limit').notNull(), // Max active campaigns
+  creatorsLimit: integer('creators_limit').notNull(), // Max creators per month
+  // Features
+  features: jsonb('features').default('{}'), // JSON object with feature flags
+  // Status
+  isActive: boolean('is_active').notNull().default(true),
+  // Metadata
+  sortOrder: integer('sort_order').default(0), // For display ordering
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 // Relations
 export const campaignRelations = relations(campaigns, ({ many }) => ({
   scrapingJobs: many(scrapingJobs),
@@ -248,3 +273,5 @@ export type Event = typeof events.$inferSelect;
 export type NewEvent = typeof events.$inferInsert;
 export type BackgroundJob = typeof backgroundJobs.$inferSelect;
 export type NewBackgroundJob = typeof backgroundJobs.$inferInsert;
+export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
+export type NewSubscriptionPlan = typeof subscriptionPlans.$inferInsert;

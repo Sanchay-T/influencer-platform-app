@@ -24,9 +24,8 @@ const isProtectedApiRoute = createRouteMatcher([
   '/api/admin(.*)',
 ])
 
-// Admin routes that require admin access
+// Admin API routes that require admin access (UI pages rely on API gating)
 const isAdminRoute = createRouteMatcher([
-  '/admin(.*)',
   '/api/admin(.*)',
 ])
 
@@ -68,17 +67,12 @@ export default clerkMiddleware(async (auth, request) => {
       return NextResponse.redirect(signInUrl)
     }
 
-    // Check admin routes
+    // Check admin API routes (UI pages are guarded by API responses)
     if (isAdminRoute(request)) {
       const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(',').map(e => e.trim()) || []
       const userEmail = sessionClaims?.email as string | undefined
       
       if (!userEmail || !adminEmails.includes(userEmail)) {
-        // For UI routes, redirect to home
-        if (!request.url.includes('/api/')) {
-          return NextResponse.redirect(new URL('/', request.url))
-        }
-        
         // For API routes, return 403
         return NextResponse.json(
           { error: 'Forbidden: Admin access required' },

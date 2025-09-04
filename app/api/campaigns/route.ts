@@ -3,6 +3,7 @@ import { db } from '@/lib/db'
 import { campaigns, scrapingJobs } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
 import { eq, desc, count } from 'drizzle-orm'
+import { PlanEnforcementService } from '@/lib/services/plan-enforcement'
 
 export const maxDuration = 10; // Aumentar el tiempo máximo de ejecución a 10 segundos
 
@@ -18,6 +19,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     console.log('✅ [CAMPAIGNS-API] User authenticated', { userId });
+
+    // 🛡️ PLAN VALIDATION - Check if user can create campaigns
+    console.log('🛡️ [CAMPAIGNS-API] Validating user plan limits');
+    const validation = await PlanEnforcementService.validateCampaignCreation(userId);
+    
+    if (!validation.allowed) {
+      console.log('❌ [CAMPAIGNS-API] Campaign creation blocked:', validation.reason);
+      return NextResponse.json({ 
+        error: 'Plan limit exceeded',
+        message: validation.reason,
+        upgrade: true,
+        usage: validation.usage
+      }, { status: 403 });
+    }
+    
+    console.log('✅ [CAMPAIGNS-API] Plan validation passed', {
+      campaignsUsed: validation.usage?.campaignsUsed,
+      campaignsRemaining: validation.usage?.campaignsRemaining
+    });
 
     console.log('🔄 [CAMPAIGNS-API] Parsing request body');
     const body = await req.json();
@@ -39,6 +59,10 @@ export async function POST(req: Request) {
       name: campaign.name,
       searchType: campaign.searchType
     });
+
+    // 📈 USAGE TRACKING - Track campaign creation
+    console.log('📈 [CAMPAIGNS-API] Tracking campaign creation in usage metrics');
+    await PlanEnforcementService.trackCampaignCreated(userId);
 
     return NextResponse.json(campaign)
   } catch (error) {

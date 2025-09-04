@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { scrapingJobs, scrapingResults, type PlatformResult, type InstagramRelatedProfile } from '@/lib/db/schema';
 import { auth } from '@clerk/nextjs/server';
 import { eq, and } from 'drizzle-orm';
+import { PlanEnforcementService } from '@/lib/services/plan-enforcement';
 import { qstash } from '@/lib/queue/qstash';
 
 const TIMEOUT_MINUTES = 60;
@@ -90,13 +91,25 @@ export async function POST(req: Request) {
     console.log('✅ Username sanitizado:', sanitizedUsername);
 
     try {
+      // 🛡️ PLAN VALIDATION - Instagram related profiles has a small fixed target (~20)
+      const expected = 20;
+      const jobValidation = await PlanEnforcementService.validateJobCreation(userId, expected);
+      if (!jobValidation.allowed) {
+        console.log('❌ [INSTAGRAM-API] Job creation blocked:', jobValidation.reason);
+        return NextResponse.json({ 
+          error: 'Plan limit exceeded',
+          message: jobValidation.reason,
+          upgrade: true,
+          usage: jobValidation.usage
+        }, { status: 403 });
+      }
       console.log('🔍 Creando job en la base de datos');
       // Crear el job en la base de datos
       const [job] = await db.insert(scrapingJobs)
         .values({
           userId: userId,
           targetUsername: sanitizedUsername,
-          targetResults: 20, // Número arbitrario, ya que los perfiles relacionados son limitados
+          targetResults: expected,
           status: 'pending',
           platform: 'Instagram',
           campaignId,

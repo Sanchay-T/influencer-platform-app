@@ -4,6 +4,7 @@ import { scrapingJobs, scrapingResults, campaigns } from '@/lib/db/schema';
 import { auth } from '@clerk/nextjs/server';
 import { eq, and } from 'drizzle-orm';
 import { qstash } from '@/lib/queue/qstash';
+import { PlanEnforcementService } from '@/lib/services/plan-enforcement';
 
 const TIMEOUT_MINUTES = 60;
 
@@ -56,6 +57,20 @@ export async function POST(req: Request) {
     console.log('✅ Username sanitized:', sanitizedUsername);
 
     try {
+      // 🛡️ PLAN VALIDATION - similar creators expected ~10
+      const requestedTarget = 10;
+      const jobValidation = await PlanEnforcementService.validateJobCreation(userId, requestedTarget);
+      if (!jobValidation.allowed) {
+        return NextResponse.json({ 
+          error: 'Plan limit exceeded',
+          message: jobValidation.reason,
+          upgrade: true,
+          usage: jobValidation.usage
+        }, { status: 403 });
+      }
+      const adjustedTarget = jobValidation.adjustedLimit && jobValidation.adjustedLimit < requestedTarget
+        ? jobValidation.adjustedLimit
+        : requestedTarget;
       console.log('🔍 Creating TikTok similar job in database');
       
       // Create the job in the database
@@ -63,7 +78,7 @@ export async function POST(req: Request) {
         .values({
           userId: userId,
           targetUsername: sanitizedUsername,
-          targetResults: 10, // Expected number of similar creators
+          targetResults: adjustedTarget, // Adjusted to plan limits
           status: 'pending',
           platform: 'TikTok',
           campaignId,
