@@ -72,18 +72,38 @@ async function resetUserOnboarding(email) {
   try {
     log(`\n🔄 Starting onboarding reset for: ${email}`, 'cyan');
     
-    // Step 1: Find user in Clerk by email
-    log('\n📧 Step 1: Finding user in Clerk...', 'yellow');
-    const users = await clerk.users.getUserList({ emailAddress: [email] });
-    
-    if (!users.data || users.data.length === 0) {
-      log(`❌ No user found with email: ${email}`, 'red');
-      return;
+    // Step 1: Resolve userId (Clerk or DB fallback)
+    let user = null;
+    let userId = null;
+    const hasClerkKey = !!process.env.CLERK_SECRET_KEY;
+    if (hasClerkKey) {
+      try {
+        log('\n📧 Step 1: Finding user in Clerk...', 'yellow');
+        const users = await clerk.users.getUserList({ emailAddress: [email] });
+        if (users.data && users.data.length > 0) {
+          user = users.data[0];
+          userId = user.id;
+          log(`✅ Found user in Clerk: ${userId}`, 'green');
+        }
+      } catch (e) {
+        log(`⚠️  Clerk lookup failed (${e.message}). Will try DB lookup...`, 'yellow');
+      }
+    } else {
+      log('\nℹ️  CLERK_SECRET_KEY not set. Using DB lookup by email...', 'yellow');
     }
-    
-    const user = users.data[0];
-    const userId = user.id;
-    log(`✅ Found user: ${userId}`, 'green');
+
+    if (!userId) {
+      // Fallback: find user_id via database by email
+      const profileRows = await queryClient`
+        SELECT user_id FROM user_profiles WHERE email = ${email} ORDER BY created_at DESC LIMIT 1;
+      `;
+      if (!profileRows || profileRows.length === 0) {
+        log(`❌ No user profile found by email in database: ${email}`, 'red');
+        return;
+      }
+      userId = profileRows[0].user_id;
+      log(`✅ Found user in DB: ${userId}`, 'green');
+    }
     
     // Step 2: Database operations (using Drizzle ORM)
     log('\n🗄️  Step 2: Connecting to database...', 'yellow');
@@ -191,18 +211,22 @@ async function resetUserOnboarding(email) {
     }
     
     // Step 7: Clear Clerk metadata (optional)
-    log('\n🔐 Step 7: Clearing Clerk metadata...', 'yellow');
-    try {
-      await clerk.users.updateUser(userId, {
-        publicMetadata: {
-          ...user.publicMetadata,
-          onboardingCompleted: false,
-          trialStarted: false,
-        },
-      });
-      log('✅ Clerk metadata cleared', 'green');
-    } catch (clerkError) {
-      log('⚠️  Could not update Clerk metadata (non-critical)', 'yellow');
+    if (hasClerkKey && user) {
+      log('\n🔐 Step 7: Clearing Clerk metadata...', 'yellow');
+      try {
+        await clerk.users.updateUser(userId, {
+          publicMetadata: {
+            ...(user.publicMetadata || {}),
+            onboardingCompleted: false,
+            trialStarted: false,
+          },
+        });
+        log('✅ Clerk metadata cleared', 'green');
+      } catch (clerkError) {
+        log('⚠️  Could not update Clerk metadata (non-critical)', 'yellow');
+      }
+    } else {
+      log('\n🔐 Skipping Clerk metadata update (no Clerk key or user not found in Clerk)', 'blue');
     }
     
     // Summary

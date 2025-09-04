@@ -4,6 +4,7 @@ import { scrapingJobs, scrapingResults, campaigns, type JobStatus } from '@/lib/
 import { eq, and } from 'drizzle-orm';
 import { auth } from '@clerk/nextjs/server';
 import { qstash } from '@/lib/queue/qstash';
+import { PlanEnforcementService } from '@/lib/services/plan-enforcement';
 
 const TIMEOUT_MINUTES = 60;
 
@@ -98,9 +99,29 @@ export async function POST(req: Request) {
         }
         console.log('✅ Campaign verified successfully');
 
+        // 🛡️ PLAN VALIDATION - Check if user can create scraping jobs
+        console.log('🛡️ [YOUTUBE-API] Step 7a: Validating user plan limits for job creation');
+        const jobValidation = await PlanEnforcementService.validateJobCreation(userId, targetResults);
+        if (!jobValidation.allowed) {
+          console.log('❌ [YOUTUBE-API] Job creation blocked:', jobValidation.reason);
+          return NextResponse.json({ 
+            error: 'Plan limit exceeded',
+            message: jobValidation.reason,
+            upgrade: true,
+            usage: jobValidation.usage
+          }, { status: 403 });
+        }
+
+        // If job needs to be adjusted to fit plan limits
+        let adjustedTargetResults = targetResults;
+        if (jobValidation.adjustedLimit && jobValidation.adjustedLimit < targetResults) {
+          adjustedTargetResults = jobValidation.adjustedLimit;
+          console.log(`🔧 [YOUTUBE-API] Target results adjusted from ${targetResults} to ${adjustedTargetResults} to fit plan limits`);
+        }
+
         console.log('🔍 Step 7: Validating targetResults');
         // Validate targetResults
-        if (![100, 500, 1000].includes(targetResults)) {
+        if (![100, 500, 1000].includes(adjustedTargetResults)) {
             console.error('❌ Invalid target results:', targetResults);
             return NextResponse.json(
                 { error: 'targetResults must be 100, 500, or 1000' },
@@ -116,7 +137,7 @@ export async function POST(req: Request) {
                 .values({
                     userId: userId,
                     keywords: sanitizedKeywords,
-                    targetResults,
+                    targetResults: adjustedTargetResults,
                     status: 'pending',
                     processedRuns: 0,
                     processedResults: 0,

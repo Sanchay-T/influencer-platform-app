@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { scrapingResults, scrapingJobs } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { auth } from '@clerk/nextjs/server';
+import { FeatureGateService } from '@/lib/services/feature-gates';
 
 export async function GET(req: Request) {
   try {
@@ -27,6 +28,18 @@ export async function GET(req: Request) {
     }
 
     console.log('CSV Export: Authentication successful', { userId });
+
+    // Feature gate: ensure CSV export is allowed for this plan
+    const gate = await FeatureGateService.assertExportFormat(userId, 'CSV');
+    if (!gate.allowed) {
+      console.log('CSV Export: blocked by feature gate', gate);
+      return NextResponse.json({
+        error: 'CSV export not available on your plan',
+        upgrade: true,
+        currentPlan: gate.currentPlan,
+        reason: gate.reason
+      }, { status: 403 });
+    }
 
     // Si se recibe campaignId, exportar todos los creadores de todos los jobs de la campaña
     if (campaignId) {

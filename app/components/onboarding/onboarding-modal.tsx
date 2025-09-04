@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +10,8 @@ import { AlertCircle, ArrowRight, User, Building, Target, Sparkles, X, CheckCirc
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'react-hot-toast';
 import PaymentStep from './payment-step';
+import OnboardingLogger from '@/lib/utils/onboarding-logger';
+import { useUser } from '@clerk/nextjs';
 
 interface OnboardingModalProps {
   isOpen: boolean;
@@ -28,27 +30,78 @@ export default function OnboardingModal({
   initialStep = 1,
   existingData 
 }: OnboardingModalProps) {
+  const { user } = useUser();
   const [step, setStep] = useState(initialStep);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [sessionId] = useState(OnboardingLogger.generateSessionId());
   
   // Form data
   const [fullName, setFullName] = useState(existingData?.fullName || '');
   const [businessName, setBusinessName] = useState(existingData?.businessName || '');
   const [brandDescription, setBrandDescription] = useState(existingData?.brandDescription || '');
 
+  // Log modal lifecycle events
+  useEffect(() => {
+    if (isOpen) {
+      OnboardingLogger.logModalEvent('OPEN', step, user?.id, {
+        initialStep,
+        hasExistingData: !!existingData,
+        existingData: existingData ? Object.keys(existingData) : []
+      }, sessionId);
+    } else {
+      OnboardingLogger.logModalEvent('CLOSE', step, user?.id, { finalStep: step }, sessionId);
+    }
+  }, [isOpen]);
+
+  // Log step changes
+  useEffect(() => {
+    if (isOpen) {
+      OnboardingLogger.logModalEvent('STEP_CHANGE', step, user?.id, { 
+        previousStep: step - 1,
+        currentStep: step,
+        direction: 'forward'
+      }, sessionId);
+    }
+  }, [step, isOpen]);
+
   if (!isOpen) return null;
 
   const handleStep1Submit = async () => {
+    await OnboardingLogger.logStep1('FORM-VALIDATION', 'Starting step 1 form validation', user?.id, {
+      fullNameProvided: !!fullName.trim(),
+      businessNameProvided: !!businessName.trim(),
+      fullNameLength: fullName.length,
+      businessNameLength: businessName.length
+    }, sessionId);
+
     if (!fullName.trim() || !businessName.trim()) {
+      await OnboardingLogger.logStep1('VALIDATION-ERROR', 'Step 1 validation failed - missing required fields', user?.id, {
+        fullNameMissing: !fullName.trim(),
+        businessNameMissing: !businessName.trim()
+      }, sessionId);
       setError('Please fill in all fields');
       return;
     }
+
+    await OnboardingLogger.logStep1('FORM-SUBMIT', 'Step 1 form submission started', user?.id, {
+      fullName: fullName.trim(),
+      businessName: businessName.trim()
+    }, sessionId);
 
     setIsLoading(true);
     setError('');
 
     try {
+      await OnboardingLogger.logAPI('API-CALL-START', 'Making API call to /api/onboarding/step-1', user?.id, {
+        endpoint: '/api/onboarding/step-1',
+        method: 'PATCH',
+        payload: {
+          fullName: fullName.trim(),
+          businessName: businessName.trim()
+        }
+      }, sessionId);
+
       const response = await fetch('/api/onboarding/step-1', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -60,15 +113,46 @@ export default function OnboardingModal({
 
       const data = await response.json();
 
+      await OnboardingLogger.logAPI('API-RESPONSE', 'Received response from /api/onboarding/step-1', user?.id, {
+        status: response.status,
+        ok: response.ok,
+        responseData: data
+      }, sessionId);
+
       if (!response.ok) {
+        await OnboardingLogger.logError('API-ERROR', 'Step 1 API call failed', user?.id, {
+          status: response.status,
+          error: data.error,
+          fullResponse: data
+        }, sessionId);
         throw new Error(data.error || 'Failed to save information');
       }
 
+      await OnboardingLogger.logStep1('FORM-SUCCESS', 'Step 1 completed successfully', user?.id, {
+        savedData: {
+          fullName: fullName.trim(),
+          businessName: businessName.trim()
+        },
+        responseData: data
+      }, sessionId);
+
       toast.success('Profile information saved!');
       setStep(2);
+      
+      await OnboardingLogger.logNavigation('STEP-ADVANCE', 'User advanced from step 1 to step 2', user?.id, {
+        fromStep: 1,
+        toStep: 2
+      }, sessionId);
     } catch (error) {
       console.error('❌ Error saving step 1:', error);
       const errorMessage = error instanceof Error ? error.message : 'Something went wrong';
+      
+      await OnboardingLogger.logError('FORM-ERROR', 'Step 1 form submission failed', user?.id, {
+        errorMessage,
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        stack: error instanceof Error ? error.stack : undefined
+      }, sessionId);
+      
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -77,20 +161,45 @@ export default function OnboardingModal({
   };
 
   const handleStep2Submit = async () => {
+    await OnboardingLogger.logStep2('FORM-VALIDATION', 'Starting step 2 form validation', user?.id, {
+      brandDescriptionProvided: !!brandDescription.trim(),
+      brandDescriptionLength: brandDescription.length,
+      meetsMinLength: brandDescription.trim().length >= 50
+    }, sessionId);
+
     if (!brandDescription.trim()) {
+      await OnboardingLogger.logStep2('VALIDATION-ERROR', 'Step 2 validation failed - brand description missing', user?.id, {
+        error: 'MISSING_BRAND_DESCRIPTION'
+      }, sessionId);
       setError('Please describe your brand and influencer preferences');
       return;
     }
 
     if (brandDescription.trim().length < 50) {
+      await OnboardingLogger.logStep2('VALIDATION-ERROR', 'Step 2 validation failed - brand description too short', user?.id, {
+        error: 'DESCRIPTION_TOO_SHORT',
+        currentLength: brandDescription.trim().length,
+        requiredLength: 50
+      }, sessionId);
       setError('Please provide more details (at least 50 characters)');
       return;
     }
+
+    await OnboardingLogger.logStep2('FORM-SUBMIT', 'Step 2 form submission started', user?.id, {
+      brandDescription: brandDescription.trim().substring(0, 100) + '...',
+      brandDescriptionLength: brandDescription.trim().length
+    }, sessionId);
 
     setIsLoading(true);
     setError('');
 
     try {
+      await OnboardingLogger.logAPI('API-CALL-START', 'Making API call to /api/onboarding/step-2', user?.id, {
+        endpoint: '/api/onboarding/step-2',
+        method: 'PATCH',
+        payloadLength: brandDescription.trim().length
+      }, sessionId);
+
       const response = await fetch('/api/onboarding/step-2', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -101,15 +210,43 @@ export default function OnboardingModal({
 
       const data = await response.json();
 
+      await OnboardingLogger.logAPI('API-RESPONSE', 'Received response from /api/onboarding/step-2', user?.id, {
+        status: response.status,
+        ok: response.ok,
+        responseData: data
+      }, sessionId);
+
       if (!response.ok) {
+        await OnboardingLogger.logError('API-ERROR', 'Step 2 API call failed', user?.id, {
+          status: response.status,
+          error: data.error,
+          fullResponse: data
+        }, sessionId);
         throw new Error(data.error || 'Failed to save information');
       }
 
+      await OnboardingLogger.logStep2('FORM-SUCCESS', 'Step 2 completed successfully', user?.id, {
+        brandDescriptionLength: brandDescription.trim().length,
+        responseData: data
+      }, sessionId);
+
       toast.success('Brand description saved!');
       setStep(3);
+      
+      await OnboardingLogger.logNavigation('STEP-ADVANCE', 'User advanced from step 2 to step 3', user?.id, {
+        fromStep: 2,
+        toStep: 3
+      }, sessionId);
     } catch (error) {
       console.error('❌ Error saving step 2:', error);
       const errorMessage = error instanceof Error ? error.message : 'Something went wrong';
+      
+      await OnboardingLogger.logError('FORM-ERROR', 'Step 2 form submission failed', user?.id, {
+        errorMessage,
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        stack: error instanceof Error ? error.stack : undefined
+      }, sessionId);
+      
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -118,30 +255,90 @@ export default function OnboardingModal({
   };
 
   const handleStep3Submit = async () => {
+    await OnboardingLogger.logStep3('PLAN-SELECTED', 'User completed plan selection in step 3', user?.id, {
+      action: 'PAYMENT_STEP_COMPLETED'
+    }, sessionId);
+    
     // Step 3 is now plan selection - move to step 4 for completion
     setStep(4);
+    
+    await OnboardingLogger.logNavigation('STEP-ADVANCE', 'User advanced from step 3 to step 4', user?.id, {
+      fromStep: 3,
+      toStep: 4
+    }, sessionId);
   };
 
   const handleComplete = async () => {
+    await OnboardingLogger.logStep4('COMPLETION-START', 'Starting onboarding completion process', user?.id, {
+      finalStep: 4,
+      formData: {
+        hasFullName: !!fullName,
+        hasBusinessName: !!businessName,
+        hasBrandDescription: !!brandDescription,
+        brandDescriptionLength: brandDescription.length
+      }
+    }, sessionId);
+    
     setIsLoading(true);
     
     try {
+      await OnboardingLogger.logAPI('API-CALL-START', 'Making API call to /api/onboarding/complete', user?.id, {
+        endpoint: '/api/onboarding/complete',
+        method: 'PATCH'
+      }, sessionId);
+
       const response = await fetch('/api/onboarding/complete', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ completed: true })
       });
 
+      const data = await response.json();
+      
+      await OnboardingLogger.logAPI('API-RESPONSE', 'Received response from /api/onboarding/complete', user?.id, {
+        status: response.status,
+        ok: response.ok,
+        responseData: data
+      }, sessionId);
+
       if (!response.ok) {
+        await OnboardingLogger.logError('API-ERROR', 'Onboarding completion API call failed', user?.id, {
+          status: response.status,
+          error: data?.error || 'Unknown error'
+        }, sessionId);
         throw new Error('Failed to complete onboarding');
       }
 
+      await OnboardingLogger.logStep4('COMPLETION-SUCCESS', 'Onboarding completed successfully', user?.id, {
+        trialData: data?.trial,
+        stripeData: data?.stripe,
+        emailsScheduled: data?.emails?.scheduled
+      }, sessionId);
+
       toast.success('Welcome to Gemz! 🎉');
       onComplete();
+      
+      await OnboardingLogger.logModalEvent('CLOSE', 4, user?.id, {
+        reason: 'COMPLETION_SUCCESS',
+        finalData: data
+      }, sessionId);
     } catch (error) {
       console.error('❌ Error completing onboarding:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Something went wrong';
+      
+      await OnboardingLogger.logError('COMPLETION-ERROR', 'Onboarding completion failed', user?.id, {
+        errorMessage,
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        stack: error instanceof Error ? error.stack : undefined
+      }, sessionId);
+      
       toast.error('Something went wrong, but you can continue using the platform');
       onComplete();
+      
+      await OnboardingLogger.logModalEvent('CLOSE', 4, user?.id, {
+        reason: 'COMPLETION_ERROR',
+        error: errorMessage
+      }, sessionId);
     } finally {
       setIsLoading(false);
     }
@@ -223,7 +420,10 @@ export default function OnboardingModal({
                     type="text"
                     placeholder="e.g., John Doe"
                     value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
+                    onChange={(e) => {
+                      setFullName(e.target.value);
+                      OnboardingLogger.logUserInput(1, 'fullName', e.target.value, user?.id, sessionId);
+                    }}
                     className="h-12 text-base"
                     disabled={isLoading}
                   />
@@ -239,7 +439,10 @@ export default function OnboardingModal({
                     type="text"
                     placeholder="e.g., Acme Corp, John's Fitness Studio"
                     value={businessName}
-                    onChange={(e) => setBusinessName(e.target.value)}
+                    onChange={(e) => {
+                      setBusinessName(e.target.value);
+                      OnboardingLogger.logUserInput(1, 'businessName', e.target.value, user?.id, sessionId);
+                    }}
                     className="h-12 text-base"
                     disabled={isLoading}
                   />
@@ -299,7 +502,10 @@ export default function OnboardingModal({
                       id="brandDescription"
                       placeholder="Example: We're a sustainable fashion brand targeting young professionals. We look for eco-conscious lifestyle influencers who promote ethical fashion..."
                       value={brandDescription}
-                      onChange={(e) => setBrandDescription(e.target.value)}
+                      onChange={(e) => {
+                        setBrandDescription(e.target.value);
+                        OnboardingLogger.logUserInput(2, 'brandDescription', e.target.value, user?.id, sessionId);
+                      }}
                       className="min-h-[120px] text-base resize-none"
                       disabled={isLoading}
                     />
@@ -333,7 +539,13 @@ export default function OnboardingModal({
                       <div
                         key={index}
                         className="p-3 bg-gray-50 rounded-md border cursor-pointer hover:bg-gray-100 transition-colors"
-                        onClick={() => setBrandDescription(prompt)}
+                        onClick={() => {
+                          setBrandDescription(prompt);
+                          OnboardingLogger.logStep2('EXAMPLE-SELECTED', 'User selected example prompt', user?.id, {
+                            exampleIndex: index,
+                            promptLength: prompt.length
+                          }, sessionId);
+                        }}
                       >
                         <p className="text-sm text-gray-700">{prompt}</p>
                       </div>
@@ -383,7 +595,11 @@ export default function OnboardingModal({
               </CardHeader>
 
               <CardContent>
-                <PaymentStep onComplete={handleStep3Submit} />
+                <PaymentStep 
+                  onComplete={handleStep3Submit} 
+                  sessionId={sessionId}
+                  userId={user?.id}
+                />
               </CardContent>
             </>
           )}

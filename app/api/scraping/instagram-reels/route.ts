@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
 import { scrapingJobs, scrapingResults, campaigns, type JobStatus } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { PlanEnforcementService } from '@/lib/services/plan-enforcement';
 
 // Add simple API logging
 let simpleLogApiCall: any = null;
@@ -122,10 +123,29 @@ export async function POST(req: NextRequest) {
     }
     console.log('✅ [INSTAGRAM-REELS-API] Campaign verified successfully');
 
+    // 🛡️ PLAN VALIDATION - Check plan limits and adjust if needed
+    console.log('🛡️ [INSTAGRAM-REELS-API] Step 5: Validating user plan limits for job creation');
+    const jobValidation = await PlanEnforcementService.validateJobCreation(userId, targetResults);
+    if (!jobValidation.allowed) {
+      console.log('❌ [INSTAGRAM-REELS-API] Job creation blocked:', jobValidation.reason);
+      return NextResponse.json({ 
+        error: 'Plan limit exceeded',
+        message: jobValidation.reason,
+        upgrade: true,
+        usage: jobValidation.usage
+      }, { status: 403 });
+    }
+
+    let adjustedTargetResults = targetResults;
+    if (jobValidation.adjustedLimit && jobValidation.adjustedLimit < targetResults) {
+      adjustedTargetResults = jobValidation.adjustedLimit;
+      console.log(`🔧 [INSTAGRAM-REELS-API] Target results adjusted from ${targetResults} to ${adjustedTargetResults} to fit plan limits`);
+    }
+
     console.log('🔍 [INSTAGRAM-REELS-API] Step 5: Validating target results');
     
     // Validate targetResults (same as TikTok/YouTube)
-    if (![100, 500, 1000].includes(targetResults)) {
+    if (![100, 500, 1000].includes(adjustedTargetResults)) {
       console.error('❌ [INSTAGRAM-REELS-API] Invalid target results:', targetResults);
       return NextResponse.json(
         { error: 'targetResults must be 100, 500, or 1000' },
@@ -140,7 +160,7 @@ export async function POST(req: NextRequest) {
         .values({
           userId: userId,
           keywords: sanitizedKeywords,
-          targetResults,
+          targetResults: adjustedTargetResults,
           status: 'pending',
           processedRuns: 0,
           processedResults: 0,

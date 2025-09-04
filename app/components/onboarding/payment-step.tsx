@@ -18,16 +18,19 @@ import {
   AlertCircle,
   Lock
 } from 'lucide-react';
+import OnboardingLogger from '@/lib/utils/onboarding-logger';
 // No complex Stripe Elements needed - using hosted checkout
 
 interface PaymentStepProps {
   onComplete: () => void;
   existingPlan?: string;
+  sessionId?: string;
+  userId?: string;
 }
 
 // Removed complex card collection - using Stripe hosted checkout
 
-export default function PaymentStep({ onComplete }: PaymentStepProps) {
+export default function PaymentStep({ onComplete, sessionId, userId }: PaymentStepProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
@@ -99,12 +102,27 @@ export default function PaymentStep({ onComplete }: PaymentStepProps) {
   ];
 
   const handlePlanSelect = (planId: string) => {
+    OnboardingLogger.logStep3('PLAN-SELECT', 'User selected a plan', userId, {
+      planId,
+      billingCycle,
+      planName: plans.find(p => p.id === planId)?.name
+    }, sessionId);
+    
     setSelectedPlan(planId);
     setError('');
   };
 
   const handleStartTrial = async () => {
+    await OnboardingLogger.logStep3('TRIAL-START-ATTEMPT', 'User clicked start trial button', userId, {
+      selectedPlan,
+      billingCycle,
+      planName: selectedPlan ? plans.find(p => p.id === selectedPlan)?.name : null
+    }, sessionId);
+
     if (!selectedPlan) {
+      await OnboardingLogger.logStep3('VALIDATION-ERROR', 'No plan selected when trying to start trial', userId, {
+        error: 'NO_PLAN_SELECTED'
+      }, sessionId);
       setError('Please select a plan to continue');
       return;
     }
@@ -113,6 +131,12 @@ export default function PaymentStep({ onComplete }: PaymentStepProps) {
     setError('');
 
     try {
+      await OnboardingLogger.logAPI('API-CALL-START', 'Making API call to save selected plan', userId, {
+        endpoint: '/api/onboarding/save-plan',
+        method: 'POST',
+        planId: selectedPlan
+      }, sessionId);
+
       // Save selected plan to user profile
       const saveResponse = await fetch('/api/onboarding/save-plan', {
         method: 'POST',
@@ -124,9 +148,34 @@ export default function PaymentStep({ onComplete }: PaymentStepProps) {
         }),
       });
 
+      const saveData = await saveResponse.json();
+
+      await OnboardingLogger.logAPI('API-RESPONSE', 'Received response from save-plan API', userId, {
+        endpoint: '/api/onboarding/save-plan',
+        status: saveResponse.status,
+        ok: saveResponse.ok,
+        responseData: saveData
+      }, sessionId);
+
       if (!saveResponse.ok) {
+        await OnboardingLogger.logError('API-ERROR', 'Failed to save plan selection', userId, {
+          status: saveResponse.status,
+          error: saveData?.error || 'Unknown error'
+        }, sessionId);
         throw new Error('Failed to save plan selection');
       }
+
+      await OnboardingLogger.logPayment('PLAN-SAVED', 'Plan selection saved successfully', userId, {
+        planId: selectedPlan,
+        planName: plans.find(p => p.id === selectedPlan)?.name
+      }, sessionId);
+
+      await OnboardingLogger.logAPI('API-CALL-START', 'Making API call to create Stripe checkout', userId, {
+        endpoint: '/api/stripe/create-checkout',
+        method: 'POST',
+        planId: selectedPlan,
+        billing: billingCycle
+      }, sessionId);
 
       // Create Stripe checkout session
       const checkoutResponse = await fetch('/api/stripe/create-checkout', {
@@ -140,18 +189,46 @@ export default function PaymentStep({ onComplete }: PaymentStepProps) {
         }),
       });
 
+      const checkoutData = await checkoutResponse.json();
+
+      await OnboardingLogger.logAPI('API-RESPONSE', 'Received response from Stripe checkout API', userId, {
+        endpoint: '/api/stripe/create-checkout',
+        status: checkoutResponse.status,
+        ok: checkoutResponse.ok,
+        hasUrl: !!checkoutData?.url
+      }, sessionId);
+
       if (!checkoutResponse.ok) {
+        await OnboardingLogger.logError('API-ERROR', 'Failed to create Stripe checkout session', userId, {
+          status: checkoutResponse.status,
+          error: checkoutData?.error || 'Unknown error'
+        }, sessionId);
         throw new Error('Failed to create checkout session');
       }
 
-      const { url } = await checkoutResponse.json();
+      const { url } = checkoutData;
+
+      await OnboardingLogger.logPayment('STRIPE-REDIRECT', 'Redirecting user to Stripe checkout', userId, {
+        checkoutUrl: url ? url.substring(0, 50) + '...' : 'No URL provided',
+        planId: selectedPlan,
+        billingCycle
+      }, sessionId);
       
       // Redirect to Stripe checkout
       window.location.href = url;
       
     } catch (err) {
       console.error('Checkout error:', err);
-      setError('Failed to proceed with checkout. Please try again.');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to proceed with checkout. Please try again.';
+      
+      await OnboardingLogger.logError('CHECKOUT-ERROR', 'Checkout process failed', userId, {
+        errorMessage,
+        errorType: err instanceof Error ? err.constructor.name : typeof err,
+        selectedPlan,
+        billingCycle
+      }, sessionId);
+      
+      setError(errorMessage);
       setIsLoading(false);
     }
   };
@@ -173,7 +250,15 @@ export default function PaymentStep({ onComplete }: PaymentStepProps) {
             Monthly
           </span>
           <button
-            onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'yearly' : 'monthly')}
+            onClick={() => {
+              const newCycle = billingCycle === 'monthly' ? 'yearly' : 'monthly';
+              setBillingCycle(newCycle);
+              OnboardingLogger.logStep3('BILLING-CYCLE-CHANGE', 'User changed billing cycle', userId, {
+                fromCycle: billingCycle,
+                toCycle: newCycle,
+                savings: newCycle === 'yearly' ? '20%' : 'none'
+              }, sessionId);
+            }}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
               billingCycle === 'yearly' ? 'bg-blue-600' : 'bg-gray-200'
             }`}

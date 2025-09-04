@@ -75,14 +75,11 @@ export class PlanEnforcementService {
       const limits = await this.getPlanLimits(userId);
       if (!limits) return null;
 
-      // Count active campaigns
+      // Count all campaigns for the user (draft + active + completed, etc.)
       const [campaignCount] = await db
         .select({ count: count() })
         .from(campaigns)
-        .where(and(
-          eq(campaigns.userId, userId),
-          eq(campaigns.status, 'active')
-        ));
+        .where(eq(campaigns.userId, userId));
 
       const campaignsUsed = campaignCount.count;
 
@@ -154,7 +151,7 @@ export class PlanEnforcementService {
       if (!usage.canCreateCampaign) {
         return {
           allowed: false,
-          reason: `Campaign limit reached. You have ${usage.campaignsUsed} active campaigns out of your ${usage.campaignsUsed + usage.campaignsRemaining} limit.`,
+          reason: `Campaign limit reached. You have ${usage.campaignsUsed} campaigns out of your ${usage.campaignsUsed + usage.campaignsRemaining} limit.`,
           usage
         };
       }

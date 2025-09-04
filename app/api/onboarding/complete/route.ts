@@ -7,11 +7,17 @@ import { startTrial } from '@/lib/trial/trial-service';
 import { MockStripeService } from '@/lib/stripe/mock-stripe';
 import { scheduleTrialEmails } from '@/lib/email/trial-email-triggers';
 import { getUserEmailFromClerk } from '@/lib/email/email-service';
+import OnboardingLogger from '@/lib/utils/onboarding-logger';
 
 export async function PATCH(request: Request) {
   try {
     const startTime = Date.now();
     const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    await OnboardingLogger.logAPI('REQUEST-START', 'Onboarding completion request received', undefined, {
+      endpoint: '/api/onboarding/complete',
+      method: 'PATCH',
+      requestId
+    });
     
     console.log('🚀🚀🚀 [ONBOARDING-COMPLETE] ===============================');
     console.log('🚀🚀🚀 [ONBOARDING-COMPLETE] STARTING COMPLETE ONBOARDING FLOW');
@@ -24,6 +30,7 @@ export async function PATCH(request: Request) {
 
     if (!userId) {
       console.error('❌ [ONBOARDING-COMPLETE] Unauthorized - No valid user session');
+      await OnboardingLogger.logAPI('AUTH-ERROR', 'Onboarding completion unauthorized - no user ID', undefined, { requestId });
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -42,6 +49,7 @@ export async function PATCH(request: Request) {
 
     if (!userProfile) {
       console.error('❌ [ONBOARDING-COMPLETE] User profile not found');
+      await OnboardingLogger.logError('PROFILE-NOT-FOUND', 'Onboarding completion failed: profile missing', userId, { requestId });
       return NextResponse.json({ 
         error: 'User profile not found. Please complete step 1 first.' 
       }, { status: 404 });
@@ -114,8 +122,12 @@ export async function PATCH(request: Request) {
       
       console.log('🎉 [ONBOARDING-COMPLETE] Real Stripe setup completed successfully');
       
-    } catch (stripeError) {
+    } catch (stripeError: any) {
       console.error('❌ [ONBOARDING-COMPLETE] Real Stripe setup failed:', stripeError);
+      await OnboardingLogger.logError('STRIPE-SETUP-ERROR', 'Failed to set up Stripe during onboarding completion', userId, {
+        requestId,
+        errorMessage: stripeError?.message || 'Unknown error'
+      });
       
       // Log detailed error for debugging
       console.error('📋 [ONBOARDING-COMPLETE] Stripe Error Details:', {
@@ -265,10 +277,25 @@ export async function PATCH(request: Request) {
     console.log('📧 [ONBOARDING-COMPLETE] User will receive trial emails on schedule');
     console.log('🚀 [ONBOARDING-COMPLETE] Onboarding flow completed successfully for:', userEmail);
 
+    await OnboardingLogger.logStep4('COMPLETION-SUCCESS', 'Onboarding completed and trial started', userId, {
+      requestId,
+      trialStatus: responseData.trial.status,
+      stripeCustomerId: responseData.stripe.customerId,
+      stripeSubscriptionId: responseData.stripe.subscriptionId
+    });
+
+    await OnboardingLogger.logAPI('REQUEST-SUCCESS', 'Onboarding completion request processed', userId, {
+      requestId,
+      durationMs: totalTime
+    });
+
     return NextResponse.json(responseData);
 
   } catch (error: any) {
     console.error('💥 [ONBOARDING-COMPLETE] Error in complete onboarding flow:', error);
+    await OnboardingLogger.logError('API-ERROR', 'Onboarding completion request failed', undefined, {
+      errorMessage: error?.message || 'Unknown error'
+    });
     return NextResponse.json({ 
       success: false,
       error: 'Internal server error',
