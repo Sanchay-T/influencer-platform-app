@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useSearchParams } from "next/navigation"
+import { Suspense } from "react"
 
 const rows = [
   { name: "Spring Launch", platform: "TikTok", status: "active", creators: 24, updated: "2d ago" },
@@ -13,7 +14,7 @@ const rows = [
   { name: "UGC Test", platform: "YouTube", status: "completed", creators: 11, updated: "1w ago" },
 ]
 
-export default function CampaignPreview() {
+function CampaignContent() {
   const params = useSearchParams()
   const green = (params.get("green") || "affc41").toLowerCase()
 
@@ -72,5 +73,13 @@ export default function CampaignPreview() {
         </div>
       </DashboardLayout>
     </div>
+  )
+}
+
+export default function CampaignPreview() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <CampaignContent />
+    </Suspense>
   )
 }
