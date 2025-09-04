@@ -4,8 +4,9 @@ import DashboardLayout from "@/app/components/layout/dashboard-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useSearchParams } from "next/navigation"
+import { Suspense } from "react"
 
-export default function LandingPreview() {
+function LandingContent() {
   const params = useSearchParams()
   const green = (params.get("green") || "affc41").toLowerCase()
 
@@ -56,6 +57,14 @@ export default function LandingPreview() {
         </div>
       </DashboardLayout>
     </div>
+  )
+}
+
+export default function LandingPreview() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LandingContent />
+    </Suspense>
   )
 }
 

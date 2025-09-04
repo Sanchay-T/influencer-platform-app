@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button"
 import AnimatedSparkline from "@/app/components/dashboard/animated-sparkline"
 import RadialProgress from "@/app/components/dashboard/radial-progress"
 import { useSearchParams } from "next/navigation"
+import { Suspense } from "react"
 
-export default function DashboardPreview() {
+function DashboardContent() {
   const params = useSearchParams()
   const green = (params.get("green") || "affc41").toLowerCase()
 
@@ -69,5 +70,13 @@ export default function DashboardPreview() {
         </div>
       </DashboardLayout>
     </div>
+  )
+}
+
+export default function DashboardPreview() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <DashboardContent />
+    </Suspense>
   )
 }

@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Suspense } from "react"
 
 const greens = [
   { key: "affc41", label: "AFFC41 (neon lime)" },
@@ -11,7 +12,7 @@ const greens = [
   { key: "04e762", label: "04E762 (emerald)" },
 ]
 
-export default function ThemePreviewIndex() {
+function ThemePreviewContent() {
   const params = useSearchParams()
   const router = useRouter()
   const current = (params.get("green") || "affc41").toLowerCase()
@@ -27,7 +28,7 @@ export default function ThemePreviewIndex() {
       <div className="mx-auto max-w-5xl px-6 md:px-8 py-10">
         <h1 className="text-2xl font-bold mb-2">Theme Preview (Client Palette)</h1>
         <p className="text-sm text-muted-foreground mb-6">
-          Explore how the dashboard shell, campaigns table, and landing view look with the client’s colors. 
+          Explore how the dashboard shell, campaigns table, and landing view look with the client's colors. 
           Use the green toggle to try the requested alternatives.
         </p>
 
@@ -129,5 +130,13 @@ export default function ThemePreviewIndex() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ThemePreviewIndex() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ThemePreviewContent />
+    </Suspense>
   )
 }

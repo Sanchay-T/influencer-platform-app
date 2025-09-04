@@ -5,6 +5,7 @@ import DashboardLayout from "@/app/components/layout/dashboard-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Check } from "lucide-react"
+import { Suspense } from "react"
 
 const plans = [
   {
@@ -27,7 +28,7 @@ const plans = [
   },
 ]
 
-export default function PricingPreview() {
+function PricingContent() {
   const params = useSearchParams()
   const green = (params.get("green") || "affc41").toLowerCase()
 
@@ -64,6 +65,14 @@ export default function PricingPreview() {
         </div>
       </DashboardLayout>
     </div>
+  )
+}
+
+export default function PricingPreview() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PricingContent />
+    </Suspense>
   )
 }
 
