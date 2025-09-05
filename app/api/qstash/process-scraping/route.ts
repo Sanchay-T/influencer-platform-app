@@ -1777,7 +1777,7 @@ export async function POST(req: Request) {
         
         // Make TikTok keyword API call
         const keywords = Array.isArray(job.keywords) ? job.keywords.join(' ') : '';
-        const apiUrl = `${process.env.SCRAPECREATORS_API_URL}?query=${encodeURIComponent(keywords)}&cursor=${job.cursor || 0}`;
+        const apiUrl = `${process.env.SCRAPECREATORS_API_URL}?query=${encodeURIComponent(keywords)}&cursor=${job.cursor || 0}&region=US`;
         
         // 📊 API CALL LOGGING
         console.log('📡 [TIKTOK-KEYWORD] Making API call:', {
@@ -1889,7 +1889,7 @@ export async function POST(req: Request) {
                 console.log(`🔍 [PROFILE-FETCH] Attempting to fetch full profile for @${author.unique_id}`);
                 
                 // Make profile API call to get bio data
-                const profileApiUrl = `https://api.scrapecreators.com/v1/tiktok/profile?handle=${encodeURIComponent(author.unique_id)}`;
+                const profileApiUrl = `https://api.scrapecreators.com/v1/tiktok/profile?handle=${encodeURIComponent(author.unique_id)}&region=US`;
                 const profileResponse = await fetch(profileApiUrl, {
                   headers: { 'x-api-key': process.env.SCRAPECREATORS_API_KEY! }
                 });

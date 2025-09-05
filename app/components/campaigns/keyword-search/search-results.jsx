@@ -249,30 +249,51 @@ const SearchResults = ({ searchData }) => {
   // Enhanced image loading handlers with comprehensive logging
   const handleImageLoad = (e, username) => {
     const img = e.target;
-    console.log("✅ [BROWSER-IMAGE] Image loaded successfully for", username);
-    console.log(
-      "  📏 Natural size:",
-      img.naturalWidth + "x" + img.naturalHeight,
-    );
-    console.log("  📐 Display size:", img.width + "x" + img.height);
-    console.log("  🔗 Loaded URL:", img.src);
-    console.log(
-      "  ⏱️ Load time: ~" +
-        (Date.now() - parseInt(img.dataset.startTime || "0")) +
-        "ms",
-    );
+    console.group(`✅ [BROWSER-IMAGE-SUCCESS] Image loaded: ${username}`);
+    console.log('📏 Natural size:', img.naturalWidth + 'x' + img.naturalHeight);
+    console.log('📐 Display size:', img.width + 'x' + img.height);
+    console.log('🔗 Loaded URL:', img.src);
+    console.log('⏱️ Load time:', (Date.now() - parseInt(img.dataset.startTime || '0')) + 'ms');
+    console.log('🌐 Request headers available:', !!img.crossOrigin);
+    console.log('📊 Image element state:', {
+      complete: img.complete,
+      loading: img.loading,
+      decoded: img.decode ? 'supported' : 'not supported'
+    });
+    console.groupEnd();
   };
 
   const handleImageError = (e, username, originalUrl) => {
     const img = e.target;
-    console.error("❌ [BROWSER-IMAGE] Image failed to load for", username);
-    console.error("  🔗 Failed URL:", img.src);
-    console.error("  📍 Original URL:", originalUrl);
-    console.error(
-      "  ⏱️ Time to failure:",
-      Date.now() - parseInt(img.dataset.startTime || "0") + "ms",
-    );
-    console.error("  📊 Image element:", img);
+    console.group(`❌ [BROWSER-IMAGE-ERROR] Image failed: ${username}`);
+    console.error('🔗 Failed URL:', img.src);
+    console.error('📍 Original URL:', originalUrl);
+    console.error('⏱️ Time to failure:', (Date.now() - parseInt(img.dataset.startTime || '0')) + 'ms');
+    console.error('🌐 Network info:', {
+      crossOrigin: img.crossOrigin,
+      referrerPolicy: img.referrerPolicy,
+      loading: img.loading
+    });
+    console.error('📊 Error details:', {
+      naturalWidth: img.naturalWidth,
+      naturalHeight: img.naturalHeight,
+      complete: img.complete,
+      currentSrc: img.currentSrc
+    });
+    
+    // Try to get more error info
+    const urlObj = new URL(img.src, window.location.origin);
+    console.error('🔍 URL Analysis:', {
+      protocol: urlObj.protocol,
+      hostname: urlObj.hostname,
+      pathname: urlObj.pathname,
+      search: urlObj.search,
+      isBlob: urlObj.hostname.includes('blob.vercel-storage'),
+      isProxy: urlObj.pathname.includes('/api/proxy/image'),
+      isDataUrl: img.src.startsWith('data:'),
+      urlLength: img.src.length
+    });
+    console.groupEnd();
 
     // Hide broken image
     img.style.display = "none";
@@ -281,9 +302,13 @@ const SearchResults = ({ searchData }) => {
   const handleImageStart = (e, username) => {
     const img = e.target;
     img.dataset.startTime = Date.now().toString();
-    console.log("🚀 [BROWSER-IMAGE] Starting image load for", username);
-    console.log("  🔗 Loading URL:", img.src);
-    console.log("  🕐 Start time:", new Date().toISOString());
+    console.log(`🚀 [BROWSER-IMAGE-START] Loading image for: ${username}`, {
+      src: img.src,
+      timestamp: new Date().toISOString(),
+      isProxy: img.src.includes('/api/proxy/image'),
+      isBlob: img.src.includes('blob.vercel-storage.com'),
+      srcLength: img.src.length
+    });
   };
 
   const renderProfileLink = (creator) => {
@@ -426,6 +451,24 @@ const SearchResults = ({ searchData }) => {
             </TableHeader>
             <TableBody className="divide-y divide-zinc-800">
               {currentCreators.map((creator, index) => {
+                // 🔍 INITIAL DATA DEBUG: Log the raw creator data structure
+                if (index === 0) {
+                  console.group('📋 [DATA-STRUCTURE] First creator data sample');
+                  console.log('Raw creator object:', creator);
+                  console.log('Creator structure analysis:', {
+                    hasCreatorProperty: !!creator.creator,
+                    creatorKeys: creator.creator ? Object.keys(creator.creator) : 'no creator property',
+                    topLevelKeys: Object.keys(creator),
+                    possibleImageUrls: {
+                      'creator.creator?.avatarUrl': creator.creator?.avatarUrl,
+                      'creator.creator?.profile_pic_url': creator.creator?.profile_pic_url,
+                      'creator.creator?.profilePicUrl': creator.creator?.profilePicUrl,
+                      'creator.profile_pic_url': creator.profile_pic_url,
+                      'creator.profilePicUrl': creator.profilePicUrl
+                    }
+                  });
+                  console.groupEnd();
+                }
                 const avatarUrl =
                   creator.creator?.avatarUrl ||
                   creator.creator?.profile_pic_url ||
@@ -433,16 +476,51 @@ const SearchResults = ({ searchData }) => {
                   creator.profile_pic_url ||
                   creator.profilePicUrl ||
                   "";
-                const proxiedUrl = avatarUrl
-                  ? `/api/proxy/image?url=${encodeURIComponent(avatarUrl)}`
-                  : "";
+                
+                // 🔍 COMPREHENSIVE DEBUG: Log all avatar URL sources
+                console.group(`🖼️ [IMAGE-DEBUG-${index}] Processing avatar for: ${creator.creator?.name || 'Unknown'}`);
+                console.log('📊 All avatar URL sources:', {
+                  'creator.creator?.avatarUrl': creator.creator?.avatarUrl,
+                  'creator.creator?.profile_pic_url': creator.creator?.profile_pic_url,
+                  'creator.creator?.profilePicUrl': creator.creator?.profilePicUrl,
+                  'creator.profile_pic_url': creator.profile_pic_url,
+                  'creator.profilePicUrl': creator.profilePicUrl,
+                  'finalAvatarUrl': avatarUrl
+                });
+
+                // 🔧 FIXED: Handle already-proxied URLs and blob URLs
+                const isBlobUrl = avatarUrl && avatarUrl.includes('blob.vercel-storage.com');
+                const isAlreadyProxied = avatarUrl && avatarUrl.startsWith('/api/proxy/image');
+                const needsProxying = avatarUrl && !isBlobUrl && !isAlreadyProxied;
+                
+                let imageUrl;
+                if (isBlobUrl) {
+                  imageUrl = avatarUrl; // Use blob URL directly
+                } else if (isAlreadyProxied) {
+                  imageUrl = avatarUrl; // Use already-proxied URL directly
+                } else if (needsProxying) {
+                  imageUrl = `/api/proxy/image?url=${encodeURIComponent(avatarUrl)}`; // Proxy raw URLs
+                } else {
+                  imageUrl = "";
+                }
+
+                console.log('🎯 Image URL decision:', {
+                  originalUrl: avatarUrl,
+                  isBlobUrl: isBlobUrl,
+                  isAlreadyProxied: isAlreadyProxied,
+                  needsProxying: needsProxying,
+                  finalImageUrl: imageUrl,
+                  urlLength: imageUrl.length,
+                  urlType: isBlobUrl ? 'BLOB_DIRECT' : isAlreadyProxied ? 'ALREADY_PROXIED' : needsProxying ? 'NEWLY_PROXIED' : 'EMPTY'
+                });
+                console.groupEnd();
 
                 return (
                   <TableRow key={index} className="table-row">
                     <TableCell className="px-6 py-4">
                       <Avatar className="w-10 h-10">
                         <AvatarImage
-                          src={proxiedUrl}
+                          src={imageUrl}
                           alt={creator.creator?.name}
                           onLoad={(e) =>
                             handleImageLoad(e, creator.creator?.name)

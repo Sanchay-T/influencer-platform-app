@@ -21,6 +21,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { ManageSubscriptionButton, UpdatePaymentMethodButton, ViewBillingHistoryButton } from './customer-portal-button';
+import CampaignCounter from '../shared/campaign-counter';
 
 interface SubscriptionData {
   currentPlan: 'free' | 'glow_up' | 'viral_surge' | 'fame_flex';
@@ -302,15 +303,17 @@ export default function SubscriptionManagement() {
           <div className="bg-zinc-800/60 rounded-lg p-4 border border-zinc-700/50">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-medium text-zinc-100">Plan Usage</h3>
-              <span className="text-sm text-zinc-300">
-                {usageInfo.campaignsUsed} / {usageInfo.campaignsLimit === -1 ? '∞' : usageInfo.campaignsLimit} campaigns • {usageInfo.creatorsUsed} / {usageInfo.creatorsLimit === -1 ? '∞' : usageInfo.creatorsLimit} creators
+              <span className="text-sm text-zinc-300 flex items-center gap-2">
+                <CampaignCounter variant="inline" className="text-zinc-300" />
+                <span>•</span>
+                <span>{usageInfo.creatorsUsed} / {usageInfo.creatorsLimit === -1 ? '∞' : usageInfo.creatorsLimit} creators</span>
               </span>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <div className="flex justify-between text-sm mb-1">
                   <span>Campaigns</span>
-                  <span>{usageInfo.campaignsUsed} / {usageInfo.campaignsLimit === -1 ? '∞' : usageInfo.campaignsLimit}</span>
+                  <CampaignCounter variant="compact" showLabel={false} />
                 </div>
                 <Progress 
                   value={usageInfo.campaignsLimit === -1 ? 0 : (usageInfo.campaignsUsed / usageInfo.campaignsLimit) * 100} 

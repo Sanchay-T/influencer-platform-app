@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import CampaignList from "./components/campaigns/CampaignList";
 import { SignedIn, SignedOut, SignInButton, SignUpButton } from '@clerk/nextjs';
 import OnboardingModal from "./components/onboarding/onboarding-modal";
+import CampaignCounter from "./components/shared/campaign-counter";
 
 export default function Home() {
   const { userId } = useAuth();
@@ -14,29 +15,12 @@ export default function Home() {
   const [onboardingStep, setOnboardingStep] = useState(1);
   const [existingData, setExistingData] = useState({});
   const [onboardingStatusLoaded, setOnboardingStatusLoaded] = useState(false);
-  // CTA (create/upgrade) is handled in header; we only show counts here
-  const [usageSummary, setUsageSummary] = useState(null);
 
   useEffect(() => {
     if (userId) {
       checkOnboardingStatus();
-      checkUsageFromBilling();
     }
   }, [userId]);
-
-  const checkUsageFromBilling = async () => {
-    try {
-      const res = await fetch('/api/billing/status');
-      if (!res.ok) return;
-      const data = await res.json();
-      const used = Number(data?.usageInfo?.campaignsUsed || 0);
-      const limitRaw = data?.usageInfo?.campaignsLimit;
-      const limit = limitRaw === -1 ? null : Number(limitRaw || 0);
-      setUsageSummary({ campaigns: { used, limit } });
-    } catch (e) {
-      // ignore gate errors; default allows
-    }
-  };
 
   const checkOnboardingStatus = async () => {
     try {
@@ -129,13 +113,7 @@ export default function Home() {
           <div className="flex justify-between items-center mb-8">
             <h1 className="text-3xl font-bold">Your campaigns</h1>
             <div className="flex items-center gap-3">
-              {usageSummary && usageSummary.campaigns && (
-                <span className="text-sm text-gray-500">
-                  {usageSummary.campaigns.limit === null || usageSummary.campaigns.limit === -1
-                    ? `${usageSummary.campaigns.used} campaigns` 
-                    : `${usageSummary.campaigns.used}/${usageSummary.campaigns.limit === -1 ? '∞' : usageSummary.campaigns.limit} campaigns`}
-                </span>
-              )}
+              <CampaignCounter />
             </div>
           </div>
           <CampaignList />

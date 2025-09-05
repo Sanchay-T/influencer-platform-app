@@ -86,13 +86,29 @@ export default function SimilarSearchResults({ searchData }) {
     return `https://instagram.com/${creator.username}`;
   };
 
-  const getProxiedImageUrl = (originalUrl) => {
+  const getImageUrl = (originalUrl) => {
     if (!originalUrl) {
       console.log('🖼️ [BROWSER-IMAGE] No image URL provided');
       return '';
     }
+    
+    // 🔧 FIXED: Handle already-proxied URLs and blob URLs
+    const isBlobUrl = originalUrl.includes('blob.vercel-storage.com');
+    const isAlreadyProxied = originalUrl.startsWith('/api/proxy/image');
+    
+    if (isBlobUrl) {
+      console.log('🖼️ [BROWSER-IMAGE] Using cached blob URL directly:', originalUrl);
+      return originalUrl;
+    }
+    
+    if (isAlreadyProxied) {
+      console.log('🖼️ [BROWSER-IMAGE] Using already-proxied URL directly:', originalUrl);
+      return originalUrl;
+    }
+    
+    // Only proxy raw URLs that haven't been processed yet
     const proxiedUrl = `/api/proxy/image?url=${encodeURIComponent(originalUrl)}`;
-    console.log('🖼️ [BROWSER-IMAGE] Generating proxied URL:');
+    console.log('🖼️ [BROWSER-IMAGE] Proxying raw URL:');
     console.log('  📍 Original:', originalUrl);
     console.log('  🔗 Proxied:', proxiedUrl);
     return proxiedUrl;
@@ -269,7 +285,7 @@ export default function SimilarSearchResults({ searchData }) {
           </TableHeader>
           <TableBody className="divide-y divide-zinc-800">
             {currentItems.map((creator) => {
-              const imageUrl = getProxiedImageUrl(
+              const imageUrl = getImageUrl(
                 creator.profile_pic_url || creator.thumbnail || ''
               );
               return (

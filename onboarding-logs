@@ -752,3 +752,64 @@
 [2025-09-05 12:02:36.357] [MODAL] [CLOSE] - Modal closeed
 [2025-09-05 12:02:36.374] [MODAL] [OPEN] - Modal opened
 [2025-09-05 12:02:36.385] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-05 17:41:45.048] [MODAL] [CLOSE] - Modal closeed
+[2025-09-05 17:41:48.845] [MODAL] [CLOSE] - Modal closeed
+[2025-09-05 17:41:51.022] [MODAL] [OPEN] - Modal opened
+[2025-09-05 17:41:51.053] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-05 18:04:58.534] [MODAL] [CLOSE] - Modal closeed
+[2025-09-05 18:04:59.897] [MODAL] [CLOSE] - Modal closeed
+[2025-09-05 18:05:00.143] [MODAL] [OPEN] - Modal opened
+[2025-09-05 18:05:00.145] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-05 18:05:04.063] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-05 18:05:04.153] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-05 18:05:05.931] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-05 18:05:06.579] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-05 18:05:06.601] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-05 18:05:06.803] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-05 18:05:06.918] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-05 18:05:07.002] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-05 18:05:07.075] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-05 18:05:07.159] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-05 18:05:08.380] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-09-05 18:05:08.384] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-09-05 18:05:08.384] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-09-05 18:05:14.320] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-09-05 18:05:14.325] [STEP-1] [FORM-SUCCESS] - Step 1 completed successfully
+[2025-09-05 18:05:14.325] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 1 to step 2
+[2025-09-05 18:05:14.331] [MODAL] [STEP_CHANGE] - Modal moved to step 2
+[2025-09-05 18:05:15.271] [STEP-2] [EXAMPLE-SELECTED] - User selected example prompt
+[2025-09-05 18:05:15.861] [STEP-2] [FORM-VALIDATION] - Starting step 2 form validation
+[2025-09-05 18:05:15.864] [STEP-2] [FORM-SUBMIT] - Step 2 form submission started
+[2025-09-05 18:05:15.864] [API] [API-CALL-START] - Making API call to /api/onboarding/step-2
+[2025-09-05 18:05:17.179] [STEP-2] [FORM-SUCCESS] - Step 2 completed successfully
+[2025-09-05 18:05:17.187] [API] [API-RESPONSE] - Received response from /api/onboarding/step-2
+[2025-09-05 18:05:17.187] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 2 to step 3
+[2025-09-05 18:05:17.198] [MODAL] [STEP_CHANGE] - Modal moved to step 3
+[2025-09-05 18:05:18.594] [STEP-3] [PLAN-SELECT] - User selected a plan
+[2025-09-05 18:05:20.369] [STEP-3] [TRIAL-START-ATTEMPT] - User clicked start trial button
+[2025-09-05 18:05:20.374] [API] [API-CALL-START] - Making API call to save selected plan
+[2025-09-05 18:05:21.495] [API] [API-CALL-START] - Making API call to create Stripe checkout
+[2025-09-05 18:05:21.495] [API] [API-RESPONSE] - Received response from save-plan API
+[2025-09-05 18:05:21.495] [PAYMENT] [PLAN-SAVED] - Plan selection saved successfully
+[2025-09-05 18:05:23.297] [API] [API-RESPONSE] - Received response from Stripe checkout API
+[2025-09-05 18:05:23.302] [PAYMENT] [STRIPE-REDIRECT] - Redirecting user to Stripe checkout
+[2025-09-05 18:06:03.884] [MODAL] [CLOSE] - Modal closeed
+[2025-09-05 18:06:03.888] [MODAL] [CLOSE] - Modal closeed
+[2025-09-05 18:06:08.580] [MODAL] [CLOSE] - Modal closeed
+[2025-09-05 18:06:08.684] [MODAL] [CLOSE] - Modal closeed
+[2025-09-05 18:06:41.630] [MODAL] [CLOSE] - Modal closeed
+[2025-09-05 18:06:41.645] [MODAL] [CLOSE] - Modal closeed
+[2025-09-05 18:06:54.962] [MODAL] [CLOSE] - Modal closeed
+[2025-09-05 18:06:54.976] [MODAL] [CLOSE] - Modal closeed
+[2025-09-05 18:07:12.499] [MODAL] [CLOSE] - Modal closeed
+[2025-09-05 18:07:12.511] [MODAL] [CLOSE] - Modal closeed
+[2025-09-05 18:14:49.052] [MODAL] [CLOSE] - Modal closeed
+[2025-09-05 18:14:50.639] [MODAL] [CLOSE] - Modal closeed
+[2025-09-05 18:16:28.408] [MODAL] [CLOSE] - Modal closeed
+[2025-09-05 18:16:29.840] [MODAL] [CLOSE] - Modal closeed
+[2025-09-05 18:19:38.285] [MODAL] [CLOSE] - Modal closeed
+[2025-09-05 18:19:40.324] [MODAL] [CLOSE] - Modal closeed
+[2025-09-05 18:19:40.334] [MODAL] [CLOSE] - Modal closeed
+[2025-09-05 18:19:40.768] [MODAL] [CLOSE] - Modal closeed
+[2025-09-05 19:03:53.000] [MODAL] [CLOSE] - Modal closeed
+[2025-09-05 19:03:53.000] [MODAL] [CLOSE] - Modal closeed

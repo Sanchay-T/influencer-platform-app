@@ -844,9 +844,18 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
                 // Calculate the actual index in the full array
                 const actualIndex = intermediateCreators.length - 5 + index;
                 
-                // 🖼️ IMAGE PROXY: Use same logic as final table for proper image loading
+                // 🖼️ IMAGE PROXY: Handle already-proxied URLs, blob URLs, and raw URLs
                 const avatarUrl = creator.creator?.avatarUrl || creator.creator?.profilePicUrl || '';
-                const proxiedImageUrl = avatarUrl ? `/api/proxy/image?url=${encodeURIComponent(avatarUrl)}` : '';
+                let imageUrl;
+                if (avatarUrl.includes('blob.vercel-storage.com')) {
+                  imageUrl = avatarUrl; // Use blob URL directly
+                } else if (avatarUrl.startsWith('/api/proxy/image')) {
+                  imageUrl = avatarUrl; // Use already-proxied URL directly
+                } else if (avatarUrl) {
+                  imageUrl = `/api/proxy/image?url=${encodeURIComponent(avatarUrl)}`; // Proxy raw URLs
+                } else {
+                  imageUrl = '';
+                }
                 
                 // 🔍 TARGETED DEBUG: Log each card being rendered
                 console.log(`🎭 [CARD-${index}] Rendering card:`, {
@@ -855,7 +864,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
                   name: creator.creator?.name,
                   username: creator.creator?.uniqueId,
                   avatarUrl: avatarUrl,
-                  hasProxy: !!proxiedImageUrl
+                  hasProxy: !!imageUrl
                 });
                 
                 return (
@@ -868,9 +877,9 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
                   }}
                 >
                   <div className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center">
-                    {proxiedImageUrl ? (
+                    {imageUrl ? (
                       <img 
-                        src={proxiedImageUrl}
+                        src={imageUrl}
                         alt={creator.creator?.name || 'Creator'}
                         className="w-full h-full rounded-full object-cover"
                         onError={(e) => {
@@ -882,7 +891,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
                     ) : null}
                     <span 
                       className="text-sm font-medium text-zinc-300"
-                      style={{ display: proxiedImageUrl ? 'none' : 'flex' }}
+                      style={{ display: imageUrl ? 'none' : 'flex' }}
                     >
                       {creator.creator?.name?.charAt(0)?.toUpperCase() || '?'}
                     </span>

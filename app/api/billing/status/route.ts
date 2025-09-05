@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { userProfiles } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { getTrialStatus } from '@/lib/trial/trial-service';
+import { PLAN_CONFIGS } from '@/lib/services/plan-validator';
 
 export async function GET(request: NextRequest) {
   try {
@@ -160,8 +161,11 @@ export async function GET(request: NextRequest) {
     // Calculate real usage information from database
     const campaignsUsed = userProfile.usageCampaignsCurrent || 0;
     const creatorsUsed = userProfile.usageCreatorsCurrentMonth || 0;
-    const campaignsLimit = userProfile.planCampaignsLimit || 0;
-    const creatorsLimit = userProfile.planCreatorsLimit || 0;
+    
+    // 🔧 SINGLE SOURCE OF TRUTH: Get limits from plan configuration, not database
+    const planConfig = PLAN_CONFIGS[currentPlan] || PLAN_CONFIGS['free'];
+    const campaignsLimit = planConfig.campaignsLimit;
+    const creatorsLimit = planConfig.creatorsLimit;
     
     // Calculate plan usage percentage based on highest utilization
     let planUsagePercentage = 0;

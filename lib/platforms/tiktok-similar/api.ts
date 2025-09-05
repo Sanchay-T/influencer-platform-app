@@ -12,7 +12,7 @@ const BASE_URL = 'https://api.scrapecreators.com';
  * Get TikTok profile information
  */
 export async function getTikTokProfile(handle: string): Promise<TikTokProfileResponse> {
-  const url = `${BASE_URL}/v1/tiktok/profile?handle=${encodeURIComponent(handle)}`;
+  const url = `${BASE_URL}/v1/tiktok/profile?handle=${encodeURIComponent(handle)}&region=US`;
   
   // Enhanced API Request Logging
   console.log('🚀 [API-REQUEST] Platform: TikTok | Type: Profile Lookup');
@@ -111,7 +111,7 @@ export async function searchTikTokUsers(
   keyword: string, 
   cursor: number = 0
 ): Promise<TikTokUserSearchResponse> {
-  const url = `${BASE_URL}/v1/tiktok/search/users?query=${encodeURIComponent(keyword)}&cursor=${cursor}`;
+  const url = `${BASE_URL}/v1/tiktok/search/users?query=${encodeURIComponent(keyword)}&cursor=${cursor}&region=US`;
   
   // Enhanced API Request Logging
   console.log('🚀 [API-REQUEST] Platform: TikTok | Type: User Search');
