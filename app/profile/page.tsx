@@ -489,12 +489,7 @@ function SubscriptionPlanCard() {
               Manage Subscription
             </Button>
           </Link>
-          <Link className="flex-1" href="/pricing">
-            <Button variant="outline" className="w-full border-zinc-700/50 bg-zinc-800/50 text-zinc-300 hover:bg-zinc-700/50 hover:text-zinc-100">
-              <ExternalLink className="h-4 w-4 mr-2" />
-              View All Plans
-            </Button>
-          </Link>
+          {/* Removed View All Plans link as /pricing is deprecated */}
         </div>
 
         {/* Status Message */}

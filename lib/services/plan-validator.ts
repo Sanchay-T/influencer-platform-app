@@ -155,10 +155,19 @@ export class PlanValidator {
       const campaignsUsed = userProfile.usageCampaignsCurrent || 0;
       const creatorsUsed = userProfile.usageCreatorsCurrentMonth || 0;
 
+      // 🔒 SECURITY: Check onboarding completion for paid plans
+      const onboardingComplete = userProfile.onboardingStep === 'completed';
+      const isPaidPlan = currentPlan !== 'free';
+      
       // Determine active status
       const hasActiveSubscription = userProfile.subscriptionStatus === 'active' && !!userProfile.stripeSubscriptionId;
+      const hasTrialingSubscription = userProfile.subscriptionStatus === 'trialing' && !!userProfile.stripeSubscriptionId;
       const isTrialing = userProfile.trialStatus === 'active' && !hasActiveSubscription;
-      const isActive = hasActiveSubscription || isTrialing;
+      
+      // 🚨 CRITICAL: Paid plans require BOTH valid subscription AND completed onboarding
+      const isActive = isPaidPlan 
+        ? ((hasActiveSubscription || hasTrialingSubscription) && onboardingComplete) // Paid plans need payment (active OR trialing) + onboarding
+        : (hasActiveSubscription || isTrialing); // Free/trial plans work as before
 
       // Calculate remaining usage
       const campaignsRemaining = planConfig.campaignsLimit === -1 ? -1 : Math.max(0, planConfig.campaignsLimit - campaignsUsed);
@@ -236,6 +245,43 @@ export class PlanValidator {
 
     // Check if subscription/trial is active
     if (!planStatus.isActive) {
+      // 🔒 SECURITY: Special handling for paid plans without completed onboarding
+      const userProfile = await db.query.userProfiles.findFirst({
+        where: eq(userProfiles.userId, userId)
+      });
+      
+      const isPaidPlan = planStatus.currentPlan !== 'free';
+      const hasActivePayment = userProfile?.subscriptionStatus === 'active' && !!userProfile?.stripeSubscriptionId;
+      const hasTrialingPayment = userProfile?.subscriptionStatus === 'trialing' && !!userProfile?.stripeSubscriptionId;
+      const hasPayment = hasActivePayment || hasTrialingPayment;
+      const onboardingComplete = userProfile?.onboardingStep === 'completed';
+      
+      if (isPaidPlan && hasPayment && !onboardingComplete) {
+        await BillingLogger.logAccess(
+          'DENIED',
+          'Campaign creation denied - paid plan without completed onboarding (SECURITY)',
+          userId,
+          {
+            resource: 'campaign_creation',
+            reason: 'paid_plan_incomplete_onboarding',
+            currentPlan: planStatus.currentPlan,
+            subscriptionStatus: planStatus.subscriptionStatus,
+            trialStatus: planStatus.trialStatus,
+            onboardingStep: userProfile?.onboardingStep,
+            securityFlag: true
+          },
+          logRequestId
+        );
+
+        return {
+          allowed: false,
+          reason: 'Please complete your onboarding process to access paid plan features.',
+          upgradeRequired: false, // They already paid!
+          currentUsage: planStatus.campaignsUsed,
+          limit: planStatus.planConfig.campaignsLimit
+        };
+      }
+
       await BillingLogger.logAccess(
         'DENIED',
         'Campaign creation denied - no active subscription or trial',

@@ -154,12 +154,7 @@ export function SubscriptionStatusCard({
               Manage Subscription
             </Button>
           </Link>
-          <Link href="/pricing" className="flex-1">
-            <Button variant="outline" className="w-full">
-              <ExternalLink className="h-4 w-4 mr-2" />
-              View All Plans
-            </Button>
-          </Link>
+          {/* Removed View All Plans link as /pricing is deprecated */}
         </div>
 
         {/* Success Message */}

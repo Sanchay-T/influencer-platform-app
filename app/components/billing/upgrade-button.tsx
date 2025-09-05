@@ -221,18 +221,18 @@ export default function UpgradeButton({
 
       {/* Upgrade Modal */}
       {showUpgradeModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="w-full max-w-md">
-            <Card className="shadow-lg border border-gray-200 bg-white">
+            <Card className="shadow-lg border border-zinc-700/50 bg-zinc-900/90 text-zinc-200">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-full bg-gray-100 ${plan.color}`}>
+                    <div className={`p-2 rounded-full bg-zinc-800 ${plan.color}`}>
                       <plan.icon className="h-6 w-6" />
                     </div>
                     <div>
-                      <CardTitle className="text-xl">{plan.name}</CardTitle>
-                      <CardDescription>{plan.description}</CardDescription>
+                      <CardTitle className="text-xl text-zinc-100">{plan.name}</CardTitle>
+                      <CardDescription className="text-zinc-400">{plan.description}</CardDescription>
                     </div>
                   </div>
                   <PriceLabel />
@@ -246,14 +246,14 @@ export default function UpgradeButton({
                   <Button size="sm" variant={billingCycle==='yearly' ? 'default' : 'outline'} onClick={() => setBillingCycle('yearly')}>Yearly</Button>
                 </div>
               )}
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg p-4">
                 <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                  <CheckCircle className="h-5 w-5 text-emerald-400 mt-0.5" />
                   <div>
-                    <h3 className="font-medium text-green-900 mb-1">
+                    <h3 className="font-medium text-zinc-100 mb-1">
                       Upgrade Confirmation
                     </h3>
-                    <p className="text-sm text-green-700">
+                    <p className="text-sm text-zinc-300">
                       You're about to upgrade to {plan.name} for {billingCycle==='monthly' ? plan.priceMonthly : plan.priceYearly}/month{billingCycle==='yearly' ? ' (billed yearly)' : ''}. 
                       {isPaidUser ? ' Your billing will be prorated.' : ' Your trial will be converted to a paid subscription.'}
                     </p>
@@ -297,7 +297,7 @@ export default function UpgradeButton({
                 </div>
 
                 <div className="text-center">
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-zinc-400">
                     Using stored payment method • Secure billing by Stripe
                   </p>
                 </div>

@@ -20,7 +20,6 @@ export default function Sidebar({ onNavigate }) {
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Profile Settings', href: '/profile', icon: UserRoundCog },
     { name: 'Billing & Plans', href: '/billing', icon: CreditCard },
-    { name: 'View All Plans', href: '/pricing', icon: CreditCard },
   ]
   const adminNav = [
     { name: 'System Config', href: '/admin/system-config', icon: Settings },

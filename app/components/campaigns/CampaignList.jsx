@@ -240,11 +240,11 @@ export default function CampaignList() {
               placeholder="Filter campaigns..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-64 bg-zinc-800/60 border-zinc-700/50"
+              className="w-full sm:w-64 bg-zinc-800/60 border-zinc-700/50"
             />
           </div>
           <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-44 bg-zinc-800/60 border-zinc-700/50 text-zinc-200">
+            <SelectTrigger className="w-36 sm:w-44 bg-zinc-800/60 border-zinc-700/50 text-zinc-200">
               <SelectValue placeholder="Sort by" />
             </SelectTrigger>
             <SelectContent className="bg-zinc-900 border-zinc-700/50">

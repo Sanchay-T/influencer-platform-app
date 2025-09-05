@@ -173,7 +173,7 @@ export function TrialSidebarIndicator() {
       )}
 
       {/* Upgrade CTA */}
-      <Link href="/pricing" className="block">
+      <Link href="/billing?upgrade=1" className="block">
         <Button 
           size="sm" 
           className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs"

@@ -177,14 +177,14 @@ function UpgradePrompt({
           </span>
         </div>
         <div className="flex gap-2 justify-center">
-          <Link href="/pricing">
+          <Link href="/billing?upgrade=1">
             <Button>
               {isPaidUser ? `Upgrade to ${content.requiredPlan}` : `Get ${content.requiredPlan}`}
             </Button>
           </Link>
-          <Link href="/pricing">
+          <Link href="/billing">
             <Button variant="outline">
-              View Plans
+              View Billing
             </Button>
           </Link>
         </div>

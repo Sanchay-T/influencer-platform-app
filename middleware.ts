@@ -31,8 +31,7 @@ const isAdminRoute = createRouteMatcher([
 
 // Routes allowed even when access is blocked (to let users pay)
 const isBillingAllowedRoute = createRouteMatcher([
-  '/billing(.*)',
-  '/pricing(.*)'
+  '/billing(.*)'
 ])
 
 export default clerkMiddleware(async (auth, request) => {

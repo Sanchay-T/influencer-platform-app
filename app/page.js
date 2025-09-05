@@ -125,9 +125,9 @@ export default function Home() {
             <div className="flex items-center gap-3">
               {usageSummary && usageSummary.campaigns && (
                 <span className="text-sm text-gray-500">
-                  {usageSummary.campaigns.limit === null
-                    ? `${usageSummary.campaigns.used} campaigns`
-                    : `${usageSummary.campaigns.used}/${usageSummary.campaigns.limit} campaigns`}
+                  {usageSummary.campaigns.limit === null || usageSummary.campaigns.limit === -1
+                    ? `${usageSummary.campaigns.used} campaigns` 
+                    : `${usageSummary.campaigns.used}/${usageSummary.campaigns.limit === -1 ? '∞' : usageSummary.campaigns.limit} campaigns`}
                 </span>
               )}
             </div>

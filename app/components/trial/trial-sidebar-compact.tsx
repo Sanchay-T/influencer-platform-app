@@ -155,7 +155,7 @@ export default function TrialSidebarCompact() {
           </div>
         )}
 
-        <Link href="/pricing" className="block">
+        <Link href="/billing?upgrade=1" className="block">
           <Button className="w-full text-sm">Upgrade Now</Button>
         </Link>
         <Link href="/billing" className="block">

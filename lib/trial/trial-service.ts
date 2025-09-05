@@ -42,9 +42,10 @@ export interface CountdownData {
 /**
  * Calculate countdown data from trial end date
  */
-export function calculateCountdown(trialEndDate: Date): CountdownData {
+export function calculateCountdown(trialStartDate: Date | null, trialEndDate: Date): CountdownData {
   const now = new Date();
   const endDate = new Date(trialEndDate);
+  const startDate = trialStartDate ? new Date(trialStartDate) : null;
   
   // Calculate time difference in milliseconds
   const timeDiff = endDate.getTime() - now.getTime();
@@ -66,10 +67,21 @@ export function calculateCountdown(trialEndDate: Date): CountdownData {
   const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
   const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
 
-  // Calculate progress (7-day trial)
-  const totalTrialDays = 7;
-  const daysElapsed = totalTrialDays - days;
-  const progressPercentage = Math.min(100, Math.max(0, (daysElapsed / totalTrialDays) * 100));
+  // Calculate progress using precise time elapsed
+  let progressPercentage = 0;
+  let totalDaysElapsed = 0;
+  if (startDate && !isNaN(startDate.getTime()) && endDate.getTime() > startDate.getTime()) {
+    const totalMs = endDate.getTime() - startDate.getTime();
+    const elapsedMs = now.getTime() - startDate.getTime();
+    progressPercentage = Math.min(100, Math.max(0, (elapsedMs / totalMs) * 100));
+    totalDaysElapsed = Math.min(7, Math.max(0, elapsedMs / (1000 * 60 * 60 * 24)));
+  } else {
+    // Fallback to a 7-day window if start date missing
+    const totalTrialMs = 7 * 24 * 60 * 60 * 1000;
+    const elapsedMs = totalTrialMs - timeDiff;
+    progressPercentage = Math.min(100, Math.max(0, (elapsedMs / totalTrialMs) * 100));
+    totalDaysElapsed = Math.min(7, Math.max(0, elapsedMs / (1000 * 60 * 60 * 24)));
+  }
 
   // Format time until expiry
   let timeUntilExpiry = '';
@@ -85,7 +97,7 @@ export function calculateCountdown(trialEndDate: Date): CountdownData {
     daysRemaining: days,
     hoursRemaining: hours,
     minutesRemaining: minutes,
-    totalDaysElapsed: daysElapsed,
+    totalDaysElapsed,
     progressPercentage: Math.round(progressPercentage),
     isExpired: false,
     timeUntilExpiry: timeUntilExpiry.trim()
@@ -166,7 +178,7 @@ export async function startTrial(userId: string, clerkBillingData?: {
     console.log('📋 [TRIAL-SERVICE] Retrieved current plan:', billingStatus.currentPlan);
 
     // Calculate countdown data
-    const countdown = calculateCountdown(trialEndDate);
+    const countdown = calculateCountdown(trialStartDate, trialEndDate);
 
     const trialData: TrialData = {
       userId,
@@ -273,7 +285,7 @@ export async function getTrialStatus(userId: string): Promise<TrialData | null> 
     }
 
     // Calculate current countdown
-    const countdown = calculateCountdown(userProfile.trialEndDate);
+    const countdown = calculateCountdown(userProfile.trialStartDate, userProfile.trialEndDate);
 
     // Check if trial should be expired
     let currentTrialStatus = userProfile.trialStatus as TrialStatus;

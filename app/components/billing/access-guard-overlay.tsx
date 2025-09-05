@@ -13,7 +13,7 @@ export default function AccessGuardOverlay({ initialBlocked = false }: { initial
   const [blockStart, setBlockStart] = useState<number | null>(null)
   const mountTs = useMemo(() => new Date().toISOString(), [])
 
-  const isAllowedRoute = useMemo(() => ['/billing', '/pricing'].some(p => pathname?.startsWith(p)), [pathname])
+  const isAllowedRoute = useMemo(() => ['/billing'].some(p => pathname?.startsWith(p)), [pathname])
 
   useEffect(() => {
     // Do NOT block while loading to avoid spinner on refresh

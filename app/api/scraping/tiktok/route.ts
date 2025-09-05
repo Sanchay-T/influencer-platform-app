@@ -264,9 +264,9 @@ export async function POST(req: Request) {
 
             console.log('🔍 Paso 9: Encolando procesamiento en QStash');
             
-            // Determine the correct URL for QStash callback
-            const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL || 'https://influencerplatform.vercel.app';
-            const qstashCallbackUrl = `${siteUrl}/api/qstash/process-scraping`;
+            // Use webhook URL for QStash callback (ngrok in dev, live domain in prod)
+            const { getWebhookUrl } = await import('@/lib/utils/url-utils');
+            const qstashCallbackUrl = `${getWebhookUrl()}/api/qstash/process-scraping`;
             
             console.log('🌐 [DIAGNOSTIC] Site URL from env:', process.env.NEXT_PUBLIC_SITE_URL);
             console.log('🌐 [DIAGNOSTIC] Vercel URL from env:', process.env.VERCEL_URL);
@@ -423,9 +423,10 @@ export async function GET(req: Request) {
                         })
                         .where(eq(scrapingJobs.id, job.id));
                     
-                    // Reencolar el procesamiento
+                    // Reencolar el procesamiento  
+                    const { getWebhookUrl } = await import('@/lib/utils/url-utils');
                     await qstash.publishJSON({
-                        url: `${baseUrl}/api/qstash/process-scraping`,
+                        url: `${getWebhookUrl()}/api/qstash/process-scraping`,
                         body: { jobId: job.id },
                         delay: '5s',
                         retries: 3,

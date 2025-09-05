@@ -10,7 +10,6 @@ import {
   Shield, 
   Star,
   ArrowRight,
-  TrendingUp,
   CheckCircle
 } from 'lucide-react';
 import { useBilling } from '@/lib/hooks/use-billing';
@@ -66,7 +65,6 @@ function BillingContent() {
   }, [upgradeParam, planParam, successParam]);
 
   const quickActions = [
-    { name: 'View All Plans', href: '/pricing', icon: TrendingUp, description: 'Compare features and pricing' },
     { name: 'Account Settings', href: '/profile', icon: Shield, description: 'Manage account details' }
   ];
 
@@ -163,14 +161,14 @@ function BillingContent() {
               {/* Glow Up Plan */}
               <div className={`rounded-lg p-6 border transition-all relative bg-zinc-900/80 ${
                 currentPlan === 'glow_up' 
-                  ? 'border-primary/40 shadow-[0_0_0_1px_rgba(255,46,204,0.10)]' 
+                  ? 'border-primary/50 ring-1 ring-primary/30 shadow-[0_0_0_1px_rgba(255,46,204,0.12)]' 
                   : 'border-zinc-700/50 hover:border-zinc-600'
               }`}>
                 {currentPlan === 'glow_up' && (
-                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-primary/20 text-primary border border-primary/30 px-4 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                  <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
+                    <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium bg-pink-600 text-white shadow-md ring-1 ring-pink-400/40 flex items-center gap-1 max-w-full">
                       <CheckCircle className="h-3 w-3" />
-                      Your Current Plan
+                      <span className="truncate">Current Plan</span>
                     </span>
                   </div>
                 )}
@@ -207,22 +205,22 @@ function BillingContent() {
               {/* Viral Surge Plan */}
               <div className={`rounded-lg p-6 border transition-all relative bg-zinc-900/80 ${
                 currentPlan === 'viral_surge' 
-                  ? 'border-primary/40 shadow-[0_0_0_1px_rgba(255,46,204,0.10)]' 
+                  ? 'border-primary/50 ring-1 ring-primary/30 shadow-[0_0_0_1px_rgba(255,46,204,0.12)]' 
                   : 'border-zinc-700/50 hover:border-zinc-600'
               }`}>
-                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                  <span className={`px-4 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${
+                <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
+                  <span className={`rounded-full text-[10px] sm:text-xs font-medium flex items-center gap-1 shadow-sm ring-1 ${
                     currentPlan === 'viral_surge' 
-                      ? 'bg-primary/20 text-primary border border-primary/30' 
-                      : 'bg-zinc-800 text-zinc-200 border border-zinc-700/50'
+                      ? 'px-2 py-0.5 sm:px-2.5 sm:py-1 bg-pink-600 text-white ring-pink-400/40' 
+                      : 'px-2 py-0.5 bg-zinc-800 text-zinc-200 ring-zinc-700/50 border border-zinc-700/50'
                   }`}>
                     {currentPlan === 'viral_surge' ? (
                       <>
                         <CheckCircle className="h-3 w-3" />
-                        Your Current Plan
+                        <span className="truncate">Current Plan</span>
                       </>
                     ) : (
-                      'Most Popular'
+                      <span className="truncate">Most Popular</span>
                     )}
                   </span>
                 </div>
@@ -259,14 +257,14 @@ function BillingContent() {
               {/* Fame Flex Plan */}
               <div className={`rounded-lg p-6 border transition-all relative bg-zinc-900/80 ${
                 currentPlan === 'fame_flex' 
-                  ? 'border-primary/40 shadow-[0_0_0_1px_rgba(255,46,204,0.10)]' 
+                  ? 'border-primary/50 ring-1 ring-primary/30 shadow-[0_0_0_1px_rgba(255,46,204,0.12)]' 
                   : 'border-zinc-700/50 hover:border-zinc-600'
               }`}>
                 {currentPlan === 'fame_flex' && (
-                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-primary/20 text-primary border border-primary/30 px-4 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                  <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
+                    <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium bg-pink-600 text-white shadow-md ring-1 ring-pink-400/40 flex items-center gap-1 max-w-full">
                       <CheckCircle className="h-3 w-3" />
-                      Your Current Plan
+                      <span className="truncate">Current Plan</span>
                     </span>
                   </div>
                 )}

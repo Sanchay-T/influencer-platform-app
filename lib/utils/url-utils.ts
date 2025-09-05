@@ -3,28 +3,49 @@
  */
 
 /**
- * Get the client URL for redirects
- * - Development: Use NEXT_PUBLIC_SITE_URL (ngrok) for consistency with Stripe
+ * Get the client URL for browser redirects (Stripe checkout, etc.)
+ * - Development: Use localhost:3000 for local browser access
  * - Production: Use the live domain
- * - QStash: Uses NEXT_PUBLIC_SITE_URL (ngrok) for webhooks
  */
 export function getClientUrl(): string {
-  // Always use NEXT_PUBLIC_SITE_URL for consistency (especially important with ngrok)
-  return process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  // In development, use localhost for browser redirects (user experience)
+  if (process.env.NODE_ENV === 'development') {
+    return 'http://localhost:3000';
+  }
+  
+  // In production, use the configured site URL
+  return process.env.NEXT_PUBLIC_SITE_URL || 'https://your-app.vercel.app';
 }
 
 /**
- * Get the server URL for webhooks (QStash, etc.)
- * - Development: Use ngrok URL for external webhooks
+ * Get the server URL for webhooks (QStash, Stripe webhooks, etc.)
+ * - Development: Use ngrok URL for external webhook access
  * - Production: Use the live domain
  */
 export function getServerUrl(): string {
+  // Always use NEXT_PUBLIC_SITE_URL for webhooks (ngrok in dev, live domain in prod)
+  return process.env.NEXT_PUBLIC_SITE_URL || 'https://your-app.vercel.app';
+}
+
+/**
+ * Get the webhook URL specifically (always uses ngrok/external URL)
+ * Use this for QStash callbacks, Stripe webhooks, etc.
+ */
+export function getWebhookUrl(): string {
   return process.env.NEXT_PUBLIC_SITE_URL || 'https://your-app.vercel.app';
 }
 
 /**
  * Get the appropriate URL for different use cases
  */
-export function getUrl(type: 'client' | 'server'): string {
-  return type === 'client' ? getClientUrl() : getServerUrl();
+export function getUrl(type: 'client' | 'server' | 'webhook'): string {
+  switch (type) {
+    case 'client':
+      return getClientUrl();
+    case 'webhook':
+      return getWebhookUrl();
+    case 'server':
+    default:
+      return getServerUrl();
+  }
 }
