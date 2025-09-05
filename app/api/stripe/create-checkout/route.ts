@@ -162,6 +162,24 @@ export async function POST(req: NextRequest) {
           error: 'Price must be recurring for subscription mode' 
         }, { status: 400 });
       }
+
+      // Guard: ensure interval matches requested billing cycle to prevent mismatched pricing
+      const interval = price.recurring?.interval; // 'day' | 'week' | 'month' | 'year'
+      const expected = billing === 'monthly' ? 'month' : 'year';
+      if (interval !== expected) {
+        console.error('❌ [STRIPE-PRICE] Interval mismatch', { interval, requested: billing, priceId });
+        await OnboardingLogger.logPayment('STRIPE-INTERVAL-MISMATCH', 'Requested billing does not match price interval', userId, {
+          priceId,
+          requestedBilling: billing,
+          priceInterval: interval,
+          expected,
+          unitAmount: price.unit_amount,
+          requestId
+        });
+        return NextResponse.json({ 
+          error: `Configured price interval (${interval}) does not match requested billing (${billing}). Expected ${expected}. Check your STRIPE_*_PRICE_ID env vars.` 
+        }, { status: 400 });
+      }
     } catch (priceError) {
       console.error('❌ [STRIPE-PRICE] Error retrieving price:', priceError);
       const errorMessage = priceError instanceof Error ? priceError.message : 'Unknown error';

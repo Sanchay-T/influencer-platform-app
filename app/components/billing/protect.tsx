@@ -234,15 +234,24 @@ export function PlanBadge({ className }: { className?: string }) {
   
   const badgeStyles = {
     free: 'bg-gray-100 text-gray-800',
-    premium: 'bg-blue-100 text-blue-800',
-    enterprise: 'bg-purple-100 text-purple-800'
+    glow_up: 'bg-blue-100 text-blue-800',
+    viral_surge: 'bg-purple-100 text-purple-800',
+    fame_flex: 'bg-yellow-100 text-yellow-800'
   } as const
   
-  const planStyle = badgeStyles[currentPlan] || badgeStyles.free
+  const planNames = {
+    free: 'Free',
+    glow_up: 'Glow Up', 
+    viral_surge: 'Viral Surge',
+    fame_flex: 'Fame Flex'
+  } as const
+  
+  const planStyle = badgeStyles[currentPlan as keyof typeof badgeStyles] || badgeStyles.free
+  const displayName = planNames[currentPlan as keyof typeof planNames] || currentPlan
   
   return (
     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${planStyle} ${className || ''}`}>
-      {currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)}
+      {displayName}
     </span>
   )
 }

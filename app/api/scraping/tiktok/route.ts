@@ -6,7 +6,8 @@ import { auth } from '@clerk/nextjs/server';
 import { qstash } from '@/lib/queue/qstash'
 import { Receiver } from "@upstash/qstash"
 import { SystemConfig } from '@/lib/config/system-config'
-import { PlanEnforcementService } from '@/lib/services/plan-enforcement'
+import { PlanValidator } from '@/lib/services/plan-validator'
+import BillingLogger from '@/lib/loggers/billing-logger'
 
 // Add API logging if enabled
 let logApiCallSafe: any = null;
@@ -157,33 +158,74 @@ export async function POST(req: Request) {
         }
         console.log('✅ Campaña verificada correctamente');
 
-        // 🛡️ PLAN VALIDATION - Check if user can create scraping jobs
-        console.log('🛡️ [TIKTOK-API] Paso 7: Validating user plan limits for job creation');
-        const jobValidation = await PlanEnforcementService.validateJobCreation(userId, targetResults);
+        // 🛡️ ENHANCED PLAN VALIDATION with detailed logging
+        const requestId = BillingLogger.generateRequestId();
         
-        if (!jobValidation.allowed) {
-          console.log('❌ [TIKTOK-API] Job creation blocked:', jobValidation.reason);
+        await BillingLogger.logUsage(
+          'LIMIT_CHECK',
+          'Validating TikTok keyword search limits',
+          userId,
+          {
+            usageType: 'creators',
+            searchType: 'tiktok_keyword',
+            platform: 'TikTok',
+            estimatedResults: targetResults,
+            campaignId
+          },
+          requestId
+        );
+        
+        const validation = await PlanValidator.validateCreatorSearch(userId, targetResults, 'tiktok_keyword', requestId);
+        
+        if (!validation.allowed) {
+          await BillingLogger.logAccess(
+            'DENIED',
+            'TikTok keyword search denied due to plan limits',
+            userId,
+            {
+              resource: 'creator_search',
+              searchType: 'tiktok_keyword',
+              reason: validation.reason,
+              estimatedResults: targetResults,
+              currentUsage: validation.currentUsage,
+              limit: validation.limit,
+              upgradeRequired: validation.upgradeRequired
+            },
+            requestId
+          );
+          
           return NextResponse.json({ 
             error: 'Plan limit exceeded',
-            message: jobValidation.reason,
-            upgrade: true,
-            usage: jobValidation.usage
+            message: validation.reason,
+            upgrade: validation.upgradeRequired,
+            currentUsage: validation.currentUsage,
+            limit: validation.limit,
+            usagePercentage: validation.usagePercentage,
+            recommendedPlan: validation.recommendedPlan,
+            searchType: 'tiktok_keyword',
+            platform: 'TikTok'
           }, { status: 403 });
         }
         
-        // If job needs to be adjusted to fit plan limits
-        let adjustedTargetResults = targetResults;
-        if (jobValidation.adjustedLimit && jobValidation.adjustedLimit < targetResults) {
-          adjustedTargetResults = jobValidation.adjustedLimit;
-          console.log(`🔧 [TIKTOK-API] Target results adjusted from ${targetResults} to ${adjustedTargetResults} to fit plan limits`);
-        }
+        await BillingLogger.logAccess(
+          'GRANTED',
+          'TikTok keyword search approved',
+          userId,
+          {
+            resource: 'creator_search',
+            searchType: 'tiktok_keyword',
+            platform: 'TikTok',
+            estimatedResults: targetResults,
+            currentUsage: validation.currentUsage,
+            limit: validation.limit,
+            usagePercentage: validation.usagePercentage,
+            warningThreshold: validation.warningThreshold
+          },
+          requestId
+        );
         
-        console.log('✅ [TIKTOK-API] Plan validation passed', {
-          originalTarget: targetResults,
-          adjustedTarget: adjustedTargetResults,
-          creatorsUsed: jobValidation.usage?.creatorsUsed,
-          creatorsRemaining: jobValidation.usage?.creatorsRemaining
-        });
+        // Note: We don't adjust target results anymore - we validate the full amount
+        let adjustedTargetResults = targetResults;
 
         console.log('🔍 Paso 8: Validando targetResults');
         // Validar targetResults (use adjusted value if needed)

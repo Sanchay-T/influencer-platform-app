@@ -1,6 +1,7 @@
 'use client'
 
 import { useAuth } from '@clerk/nextjs'
+import { loggedApiCall, logTiming } from '@/lib/utils/frontend-logger'
 import { useState, useEffect } from 'react'
 
 export interface BillingStatus {
@@ -63,10 +64,22 @@ export function useBilling(): BillingStatus {
     if (!isLoaded || !userId) return
 
     // Fetch billing status from our API (with simple cache + inflight guard)
-    const fetchBillingStatus = async () => {
+    const fetchBillingStatus = async (skipCache = false) => {
       try {
+        // 1) Try persisted snapshot first for instant UX (no spinner on refresh)
+        try {
+          const persisted = localStorage.getItem('gemz_entitlements_v1')
+          if (persisted) {
+            const parsed = JSON.parse(persisted)
+            // TTL 60s to keep UI snappy during navigation/refreshes
+            if (parsed && parsed.ts && Date.now() - parsed.ts < 60_000) {
+              setFromData(parsed.data)
+            }
+          }
+        } catch {}
+
         const now = Date.now()
-        if (cacheRef.data && now - cacheRef.ts < CACHE_TTL_MS) {
+        if (!skipCache && cacheRef.data && now - cacheRef.ts < CACHE_TTL_MS) {
           setFromData(cacheRef.data)
           return
         }
@@ -75,14 +88,23 @@ export function useBilling(): BillingStatus {
           setFromData(data)
           return
         }
+        const opStart = Date.now()
         console.log('💳 [STRIPE-BILLING] Fetching billing status for user:', userId)
 
-        cacheRef.inflight = fetch('/api/billing/status').then(async (res: Response) => {
-          if (!res.ok) throw new Error('Failed to fetch billing status')
-          const data = await res.json()
+        cacheRef.inflight = loggedApiCall('/api/billing/status', {}, { action: 'fetch_billing_status', userId: userId || 'unknown' }).then(async (res: any) => {
+          if (!res.ok) throw new Error(`Failed to fetch billing status (status ${res.status})`)
+          const reqId = (res.headers && res.headers.get && res.headers.get('x-request-id')) || 'none'
+          const serverDuration = (res.headers && res.headers.get && res.headers.get('x-duration-ms')) || 'n/a'
+          const data = res.data ?? (await res.json())
+          console.log('💳 [STRIPE-BILLING] Correlation IDs:', { requestId: reqId, serverDurationMs: serverDuration })
+          logTiming('fetch_billing_status_total', opStart, { userId: userId || 'unknown', requestId: reqId || undefined })
           cacheRef.data = data
           cacheRef.ts = Date.now()
           cacheRef.inflight = null
+          // persist snapshot for fast subsequent loads
+          try {
+            localStorage.setItem('gemz_entitlements_v1', JSON.stringify({ ts: Date.now(), data }))
+          } catch {}
           return data
         }).catch((e: any) => {
           cacheRef.inflight = null
@@ -247,9 +269,39 @@ export function useBilling(): BillingStatus {
     }
 
     fetchBillingStatus()
+    
+    // Listen for focus events to refresh billing status
+    const handleFocus = () => {
+      console.log('💳 [BILLING-REFRESH] Window focused, refreshing billing status');
+      fetchBillingStatus(true); // Skip cache on focus
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, [isLoaded, userId])
 
-  return billingStatus
+  // Add function to force refresh billing data (useful after upgrades)
+  const refreshBillingData = () => {
+    console.log('🔄 [BILLING-REFRESH] Force refreshing billing data');
+    
+    // Clear caches
+    try {
+      localStorage.removeItem('gemz_entitlements_v1');
+      if ((globalThis as any).__BILLING_CACHE__) {
+        (globalThis as any).__BILLING_CACHE__.data = null;
+        (globalThis as any).__BILLING_CACHE__.ts = 0;
+        (globalThis as any).__BILLING_CACHE__.inflight = null;
+      }
+    } catch (e) {}
+    
+    // Trigger a fresh fetch
+    fetchBillingStatus(true);
+  };
+
+  return {
+    ...billingStatus,
+    refreshBillingData
+  };
 }
 
 /**

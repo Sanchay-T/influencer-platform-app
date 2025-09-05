@@ -90,10 +90,10 @@ function OnboardingSuccessContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-900 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-pink-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading subscription details...</p>
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading subscription details...</p>
         </div>
       </div>
     );
@@ -108,17 +108,17 @@ function OnboardingSuccessContent() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-3xl">
-        <Card className="shadow-xl border-0">
+        <Card className="bg-zinc-900/80 border border-zinc-700/50 shadow-xl">
           <CardHeader className="text-center">
-            <div className="mx-auto mb-4 w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center">
-              <CheckCircle className="w-8 h-8 text-pink-400" />
+            <div className="mx-auto mb-4 w-16 h-16 bg-zinc-800/60 rounded-full flex items-center justify-center">
+              <CheckCircle className="w-8 h-8 text-primary" />
             </div>
-            <CardTitle className="text-3xl font-bold text-gray-900">
+            <CardTitle className="text-3xl font-bold text-foreground">
               Welcome to Gemz! 🎉
             </CardTitle>
-            <CardDescription className="text-gray-600 mt-2 text-lg">
+            <CardDescription className="text-muted-foreground mt-2 text-lg">
               {sessionData ? 
                 `Your ${sessionData.plan.name} subscription is now active with a 7-day free trial.` :
                 'Your trial has started successfully. You now have full access to all features.'
@@ -129,31 +129,31 @@ function OnboardingSuccessContent() {
           <CardContent className="space-y-6">
             {/* Plan Details */}
             {sessionData && (
-              <div className="bg-white border rounded-lg p-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <div className="bg-zinc-800/30 border border-zinc-700/50 rounded-lg p-6">
+                <h3 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
                   {sessionData.plan.icon} Your Selected Plan
                 </h3>
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-2xl font-bold text-gray-900">{sessionData.plan.name}</span>
-                      <Badge variant="secondary" className="bg-zinc-800 text-pink-400 border border-zinc-700/50">
+                      <span className="text-2xl font-bold text-foreground">{sessionData.plan.name}</span>
+                      <Badge variant="secondary" className="bg-zinc-800 text-primary border border-zinc-700/50">
                         {sessionData.billing === 'yearly' ? 'Annual' : 'Monthly'}
                       </Badge>
                     </div>
-                    <div className="text-lg text-gray-600 mt-1">
+                    <div className="text-lg text-muted-foreground mt-1">
                       {sessionData.billing === 'yearly' ? sessionData.plan.yearlyPrice : sessionData.plan.monthlyPrice}
-                      <span className="text-sm text-gray-500 ml-1">per month</span>
+                      <span className="text-sm text-muted-foreground ml-1">per month</span>
                       {sessionData.billing === 'yearly' && (
-                        <Badge variant="secondary" className="bg-zinc-800 text-pink-400 border border-zinc-700/50 ml-2">
+                        <Badge variant="secondary" className="bg-zinc-800 text-primary border border-zinc-700/50 ml-2">
                           20% off
                         </Badge>
                       )}
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm text-gray-500">Trial ends</div>
-                    <div className="text-sm font-medium text-gray-900">
+                    <div className="text-sm text-muted-foreground">Trial ends</div>
+                    <div className="text-sm font-medium text-foreground">
                       {sessionData.subscription.trial_end ? formatDate(sessionData.subscription.trial_end) : 'Not set'}
                     </div>
                   </div>
@@ -162,8 +162,8 @@ function OnboardingSuccessContent() {
                 {/* Plan Features */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-4">
                   {sessionData.plan.features.map((feature, index) => (
-                    <div key={index} className="flex items-center gap-2 text-sm">
-                      <CheckCircle className="h-4 w-4 text-pink-400 flex-shrink-0" />
+                    <div key={index} className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <CheckCircle className="h-4 w-4 text-primary flex-shrink-0" />
                       <span>{feature}</span>
                     </div>
                   ))}
@@ -173,18 +173,18 @@ function OnboardingSuccessContent() {
 
             {/* Trial Information */}
             <div className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-zinc-100 mb-4 flex items-center gap-2">
-                <Sparkles className="h-5 w-5" />
+              <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
                 Your 7-Day Free Trial is Active
               </h3>
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 bg-pink-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                    <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
                     ✓
                   </div>
                   <div>
-                        <p className="font-medium text-zinc-100">Payment method secured</p>
-                        <p className="text-sm text-zinc-300">
+                        <p className="font-medium text-foreground">Payment method secured</p>
+                        <p className="text-sm text-muted-foreground">
                       {sessionData ? 
                         `You'll be charged ${sessionData.billing === 'yearly' ? sessionData.plan.yearlyPrice : sessionData.plan.monthlyPrice} when trial ends` :
                         "You won't be charged until your trial ends"
@@ -193,58 +193,58 @@ function OnboardingSuccessContent() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 bg-pink-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                    <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
                     ✓
                   </div>
                   <div>
-                        <p className="font-medium text-zinc-100">Full feature access</p>
-                        <p className="text-sm text-zinc-300">All platform features are now unlocked</p>
+                        <p className="font-medium text-foreground">Full feature access</p>
+                        <p className="text-sm text-muted-foreground">All platform features are now unlocked</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                  <div className="w-6 h-6 bg-brand-green-500 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
                     ✓
                   </div>
                   <div>
-                    <p className="font-medium text-green-900">Cancel anytime</p>
-                    <p className="text-sm text-green-700">No commitment - cancel before trial ends</p>
+                    <p className="font-medium text-foreground">Cancel anytime</p>
+                    <p className="text-sm text-muted-foreground">No commitment - cancel before trial ends</p>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* What's Next */}
-            <div className="bg-blue-50 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center gap-2">
-                <Sparkles className="h-5 w-5" />
+            <div className="bg-zinc-800/30 border border-zinc-700/50 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
                 What's next?
               </h3>
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                  <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
                     1
                   </div>
                   <div>
-                    <p className="font-medium text-blue-900">Create your first campaign</p>
-                    <p className="text-sm text-blue-700">Search for influencers across TikTok, Instagram & YouTube</p>
+                    <p className="font-medium text-foreground">Create your first campaign</p>
+                    <p className="text-sm text-muted-foreground">Search for influencers across TikTok, Instagram & YouTube</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                  <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
                     2
                   </div>
                   <div>
-                    <p className="font-medium text-blue-900">Get detailed insights</p>
-                    <p className="text-sm text-blue-700">Access contact info, analytics, and audience data</p>
+                    <p className="font-medium text-foreground">Get detailed insights</p>
+                    <p className="text-sm text-muted-foreground">Access contact info, analytics, and audience data</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                  <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
                     3
                   </div>
                   <div>
-                    <p className="font-medium text-blue-900">Export and contact</p>
-                    <p className="text-sm text-blue-700">Download contact lists and start your campaigns</p>
+                    <p className="font-medium text-foreground">Export and contact</p>
+                    <p className="text-sm text-muted-foreground">Download contact lists and start your campaigns</p>
                   </div>
                 </div>
               </div>
@@ -254,12 +254,12 @@ function OnboardingSuccessContent() {
             <Button
               onClick={handleContinue}
               size="lg"
-              className="w-full h-14 text-lg font-semibold"
+              className="w-full h-14 text-lg font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
               disabled={isLoading}
             >
               {isLoading ? (
                 <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
                   Loading...
                 </div>
               ) : (
@@ -272,9 +272,9 @@ function OnboardingSuccessContent() {
 
             {/* Support Info */}
             <div className="text-center">
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-foreground">
                 Need help getting started?{' '}
-                <a href="mailto:support@gemz.io" className="text-blue-600 hover:underline">
+                <a href="mailto:support@gemz.io" className="text-primary hover:underline">
                   Contact our support team
                 </a>
               </p>
@@ -289,10 +289,10 @@ function OnboardingSuccessContent() {
 export default function OnboardingSuccess() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     }>

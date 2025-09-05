@@ -25,11 +25,12 @@ function BillingContent() {
   const searchParams = useSearchParams();
   const upgradeParam = searchParams.get('upgrade');
   const planParam = searchParams.get('plan');
+  const successParam = searchParams.get('success');
 
   // Auto-scroll to pricing table if coming from pricing page
   useEffect(() => {
     if (upgradeParam || planParam) {
-      console.log('🛒 [BILLING] Auto-scrolling to pricing table. Upgrade:', upgradeParam, 'Plan:', planParam);
+      console.log('🛒 [BILLING] Auto-scrolling to pricing table. Upgrade:', upgradeParam, 'Plan:', planParam, 'Success:', successParam);
       setTimeout(() => {
         const pricingSection = document.querySelector('[data-testid="pricing-table"]') || 
                               document.querySelector('.max-w-5xl') ||
@@ -39,7 +40,30 @@ function BillingContent() {
         }
       }, 500);
     }
-  }, [upgradeParam, planParam]);
+    
+    // Refresh billing data when returning from successful upgrade
+    if (successParam && typeof window !== 'undefined') {
+      console.log('🎉 [BILLING] Successful upgrade detected, clearing cache and refreshing billing status');
+      
+      // Clear all billing caches
+      try {
+        localStorage.removeItem('gemz_entitlements_v1');
+        if ((globalThis as any).__BILLING_CACHE__) {
+          (globalThis as any).__BILLING_CACHE__.data = null;
+          (globalThis as any).__BILLING_CACHE__.ts = 0;
+          (globalThis as any).__BILLING_CACHE__.inflight = null;
+        }
+        console.log('🧹 [BILLING] Cache cleared successfully');
+      } catch (e) {
+        console.log('⚠️ [BILLING] Cache clear failed:', e);
+      }
+      
+      // Force refresh of useBilling hook data
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    }
+  }, [upgradeParam, planParam, successParam]);
 
   const quickActions = [
     { name: 'View All Plans', href: '/pricing', icon: TrendingUp, description: 'Compare features and pricing' },
@@ -53,21 +77,37 @@ function BillingContent() {
         <h1 className="text-2xl font-bold text-zinc-100">Billing & Subscription</h1>
         <p className="text-zinc-400 mt-1">Manage your plan, usage, and billing information</p>
         
-        {/* Upgrade notification */}
-        {(upgradeParam || planParam) && (
-          <div className="mt-4 bg-zinc-800/60 border border-zinc-700/50 rounded-lg p-4 text-zinc-200">
+        {/* Upgrade/Success notification */}
+        {(upgradeParam || planParam || successParam) && (
+          <div className={`mt-4 rounded-lg p-4 text-zinc-200 ${
+            successParam 
+              ? 'bg-green-800/60 border border-green-700/50' 
+              : 'bg-zinc-800/60 border border-zinc-700/50'
+          }`}>
             <div className="flex items-center gap-2">
               <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                {successParam ? (
+                  <CheckCircle className="h-5 w-5 text-green-400" />
+                ) : (
+                  <svg className="h-5 w-5 text-zinc-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                )}
               </div>
               <div>
-                <p className="text-zinc-100 font-medium">
-                  {planParam ? `Ready to upgrade to ${planParam}!` : 'Ready to upgrade!'}
+                <p className={`font-medium ${successParam ? 'text-green-100' : 'text-zinc-100'}`}>
+                  {successParam 
+                    ? `🎉 Successfully upgraded${planParam ? ` to ${planParam}` : ''}!` 
+                    : planParam 
+                      ? `Ready to upgrade to ${planParam}!` 
+                      : 'Ready to upgrade!'
+                  }
                 </p>
-                <p className="text-zinc-300 text-sm">
-                  Select a plan below to upgrade. We’ll charge the prorated amount and update your account automatically.
+                <p className={`text-sm ${successParam ? 'text-green-300' : 'text-zinc-300'}`}>
+                  {successParam 
+                    ? 'Your plan has been updated and is now active. You can start using your new features immediately.'
+                    : 'Select a plan below to upgrade. We\'ll charge the prorated amount and update your account automatically.'
+                  }
                 </p>
               </div>
             </div>

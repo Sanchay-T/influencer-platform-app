@@ -79,7 +79,7 @@ export class FrontendLogger {
   /**
    * Log API calls with comprehensive tracking
    */
-  static async loggedApiCall(url: string, options: ApiCallOptions = {}, context?: LogContext): Promise<Response> {
+  static async loggedApiCall(url: string, options: ApiCallOptions = {}, context?: LogContext): Promise<any> {
     const startTime = Date.now();
     const requestId = `api_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     
@@ -124,14 +124,21 @@ export class FrontendLogger {
         console.error(`❌ [FRONTEND-API] Error response:`, responseData);
       }
 
-      // Return response with data already parsed
+      // Return a lightweight response-like object to avoid spreading native Response
+      // Keep common fields used by call sites
       return {
-        ...response,
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers,
         json: async () => responseData,
+        // Convenience fields
+        data: responseData,
         _parsedData: responseData,
         _duration: duration,
-        _requestId: requestId
-      } as any;
+        _requestId: requestId,
+        raw: response
+      };
 
     } catch (error) {
       const duration = Date.now() - startTime;

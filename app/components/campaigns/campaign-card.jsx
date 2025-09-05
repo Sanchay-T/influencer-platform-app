@@ -41,12 +41,12 @@ export default function CampaignCard({ campaign }) {
           </div>
         )}
         <CardHeader className="p-4 pb-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-lg font-semibold text-zinc-100 group-hover:text-zinc-300">
+          <div className="flex items-center justify-between gap-3 min-w-0">
+            <div className="min-w-0">
+              <CardTitle className="text-lg font-semibold text-zinc-100 group-hover:text-zinc-300 truncate">
                 {campaign.name}
               </CardTitle>
-              <CardDescription className="mt-1 text-sm text-zinc-400">
+              <CardDescription className="mt-1 text-sm text-zinc-400 truncate">
                 {campaign.description}
               </CardDescription>
             </div>
@@ -66,7 +66,8 @@ export default function CampaignCard({ campaign }) {
               day: 'numeric'
             })}
           </div>
-          <div className="mt-2 flex items-center gap-2">
+          {/* Actions: wrap on small widths to avoid overflow */}
+          <div className="mt-2 flex flex-wrap items-center gap-2">
             <Button
               type="button"
               size="sm"

@@ -25,6 +25,8 @@ interface UpgradeButtonProps {
   variant?: 'default' | 'outline' | 'secondary';
   className?: string;
   showModal?: boolean;
+  allowBillingToggle?: boolean;
+  billingDefault?: 'monthly' | 'yearly';
 }
 
 export default function UpgradeButton({ 
@@ -32,17 +34,21 @@ export default function UpgradeButton({
   size = 'md', 
   variant = 'default',
   className = '',
-  showModal = false
+  showModal = false,
+  allowBillingToggle = true,
+  billingDefault = 'monthly'
 }: UpgradeButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const { currentPlan, hasActiveSubscription, isPaidUser } = useBilling();
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>(billingDefault);
+  const { currentPlan, hasActiveSubscription, isPaidUser, isTrialing } = useBilling();
 
   const planConfig = {
     glow_up: {
       name: 'Glow Up',
-      price: '$99',
+      priceMonthly: '$99',
+      priceYearly: '$79',
       period: 'month',
       icon: Star,
       color: 'text-blue-600',
@@ -50,7 +56,8 @@ export default function UpgradeButton({
     },
     viral_surge: {
       name: 'Viral Surge',
-      price: '$249',
+      priceMonthly: '$249',
+      priceYearly: '$199',
       period: 'month',
       icon: Zap,
       color: 'text-purple-600',
@@ -58,7 +65,8 @@ export default function UpgradeButton({
     },
     fame_flex: {
       name: 'Fame Flex',
-      price: '$499',
+      priceMonthly: '$499',
+      priceYearly: '$399',
       period: 'month',
       icon: Crown,
       color: 'text-yellow-600',
@@ -82,15 +90,45 @@ export default function UpgradeButton({
     setError('');
 
     try {
-      // Always redirect to Stripe Checkout to complete payment for upgrades
+      console.log(`🔍 [UPGRADE-AUDIT] Starting upgrade:`, { 
+        targetPlan, 
+        billingCycle, 
+        hasActiveSubscription, 
+        isTrialing,
+        currentPlan 
+      });
+
+      // Always use checkout for plan upgrades (cleaner UX)
+      if (hasActiveSubscription || isTrialing) {
+        console.log('📡 [UPGRADE-AUDIT] Using checkout for existing subscription upgrade');
+      } else {
+        console.log('📡 [UPGRADE-AUDIT] Using checkout for new subscription');
+      }
+      
+      // Use checkout-upgrade for all scenarios (better UX than programmatic updates)
       const response = await fetch('/api/stripe/checkout-upgrade', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planId: targetPlan, billing: 'monthly' }),
+        body: JSON.stringify({ planId: targetPlan, billing: billingCycle }),
       });
-      if (!response.ok) throw new Error('Failed to initiate upgrade');
       const data = await response.json();
+      console.log('📊 [UPGRADE-AUDIT] checkout-upgrade response:', data);
+
+      if (!response.ok) throw new Error('Failed to initiate upgrade');
+      
       if (!data?.url) throw new Error('Invalid checkout session');
+      
+      try {
+        if (data.price?.displayAmount && data.price?.interval) {
+          console.log('💰 [UPGRADE-AUDIT] Redirecting to Stripe checkout', { 
+            amount: data.price.displayAmount, 
+            interval: data.price.interval, 
+            portal: !!data.portal,
+            planId: targetPlan,
+            billing: billingCycle
+          });
+        }
+      } catch {}
       window.location.href = data.url;
     } catch (err) {
       console.error('Upgrade error:', err);
@@ -110,22 +148,58 @@ export default function UpgradeButton({
     }
   };
 
-  // Simple button version
+  const PriceLabel = () => {
+    const p = billingCycle === 'monthly' ? plan.priceMonthly : plan.priceYearly;
+    const suffix = billingCycle === 'monthly' ? '/month' : '/month (billed yearly)';
+    return <Badge variant="secondary">{p}{suffix}</Badge>
+  };
+
+  // Simple button version (with optional inline toggle)
   if (!showModal) {
     return (
-      <Button
-        onClick={handleButtonClick}
-        disabled={isLoading}
-        variant={variant}
-        className={`h-11 px-6 text-sm font-medium ${className}`}
-      >
-        {isLoading ? (
-          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-        ) : (
-          <plan.icon className="h-4 w-4 mr-2" />
+      <div className={`w-full space-y-3 ${className}`}>
+        {allowBillingToggle && (
+          <div className="flex items-center justify-between">
+            <div className="text-xs text-zinc-400">
+              Billing
+            </div>
+            <div className="inline-flex rounded-full bg-zinc-800 p-1 border border-zinc-700">
+              <button
+                onClick={() => setBillingCycle('monthly')}
+                className={`px-3 py-1 text-xs rounded-full transition-colors ${billingCycle==='monthly' ? 'bg-pink-600 text-white shadow' : 'text-zinc-300 hover:text-white'}`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setBillingCycle('yearly')}
+                className={`px-3 py-1 text-xs rounded-full transition-colors ${billingCycle==='yearly' ? 'bg-pink-600 text-white shadow' : 'text-zinc-300 hover:text-white'}`}
+              >
+                Yearly
+              </button>
+            </div>
+          </div>
         )}
-        {isLoading ? 'Upgrading...' : `Upgrade to ${plan.name}`}
-      </Button>
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-xs text-zinc-400">
+            <PriceLabel />
+          </div>
+        </div>
+
+        <Button
+          onClick={handleButtonClick}
+          disabled={isLoading}
+          variant={variant}
+          className={`h-11 px-6 text-sm font-medium w-full`}
+        >
+          {isLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          ) : (
+            <plan.icon className="h-4 w-4 mr-2" />
+          )}
+          {isLoading ? 'Upgrading...' : `Upgrade to ${plan.name}`}
+        </Button>
+      </div>
     );
   }
 
@@ -161,25 +235,31 @@ export default function UpgradeButton({
                       <CardDescription>{plan.description}</CardDescription>
                     </div>
                   </div>
-                  <Badge variant="secondary">{plan.price}/{plan.period}</Badge>
-                </div>
-              </CardHeader>
+                  <PriceLabel />
+              </div>
+            </CardHeader>
 
-              <CardContent className="space-y-4">
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
-                    <div>
-                      <h3 className="font-medium text-green-900 mb-1">
-                        Upgrade Confirmation
-                      </h3>
-                      <p className="text-sm text-green-700">
-                        You're about to upgrade to {plan.name} for {plan.price}/{plan.period}. 
-                        {isPaidUser ? ' Your billing will be prorated.' : ' Your trial will be converted to a paid subscription.'}
-                      </p>
-                    </div>
+            <CardContent className="space-y-4">
+              {allowBillingToggle && (
+                <div className="flex items-center justify-center gap-2">
+                  <Button size="sm" variant={billingCycle==='monthly' ? 'default' : 'outline'} onClick={() => setBillingCycle('monthly')}>Monthly</Button>
+                  <Button size="sm" variant={billingCycle==='yearly' ? 'default' : 'outline'} onClick={() => setBillingCycle('yearly')}>Yearly</Button>
+                </div>
+              )}
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                  <div>
+                    <h3 className="font-medium text-green-900 mb-1">
+                      Upgrade Confirmation
+                    </h3>
+                    <p className="text-sm text-green-700">
+                      You're about to upgrade to {plan.name} for {billingCycle==='monthly' ? plan.priceMonthly : plan.priceYearly}/month{billingCycle==='yearly' ? ' (billed yearly)' : ''}. 
+                      {isPaidUser ? ' Your billing will be prorated.' : ' Your trial will be converted to a paid subscription.'}
+                    </p>
                   </div>
                 </div>
+              </div>
 
                 {error && (
                   <Alert variant="destructive">

@@ -6,6 +6,7 @@
  *
  * Usage:
  *   node delete-user.js <email>
+ *   node delete-user.js --user-id <clerkUserId>
  * Example:
  *   node delete-user.js sanchaythanerkar@gmail.gov
  */
@@ -17,13 +18,20 @@ async function deleteUser() {
   console.log('🗑️  DELETING USER FROM DATABASE');
   console.log('━'.repeat(50));
   
-  const targetEmail = process.argv[2];
-  if (!targetEmail) {
-    console.log('❌ Please provide an email');
-    console.log('Usage: node delete-user.js <email>');
+  const args = process.argv.slice(2);
+  const userIdFlagIndex = args.indexOf('--user-id');
+  const targetUserId = userIdFlagIndex > -1 ? args[userIdFlagIndex + 1] : null;
+  const targetEmail = userIdFlagIndex === 0 ? null : args[0];
+
+  if (!targetEmail && !targetUserId) {
+    console.log('❌ Please provide an email or --user-id');
+    console.log('Usage:');
+    console.log('  node delete-user.js <email>');
+    console.log('  node delete-user.js --user-id <clerkUserId>');
     process.exit(1);
   }
-  console.log(`🎯 Target email: ${targetEmail}`);
+  if (targetUserId) console.log(`🎯 Target userId: ${targetUserId}`);
+  if (targetEmail) console.log(`🎯 Target email: ${targetEmail}`);
   
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
@@ -36,46 +44,56 @@ async function deleteUser() {
     
     // Step 1: Find the user
     console.log('\n🔍 STEP 1: Finding user...');
-    const findUserQuery = `
-      SELECT 
-        id, 
-        user_id, 
-        email, 
-        name,
-        full_name,
-        current_plan,
-        trial_status,
-        stripe_subscription_id,
-        stripe_customer_id,
-        created_at
-      FROM user_profiles 
-      WHERE email = $1;
-    `;
-    
-    const userResult = await client.query(findUserQuery, [targetEmail]);
-    
-    if (userResult.rows.length === 0) {
-      console.log('❌ User not found with that email');
-      console.log('\n🔍 Searching for similar emails...');
-      
-      const similarQuery = `
-        SELECT email, user_id, name 
-        FROM user_profiles 
-        WHERE email ILIKE '%' || $1 || '%'
-        LIMIT 5;
+    let userResult;
+    if (targetUserId) {
+      const findByIdQuery = `
+        SELECT 
+          id, user_id, email, name, full_name, current_plan, trial_status,
+          stripe_subscription_id, stripe_customer_id, created_at
+        FROM user_profiles WHERE user_id = $1;
       `;
-      
-      const similarResult = await client.query(similarQuery, [targetEmail.split('@')[0]]);
-      
-      if (similarResult.rows.length > 0) {
-        console.log('Found similar emails:');
-        similarResult.rows.forEach(row => {
-          console.log(`   ${row.email} (${row.user_id}) - ${row.name || 'No name'}`);
-        });
+      userResult = await client.query(findByIdQuery, [targetUserId]);
+    } else {
+      const findUserQuery = `
+        SELECT 
+          id, 
+          user_id, 
+          email, 
+          name,
+          full_name,
+          current_plan,
+          trial_status,
+          stripe_subscription_id,
+          stripe_customer_id,
+          created_at
+        FROM user_profiles 
+        WHERE email = $1;
+      `;
+      userResult = await client.query(findUserQuery, [targetEmail]);
+    }
+
+    if (userResult.rows.length === 0) {
+      if (targetEmail) {
+        console.log('❌ User not found with that email');
+        console.log('\n🔍 Searching for similar emails...');
+        const similarQuery = `
+          SELECT email, user_id, name 
+          FROM user_profiles 
+          WHERE email ILIKE '%' || $1 || '%'
+          LIMIT 5;
+        `;
+        const similarResult = await client.query(similarQuery, [targetEmail.includes('@') ? targetEmail.split('@')[0] : targetEmail]);
+        if (similarResult.rows.length > 0) {
+          console.log('Found similar emails:');
+          similarResult.rows.forEach(row => {
+            console.log(`   ${row.email} (${row.user_id}) - ${row.name || 'No name'}`);
+          });
+        } else {
+          console.log('No similar emails found');
+        }
       } else {
-        console.log('No similar emails found');
+        console.log('❌ User not found with that userId');
       }
-      
       return;
     }
     

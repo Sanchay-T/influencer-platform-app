@@ -7,29 +7,45 @@ import { getTrialStatus } from '@/lib/trial/trial-service';
 
 export async function GET() {
   try {
+    const startedAt = Date.now();
+    const reqId = `prof_get_${startedAt}_${Math.random().toString(36).slice(2, 8)}`;
+    const ts = new Date().toISOString();
+    console.log(`🟢 [PROFILE-API-GET:${reqId}] START ${ts}`);
     console.log('🔐 [PROFILE-API-GET] Getting authenticated user from Clerk');
     const { userId } = await auth();
 
     if (!userId) {
       console.error('❌ [PROFILE-API-GET] Unauthorized - No valid user session');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      const res = NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      res.headers.set('x-request-id', reqId);
+      res.headers.set('x-started-at', ts);
+      res.headers.set('x-duration-ms', String(Date.now() - startedAt));
+      return res;
     }
     console.log('✅ [PROFILE-API-GET] User authenticated', { userId });
 
     // Buscar el perfil del usuario
     console.log('🔍 [PROFILE-API-GET] Fetching user profile');
+    const profileStart = Date.now();
     const userProfile = await db.query.userProfiles.findFirst({
       where: (userProfiles, { eq }) => eq(userProfiles.userId, userId),
     });
+    console.log(`⏱️ [PROFILE-API-GET:${reqId}] DB profile query: ${Date.now() - profileStart}ms`);
 
     if (!userProfile) {
       console.log('ℹ️ [PROFILE-API-GET] No profile found for user');
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+      const res = NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+      res.headers.set('x-request-id', reqId);
+      res.headers.set('x-started-at', ts);
+      res.headers.set('x-duration-ms', String(Date.now() - startedAt));
+      return res;
     }
 
     // Get trial status data
     console.log('🎯 [PROFILE-API-GET] Fetching trial status');
+    const trialStart = Date.now();
     const trialData = await getTrialStatus(userId);
+    console.log(`⏱️ [PROFILE-API-GET:${reqId}] Trial service duration: ${Date.now() - trialStart}ms`);
 
     // Prepare response with trial data
     const responseData = {
@@ -70,30 +86,48 @@ export async function GET() {
       updatedAt: userProfile.updatedAt
     };
 
+    const duration = Date.now() - startedAt;
     console.log('✅ [PROFILE-API-GET] Profile fetched successfully', { 
       profileId: userProfile.id,
       hasTrialData: !!trialData,
       trialStatus: trialData?.trialStatus || 'none',
-      daysRemaining: trialData?.daysRemaining || 0
+      daysRemaining: trialData?.daysRemaining || 0,
+      duration
     });
-    
-    return NextResponse.json(responseData);
+    const res = NextResponse.json(responseData);
+    res.headers.set('x-request-id', reqId);
+    res.headers.set('x-started-at', ts);
+    res.headers.set('x-duration-ms', String(duration));
+    console.log(`🟣 [PROFILE-API-GET:${reqId}] END duration=${duration}ms`);
+    return res;
   } catch (error: any) {
-    console.error('💥 [PROFILE-API-GET] Error fetching profile:', error);
-    return NextResponse.json({ 
+    const reqId = `prof_get_err_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    console.error(`💥 [PROFILE-API-GET:${reqId}] Error fetching profile:`, error);
+    const res = NextResponse.json({ 
       error: 'Error interno del servidor' 
     }, { status: 500 });
+    res.headers.set('x-request-id', reqId);
+    res.headers.set('x-duration-ms', '0');
+    return res;
   }
 }
 
 export async function POST(request: Request) {
   try {
+    const startedAt = Date.now();
+    const reqId = `prof_post_${startedAt}_${Math.random().toString(36).slice(2, 8)}`;
+    const ts = new Date().toISOString();
+    console.log(`🟢 [PROFILE-API:${reqId}] START ${ts}`);
     console.log('🔐 [PROFILE-API] Getting authenticated user from Clerk');
     const { userId } = await auth();
 
     if (!userId) {
       console.error('❌ [PROFILE-API] Unauthorized - No valid user session');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      const res = NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      res.headers.set('x-request-id', reqId);
+      res.headers.set('x-started-at', ts);
+      res.headers.set('x-duration-ms', String(Date.now() - startedAt));
+      return res;
     }
     console.log('✅ [PROFILE-API] User authenticated', { userId });
 
@@ -102,32 +136,50 @@ export async function POST(request: Request) {
 
     // Verificar si ya existe un perfil
     console.log('🔍 [PROFILE-API] Checking for existing profile');
+    const checkStart = Date.now();
     const existingUser = await db.query.userProfiles.findFirst({
       where: (userProfiles, { eq }) => eq(userProfiles.userId, userId),
     });
+    console.log(`⏱️ [PROFILE-API:${reqId}] DB existence check: ${Date.now() - checkStart}ms`);
 
     if (existingUser) {
       console.log('⚠️ [PROFILE-API] Profile already exists for user');
-      return NextResponse.json({ 
+      const res = NextResponse.json({ 
         error: 'Ya existe un perfil para este usuario' 
       }, { status: 400 });
+      res.headers.set('x-request-id', reqId);
+      res.headers.set('x-started-at', ts);
+      res.headers.set('x-duration-ms', String(Date.now() - startedAt));
+      return res;
     }
 
     // Crear el perfil
     console.log('🔄 [PROFILE-API] Creating new profile');
+    const insertStart = Date.now();
     const [profile] = await db.insert(userProfiles).values({
       userId,
       name,
       companyName,
       industry,
     }).returning();
+    console.log(`⏱️ [PROFILE-API:${reqId}] DB insert: ${Date.now() - insertStart}ms`);
 
-    console.log('✅ [PROFILE-API] Profile created successfully', { profileId: profile.id });
-    return NextResponse.json(profile);
+    const duration = Date.now() - startedAt;
+    console.log('✅ [PROFILE-API] Profile created successfully', { profileId: profile.id, duration });
+    const res = NextResponse.json(profile);
+    res.headers.set('x-request-id', reqId);
+    res.headers.set('x-started-at', ts);
+    res.headers.set('x-duration-ms', String(duration));
+    console.log(`🟣 [PROFILE-API:${reqId}] END duration=${duration}ms`);
+    return res;
   } catch (error: any) {
-    console.error('💥 [PROFILE-API] Error creating profile:', error);
-    return NextResponse.json({ 
+    const reqId = `prof_post_err_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    console.error(`💥 [PROFILE-API:${reqId}] Error creating profile:`, error);
+    const res = NextResponse.json({ 
       error: 'Error interno del servidor' 
     }, { status: 500 });
+    res.headers.set('x-request-id', reqId);
+    res.headers.set('x-duration-ms', '0');
+    return res;
   }
 } 

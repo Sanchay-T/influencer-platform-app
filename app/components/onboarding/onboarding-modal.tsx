@@ -351,36 +351,36 @@ export default function OnboardingModal({
   ];
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Progress indicator */}
         <div className="mb-6">
           <div className="flex items-center justify-center space-x-2 mb-4">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-              step >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'
+              step >= 1 ? 'bg-primary text-primary-foreground' : 'bg-zinc-700/50 text-zinc-400'
             }`}>
               {step > 1 ? '✓' : '1'}
             </div>
-            <div className={`w-16 h-1 rounded ${step >= 2 ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
+            <div className={`w-16 h-1 rounded ${step >= 2 ? 'bg-primary' : 'bg-zinc-700/50'}`}></div>
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-              step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'
+              step >= 2 ? 'bg-primary text-primary-foreground' : 'bg-zinc-700/50 text-zinc-400'
             }`}>
               {step > 2 ? '✓' : '2'}
             </div>
-            <div className={`w-16 h-1 rounded ${step >= 3 ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
+            <div className={`w-16 h-1 rounded ${step >= 3 ? 'bg-primary' : 'bg-zinc-700/50'}`}></div>
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-              step >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'
+              step >= 3 ? 'bg-primary text-primary-foreground' : 'bg-zinc-700/50 text-zinc-400'
             }`}>
               {step > 3 ? '✓' : '3'}
             </div>
-            <div className={`w-16 h-1 rounded ${step >= 4 ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
+            <div className={`w-16 h-1 rounded ${step >= 4 ? 'bg-primary' : 'bg-zinc-700/50'}`}></div>
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-              step >= 4 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'
+              step >= 4 ? 'bg-primary text-primary-foreground' : 'bg-zinc-700/50 text-zinc-400'
             }`}>
               {step > 4 ? '✓' : '4'}
             </div>
           </div>
-          <p className="text-center text-sm text-gray-600">
+          <p className="text-center text-sm text-muted-foreground">
             Step {step} of 4: {
               step === 1 ? 'Tell us about yourself' : 
               step === 2 ? 'Tell us about your brand' : 
@@ -390,14 +390,14 @@ export default function OnboardingModal({
           </p>
         </div>
 
-        <Card className="shadow-lg border border-gray-200 bg-white">
+        <Card className="bg-zinc-900/80 border border-zinc-700/50">
           {step === 1 && (
             <>
               <CardHeader>
-                <CardTitle className="text-2xl font-bold text-gray-900">
+                <CardTitle className="text-2xl font-bold text-foreground">
                   Welcome to Gemz! 🎉
                 </CardTitle>
-                <CardDescription className="text-gray-600">
+                <CardDescription className="text-muted-foreground">
                   Let's get to know you and your business better. This helps us personalize your experience.
                 </CardDescription>
               </CardHeader>
@@ -411,7 +411,7 @@ export default function OnboardingModal({
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="fullName" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <Label htmlFor="fullName" className="text-sm font-medium text-foreground flex items-center gap-2">
                     <User className="h-4 w-4" />
                     Full Name
                   </Label>
@@ -424,13 +424,13 @@ export default function OnboardingModal({
                       setFullName(e.target.value);
                       OnboardingLogger.logUserInput(1, 'fullName', e.target.value, user?.id, sessionId);
                     }}
-                    className="h-12 text-base"
+                    className="h-12 text-base bg-zinc-800/50 border-zinc-700/50 focus:border-primary"
                     disabled={isLoading}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="businessName" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <Label htmlFor="businessName" className="text-sm font-medium text-foreground flex items-center gap-2">
                     <Building className="h-4 w-4" />
                     Business Name
                   </Label>
@@ -443,17 +443,17 @@ export default function OnboardingModal({
                       setBusinessName(e.target.value);
                       OnboardingLogger.logUserInput(1, 'businessName', e.target.value, user?.id, sessionId);
                     }}
-                    className="h-12 text-base"
+                    className="h-12 text-base bg-zinc-800/50 border-zinc-700/50 focus:border-primary"
                     disabled={isLoading}
                   />
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     This could be your company name, brand name, or your own name if you're a solo entrepreneur.
                   </p>
                 </div>
 
                 <Button
                   onClick={handleStep1Submit}
-                  className="w-full"
+                  className="w-full h-12 text-base bg-primary hover:bg-primary/90 text-primary-foreground"
                   disabled={isLoading}
                 >
                   {isLoading ? (
@@ -475,10 +475,10 @@ export default function OnboardingModal({
           {step === 2 && (
             <>
               <CardHeader>
-                <CardTitle className="text-2xl font-bold text-gray-900">
+                <CardTitle className="text-2xl font-bold text-foreground">
                   Describe Your Brand & Influencer Goals 🎯
                 </CardTitle>
-                <CardDescription className="text-gray-600">
+                <CardDescription className="text-muted-foreground">
                   Help our AI understand your brand and the type of influencers you want to work with.
                 </CardDescription>
               </CardHeader>
@@ -492,7 +492,7 @@ export default function OnboardingModal({
                 )}
 
                 <div className="space-y-3">
-                  <Label htmlFor="brandDescription" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <Label htmlFor="brandDescription" className="text-sm font-medium text-foreground flex items-center gap-2">
                     <Target className="h-4 w-4" />
                     Explain your brand and the type of influencers you look to work with
                   </Label>
@@ -506,21 +506,21 @@ export default function OnboardingModal({
                         setBrandDescription(e.target.value);
                         OnboardingLogger.logUserInput(2, 'brandDescription', e.target.value, user?.id, sessionId);
                       }}
-                      className="min-h-[120px] text-base resize-none"
+                      className="min-h-[120px] text-base resize-none bg-zinc-800/50 border-zinc-700/50 focus:border-primary"
                       disabled={isLoading}
                     />
-                    <div className="absolute bottom-2 right-2 text-xs text-gray-400">
+                    <div className="absolute bottom-2 right-2 text-xs text-zinc-400">
                       {brandDescription.length}/500
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg">
-                    <Sparkles className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex items-start gap-2 p-3 bg-zinc-800/30 border border-zinc-700/50 rounded-lg">
+                    <Sparkles className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-sm text-blue-800 font-medium mb-1">
+                      <p className="text-sm text-foreground font-medium mb-1">
                         Our AI will use this context to:
                       </p>
-                      <ul className="text-xs text-blue-700 space-y-1">
+                      <ul className="text-xs text-muted-foreground space-y-1">
                         <li>• Find influencers that match your brand values</li>
                         <li>• Identify creators with relevant audience demographics</li>
                         <li>• Prioritize accounts with authentic engagement in your niche</li>
@@ -530,7 +530,7 @@ export default function OnboardingModal({
                 </div>
 
                 <div className="space-y-3">
-                  <Label className="text-sm font-medium text-gray-700">
+                  <Label className="text-sm font-medium text-foreground">
                     Need inspiration? Click any example:
                   </Label>
                   
@@ -538,7 +538,7 @@ export default function OnboardingModal({
                     {examplePrompts.map((prompt, index) => (
                       <div
                         key={index}
-                        className="p-3 bg-gray-50 rounded-md border cursor-pointer hover:bg-gray-100 transition-colors"
+                        className="p-3 bg-zinc-800/30 border border-zinc-700/50 rounded-md cursor-pointer hover:bg-zinc-800/50 hover:border-zinc-600/50 transition-colors"
                         onClick={() => {
                           setBrandDescription(prompt);
                           OnboardingLogger.logStep2('EXAMPLE-SELECTED', 'User selected example prompt', user?.id, {
@@ -547,7 +547,7 @@ export default function OnboardingModal({
                           }, sessionId);
                         }}
                       >
-                        <p className="text-sm text-gray-700">{prompt}</p>
+                        <p className="text-sm text-muted-foreground">{prompt}</p>
                       </div>
                     ))}
                   </div>
@@ -555,7 +555,7 @@ export default function OnboardingModal({
 
                 <Button
                   onClick={handleStep2Submit}
-                  className="w-full"
+                  className="w-full h-12 text-base bg-primary hover:bg-primary/90 text-primary-foreground"
                   disabled={isLoading || brandDescription.trim().length < 50}
                 >
                   {isLoading ? (
@@ -572,7 +572,7 @@ export default function OnboardingModal({
                 </Button>
 
                 {brandDescription.trim().length < 50 && brandDescription.trim().length > 0 && (
-                  <p className="text-sm text-amber-600 text-center">
+                  <p className="text-sm text-amber-400 text-center">
                     Please provide more details (at least 50 characters) for better AI recommendations
                   </p>
                 )}
@@ -583,13 +583,13 @@ export default function OnboardingModal({
           {step === 3 && (
             <>
               <CardHeader>
-                <div className="mx-auto mb-4 w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                  <CreditCard className="w-8 h-8 text-blue-600" />
+                <div className="mx-auto mb-4 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                  <CreditCard className="w-8 h-8 text-primary" />
                 </div>
-                <CardTitle className="text-2xl font-bold text-gray-900 text-center">
+                <CardTitle className="text-2xl font-bold text-foreground text-center">
                   Choose Your Plan 💳
                 </CardTitle>
-                <CardDescription className="text-gray-600 text-center">
+                <CardDescription className="text-muted-foreground text-center">
                   Select the perfect plan for your influencer marketing needs.
                 </CardDescription>
               </CardHeader>
@@ -607,49 +607,49 @@ export default function OnboardingModal({
           {step === 4 && (
             <>
               <CardHeader>
-                <div className="mx-auto mb-4 w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-                  <CheckCircle className="w-8 h-8 text-green-600" />
+                <div className="mx-auto mb-4 w-16 h-16 bg-brand-green-500/10 rounded-full flex items-center justify-center">
+                  <CheckCircle className="w-8 h-8 text-brand-green-500" />
                 </div>
-                <CardTitle className="text-2xl font-bold text-gray-900 text-center">
+                <CardTitle className="text-2xl font-bold text-foreground text-center">
                   You're All Set! 🎉
                 </CardTitle>
-                <CardDescription className="text-gray-600 text-center">
+                <CardDescription className="text-muted-foreground text-center">
                   Your profile is complete and our AI is ready to find perfect influencers for your brand.
                 </CardDescription>
               </CardHeader>
 
               <CardContent className="space-y-6">
-                <div className="bg-blue-50 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center gap-2">
-                    <Sparkles className="h-5 w-5" />
+                <div className="bg-zinc-800/30 border border-zinc-700/50 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-primary" />
                     What's next?
                   </h3>
                   <div className="space-y-3">
                     <div className="flex items-start gap-3">
-                      <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                      <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
                         1
                       </div>
                       <div>
-                        <p className="font-medium text-blue-900">Create your first campaign</p>
-                        <p className="text-sm text-blue-700">Search for influencers across TikTok, Instagram & YouTube</p>
+                        <p className="font-medium text-foreground">Create your first campaign</p>
+                        <p className="text-sm text-muted-foreground">Search for influencers across TikTok, Instagram & YouTube</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                      <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
                         2
                       </div>
                       <div>
-                        <p className="font-medium text-blue-900">Get detailed insights</p>
-                        <p className="text-sm text-blue-700">Access contact info, analytics, and audience data</p>
+                        <p className="font-medium text-foreground">Get detailed insights</p>
+                        <p className="text-sm text-muted-foreground">Access contact info, analytics, and audience data</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                      <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
                         3
                       </div>
                       <div>
-                        <p className="font-medium text-blue-900">Export and contact</p>
-                        <p className="text-sm text-blue-700">Download contact lists and start your campaigns</p>
+                        <p className="font-medium text-foreground">Export and contact</p>
+                        <p className="text-sm text-muted-foreground">Download contact lists and start your campaigns</p>
                       </div>
                     </div>
                   </div>
@@ -658,7 +658,7 @@ export default function OnboardingModal({
                 <Button
                   onClick={handleComplete}
                   size="lg"
-                  className="w-full h-12 text-lg font-semibold"
+                  className="w-full h-12 text-lg font-semibold bg-primary hover:bg-primary/90 text-primary-foreground"
                   disabled={isLoading}
                 >
                   {isLoading ? (

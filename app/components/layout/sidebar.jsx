@@ -9,7 +9,7 @@ import { useAdmin } from '@/lib/hooks/use-admin'
 import TrialSidebarCompact from '@/app/components/trial/trial-sidebar-compact'
 import { cn } from '@/lib/utils'
 
-export default function Sidebar() {
+export default function Sidebar({ onNavigate }) {
   const router = useRouter()
   const pathname = usePathname()
   const { signOut } = useClerk()
@@ -55,6 +55,7 @@ export default function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
+              onClick={() => { onNavigate?.(); }}
               className={cn(
                 'group flex items-center space-x-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
                 isActive ? 'bg-zinc-800/60 text-zinc-100' : 'text-zinc-400 hover:bg-zinc-800/30 hover:text-zinc-200'
@@ -78,6 +79,7 @@ export default function Sidebar() {
                 <Link
                   key={item.name}
                   href={item.href}
+                  onClick={() => { onNavigate?.(); }}
                   className={cn(
                     'group flex items-center space-x-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
                     isActive ? 'bg-zinc-800/60 text-zinc-100' : 'text-zinc-400 hover:bg-zinc-800/30 hover:text-zinc-200'
@@ -111,7 +113,7 @@ export default function Sidebar() {
               </div>
             </div>
           </div>
-          <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50" onClick={handleLogout}>
+          <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50" onClick={() => { onNavigate?.(); handleLogout(); }}>
             <LogOut className="h-4 w-4" />
           </Button>
         </div>

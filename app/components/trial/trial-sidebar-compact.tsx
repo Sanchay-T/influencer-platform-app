@@ -30,11 +30,26 @@ export default function TrialSidebarCompact() {
     let mounted = true
     const load = async () => {
       try {
+        // 🚀 ANTI-FLICKER: Try localStorage cache first for instant UI
+        try {
+          const cached = localStorage.getItem('gemz_trial_status_v1')
+          if (cached) {
+            const parsed = JSON.parse(cached)
+            // Use cached data if less than 30 seconds old
+            if (parsed && parsed.ts && Date.now() - parsed.ts < 30_000) {
+              if (!mounted) return
+              setStatus(parsed.data)
+              // Still fetch fresh data in background
+            }
+          }
+        } catch {}
+
         const res = await fetch("/api/billing/status", { cache: "no-store" })
         if (!res.ok) throw new Error("Failed to fetch status")
         const data = await res.json()
         if (!mounted) return
-        setStatus({
+        
+        const newStatus = {
           isLoaded: true,
           isTrialing: !!data.isTrialing,
           trialStatus: data.trialStatus,
@@ -48,7 +63,18 @@ export default function TrialSidebarCompact() {
             campaignsUsed: data.usageInfo.campaignsUsed || 0,
             campaignsLimit: data.usageInfo.campaignsLimit || 0,
           } : undefined,
-        })
+        }
+        
+        setStatus(newStatus)
+        
+        // 💾 CACHE: Store fresh data for next page load
+        try {
+          localStorage.setItem('gemz_trial_status_v1', JSON.stringify({
+            ts: Date.now(),
+            data: newStatus
+          }))
+        } catch {}
+        
       } catch (e) {
         if (!mounted) return
         setStatus((s) => ({ ...s, isLoaded: true }))
@@ -61,6 +87,16 @@ export default function TrialSidebarCompact() {
 
   const isExpired = status.trialStatus === "expired" || (!status.isTrialing && !status.isPaidUser)
   const progress = Math.max(0, Math.min(100, status.trialProgressPercentage ?? (isExpired ? 100 : 0)))
+
+  // 🛡️ ANTI-FLICKER: Don't render anything until data is loaded
+  if (!status.isLoaded) {
+    return null
+  }
+
+  // Hide trial component if user has upgraded (converted trial or active subscription)
+  if (status.trialStatus === "converted" || status.isPaidUser || status.hasActiveSubscription) {
+    return null
+  }
 
   return (
     <div className="rounded-lg bg-zinc-900/80 border border-zinc-700/50 p-4">

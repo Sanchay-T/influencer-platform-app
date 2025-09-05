@@ -15,16 +15,26 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
  */
 export async function GET(req: NextRequest) {
   try {
+    const startedAt = Date.now();
+    const reqId = `sub_${startedAt}_${Math.random().toString(36).slice(2, 8)}`;
+    const ts = new Date().toISOString();
+    console.log(`🟢 [SUBSCRIPTION-STATUS:${reqId}] START ${ts}`);
     const { userId } = await auth();
     
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      const res = NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      res.headers.set('x-request-id', reqId);
+      res.headers.set('x-started-at', ts);
+      res.headers.set('x-duration-ms', String(Date.now() - startedAt));
+      return res;
     }
 
     // Get user's Stripe IDs from database
+    const profileStart = Date.now();
     const profile = await db.query.userProfiles.findFirst({
       where: eq(userProfiles.userId, userId)
     });
+    console.log(`⏱️ [SUBSCRIPTION-STATUS:${reqId}] DB profile query: ${Date.now() - profileStart}ms`);
 
     if (!profile?.stripeSubscriptionId) {
       return NextResponse.json({
@@ -38,12 +48,14 @@ export async function GET(req: NextRequest) {
     }
 
     // Fetch real-time data from Stripe
+    const stripeStart = Date.now();
     const subscription = await stripe.subscriptions.retrieve(
       profile.stripeSubscriptionId,
       {
         expand: ['latest_invoice', 'default_payment_method']
       }
     );
+    console.log(`⏱️ [SUBSCRIPTION-STATUS:${reqId}] Stripe retrieve: ${Date.now() - stripeStart}ms`);
 
     // Calculate derived states from Stripe data
     const now = Math.floor(Date.now() / 1000);
@@ -54,7 +66,7 @@ export async function GET(req: NextRequest) {
     const hasAccess = ['active', 'trialing'].includes(subscription.status);
     const requiresAction = subscription.status === 'past_due' || subscription.status === 'unpaid';
 
-    return NextResponse.json({
+    const payload = {
       subscription: {
         id: subscription.id,
         status: subscription.status,
@@ -81,13 +93,24 @@ export async function GET(req: NextRequest) {
         lastPaymentStatus: (subscription.latest_invoice as Stripe.Invoice)?.status || null,
         paymentMethodLast4: (subscription.default_payment_method as Stripe.PaymentMethod)?.card?.last4 || null
       }
-    });
+    };
+    const duration = Date.now() - startedAt;
+    const res = NextResponse.json(payload);
+    res.headers.set('x-request-id', reqId);
+    res.headers.set('x-started-at', ts);
+    res.headers.set('x-duration-ms', String(duration));
+    console.log(`🟣 [SUBSCRIPTION-STATUS:${reqId}] END duration=${duration}ms`);
+    return res;
 
   } catch (error) {
-    console.error('Error fetching subscription status:', error);
-    return NextResponse.json(
+    const reqId = `sub_err_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    console.error(`❌ [SUBSCRIPTION-STATUS:${reqId}] Error fetching subscription status:`, error);
+    const res = NextResponse.json(
       { error: 'Failed to fetch subscription status' },
       { status: 500 }
     );
+    res.headers.set('x-request-id', reqId);
+    res.headers.set('x-duration-ms', '0');
+    return res;
   }
 }

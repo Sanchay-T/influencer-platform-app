@@ -4,19 +4,13 @@
 
 /**
  * Get the client URL for redirects
- * - Development: Use localhost:3000 for Stripe redirects (better for testing)
+ * - Development: Use NEXT_PUBLIC_SITE_URL (ngrok) for consistency with Stripe
  * - Production: Use the live domain
  * - QStash: Uses NEXT_PUBLIC_SITE_URL (ngrok) for webhooks
  */
 export function getClientUrl(): string {
-  // In development, use localhost for Stripe redirects
-  if (process.env.NODE_ENV === 'development') {
-    const port = process.env.LOCAL_PORT || process.env.PORT || '3000'
-    return `http://localhost:${port}`;
-  }
-  
-  // In production, use the live domain
-  return process.env.NEXT_PUBLIC_SITE_URL || 'https://your-app.vercel.app';
+  // Always use NEXT_PUBLIC_SITE_URL for consistency (especially important with ngrok)
+  return process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 }
 
 /**

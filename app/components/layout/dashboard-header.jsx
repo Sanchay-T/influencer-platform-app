@@ -2,13 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Search, PlusCircle } from 'lucide-react'
+import { Search, PlusCircle, Menu } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useEffect, useRef, useState } from 'react'
+import { useBilling } from '@/lib/hooks/use-billing'
 
-export default function DashboardHeader() {
+export default function DashboardHeader({ onToggleSidebar, isSidebarOpen }) {
   const pathname = usePathname()
   const router = useRouter()
   const [q, setQ] = useState('')
@@ -20,30 +21,19 @@ export default function DashboardHeader() {
     // Removed "Influencers" tab to avoid clutter in navbar
   ]
 
-  // Gate: whether user can create more campaigns (single source: billing/status)
+  // Gate: whether user can create more campaigns (use billing hook to avoid duplicate fetch)
+  const { isLoaded: billingLoaded, usageInfo } = useBilling()
   const [canCreateCampaign, setCanCreateCampaign] = useState(true)
-  const [loadingGate, setLoadingGate] = useState(false)
+  const [loadingGate, setLoadingGate] = useState(true)
 
   useEffect(() => {
-    const run = async () => {
-      try {
-        setLoadingGate(true)
-        const res = await fetch('/api/billing/status')
-        if (!res.ok) return
-        const data = await res.json()
-        const used = Number(data?.usageInfo?.campaignsUsed ?? 0)
-        const limit = data?.usageInfo?.campaignsLimit
-        const unlimited = limit === -1 || limit === null || typeof limit === 'undefined'
-        setCanCreateCampaign(unlimited || used < Number(limit))
-      } catch (_) {
-        // fail-open
-        setCanCreateCampaign(true)
-      } finally {
-        setLoadingGate(false)
-      }
-    }
-    run()
-  }, [])
+    if (!billingLoaded) return
+    const used = Number(usageInfo?.campaignsUsed ?? 0)
+    const limit = usageInfo?.campaignsLimit
+    const unlimited = limit === -1 || limit === null || typeof limit === 'undefined'
+    setCanCreateCampaign(unlimited || used < Number(limit))
+    setLoadingGate(false)
+  }, [billingLoaded, usageInfo])
 
   const onKeyDown = (e) => {
     if (e.key === 'Enter') {
@@ -70,9 +60,18 @@ export default function DashboardHeader() {
 
   return (
     <div className="sticky top-0 z-50 border-b border-zinc-700/50 bg-zinc-900/90 backdrop-blur supports-[backdrop-filter]:bg-zinc-900/70">
-      <div className="px-6 md:px-8 py-2">
+      <div className="px-4 sm:px-6 md:px-8 py-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
+            {/* Mobile: sidebar toggle */}
+            <button
+              type="button"
+              aria-label="Toggle sidebar"
+              onClick={onToggleSidebar}
+              className="mr-1 inline-flex items-center justify-center rounded-md p-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 focus:outline-none focus:ring-2 focus:ring-pink-500/30 lg:hidden"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
             {tabs.map((t) => {
               const isActive = pathname === t.href
               return (
@@ -101,7 +100,7 @@ export default function DashboardHeader() {
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 onKeyDown={onKeyDown}
-                className="w-72 h-9 pl-10 bg-zinc-800/60 border-zinc-700/50 focus:border-pink-400/60 focus:ring-2 focus:ring-pink-500/20 placeholder:text-zinc-500 transition-all"
+                className="h-9 pl-10 bg-zinc-800/60 border-zinc-700/50 focus:border-pink-400/60 focus:ring-2 focus:ring-pink-500/20 placeholder:text-zinc-500 transition-all w-44 sm:w-60 md:w-72 max-w-[60vw]"
               />
             </div>
             {/* Single global CTA with plan gating */}
