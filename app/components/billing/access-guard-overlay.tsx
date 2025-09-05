@@ -6,7 +6,15 @@ import { useBilling } from '@/lib/hooks/use-billing'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 
-export default function AccessGuardOverlay({ initialBlocked = false }: { initialBlocked?: boolean }) {
+export default function AccessGuardOverlay({ 
+  initialBlocked = false,
+  onboardingStatusLoaded = true,
+  showOnboarding = false 
+}: { 
+  initialBlocked?: boolean;
+  onboardingStatusLoaded?: boolean;
+  showOnboarding?: boolean;
+}) {
   const { isLoaded, isTrialing, trialStatus, hasActiveSubscription } = useBilling()
   const pathname = usePathname()
   const [blocked, setBlocked] = useState<boolean>(initialBlocked)
@@ -33,6 +41,13 @@ export default function AccessGuardOverlay({ initialBlocked = false }: { initial
       console.log('[Overlay] Resolve block state', { pathname, isTrialExpired, hasActiveSubscription, isTrialing, trialStatus, isAllowedRoute, blocked: nextBlocked })
     } catch {}
   }, [isLoaded, isAllowedRoute, isTrialing, trialStatus, hasActiveSubscription, blockStart, pathname, mountTs])
+
+  // 🚨 RACE CONDITION FIX: Don't show overlay during onboarding flow
+  // Wait for onboarding status to be determined before showing billing overlay
+  if (!onboardingStatusLoaded || showOnboarding) {
+    console.log('🛡️ [ACCESS-GUARD] Preventing overlay during onboarding:', { onboardingStatusLoaded, showOnboarding })
+    return null
+  }
 
   // If decision not to block or still loading, render nothing
   if (!isLoaded || !blocked) return null

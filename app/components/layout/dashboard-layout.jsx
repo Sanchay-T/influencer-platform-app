@@ -6,7 +6,11 @@ import Sidebar from "./sidebar";
 import DashboardHeader from "./dashboard-header";
 import AccessGuardOverlay from "../billing/access-guard-overlay";
 
-export default function DashboardLayout({ children }) {
+export default function DashboardLayout({ 
+  children, 
+  onboardingStatusLoaded = true, 
+  showOnboarding = false 
+}) {
   const pathname = usePathname();
   const [isLarge, setIsLarge] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -76,7 +80,10 @@ export default function DashboardLayout({ children }) {
           </div>
         </div>
         {/* Global access overlay to gate unpaid/expired users */}
-        <AccessGuardOverlay />
+        <AccessGuardOverlay 
+          onboardingStatusLoaded={onboardingStatusLoaded}
+          showOnboarding={showOnboarding}
+        />
       </main>
     </div>
   );

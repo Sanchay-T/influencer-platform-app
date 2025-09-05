@@ -13,6 +13,7 @@ export default function Home() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(1);
   const [existingData, setExistingData] = useState({});
+  const [onboardingStatusLoaded, setOnboardingStatusLoaded] = useState(false);
   // CTA (create/upgrade) is handled in header; we only show counts here
   const [usageSummary, setUsageSummary] = useState(null);
 
@@ -47,6 +48,7 @@ export default function Home() {
         console.log('👋 [ONBOARDING] New user detected, showing onboarding modal');
         setShowOnboarding(true);
         setOnboardingStep(1);
+        setOnboardingStatusLoaded(true); // ✅ Mark as loaded
         return;
       }
       
@@ -72,16 +74,17 @@ export default function Home() {
         // User completed full onboarding - show dashboard
         console.log('✅ [ONBOARDING] User completed onboarding, showing dashboard');
         setShowOnboarding(false);
-        return;
       }
       
       console.log('🔄 [ONBOARDING] Showing modal for step:', step);
+      setOnboardingStatusLoaded(true); // ✅ Mark as loaded after determining status
       
     } catch (error) {
       console.error('❌ [ONBOARDING] Error checking status:', error);
       // On error, assume new user and show onboarding
       setShowOnboarding(true);
       setOnboardingStep(1);
+      setOnboardingStatusLoaded(true); // ✅ Mark as loaded even on error
     }
   };
 
@@ -119,7 +122,10 @@ export default function Home() {
       </SignedOut>
 
       <SignedIn>
-        <DashboardLayout>
+        <DashboardLayout 
+          onboardingStatusLoaded={onboardingStatusLoaded}
+          showOnboarding={showOnboarding}
+        >
           <div className="flex justify-between items-center mb-8">
             <h1 className="text-3xl font-bold">Your campaigns</h1>
             <div className="flex items-center gap-3">
