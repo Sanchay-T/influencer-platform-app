@@ -82,7 +82,7 @@ export async function PATCH(request: Request) {
     console.log('💳💳💳 [ONBOARDING-COMPLETE] ===============================');
     console.log('💳 [ONBOARDING-COMPLETE] User Email:', userEmail);
     console.log('💳 [ONBOARDING-COMPLETE] User ID:', userId);
-    console.log('💳 [ONBOARDING-COMPLETE] User Selected Plan:', userProfile.currentPlan || 'glow_up');
+    console.log('💳 [ONBOARDING-COMPLETE] Intended Plan:', userProfile.intendedPlan || userProfile.currentPlan || 'glow_up');
     console.log('💳 [ONBOARDING-COMPLETE] Environment:', process.env.NODE_ENV);
     console.log('💳 [ONBOARDING-COMPLETE] Use Real Stripe:', process.env.USE_REAL_STRIPE);
     
@@ -109,7 +109,7 @@ export async function PATCH(request: Request) {
       console.log('📋 [ONBOARDING-COMPLETE] Creating trial subscription...');
       const subscription = await StripeService.createTrialSubscription(
         customer.id, 
-        userProfile.currentPlan || 'glow_up'
+        userProfile.intendedPlan || userProfile.currentPlan || 'glow_up'
       );
       
       console.log('✅ [ONBOARDING-COMPLETE] Trial subscription created:', subscription.id);

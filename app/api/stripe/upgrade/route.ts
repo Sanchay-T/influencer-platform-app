@@ -42,12 +42,12 @@ export async function POST(req: NextRequest) {
         planId
       );
 
-      // Update user profile
+      // Update user profile: do NOT flip currentPlan here; wait for webhook confirmation
       await db.update(userProfiles)
         .set({
-          currentPlan: planId,
           subscriptionStatus: subscription.status,
-          billingSyncStatus: 'subscription_updated',
+          intendedPlan: planId,
+          billingSyncStatus: 'subscription_update_requested',
           updatedAt: new Date()
         })
         .where(eq(userProfiles.userId, userId));
@@ -78,12 +78,12 @@ export async function POST(req: NextRequest) {
       paymentMethodId
     );
 
-    // Update user profile
+    // Update user profile: do NOT flip currentPlan here; wait for webhook confirmation
     const updateData: any = {
       stripeSubscriptionId: subscription.id,
-      currentPlan: planId,
       subscriptionStatus: subscription.status,
-      billingSyncStatus: 'subscription_created',
+      intendedPlan: planId,
+      billingSyncStatus: 'subscription_created_pending_webhook',
       trialStatus: 'converted',
       trialConversionDate: new Date(),
       updatedAt: new Date()

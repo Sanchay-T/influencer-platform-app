@@ -44,21 +44,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Selected plan is required' }, { status: 400 });
     }
 
-    await OnboardingLogger.logPayment('DB-UPDATE-START', 'Starting database update for plan selection', userId, {
+    await OnboardingLogger.logPayment('DB-UPDATE-START', 'Starting database update for intended plan selection', userId, {
       selectedPlan,
       requestId
     });
 
-    // Update user profile with selected plan
+    // Update user profile with intended plan (do not change currentPlan here)
     await db.update(userProfiles)
       .set({
-        currentPlan: selectedPlan,
-        billingSyncStatus: 'plan_selected',
+        intendedPlan: selectedPlan,
+        billingSyncStatus: 'plan_selected', // will be confirmed by Stripe webhook
         updatedAt: new Date()
       })
       .where(eq(userProfiles.userId, userId));
 
-    await OnboardingLogger.logPayment('DB-UPDATE-SUCCESS', 'Database updated successfully with plan selection', userId, {
+    await OnboardingLogger.logPayment('DB-UPDATE-SUCCESS', 'Database updated successfully with intended plan selection', userId, {
       selectedPlan,
       billingSyncStatus: 'plan_selected',
       requestId

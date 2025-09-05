@@ -109,6 +109,8 @@ export const userProfiles = pgTable('user_profiles', {
   subscriptionStatus: varchar('subscription_status', { length: 20 }).default('none'), // 'none', 'trialing', 'active', 'past_due', 'canceled'
   // Removed Clerk billing fields - using Stripe only
   currentPlan: varchar('current_plan', { length: 50 }).default('free'), // 'free', 'glow_up', 'viral_surge', 'fame_flex'
+  // Intended plan selected by user prior to successful checkout/webhook confirmation
+  intendedPlan: varchar('intended_plan', { length: 50 }),
   // Payment method fields
   paymentMethodId: text('payment_method_id'),
   cardLast4: varchar('card_last_4', { length: 4 }),
