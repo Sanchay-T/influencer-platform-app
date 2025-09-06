@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { Clock, Zap, AlertTriangle, Crown, Star, CheckCircle, Settings } from 'lucide-react';
 import { useBilling } from '@/lib/hooks/use-billing';
-import { useFormattedCountdown } from '@/lib/hooks/useTrialCountdown';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import Link from 'next/link';
@@ -12,27 +11,36 @@ import Link from 'next/link';
 function SubscriptionBadge({ currentPlan }: { currentPlan: string }) {
   const getPlanDetails = () => {
     switch (currentPlan) {
-      case 'basic':
+      case 'free':
         return {
-          name: 'Basic',
+          name: 'Free',
           icon: Star,
           color: 'from-blue-50 to-blue-100',
           borderColor: 'border-blue-200',
           textColor: 'text-blue-900',
           iconColor: 'text-blue-600'
         };
-      case 'premium':
+      case 'glow_up':
         return {
-          name: 'Premium',
+          name: 'Glow Up',
           icon: Zap,
           color: 'from-purple-50 to-purple-100',
           borderColor: 'border-purple-200',
           textColor: 'text-purple-900',
           iconColor: 'text-purple-600'
         };
-      case 'enterprise':
+      case 'viral_surge':
         return {
-          name: 'Enterprise',
+          name: 'Viral Surge',
+          icon: Zap,
+          color: 'from-purple-50 to-purple-100',
+          borderColor: 'border-purple-200',
+          textColor: 'text-purple-900',
+          iconColor: 'text-purple-600'
+        };
+      case 'fame_flex':
+        return {
+          name: 'Fame Flex',
           icon: Crown,
           color: 'from-amber-50 to-amber-100',
           borderColor: 'border-amber-200',
@@ -41,7 +49,7 @@ function SubscriptionBadge({ currentPlan }: { currentPlan: string }) {
         };
       default:
         return {
-          name: 'Basic',
+          name: 'Free',
           icon: Star,
           color: 'from-blue-50 to-blue-100',
           borderColor: 'border-blue-200',
@@ -95,33 +103,24 @@ function SubscriptionBadge({ currentPlan }: { currentPlan: string }) {
 }
 
 export function TrialSidebarIndicator() {
-  const { currentPlan, isTrialing, trialStatus, usageInfo, isPaidUser, hasActiveSubscription } = useBilling();
-  const [trialData, setTrialData] = useState(null);
-  const countdown = useFormattedCountdown(trialData);
-
-  // Fetch trial data for countdown - always call hooks first
-  useEffect(() => {
-    if (isTrialing) {
-      fetch('/api/profile')
-        .then(res => res.json())
-        .then(data => {
-          if (data.trialData) {
-            setTrialData(data.trialData);
-          }
-        })
-        .catch(err => console.error('Failed to fetch trial data:', err));
-    }
-  }, [isTrialing]);
+  const { currentPlan, isTrialing, trialStatus, daysRemaining, trialProgressPercentage, usageInfo, isPaidUser, hasActiveSubscription } = useBilling();
 
   // If user has active paid subscription, show subscription badge instead
-  if (isPaidUser && hasActiveSubscription && currentPlan !== 'free_trial') {
+  if (isPaidUser && hasActiveSubscription && currentPlan !== 'free') {
     return <SubscriptionBadge currentPlan={currentPlan} />;
   }
 
-  // Don't show for non-trial users
-  if (currentPlan !== 'free_trial' || !isTrialing) {
-    return null;
-  }
+  // Only show indicator for active trials
+  if (!isTrialing) return null;
+
+  const isExpired = trialStatus === 'expired';
+  const countdownDisplay = useMemo(() => {
+    if (typeof daysRemaining === 'number') {
+      if (isExpired) return 'Expired';
+      return `${daysRemaining}d left`;
+    }
+    return '';
+  }, [daysRemaining, isExpired]);
 
   return (
     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3 space-y-3">
@@ -140,22 +139,19 @@ export function TrialSidebarIndicator() {
       <div className="space-y-2">
         <div className="text-center">
           <div className="text-lg font-bold text-blue-900">
-            {countdown.formatted?.timeDisplay || 'Loading...'}
+            {countdownDisplay}
           </div>
           <p className="text-xs text-blue-700">
-            {countdown.isExpired ? 'Trial Expired' : 'remaining'}
+            {isExpired ? 'Trial Expired' : 'remaining'}
           </p>
         </div>
 
         {/* Progress Bar */}
         <div className="space-y-1">
-          <Progress 
-            value={countdown.progressPercentage || 0} 
-            className="h-1.5 bg-blue-100"
-          />
+          <Progress value={Math.max(0, Math.min(100, trialProgressPercentage || 0))} className="h-1.5 bg-blue-100" />
           <div className="flex justify-between text-xs text-blue-600">
             <span>Day 1</span>
-            <span>{countdown.progressPercentage || 0}%</span>
+            <span>{Math.max(0, Math.min(100, trialProgressPercentage || 0))}%</span>
             <span>Day 7</span>
           </div>
         </div>
@@ -165,20 +161,19 @@ export function TrialSidebarIndicator() {
       {usageInfo && (
         <div className="space-y-2">
           <div className="flex justify-between text-xs">
-            <span className="text-blue-700">Searches Used</span>
+            <span className="text-blue-700">Campaigns Used</span>
             <span className="font-medium text-blue-900">
-              {usageInfo.searchesUsed}/{usageInfo.searchesLimit}
+              {usageInfo.campaignsUsed}/{usageInfo.campaignsLimit === -1 ? '∞' : usageInfo.campaignsLimit}
             </span>
           </div>
-          <Progress 
-            value={(usageInfo.searchesUsed / usageInfo.searchesLimit) * 100} 
-            className="h-1.5 bg-blue-100"
-          />
+          {usageInfo.campaignsLimit > 0 && (
+            <Progress value={(usageInfo.campaignsUsed / usageInfo.campaignsLimit) * 100} className="h-1.5 bg-blue-100" />
+          )}
         </div>
       )}
 
       {/* Upgrade CTA */}
-      <Link href="/pricing" className="block">
+      <Link href="/billing?upgrade=1" className="block">
         <Button 
           size="sm" 
           className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs"

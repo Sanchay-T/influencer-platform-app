@@ -217,6 +217,8 @@ export class StripeService {
           price: planConfig.priceId
         }],
         proration_behavior: 'create_prorations',
+        // Expand latest invoice + payment_intent so callers can handle SCA when required
+        expand: ['latest_invoice.payment_intent'],
         metadata: {
           ...subscription.metadata,
           plan: newPlanId,

@@ -12,7 +12,8 @@ import { processInstagramSimilarJob } from '@/lib/platforms/instagram-similar/ha
 import { processYouTubeSimilarJob } from '@/lib/platforms/youtube-similar/handler'
 import { SystemConfig } from '@/lib/config/system-config'
 import { ImageCache } from '@/lib/services/image-cache'
-import { PlanEnforcementService } from '@/lib/services/plan-enforcement'
+import { PlanValidator } from '@/lib/services/plan-validator'
+import BillingLogger from '@/lib/loggers/billing-logger'
 
 // Inline API logging function (Vercel-compatible)
 const fs = require('fs');
@@ -683,9 +684,37 @@ export async function POST(req: Request) {
             })
             .where(eq(scrapingJobs.id, job.id));
           
-          // Track creators found for plan enforcement
-          await PlanEnforcementService.trackCreatorsFound(job.userId, job.processedResults);
-          console.log(`📊 [PLAN-TRACKING] Tracked ${job.processedResults} creators for user ${job.userId} (accumulated results)`);
+          // 📈 ENHANCED USAGE TRACKING with detailed logging
+          const requestId = BillingLogger.generateRequestId();
+          
+          await BillingLogger.logUsage(
+            'CREATOR_SEARCH',
+            'Instagram reels search completed - tracking creator usage',
+            job.userId,
+            {
+              searchType: 'instagram_reels',
+              platform: 'Instagram',
+              resultCount: job.processedResults,
+              jobId: job.id,
+              usageType: 'creators'
+            },
+            requestId
+          );
+          
+          await PlanValidator.incrementUsage(
+            job.userId, 
+            'creators', 
+            job.processedResults, 
+            {
+              searchType: 'instagram_reels',
+              platform: 'Instagram',
+              jobId: job.id,
+              completedAt: new Date().toISOString()
+            },
+            requestId
+          );
+          
+          console.log(`📊 [USAGE-TRACKING] Tracked ${job.processedResults} creators for user ${job.userId} (Instagram reels search)`);
           
           return NextResponse.json({
             success: true,
@@ -1476,8 +1505,39 @@ export async function POST(req: Request) {
           
           console.log('✅ [COMPLETE] Job marked as completed with full data!');
           
-          // Track creators found for plan enforcement
-          await PlanEnforcementService.trackCreatorsFound(job.userId, finalCreatorCount);
+          // 📈 ENHANCED USAGE TRACKING with detailed logging  
+          const requestId2 = BillingLogger.generateRequestId();
+          
+          await BillingLogger.logUsage(
+            'CREATOR_SEARCH',
+            'Instagram reels search with exact count delivery completed - tracking creator usage',
+            job.userId,
+            {
+              searchType: 'instagram_reels',
+              platform: 'Instagram', 
+              resultCount: finalCreatorCount,
+              targetResults: userTargetResults,
+              exactDelivery: finalCreatorCount === userTargetResults,
+              jobId: job.id,
+              usageType: 'creators'
+            },
+            requestId2
+          );
+          
+          await PlanValidator.incrementUsage(
+            job.userId,
+            'creators',
+            finalCreatorCount,
+            {
+              searchType: 'instagram_reels',
+              platform: 'Instagram',
+              jobId: job.id,
+              exactDelivery: finalCreatorCount === userTargetResults,
+              targetResults: userTargetResults,
+              completedAt: new Date().toISOString()
+            },
+            requestId2
+          );
           console.log(`📊 [PLAN-TRACKING] Tracked ${finalCreatorCount} creators for user ${job.userId}`);
           
           console.log('\n🎉 [COMPLETE] Search completed successfully:', {
@@ -1532,9 +1592,39 @@ export async function POST(req: Request) {
             })
             .where(eq(scrapingJobs.id, job.id));
           
-          // Track creators found for plan enforcement
-          await PlanEnforcementService.trackCreatorsFound(job.userId, currentResults);
-          console.log(`📊 [PLAN-TRACKING] Tracked ${currentResults} creators for user ${job.userId} (partial results)`);
+          // 📈 ENHANCED USAGE TRACKING for partial completion
+          const requestId3 = BillingLogger.generateRequestId();
+          
+          await BillingLogger.logUsage(
+            'CREATOR_SEARCH',
+            'Instagram reels search completed with partial results - tracking creator usage',
+            job.userId,
+            {
+              searchType: 'instagram_reels',
+              platform: 'Instagram',
+              resultCount: currentResults,
+              jobId: job.id,
+              partialCompletion: true,
+              usageType: 'creators'
+            },
+            requestId3
+          );
+          
+          await PlanValidator.incrementUsage(
+            job.userId,
+            'creators', 
+            currentResults,
+            {
+              searchType: 'instagram_reels',
+              platform: 'Instagram', 
+              jobId: job.id,
+              partialCompletion: true,
+              completedAt: new Date().toISOString()
+            },
+            requestId3
+          );
+          
+          console.log(`📊 [USAGE-TRACKING] Tracked ${currentResults} creators for user ${job.userId} (partial results)`);
           
           return NextResponse.json({
             success: true,
@@ -1687,7 +1777,7 @@ export async function POST(req: Request) {
         
         // Make TikTok keyword API call
         const keywords = Array.isArray(job.keywords) ? job.keywords.join(' ') : '';
-        const apiUrl = `${process.env.SCRAPECREATORS_API_URL}?query=${encodeURIComponent(keywords)}&cursor=${job.cursor || 0}`;
+        const apiUrl = `${process.env.SCRAPECREATORS_API_URL}?query=${encodeURIComponent(keywords)}&cursor=${job.cursor || 0}&region=US`;
         
         // 📊 API CALL LOGGING
         console.log('📡 [TIKTOK-KEYWORD] Making API call:', {
@@ -1799,7 +1889,7 @@ export async function POST(req: Request) {
                 console.log(`🔍 [PROFILE-FETCH] Attempting to fetch full profile for @${author.unique_id}`);
                 
                 // Make profile API call to get bio data
-                const profileApiUrl = `https://api.scrapecreators.com/v1/tiktok/profile?handle=${encodeURIComponent(author.unique_id)}`;
+                const profileApiUrl = `https://api.scrapecreators.com/v1/tiktok/profile?handle=${encodeURIComponent(author.unique_id)}&region=US`;
                 const profileResponse = await fetch(profileApiUrl, {
                   headers: { 'x-api-key': process.env.SCRAPECREATORS_API_KEY! }
                 });
@@ -2022,9 +2112,37 @@ export async function POST(req: Request) {
           
           console.log('✅ [PROGRESS-UPDATE] Final database update complete');
           
-          // Track creators found for plan enforcement
-          await PlanEnforcementService.trackCreatorsFound(job.userId, newProcessedResults);
-          console.log(`📊 [PLAN-TRACKING] Tracked ${newProcessedResults} creators for user ${job.userId} (TikTok completed)`);
+          // 📈 ENHANCED USAGE TRACKING for TikTok keyword search completion
+          const requestId4 = BillingLogger.generateRequestId();
+          
+          await BillingLogger.logUsage(
+            'CREATOR_SEARCH',
+            'TikTok keyword search completed - tracking creator usage',
+            job.userId,
+            {
+              searchType: 'tiktok_keyword',
+              platform: 'TikTok',
+              resultCount: newProcessedResults,
+              jobId: job.id,
+              usageType: 'creators'
+            },
+            requestId4
+          );
+          
+          await PlanValidator.incrementUsage(
+            job.userId,
+            'creators',
+            newProcessedResults,
+            {
+              searchType: 'tiktok_keyword',
+              platform: 'TikTok',
+              jobId: job.id,
+              completedAt: new Date().toISOString()
+            },
+            requestId4
+          );
+          
+          console.log(`📊 [USAGE-TRACKING] Tracked ${newProcessedResults} creators for user ${job.userId} (TikTok keyword search completed)`);
           
           return NextResponse.json({ 
             status: 'completed',

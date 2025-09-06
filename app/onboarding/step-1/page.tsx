@@ -222,32 +222,36 @@ export default function OnboardingStep1() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-background py-8">
       <div className="max-w-2xl mx-auto px-4">
         {/* Progress indicator */}
         <div className="mb-8">
           <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+            <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-semibold">
               1
             </div>
-            <div className="w-16 h-1 bg-gray-300 rounded"></div>
-            <div className="w-8 h-8 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-sm font-semibold">
+            <div className="w-16 h-1 bg-zinc-700/50 rounded"></div>
+            <div className="w-8 h-8 bg-zinc-700/50 text-zinc-400 rounded-full flex items-center justify-center text-sm font-semibold">
               2
             </div>
-            <div className="w-16 h-1 bg-gray-300 rounded"></div>
-            <div className="w-8 h-8 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-sm font-semibold">
+            <div className="w-16 h-1 bg-zinc-700/50 rounded"></div>
+            <div className="w-8 h-8 bg-zinc-700/50 text-zinc-400 rounded-full flex items-center justify-center text-sm font-semibold">
               3
             </div>
+            <div className="w-16 h-1 bg-zinc-700/50 rounded"></div>
+            <div className="w-8 h-8 bg-zinc-700/50 text-zinc-400 rounded-full flex items-center justify-center text-sm font-semibold">
+              4
+            </div>
           </div>
-          <p className="text-center text-sm text-gray-600">Step 1 of 3: Tell us about yourself</p>
+          <p className="text-center text-sm text-muted-foreground">Step 1 of 4: Tell us about yourself</p>
         </div>
 
-        <Card className="shadow-sm border border-gray-200">
+        <Card className="bg-zinc-900/80 border border-zinc-700/50">
           <CardHeader>
-            <CardTitle className="text-2xl font-bold text-gray-900">
+            <CardTitle className="text-2xl font-bold text-foreground">
               Welcome to Gemz! 🎉
             </CardTitle>
-            <CardDescription className="text-gray-600 mt-2">
+            <CardDescription className="text-muted-foreground mt-2">
               Let's get to know you and your business better. This helps us personalize your experience.
             </CardDescription>
           </CardHeader>
@@ -262,7 +266,7 @@ export default function OnboardingStep1() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="fullName" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <Label htmlFor="fullName" className="text-sm font-medium text-foreground flex items-center gap-2">
                   <User className="h-4 w-4" />
                   Full Name
                 </Label>
@@ -306,14 +310,14 @@ export default function OnboardingStep1() {
                       step: 'step-1'
                     });
                   }}
-                  className="h-12 text-base"
+                  className="h-12 text-base bg-zinc-800/50 border-zinc-700/50 focus:border-primary"
                   disabled={isLoading}
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="businessName" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <Label htmlFor="businessName" className="text-sm font-medium text-foreground flex items-center gap-2">
                   <Building className="h-4 w-4" />
                   Business Name
                 </Label>
@@ -357,18 +361,18 @@ export default function OnboardingStep1() {
                       step: 'step-1'
                     });
                   }}
-                  className="h-12 text-base"
+                  className="h-12 text-base bg-zinc-800/50 border-zinc-700/50 focus:border-primary"
                   disabled={isLoading}
                   required
                 />
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   This could be your company name, brand name, or your own name if you're a solo entrepreneur.
                 </p>
               </div>
 
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full h-12 text-base bg-primary hover:bg-primary/90 text-primary-foreground"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -385,8 +389,8 @@ export default function OnboardingStep1() {
               </Button>
             </form>
 
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-              <p className="text-xs text-blue-800">
+            <div className="mt-6 p-4 bg-zinc-800/60 border border-zinc-700/50 rounded-lg">
+              <p className="text-xs text-zinc-300">
                 <strong>Privacy note:</strong> Your information is securely stored and will only be used to personalize your experience and provide customer support.
               </p>
             </div>
@@ -394,9 +398,9 @@ export default function OnboardingStep1() {
         </Card>
 
         <div className="mt-6 text-center">
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-muted-foreground">
             Need help? Contact our support team at{' '}
-            <a href="mailto:support@gemz.io" className="text-blue-600 hover:underline">
+            <a href="mailto:support@gemz.io" className="text-primary hover:underline">
               support@gemz.io
             </a>
           </p>

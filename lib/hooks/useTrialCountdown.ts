@@ -45,11 +45,12 @@ export function useTrialCountdown(initialTrialData?: TrialData | null) {
 
   const [trialData, setTrialData] = useState<TrialData | null>(initialTrialData || null);
 
-  // Calculate countdown from trial end date
-  const calculateCountdown = useCallback((endDateString: string): TrialCountdownData => {
+  // Calculate countdown from trial start/end dates (progress is time-based)
+  const calculateCountdown = useCallback((endDateString: string, startDateString?: string): TrialCountdownData => {
     try {
       const now = new Date();
       const endDate = new Date(endDateString);
+      const startDate = startDateString ? new Date(startDateString) : null;
       
       // Calculate time difference in milliseconds
       const timeDiff = endDate.getTime() - now.getTime();
@@ -74,10 +75,20 @@ export function useTrialCountdown(initialTrialData?: TrialData | null) {
       const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
 
-      // Calculate progress (7-day trial)
-      const totalTrialDays = 7;
-      const daysElapsed = totalTrialDays - days;
-      const progressPercentage = Math.min(100, Math.max(0, (daysElapsed / totalTrialDays) * 100));
+      // Calculate progress as precise time-based percentage
+      // Prefer using actual start/end dates if provided; fallback to 7-day window
+      let progressPercentage = 0;
+      if (startDate && !isNaN(startDate.getTime()) && endDate.getTime() > startDate.getTime()) {
+        const totalMs = endDate.getTime() - startDate.getTime();
+        const elapsedMs = now.getTime() - startDate.getTime();
+        progressPercentage = (elapsedMs / totalMs) * 100;
+      } else {
+        // Fallback assumes a 7-day trial window
+        const totalTrialMs = 7 * 24 * 60 * 60 * 1000;
+        const elapsedMs = totalTrialMs - timeDiff;
+        progressPercentage = (elapsedMs / totalTrialMs) * 100;
+      }
+      progressPercentage = Math.min(100, Math.max(0, progressPercentage));
 
       // Format time until expiry
       let timeUntilExpiry = '';
@@ -138,7 +149,7 @@ export function useTrialCountdown(initialTrialData?: TrialData | null) {
         
         // Calculate fresh countdown
         if (profileData.trialData.endDate) {
-          const newCountdown = calculateCountdown(profileData.trialData.endDate);
+          const newCountdown = calculateCountdown(profileData.trialData.endDate, profileData.trialData.startDate);
           setCountdownData(newCountdown);
         }
       } else {
@@ -162,7 +173,7 @@ export function useTrialCountdown(initialTrialData?: TrialData | null) {
   // Update countdown based on current trial data
   const updateCountdown = useCallback(() => {
     if (trialData && trialData.endDate && !trialData.isExpired) {
-      const newCountdown = calculateCountdown(trialData.endDate);
+      const newCountdown = calculateCountdown(trialData.endDate, trialData.startDate);
       setCountdownData(newCountdown);
       
       // If countdown shows expired but trial data doesn't, refresh from server

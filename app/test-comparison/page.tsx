@@ -17,18 +17,18 @@ export default function TestComparisonPage() {
 
   return (
     <div className="container mx-auto p-8">
-      <h1 className="text-2xl font-bold mb-8">Old vs New Comparison</h1>
+      <h1 className="text-2xl font-bold mb-8 text-zinc-100">Old vs New Comparison</h1>
       
       <div className="grid grid-cols-2 gap-8">
         {/* Old System */}
-        <div className="bg-red-50 p-6 rounded-lg">
-          <h2 className="text-lg font-semibold mb-4 text-red-800">
+        <div className="bg-zinc-800/60 border border-zinc-700/50 p-6 rounded-lg">
+          <h2 className="text-lg font-semibold mb-4 text-zinc-100">
             ❌ Old System (Database)
           </h2>
           <pre className="text-xs overflow-auto">
             {JSON.stringify(oldData, null, 2)}
           </pre>
-          <div className="mt-4 text-sm text-red-700">
+          <div className="mt-4 text-sm text-zinc-300">
             <p>Problems:</p>
             <ul className="list-disc list-inside">
               <li>Stored in database</li>
@@ -40,8 +40,8 @@ export default function TestComparisonPage() {
         </div>
 
         {/* New System */}
-        <div className="bg-green-50 p-6 rounded-lg">
-          <h2 className="text-lg font-semibold mb-4 text-green-800">
+        <div className="bg-zinc-800/60 border border-zinc-700/50 p-6 rounded-lg">
+          <h2 className="text-lg font-semibold mb-4 text-zinc-100">
             ✅ New System (Stripe API)
           </h2>
           <pre className="text-xs overflow-auto">
@@ -54,7 +54,7 @@ export default function TestComparisonPage() {
               nextPaymentDate: modernData.nextPaymentDate
             }, null, 2)}
           </pre>
-          <div className="mt-4 text-sm text-green-700">
+          <div className="mt-4 text-sm text-zinc-300">
             <p>Benefits:</p>
             <ul className="list-disc list-inside">
               <li>Real-time from Stripe</li>
@@ -67,12 +67,12 @@ export default function TestComparisonPage() {
       </div>
 
       {/* Actions */}
-      <div className="mt-8 p-6 bg-blue-50 rounded-lg">
-        <h3 className="font-semibold mb-4">Test Actions</h3>
+      <div className="mt-8 p-6 bg-zinc-800/60 border border-zinc-700/50 rounded-lg">
+        <h3 className="font-semibold mb-4 text-zinc-100">Test Actions</h3>
         <div className="space-x-4">
           <button
             onClick={() => modernData.refresh()}
-            className="bg-blue-500 text-white px-4 py-2 rounded"
+            className="bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-500"
           >
             Refresh Modern Data
           </button>
@@ -88,7 +88,7 @@ export default function TestComparisonPage() {
                 }
               });
             }}
-            className="bg-gray-500 text-white px-4 py-2 rounded"
+            className="bg-zinc-700 text-white px-4 py-2 rounded hover:bg-zinc-600"
           >
             Log to Console
           </button>

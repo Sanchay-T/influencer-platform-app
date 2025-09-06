@@ -710,21 +710,21 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
       <div className="space-y-8 py-8">
         <div className="flex flex-col items-center gap-2 text-center">
           {status === 'completed' ? (
-            <CheckCircle2 className="h-6 w-6 text-green-600" />
+            <CheckCircle2 className="h-6 w-6 text-primary" />
           ) : status === 'timeout' ? (
             <AlertCircle className="h-6 w-6 text-amber-500" />
           ) : error && retryCount >= maxRetries ? (
             <button 
               onClick={handleRetry}
-              className="flex items-center justify-center h-8 w-8 rounded-full bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors"
+              className="flex items-center justify-center h-8 w-8 rounded-full bg-zinc-800/60 text-zinc-200 border border-zinc-700/50 hover:bg-zinc-800/90 transition-colors"
             >
               <RefreshCcw className="h-5 w-5" />
             </button>
           ) : (
-            <Loader2 className="h-6 w-6 animate-spin text-gray-900" />
+            <Loader2 className="h-6 w-6 animate-spin text-zinc-300" />
           )}
           
-          <h2 className="text-xl font-medium text-gray-900 mt-2">
+          <h2 className="text-xl font-medium text-zinc-100 mt-2">
             {status === 'completed' 
               ? 'Campaign completed' 
               : status === 'timeout'
@@ -738,7 +738,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
               : 'Processing your campaign'}
           </h2>
           
-          <p className="text-sm text-gray-500 max-w-xs">
+          <p className="text-sm text-zinc-400 max-w-xs">
             {error && retryCount >= maxRetries
               ? "We're having trouble reaching our servers. Click the refresh icon to try again."
               : error 
@@ -753,7 +753,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
           </p>
           
           {recovery && (
-            <div className="mt-2 px-4 py-2 bg-blue-50 border border-blue-100 rounded-md text-sm text-blue-700">
+            <div className="mt-2 px-4 py-2 bg-zinc-800/60 border border-zinc-700/50 rounded-md text-sm text-zinc-300">
               Campaign processing resumed automatically
             </div>
           )}
@@ -761,16 +761,16 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
 
         <div className="w-full space-y-3">
           {/* Main Progress Bar */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg p-4">
             <div className="flex justify-between items-center mb-3">
               <div className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                <span className="text-sm font-medium text-blue-900">
+                <Loader2 className="h-4 w-4 animate-spin text-zinc-300" />
+                <span className="text-sm font-medium text-zinc-100">
                   {getProgressStage()}
                 </span>
               </div>
               {processedResults > 0 && (
-                <span className="text-sm font-medium text-blue-800 bg-blue-100 px-2 py-1 rounded">
+                <span className="text-sm font-medium text-zinc-200 bg-zinc-800/60 border border-zinc-700/50 px-2 py-1 rounded">
                   {(() => {
                     const platformName = platform || 'TikTok';
                     const isInstagramReels = platformName.toLowerCase() === 'instagram' && !searchData?.targetUsername;
@@ -790,21 +790,21 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
                 </span>
               )}
             </div>
-            <div className="w-full bg-blue-100 rounded-lg h-6 relative overflow-hidden shadow-inner">
+            <div className="w-full bg-zinc-800 rounded-lg h-6 relative overflow-hidden shadow-inner">
               <div 
-                className="bg-gradient-to-r from-blue-500 to-blue-600 h-6 rounded-lg transition-all duration-500 relative shadow-sm" 
+                className="bg-primary h-6 rounded-lg transition-all duration-500 relative shadow-sm" 
                 style={{ width: `${Math.min(displayProgress, 100)}%` }}
               >
                 {/* 📊 INTEGRATED PERCENTAGE: Show percentage inside the progress bar */}
                 {displayProgress > 12 && (
-                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm font-semibold text-white drop-shadow">
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm font-semibold text-white/90">
                     {Math.round(displayProgress)}%
                   </span>
                 )}
               </div>
               {/* Show percentage outside when progress bar is too small */}
               {displayProgress <= 12 && (
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sm font-semibold text-gray-700">
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sm font-semibold text-zinc-300">
                   {Math.round(displayProgress)}%
                 </span>
               )}
@@ -816,11 +816,11 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
         {showIntermediateResults && intermediateCreators.length > 0 && (
           <div className="w-full mt-6 space-y-4">
             <div className="flex justify-between items-center">
-              <h3 className="text-lg font-medium text-gray-900">
-                Latest Results (<span className="text-blue-600 font-semibold">{intermediateCreators.length}</span> creators found)
+              <h3 className="text-lg font-medium text-zinc-100">
+                Latest Results (<span className="text-primary font-semibold">{intermediateCreators.length}</span> creators found)
               </h3>
-              <span className="text-sm text-gray-500 flex items-center gap-1">
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+              <span className="text-sm text-zinc-400 flex items-center gap-1">
+                <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
                 {status === 'processing' ? 'More results loading...' : 'Loading complete'}
               </span>
             </div>
@@ -844,9 +844,18 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
                 // Calculate the actual index in the full array
                 const actualIndex = intermediateCreators.length - 5 + index;
                 
-                // 🖼️ IMAGE PROXY: Use same logic as final table for proper image loading
+                // 🖼️ IMAGE PROXY: Handle already-proxied URLs, blob URLs, and raw URLs
                 const avatarUrl = creator.creator?.avatarUrl || creator.creator?.profilePicUrl || '';
-                const proxiedImageUrl = avatarUrl ? `/api/proxy/image?url=${encodeURIComponent(avatarUrl)}` : '';
+                let imageUrl;
+                if (avatarUrl.includes('blob.vercel-storage.com')) {
+                  imageUrl = avatarUrl; // Use blob URL directly
+                } else if (avatarUrl.startsWith('/api/proxy/image')) {
+                  imageUrl = avatarUrl; // Use already-proxied URL directly
+                } else if (avatarUrl) {
+                  imageUrl = `/api/proxy/image?url=${encodeURIComponent(avatarUrl)}`; // Proxy raw URLs
+                } else {
+                  imageUrl = '';
+                }
                 
                 // 🔍 TARGETED DEBUG: Log each card being rendered
                 console.log(`🎭 [CARD-${index}] Rendering card:`, {
@@ -855,22 +864,22 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
                   name: creator.creator?.name,
                   username: creator.creator?.uniqueId,
                   avatarUrl: avatarUrl,
-                  hasProxy: !!proxiedImageUrl
+                  hasProxy: !!imageUrl
                 });
                 
                 return (
                 <div 
                   key={`progress-creator-${creator.creator?.uniqueId || actualIndex}-${creator.creator?.name || 'unknown'}-${actualIndex}`}
-                  className="flex items-start gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-all duration-500 animate-in fade-in slide-in-from-bottom-4"
+                  className="flex items-start gap-3 p-3 bg-zinc-900/80 border border-zinc-700/50 rounded-lg hover:border-zinc-600 transition-all duration-500 animate-in fade-in slide-in-from-bottom-4"
                   style={{ 
                     animationDelay: `${index * 50}ms`,
-                    borderLeft: index < 5 ? '3px solid #3B82F6' : '3px solid transparent' // Highlight first 5 as "new"
+                    borderLeft: index < 5 ? '3px solid hsl(var(--primary))' : '3px solid transparent'
                   }}
                 >
-                  <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                    {proxiedImageUrl ? (
+                  <div className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center">
+                    {imageUrl ? (
                       <img 
-                        src={proxiedImageUrl}
+                        src={imageUrl}
                         alt={creator.creator?.name || 'Creator'}
                         className="w-full h-full rounded-full object-cover"
                         onError={(e) => {
@@ -881,26 +890,26 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
                       />
                     ) : null}
                     <span 
-                      className="text-sm font-medium text-gray-600"
-                      style={{ display: proxiedImageUrl ? 'none' : 'flex' }}
+                      className="text-sm font-medium text-zinc-300"
+                      style={{ display: imageUrl ? 'none' : 'flex' }}
                     >
                       {creator.creator?.name?.charAt(0)?.toUpperCase() || '?'}
                     </span>
                   </div>
                   
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-gray-900 truncate">
+                    <h4 className="font-medium text-zinc-100 truncate">
                       {creator.creator?.name || 'Unknown Creator'}
                       {/* 🔍 VISUAL DEBUG: Show render timestamp */}
-                      <span className="ml-2 text-xs text-blue-500">
+                      <span className="ml-2 text-xs text-pink-400">
                         #{index + 1} ({new Date().getSeconds()}s)
                       </span>
                     </h4>
-                    <p className="text-sm text-gray-600 line-clamp-2">
+                    <p className="text-sm text-zinc-400 line-clamp-2">
                       {creator.video?.description || 'No description available'}
                     </p>
                     {creator.creator?.followers && (
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-zinc-500 mt-1">
                         {creator.creator.followers.toLocaleString()} followers
                       </p>
                     )}
@@ -910,7 +919,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
               })}
               
               {intermediateCreators.length > 5 && (
-                <div className="text-center py-3 text-sm text-gray-500 bg-gray-50 rounded-lg">
+                <div className="text-center py-3 text-sm text-zinc-400 bg-zinc-800/60 rounded-lg">
                   And {intermediateCreators.length - 5} more results...
                 </div>
               )}

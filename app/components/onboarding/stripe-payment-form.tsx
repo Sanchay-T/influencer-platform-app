@@ -156,14 +156,14 @@ export default function StripePaymentForm({ selectedPlan, onSuccess, onError }: 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Security Notice */}
-      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+      <div className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg p-4">
         <div className="flex items-start gap-3">
-          <Shield className="h-5 w-5 text-green-600 mt-0.5" />
+          <Shield className="h-5 w-5 text-pink-400 mt-0.5" />
           <div>
-            <h3 className="font-medium text-green-900 mb-1">
+            <h3 className="font-medium text-zinc-100 mb-1">
               Secure Payment Processing
             </h3>
-            <p className="text-sm text-green-700">
+            <p className="text-sm text-zinc-300">
               Your payment information is encrypted and processed securely by Stripe. We don't store your full card details.
             </p>
           </div>
@@ -202,14 +202,14 @@ export default function StripePaymentForm({ selectedPlan, onSuccess, onError }: 
       </div>
 
       {/* Trial Information */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <div className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg p-4">
         <div className="flex items-start gap-3">
-          <Lock className="h-5 w-5 text-blue-600 mt-0.5" />
+          <Lock className="h-5 w-5 text-pink-400 mt-0.5" />
           <div>
-            <h3 className="font-medium text-blue-900 mb-1">
+            <h3 className="font-medium text-zinc-100 mb-1">
               7-Day Free Trial
             </h3>
-            <ul className="text-sm text-blue-700 space-y-1">
+            <ul className="text-sm text-zinc-300 space-y-1">
               <li>• Your trial starts immediately after setup</li>
               <li>• No charge for 7 days</li>
               <li>• Cancel anytime during trial</li>

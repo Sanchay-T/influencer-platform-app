@@ -46,7 +46,7 @@ export default function PaymentStep({ onComplete, sessionId, userId }: PaymentSt
       yearlyTotal: '$948',
       description: 'Perfect for growing brands',
       icon: Star,
-      color: 'text-blue-600 bg-blue-100',
+      color: 'text-pink-400 bg-zinc-800',
       features: [
         'Up to 3 active campaigns',
         'Up to 1,000 creators per month',
@@ -65,7 +65,7 @@ export default function PaymentStep({ onComplete, sessionId, userId }: PaymentSt
       yearlyTotal: '$2,388',
       description: 'Best for scaling businesses',
       icon: Zap,
-      color: 'text-purple-600 bg-purple-100',
+      color: 'text-pink-400 bg-zinc-800',
       features: [
         'Up to 10 active campaigns',
         'Up to 10,000 creators per month',
@@ -85,7 +85,7 @@ export default function PaymentStep({ onComplete, sessionId, userId }: PaymentSt
       yearlyTotal: '$4,788',
       description: 'For large-scale operations',
       icon: Crown,
-      color: 'text-yellow-600 bg-yellow-100',
+      color: 'text-pink-400 bg-zinc-800',
       features: [
         'Unlimited campaigns',
         'Unlimited creators',
@@ -240,13 +240,13 @@ export default function PaymentStep({ onComplete, sessionId, userId }: PaymentSt
     <div className="space-y-6">
       {/* Billing Cycle Toggle - removed duplicate header */}
       <div className="text-center">
-        <p className="text-gray-600 mb-6">
+        <p className="text-zinc-400 mb-6">
           Select a plan to start your 7-day free trial. You won't be charged until the trial ends.
         </p>
         
         {/* Billing Cycle Toggle */}
         <div className="flex items-center justify-center gap-4 mb-6">
-          <span className={`text-sm ${billingCycle === 'monthly' ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
+          <span className={`text-sm ${billingCycle === 'monthly' ? 'text-zinc-100 font-medium' : 'text-zinc-500'}`}>
             Monthly
           </span>
           <button
@@ -260,7 +260,7 @@ export default function PaymentStep({ onComplete, sessionId, userId }: PaymentSt
               }, sessionId);
             }}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              billingCycle === 'yearly' ? 'bg-blue-600' : 'bg-gray-200'
+              billingCycle === 'yearly' ? 'bg-pink-600' : 'bg-zinc-700'
             }`}
           >
             <span
@@ -269,11 +269,11 @@ export default function PaymentStep({ onComplete, sessionId, userId }: PaymentSt
               }`}
             />
           </button>
-          <span className={`text-sm ${billingCycle === 'yearly' ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
+          <span className={`text-sm ${billingCycle === 'yearly' ? 'text-zinc-100 font-medium' : 'text-zinc-500'}`}>
             Yearly
           </span>
           {billingCycle === 'yearly' && (
-            <Badge variant="secondary" className="bg-green-100 text-green-700">
+            <Badge variant="secondary" className="bg-zinc-800 text-pink-400 border border-zinc-700/50">
               Save 20%
             </Badge>
           )}
@@ -295,8 +295,8 @@ export default function PaymentStep({ onComplete, sessionId, userId }: PaymentSt
               <Card 
                 className={`transition-all duration-200 ${
                   isSelected 
-                    ? 'ring-2 ring-blue-500 border-blue-500 shadow-lg' 
-                    : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
+                    ? 'ring-2 ring-pink-500 border-pink-500 shadow-lg' 
+                    : 'border-zinc-700/50 hover:border-zinc-600 hover:shadow-md'
                 }`}
               >
               <CardHeader className="pb-3">
@@ -308,24 +308,24 @@ export default function PaymentStep({ onComplete, sessionId, userId }: PaymentSt
                     <div>
                       <div className="flex items-center gap-2">
                         <CardTitle className="text-lg">{plan.name}</CardTitle>
-                        {plan.popular && (
-                          <Badge variant="default" className="bg-blue-600 text-white">
-                            Popular
-                          </Badge>
-                        )}
+                    {plan.popular && (
+                      <Badge variant="default" className="bg-pink-600 text-white">
+                        Popular
+                      </Badge>
+                    )}
                       </div>
                       <CardDescription>{plan.description}</CardDescription>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-2xl font-bold text-gray-900">
+                    <div className="text-2xl font-bold text-zinc-100">
                       {billingCycle === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice}
                     </div>
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-zinc-500">
                       {billingCycle === 'monthly' ? 'per month' : 'per month'}
                     </div>
                     {billingCycle === 'yearly' && (
-                      <div className="text-xs text-gray-400">
+                      <div className="text-xs text-zinc-400">
                         {plan.yearlyTotal} billed annually
                       </div>
                     )}
@@ -336,7 +336,7 @@ export default function PaymentStep({ onComplete, sessionId, userId }: PaymentSt
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   {plan.features.map((feature, index) => (
                     <div key={index} className="flex items-center gap-2 text-sm">
-                      <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                      <CheckCircle className="h-4 w-4 text-pink-400 flex-shrink-0" />
                       <span>{feature}</span>
                     </div>
                   ))}
@@ -349,14 +349,14 @@ export default function PaymentStep({ onComplete, sessionId, userId }: PaymentSt
       </div>
 
       {/* Trial Information */}
-      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+      <div className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg p-4">
         <div className="flex items-start gap-3">
-          <Shield className="h-5 w-5 text-green-600 mt-0.5" />
+          <Shield className="h-5 w-5 text-emerald-400 mt-0.5" />
           <div>
-            <h3 className="font-medium text-green-900 mb-1">
+            <h3 className="font-medium text-zinc-100 mb-1">
               7-Day Free Trial Included
             </h3>
-            <p className="text-sm text-green-700">
+            <p className="text-sm text-zinc-300">
               Start your trial immediately after onboarding. Full access to all features during the trial period.
             </p>
           </div>
@@ -364,17 +364,17 @@ export default function PaymentStep({ onComplete, sessionId, userId }: PaymentSt
       </div>
 
       {/* Payment Information */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <div className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg p-4">
         <div className="flex items-start gap-3">
-          <Lock className="h-5 w-5 text-blue-600 mt-0.5" />
+          <Lock className="h-5 w-5 text-pink-400 mt-0.5" />
           <div>
-            <h3 className="font-medium text-blue-900 mb-1">
+            <h3 className="font-medium text-zinc-100 mb-1">
               Secure Payment Processing
             </h3>
-            <p className="text-sm text-blue-700 mb-2">
+            <p className="text-sm text-zinc-300 mb-2">
               Payment method will be collected securely via Clerk's billing system after you complete onboarding.
             </p>
-            <ul className="text-sm text-blue-700 space-y-1">
+            <ul className="text-sm text-zinc-300 space-y-1">
               <li>• No charge during the 7-day trial</li>
               <li>• Cancel anytime before trial ends</li>
               <li>• Secure card storage with industry-standard encryption</li>

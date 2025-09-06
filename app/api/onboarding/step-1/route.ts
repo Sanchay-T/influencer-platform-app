@@ -55,10 +55,14 @@ export async function PATCH(request: Request) {
         hasTrialData: !!(existingProfile.trialStartDate && existingProfile.trialEndDate)
       });
       
+      // Get user email from Clerk for database storage
+      const userEmail = await getUserEmailFromClerk(userId);
+      
       await db.update(userProfiles)
         .set({
           fullName: fullName.trim(),
           businessName: businessName.trim(),
+          email: userEmail, // ✅ Store email in database
           onboardingStep: 'info_captured',
           updatedAt: new Date()
         })
@@ -68,7 +72,6 @@ export async function PATCH(request: Request) {
       console.log('💾 [ONBOARDING-STEP1] Update completed in:', Date.now() - startTime, 'ms');
 
       // Schedule welcome email for existing users too (if not already sent)
-      const userEmail = await getUserEmailFromClerk(userId);
       
       if (userEmail && await shouldSendEmail(userId, 'welcome')) {
         console.log('📧📧📧 [ONBOARDING-STEP1] SCHEDULING WELCOME EMAIL FOR EXISTING USER');
@@ -143,10 +146,14 @@ export async function PATCH(request: Request) {
       console.log('🆕🆕🆕 [ONBOARDING-STEP1] CREATING NEW PROFILE');
       console.log('🆕 [ONBOARDING-STEP1] This is a first-time user signup');
       
+      // Get user email from Clerk for database storage
+      const userEmail = await getUserEmailFromClerk(userId);
+      
       await db.insert(userProfiles).values({
         userId,
         fullName: fullName.trim(),
         businessName: businessName.trim(),
+        email: userEmail, // ✅ Store email in database
         onboardingStep: 'info_captured',
         signupTimestamp: new Date(),
         emailScheduleStatus: {}
@@ -156,7 +163,6 @@ export async function PATCH(request: Request) {
       console.log('💾 [ONBOARDING-STEP1] Profile creation completed in:', Date.now() - startTime, 'ms');
 
       // Schedule welcome email (10 minutes after signup)
-      const userEmail = await getUserEmailFromClerk(userId);
       
       if (userEmail && await shouldSendEmail(userId, 'welcome')) {
         console.log('📧📧📧 [ONBOARDING-STEP1] SCHEDULING WELCOME EMAIL');

@@ -4,54 +4,23 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import DashboardLayout from "./components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { useRouter } from 'next/navigation';
-import { toast } from 'react-hot-toast';
 import CampaignList from "./components/campaigns/CampaignList";
-import { PlusCircle } from "lucide-react";
 import { SignedIn, SignedOut, SignInButton, SignUpButton } from '@clerk/nextjs';
 import OnboardingModal from "./components/onboarding/onboarding-modal";
+import CampaignCounter from "./components/shared/campaign-counter";
 
 export default function Home() {
   const { userId } = useAuth();
-  const router = useRouter();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(1);
   const [existingData, setExistingData] = useState({});
-  const [canCreateCampaign, setCanCreateCampaign] = useState(true);
-  const [limitMessage, setLimitMessage] = useState('');
-  const [usageSummary, setUsageSummary] = useState(null);
+  const [onboardingStatusLoaded, setOnboardingStatusLoaded] = useState(false);
 
   useEffect(() => {
     if (userId) {
       checkOnboardingStatus();
-      checkCampaignGate();
-      fetchUsageSummary();
     }
   }, [userId]);
-
-  const checkCampaignGate = async () => {
-    try {
-      const res = await fetch('/api/campaigns/can-create');
-      if (!res.ok) return;
-      const data = await res.json();
-      setCanCreateCampaign(Boolean(data.allowed));
-      if (!data.allowed && data.message) setLimitMessage(data.message);
-    } catch (e) {
-      // ignore gate errors; default allows
-    }
-  };
-
-  const fetchUsageSummary = async () => {
-    try {
-      const res = await fetch('/api/usage/summary');
-      if (!res.ok) return;
-      const data = await res.json();
-      setUsageSummary(data);
-    } catch (e) {
-      // ignore
-    }
-  };
 
   const checkOnboardingStatus = async () => {
     try {
@@ -63,6 +32,7 @@ export default function Home() {
         console.log('👋 [ONBOARDING] New user detected, showing onboarding modal');
         setShowOnboarding(true);
         setOnboardingStep(1);
+        setOnboardingStatusLoaded(true); // ✅ Mark as loaded
         return;
       }
       
@@ -88,16 +58,17 @@ export default function Home() {
         // User completed full onboarding - show dashboard
         console.log('✅ [ONBOARDING] User completed onboarding, showing dashboard');
         setShowOnboarding(false);
-        return;
       }
       
       console.log('🔄 [ONBOARDING] Showing modal for step:', step);
+      setOnboardingStatusLoaded(true); // ✅ Mark as loaded after determining status
       
     } catch (error) {
       console.error('❌ [ONBOARDING] Error checking status:', error);
       // On error, assume new user and show onboarding
       setShowOnboarding(true);
       setOnboardingStep(1);
+      setOnboardingStatusLoaded(true); // ✅ Mark as loaded even on error
     }
   };
 
@@ -135,33 +106,14 @@ export default function Home() {
       </SignedOut>
 
       <SignedIn>
-        <DashboardLayout>
+        <DashboardLayout 
+          onboardingStatusLoaded={onboardingStatusLoaded}
+          showOnboarding={showOnboarding}
+        >
           <div className="flex justify-between items-center mb-8">
             <h1 className="text-3xl font-bold">Your campaigns</h1>
             <div className="flex items-center gap-3">
-              {usageSummary && usageSummary.campaigns && (
-                <span className="text-sm text-gray-500">
-                  {usageSummary.campaigns.limit === null
-                    ? `${usageSummary.campaigns.used} campaigns`
-                    : `${usageSummary.campaigns.used}/${usageSummary.campaigns.limit} campaigns`}
-                </span>
-              )}
-              <Button
-              onClick={() => {
-                if (!canCreateCampaign) {
-                  toast.error(limitMessage || 'Campaign limit reached. Upgrade your plan to create more.');
-                  return;
-                }
-                router.push('/campaigns/new');
-              }}
-            >
-              <PlusCircle className="mr-2" /> Create campaign
-              </Button>
-              {!canCreateCampaign && (
-                <Link href="/billing" className="text-sm text-blue-600 hover:underline">
-                  Upgrade
-                </Link>
-              )}
+              <CampaignCounter />
             </div>
           </div>
           <CampaignList />

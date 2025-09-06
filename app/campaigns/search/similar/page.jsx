@@ -73,7 +73,14 @@ export default function SimilarCreatorSearch() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-6xl mx-auto py-8">
+      <div className="space-y-6">
+        <div className="flex items-center justify-between mt-2">
+          <div>
+            <h1 className="text-2xl font-bold">Find Influencers</h1>
+            <p className="text-sm text-zinc-400 mt-1">Search similar creators by username across platforms</p>
+          </div>
+        </div>
+
         {step === 1 && (
           <SimilarSearchForm 
             campaignId={searchData.campaignId}
@@ -86,4 +93,4 @@ export default function SimilarCreatorSearch() {
       </div>
     </DashboardLayout>
   );
-} 
+}

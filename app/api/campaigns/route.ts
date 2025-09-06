@@ -3,49 +3,136 @@ import { db } from '@/lib/db'
 import { campaigns, scrapingJobs } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
 import { eq, desc, count } from 'drizzle-orm'
-import { PlanEnforcementService } from '@/lib/services/plan-enforcement'
+import { PlanValidator } from '@/lib/services/plan-validator'
+import BillingLogger from '@/lib/loggers/billing-logger'
 
 export const maxDuration = 10; // Aumentar el tiempo máximo de ejecución a 10 segundos
 
 export async function POST(req: Request) {
-  console.log('\n\n====== CAMPAIGNS API POST CALLED ======');
-  console.log('📝 [CAMPAIGNS-API] POST request received at:', new Date().toISOString());
+  const requestId = BillingLogger.generateRequestId();
+  
   try {
-    console.log('🔐 [CAMPAIGNS-API] Getting authenticated user from Clerk');
-    const { userId } = await auth()
+    await BillingLogger.logAPI(
+      'REQUEST_START',
+      'Campaign creation API request started',
+      undefined,
+      {
+        endpoint: '/api/campaigns',
+        method: 'POST',
+        requestId
+      },
+      requestId
+    );
+
+    const { userId } = await auth();
     
     if (!userId) {
-      console.error('❌ [CAMPAIGNS-API] Unauthorized - No valid user session');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      await BillingLogger.logAPI(
+        'REQUEST_ERROR',
+        'Campaign creation unauthorized',
+        undefined,
+        {
+          error: 'UNAUTHORIZED',
+          requestId
+        },
+        requestId
+      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    console.log('✅ [CAMPAIGNS-API] User authenticated', { userId });
 
-    // 🛡️ PLAN VALIDATION - Check if user can create campaigns
-    console.log('🛡️ [CAMPAIGNS-API] Validating user plan limits');
-    const validation = await PlanEnforcementService.validateCampaignCreation(userId);
+    await BillingLogger.logAPI(
+      'REQUEST_SUCCESS',
+      'User authenticated for campaign creation',
+      userId,
+      { requestId },
+      requestId
+    );
+
+    // 🛡️ ENHANCED PLAN VALIDATION with detailed logging
+    await BillingLogger.logUsage(
+      'LIMIT_CHECK',
+      'Validating campaign creation limits',
+      userId,
+      {
+        usageType: 'campaigns',
+        action: 'create'
+      },
+      requestId
+    );
+
+    const validation = await PlanValidator.validateCampaignCreation(userId, requestId);
     
     if (!validation.allowed) {
-      console.log('❌ [CAMPAIGNS-API] Campaign creation blocked:', validation.reason);
+      await BillingLogger.logAccess(
+        'DENIED',
+        'Campaign creation denied due to plan limits',
+        userId,
+        {
+          resource: 'campaign_creation',
+          reason: validation.reason,
+          upgradeRequired: validation.upgradeRequired,
+          currentUsage: validation.currentUsage,
+          limit: validation.limit,
+          usagePercentage: validation.usagePercentage
+        },
+        requestId
+      );
+
       return NextResponse.json({ 
         error: 'Plan limit exceeded',
         message: validation.reason,
-        upgrade: true,
-        usage: validation.usage
+        upgrade: validation.upgradeRequired,
+        currentUsage: validation.currentUsage,
+        limit: validation.limit,
+        usagePercentage: validation.usagePercentage,
+        recommendedPlan: validation.recommendedPlan,
+        warningThreshold: validation.warningThreshold
       }, { status: 403 });
     }
     
-    console.log('✅ [CAMPAIGNS-API] Plan validation passed', {
-      campaignsUsed: validation.usage?.campaignsUsed,
-      campaignsRemaining: validation.usage?.campaignsRemaining
-    });
+    await BillingLogger.logAccess(
+      'GRANTED',
+      'Campaign creation approved',
+      userId,
+      {
+        resource: 'campaign_creation',
+        currentUsage: validation.currentUsage,
+        limit: validation.limit,
+        usagePercentage: validation.usagePercentage,
+        warningThreshold: validation.warningThreshold
+      },
+      requestId
+    );
 
-    console.log('🔄 [CAMPAIGNS-API] Parsing request body');
+    // Parse request body
     const body = await req.json();
     const { name, description, searchType } = body;
-    console.log('📥 [CAMPAIGNS-API] Campaign data received', { name, description, searchType });
 
-    console.log('🔄 [CAMPAIGNS-API] Creating campaign in database');
-    // Crear la campaña y devolver el resultado
+    await BillingLogger.logAPI(
+      'RESPONSE',
+      'Campaign data parsed successfully',
+      userId,
+      {
+        campaignName: name,
+        searchType,
+        hasDescription: !!description
+      },
+      requestId
+    );
+
+    // Create campaign in database
+    await BillingLogger.logDatabase(
+      'CREATE',
+      'Creating new campaign in database',
+      userId,
+      {
+        table: 'campaigns',
+        operation: 'insert',
+        data: { name, searchType, status: 'draft' }
+      },
+      requestId
+    );
+
     const [campaign] = await db.insert(campaigns).values({
       userId: userId,
       name,
@@ -54,20 +141,92 @@ export async function POST(req: Request) {
       status: 'draft'
     }).returning();
 
-    console.log('✅ [CAMPAIGNS-API] Campaign created successfully', { 
-      campaignId: campaign.id, 
-      name: campaign.name,
-      searchType: campaign.searchType
-    });
+    await BillingLogger.logDatabase(
+      'CREATE',
+      'Campaign created successfully in database',
+      userId,
+      {
+        table: 'campaigns',
+        recordId: campaign.id,
+        campaignName: campaign.name,
+        searchType: campaign.searchType
+      },
+      requestId
+    );
 
-    // 📈 USAGE TRACKING - Track campaign creation
-    console.log('📈 [CAMPAIGNS-API] Tracking campaign creation in usage metrics');
-    await PlanEnforcementService.trackCampaignCreated(userId);
+    // 📈 ENHANCED USAGE TRACKING with detailed logging
+    await BillingLogger.logUsage(
+      'CAMPAIGN_CREATE',
+      'Incrementing campaign usage counter',
+      userId,
+      {
+        campaignId: campaign.id,
+        campaignName: campaign.name,
+        searchType: campaign.searchType,
+        usageType: 'campaigns'
+      },
+      requestId
+    );
 
-    return NextResponse.json(campaign)
+    await PlanValidator.incrementUsage(
+      userId, 
+      'campaigns', 
+      1, 
+      {
+        campaignId: campaign.id,
+        campaignName: campaign.name,
+        searchType: campaign.searchType
+      },
+      requestId
+    );
+
+    await BillingLogger.logAPI(
+      'REQUEST_SUCCESS',
+      'Campaign creation completed successfully',
+      userId,
+      {
+        campaignId: campaign.id,
+        campaignName: campaign.name,
+        searchType: campaign.searchType,
+        executionTime: Date.now(),
+        requestId
+      },
+      requestId
+    );
+
+    return NextResponse.json(campaign);
+
   } catch (error) {
-    console.error('💥 [CAMPAIGNS-API] Error creating campaign:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    await BillingLogger.logError(
+      'CAMPAIGN_CREATION_ERROR',
+      'Campaign creation failed',
+      undefined, // userId might not be available in catch
+      {
+        errorMessage,
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        stack: error instanceof Error ? error.stack : undefined,
+        requestId
+      },
+      requestId
+    );
+
+    await BillingLogger.logAPI(
+      'REQUEST_ERROR',
+      'Campaign creation API request failed',
+      undefined,
+      {
+        error: errorMessage,
+        requestId
+      },
+      requestId
+    );
+
+    return NextResponse.json({ 
+      error: 'Internal Server Error',
+      requestId 
+    }, { status: 500 });
   }
 }
 

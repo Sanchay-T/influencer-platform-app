@@ -55,16 +55,9 @@ export class OnboardingLogger {
       return;
     }
 
-    // Server-side: append directly to file using dynamic imports
-    try {
-      const { promises: fs } = await import('fs');
-      const logFilePath = `${process.cwd()}/onboarding-logs`;
-      await fs.appendFile(logFilePath, logLine + '\n', 'utf8');
-      console.log(`📝 [ONBOARDING-LOG] ${logLine}`);
-    } catch (error) {
-      console.error('❌ [ONBOARDING-LOG] Failed to write to log file:', error);
-      console.log(`📝 [ONBOARDING-LOG-FALLBACK] [${this.getTimestamp()}] [${entry.step}] [${entry.action}] - ${entry.description}`);
-    }
+    // Server-side: avoid Node 'fs' imports in shared module to keep it client-safe
+    // Just echo to console; API route can be used by server code if persistent logging is needed
+    console.log(`📝 [ONBOARDING-LOG] ${logLine}`);
   }
 
   /**
@@ -185,16 +178,8 @@ export class OnboardingLogger {
         return [];
       }
     }
-    try {
-      const { promises: fs } = await import('fs');
-      const logFilePath = `${process.cwd()}/onboarding-logs`;
-      const content = await fs.readFile(logFilePath, 'utf8');
-      const allLines = content.trim().split('\n');
-      return allLines.slice(-lines);
-    } catch (error) {
-      console.error('❌ [ONBOARDING-LOG] Failed to read log file:', error);
-      return [];
-    }
+    // No direct file read in shared module (keeps client-safe). Use API route instead if needed.
+    return [];
   }
 
   /**
@@ -205,14 +190,7 @@ export class OnboardingLogger {
       try { await fetch('/api/logs/onboarding', { method: 'DELETE' }); } catch {}
       return;
     }
-    try {
-      const { promises: fs } = await import('fs');
-      const logFilePath = `${process.cwd()}/onboarding-logs`;
-      await fs.writeFile(logFilePath, '', 'utf8');
-      console.log('✅ [ONBOARDING-LOG] Logs cleared successfully');
-    } catch (error) {
-      console.error('❌ [ONBOARDING-LOG] Failed to clear logs:', error);
-    }
+    // No direct file write here to avoid bundling fs; rely on API if needed.
   }
 }
 

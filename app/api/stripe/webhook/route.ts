@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { StripeService } from '@/lib/stripe/stripe-service';
 import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
+import { userProfiles, subscriptionPlans } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import Stripe from 'stripe';
 import { EventService, EVENT_TYPES, AGGREGATE_TYPES, SOURCE_SYSTEMS } from '@/lib/events/event-service';
@@ -69,10 +69,41 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// Helper function to determine plan from price ID
+function getPlanFromPriceId(priceId: string): string {
+  const priceIdToplan = {
+    [process.env.STRIPE_GLOW_UP_MONTHLY_PRICE_ID!]: 'glow_up',
+    [process.env.STRIPE_GLOW_UP_YEARLY_PRICE_ID!]: 'glow_up',
+    [process.env.STRIPE_VIRAL_SURGE_MONTHLY_PRICE_ID!]: 'viral_surge',
+    [process.env.STRIPE_VIRAL_SURGE_YEARLY_PRICE_ID!]: 'viral_surge',
+    [process.env.STRIPE_FAME_FLEX_MONTHLY_PRICE_ID!]: 'fame_flex',
+    [process.env.STRIPE_FAME_FLEX_YEARLY_PRICE_ID!]: 'fame_flex',
+  };
+  
+  return priceIdToplan[priceId] || 'unknown';
+}
+
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   try {
     const customerId = subscription.customer as string;
-    const planId = subscription.metadata.plan || 'glow_up';
+    
+    // Try multiple ways to get the plan ID
+    let planId = subscription.metadata.plan || subscription.metadata.planId;
+    
+    // If metadata doesn't have plan info, determine from price ID
+    if (!planId || planId === 'unknown') {
+      const priceId = subscription.items.data[0]?.price?.id;
+      if (priceId) {
+        planId = getPlanFromPriceId(priceId);
+        console.log('🔍 [STRIPE-WEBHOOK] Plan determined from price ID:', { priceId, planId });
+      }
+    }
+    
+    // Final fallback
+    if (!planId || planId === 'unknown') {
+      planId = 'glow_up';
+      console.log('⚠️ [STRIPE-WEBHOOK] Using fallback plan:', planId);
+    }
 
     console.log('🎯 [STRIPE-WEBHOOK] Processing subscription created (Event-Driven):', {
       subscriptionId: subscription.id,
@@ -132,18 +163,38 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
       idempotencyKey: EventService.generateIdempotencyKey('stripe', subscription.id, 'subscription_created')
     });
 
-    // Update subscription info immediately (non-controversial changes)
+    // 🔧 FIX: Get plan limits from subscription_plans table
+    const planDetails = await db.query.subscriptionPlans.findFirst({
+      where: eq(subscriptionPlans.planKey, planId)
+    });
+
+    if (!planDetails) {
+      console.error('❌ [STRIPE-WEBHOOK] Plan details not found for:', planId);
+      // Continue with basic update, but log the issue
+    }
+
+    // Update subscription info immediately (including plan limits from subscription_plans)
     await db.update(userProfiles)
       .set({
         stripeSubscriptionId: subscription.id,
         currentPlan: planId,
         subscriptionStatus: subscription.status,
+        // 🚀 CRITICAL FIX: Set plan limits from subscription_plans table
+        planCampaignsLimit: planDetails?.campaignsLimit || 0,
+        planCreatorsLimit: planDetails?.creatorsLimit || 0,
+        planFeatures: planDetails?.features || {},
         billingSyncStatus: 'webhook_subscription_created',
         lastWebhookEvent: 'customer.subscription.created',
         lastWebhookTimestamp: new Date(),
         updatedAt: new Date()
       })
       .where(eq(userProfiles.userId, user.userId));
+
+    console.log('✅ [STRIPE-WEBHOOK] User plan limits updated:', {
+      planId,
+      campaignsLimit: planDetails?.campaignsLimit,
+      creatorsLimit: planDetails?.creatorsLimit
+    });
 
     // If subscription has trial, queue background job to complete onboarding (Industry Standard)
     if (subscription.trial_end && subscription.status === 'trialing') {
@@ -218,7 +269,18 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   try {
     const customerId = subscription.customer as string;
-    const planId = subscription.metadata.plan || 'unknown';
+    
+    // Try multiple ways to get the plan ID
+    let planId = subscription.metadata.plan || subscription.metadata.planId;
+    
+    // If metadata doesn't have plan info, determine from price ID
+    if (!planId || planId === 'unknown') {
+      const priceId = subscription.items.data[0]?.price?.id;
+      if (priceId) {
+        planId = getPlanFromPriceId(priceId);
+        console.log('🔍 [STRIPE-WEBHOOK] Plan determined from price ID for update:', { priceId, planId });
+      }
+    }
 
     // Find user by Stripe customer ID
     const user = await db.query.userProfiles.findFirst({
@@ -239,10 +301,30 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       updatedAt: new Date()
     };
 
-    // Handle trial end
+    // Handle trial conversion - more comprehensive logic
+    if (subscription.status === 'active' && user.trialStatus === 'active') {
+      console.log('🎯 [STRIPE-WEBHOOK] Trial converted to paid subscription');
+      updateData.trialStatus = 'converted';
+      updateData.trialConversionDate = new Date();
+    }
+    
+    // Handle explicit trial end
     if (subscription.trial_end && subscription.trial_end * 1000 < Date.now()) {
       updateData.trialStatus = 'converted';
       updateData.trialConversionDate = new Date();
+    }
+    
+    // Set plan limits based on the new plan
+    const planLimits = {
+      'glow_up': { campaigns: 3, creators: 1000 },
+      'viral_surge': { campaigns: 10, creators: 10000 },
+      'fame_flex': { campaigns: -1, creators: -1 }
+    };
+    
+    const limits = planLimits[planId as keyof typeof planLimits];
+    if (limits) {
+      updateData.planCampaignsLimit = limits.campaigns;
+      updateData.planCreatorsLimit = limits.creators;
     }
 
     // Handle cancellation

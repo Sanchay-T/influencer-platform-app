@@ -49,17 +49,41 @@ function generatePlaceholderResponse(imageUrl: string) {
 
 export async function GET(request: Request) {
   const startTime = Date.now();
+  const requestId = Math.random().toString(36).slice(2, 8);
+  
   try {
     const { searchParams } = new URL(request.url);
     const imageUrl = searchParams.get('url');
 
-    console.log('🖼️ [IMAGE-PROXY] Starting image proxy request');
-    console.log('🔗 [IMAGE-PROXY] Source URL:', imageUrl);
-    console.log('🕐 [IMAGE-PROXY] Timestamp:', new Date().toISOString());
+    console.group(`🖼️ [IMAGE-PROXY-${requestId}] New request started`);
+    console.log('🔗 Source URL:', imageUrl);
+    console.log('🕐 Timestamp:', new Date().toISOString());
+    console.log('📊 Request details:', {
+      method: request.method,
+      headers: Object.fromEntries(request.headers.entries()),
+      urlLength: imageUrl?.length || 0,
+      isBlob: imageUrl?.includes('blob.vercel-storage.com') || false,
+      isTikTok: imageUrl?.includes('tiktok') || false,
+      requestId: requestId
+    });
 
     if (!imageUrl) {
       console.error('❌ [IMAGE-PROXY] Missing image URL parameter');
+      console.groupEnd();
       return new NextResponse('Missing image URL', { status: 400 });
+    }
+
+    // 🚨 IMPORTANT: Check if this is a blob URL (which shouldn't be proxied)
+    if (imageUrl.includes('blob.vercel-storage.com')) {
+      console.warn('⚠️ [IMAGE-PROXY] WARNING: Received blob URL for proxying - this should not happen!');
+      console.warn('  🔍 This suggests frontend is double-proxying already cached images');
+      console.warn('  🔗 Blob URL:', imageUrl);
+      console.warn('  📋 Recommendation: Frontend should use blob URLs directly');
+      
+      // Redirect to the blob URL directly
+      console.log('🔄 [IMAGE-PROXY] Redirecting to blob URL directly');
+      console.groupEnd();
+      return NextResponse.redirect(imageUrl, 302);
     }
 
     // Detect image format from URL
@@ -326,13 +350,23 @@ export async function GET(request: Request) {
     }
 
     const totalTime = Date.now() - startTime;
-    console.log('🏁 [IMAGE-PROXY] Total processing time:', totalTime + 'ms');
-    console.log('📤 [IMAGE-PROXY] Sending response with content-type:', contentType);
+    
+    console.log('🏁 [IMAGE-PROXY] Processing complete!');
+    console.log('📤 [IMAGE-PROXY] Final response details:', {
+      contentType: contentType,
+      bufferSize: buffer.length,
+      totalTime: totalTime + 'ms',
+      fetchStrategy: fetchStrategy,
+      requestId: requestId
+    });
 
     // Determine the conversion method used for headers
     const conversionMethod = isHeic ? 
       (contentType === 'image/jpeg' ? 'heic-converted' : 'heic-original') : 
       'original';
+
+    console.log('✅ [IMAGE-PROXY] Sending successful response');
+    console.groupEnd();
 
     return new NextResponse(buffer, {
       headers: {
@@ -345,12 +379,19 @@ export async function GET(request: Request) {
         'X-Image-Original-Format': isHeic ? 'heic' : 'other',
         'X-Image-Fetch-Strategy': fetchStrategy,
         'X-Image-Final-Status': response.status.toString(),
+        'X-Request-ID': requestId,
       },
     });
   } catch (error) {
     const errorTime = Date.now() - startTime;
     console.error('❌ [IMAGE-PROXY] Critical error after', errorTime + 'ms:', error);
-    console.error('📍 [IMAGE-PROXY] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error('📍 [IMAGE-PROXY] Error details:', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : 'No stack trace',
+      requestId: requestId,
+      errorTime: errorTime + 'ms'
+    });
+    console.groupEnd();
     return new NextResponse('Error fetching image', { status: 500 });
   }
 } 

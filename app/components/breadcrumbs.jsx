@@ -3,6 +3,7 @@
 import { ChevronRight, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import Link from 'next/link'
 
 export default function Breadcrumbs({ items, showBackButton = true }) {
   const router = useRouter();
@@ -20,23 +21,23 @@ export default function Breadcrumbs({ items, showBackButton = true }) {
 
   return (
     <div className="flex items-center justify-between mb-6">
-      <nav className="flex items-center space-x-2 text-sm text-gray-500">
+      <nav className="flex items-center space-x-2 text-sm text-zinc-400">
         {items.map((item, index) => (
           <div key={index} className="flex items-center">
             {item.href ? (
-              <a 
+              <Link 
                 href={item.href}
-                className="hover:text-gray-700 transition-colors duration-200"
+                className="hover:text-zinc-200 transition-colors duration-200"
               >
                 {item.label}
-              </a>
+              </Link>
             ) : (
-              <span className={index === items.length - 1 ? "text-gray-900 font-medium" : ""}>
+              <span className={index === items.length - 1 ? "text-zinc-100 font-medium" : ""}>
                 {item.label}
               </span>
             )}
             {index < items.length - 1 && (
-              <ChevronRight className="h-4 w-4 mx-2 text-gray-400" />
+              <ChevronRight className="h-4 w-4 mx-2 text-zinc-500" />
             )}
           </div>
         ))}

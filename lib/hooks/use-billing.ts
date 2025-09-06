@@ -1,6 +1,7 @@
 'use client'
 
 import { useAuth } from '@clerk/nextjs'
+import { loggedApiCall, logTiming } from '@/lib/utils/frontend-logger'
 import { useState, useEffect } from 'react'
 
 export interface BillingStatus {
@@ -40,6 +41,15 @@ export interface BillingStatus {
  */
 export function useBilling(): BillingStatus {
   const { isLoaded, userId } = useAuth()
+  // Simple in-memory cache to avoid duplicate fetches and speed up gating
+  // Shared across all hook instances in the same tab
+  // 5s TTL keeps UI fresh but prevents bursty refetches
+  const CACHE_TTL_MS = 5000
+  // @ts-ignore module-level singleton
+  if (!(globalThis as any).__BILLING_CACHE__) {
+    ;(globalThis as any).__BILLING_CACHE__ = { data: null as any, ts: 0, inflight: null as Promise<any> | null }
+  }
+  const cacheRef = (globalThis as any).__BILLING_CACHE__
   const [billingStatus, setBillingStatus] = useState<BillingStatus>({
     isLoaded: false,
     currentPlan: 'free',
@@ -53,18 +63,66 @@ export function useBilling(): BillingStatus {
   useEffect(() => {
     if (!isLoaded || !userId) return
 
-    // Fetch billing status from our API
-    const fetchBillingStatus = async () => {
+    // Fetch billing status from our API (with simple cache + inflight guard)
+    const fetchBillingStatus = async (skipCache = false) => {
       try {
-        console.log('💳 [STRIPE-BILLING] Fetching billing status for user:', userId)
-        
-        const response = await fetch('/api/billing/status')
-        if (!response.ok) {
-          throw new Error('Failed to fetch billing status')
+        // 1) Try persisted snapshot first for instant UX (no spinner on refresh)
+        try {
+          const persisted = localStorage.getItem('gemz_entitlements_v1')
+          if (persisted) {
+            const parsed = JSON.parse(persisted)
+            // TTL 60s to keep UI snappy during navigation/refreshes
+            if (parsed && parsed.ts && Date.now() - parsed.ts < 60_000) {
+              setFromData(parsed.data)
+            }
+          }
+        } catch {}
+
+        const now = Date.now()
+        if (!skipCache && cacheRef.data && now - cacheRef.ts < CACHE_TTL_MS) {
+          setFromData(cacheRef.data)
+          return
         }
-        
-        const data = await response.json()
+        if (cacheRef.inflight) {
+          const data = await cacheRef.inflight
+          setFromData(data)
+          return
+        }
+        const opStart = Date.now()
+        console.log('💳 [STRIPE-BILLING] Fetching billing status for user:', userId)
+
+        cacheRef.inflight = loggedApiCall('/api/billing/status', {}, { action: 'fetch_billing_status', userId: userId || 'unknown' }).then(async (res: any) => {
+          if (!res.ok) throw new Error(`Failed to fetch billing status (status ${res.status})`)
+          const reqId = (res.headers && res.headers.get && res.headers.get('x-request-id')) || 'none'
+          const serverDuration = (res.headers && res.headers.get && res.headers.get('x-duration-ms')) || 'n/a'
+          const data = res.data ?? (await res.json())
+          console.log('💳 [STRIPE-BILLING] Correlation IDs:', { requestId: reqId, serverDurationMs: serverDuration })
+          logTiming('fetch_billing_status_total', opStart, { userId: userId || 'unknown', requestId: reqId || undefined })
+          cacheRef.data = data
+          cacheRef.ts = Date.now()
+          cacheRef.inflight = null
+          // persist snapshot for fast subsequent loads
+          try {
+            localStorage.setItem('gemz_entitlements_v1', JSON.stringify({ ts: Date.now(), data }))
+          } catch {}
+          return data
+        }).catch((e: any) => {
+          cacheRef.inflight = null
+          throw e
+        })
+
+        const data = await cacheRef.inflight
         console.log('💳 [STRIPE-BILLING] Received billing data:', data)
+        
+        setFromData(data)
+
+      } catch (error) {
+        console.error('❌ [STRIPE-BILLING] Error fetching billing status:', error)
+        setOnError()
+      }
+    }
+
+    const setFromData = (data: any) => {
         
         const currentPlan = data.currentPlan || 'free'
         const isTrialing = data.isTrialing || false
@@ -175,10 +233,9 @@ export function useBilling(): BillingStatus {
             progressPercentage: data.usageInfo?.progressPercentage || 0
           }
         })
+    }
 
-      } catch (error) {
-        console.error('❌ [STRIPE-BILLING] Error fetching billing status:', error)
-        
+    const setOnError = () => {
         // Default to free plan on error
         setBillingStatus({
           isLoaded: true,
@@ -209,13 +266,42 @@ export function useBilling(): BillingStatus {
             progressPercentage: 0
           }
         })
-      }
     }
 
     fetchBillingStatus()
+    
+    // Listen for focus events to refresh billing status
+    const handleFocus = () => {
+      console.log('💳 [BILLING-REFRESH] Window focused, refreshing billing status');
+      fetchBillingStatus(true); // Skip cache on focus
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, [isLoaded, userId])
 
-  return billingStatus
+  // Add function to force refresh billing data (useful after upgrades)
+  const refreshBillingData = () => {
+    console.log('🔄 [BILLING-REFRESH] Force refreshing billing data');
+    
+    // Clear caches
+    try {
+      localStorage.removeItem('gemz_entitlements_v1');
+      if ((globalThis as any).__BILLING_CACHE__) {
+        (globalThis as any).__BILLING_CACHE__.data = null;
+        (globalThis as any).__BILLING_CACHE__.ts = 0;
+        (globalThis as any).__BILLING_CACHE__.inflight = null;
+      }
+    } catch (e) {}
+    
+    // Trigger a fresh fetch
+    fetchBillingStatus(true);
+  };
+
+  return {
+    ...billingStatus,
+    refreshBillingData
+  };
 }
 
 /**

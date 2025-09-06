@@ -9,6 +9,7 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+project
 
 # testing
 /coverage
@@ -41,3 +42,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .conductor/
+
+# billing logs (sensitive information)
+/billing-check/*.log
+/billing-check/*.json
