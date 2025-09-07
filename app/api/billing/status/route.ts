@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
 import { userProfiles, subscriptionPlans } from '@/lib/db/schema';
+import { getUserProfile, createUser } from '@/lib/db/queries/user-queries';
 import { eq } from 'drizzle-orm';
 import { getTrialStatus } from '@/lib/trial/trial-service';
 import { PLAN_CONFIGS } from '@/lib/services/plan-validator';
@@ -24,10 +25,8 @@ export async function GET(request: NextRequest) {
 
     console.log(`💳 [BILLING-STATUS:${reqId}] Fetching billing status for user:`, userId);
 
-    // Get user profile with billing information
-    let userProfile = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.userId, userId)
-    });
+    // Get user profile with billing information (using new normalized tables)
+    let userProfile = await getUserProfile(userId);
 
     if (!userProfile) {
       console.log(`⚠️ [BILLING-STATUS:${reqId}] User profile not found - creating default profile`);
@@ -35,6 +34,7 @@ export async function GET(request: NextRequest) {
       // 🚨 CRITICAL FIX: Auto-create user profile if missing
       const now = new Date();
       const trialEndDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
+      
       // Fetch Clerk user for richer defaults (email, name)
       let emailFromClerk: string | null = null;
       let fullNameFromClerk: string | null = null;
@@ -46,57 +46,22 @@ export async function GET(request: NextRequest) {
         console.log(`ℹ️ [BILLING-STATUS:${reqId}] Could not fetch Clerk user details for defaults`);
       }
       
-      const defaultUserProfile = {
+      // Create user with normalized tables
+      userProfile = await createUser({
         userId: userId,
         email: emailFromClerk,
         fullName: fullNameFromClerk || 'New User',
-        signupTimestamp: now,
         onboardingStep: 'pending', // Will trigger onboarding modal
         
         // Trial system - Start 7-day trial immediately
         trialStartDate: now,
         trialEndDate: trialEndDate,
-        trialStatus: 'active',
         
         // Subscription defaults
         currentPlan: 'free', // Start with free, upgrade during onboarding
-        subscriptionStatus: 'none',
-        
-        // Plan limits for free tier (will be updated during onboarding)
-        planCampaignsLimit: 0,
-        planCreatorsLimit: 0,
-        planFeatures: {},
-        
-        // Usage tracking
-        usageCampaignsCurrent: 0,
-        usageCreatorsCurrentMonth: 0,
-        usageResetDate: now,
-        
-        // Billing sync
-        billingSyncStatus: 'pending',
-        
-        // Admin system
-        isAdmin: false,
-        
-        // Timestamps
-        createdAt: now,
-        updatedAt: now
-      };
+      });
 
-      try {
-        await db.insert(userProfiles).values(defaultUserProfile);
-        console.log(`✅ [BILLING-STATUS:${reqId}] Default user profile created successfully`);
-        
-        // Use the newly created profile
-        userProfile = defaultUserProfile;
-      } catch (error) {
-        console.error(`❌ [BILLING-STATUS:${reqId}] Failed to create default user profile:`, error);
-        const res = NextResponse.json({ error: 'Failed to initialize user profile' }, { status: 500 });
-        res.headers.set('x-request-id', reqId);
-        res.headers.set('x-started-at', ts);
-        res.headers.set('x-duration-ms', String(Date.now() - startedAt));
-        return res;
-      }
+      console.log(`✅ [BILLING-STATUS:${reqId}] Default user profile created successfully with normalized tables`);
     }
 
     // 🔍 DIAGNOSTIC LOGS - Check for inconsistent state

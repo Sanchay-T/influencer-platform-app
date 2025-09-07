@@ -1,36 +1,33 @@
 {
   "mcpServers": {
     "supabase": {
-      "command": "npx", 
-      "args": ["-y", "@supabase/mcp-server-supabase@latest", "--project-ref=YOUR_DEV_PROJECT_REF_HERE"],
-      "env": {
-        "SUPABASE_ACCESS_TOKEN": "YOUR_DEV_SUPABASE_TOKEN_HERE"
-      }
-    },
-    "linear": {
       "command": "npx",
-      "args": ["-y", "@linear/mcp-server@latest"],
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--read-only",
+        "--project-ref=cufwvosytcmaggyyfsix"
+      ],
       "env": {
-        "LINEAR_API_KEY": "YOUR_LINEAR_API_KEY_HERE"
+        "SUPABASE_ACCESS_TOKEN": "sbp_dd7faee174f910ab26cc84555bd447e665c66367"
       }
     },
     "shadcn": {
       "command": "npx",
-      "args": ["shadcn@latest", "mcp"]
+      "args": [
+        "shadcn@latest",
+        "mcp"
+      ]
     },
     "browser": {
       "command": "npx",
-      "args": ["@browsermcp/mcp@latest"]
+      "args": [
+        "@browsermcp/mcp@latest"
+      ]
     },
-    "stripe": {
-      "transport": {
-        "type": "http",
-        "uri": "https://mcp.stripe.com"
-      },
-      "auth": {
-        "type": "bearer",
-        "token": "YOUR_STRIPE_SECRET_KEY_HERE"
-      }
+    "linear-server": {
+      "type": "sse",
+      "url": "https://mcp.linear.app/sse"
     }
   }
 }

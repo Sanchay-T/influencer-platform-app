@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { StripeService } from '@/lib/stripe/stripe-service';
 import { db } from '@/lib/db';
 import { userProfiles, subscriptionPlans } from '@/lib/db/schema';
+import { getUserProfile, updateUserProfile, getUserByStripeCustomerId } from '@/lib/db/queries/user-queries';
 import { eq } from 'drizzle-orm';
 import Stripe from 'stripe';
 import { EventService, EVENT_TYPES, AGGREGATE_TYPES, SOURCE_SYSTEMS } from '@/lib/events/event-service';
@@ -124,10 +125,8 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
       console.error('🚨 [STRIPE-WEBHOOK-DIAGNOSTICS] CRITICAL: Event sourcing not available - falling back to direct DB update');
     }
 
-    // Find user by Stripe customer ID
-    const user = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.stripeCustomerId, customerId)
-    });
+    // Find user by Stripe customer ID (using normalized tables)
+    const user = await getUserByStripeCustomerId(customerId);
 
     if (!user) {
       console.error('❌ [STRIPE-WEBHOOK] User not found for customer:', customerId);
@@ -173,22 +172,19 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
       // Continue with basic update, but log the issue
     }
 
-    // Update subscription info immediately (including plan limits from subscription_plans)
-    await db.update(userProfiles)
-      .set({
-        stripeSubscriptionId: subscription.id,
-        currentPlan: planId,
-        subscriptionStatus: subscription.status,
-        // 🚀 CRITICAL FIX: Set plan limits from subscription_plans table
-        planCampaignsLimit: planDetails?.campaignsLimit || 0,
-        planCreatorsLimit: planDetails?.creatorsLimit || 0,
-        planFeatures: planDetails?.features || {},
-        billingSyncStatus: 'webhook_subscription_created',
-        lastWebhookEvent: 'customer.subscription.created',
-        lastWebhookTimestamp: new Date(),
-        updatedAt: new Date()
-      })
-      .where(eq(userProfiles.userId, user.userId));
+    // Update subscription info immediately using normalized tables
+    await updateUserProfile(user.userId, {
+      stripeSubscriptionId: subscription.id,
+      currentPlan: planId,
+      subscriptionStatus: subscription.status,
+      // 🚀 CRITICAL FIX: Set plan limits from subscription_plans table
+      planCampaignsLimit: planDetails?.campaignsLimit || 0,
+      planCreatorsLimit: planDetails?.creatorsLimit || 0,
+      planFeatures: planDetails?.features || {},
+      billingSyncStatus: 'webhook_subscription_created',
+      lastWebhookEvent: 'customer.subscription.created',
+      lastWebhookTimestamp: new Date(),
+    });
 
     console.log('✅ [STRIPE-WEBHOOK] User plan limits updated:', {
       planId,

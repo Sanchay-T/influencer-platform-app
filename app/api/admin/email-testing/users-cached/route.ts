@@ -55,21 +55,22 @@ export async function GET(req: NextRequest) {
     try {
       const dbStartTime = Date.now();
       
-      // Fast query with minimal data
+      // Fast query with minimal data using new normalized tables
       const users = await sql`
         SELECT 
-          user_id,
-          full_name,
-          business_name,
-          trial_status,
-          onboarding_step
-        FROM user_profiles 
+          u.user_id,
+          u.full_name,
+          u.business_name,
+          us.trial_status,
+          u.onboarding_step
+        FROM users u
+        LEFT JOIN user_subscriptions us ON u.id = us.user_id
         WHERE 
-          full_name ILIKE ${query + '%'} OR 
-          user_id ILIKE ${query + '%'}
+          u.full_name ILIKE ${query + '%'} OR 
+          u.user_id ILIKE ${query + '%'}
         ORDER BY 
-          CASE WHEN full_name ILIKE ${query + '%'} THEN 0 ELSE 1 END,
-          created_at DESC 
+          CASE WHEN u.full_name ILIKE ${query + '%'} THEN 0 ELSE 1 END,
+          u.created_at DESC 
         LIMIT 5
       `;
       

@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import { userProfiles, campaigns, scrapingJobs, subscriptionPlans } from '@/lib/db/schema';
+import { getUserProfile, incrementUsage } from '@/lib/db/queries/user-queries';
 import { eq, count, and, gte, sql } from 'drizzle-orm';
 import BillingLogger from '@/lib/loggers/billing-logger';
 
@@ -117,10 +118,8 @@ export class PlanValidator {
         logRequestId
       );
 
-      // Get user profile
-      const userProfile = await db.query.userProfiles.findFirst({
-        where: eq(userProfiles.userId, userId)
-      });
+      // Get user profile using normalized tables
+      const userProfile = await getUserProfile(userId);
 
       if (!userProfile) {
         await BillingLogger.logError(
@@ -579,21 +578,8 @@ export class PlanValidator {
         logRequestId
       );
 
-      if (type === 'campaigns') {
-        await db.update(userProfiles)
-          .set({
-            usageCampaignsCurrent: sql`${userProfiles.usageCampaignsCurrent} + ${amount}`,
-            updatedAt: new Date()
-          })
-          .where(eq(userProfiles.userId, userId));
-      } else if (type === 'creators') {
-        await db.update(userProfiles)
-          .set({
-            usageCreatorsCurrentMonth: sql`${userProfiles.usageCreatorsCurrentMonth} + ${amount}`,
-            updatedAt: new Date()
-          })
-          .where(eq(userProfiles.userId, userId));
-      }
+      // Use the new helper function for normalized tables
+      await incrementUsage(userId, type, amount);
 
       await BillingLogger.logDatabase(
         'UPDATE',
