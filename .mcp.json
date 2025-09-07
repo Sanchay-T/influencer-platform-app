@@ -1,15 +1,35 @@
 {
   "mcpServers": {
     "supabase": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@supabase/mcp-server-supabase@latest",
-        "--read-only",
-        "--project-ref=nlxgzhqfrjohvkigwqvh"
-      ],
+      "command": "npx", 
+      "args": ["-y", "@supabase/mcp-server-supabase@latest", "--project-ref=YOUR_DEV_PROJECT_REF_HERE"],
       "env": {
-        "SUPABASE_ACCESS_TOKEN": "sbp_481a2d3c2b9addc7aeb9d64fff06b81bdc84d331"
+        "SUPABASE_ACCESS_TOKEN": "YOUR_DEV_SUPABASE_TOKEN_HERE"
+      }
+    },
+    "linear": {
+      "command": "npx",
+      "args": ["-y", "@linear/mcp-server@latest"],
+      "env": {
+        "LINEAR_API_KEY": "YOUR_LINEAR_API_KEY_HERE"
+      }
+    },
+    "shadcn": {
+      "command": "npx",
+      "args": ["shadcn@latest", "mcp"]
+    },
+    "browser": {
+      "command": "npx",
+      "args": ["@browsermcp/mcp@latest"]
+    },
+    "stripe": {
+      "transport": {
+        "type": "http",
+        "uri": "https://mcp.stripe.com"
+      },
+      "auth": {
+        "type": "bearer",
+        "token": "YOUR_STRIPE_SECRET_KEY_HERE"
       }
     }
   }
