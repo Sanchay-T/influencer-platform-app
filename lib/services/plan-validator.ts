@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { userProfiles, campaigns, scrapingJobs } from '@/lib/db/schema';
+import { userProfiles, campaigns, scrapingJobs, subscriptionPlans } from '@/lib/db/schema';
 import { eq, count, and, gte, sql } from 'drizzle-orm';
 import BillingLogger from '@/lib/loggers/billing-logger';
 
@@ -18,6 +18,7 @@ export interface PlanConfig {
   };
 }
 
+// Legacy defaults kept as fallback for features only; limits now come from DB subscription_plans
 export const PLAN_CONFIGS: Record<string, PlanConfig> = {
   'free': {
     id: 'free',
@@ -132,9 +133,31 @@ export class PlanValidator {
         return null;
       }
 
-      // Get plan config
+      // Get plan config: resolve limits from subscription_plans (DB), fallback features from legacy map
       const currentPlan = userProfile.currentPlan || 'free';
-      const planConfig = PLAN_CONFIGS[currentPlan];
+      const planDefaults = PLAN_CONFIGS[currentPlan] || PLAN_CONFIGS['free'];
+
+      let campaignsLimit = planDefaults.campaignsLimit;
+      let creatorsLimit = planDefaults.creatorsLimit;
+      try {
+        const planRow = await db.query.subscriptionPlans.findFirst({
+          where: eq(subscriptionPlans.planKey, currentPlan)
+        });
+        if (planRow) {
+          campaignsLimit = planRow.campaignsLimit ?? campaignsLimit;
+          creatorsLimit = planRow.creatorsLimit ?? creatorsLimit;
+        }
+      } catch (e) {
+        // keep defaults if DB lookup fails
+      }
+
+      const planConfig: PlanConfig = {
+        id: currentPlan,
+        name: planDefaults.name,
+        campaignsLimit,
+        creatorsLimit,
+        features: planDefaults.features
+      };
       
       if (!planConfig) {
         await BillingLogger.logError(

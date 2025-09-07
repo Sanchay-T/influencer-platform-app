@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
+import { userProfiles, subscriptionPlans } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { getTrialStatus } from '@/lib/trial/trial-service';
 import { PLAN_CONFIGS } from '@/lib/services/plan-validator';
@@ -162,10 +162,41 @@ export async function GET(request: NextRequest) {
     const campaignsUsed = userProfile.usageCampaignsCurrent || 0;
     const creatorsUsed = userProfile.usageCreatorsCurrentMonth || 0;
     
-    // 🔧 SINGLE SOURCE OF TRUTH: Get limits from plan configuration, not database
-    const planConfig = PLAN_CONFIGS[currentPlan] || PLAN_CONFIGS['free'];
-    const campaignsLimit = planConfig.campaignsLimit;
-    const creatorsLimit = planConfig.creatorsLimit;
+    // 🔧 SINGLE SOURCE OF TRUTH: Get limits from subscription_plans table
+    let campaignsLimit = 0;
+    let creatorsLimit = 0;
+    try {
+      const planRow = await db.query.subscriptionPlans.findFirst({
+        where: eq(subscriptionPlans.planKey, currentPlan)
+      });
+
+      if (planRow) {
+        campaignsLimit = planRow.campaignsLimit ?? 0;
+        creatorsLimit = planRow.creatorsLimit ?? 0;
+      } else {
+        // Sensible fallback by plan key (keeps current UX if plans table missing rows)
+        const fallback: Record<string, { c: number; r: number }> = {
+          free: { c: 0, r: 0 },
+          glow_up: { c: 3, r: 1000 },
+          viral_surge: { c: 10, r: 10000 },
+          fame_flex: { c: -1, r: -1 },
+        };
+        const f = fallback[currentPlan as keyof typeof fallback] || fallback['free'];
+        campaignsLimit = f.c;
+        creatorsLimit = f.r;
+      }
+    } catch (e) {
+      console.log(`⚠️ [BILLING-STATUS:${reqId}] Plan lookup failed, using fallback`, e);
+      const fallback: Record<string, { c: number; r: number }> = {
+        free: { c: 0, r: 0 },
+        glow_up: { c: 3, r: 1000 },
+        viral_surge: { c: 10, r: 10000 },
+        fame_flex: { c: -1, r: -1 },
+      };
+      const f = fallback[currentPlan as keyof typeof fallback] || fallback['free'];
+      campaignsLimit = f.c;
+      creatorsLimit = f.r;
+    }
     
     // Calculate plan usage percentage based on highest utilization
     let planUsagePercentage = 0;
