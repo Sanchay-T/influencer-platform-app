@@ -8,20 +8,21 @@ async function listUsers() {
   const sql = postgres(process.env.DATABASE_URL);
 
   try {
-    // Get all users
+    // Get all users from normalized tables
     const users = await sql`
       SELECT 
-        user_id,
-        full_name,
-        business_name,
-        email,
-        onboarding_step,
-        trial_status,
-        trial_start_date,
-        trial_end_date,
-        created_at
-      FROM user_profiles 
-      ORDER BY created_at DESC
+        u.user_id,
+        u.full_name,
+        u.business_name,
+        u.email,
+        u.onboarding_step,
+        us.trial_status,
+        us.trial_start_date,
+        us.trial_end_date,
+        u.created_at
+      FROM users u
+      LEFT JOIN user_subscriptions us ON u.id = us.user_id
+      ORDER BY u.created_at DESC
     `;
 
     if (users.length === 0) {

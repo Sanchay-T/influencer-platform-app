@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import Stripe from 'stripe';
 import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { getClientUrl } from '@/lib/utils/url-utils';
 import OnboardingLogger from '@/lib/utils/onboarding-logger';
 
@@ -58,9 +57,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Get user profile
-    const profile = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.userId, userId)
-    });
+    const profile = await getUserProfile(userId);
 
     if (!profile) {
       await OnboardingLogger.logPayment('DB-ERROR', 'User profile not found for checkout', userId, {

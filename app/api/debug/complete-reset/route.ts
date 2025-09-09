@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
+import { getUserProfile, createUser } from '@/lib/db/queries/user-queries';
+import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 export async function POST() {
@@ -17,9 +18,13 @@ export async function POST() {
     console.log('🔄🔄🔄 [COMPLETE-RESET] ===================================');
     console.log('🔑 [COMPLETE-RESET] User ID:', userId);
 
-    // Step 1: Delete existing user profile
-    await db.delete(userProfiles).where(eq(userProfiles.userId, userId));
-    console.log('🗑️ [COMPLETE-RESET] Deleted existing user profile');
+    // Step 1: Delete existing user from normalized tables
+    // Find the user first
+    const existingUser = await getUserProfile(userId);
+    if (existingUser) {
+      await db.delete(users).where(eq(users.userId, userId));
+      console.log('🗑️ [COMPLETE-RESET] Deleted existing user profile');
+    }
 
     // Step 2: Create fresh profile with pending onboarding
     const now = new Date();
@@ -65,7 +70,14 @@ export async function POST() {
       updatedAt: now
     };
 
-    await db.insert(userProfiles).values(freshProfile);
+    // Step 2: Create fresh user profile using normalized schema
+    await createUser({
+      userId: userId,
+      onboardingStep: 'pending',
+      trialStartDate: now,
+      trialEndDate: trialEndDate,
+      currentPlan: 'free'
+    });
     console.log('✅ [COMPLETE-RESET] Created fresh user profile with pending onboarding');
 
     console.log('🔄🔄🔄 [COMPLETE-RESET] ===================================');

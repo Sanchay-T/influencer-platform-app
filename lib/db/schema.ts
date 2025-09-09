@@ -350,8 +350,8 @@ export type SearchJob = typeof searchJobs.$inferSelect;
 export type NewSearchJob = typeof searchJobs.$inferInsert;
 export type SearchResult = typeof searchResults.$inferSelect;
 export type NewSearchResult = typeof searchResults.$inferInsert;
-export type UserProfile = typeof userProfiles.$inferSelect;
-export type NewUserProfile = typeof userProfiles.$inferInsert;
+// Note: UserProfile types have been replaced by UserProfileComplete for backward compatibility
+// Individual normalized table types are available as User, UserSubscription, UserBilling, etc.
 export type SystemConfiguration = typeof systemConfigurations.$inferSelect;
 export type NewSystemConfiguration = typeof systemConfigurations.$inferInsert;
 export type Event = typeof events.$inferSelect;

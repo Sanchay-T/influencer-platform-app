@@ -31,9 +31,81 @@ lib/
 
 ### Core Schema (`/lib/db/schema.ts`)
 
-The platform uses **Drizzle ORM** with PostgreSQL, featuring 10 core tables supporting campaigns, scraping jobs, user management, billing, and event sourcing.
+The platform uses **Drizzle ORM** with PostgreSQL, featuring 15+ tables supporting campaigns, scraping jobs, **normalized user management**, billing, event sourcing, and background job processing.
 
-#### Key Tables:
+#### **🔄 MAJOR UPDATE: Database Normalization**
+
+The monolithic `user_profiles` table has been **replaced with 5 normalized tables** for better data integrity, performance, and maintainability:
+
+**NEW Normalized User System:**
+```typescript
+// 1. USERS - Core identity and profile information
+export const users = pgTable('users', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: text('user_id').unique().notNull(), // External auth ID (Clerk)
+  email: text('email'),
+  fullName: text('full_name'),
+  businessName: text('business_name'),
+  brandDescription: text('brand_description'),
+  industry: text('industry'),
+  onboardingStep: varchar('onboarding_step', { length: 50 }).default('pending').notNull(),
+  isAdmin: boolean('is_admin').default(false).notNull(),
+});
+
+// 2. USER_SUBSCRIPTIONS - Trial and subscription management
+export const userSubscriptions = pgTable('user_subscriptions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  currentPlan: varchar('current_plan', { length: 50 }).default('free').notNull(),
+  intendedPlan: varchar('intended_plan', { length: 50 }), // ✨ NEW: Plan selected before checkout
+  subscriptionStatus: varchar('subscription_status', { length: 20 }).default('none').notNull(),
+  trialStatus: varchar('trial_status', { length: 20 }).default('pending').notNull(),
+  trialStartDate: timestamp('trial_start_date'),
+  trialEndDate: timestamp('trial_end_date'),
+  trialConversionDate: timestamp('trial_conversion_date'), // ✨ NEW: Conversion tracking
+  subscriptionCancelDate: timestamp('subscription_cancel_date'),
+  subscriptionRenewalDate: timestamp('subscription_renewal_date'),
+  billingSyncStatus: varchar('billing_sync_status', { length: 20 }).default('pending').notNull(),
+});
+
+// 3. USER_BILLING - Stripe payment data (Clerk artifacts removed)
+export const userBilling = pgTable('user_billing', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  stripeCustomerId: text('stripe_customer_id').unique(),
+  stripeSubscriptionId: text('stripe_subscription_id'),
+  paymentMethodId: text('payment_method_id'),
+  cardLast4: varchar('card_last_4', { length: 4 }),
+  cardBrand: varchar('card_brand', { length: 20 }),
+  cardExpMonth: integer('card_exp_month'),
+  cardExpYear: integer('card_exp_year'),
+  billingAddressCity: text('billing_address_city'),
+  billingAddressCountry: varchar('billing_address_country', { length: 2 }),
+  billingAddressPostalCode: varchar('billing_address_postal_code', { length: 20 }),
+});
+
+// 4. USER_USAGE - Usage tracking and plan limits
+export const userUsage = pgTable('user_usage', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  planCampaignsLimit: integer('plan_campaigns_limit'),
+  planCreatorsLimit: integer('plan_creators_limit'),
+  planFeatures: jsonb('plan_features').default('{}').notNull(),
+  usageCampaignsCurrent: integer('usage_campaigns_current').default(0).notNull(),
+  usageCreatorsCurrentMonth: integer('usage_creators_current_month').default(0).notNull(),
+  usageResetDate: timestamp('usage_reset_date').defaultNow().notNull(),
+});
+
+// 5. USER_SYSTEM_DATA - System metadata and webhook tracking
+export const userSystemData = pgTable('user_system_data', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  signupTimestamp: timestamp('signup_timestamp').defaultNow().notNull(),
+  emailScheduleStatus: jsonb('email_schedule_status').default('{}').notNull(),
+  lastWebhookEvent: varchar('last_webhook_event', { length: 100 }),
+  lastWebhookTimestamp: timestamp('last_webhook_timestamp'),
+});
+```
 
 **Campaigns & Jobs:**
 ```typescript
@@ -68,33 +140,40 @@ export const scrapingResults = pgTable('scraping_results', {
 });
 ```
 
-**User & Billing System:**
+**Enhanced System Tables:**
 ```typescript
-// User profiles with billing integration
-export const userProfiles = pgTable('user_profiles', {
-  userId: text('user_id').unique(), // Clerk user ID
-  // Trial system
-  trialStartDate: timestamp('trial_start_date'),
-  trialEndDate: timestamp('trial_end_date'),
-  trialStatus: varchar('trial_status').default('pending'),
-  // Subscription management
-  currentPlan: varchar('current_plan').default('free'),
-  subscriptionStatus: varchar('subscription_status').default('none'),
-  stripeCustomerId: text('stripe_customer_id'),
-  // Usage tracking
-  usageCampaignsCurrent: integer('usage_campaigns_current').default(0),
-  usageCreatorsCurrentMonth: integer('usage_creators_current_month').default(0),
-  // Admin system
-  isAdmin: boolean('is_admin').default(false)
+// Event Sourcing table for tracking all state changes (Industry Standard)
+export const events = pgTable('events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  aggregateId: text('aggregate_id').notNull(), // User ID, Job ID, etc.
+  aggregateType: varchar('aggregate_type', { length: 50 }).notNull(), // 'user', 'subscription', 'onboarding'
+  eventType: varchar('event_type', { length: 100 }).notNull(), // 'subscription_created', 'onboarding_completed'
+  eventData: jsonb('event_data').notNull(), // Full event payload
+  idempotencyKey: text('idempotency_key').notNull().unique(), // Prevent duplicate processing
+  sourceSystem: varchar('source_system', { length: 50 }).notNull(), // 'stripe_webhook', 'admin_action', 'user_action'
 });
 
-// Subscription plan definitions
+// Background Jobs table for QStash job tracking (Industry Standard)
+export const backgroundJobs = pgTable('background_jobs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  jobType: varchar('job_type', { length: 100 }).notNull(), // 'complete_onboarding', 'send_trial_email'
+  payload: jsonb('payload').notNull(), // Job data
+  status: varchar('status', { length: 20 }).notNull().default('pending'),
+  qstashMessageId: text('qstash_message_id'), // QStash message ID for tracking
+  priority: integer('priority').notNull().default(100),
+  maxRetries: integer('max_retries').notNull().default(3),
+});
+
+// Subscription Plans table - Plan configuration and limits
 export const subscriptionPlans = pgTable('subscription_plans', {
-  planKey: varchar('plan_key').unique(), // 'glow_up' | 'viral_surge' | 'fame_flex'
+  id: uuid('id').primaryKey().defaultRandom(),
+  planKey: varchar('plan_key', { length: 50 }).notNull().unique(), // 'glow_up' | 'viral_surge' | 'fame_flex'
+  displayName: text('display_name').notNull(), // 'Glow Up Plan'
+  monthlyPrice: integer('monthly_price').notNull(), // Price in cents (9900 = $99.00)
+  stripeMonthlaPriceId: text('stripe_monthly_price_id').notNull(),
   campaignsLimit: integer('campaigns_limit').notNull(),
   creatorsLimit: integer('creators_limit').notNull(),
-  monthlyPrice: integer('monthly_price').notNull(), // in cents
-  features: jsonb('features').default('{}')
+  features: jsonb('features').default('{}'),
 });
 ```
 
@@ -130,6 +209,113 @@ export const db = global.__db ?? drizzle(queryClient, { schema });
 - ✅ Environment-specific settings (local vs production)
 - ✅ Automatic connection reuse across serverless invocations
 - ✅ Built-in diagnostics and connection analysis
+
+### **🆕 User Query Layer (`/lib/db/queries/user-queries.ts`)**
+
+**Comprehensive User Data Access System:**
+
+The new query layer provides **backward compatibility** for the normalized user tables while offering optimized queries for specific use cases:
+
+```typescript
+/**
+ * Get complete user profile (replaces old userProfiles queries)
+ * Joins all 5 normalized tables into a single UserProfileComplete object
+ */
+export async function getUserProfile(userId: string): Promise<UserProfileComplete | null> {
+  const result = await db
+    .select({
+      // Core user data
+      id: users.id,
+      userId: users.userId,
+      email: users.email,
+      fullName: users.fullName,
+      businessName: users.businessName,
+      // ... all fields from all 5 tables
+    })
+    .from(users)
+    .leftJoin(userSubscriptions, eq(users.id, userSubscriptions.userId))
+    .leftJoin(userBilling, eq(users.id, userBilling.userId))
+    .leftJoin(userUsage, eq(users.id, userUsage.userId))
+    .leftJoin(userSystemData, eq(users.id, userSystemData.userId))
+    .where(eq(users.userId, userId));
+    
+  // Transform and return with proper defaults
+  return transformToUserProfileComplete(result[0]);
+}
+
+/**
+ * Create new user with all related records
+ * Replaces user_profiles INSERT operations with transaction across 4 tables
+ */
+export async function createUser(userData: {
+  userId: string;
+  email?: string;
+  // ... other fields
+}): Promise<UserProfileComplete> {
+  return db.transaction(async (tx) => {
+    // 1. Insert core user data
+    const [newUser] = await tx.insert(users).values({...}).returning();
+    
+    // 2. Insert subscription data
+    const [newSubscription] = await tx.insert(userSubscriptions).values({...}).returning();
+    
+    // 3. Insert usage tracking
+    const [newUsage] = await tx.insert(userUsage).values({...}).returning();
+    
+    // 4. Insert system data
+    const [newSystemData] = await tx.insert(userSystemData).values({...}).returning();
+    
+    return combineUserProfile(newUser, newSubscription, newUsage, newSystemData);
+  });
+}
+
+/**
+ * Update user profile across normalized tables
+ * Intelligently routes updates to appropriate tables
+ */
+export async function updateUserProfile(userId: string, updates: {
+  // Core user updates
+  email?: string;
+  fullName?: string;
+  // Subscription updates
+  currentPlan?: string;
+  intendedPlan?: string;
+  // Billing updates
+  stripeCustomerId?: string;
+  // Usage updates
+  usageCampaignsCurrent?: number;
+  // System updates
+  lastWebhookEvent?: string;
+}): Promise<void> {
+  return db.transaction(async (tx) => {
+    // Split updates by table and apply to appropriate normalized tables
+  });
+}
+
+/**
+ * Optimized queries for specific use cases:
+ */
+
+// Get only billing info (for Stripe webhooks)
+export async function getUserBilling(userId: string): Promise<UserBilling | null>
+
+// Get only usage info (for plan validation)
+export async function getUserUsage(userId: string): Promise<UserUsage | null>
+
+// Increment usage counters (optimized for high-frequency operations)
+export async function incrementUsage(userId: string, type: 'campaigns' | 'creators', amount: number): Promise<void>
+
+// Find user by Stripe customer ID (for webhook processing)
+export async function getUserByStripeCustomerId(stripeCustomerId: string): Promise<UserProfileComplete | null>
+```
+
+**Key Benefits of the New Query Layer:**
+- ✅ **Backward Compatibility**: Existing code continues to work
+- ✅ **Performance Optimization**: Specific queries only join necessary tables
+- ✅ **Data Integrity**: All updates use transactions
+- ✅ **Type Safety**: Full TypeScript support with proper types
+- ✅ **Specialized Functions**: Optimized queries for common use cases (billing, usage, webhooks)
+- ✅ **Error Handling**: Comprehensive error handling and graceful degradation
 
 ---
 
@@ -297,9 +483,12 @@ export async function isAdmin(user: { id: string; emailAddresses?: { emailAddres
 
 ## 💳 Billing & Subscription System
 
-### Plan Validation (`/lib/services/plan-validator.ts`)
+### **🔄 UPDATED: Plan Validation (`/lib/services/plan-validator.ts`)**
 
-**Comprehensive Plan Management:**
+**Enhanced Plan Management with Database Integration:**
+
+The plan validator now integrates with the **normalized user tables** and **database-driven subscription plans**:
+
 ```typescript
 export interface PlanConfig {
   id: string;
@@ -315,6 +504,7 @@ export interface PlanConfig {
   };
 }
 
+// Legacy defaults kept as fallback for features only; limits now come from DB subscription_plans
 export const PLAN_CONFIGS: Record<string, PlanConfig> = {
   'free': { campaignsLimit: 0, creatorsLimit: 0 },
   'glow_up': { campaignsLimit: 3, creatorsLimit: 1000 },
@@ -323,21 +513,87 @@ export const PLAN_CONFIGS: Record<string, PlanConfig> = {
 };
 ```
 
-**Validation Methods:**
+**🆕 Database-Driven Plan Resolution:**
 ```typescript
-// Campaign creation validation
-static async validateCampaignCreation(userId: string): Promise<ValidationResult> {
-  const planStatus = await this.getUserPlanStatus(userId);
+/**
+ * Get comprehensive user plan status from database
+ * Now uses normalized user tables and database subscription plans
+ */
+static async getUserPlanStatus(userId: string, requestId?: string): Promise<UserPlanStatus | null> {
+  // Get user profile using NEW normalized tables
+  const userProfile = await getUserProfile(userId);
+  
+  // Get plan config: resolve limits from subscription_plans (DB), fallback features from legacy map
+  const currentPlan = userProfile.currentPlan || 'free';
+  const planDefaults = PLAN_CONFIGS[currentPlan] || PLAN_CONFIGS['free'];
+
+  let campaignsLimit = planDefaults.campaignsLimit;
+  let creatorsLimit = planDefaults.creatorsLimit;
+  
+  // 🆕 ENHANCED: Load limits from database subscription_plans table
+  try {
+    const planRow = await db.query.subscriptionPlans.findFirst({
+      where: eq(subscriptionPlans.planKey, currentPlan)
+    });
+    if (planRow) {
+      campaignsLimit = planRow.campaignsLimit ?? campaignsLimit;
+      creatorsLimit = planRow.creatorsLimit ?? creatorsLimit;
+    }
+  } catch (e) {
+    // keep defaults if DB lookup fails
+  }
+  
+  // 🔒 SECURITY: Enhanced onboarding verification for paid plans
+  const onboardingComplete = userProfile.onboardingStep === 'completed';
+  const isPaidPlan = currentPlan !== 'free';
+  
+  // 🚨 CRITICAL: Paid plans require BOTH valid subscription AND completed onboarding
+  const isActive = isPaidPlan 
+    ? ((hasActiveSubscription || hasTrialingSubscription) && onboardingComplete)
+    : (hasActiveSubscription || isTrialing);
+    
+  return {
+    userId,
+    currentPlan,
+    planConfig: { id: currentPlan, name: planDefaults.name, campaignsLimit, creatorsLimit, features: planDefaults.features },
+    isActive,
+    campaignsUsed: userProfile.usageCampaignsCurrent || 0,
+    creatorsUsed: userProfile.usageCreatorsCurrentMonth || 0,
+    // ... other status fields
+  };
+}
+```
+
+**🆕 Enhanced Security & Onboarding Integration:**
+```typescript
+// Campaign creation validation with enhanced security
+static async validateCampaignCreation(userId: string, requestId?: string): Promise<ValidationResult> {
+  const planStatus = await this.getUserPlanStatus(userId, requestId);
   
   if (!planStatus.isActive) {
+    // 🔒 SECURITY: Special handling for paid plans without completed onboarding
+    const isPaidPlan = planStatus.currentPlan !== 'free';
+    const hasPayment = /* check for active/trialing subscription */;
+    const onboardingComplete = /* check onboarding status */;
+    
+    if (isPaidPlan && hasPayment && !onboardingComplete) {
+      return {
+        allowed: false,
+        reason: 'Please complete your onboarding process to access paid plan features.',
+        upgradeRequired: false, // They already paid!
+      };
+    }
+    
     return {
       allowed: false,
       reason: 'Please upgrade to create campaigns.',
-      upgradeRequired: true
+      upgradeRequired: true,
+      recommendedPlan: this.getRecommendedPlan('campaigns', 1)
     };
   }
   
-  if (planStatus.campaignsUsed >= planStatus.planConfig.campaignsLimit) {
+  // Check campaign limits (now from database)
+  if (planStatus.planConfig.campaignsLimit > 0 && planStatus.campaignsUsed >= planStatus.planConfig.campaignsLimit) {
     return {
       allowed: false,
       reason: `You've reached your campaign limit (${planStatus.planConfig.campaignsLimit})`,
@@ -348,11 +604,22 @@ static async validateCampaignCreation(userId: string): Promise<ValidationResult>
   return { allowed: true };
 }
 
-// Creator search validation
-static async validateCreatorSearch(userId: string, estimatedResults: number): Promise<ValidationResult> {
-  // Similar validation logic for creator searches
+/**
+ * 🆕 Enhanced usage increment with normalized tables
+ */
+static async incrementUsage(userId: string, type: 'campaigns' | 'creators', amount: number = 1): Promise<void> {
+  // Use the new helper function for normalized tables
+  await incrementUsage(userId, type, amount);
 }
 ```
+
+**Key Enhancements:**
+- ✅ **Database-Driven Plans**: Limits now loaded from `subscription_plans` table
+- ✅ **Normalized Table Integration**: Uses new `getUserProfile()` function
+- ✅ **Enhanced Security**: Paid plan + onboarding completion verification
+- ✅ **Intended Plan Tracking**: Support for `intendedPlan` field for checkout flows
+- ✅ **Improved Logging**: Comprehensive billing logger integration
+- ✅ **Performance Optimization**: Uses specialized query functions when possible
 
 ### Trial System (`/lib/trial/trial-service.ts`)
 
@@ -718,31 +985,100 @@ const timeout = await getJobTimeout('standard_job');
 
 ---
 
+## 🧪 Testing & Quality Assurance
+
+### **🆕 Comprehensive Testing Framework**
+
+The library includes a **professional-grade testing infrastructure** with 1000+ lines of test code across multiple test suites:
+
+**Master Test Runner (`/run-all-tests.js`):**
+```javascript
+class MasterTestRunner {
+  async runAllTests() {
+    // Test Suite 1: Database Refactoring Tests
+    const dbTester = new DatabaseRefactoringTester();
+    await this.runTestSuite('Database Refactoring Tests', dbTester);
+
+    // Test Suite 2: API Integration Tests
+    const apiTester = new APIIntegrationTester();
+    await this.runTestSuite('API Integration Tests', apiTester);
+
+    // Test Suite 3: Data Integrity and Rollback Safety
+    const integrityTester = new DataIntegrityTester();
+    await this.runTestSuite('Data Integrity & Rollback Tests', integrityTester);
+
+    this.generateFinalReport();
+  }
+}
+```
+
+**Test Suites Available:**
+- **Database Refactoring Tests** (`/tests/database-refactoring-tests.js`): Validates schema normalization
+- **API Integration Tests** (`/tests/api-integration-tests.js`): Tests API compatibility with normalized tables
+- **Data Integrity Tests** (`/tests/data-integrity-tests.js`): Ensures data consistency during migration
+- **MCP Database Verification** (`/tests/mcp-database-verification.js`): Validates MCP integration
+- **Platform-Specific Tests** (`/tests/tiktok-similar-search-test.js`): Platform integration testing
+
+**Testing Features:**
+- ✅ **Automated Test Discovery**: Runs comprehensive test suites automatically
+- ✅ **Deployment Readiness Assessment**: Determines if code is ready for production
+- ✅ **Color-coded Output**: Clear visual feedback on test results
+- ✅ **Performance Benchmarking**: Tests include performance validation
+- ✅ **Rollback Safety**: Validates that changes don't break existing functionality
+- ✅ **MCP Integration Testing**: Ensures proper integration with Model Context Protocol
+
+**Usage:**
+```bash
+# Run all tests
+node run-all-tests.js
+
+# Run specific test suite
+node tests/database-refactoring-tests.js
+
+# MCP verification
+node tests/mcp-database-verification.js
+```
+
+---
+
 ## 🌟 Key Features & Benefits
+
+### **🆕 Database Architecture Improvements**
+- ✅ **Normalized Schema**: 5-table user system replacing monolithic `user_profiles`
+- ✅ **Data Integrity**: Foreign key constraints and cascade deletes
+- ✅ **Performance Optimization**: Specialized queries for common operations
+- ✅ **Event Sourcing**: Industry-standard event tracking with idempotency
+- ✅ **Background Job Tracking**: QStash integration with comprehensive job metadata
+- ✅ **Intended Plan Support**: Enhanced checkout flow with plan selection tracking
 
 ### Performance Optimizations
 - ✅ **Connection Pooling:** Global database connections for serverless
 - ✅ **localStorage Caching:** 2-minute billing cache for instant loading
 - ✅ **Image Caching:** Permanent Vercel Blob storage
 - ✅ **Hot Configuration:** Dynamic system settings without deployment
+- ✅ **Query Optimization:** Table-specific queries reduce unnecessary joins
 
 ### Reliability & Monitoring
 - ✅ **Comprehensive Logging:** BillingLogger with request tracking
 - ✅ **Performance Monitoring:** Real-time timing and benchmarks
 - ✅ **Error Recovery:** Graceful fallbacks and retry mechanisms
 - ✅ **Event Sourcing:** Complete audit trail of system events
+- ✅ **Data Consistency:** Transaction-based updates across normalized tables
 
 ### Scalability Features
 - ✅ **Background Processing:** QStash for async job handling
 - ✅ **Platform Modularity:** Easy addition of new social platforms
 - ✅ **Rate Limiting:** Configurable API call limits
 - ✅ **Usage Tracking:** Real-time billing and limit enforcement
+- ✅ **Database Normalization:** Better performance and maintainability at scale
 
 ### Developer Experience
 - ✅ **TypeScript First:** Full type safety across all modules
 - ✅ **Modular Architecture:** Clear separation of concerns
-- ✅ **Comprehensive Testing:** Utilities for subscription and billing tests
+- ✅ **Comprehensive Testing:** Professional test suite with 1000+ lines of test code
 - ✅ **Rich Logging:** Detailed debugging and monitoring information
+- ✅ **Backward Compatibility:** Existing code continues to work during migration
+- ✅ **Migration Safety:** Comprehensive testing ensures safe database transitions
 
 ---
 

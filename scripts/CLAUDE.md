@@ -4,8 +4,9 @@
 
 The influencer platform includes a comprehensive suite of development scripts, automation tools, and utilities designed to streamline database management, user administration, testing, monitoring, and deployment workflows. These scripts are organized across the root directory and `/scripts` folder, providing essential development and operational capabilities.
 
-**Total Scripts**: 60+ utility scripts and tools
-**Categories**: Database Management, User Administration, API Testing, Performance Monitoring, Development Tools, Production Deployment
+**Total Scripts**: 70+ utility scripts and tools
+**Categories**: Database Management, User Administration, API Testing, Performance Monitoring, Development Tools, Production Deployment, **Database Normalization & Testing Framework**
+**NEW**: Professional-grade testing framework with 1500+ lines of specialized test code
 
 ---
 
@@ -373,6 +374,219 @@ npm run logs:onboarding  # Monitor onboarding logs
 
 ---
 
+## Database Normalization & Testing Framework
+
+### 🏗️ **Comprehensive Testing Architecture**
+
+The platform includes a professional-grade testing framework designed for database normalization verification, API integration testing, and data integrity validation. This system provides **1500+ lines of specialized test code** across multiple testing layers.
+
+#### **Master Test Orchestration**
+
+##### **`run-all-tests.js`** *(243 lines)*
+**Purpose**: Comprehensive test suite orchestration with multi-layer verification
+**Usage**: `node run-all-tests.js`
+**Architecture**:
+- **4 Test Suite Integration**: Database Refactoring, API Integration, Data Integrity, MCP Verification
+- **Real-time Progress Tracking**: Color-coded console output with detailed timing
+- **Comprehensive Reporting**: Pass/fail statistics, warnings, and detailed results
+- **Error Recovery**: Individual suite failure isolation
+
+**Test Suite Hierarchy**:
+```javascript
+MasterTestRunner
+├── DatabaseRefactoringTester (Database normalization validation)
+├── APIIntegrationTester (API endpoint verification)
+├── DataIntegrityTester (Data migration safety)
+└── MCPDatabaseVerifier (MCP integration validation)
+```
+
+**Features**:
+- Multi-threaded test execution
+- Detailed performance metrics
+- HTML-style result reporting
+- Error isolation and recovery
+- Production-ready test orchestration
+
+### 🧪 **Database Testing & Verification**
+
+#### **`test-normalized-database.ts`** *(307 lines)*
+**Purpose**: TypeScript-based database normalization verification
+**Usage**: `tsx test-normalized-database.ts` or `npm run test:db:normalized`
+**Features**:
+- **Schema Validation**: Verify normalized table structures (users, user_subscriptions, user_usage, user_billing, campaign_data)
+- **Constraint Testing**: Foreign key relationships, check constraints, unique indexes
+- **Migration Verification**: Ensure data migration accuracy and completeness
+- **Performance Testing**: Index effectiveness and query optimization
+- **Rollback Safety**: Verify safe migration rollback procedures
+
+#### **`test-migration.js`** *(78 lines)*
+**Purpose**: Database migration testing and validation
+**Usage**: `node test-migration.js`
+**Features**:
+- Migration execution verification
+- Schema change validation
+- Data preservation testing
+- Performance impact assessment
+- Rollback capability verification
+
+#### **`apply-normalization.sql`** *(144 lines)*
+**Purpose**: Production-ready database normalization SQL script
+**Usage**: Direct SQL execution in database console or via migration system
+**Architecture**:
+```sql
+-- 5 Normalized Tables Architecture
+├── users (Core identity & profile)
+├── user_subscriptions (Trial & billing)
+├── user_usage (Usage tracking)
+├── user_billing (Payment integration) 
+└── campaign_data (Search campaigns)
+```
+
+**Features**:
+- **Clean Normalization**: 5-table normalized structure
+- **Comprehensive Constraints**: Check constraints, foreign keys, unique indexes
+- **Data Integrity**: ACID compliance and referential integrity
+- **Performance Optimization**: Strategic indexing for query performance
+
+### 🔗 **API Integration Testing**
+
+#### **`test-api-endpoints.ts`** *(190 lines)*
+**Purpose**: TypeScript API endpoint verification against normalized database
+**Usage**: `tsx test-api-endpoints.ts` or `npm run test:api`
+**Features**:
+- **Endpoint Coverage**: Test all critical API routes with new database schema
+- **Response Validation**: Verify API responses match expected normalized data structure
+- **Performance Metrics**: Response time measurement and performance benchmarking
+- **Error Handling**: Test error scenarios and validation failures
+- **Authentication Testing**: Verify auth integration with new user table structure
+
+**Tested Endpoints**:
+- User profile APIs (`/api/user/*`)
+- Subscription management (`/api/subscriptions/*`)
+- Campaign operations (`/api/campaigns/*`)
+- Admin panel APIs (`/api/admin/*`)
+- Scraping job APIs (`/api/scraping/*`)
+
+#### **`verify-refactor.js`** *(121 lines)*
+**Purpose**: End-to-end refactor verification and validation
+**Usage**: `node verify-refactor.js`
+**Features**:
+- **Complete System Verification**: Test entire application stack with normalized database
+- **Integration Validation**: Verify frontend-backend-database integration
+- **Performance Comparison**: Before/after performance metrics
+- **Data Consistency**: Ensure data consistency across refactored system
+
+### 🔒 **Comprehensive Test Suites**
+
+#### **`tests/database-refactoring-tests.js`** *(401 lines)*
+**Purpose**: Multi-layered database refactoring verification
+**Features**:
+- **MCP Integration Testing**: Verify MCP (Model Context Protocol) database operations
+- **Direct Database Testing**: Raw SQL query validation
+- **Schema Migration Testing**: Complete migration process verification
+- **Performance Benchmarking**: Database operation performance measurement
+- **Error Recovery Testing**: Test failure scenarios and recovery procedures
+
+#### **`tests/api-integration-tests.js`** *(378 lines)*
+**Purpose**: Comprehensive API integration testing with normalized database
+**Features**:
+- **HTTP Request Testing**: All API endpoints with realistic payloads
+- **Authentication Flow**: Complete auth testing with Clerk integration
+- **Database Transaction Testing**: Verify API operations create correct database records
+- **Error Scenario Testing**: Invalid inputs, auth failures, constraint violations
+- **Rate Limiting Testing**: API throttling and quota enforcement
+
+#### **`tests/data-integrity-tests.js`** *(471 lines)*
+**Purpose**: Data integrity and migration safety validation
+**Features**:
+- **Data Migration Verification**: Ensure data preservation during normalization
+- **Referential Integrity**: Test foreign key constraints and cascading operations
+- **Rollback Safety**: Verify safe rollback procedures and data recovery
+- **Constraint Validation**: Test all database constraints and business rules
+- **GDPR Compliance**: User data deletion and privacy compliance testing
+
+#### **`tests/mcp-database-verification.js`** *(272 lines)*
+**Purpose**: MCP (Model Context Protocol) database integration verification
+**Features**:
+- **MCP Operation Testing**: Verify MCP can correctly interact with normalized database
+- **Query Translation**: Test MCP query translation to normalized schema
+- **Performance Optimization**: Verify MCP queries are optimized for new schema
+- **Connection Management**: Test MCP database connection handling
+
+### 🚀 **Testing Framework Usage Patterns**
+
+#### **Complete System Verification Workflow**
+```bash
+# 1. Run master test suite (comprehensive verification)
+node run-all-tests.js
+
+# 2. Individual test suite execution
+tsx test-normalized-database.ts          # Database normalization verification
+tsx test-api-endpoints.ts                # API endpoint testing
+node test-migration.js                   # Migration verification
+node verify-refactor.js                  # End-to-end refactor verification
+
+# 3. Specialized testing
+node tests/database-refactoring-tests.js # Database-specific tests
+node tests/api-integration-tests.js      # API integration validation
+node tests/data-integrity-tests.js       # Data safety verification
+node tests/mcp-database-verification.js  # MCP integration testing
+```
+
+#### **Pre-Production Deployment Checklist**
+```bash
+# Essential testing sequence before deployment
+node run-all-tests.js                    # Master verification (all 4 suites)
+tsx test-normalized-database.ts          # Database schema verification
+node verify-refactor.js                  # Complete system validation
+node test-migration.js                   # Migration safety check
+
+# Performance validation
+node scripts/benchmark-performance.js     # Performance benchmarking
+node scripts/test-db-performance.js      # Database performance verification
+```
+
+### 🛠️ **Testing Framework Architecture**
+
+#### **Professional Testing Standards**
+- **Modular Design**: Independent test suites with clear separation of concerns
+- **Comprehensive Coverage**: Database, API, integration, and performance testing
+- **Production-Ready**: Professional logging, error handling, and reporting
+- **Scalable Architecture**: Easily extensible for new features and test scenarios
+
+#### **Test Data Management**
+- **Mock Data Generation**: Realistic test data for comprehensive validation
+- **Data Isolation**: Tests use isolated test environments
+- **Cleanup Procedures**: Automatic test data cleanup and environment reset
+- **State Management**: Test state tracking and rollback capabilities
+
+#### **Reporting & Monitoring**
+- **Real-time Feedback**: Color-coded console output with progress indicators  
+- **Detailed Metrics**: Performance timing, pass/fail rates, error details
+- **Structured Logging**: JSON-formatted logs for automated analysis
+- **Test History**: Maintain test execution history for trend analysis
+
+### 🔧 **Framework Dependencies**
+
+**Required Technologies**:
+- **Node.js 18+**: JavaScript runtime environment
+- **TypeScript/TSX**: For TypeScript-based test execution
+- **PostgreSQL**: Database system for testing
+- **MCP Protocol**: Model Context Protocol integration
+- **Drizzle ORM**: Database query builder and migration system
+
+**Testing Libraries**:
+```json
+{
+  "tsx": "TypeScript execution environment",
+  "node-fetch": "HTTP request testing",
+  "colors": "Console output formatting", 
+  "child_process": "Process execution for system testing"
+}
+```
+
+---
+
 ## Performance Monitoring & Benchmarking
 
 ### ⚡ Performance Analysis
@@ -614,7 +828,12 @@ node scripts/check-env.js           # Verify API keys
 node scripts/test-all-searches.js  # Test all search endpoints
 node scripts/benchmark-performance.js  # Performance monitoring
 
-# 4. Database operations
+# 4. Database normalization testing (NEW)
+node run-all-tests.js              # Complete testing framework
+tsx test-normalized-database.ts    # Database schema verification
+tsx test-api-endpoints.ts          # API endpoint testing
+
+# 5. Database operations
 npm run db:studio:local            # Visual database management
 node scripts/analyze-database.js   # Database health check
 npm run db:seed:plans             # Refresh subscription plans
@@ -623,6 +842,13 @@ npm run db:seed:plans             # Refresh subscription plans
 ### 🧪 Testing & Quality Assurance
 
 ```bash
+# NEW: Master testing framework (complete system verification)
+node run-all-tests.js                       # Complete 4-suite testing framework
+tsx test-normalized-database.ts             # Database normalization verification  
+tsx test-api-endpoints.ts                   # API integration testing
+node test-migration.js                      # Database migration safety
+node verify-refactor.js                     # End-to-end system validation
+
 # Comprehensive testing sequence
 node scripts/test-all-searches.js           # All 6 search combinations
 node test-complete-flow.js                  # End-to-end workflow
@@ -769,6 +995,7 @@ node scripts/test-db-performance.js    # Database performance
 
 ---
 
-*Last Updated: 2024-09-07*
-*Script Count: 60+ development and operational utilities*
+*Last Updated: 2025-01-28*
+*Script Count: 70+ development and operational utilities*
+*NEW: Database Normalization & Testing Framework with 1500+ lines of test code*
 *Maintained by: Development Team*

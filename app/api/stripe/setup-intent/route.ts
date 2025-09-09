@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { StripeService } from '@/lib/stripe/stripe-service';
 import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,9 +13,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Get user profile
-    const profile = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.userId, userId)
-    });
+    const profile = await getUserProfile(userId);
 
     if (!profile) {
       return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
@@ -35,12 +32,9 @@ export async function POST(req: NextRequest) {
       stripeCustomerId = customer.id;
 
       // Update user profile with Stripe customer ID
-      await db.update(userProfiles)
-        .set({ 
-          stripeCustomerId: customer.id,
-          updatedAt: new Date()
-        })
-        .where(eq(userProfiles.userId, userId));
+      await updateUserProfile(userId, {
+        stripeCustomerId: customer.id,
+      });
     }
 
     // Create setup intent for card collection

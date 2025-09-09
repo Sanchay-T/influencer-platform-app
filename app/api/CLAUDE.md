@@ -276,6 +276,58 @@ function calculateUnifiedProgress(processedRuns, maxRuns, processedResults, targ
 - `trial_expiry`: Trial expiration notice
 - `campaign_finished`: Campaign completion notification
 
+**Fast User Search**: `GET /api/admin/email-testing/users-fast?q={query}`
+```json
+{
+  "users": [
+    {
+      "user_id": "clerk_user_id",
+      "full_name": "John Doe",
+      "business_name": "Company Inc",
+      "trial_status": "active",
+      "onboarding_step": "completed",
+      "stripe_customer_id": "cus_xxx",
+      "computed_trial_status": "Active"
+    }
+  ],
+  "query": "john",
+  "count": 1,
+  "performance": {
+    "dbTime": 15,
+    "processTime": 2,
+    "totalTime": 23
+  }
+}
+```
+
+**Cached User Search**: `GET /api/admin/email-testing/users-cached?q={query}`
+```json
+{
+  "users": [
+    {
+      "user_id": "clerk_user_id",
+      "full_name": "John Doe",
+      "business_name": "Company Inc",
+      "trial_status": "active",
+      "onboarding_step": "completed",
+      "computed_trial_status": "Active"
+    }
+  ],
+  "query": "john",
+  "count": 1,
+  "cached": true,
+  "dbTime": 15,
+  "totalTime": 5
+}
+```
+
+**Features**:
+- ✅ **Performance Optimized**: Fast endpoint with minimal processing
+- ✅ **In-Memory Caching**: 5-minute TTL cache for repeated searches
+- ✅ **Normalized Database**: Uses new users/user_subscriptions tables
+- ✅ **Performance Metrics**: Detailed timing breakdown in responses
+- ✅ **Auto Cache Cleanup**: Prevents memory leaks with size limits
+
 ---
 
 ### Administrative Utilities
@@ -338,27 +390,62 @@ if (isHeic) {
 ### Billing Status
 **Endpoint**: `GET /api/billing/status`
 
-**Response**:
+**Enhanced Response**:
 ```json
 {
-  "currentPlan": "pro",
+  "currentPlan": "glow_up",
+  "isTrialing": true,
+  "hasActiveSubscription": false,
   "trialStatus": "active",
-  "trialExpiresAt": "2025-01-08T10:00:00Z",
-  "usage": {
-    "creators": 450,
-    "campaigns": 5
+  "daysRemaining": 5,
+  "hoursRemaining": 120,
+  "minutesRemaining": 7200,
+  "subscriptionStatus": "trialing",
+  "usageInfo": {
+    "campaignsUsed": 2,
+    "creatorsUsed": 450,
+    "progressPercentage": 45,
+    "campaignsLimit": 3,
+    "creatorsLimit": 1000
   },
-  "limits": {
-    "creators": 1000,
-    "campaigns": 10
-  }
+  "stripeCustomerId": "cus_xxx",
+  "stripeSubscriptionId": "sub_xxx",
+  "nextBillingDate": "2025-02-08",
+  "billingAmount": 99,
+  "billingCycle": "monthly",
+  "paymentMethod": {
+    "brand": "visa",
+    "last4": "4242",
+    "expiryMonth": 12,
+    "expiryYear": 2025
+  },
+  "trialEndsAt": "2025-01-08",
+  "canManageSubscription": true,
+  "trialProgressPercentage": 28.5,
+  "trialTimeRemaining": "5 days, 2 hours",
+  "trialStartDate": "2025-01-01T10:00:00Z",
+  "trialEndDate": "2025-01-08T10:00:00Z",
+  "lastWebhookEvent": "customer.subscription.created",
+  "lastWebhookTimestamp": "2025-01-01T10:05:00Z",
+  "billingSyncStatus": "webhook_subscription_created"
 }
 ```
 
-**Features**:
-- Auto-creates user profile if missing
-- Fetches Clerk user details for defaults
-- Includes comprehensive trial information
+**Enhanced Features**:
+- ✅ **Auto-creates user profile** if missing with Clerk user details
+- ✅ **Comprehensive trial tracking** with detailed time remaining
+- ✅ **Enhanced subscription management** with payment method info
+- ✅ **Plan limits from database** using subscription_plans table
+- ✅ **Inconsistent state detection** with diagnostic logging
+- ✅ **Performance headers** with request ID and timing
+- ✅ **Billing sync status tracking** for webhook integration
+- ✅ **Usage percentage calculation** based on highest utilization
+- ✅ **Normalized database integration** using new table structure
+
+**Response Headers**:
+- `x-request-id`: Unique request identifier for tracking
+- `x-started-at`: Request start timestamp
+- `x-duration-ms`: Total request processing time
 
 ---
 
@@ -371,12 +458,44 @@ if (isHeic) {
 **Webhook Handler**: `POST /api/stripe/webhook`
 
 **Webhook Events Handled**:
-- `customer.subscription.created`
-- `customer.subscription.updated`
-- `customer.subscription.deleted`
-- `invoice.payment_succeeded`
-- `invoice.payment_failed`
-- `setup_intent.succeeded`
+- `customer.subscription.created`: Creates subscription with event sourcing
+- `customer.subscription.updated`: Updates plan and handles trial conversion
+- `customer.subscription.deleted`: Downgrades user to free plan
+- `customer.subscription.trial_will_end`: Triggers trial ending notifications
+- `invoice.payment_succeeded`: Updates billing sync status
+- `invoice.payment_failed`: Marks payment failures for retry logic
+- `setup_intent.succeeded`: Confirms payment method setup
+- `payment_method.attached`: Stores card details in user profile
+
+**Enhanced Processing Features**:
+- ✅ **Event Sourcing Integration**: Creates audit trail events for all subscription changes
+- ✅ **Background Job Queue**: Automatically queues onboarding completion jobs
+- ✅ **Plan Limits from Database**: Fetches limits from subscription_plans table
+- ✅ **Comprehensive Error Handling**: Emergency fallback for critical operations
+- ✅ **Diagnostic Logging**: Detailed system availability checks
+- ✅ **Correlation ID Tracking**: Links related events across systems
+- ✅ **Normalized Database Updates**: Uses new users/user_subscriptions tables
+- ✅ **Intelligent Plan Detection**: Multiple fallback methods for plan identification
+
+**Error Recovery**:
+```typescript
+// Emergency fallback if background jobs fail
+if (jobError) {
+  console.log('🔧 [STRIPE-WEBHOOK] EMERGENCY FALLBACK: Completing onboarding directly');
+  // Direct database update to prevent user being stuck
+}
+```
+
+**Event Sourcing Pattern**:
+```typescript
+const subscriptionEvent = await EventService.createEvent({
+  aggregateId: user.userId,
+  aggregateType: AGGREGATE_TYPES.SUBSCRIPTION,
+  eventType: EVENT_TYPES.SUBSCRIPTION_CREATED,
+  correlationId,
+  idempotencyKey: EventService.generateIdempotencyKey('stripe', subscription.id)
+});
+```
 
 ---
 

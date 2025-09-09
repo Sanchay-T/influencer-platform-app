@@ -9,13 +9,16 @@ const isPublicRoute = createRouteMatcher([
   '/sso-callback(.*)',
 ])
 
-// Define API routes that need special handling for QStash
+// Define API routes that need special handling for QStash and Stripe webhooks
 const isWebhookRoute = createRouteMatcher([
   '/api/qstash/(.*)',
   '/api/scraping/(.*)',
   '/api/proxy/(.*)',
   '/api/export/(.*)',
   '/api/email/send-scheduled',
+  '/api/webhooks/(.*)',      // Stripe/Clerk webhooks
+  '/api/stripe/checkout-success', // Stripe checkout callback
+  '/api/stripe/session',     // Stripe session verification
 ])
 
 // API routes that are protected but handled differently

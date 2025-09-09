@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
+import { ErrorBoundary } from '@/app/components/error-boundary';
+import { useComponentLogger, useUserActionLogger, useApiLogger } from '@/lib/logging/react-logger';
+import { adminLogger, LogCategory } from '@/lib/logging';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -49,8 +52,11 @@ interface EmailResult {
   userEmail: string;
 }
 
-export default function AdminEmailTestingPage() {
+function AdminEmailTestingPageContent() {
   const { user: currentUser } = useUser(); // Get current admin user
+  const componentLogger = useComponentLogger('AdminEmailTestingPage');
+  const userActionLogger = useUserActionLogger();
+  const apiLogger = useApiLogger();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
@@ -97,11 +103,18 @@ export default function AdminEmailTestingPage() {
         const data = await response.json();
         setSearchResults(data.users || []);
       } else {
-        console.error('Failed to search users:', response.statusText);
+        adminLogger.error('Failed to search users', new Error(response.statusText), {
+          searchQuery: query,
+          statusCode: response.status,
+          operation: 'user-search'
+        });
         setSearchResults([]);
       }
     } catch (error) {
-      console.error('Error searching users:', error);
+      adminLogger.error('Error searching users', error instanceof Error ? error : new Error(String(error)), {
+        searchQuery: query,
+        operation: 'user-search'
+      });
       setSearchResults([]);
     } finally {
       setIsSearching(false);
@@ -125,14 +138,15 @@ export default function AdminEmailTestingPage() {
     const targetEmail = userEmail || adminEmail;
     
     if (!targetUserId || !targetEmail) {
-      console.error('No user selected for email sending. Debug:', {
-        selectedUser,
+      adminLogger.warn('No user selected for email sending', {
+        selectedUser: selectedUser?.user_id,
         targetUserId,
         targetEmail,
         adminEmail,
         userIdParam: userId,
         userEmailParam: userEmail,
-        currentUser: currentUser?.id
+        currentUserId: currentUser?.id,
+        operation: 'email-validation'
       });
       return;
     }
@@ -140,11 +154,18 @@ export default function AdminEmailTestingPage() {
     setIsSending(true);
     
     try {
-      console.log('🚀 [ADMIN-EMAIL] Sending test email:', {
+      adminLogger.info('Sending test email', {
         userId: targetUserId,
         emailType: selectedEmailType,
         delay: customDelay,
-        userEmail: targetEmail
+        userEmail: targetEmail,
+        operation: 'test-email-send'
+      });
+      
+      userActionLogger.logClick('send-test-email', {
+        emailType: selectedEmailType,
+        delay: customDelay,
+        targetUserId
       });
 
       const response = await fetch('/api/admin/email-testing/send', {
@@ -179,13 +200,29 @@ export default function AdminEmailTestingPage() {
       setEmailResults(prev => [result, ...prev].slice(0, 10)); // Keep last 10 results
 
       if (response.ok) {
-        console.log('✅ [ADMIN-EMAIL] Email scheduled successfully:', data);
+        adminLogger.info('Email scheduled successfully', {
+          messageId: data.messageId,
+          emailType: selectedEmailType,
+          userId: targetUserId,
+          userEmail: targetEmail,
+          operation: 'email-schedule-success'
+        });
       } else {
-        console.error('❌ [ADMIN-EMAIL] Failed to schedule:', data);
+        adminLogger.error('Failed to schedule email', new Error(data.error), {
+          emailType: selectedEmailType,
+          userId: targetUserId,
+          userEmail: targetEmail,
+          operation: 'email-schedule-failure'
+        });
       }
 
     } catch (error) {
-      console.error('❌ [ADMIN-EMAIL] Error sending email:', error);
+      adminLogger.error('Error sending email', error instanceof Error ? error : new Error(String(error)), {
+        emailType: selectedEmailType,
+        userId: targetUserId,
+        userEmail: targetEmail,
+        operation: 'email-send-error'
+      });
       
       setEmailResults(prev => [{
         type: selectedEmailType,
@@ -307,7 +344,17 @@ export default function AdminEmailTestingPage() {
                             : 'border-gray-200 hover:bg-gray-50'
                         }`}
                         onClick={() => {
-                          console.log('🔄 [ADMIN-UI] User clicked, setting selectedUser:', user);
+                          componentLogger.logInfo('User selected from search results', {
+                            userId: user.user_id,
+                            userName: user.full_name,
+                            operation: 'user-selection'
+                          });
+                          
+                          userActionLogger.logClick('select-user', {
+                            userId: user.user_id,
+                            userName: user.full_name
+                          });
+                          
                           setSelectedUser(user);
                         }}
                       >
@@ -424,7 +471,18 @@ export default function AdminEmailTestingPage() {
                 <div className="flex gap-3">
                   <Button 
                     onClick={() => {
-                      console.log('🚀 [ADMIN-UI] Send button clicked, selectedUser state:', selectedUser);
+                      componentLogger.logInfo('Send button clicked', {
+                        selectedUserId: selectedUser?.user_id,
+                        emailType: selectedEmailType,
+                        delay: customDelay,
+                        operation: 'send-button-click'
+                      });
+                      
+                      userActionLogger.logClick('send-test-email-button', {
+                        emailType: selectedEmailType,
+                        delay: customDelay
+                      });
+                      
                       sendTestEmail();
                     }}
                     disabled={isSending || !selectedUser}
@@ -569,5 +627,13 @@ export default function AdminEmailTestingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AdminEmailTestingPage() {
+  return (
+    <ErrorBoundary componentName="AdminEmailTestingPage">
+      <AdminEmailTestingPageContent />
+    </ErrorBoundary>
   );
 }

@@ -18,34 +18,44 @@ The influencer platform uses a **PostgreSQL database** hosted on **Supabase** wi
 
 ## Schema Overview
 
-The database consists of **9 core tables** organized into these domains:
+The database consists of **13 core tables** organized into these domains:
 
 ```
 ┌─────────────────────┬─────────────────────┬─────────────────────┐
 │    Campaign Domain  │    User Domain      │   System Domain     │
 ├─────────────────────┼─────────────────────┼─────────────────────┤
-│ campaigns           │ user_profiles       │ system_config       │
-│ scraping_jobs       │ subscription_plans  │ events              │
-│ scraping_results    │                     │ background_jobs     │
-│ search_jobs*        │                     │                     │
-│ search_results*     │                     │                     │
+│ campaigns           │ users               │ system_config       │
+│ scraping_jobs       │ user_subscriptions  │ events              │
+│ scraping_results    │ user_billing        │ background_jobs     │
+│ search_jobs*        │ user_usage          │                     │
+│ search_results*     │ user_system_data    │                     │
+│                     │ subscription_plans  │                     │
 └─────────────────────┴─────────────────────┴─────────────────────┘
 * Legacy tables for alternative job processing
 ```
 
+**Major Change**: The monolithic `user_profiles` table has been **normalized into 5 focused tables** for better performance, maintainability, and data integrity.
+
 ### Entity Relationship Diagram (ASCII)
 
 ```
-user_profiles (1) ──< (M) campaigns ──< (1) scraping_jobs ──< (M) scraping_results
-     │                     │                    │
-     │                     │                    │
-     └── subscription_plans │                    └── background_jobs
-                            │
-                            └── search_jobs ──< search_results (legacy)
+users (1) ──< (1) user_subscriptions
+  │         ──< (1) user_billing  
+  │         ──< (1) user_usage
+  │         ──< (1) user_system_data
+  │
+  └── (1) ──< (M) campaigns ──< (1) scraping_jobs ──< (M) scraping_results
+                  │                    │
+                  │                    └── background_jobs
+                  │
+                  └── search_jobs ──< search_results (legacy)
 
+subscription_plans (plan configuration)
 system_configurations (singleton config store)
 events (event sourcing audit trail)
 ```
+
+**Normalized User Architecture**: The old monolithic `user_profiles` table is now split into 5 specialized tables with proper foreign key relationships and CASCADE deletes.
 
 ## Core Tables
 
@@ -157,73 +167,134 @@ CREATE TABLE scraping_results (
 ]
 ```
 
-### 4. **user_profiles** - User Management & Billing
+### 4. **users** - Core User Identity (Normalized from user_profiles)
 ```sql
-CREATE TABLE user_profiles (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id TEXT NOT NULL UNIQUE,            -- Clerk user ID
-    -- Basic Info
-    name TEXT,
-    company_name TEXT,
-    industry TEXT,
-    email TEXT,
-    -- Onboarding System
-    signup_timestamp TIMESTAMP DEFAULT NOW() NOT NULL,
-    onboarding_step VARCHAR(50) DEFAULT 'pending' NOT NULL,
-    full_name TEXT,
-    business_name TEXT,
-    brand_description TEXT,
-    email_schedule_status JSONB DEFAULT '{}',
-    -- Trial System
-    trial_start_date TIMESTAMP,
-    trial_end_date TIMESTAMP,
-    trial_status VARCHAR(20) DEFAULT 'pending', -- 'pending' | 'active' | 'expired' | 'cancelled' | 'converted'
-    -- Subscription Management
-    current_plan VARCHAR(50) DEFAULT 'free',   -- 'free' | 'glow_up' | 'viral_surge' | 'fame_flex'
-    intended_plan VARCHAR(50),                 -- Plan selected before checkout
-    stripe_customer_id TEXT,
-    stripe_subscription_id TEXT,
-    subscription_status VARCHAR(20) DEFAULT 'none',
-    -- Payment Info
-    payment_method_id TEXT,
-    card_last_4 VARCHAR(4),
-    card_brand VARCHAR(20),
-    card_exp_month INTEGER,
-    card_exp_year INTEGER,
-    billing_address_city TEXT,
-    billing_address_country VARCHAR(2),
-    billing_address_postal_code VARCHAR(20),
-    -- Usage Tracking
-    plan_campaigns_limit INTEGER,
-    plan_creators_limit INTEGER,
-    plan_features JSONB,
-    usage_campaigns_current INTEGER DEFAULT 0,
-    usage_creators_current_month INTEGER DEFAULT 0,
-    usage_reset_date TIMESTAMP DEFAULT NOW(),
-    -- Billing Webhooks
-    last_webhook_event VARCHAR(100),
-    last_webhook_timestamp TIMESTAMP,
-    billing_sync_status VARCHAR(20) DEFAULT 'pending',
-    trial_conversion_date TIMESTAMP,
-    subscription_cancel_date TIMESTAMP,
-    subscription_renewal_date TIMESTAMP,
-    -- Admin System
-    is_admin BOOLEAN DEFAULT FALSE,           -- Database-based admin role
-    -- Timestamps
-    created_at TIMESTAMP DEFAULT NOW() NOT NULL,
-    updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+CREATE TABLE users (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id text UNIQUE NOT NULL,        -- External auth ID (Clerk)
+    email text,
+    full_name text,
+    business_name text,
+    brand_description text,
+    industry text,
+    onboarding_step varchar DEFAULT 'pending' NOT NULL,
+    is_admin boolean DEFAULT false NOT NULL,
+    created_at timestamp DEFAULT now() NOT NULL,
+    updated_at timestamp DEFAULT now() NOT NULL
 );
 ```
 
-**Purpose**: Comprehensive user management including trials, billing, and admin permissions
+**Purpose**: Core user identity and profile information (separated from billing/subscription data)
 
 **Key Features**:
-- **Dual Authentication**: Integrates with Clerk while maintaining database user records
-- **Trial Management**: 7-day trial system with automated email sequences
-- **Usage Tracking**: Monitor plan limits and current usage
-- **Admin System**: Database-level admin permissions
+- **Clean Separation**: Only essential user identity data
+- **Clerk Integration**: External auth ID linking
+- **Onboarding Tracking**: Step-by-step onboarding progress
+- **Admin Permissions**: Database-level admin role
 
-### 5. **system_configurations** - Dynamic Settings
+### 5. **user_subscriptions** - Trial & Subscription Management
+```sql
+CREATE TABLE user_subscriptions (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    current_plan varchar DEFAULT 'free' NOT NULL,
+    intended_plan varchar,              -- Plan selected before checkout
+    subscription_status varchar DEFAULT 'none' NOT NULL,
+    trial_status varchar DEFAULT 'pending' NOT NULL,
+    trial_start_date timestamp,
+    trial_end_date timestamp,
+    trial_conversion_date timestamp,
+    subscription_cancel_date timestamp,
+    subscription_renewal_date timestamp,
+    billing_sync_status varchar DEFAULT 'pending' NOT NULL,
+    created_at timestamp DEFAULT now() NOT NULL,
+    updated_at timestamp DEFAULT now() NOT NULL
+);
+```
+
+**Purpose**: Dedicated trial and subscription state management
+
+**Key Features**:
+- **7-Day Trials**: Complete trial lifecycle tracking
+- **Plan Management**: Current and intended plan tracking
+- **Status Tracking**: Comprehensive subscription status management
+- **Billing Synchronization**: Webhook sync status tracking
+
+### 6. **user_billing** - Payment & Billing Data
+```sql
+CREATE TABLE user_billing (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    stripe_customer_id text UNIQUE,
+    stripe_subscription_id text,
+    payment_method_id text,
+    card_last_4 varchar(4),
+    card_brand varchar(20),
+    card_exp_month integer,
+    card_exp_year integer,
+    billing_address_city text,
+    billing_address_country varchar(2),
+    billing_address_postal_code varchar(20),
+    created_at timestamp DEFAULT now() NOT NULL,
+    updated_at timestamp DEFAULT now() NOT NULL
+);
+```
+
+**Purpose**: Secure storage of payment method and billing information
+
+**Key Features**:
+- **Stripe Integration**: Customer and subscription ID tracking
+- **Payment Methods**: Card details and billing address
+- **Security**: Separate table reduces exposure of sensitive data
+- **Unique Constraints**: Prevents duplicate Stripe customers
+
+### 7. **user_usage** - Plan Limits & Usage Tracking
+```sql
+CREATE TABLE user_usage (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    plan_campaigns_limit integer,
+    plan_creators_limit integer,
+    plan_features jsonb DEFAULT '{}' NOT NULL,
+    usage_campaigns_current integer DEFAULT 0 NOT NULL,
+    usage_creators_current_month integer DEFAULT 0 NOT NULL,
+    usage_reset_date timestamp DEFAULT now() NOT NULL,
+    created_at timestamp DEFAULT now() NOT NULL,
+    updated_at timestamp DEFAULT now() NOT NULL
+);
+```
+
+**Purpose**: Monitor plan limits and current usage patterns
+
+**Key Features**:
+- **Plan Limits**: Campaigns and creators limits per plan
+- **Usage Counters**: Current usage tracking with monthly resets
+- **Feature Flags**: JSONB plan features configuration
+- **Reset Management**: Automatic monthly usage resets
+
+### 8. **user_system_data** - System Events & Metadata
+```sql
+CREATE TABLE user_system_data (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    signup_timestamp timestamp DEFAULT now() NOT NULL,
+    email_schedule_status jsonb DEFAULT '{}' NOT NULL,
+    last_webhook_event varchar(100),
+    last_webhook_timestamp timestamp,
+    created_at timestamp DEFAULT now() NOT NULL,
+    updated_at timestamp DEFAULT now() NOT NULL
+);
+```
+
+**Purpose**: System-level metadata and webhook tracking
+
+**Key Features**:
+- **Email Automation**: Scheduled email status tracking
+- **Webhook Monitoring**: Last webhook event and timestamp
+- **System Events**: Signup and system interaction tracking
+- **Audit Support**: System-level user activity logging
+
+### 9. **system_configurations** - Dynamic Settings
 ```sql
 CREATE TABLE system_configurations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -248,7 +319,7 @@ CREATE TABLE system_configurations (
 - `email`: Email system configuration
 - `feature_flags`: Feature toggles
 
-### 6. **events** - Event Sourcing (Industry Standard)
+### 10. **events** - Event Sourcing (Industry Standard)
 ```sql
 CREATE TABLE events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -278,7 +349,7 @@ CREATE TABLE events (
 - `subscription_created`, `subscription_canceled`
 - `admin_action`, `billing_webhook_received`
 
-### 7. **background_jobs** - Job Queue Management
+### 11. **background_jobs** - Job Queue Management
 ```sql
 CREATE TABLE background_jobs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -302,7 +373,7 @@ CREATE TABLE background_jobs (
 
 **Purpose**: QStash-integrated job queue for background processing
 
-### 8. **subscription_plans** - Plan Configuration
+### 12. **subscription_plans** - Plan Configuration
 ```sql
 CREATE TABLE subscription_plans (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -330,7 +401,7 @@ CREATE TABLE subscription_plans (
 
 **Purpose**: Centralized plan configuration and pricing
 
-### 9. Legacy Tables (Alternative Processing)
+### 13. Legacy Tables (Alternative Processing)
 
 #### **search_jobs** & **search_results**
 Alternative job processing tables with different data structure:
@@ -340,7 +411,7 @@ Alternative job processing tables with different data structure:
 
 ## Migration History
 
-The database has evolved through **23 migrations** (as of current state):
+The database has evolved through **27 migrations** (as of current state):
 
 ### Key Migration Milestones
 
@@ -378,9 +449,28 @@ ON user_profiles (created_at DESC, onboarding_step, trial_status);
 - Implemented Row Level Security (RLS) policies
 - Added comprehensive indexing strategy
 
-#### **0013_safe_plans_and_intended_plan.sql** - Subscription Enhancement
-- Created `subscription_plans` table
-- Added `intended_plan` tracking for checkout flows
+#### **0013_sleepy_luckman.sql** - Database Normalization Foundation
+- Created 5 new normalized user tables: `users`, `user_subscriptions`, `user_billing`, `user_usage`, `user_system_data`
+- Established proper foreign key relationships with CASCADE deletes
+- Replaced monolithic `user_profiles` table approach
+
+#### **0014_migrate_user_data.sql** - Safe Data Migration
+- Migrated existing data from `user_profiles` to normalized tables
+- Added data integrity verification functions
+- Created comprehensive performance indexes for new table structure
+- Preserved all existing user data during normalization process
+
+#### **0015_remove_legacy_user_profiles.sql** - Legacy Cleanup
+- Safely removed the old monolithic `user_profiles` table
+- Created `user_profiles_backup` table for safety
+- Added table documentation comments
+- Implemented normalization completion verification
+
+#### **0016_normalize_user_tables.sql** - Complete Normalization
+- Comprehensive user table normalization with built-in data migration
+- Added constraint checks for data integrity (trial status, subscription status)
+- Created complete indexing strategy for optimal query performance
+- Recorded normalization completion in `system_configurations`
 
 ### Migration Patterns
 
@@ -399,6 +489,12 @@ ON user_profiles (created_at DESC, onboarding_step, trial_status);
 ### Primary Relationships
 
 ```sql
+-- User Normalization (One-to-One relationships with CASCADE deletes)
+users.id → user_subscriptions.user_id
+users.id → user_billing.user_id  
+users.id → user_usage.user_id
+users.id → user_system_data.user_id
+
 -- Campaign -> Jobs (One-to-Many)
 scraping_jobs.campaign_id → campaigns.id
 
@@ -410,16 +506,21 @@ search_results.job_id → search_jobs.id
 search_jobs.campaign_id → campaigns.id
 
 -- User -> Plans (Many-to-One, conceptual)
-user_profiles.current_plan ↔ subscription_plans.plan_key
+user_subscriptions.current_plan ↔ subscription_plans.plan_key
 ```
 
 ### Relationship Patterns
 
-#### **Campaign Management**
+#### **Normalized User Data Flow**
 ```
-User (Clerk) → [user_profiles] → campaigns → scraping_jobs → scraping_results
-                     ↓
-               subscription_plans (via current_plan)
+User (Clerk) → [users] ← (1:1) → user_subscriptions
+                  ↑     ← (1:1) → user_billing
+                  ↑     ← (1:1) → user_usage  
+                  ↑     ← (1:1) → user_system_data
+                  ↓
+               campaigns → scraping_jobs → scraping_results
+                            ↓
+                      subscription_plans (via current_plan)
 ```
 
 #### **Event Sourcing**
@@ -457,6 +558,62 @@ export const scrapingResultsRelations = relations(scrapingResults, ({ one }) => 
 ```
 
 ## Query Patterns
+
+### **NEW: Comprehensive User Query System**
+
+With the database normalization, a new comprehensive query system has been introduced in `/lib/db/queries/user-queries.ts` that provides backward compatibility while leveraging the normalized structure.
+
+#### **Key Features**:
+- **Backward Compatibility**: Maintains existing API while using normalized tables
+- **Performance Optimized**: Uses LEFT JOINs across all user tables
+- **Type Safety**: Full TypeScript type support for all user data
+- **Complete User Profiles**: Single query retrieves all user information
+
+#### **Primary Query Function**:
+```typescript
+// Get complete user profile (replaces old userProfiles queries)
+export async function getUserProfile(userId: string): Promise<UserProfileComplete | null> {
+  const result = await db
+    .select({
+      // Core user data from users table
+      id: users.id,
+      userId: users.userId,
+      email: users.email,
+      // ... all user fields
+      
+      // Subscription data from user_subscriptions
+      currentPlan: userSubscriptions.currentPlan,
+      trialStatus: userSubscriptions.trialStatus,
+      // ... all subscription fields
+      
+      // Billing data from user_billing (if exists)
+      stripeCustomerId: userBilling.stripeCustomerId,
+      // ... all billing fields
+      
+      // Usage data from user_usage  
+      planCampaignsLimit: userUsage.planCampaignsLimit,
+      // ... all usage fields
+      
+      // System data from user_system_data
+      signupTimestamp: userSystemData.signupTimestamp,
+      emailScheduleStatus: userSystemData.emailScheduleStatus,
+      // ... all system fields
+    })
+    .from(users)
+    .leftJoin(userSubscriptions, eq(users.id, userSubscriptions.userId))
+    .leftJoin(userBilling, eq(users.id, userBilling.userId))
+    .leftJoin(userUsage, eq(users.id, userUsage.userId))
+    .leftJoin(userSystemData, eq(users.id, userSystemData.userId))
+    .where(eq(users.userId, userId));
+}
+```
+
+#### **Query System Benefits**:
+1. **Single Source of Truth**: One function for all user data needs
+2. **Efficient JOINs**: All user data in single database round-trip  
+3. **Optional Data**: Graceful handling of missing billing/usage data
+4. **Migration Safe**: Existing code works without modification
+5. **Performance Indexed**: All JOIN keys are properly indexed
 
 ### Common Query Operations
 
@@ -613,10 +770,33 @@ Plan Validation → subscription_plans JOIN (limits check)
 
 #### **Query Performance Indexes**
 ```sql
--- User profile searches (admin panel)
-CREATE INDEX idx_user_profiles_full_name_search 
-ON user_profiles USING gin (full_name gin_trgm_ops);
+-- NORMALIZED USER TABLE INDEXES (NEW)
+-- Users table indexes
+CREATE INDEX idx_users_user_id ON users(user_id);
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_onboarding ON users(onboarding_step);
+CREATE INDEX idx_users_admin ON users(is_admin) WHERE is_admin = true;
 
+-- User subscriptions indexes  
+CREATE INDEX idx_user_subscriptions_user_id ON user_subscriptions(user_id);
+CREATE INDEX idx_user_subscriptions_current_plan ON user_subscriptions(current_plan);
+CREATE INDEX idx_user_subscriptions_trial_status ON user_subscriptions(trial_status);
+CREATE INDEX idx_user_subscriptions_subscription_status ON user_subscriptions(subscription_status);
+
+-- User billing indexes
+CREATE INDEX idx_user_billing_user_id ON user_billing(user_id);
+CREATE INDEX idx_user_billing_stripe_customer ON user_billing(stripe_customer_id);
+CREATE INDEX idx_user_billing_stripe_subscription ON user_billing(stripe_subscription_id);
+
+-- User usage indexes
+CREATE INDEX idx_user_usage_user_id ON user_usage(user_id);
+CREATE INDEX idx_user_usage_reset_date ON user_usage(usage_reset_date);
+
+-- User system data indexes
+CREATE INDEX idx_user_system_data_user_id ON user_system_data(user_id);
+CREATE INDEX idx_user_system_data_signup ON user_system_data(signup_timestamp);
+
+-- EXISTING INDEXES
 -- Job processing optimization
 CREATE INDEX idx_scraping_jobs_status_created 
 ON scraping_jobs (status, created_at DESC);
@@ -633,10 +813,15 @@ WHERE status = 'pending';
 
 #### **Partial Indexes** (Condition-based)
 ```sql
--- Only index active trials (reduces index size)
-CREATE INDEX idx_user_profiles_trial_info 
-ON user_profiles (trial_status, trial_start_date, trial_end_date) 
+-- Only index active trials (reduces index size) - UPDATED FOR NORMALIZED TABLES
+CREATE INDEX idx_user_subscriptions_active_trials 
+ON user_subscriptions (trial_status, trial_start_date, trial_end_date) 
 WHERE trial_status != 'pending';
+
+-- Only index users with billing data (sparse index)
+CREATE INDEX idx_user_billing_active_customers
+ON user_billing (stripe_customer_id, created_at)
+WHERE stripe_customer_id IS NOT NULL;
 
 -- Only index pending events for processing
 CREATE INDEX idx_events_processing_pending 
@@ -732,4 +917,60 @@ FROM (SELECT schemaname,tablename,pg_relation_size(schemaname||'.'||tablename) a
 ORDER BY size DESC;
 ```
 
-This database architecture provides a solid foundation for a multi-platform influencer discovery platform with enterprise-grade features including event sourcing, background job processing, comprehensive user management, and performance optimization.
+---
+
+## Database Normalization Summary
+
+### **Major Architectural Change: User Table Normalization**
+
+The database has undergone a significant normalization process, replacing the monolithic `user_profiles` table with **5 specialized tables**:
+
+1. **`users`** - Core identity and profile information
+2. **`user_subscriptions`** - Trial and subscription management  
+3. **`user_billing`** - Payment and billing data
+4. **`user_usage`** - Usage tracking and plan limits
+5. **`user_system_data`** - System metadata and webhook tracking
+
+### **Normalization Benefits**
+
+#### **Performance Improvements**
+- **Reduced Row Size**: Smaller tables = faster queries and better cache utilization
+- **Specialized Indexes**: Targeted indexes for specific query patterns
+- **Sparse Data Handling**: Only store billing/usage data when needed
+- **JOIN Optimization**: Modern PostgreSQL JOIN performance with proper indexing
+
+#### **Security & Data Integrity**
+- **Sensitive Data Isolation**: Payment info separated from profile data
+- **CASCADE Deletes**: Automatic cleanup when users are deleted
+- **Constraint Checks**: Database-level validation for subscription states
+- **Backup Safety**: Individual table backups and recovery options
+
+#### **Development & Maintenance**
+- **Backward Compatibility**: Existing code works via comprehensive query layer
+- **Type Safety**: Full TypeScript support for all normalized structures
+- **Clear Separation of Concerns**: Each table has a single, well-defined purpose
+- **Migration Safety**: Complete data migration with verification functions
+
+#### **Scalability Benefits**
+- **Table-Specific Optimization**: Each table can be optimized independently
+- **Selective Querying**: Only fetch needed data (don't always load billing info)
+- **Index Strategy**: Specialized indexes for each data domain
+- **Future Growth**: Easy to add new user-related tables without affecting others
+
+### **Migration Process**
+The normalization was completed through 4 comprehensive migrations:
+- **0013**: Create normalized table structure
+- **0014**: Migrate existing data with verification
+- **0015**: Clean up legacy table with backup
+- **0016**: Complete normalization with constraints and indexes
+
+### **Query Compatibility**
+A comprehensive query system in `/lib/db/queries/user-queries.ts` provides:
+- **Seamless Transition**: All existing user queries continue working
+- **Performance Optimization**: Single JOIN query for complete user profiles
+- **Type Safety**: Full TypeScript definitions for all user data
+- **Optional Data**: Graceful handling of missing billing/usage records
+
+---
+
+This database architecture provides a solid foundation for a multi-platform influencer discovery platform with enterprise-grade features including event sourcing, background job processing, **normalized user management**, and comprehensive performance optimization.

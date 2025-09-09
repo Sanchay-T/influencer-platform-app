@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { userProfiles, campaigns, scrapingJobs, subscriptionPlans } from '@/lib/db/schema';
+import { campaigns, scrapingJobs, subscriptionPlans } from '@/lib/db/schema';
 import { getUserProfile, incrementUsage } from '@/lib/db/queries/user-queries';
 import { eq, count, and, gte, sql } from 'drizzle-orm';
 import BillingLogger from '@/lib/loggers/billing-logger';

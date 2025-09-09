@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { StripeService } from '@/lib/stripe/stripe-service';
 import { db } from '@/lib/db';
-import { userProfiles, subscriptionPlans } from '@/lib/db/schema';
+import { subscriptionPlans } from '@/lib/db/schema';
 import { getUserProfile, updateUserProfile, getUserByStripeCustomerId } from '@/lib/db/queries/user-queries';
 import { eq } from 'drizzle-orm';
 import Stripe from 'stripe';
@@ -81,12 +81,34 @@ function getPlanFromPriceId(priceId: string): string {
     [process.env.STRIPE_FAME_FLEX_YEARLY_PRICE_ID!]: 'fame_flex',
   };
   
-  return priceIdToplan[priceId] || 'unknown';
+  const plan = priceIdToplan[priceId];
+  
+  if (!plan) {
+    console.error('⚠️ [STRIPE-WEBHOOK] Unknown price ID encountered:', {
+      priceId,
+      availableMappings: Object.keys(priceIdToplan).filter(key => key !== 'undefined'),
+      allEnvVars: Object.entries(priceIdToplan).map(([key, value]) => ({ priceId: key, plan: value }))
+    });
+  } else {
+    console.log('✅ [STRIPE-WEBHOOK] Plan mapped successfully:', { priceId, plan });
+  }
+  
+  return plan || 'unknown';
 }
 
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   try {
+    const webhookTestId = `WEBHOOK_SUBSCRIPTION_CREATED_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    console.log(`🎯 [WEBHOOK-TEST] ${webhookTestId} - Processing subscription.created webhook`);
+    
     const customerId = subscription.customer as string;
+    console.log(`🔍 [WEBHOOK-TEST] ${webhookTestId} - Subscription details:`, {
+      subscriptionId: subscription.id,
+      customerId,
+      status: subscription.status,
+      metadata: subscription.metadata,
+      priceId: subscription.items.data[0]?.price?.id
+    });
     
     // Try multiple ways to get the plan ID
     let planId = subscription.metadata.plan || subscription.metadata.planId;
@@ -100,10 +122,23 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
       }
     }
     
-    // Final fallback
+    // 🚨 CRITICAL: Never use arbitrary fallback plan - this causes upgrade bugs
     if (!planId || planId === 'unknown') {
-      planId = 'glow_up';
-      console.log('⚠️ [STRIPE-WEBHOOK] Using fallback plan:', planId);
+      console.error('❌ [STRIPE-WEBHOOK] CRITICAL: Cannot determine plan from subscription', {
+        subscriptionId: subscription.id,
+        customerId,
+        metadata: subscription.metadata,
+        priceId: subscription.items.data[0]?.price?.id,
+        availableEnvVars: {
+          glow_up_monthly: !!process.env.STRIPE_GLOW_UP_MONTHLY_PRICE_ID,
+          glow_up_yearly: !!process.env.STRIPE_GLOW_UP_YEARLY_PRICE_ID,
+          viral_surge_monthly: !!process.env.STRIPE_VIRAL_SURGE_MONTHLY_PRICE_ID,
+          viral_surge_yearly: !!process.env.STRIPE_VIRAL_SURGE_YEARLY_PRICE_ID,
+          fame_flex_monthly: !!process.env.STRIPE_FAME_FLEX_MONTHLY_PRICE_ID,
+          fame_flex_yearly: !!process.env.STRIPE_FAME_FLEX_YEARLY_PRICE_ID,
+        }
+      });
+      throw new Error(`Cannot determine plan for subscription ${subscription.id}. This webhook will be retried.`);
     }
 
     console.log('🎯 [STRIPE-WEBHOOK] Processing subscription created (Event-Driven):', {
@@ -173,7 +208,8 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
     }
 
     // Update subscription info immediately using normalized tables
-    await updateUserProfile(user.userId, {
+    console.log(`🔄 [WEBHOOK-TEST] ${webhookTestId} - Updating user profile with plan: ${planId}`);
+    const updateData = {
       stripeSubscriptionId: subscription.id,
       currentPlan: planId,
       subscriptionStatus: subscription.status,
@@ -184,7 +220,11 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
       billingSyncStatus: 'webhook_subscription_created',
       lastWebhookEvent: 'customer.subscription.created',
       lastWebhookTimestamp: new Date(),
-    });
+    };
+    
+    console.log(`🔍 [WEBHOOK-TEST] ${webhookTestId} - Update data being applied:`, updateData);
+    await updateUserProfile(user.userId, updateData);
+    console.log(`✅ [WEBHOOK-TEST] ${webhookTestId} - User profile updated successfully`);
 
     console.log('✅ [STRIPE-WEBHOOK] User plan limits updated:', {
       planId,
@@ -236,16 +276,13 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
         const trialStartDate = new Date();
         const trialEndDate = new Date(subscription.trial_end * 1000);
         
-        await db.update(userProfiles)
-          .set({
-            onboardingStep: 'completed',
-            trialStatus: 'active',
-            trialStartDate,
-            trialEndDate,
-            billingSyncStatus: 'webhook_emergency_fallback',
-            updatedAt: new Date()
-          })
-          .where(eq(userProfiles.userId, user.userId));
+        await updateUserProfile(user.userId, {
+          onboardingStep: 'completed',
+          trialStatus: 'active',
+          trialStartDate,
+          trialEndDate,
+          billingSyncStatus: 'webhook_emergency_fallback',
+        });
           
         console.log('🔧 [STRIPE-WEBHOOK-DIAGNOSTICS] Emergency fallback completed - onboarding set to completed');
       }
@@ -278,10 +315,19 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       }
     }
 
+    // 🚨 CRITICAL: Never proceed with unknown plan - this causes upgrade bugs
+    if (!planId || planId === 'unknown') {
+      console.error('❌ [STRIPE-WEBHOOK] CRITICAL: Cannot determine plan for subscription update', {
+        subscriptionId: subscription.id,
+        customerId,
+        metadata: subscription.metadata,
+        priceId: subscription.items.data[0]?.price?.id
+      });
+      throw new Error(`Cannot determine plan for subscription update ${subscription.id}. This webhook will be retried.`);
+    }
+
     // Find user by Stripe customer ID
-    const user = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.stripeCustomerId, customerId)
-    });
+    const user = await getUserByStripeCustomerId(customerId);
 
     if (!user) {
       console.error('❌ [STRIPE-WEBHOOK] User not found for customer:', customerId);
@@ -328,9 +374,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       updateData.subscriptionCancelDate = new Date(subscription.current_period_end * 1000);
     }
 
-    await db.update(userProfiles)
-      .set(updateData)
-      .where(eq(userProfiles.userId, user.userId));
+    await updateUserProfile(user.userId, updateData);
 
     console.log('✅ [STRIPE-WEBHOOK] Subscription updated for user:', user.userId);
 
@@ -343,28 +387,27 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   try {
     const customerId = subscription.customer as string;
 
-    // Find user by Stripe customer ID
-    const user = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.stripeCustomerId, customerId)
-    });
+    // Find user by Stripe customer ID using normalized tables
+    const user = await getUserByStripeCustomerId(customerId);
 
     if (!user) {
       console.error('❌ [STRIPE-WEBHOOK] User not found for customer:', customerId);
       return;
     }
 
-    // Update user profile
-    await db.update(userProfiles)
-      .set({
-        currentPlan: 'free',
-        subscriptionStatus: 'canceled',
-        billingSyncStatus: 'webhook_subscription_deleted',
-        subscriptionCancelDate: new Date(),
-        lastWebhookEvent: 'customer.subscription.deleted',
-        lastWebhookTimestamp: new Date(),
-        updatedAt: new Date()
-      })
-      .where(eq(userProfiles.userId, user.userId));
+    // Update user profile using normalized tables
+    await updateUserProfile(user.userId, {
+      currentPlan: 'free',
+      subscriptionStatus: 'canceled',
+      billingSyncStatus: 'webhook_subscription_deleted',
+      subscriptionCancelDate: new Date(),
+      lastWebhookEvent: 'customer.subscription.deleted',
+      lastWebhookTimestamp: new Date(),
+      // Reset plan limits to free tier
+      planCampaignsLimit: 0,
+      planCreatorsLimit: 0,
+      planFeatures: {}
+    });
 
     console.log('✅ [STRIPE-WEBHOOK] Subscription deleted for user:', user.userId);
 
@@ -377,25 +420,20 @@ async function handleTrialWillEnd(subscription: Stripe.Subscription) {
   try {
     const customerId = subscription.customer as string;
 
-    // Find user by Stripe customer ID
-    const user = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.stripeCustomerId, customerId)
-    });
+    // Find user by Stripe customer ID using normalized tables
+    const user = await getUserByStripeCustomerId(customerId);
 
     if (!user) {
       console.error('❌ [STRIPE-WEBHOOK] User not found for customer:', customerId);
       return;
     }
 
-    // Update user profile
-    await db.update(userProfiles)
-      .set({
-        billingSyncStatus: 'webhook_trial_will_end',
-        lastWebhookEvent: 'customer.subscription.trial_will_end',
-        lastWebhookTimestamp: new Date(),
-        updatedAt: new Date()
-      })
-      .where(eq(userProfiles.userId, user.userId));
+    // Update user profile using normalized tables
+    await updateUserProfile(user.userId, {
+      billingSyncStatus: 'webhook_trial_will_end',
+      lastWebhookEvent: 'customer.subscription.trial_will_end',
+      lastWebhookTimestamp: new Date()
+    });
 
     console.log('✅ [STRIPE-WEBHOOK] Trial will end for user:', user.userId);
 
@@ -410,25 +448,20 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   try {
     const customerId = invoice.customer as string;
 
-    // Find user by Stripe customer ID
-    const user = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.stripeCustomerId, customerId)
-    });
+    // Find user by Stripe customer ID using normalized tables
+    const user = await getUserByStripeCustomerId(customerId);
 
     if (!user) {
       console.error('❌ [STRIPE-WEBHOOK] User not found for customer:', customerId);
       return;
     }
 
-    // Update user profile
-    await db.update(userProfiles)
-      .set({
-        billingSyncStatus: 'webhook_payment_succeeded',
-        lastWebhookEvent: 'invoice.payment_succeeded',
-        lastWebhookTimestamp: new Date(),
-        updatedAt: new Date()
-      })
-      .where(eq(userProfiles.userId, user.userId));
+    // Update user profile using normalized tables
+    await updateUserProfile(user.userId, {
+      billingSyncStatus: 'webhook_payment_succeeded',
+      lastWebhookEvent: 'invoice.payment_succeeded',
+      lastWebhookTimestamp: new Date()
+    });
 
     console.log('✅ [STRIPE-WEBHOOK] Payment succeeded for user:', user.userId);
 
@@ -441,25 +474,20 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
   try {
     const customerId = invoice.customer as string;
 
-    // Find user by Stripe customer ID
-    const user = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.stripeCustomerId, customerId)
-    });
+    // Find user by Stripe customer ID using normalized tables
+    const user = await getUserByStripeCustomerId(customerId);
 
     if (!user) {
       console.error('❌ [STRIPE-WEBHOOK] User not found for customer:', customerId);
       return;
     }
 
-    // Update user profile
-    await db.update(userProfiles)
-      .set({
-        billingSyncStatus: 'webhook_payment_failed',
-        lastWebhookEvent: 'invoice.payment_failed',
-        lastWebhookTimestamp: new Date(),
-        updatedAt: new Date()
-      })
-      .where(eq(userProfiles.userId, user.userId));
+    // Update user profile using normalized tables
+    await updateUserProfile(user.userId, {
+      billingSyncStatus: 'webhook_payment_failed',
+      lastWebhookEvent: 'invoice.payment_failed',
+      lastWebhookTimestamp: new Date()
+    });
 
     console.log('✅ [STRIPE-WEBHOOK] Payment failed for user:', user.userId);
 
@@ -474,25 +502,20 @@ async function handleSetupIntentSucceeded(setupIntent: Stripe.SetupIntent) {
   try {
     const customerId = setupIntent.customer as string;
 
-    // Find user by Stripe customer ID
-    const user = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.stripeCustomerId, customerId)
-    });
+    // Find user by Stripe customer ID using normalized tables
+    const user = await getUserByStripeCustomerId(customerId);
 
     if (!user) {
       console.error('❌ [STRIPE-WEBHOOK] User not found for customer:', customerId);
       return;
     }
 
-    // Update user profile
-    await db.update(userProfiles)
-      .set({
-        billingSyncStatus: 'webhook_setup_intent_succeeded',
-        lastWebhookEvent: 'setup_intent.succeeded',
-        lastWebhookTimestamp: new Date(),
-        updatedAt: new Date()
-      })
-      .where(eq(userProfiles.userId, user.userId));
+    // Update user profile using normalized tables
+    await updateUserProfile(user.userId, {
+      billingSyncStatus: 'webhook_setup_intent_succeeded',
+      lastWebhookEvent: 'setup_intent.succeeded',
+      lastWebhookTimestamp: new Date()
+    });
 
     console.log('✅ [STRIPE-WEBHOOK] Setup intent succeeded for user:', user.userId);
 
@@ -505,23 +528,20 @@ async function handlePaymentMethodAttached(paymentMethod: Stripe.PaymentMethod) 
   try {
     const customerId = paymentMethod.customer as string;
 
-    // Find user by Stripe customer ID
-    const user = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.stripeCustomerId, customerId)
-    });
+    // Find user by Stripe customer ID using normalized tables
+    const user = await getUserByStripeCustomerId(customerId);
 
     if (!user) {
       console.error('❌ [STRIPE-WEBHOOK] User not found for customer:', customerId);
       return;
     }
 
-    // Update user profile with payment method details
+    // Update user profile with payment method details using normalized tables
     const updateData: any = {
       paymentMethodId: paymentMethod.id,
       billingSyncStatus: 'webhook_payment_method_attached',
       lastWebhookEvent: 'payment_method.attached',
-      lastWebhookTimestamp: new Date(),
-      updatedAt: new Date()
+      lastWebhookTimestamp: new Date()
     };
 
     // Store card details if available
@@ -532,9 +552,7 @@ async function handlePaymentMethodAttached(paymentMethod: Stripe.PaymentMethod) 
       updateData.cardExpYear = paymentMethod.card.exp_year;
     }
 
-    await db.update(userProfiles)
-      .set(updateData)
-      .where(eq(userProfiles.userId, user.userId));
+    await updateUserProfile(user.userId, updateData);
 
     console.log('✅ [STRIPE-WEBHOOK] Payment method attached for user:', user.userId);
 

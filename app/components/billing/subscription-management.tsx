@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ErrorBoundary } from '../error-boundary';
+import { useComponentLogger, useUserActionLogger } from '@/lib/logging/react-logger';
+import { paymentLogger } from '@/lib/logging';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -41,19 +44,26 @@ interface SubscriptionData {
   daysRemaining?: number;
   trialProgressPercentage?: number;
   trialTimeRemaining?: string;
+  trialTimeRemainingShort?: string;
+  trialUrgencyLevel?: 'low' | 'medium' | 'high' | 'expired';
   canAccessPortal: boolean;
   isMockCustomer?: boolean;
 }
 
-export default function SubscriptionManagement() {
+function SubscriptionManagementContent() {
+  const componentLogger = useComponentLogger('SubscriptionManagement');
+  const userActionLogger = useUserActionLogger();
   const [subscriptionData, setSubscriptionData] = useState<SubscriptionData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [usageInfo, setUsageInfo] = useState<any>(null);
+  // Removed manual sync - should be automatic via checkout success
 
   useEffect(() => {
     fetchSubscriptionData();
   }, []);
+
+  // Removed manual sync function - billing should update automatically via checkout success
 
   const fetchSubscriptionData = async () => {
     try {
@@ -61,11 +71,23 @@ export default function SubscriptionManagement() {
       setError('');
 
       // Fetch billing status
+      const fetchTestId = `SUBSCRIPTION_FETCH_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      console.log(`🎯 [SUBSCRIPTION-TEST] ${fetchTestId} - Fetching billing status from API`);
+      
       const billingResponse = await fetch('/api/billing/status');
       if (!billingResponse.ok) {
         throw new Error('Failed to fetch billing status');
       }
       const billingData = await billingResponse.json();
+      
+      console.log(`📊 [SUBSCRIPTION-TEST] ${fetchTestId} - Billing data received:`, {
+        currentPlan: billingData.currentPlan,
+        subscriptionStatus: billingData.subscriptionStatus,
+        isTrialing: billingData.isTrialing,
+        hasActiveSubscription: billingData.hasActiveSubscription,
+        stripeCustomerId: billingData.stripeCustomerId,
+        stripeSubscriptionId: billingData.stripeSubscriptionId
+      });
 
       // Check portal access
       const portalResponse = await fetch('/api/stripe/customer-portal', {
@@ -94,7 +116,9 @@ export default function SubscriptionManagement() {
       setSubscriptionData(combinedData);
       setUsageInfo(billingData.usageInfo);
     } catch (err) {
-      console.error('Error fetching subscription data:', err);
+      paymentLogger.error('Error fetching subscription data', err instanceof Error ? err : new Error(String(err)), {
+        operation: 'fetch-subscription-data'
+      });
       setError(err instanceof Error ? err.message : 'Failed to load subscription data');
     } finally {
       setIsLoading(false);
@@ -183,7 +207,19 @@ export default function SubscriptionManagement() {
         </CardHeader>
         <CardContent>
           <p className="text-zinc-400 mb-4">{error}</p>
-          <Button onClick={fetchSubscriptionData} variant="outline" className="border-zinc-700/50">
+          <Button 
+            onClick={() => {
+              userActionLogger.logClick('retry-subscription-load', {
+                operation: 'retry-subscription-fetch'
+              });
+              componentLogger.logInfo('Retrying subscription data fetch', {
+                operation: 'retry-fetch'
+              });
+              fetchSubscriptionData();
+            }} 
+            variant="outline" 
+            className="border-zinc-700/50"
+          >
             Try Again
           </Button>
         </CardContent>
@@ -244,10 +280,7 @@ export default function SubscriptionManagement() {
               <div>
                 <p className="font-semibold text-zinc-100 text-base">Trial Ends</p>
                 <p className="text-base text-zinc-400">
-                  {subscriptionData.daysRemaining 
-                    ? `${subscriptionData.daysRemaining} days remaining`
-                    : 'Loading...'
-                  }
+                  {subscriptionData.trialTimeRemaining || 'Loading...'}
                 </p>
               </div>
             </div>
@@ -291,7 +324,7 @@ export default function SubscriptionManagement() {
             <div className="flex justify-between text-sm text-zinc-400">
               <span>Day 1</span>
               <span className="font-medium">
-                {subscriptionData.daysRemaining || 0} days remaining
+                {subscriptionData.trialTimeRemainingShort || 'Loading...'}
               </span>
               <span>Day 7</span>
             </div>
@@ -422,5 +455,13 @@ export default function SubscriptionManagement() {
 
       </CardContent>
     </Card>
+  );
+}
+
+export default function SubscriptionManagement() {
+  return (
+    <ErrorBoundary componentName="SubscriptionManagement">
+      <SubscriptionManagementContent />
+    </ErrorBoundary>
   );
 }

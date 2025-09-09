@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { Receiver } from "@upstash/qstash";
 import { sendEmail, updateEmailScheduleStatus, EMAIL_CONFIG } from '@/lib/email/email-service';
+import { backgroundJobLogger, jobLog } from '@/lib/logging/background-job-logger';
+import { logger } from '@/lib/logging';
+import { LogCategory } from '@/lib/logging/types';
 
 // Import email templates (will be created next)
 import WelcomeEmail from '@/components/email-templates/welcome-email';
@@ -16,7 +19,13 @@ const receiver = new Receiver({
 
 export async function POST(request: Request) {
   try {
-    console.log('📧 [SCHEDULED-EMAIL] Processing scheduled email request');
+    // Start email job tracking
+    const jobId = jobLog.start({
+      jobType: 'scheduled-email',
+      metadata: { operation: 'send-scheduled-email' }
+    });
+
+    logger.info('Processing scheduled email request', { jobId }, LogCategory.EMAIL);
 
     // Get request body
     const body = await request.text();
@@ -33,22 +42,24 @@ export async function POST(request: Request) {
         });
 
         if (!isValid) {
-          console.error('❌ [SCHEDULED-EMAIL] Invalid QStash signature');
+          logger.error('Invalid QStash signature for scheduled email', undefined, { jobId }, LogCategory.EMAIL);
+          jobLog.fail(jobId, new Error('Invalid QStash signature'), undefined, false);
           return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
         }
       } catch (signatureError) {
-        console.warn('⚠️ [SCHEDULED-EMAIL] Signature verification failed, but proceeding for admin test');
+        logger.warn('QStash signature verification failed for admin test', signatureError as Error, { jobId }, LogCategory.EMAIL);
       }
     }
 
-    console.log('📧 [SCHEDULED-EMAIL] Processing email:', {
+    logger.info('Processing scheduled email', {
+      jobId,
       userId,
       emailType,
-      userEmail,
+      userEmail: userEmail.replace(/(.{2}).*@/, '$1***@'), // Partially redact
       scheduledAt,
       source: source || 'system',
       adminTriggered: !!adminUserId
-    });
+    }, LogCategory.EMAIL);
 
     // Get the appropriate email template and subject
     let emailComponent: React.ReactElement;
@@ -97,12 +108,17 @@ export async function POST(request: Request) {
         await updateEmailScheduleStatus(userId, emailType, 'sent', result.id);
       }
       
-      console.log('✅ [SCHEDULED-EMAIL] Email sent successfully:', {
+      jobLog.email(jobId, 'send', userEmail, emailType, true);
+      jobLog.complete(jobId, { emailId: result.id, action: 'email-sent' });
+      
+      logger.info('Scheduled email sent successfully', {
+        jobId,
         userId,
         emailType,
         emailId: result.id,
-        adminTest: source === 'admin-testing'
-      });
+        adminTest: source === 'admin-testing',
+        recipient: userEmail.replace(/(.{2}).*@/, '$1***@')
+      }, LogCategory.EMAIL);
 
       return NextResponse.json({ 
         success: true, 
@@ -119,7 +135,19 @@ export async function POST(request: Request) {
         await updateEmailScheduleStatus(userId, emailType, 'failed');
       }
       
-      console.error('❌ [SCHEDULED-EMAIL] Email sending failed:', result.error);
+      jobLog.email(jobId, 'fail', userEmail, emailType, false);
+      jobLog.fail(jobId, new Error(result.error || 'Email sending failed'));
+      
+      logger.error('Scheduled email sending failed', 
+        new Error(result.error || 'Email sending failed'), 
+        {
+          jobId,
+          emailType,
+          recipient: userEmail.replace(/(.{2}).*@/, '$1***@')
+        }, 
+        LogCategory.EMAIL
+      );
+      
       return NextResponse.json({ 
         error: result.error,
         emailType,
@@ -128,7 +156,12 @@ export async function POST(request: Request) {
     }
 
   } catch (error: any) {
-    console.error('❌ [SCHEDULED-EMAIL] Error processing scheduled email:', error);
+    logger.error('Error processing scheduled email', 
+      error instanceof Error ? error : new Error(String(error)), 
+      { operation: 'scheduled-email-processing' }, 
+      LogCategory.EMAIL
+    );
+    
     return NextResponse.json({ 
       error: error instanceof Error ? error.message : 'Unknown error' 
     }, { status: 500 });

@@ -1,23 +1,27 @@
 import { NextResponse } from 'next/server';
 import sharp from 'sharp';
 import convert from 'heic-convert';
+import { backgroundJobLogger, jobLog } from '@/lib/logging/background-job-logger';
+import { logger } from '@/lib/logging';
+import { LogCategory } from '@/lib/logging/types';
 
 // Generate placeholder for failed images
-function generatePlaceholderResponse(imageUrl: string) {
-  console.log('🎨 [IMAGE-PROXY] Generating placeholder for failed image:', imageUrl);
-  
+function generatePlaceholderResponse(imageUrl: string, jobId?: string) {
   // Extract username or create a generic placeholder
   let initial = '?';
   let color = '#6B7280'; // Default gray
+  let platform = 'unknown';
   
   try {
     // Try to extract some identifier from the URL for personalization
     if (imageUrl.includes('instagram')) {
       initial = 'I';
       color = '#E1306C'; // Instagram pink
+      platform = 'instagram';
     } else if (imageUrl.includes('tiktok')) {
       initial = 'T';
       color = '#FF0050'; // TikTok red
+      platform = 'tiktok';
     } else {
       initial = 'U'; // Unknown/User
       color = '#3B82F6'; // Blue
@@ -34,7 +38,17 @@ function generatePlaceholderResponse(imageUrl: string) {
     </svg>
   `;
   
-  console.log('✅ [IMAGE-PROXY] Generated placeholder SVG');
+  if (jobId) {
+    jobLog.image(jobId, 'placeholder-generation', 'failed-network', 'svg', true, 0);
+  }
+  
+  logger.debug('Generated image placeholder', {
+    jobId,
+    platform,
+    imageUrl: imageUrl.substring(0, 100) + '...',
+    initial,
+    color
+  }, LogCategory.STORAGE);
   
   return new NextResponse(Buffer.from(placeholderSvg), {
     headers: {
@@ -51,38 +65,52 @@ export async function GET(request: Request) {
   const startTime = Date.now();
   const requestId = Math.random().toString(36).slice(2, 8);
   
+  // Start image processing job tracking
+  const jobId = jobLog.start({
+    jobType: 'image-processing',
+    requestId,
+    metadata: { operation: 'image-proxy' }
+  });
+  
   try {
     const { searchParams } = new URL(request.url);
     const imageUrl = searchParams.get('url');
 
-    console.group(`🖼️ [IMAGE-PROXY-${requestId}] New request started`);
-    console.log('🔗 Source URL:', imageUrl);
-    console.log('🕐 Timestamp:', new Date().toISOString());
-    console.log('📊 Request details:', {
-      method: request.method,
-      headers: Object.fromEntries(request.headers.entries()),
-      urlLength: imageUrl?.length || 0,
-      isBlob: imageUrl?.includes('blob.vercel-storage.com') || false,
-      isTikTok: imageUrl?.includes('tiktok') || false,
-      requestId: requestId
-    });
+    logger.info('Image proxy request started', {
+      requestId,
+      jobId,
+      sourceUrl: imageUrl?.substring(0, 100) + '...',
+      metadata: {
+        method: request.method,
+        urlLength: imageUrl?.length || 0,
+        isBlob: imageUrl?.includes('blob.vercel-storage.com') || false,
+        isTikTok: imageUrl?.includes('tiktok') || false
+      }
+    }, LogCategory.API);
 
     if (!imageUrl) {
-      console.error('❌ [IMAGE-PROXY] Missing image URL parameter');
-      console.groupEnd();
+      logger.error('Missing image URL parameter', undefined, { requestId, jobId }, LogCategory.API);
+      jobLog.fail(jobId, new Error('Missing image URL parameter'), undefined, false);
       return new NextResponse('Missing image URL', { status: 400 });
     }
 
-    // 🚨 IMPORTANT: Check if this is a blob URL (which shouldn't be proxied)
+    // Check if this is a blob URL (which shouldn't be proxied)
     if (imageUrl.includes('blob.vercel-storage.com')) {
-      console.warn('⚠️ [IMAGE-PROXY] WARNING: Received blob URL for proxying - this should not happen!');
-      console.warn('  🔍 This suggests frontend is double-proxying already cached images');
-      console.warn('  🔗 Blob URL:', imageUrl);
-      console.warn('  📋 Recommendation: Frontend should use blob URLs directly');
+      logger.warn('Received blob URL for proxying - redirecting directly', {
+        requestId,
+        jobId,
+        blobUrl: imageUrl,
+        metadata: {
+          issue: 'double-proxying-cached-images',
+          recommendation: 'frontend-should-use-blob-urls-directly'
+        }
+      }, LogCategory.STORAGE);
       
-      // Redirect to the blob URL directly
-      console.log('🔄 [IMAGE-PROXY] Redirecting to blob URL directly');
-      console.groupEnd();
+      jobLog.complete(jobId, { 
+        duration: Date.now() - startTime,
+        action: 'blob-redirect' 
+      });
+      
       return NextResponse.redirect(imageUrl, 302);
     }
 

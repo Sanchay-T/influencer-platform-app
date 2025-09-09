@@ -817,3 +817,713 @@
 [2025-09-06 08:39:56.961] [MODAL] [CLOSE] - Modal closeed
 [2025-09-06 10:42:18.283] [MODAL] [CLOSE] - Modal closeed
 [2025-09-06 10:42:18.283] [MODAL] [CLOSE] - Modal closeed
+[2025-09-07 20:24:37.068] [MODAL] [CLOSE] - Modal closeed
+[2025-09-07 20:24:37.390] [MODAL] [CLOSE] - Modal closeed
+[2025-09-07 20:24:37.408] [MODAL] [OPEN] - Modal opened
+[2025-09-07 20:24:37.418] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-07 20:24:40.983] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-07 20:24:41.132] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-07 20:24:41.229] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-07 20:24:41.385] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-07 20:24:42.029] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-07 20:24:42.282] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-07 20:24:42.407] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-07 20:24:42.557] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-07 20:24:43.586] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-09-07 20:24:43.595] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-09-07 20:24:43.595] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-09-07 20:24:44.707] [ERROR] [API-ERROR] - Step 1 API call failed
+[2025-09-07 20:24:44.711] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-09-07 20:24:44.711] [ERROR] [FORM-ERROR] - Step 1 form submission failed
+[2025-09-08 06:33:14.553] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 06:33:14.710] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 06:33:14.822] [MODAL] [OPEN] - Modal opened
+[2025-09-08 06:33:14.846] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-08 06:34:05.289] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-08 06:34:06.074] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-08 06:34:06.840] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-09-08 06:34:06.853] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-09-08 06:34:06.853] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-09-08 06:34:07.692] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-09-08 06:34:07.703] [ERROR] [API-ERROR] - Step 1 API call failed
+[2025-09-08 06:34:07.711] [ERROR] [FORM-ERROR] - Step 1 form submission failed
+[2025-09-08 06:48:34.444] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 06:48:34.619] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 06:48:34.643] [MODAL] [OPEN] - Modal opened
+[2025-09-08 06:48:34.655] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-08 06:48:40.420] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-08 06:48:41.165] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-08 06:48:41.541] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-09-08 06:48:41.551] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-09-08 06:48:41.551] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-09-08 06:48:42.890] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-09-08 06:48:42.903] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 1 to step 2
+[2025-09-08 06:48:42.903] [STEP-1] [FORM-SUCCESS] - Step 1 completed successfully
+[2025-09-08 06:48:42.911] [MODAL] [STEP_CHANGE] - Modal moved to step 2
+[2025-09-08 06:48:44.197] [STEP-2] [EXAMPLE-SELECTED] - User selected example prompt
+[2025-09-08 06:48:44.988] [STEP-2] [FORM-VALIDATION] - Starting step 2 form validation
+[2025-09-08 06:48:44.996] [STEP-2] [FORM-SUBMIT] - Step 2 form submission started
+[2025-09-08 06:48:44.996] [API] [API-CALL-START] - Making API call to /api/onboarding/step-2
+[2025-09-08 06:48:45.656] [API] [API-RESPONSE] - Received response from /api/onboarding/step-2
+[2025-09-08 06:48:45.660] [ERROR] [API-ERROR] - Step 2 API call failed
+[2025-09-08 06:48:45.661] [ERROR] [FORM-ERROR] - Step 2 form submission failed
+[2025-09-08 08:23:48.535] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 08:23:48.638] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 08:23:48.680] [MODAL] [OPEN] - Modal opened
+[2025-09-08 08:23:48.680] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-08 08:23:50.333] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-08 08:23:51.179] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-08 08:23:51.621] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-09-08 08:23:52.835] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-09-08 08:23:52.835] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-09-08 08:23:58.206] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-09-08 08:23:58.217] [STEP-1] [FORM-SUCCESS] - Step 1 completed successfully
+[2025-09-08 08:23:58.218] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 1 to step 2
+[2025-09-08 08:23:58.233] [MODAL] [STEP_CHANGE] - Modal moved to step 2
+[2025-09-08 08:24:01.146] [STEP-2] [EXAMPLE-SELECTED] - User selected example prompt
+[2025-09-08 08:24:01.743] [API] [API-CALL-START] - Making API call to /api/onboarding/step-2
+[2025-09-08 08:24:03.130] [STEP-2] [FORM-VALIDATION] - Starting step 2 form validation
+[2025-09-08 08:24:03.130] [STEP-2] [FORM-SUBMIT] - Step 2 form submission started
+[2025-09-08 08:24:03.349] [API] [API-RESPONSE] - Received response from /api/onboarding/step-2
+[2025-09-08 08:24:03.355] [STEP-2] [FORM-SUCCESS] - Step 2 completed successfully
+[2025-09-08 08:24:03.355] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 2 to step 3
+[2025-09-08 08:24:03.370] [MODAL] [STEP_CHANGE] - Modal moved to step 3
+[2025-09-08 08:24:08.451] [STEP-3] [PLAN-SELECT] - User selected a plan
+[2025-09-08 08:24:11.555] [STEP-3] [TRIAL-START-ATTEMPT] - User clicked start trial button
+[2025-09-08 08:24:11.565] [API] [API-CALL-START] - Making API call to save selected plan
+[2025-09-08 08:24:12.378] [API] [API-RESPONSE] - Received response from save-plan API
+[2025-09-08 08:24:12.383] [ERROR] [API-ERROR] - Failed to save plan selection
+[2025-09-08 08:24:12.384] [ERROR] [CHECKOUT-ERROR] - Checkout process failed
+[2025-09-08 08:29:10.887] [STEP-3] [TRIAL-START-ATTEMPT] - User clicked start trial button
+[2025-09-08 08:29:10.887] [API] [API-CALL-START] - Making API call to save selected plan
+[2025-09-08 08:29:12.661] [API] [API-CALL-START] - Making API call to create Stripe checkout
+[2025-09-08 08:29:12.661] [API] [API-RESPONSE] - Received response from save-plan API
+[2025-09-08 08:29:12.661] [PAYMENT] [PLAN-SAVED] - Plan selection saved successfully
+[2025-09-08 08:29:12.710] [API] [API-RESPONSE] - Received response from Stripe checkout API
+[2025-09-08 08:29:12.716] [ERROR] [CHECKOUT-ERROR] - Checkout process failed
+[2025-09-08 08:29:12.716] [ERROR] [API-ERROR] - Failed to create Stripe checkout session
+[2025-09-08 08:29:36.951] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 08:29:37.582] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 08:29:37.612] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-08 08:29:37.612] [MODAL] [OPEN] - Modal opened
+[2025-09-08 08:29:39.201] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-08 08:29:40.420] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-09-08 08:29:40.427] [STEP-1] [VALIDATION-ERROR] - Step 1 validation failed - missing required fields
+[2025-09-08 08:29:41.800] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-08 08:29:43.892] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-09-08 08:29:43.892] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-09-08 08:29:43.892] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-09-08 08:29:45.299] [STEP-1] [FORM-SUCCESS] - Step 1 completed successfully
+[2025-09-08 08:29:45.313] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-09-08 08:29:45.313] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 1 to step 2
+[2025-09-08 08:29:45.332] [MODAL] [STEP_CHANGE] - Modal moved to step 2
+[2025-09-08 08:29:47.258] [STEP-2] [EXAMPLE-SELECTED] - User selected example prompt
+[2025-09-08 08:29:47.775] [STEP-2] [FORM-VALIDATION] - Starting step 2 form validation
+[2025-09-08 08:29:47.781] [API] [API-CALL-START] - Making API call to /api/onboarding/step-2
+[2025-09-08 08:29:47.781] [STEP-2] [FORM-SUBMIT] - Step 2 form submission started
+[2025-09-08 08:29:49.047] [API] [API-RESPONSE] - Received response from /api/onboarding/step-2
+[2025-09-08 08:29:49.057] [STEP-2] [FORM-SUCCESS] - Step 2 completed successfully
+[2025-09-08 08:29:49.057] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 2 to step 3
+[2025-09-08 08:29:49.075] [MODAL] [STEP_CHANGE] - Modal moved to step 3
+[2025-09-08 08:29:50.241] [STEP-3] [PLAN-SELECT] - User selected a plan
+[2025-09-08 08:29:52.205] [STEP-3] [TRIAL-START-ATTEMPT] - User clicked start trial button
+[2025-09-08 08:29:52.215] [API] [API-CALL-START] - Making API call to save selected plan
+[2025-09-08 08:29:53.149] [API] [API-RESPONSE] - Received response from save-plan API
+[2025-09-08 08:29:55.099] [API] [API-CALL-START] - Making API call to create Stripe checkout
+[2025-09-08 08:29:55.098] [PAYMENT] [PLAN-SAVED] - Plan selection saved successfully
+[2025-09-08 08:29:55.348] [API] [API-RESPONSE] - Received response from Stripe checkout API
+[2025-09-08 08:29:55.359] [ERROR] [API-ERROR] - Failed to create Stripe checkout session
+[2025-09-08 08:29:55.359] [ERROR] [CHECKOUT-ERROR] - Checkout process failed
+[2025-09-08 08:46:32.020] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 08:46:32.341] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 08:46:32.413] [MODAL] [OPEN] - Modal opened
+[2025-09-08 08:46:32.472] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-08 08:46:34.186] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-08 08:46:35.229] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-08 08:46:35.971] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-09-08 08:46:35.978] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-09-08 08:46:35.978] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-09-08 08:46:38.293] [STEP-1] [FORM-SUCCESS] - Step 1 completed successfully
+[2025-09-08 08:46:38.303] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-09-08 08:46:38.303] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 1 to step 2
+[2025-09-08 08:46:38.316] [MODAL] [STEP_CHANGE] - Modal moved to step 2
+[2025-09-08 08:46:39.190] [STEP-2] [EXAMPLE-SELECTED] - User selected example prompt
+[2025-09-08 08:46:40.148] [STEP-2] [FORM-VALIDATION] - Starting step 2 form validation
+[2025-09-08 08:46:40.152] [STEP-2] [FORM-SUBMIT] - Step 2 form submission started
+[2025-09-08 08:46:40.152] [API] [API-CALL-START] - Making API call to /api/onboarding/step-2
+[2025-09-08 08:46:41.223] [API] [API-RESPONSE] - Received response from /api/onboarding/step-2
+[2025-09-08 08:46:41.234] [STEP-2] [FORM-SUCCESS] - Step 2 completed successfully
+[2025-09-08 08:46:41.234] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 2 to step 3
+[2025-09-08 08:46:41.328] [MODAL] [STEP_CHANGE] - Modal moved to step 3
+[2025-09-08 08:46:42.206] [STEP-3] [PLAN-SELECT] - User selected a plan
+[2025-09-08 08:46:43.433] [STEP-3] [TRIAL-START-ATTEMPT] - User clicked start trial button
+[2025-09-08 08:46:43.441] [API] [API-CALL-START] - Making API call to save selected plan
+[2025-09-08 08:46:44.440] [API] [API-RESPONSE] - Received response from save-plan API
+[2025-09-08 08:46:46.179] [API] [API-CALL-START] - Making API call to create Stripe checkout
+[2025-09-08 08:46:46.179] [PAYMENT] [PLAN-SAVED] - Plan selection saved successfully
+[2025-09-08 08:46:53.576] [API] [API-RESPONSE] - Received response from Stripe checkout API
+[2025-09-08 08:46:53.585] [PAYMENT] [STRIPE-REDIRECT] - Redirecting user to Stripe checkout
+[2025-09-08 08:49:34.877] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 08:49:41.389] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 08:49:41.405] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-08 08:49:41.405] [MODAL] [OPEN] - Modal opened
+[2025-09-08 08:49:44.099] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-08 08:49:45.193] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-08 08:49:45.594] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-09-08 08:49:46.815] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-09-08 08:49:46.815] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-09-08 08:49:48.292] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-09-08 08:49:48.301] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 1 to step 2
+[2025-09-08 08:49:48.301] [STEP-1] [FORM-SUCCESS] - Step 1 completed successfully
+[2025-09-08 08:49:48.310] [MODAL] [STEP_CHANGE] - Modal moved to step 2
+[2025-09-08 08:49:49.197] [STEP-2] [EXAMPLE-SELECTED] - User selected example prompt
+[2025-09-08 08:49:50.595] [STEP-2] [FORM-SUBMIT] - Step 2 form submission started
+[2025-09-08 08:49:51.542] [STEP-2] [FORM-VALIDATION] - Starting step 2 form validation
+[2025-09-08 08:49:51.542] [API] [API-CALL-START] - Making API call to /api/onboarding/step-2
+[2025-09-08 08:49:51.689] [API] [API-RESPONSE] - Received response from /api/onboarding/step-2
+[2025-09-08 08:49:51.695] [STEP-2] [FORM-SUCCESS] - Step 2 completed successfully
+[2025-09-08 08:49:51.695] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 2 to step 3
+[2025-09-08 08:49:51.710] [MODAL] [STEP_CHANGE] - Modal moved to step 3
+[2025-09-08 08:49:52.610] [STEP-3] [PLAN-SELECT] - User selected a plan
+[2025-09-08 08:49:54.092] [STEP-3] [TRIAL-START-ATTEMPT] - User clicked start trial button
+[2025-09-08 08:49:54.096] [API] [API-CALL-START] - Making API call to save selected plan
+[2025-09-08 08:49:55.018] [API] [API-RESPONSE] - Received response from save-plan API
+[2025-09-08 08:49:56.252] [API] [API-CALL-START] - Making API call to create Stripe checkout
+[2025-09-08 08:49:56.252] [PAYMENT] [PLAN-SAVED] - Plan selection saved successfully
+[2025-09-08 08:49:57.456] [API] [API-RESPONSE] - Received response from Stripe checkout API
+[2025-09-08 08:49:57.467] [PAYMENT] [STRIPE-REDIRECT] - Redirecting user to Stripe checkout
+[2025-09-08 08:50:37.916] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 08:50:37.938] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 09:35:48.358] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 09:35:48.358] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 10:10:16.254] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 10:10:16.479] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 10:15:41.073] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 10:15:41.073] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 10:29:46.399] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 10:29:46.591] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 10:53:39.150] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 10:53:39.151] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 11:33:16.333] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 11:33:16.527] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 11:33:16.540] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-08 11:33:16.540] [MODAL] [OPEN] - Modal opened
+[2025-09-08 11:33:23.939] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-08 11:33:25.053] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-08 11:33:27.393] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-09-08 11:33:28.934] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-09-08 11:33:28.934] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-09-08 11:33:31.010] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 1 to step 2
+[2025-09-08 11:33:31.016] [STEP-1] [FORM-SUCCESS] - Step 1 completed successfully
+[2025-09-08 11:33:31.016] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-09-08 11:33:31.025] [MODAL] [STEP_CHANGE] - Modal moved to step 2
+[2025-09-08 11:33:31.916] [STEP-2] [EXAMPLE-SELECTED] - User selected example prompt
+[2025-09-08 11:33:32.546] [STEP-2] [FORM-VALIDATION] - Starting step 2 form validation
+[2025-09-08 11:33:32.550] [STEP-2] [FORM-SUBMIT] - Step 2 form submission started
+[2025-09-08 11:33:32.550] [API] [API-CALL-START] - Making API call to /api/onboarding/step-2
+[2025-09-08 11:33:33.295] [API] [API-RESPONSE] - Received response from /api/onboarding/step-2
+[2025-09-08 11:33:33.300] [STEP-2] [FORM-SUCCESS] - Step 2 completed successfully
+[2025-09-08 11:33:33.300] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 2 to step 3
+[2025-09-08 11:33:33.312] [MODAL] [STEP_CHANGE] - Modal moved to step 3
+[2025-09-08 11:33:37.027] [STEP-3] [PLAN-SELECT] - User selected a plan
+[2025-09-08 11:33:39.003] [STEP-3] [TRIAL-START-ATTEMPT] - User clicked start trial button
+[2025-09-08 11:33:39.013] [API] [API-CALL-START] - Making API call to save selected plan
+[2025-09-08 11:33:39.739] [API] [API-RESPONSE] - Received response from save-plan API
+[2025-09-08 11:33:39.745] [PAYMENT] [PLAN-SAVED] - Plan selection saved successfully
+[2025-09-08 11:33:40.966] [API] [API-CALL-START] - Making API call to create Stripe checkout
+[2025-09-08 11:33:43.186] [API] [API-RESPONSE] - Received response from Stripe checkout API
+[2025-09-08 11:33:43.189] [PAYMENT] [STRIPE-REDIRECT] - Redirecting user to Stripe checkout
+[2025-09-08 11:34:19.653] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 11:34:19.666] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 11:50:41.156] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 11:50:41.156] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 12:19:10.011] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 12:19:10.011] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 12:19:10.011] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-08 12:19:10.011] [MODAL] [OPEN] - Modal opened
+[2025-09-08 12:19:12.771] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-08 12:19:12.834] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-08 12:19:13.015] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-08 12:19:13.152] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-08 12:19:13.244] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-08 12:19:13.306] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-08 12:19:13.431] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-08 12:19:13.969] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-08 12:19:14.029] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-08 12:19:14.150] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-08 12:19:14.277] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-08 12:19:14.361] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-08 12:19:14.456] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-08 12:19:14.561] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-08 12:19:15.793] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-09-08 12:19:15.797] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-09-08 12:19:15.797] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-09-08 12:19:19.169] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-09-08 12:19:19.174] [STEP-1] [FORM-SUCCESS] - Step 1 completed successfully
+[2025-09-08 12:19:19.174] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 1 to step 2
+[2025-09-08 12:19:19.185] [MODAL] [STEP_CHANGE] - Modal moved to step 2
+[2025-09-08 12:19:20.418] [STEP-2] [EXAMPLE-SELECTED] - User selected example prompt
+[2025-09-08 12:19:21.491] [STEP-2] [FORM-VALIDATION] - Starting step 2 form validation
+[2025-09-08 12:19:21.495] [STEP-2] [FORM-SUBMIT] - Step 2 form submission started
+[2025-09-08 12:19:21.495] [API] [API-CALL-START] - Making API call to /api/onboarding/step-2
+[2025-09-08 12:19:22.160] [API] [API-RESPONSE] - Received response from /api/onboarding/step-2
+[2025-09-08 12:19:22.164] [STEP-2] [FORM-SUCCESS] - Step 2 completed successfully
+[2025-09-08 12:19:22.164] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 2 to step 3
+[2025-09-08 12:19:22.178] [MODAL] [STEP_CHANGE] - Modal moved to step 3
+[2025-09-08 12:19:23.754] [STEP-3] [PLAN-SELECT] - User selected a plan
+[2025-09-08 12:19:25.504] [STEP-3] [TRIAL-START-ATTEMPT] - User clicked start trial button
+[2025-09-08 12:19:25.507] [API] [API-CALL-START] - Making API call to save selected plan
+[2025-09-08 12:19:27.612] [API] [API-CALL-START] - Making API call to create Stripe checkout
+[2025-09-08 12:19:27.612] [PAYMENT] [PLAN-SAVED] - Plan selection saved successfully
+[2025-09-08 12:19:27.612] [API] [API-RESPONSE] - Received response from save-plan API
+[2025-09-08 12:19:29.152] [API] [API-RESPONSE] - Received response from Stripe checkout API
+[2025-09-08 12:19:29.162] [PAYMENT] [STRIPE-REDIRECT] - Redirecting user to Stripe checkout
+[2025-09-08 12:20:11.759] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 12:20:11.759] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 12:20:11.786] [MODAL] [OPEN] - Modal opened
+[2025-09-08 12:20:11.790] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-08 12:52:07.659] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-08 12:52:07.666] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-08 12:52:07.933] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-08 12:52:08.045] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-08 12:52:08.175] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-08 12:52:08.257] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-08 12:52:09.092] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-09-08 12:52:09.096] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-09-08 12:52:09.096] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-09-08 12:52:17.644] [STEP-1] [FORM-SUCCESS] - Step 1 completed successfully
+[2025-09-08 12:52:17.650] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-09-08 12:52:17.650] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 1 to step 2
+[2025-09-08 12:52:17.658] [MODAL] [STEP_CHANGE] - Modal moved to step 2
+[2025-09-08 12:52:29.948] [STEP-2] [EXAMPLE-SELECTED] - User selected example prompt
+[2025-09-08 12:52:31.205] [STEP-2] [FORM-VALIDATION] - Starting step 2 form validation
+[2025-09-08 12:52:31.212] [STEP-2] [FORM-SUBMIT] - Step 2 form submission started
+[2025-09-08 12:52:31.212] [API] [API-CALL-START] - Making API call to /api/onboarding/step-2
+[2025-09-08 12:52:31.827] [API] [API-RESPONSE] - Received response from /api/onboarding/step-2
+[2025-09-08 12:52:31.831] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 2 to step 3
+[2025-09-08 12:52:31.831] [STEP-2] [FORM-SUCCESS] - Step 2 completed successfully
+[2025-09-08 12:52:31.843] [MODAL] [STEP_CHANGE] - Modal moved to step 3
+[2025-09-08 12:52:33.162] [STEP-3] [PLAN-SELECT] - User selected a plan
+[2025-09-08 12:52:34.917] [STEP-3] [TRIAL-START-ATTEMPT] - User clicked start trial button
+[2025-09-08 12:52:34.920] [API] [API-CALL-START] - Making API call to save selected plan
+[2025-09-08 12:52:35.952] [API] [API-RESPONSE] - Received response from save-plan API
+[2025-09-08 12:52:37.299] [API] [API-CALL-START] - Making API call to create Stripe checkout
+[2025-09-08 12:52:37.299] [PAYMENT] [PLAN-SAVED] - Plan selection saved successfully
+[2025-09-08 12:52:38.562] [API] [API-RESPONSE] - Received response from Stripe checkout API
+[2025-09-08 12:52:38.565] [PAYMENT] [STRIPE-REDIRECT] - Redirecting user to Stripe checkout
+[2025-09-08 13:16:14.247] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 13:16:16.458] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 13:16:16.490] [MODAL] [OPEN] - Modal opened
+[2025-09-08 13:16:16.501] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-08 13:23:25.123] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 13:23:29.802] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-08 13:23:29.802] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 13:23:29.802] [MODAL] [OPEN] - Modal opened
+[2025-09-08 17:34:25.877] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 17:34:25.959] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 17:34:26.000] [MODAL] [OPEN] - Modal opened
+[2025-09-08 17:34:26.010] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-08 17:34:27.562] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-08 17:34:28.795] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-08 17:34:29.127] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-09-08 17:34:30.762] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-09-08 17:34:30.762] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-09-08 17:34:32.555] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-09-08 17:34:32.560] [STEP-1] [FORM-SUCCESS] - Step 1 completed successfully
+[2025-09-08 17:34:32.560] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 1 to step 2
+[2025-09-08 17:34:32.571] [MODAL] [STEP_CHANGE] - Modal moved to step 2
+[2025-09-08 17:34:33.379] [STEP-2] [EXAMPLE-SELECTED] - User selected example prompt
+[2025-09-08 17:34:34.003] [STEP-2] [FORM-VALIDATION] - Starting step 2 form validation
+[2025-09-08 17:34:34.010] [STEP-2] [FORM-SUBMIT] - Step 2 form submission started
+[2025-09-08 17:34:34.010] [API] [API-CALL-START] - Making API call to /api/onboarding/step-2
+[2025-09-08 17:34:34.716] [STEP-2] [FORM-SUCCESS] - Step 2 completed successfully
+[2025-09-08 17:34:34.722] [API] [API-RESPONSE] - Received response from /api/onboarding/step-2
+[2025-09-08 17:34:34.722] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 2 to step 3
+[2025-09-08 17:34:34.731] [MODAL] [STEP_CHANGE] - Modal moved to step 3
+[2025-09-08 17:34:38.046] [STEP-3] [PLAN-SELECT] - User selected a plan
+[2025-09-08 17:34:39.169] [STEP-3] [TRIAL-START-ATTEMPT] - User clicked start trial button
+[2025-09-08 17:34:39.172] [API] [API-CALL-START] - Making API call to save selected plan
+[2025-09-08 17:34:42.150] [PAYMENT] [PLAN-SAVED] - Plan selection saved successfully
+[2025-09-08 17:34:42.150] [API] [API-RESPONSE] - Received response from save-plan API
+[2025-09-08 17:34:42.150] [API] [API-CALL-START] - Making API call to create Stripe checkout
+[2025-09-08 17:34:43.397] [API] [API-RESPONSE] - Received response from Stripe checkout API
+[2025-09-08 17:34:43.400] [PAYMENT] [STRIPE-REDIRECT] - Redirecting user to Stripe checkout
+[2025-09-08 18:25:19.290] [MODAL] [CLOSE] - Modal closeed
+[2025-09-08 18:25:19.290] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 05:33:11.774] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 05:33:11.987] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 06:25:14.184] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 06:25:14.434] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 07:03:20.597] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 07:03:20.596] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 07:04:00.716] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 07:04:00.716] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 07:05:47.441] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 07:05:47.573] [MODAL] [OPEN] - Modal opened
+[2025-09-09 07:05:47.573] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 07:05:47.583] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-09 07:06:52.662] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-09 07:06:53.773] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-09 07:06:54.283] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-09-09 07:06:54.294] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-09-09 07:06:54.294] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-09-09 07:06:58.201] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-09-09 07:06:58.211] [STEP-1] [FORM-SUCCESS] - Step 1 completed successfully
+[2025-09-09 07:06:58.211] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 1 to step 2
+[2025-09-09 07:06:58.220] [MODAL] [STEP_CHANGE] - Modal moved to step 2
+[2025-09-09 07:06:59.822] [STEP-2] [EXAMPLE-SELECTED] - User selected example prompt
+[2025-09-09 07:07:00.551] [STEP-2] [FORM-VALIDATION] - Starting step 2 form validation
+[2025-09-09 07:07:00.561] [STEP-2] [FORM-SUBMIT] - Step 2 form submission started
+[2025-09-09 07:07:00.561] [API] [API-CALL-START] - Making API call to /api/onboarding/step-2
+[2025-09-09 07:07:01.662] [STEP-2] [FORM-SUCCESS] - Step 2 completed successfully
+[2025-09-09 07:07:01.668] [API] [API-RESPONSE] - Received response from /api/onboarding/step-2
+[2025-09-09 07:07:01.668] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 2 to step 3
+[2025-09-09 07:07:01.674] [MODAL] [STEP_CHANGE] - Modal moved to step 3
+[2025-09-09 07:07:05.471] [STEP-3] [PLAN-SELECT] - User selected a plan
+[2025-09-09 07:07:06.919] [STEP-3] [TRIAL-START-ATTEMPT] - User clicked start trial button
+[2025-09-09 07:07:06.925] [API] [API-CALL-START] - Making API call to save selected plan
+[2025-09-09 07:07:07.662] [API] [API-CALL-START] - Making API call to create Stripe checkout
+[2025-09-09 07:07:08.786] [PAYMENT] [PLAN-SAVED] - Plan selection saved successfully
+[2025-09-09 07:07:08.786] [API] [API-RESPONSE] - Received response from save-plan API
+[2025-09-09 07:07:09.853] [API] [API-RESPONSE] - Received response from Stripe checkout API
+[2025-09-09 07:07:09.856] [PAYMENT] [STRIPE-REDIRECT] - Redirecting user to Stripe checkout
+[2025-09-09 07:07:52.559] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 07:07:52.571] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 07:18:53.678] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 07:18:53.678] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 07:18:53.678] [MODAL] [OPEN] - Modal opened
+[2025-09-09 07:18:53.678] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-09 07:22:35.667] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-09 07:22:36.420] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-09 07:22:37.644] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-09-09 07:22:37.650] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-09-09 07:22:37.650] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-09-09 07:22:41.012] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-09-09 07:22:41.019] [STEP-1] [FORM-SUCCESS] - Step 1 completed successfully
+[2025-09-09 07:22:41.019] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 1 to step 2
+[2025-09-09 07:22:41.030] [MODAL] [STEP_CHANGE] - Modal moved to step 2
+[2025-09-09 07:22:42.039] [STEP-2] [EXAMPLE-SELECTED] - User selected example prompt
+[2025-09-09 07:22:42.409] [STEP-2] [EXAMPLE-SELECTED] - User selected example prompt
+[2025-09-09 07:22:43.981] [STEP-2] [FORM-VALIDATION] - Starting step 2 form validation
+[2025-09-09 07:22:43.991] [API] [API-CALL-START] - Making API call to /api/onboarding/step-2
+[2025-09-09 07:22:43.991] [STEP-2] [FORM-SUBMIT] - Step 2 form submission started
+[2025-09-09 07:22:44.679] [API] [API-RESPONSE] - Received response from /api/onboarding/step-2
+[2025-09-09 07:22:44.689] [STEP-2] [FORM-SUCCESS] - Step 2 completed successfully
+[2025-09-09 07:22:44.689] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 2 to step 3
+[2025-09-09 07:22:44.703] [MODAL] [STEP_CHANGE] - Modal moved to step 3
+[2025-09-09 07:22:45.471] [STEP-3] [PLAN-SELECT] - User selected a plan
+[2025-09-09 07:22:46.570] [STEP-3] [TRIAL-START-ATTEMPT] - User clicked start trial button
+[2025-09-09 07:22:46.575] [API] [API-CALL-START] - Making API call to save selected plan
+[2025-09-09 07:22:47.208] [API] [API-RESPONSE] - Received response from save-plan API
+[2025-09-09 07:22:48.515] [PAYMENT] [PLAN-SAVED] - Plan selection saved successfully
+[2025-09-09 07:22:48.515] [API] [API-CALL-START] - Making API call to create Stripe checkout
+[2025-09-09 07:22:49.625] [API] [API-RESPONSE] - Received response from Stripe checkout API
+[2025-09-09 07:22:49.629] [PAYMENT] [STRIPE-REDIRECT] - Redirecting user to Stripe checkout
+[2025-09-09 07:24:02.882] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 07:24:02.882] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 07:29:15.901] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 07:29:15.901] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 07:29:15.901] [MODAL] [OPEN] - Modal opened
+[2025-09-09 07:29:15.901] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-09 07:29:17.352] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-09 07:29:18.299] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-09 07:29:18.867] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-09-09 07:29:18.875] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-09-09 07:29:18.875] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-09-09 07:29:21.711] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-09-09 07:29:21.718] [STEP-1] [FORM-SUCCESS] - Step 1 completed successfully
+[2025-09-09 07:29:21.718] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 1 to step 2
+[2025-09-09 07:29:21.735] [MODAL] [STEP_CHANGE] - Modal moved to step 2
+[2025-09-09 07:29:22.573] [STEP-2] [EXAMPLE-SELECTED] - User selected example prompt
+[2025-09-09 07:29:23.404] [STEP-2] [FORM-VALIDATION] - Starting step 2 form validation
+[2025-09-09 07:29:23.414] [API] [API-CALL-START] - Making API call to /api/onboarding/step-2
+[2025-09-09 07:29:23.414] [STEP-2] [FORM-SUBMIT] - Step 2 form submission started
+[2025-09-09 07:29:24.159] [API] [API-RESPONSE] - Received response from /api/onboarding/step-2
+[2025-09-09 07:29:24.166] [STEP-2] [FORM-SUCCESS] - Step 2 completed successfully
+[2025-09-09 07:29:24.166] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 2 to step 3
+[2025-09-09 07:29:24.188] [MODAL] [STEP_CHANGE] - Modal moved to step 3
+[2025-09-09 07:29:25.138] [STEP-3] [PLAN-SELECT] - User selected a plan
+[2025-09-09 07:29:26.132] [STEP-3] [TRIAL-START-ATTEMPT] - User clicked start trial button
+[2025-09-09 07:29:26.140] [API] [API-CALL-START] - Making API call to save selected plan
+[2025-09-09 07:29:28.170] [PAYMENT] [PLAN-SAVED] - Plan selection saved successfully
+[2025-09-09 07:29:28.170] [API] [API-RESPONSE] - Received response from save-plan API
+[2025-09-09 07:29:28.170] [API] [API-CALL-START] - Making API call to create Stripe checkout
+[2025-09-09 07:29:29.576] [API] [API-RESPONSE] - Received response from Stripe checkout API
+[2025-09-09 07:29:29.585] [PAYMENT] [STRIPE-REDIRECT] - Redirecting user to Stripe checkout
+[2025-09-09 07:30:43.080] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 07:30:43.080] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 07:38:24.246] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-09 07:38:24.246] [MODAL] [OPEN] - Modal opened
+[2025-09-09 07:38:24.246] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 07:38:24.246] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 07:38:24.595] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-09 07:38:25.539] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-09 07:38:26.003] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-09-09 07:38:26.009] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-09-09 07:38:26.009] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-09-09 07:38:29.337] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-09-09 07:38:29.350] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 1 to step 2
+[2025-09-09 07:38:29.350] [STEP-1] [FORM-SUCCESS] - Step 1 completed successfully
+[2025-09-09 07:38:29.360] [MODAL] [STEP_CHANGE] - Modal moved to step 2
+[2025-09-09 07:38:30.473] [STEP-2] [EXAMPLE-SELECTED] - User selected example prompt
+[2025-09-09 07:38:31.007] [STEP-2] [FORM-VALIDATION] - Starting step 2 form validation
+[2025-09-09 07:38:31.017] [API] [API-CALL-START] - Making API call to /api/onboarding/step-2
+[2025-09-09 07:38:31.017] [STEP-2] [FORM-SUBMIT] - Step 2 form submission started
+[2025-09-09 07:38:32.399] [API] [API-RESPONSE] - Received response from /api/onboarding/step-2
+[2025-09-09 07:38:32.418] [STEP-2] [FORM-SUCCESS] - Step 2 completed successfully
+[2025-09-09 07:38:32.418] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 2 to step 3
+[2025-09-09 07:38:32.444] [MODAL] [STEP_CHANGE] - Modal moved to step 3
+[2025-09-09 07:38:32.988] [STEP-3] [PLAN-SELECT] - User selected a plan
+[2025-09-09 07:38:34.028] [STEP-3] [TRIAL-START-ATTEMPT] - User clicked start trial button
+[2025-09-09 07:38:34.040] [API] [API-CALL-START] - Making API call to save selected plan
+[2025-09-09 07:38:34.780] [API] [API-RESPONSE] - Received response from save-plan API
+[2025-09-09 07:38:36.247] [API] [API-CALL-START] - Making API call to create Stripe checkout
+[2025-09-09 07:38:36.247] [PAYMENT] [PLAN-SAVED] - Plan selection saved successfully
+[2025-09-09 07:38:37.638] [PAYMENT] [STRIPE-REDIRECT] - Redirecting user to Stripe checkout
+[2025-09-09 07:38:37.651] [API] [API-RESPONSE] - Received response from Stripe checkout API
+[2025-09-09 07:39:23.138] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 07:39:23.138] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 10:52:37.397] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 10:52:37.397] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 10:53:35.528] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 10:53:35.578] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 11:19:14.537] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 11:19:14.537] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 11:19:18.095] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 11:19:18.179] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 11:21:07.255] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 11:21:07.372] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 11:21:15.318] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 11:21:15.350] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 11:22:30.667] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 11:22:30.821] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 11:25:24.500] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 11:25:24.631] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 11:30:22.209] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 11:30:22.345] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 11:30:22.380] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-09 11:30:22.392] [MODAL] [OPEN] - Modal opened
+[2025-09-09 11:54:17.856] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 11:54:19.072] [MODAL] [OPEN] - Modal opened
+[2025-09-09 11:54:19.072] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 11:54:19.133] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-09 11:54:28.333] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-09 11:54:28.729] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-09 11:54:29.102] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-09-09 11:54:29.110] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-09-09 11:54:29.110] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-09-09 11:54:31.640] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-09-09 11:54:31.658] [STEP-1] [FORM-SUCCESS] - Step 1 completed successfully
+[2025-09-09 11:54:31.666] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 1 to step 2
+[2025-09-09 11:54:31.671] [MODAL] [STEP_CHANGE] - Modal moved to step 2
+[2025-09-09 11:54:32.723] [STEP-2] [EXAMPLE-SELECTED] - User selected example prompt
+[2025-09-09 11:54:33.536] [STEP-2] [FORM-VALIDATION] - Starting step 2 form validation
+[2025-09-09 11:54:33.539] [STEP-2] [FORM-SUBMIT] - Step 2 form submission started
+[2025-09-09 11:54:33.539] [API] [API-CALL-START] - Making API call to /api/onboarding/step-2
+[2025-09-09 11:54:35.496] [API] [API-RESPONSE] - Received response from /api/onboarding/step-2
+[2025-09-09 11:54:35.506] [STEP-2] [FORM-SUCCESS] - Step 2 completed successfully
+[2025-09-09 11:54:35.506] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 2 to step 3
+[2025-09-09 11:54:35.518] [MODAL] [STEP_CHANGE] - Modal moved to step 3
+[2025-09-09 11:54:37.397] [STEP-3] [PLAN-SELECT] - User selected a plan
+[2025-09-09 11:54:37.793] [STEP-3] [TRIAL-START-ATTEMPT] - User clicked start trial button
+[2025-09-09 11:54:37.809] [API] [API-CALL-START] - Making API call to save selected plan
+[2025-09-09 11:54:40.115] [API] [API-RESPONSE] - Received response from save-plan API
+[2025-09-09 11:54:42.230] [API] [API-CALL-START] - Making API call to create Stripe checkout
+[2025-09-09 11:54:42.230] [PAYMENT] [PLAN-SAVED] - Plan selection saved successfully
+[2025-09-09 11:54:43.330] [API] [API-RESPONSE] - Received response from Stripe checkout API
+[2025-09-09 11:54:43.336] [PAYMENT] [STRIPE-REDIRECT] - Redirecting user to Stripe checkout
+[2025-09-09 11:54:59.677] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 11:54:59.768] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 11:54:59.842] [MODAL] [OPEN] - Modal opened
+[2025-09-09 11:54:59.854] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-09 11:55:04.883] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 11:55:04.966] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 11:55:04.999] [MODAL] [OPEN] - Modal opened
+[2025-09-09 11:55:05.029] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-09 11:55:13.520] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 11:55:13.580] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 11:55:13.626] [MODAL] [OPEN] - Modal opened
+[2025-09-09 11:55:13.630] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-09 11:55:20.533] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 11:55:20.606] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 11:55:20.612] [MODAL] [OPEN] - Modal opened
+[2025-09-09 11:55:20.659] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-09 11:55:29.003] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-09 11:55:29.860] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-09 11:55:30.290] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-09-09 11:55:30.303] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-09-09 11:55:30.303] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-09-09 11:55:31.044] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-09-09 11:55:31.048] [STEP-1] [FORM-SUCCESS] - Step 1 completed successfully
+[2025-09-09 11:55:31.048] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 1 to step 2
+[2025-09-09 11:55:31.068] [MODAL] [STEP_CHANGE] - Modal moved to step 2
+[2025-09-09 11:55:32.320] [STEP-2] [EXAMPLE-SELECTED] - User selected example prompt
+[2025-09-09 11:55:33.440] [STEP-2] [FORM-VALIDATION] - Starting step 2 form validation
+[2025-09-09 11:55:33.445] [STEP-2] [FORM-SUBMIT] - Step 2 form submission started
+[2025-09-09 11:55:33.445] [API] [API-CALL-START] - Making API call to /api/onboarding/step-2
+[2025-09-09 11:55:33.581] [API] [API-RESPONSE] - Received response from /api/onboarding/step-2
+[2025-09-09 11:55:33.591] [STEP-2] [FORM-SUCCESS] - Step 2 completed successfully
+[2025-09-09 11:55:33.591] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 2 to step 3
+[2025-09-09 11:55:33.607] [MODAL] [STEP_CHANGE] - Modal moved to step 3
+[2025-09-09 11:55:34.572] [STEP-3] [PLAN-SELECT] - User selected a plan
+[2025-09-09 11:55:35.723] [STEP-3] [TRIAL-START-ATTEMPT] - User clicked start trial button
+[2025-09-09 11:55:35.731] [API] [API-CALL-START] - Making API call to save selected plan
+[2025-09-09 11:55:35.829] [API] [API-RESPONSE] - Received response from save-plan API
+[2025-09-09 11:55:35.834] [PAYMENT] [PLAN-SAVED] - Plan selection saved successfully
+[2025-09-09 11:55:35.834] [API] [API-CALL-START] - Making API call to create Stripe checkout
+[2025-09-09 11:55:36.776] [API] [API-RESPONSE] - Received response from Stripe checkout API
+[2025-09-09 11:55:36.780] [PAYMENT] [STRIPE-REDIRECT] - Redirecting user to Stripe checkout
+[2025-09-09 11:56:07.634] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 11:56:07.634] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 12:13:23.861] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 12:13:23.971] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 12:13:33.168] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 12:13:33.181] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 12:13:35.374] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 12:13:35.383] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 12:22:54.100] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 12:22:54.164] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 12:22:54.240] [MODAL] [OPEN] - Modal opened
+[2025-09-09 12:22:54.247] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-09 12:23:10.058] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-09 12:23:10.977] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-09 12:23:11.319] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-09-09 12:23:11.323] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-09-09 12:23:11.323] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-09-09 12:23:15.391] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-09-09 12:23:15.520] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 1 to step 2
+[2025-09-09 12:23:15.520] [STEP-1] [FORM-SUCCESS] - Step 1 completed successfully
+[2025-09-09 12:23:15.596] [MODAL] [STEP_CHANGE] - Modal moved to step 2
+[2025-09-09 12:23:15.612] [STEP-2] [EXAMPLE-SELECTED] - User selected example prompt
+[2025-09-09 12:23:16.164] [STEP-2] [FORM-VALIDATION] - Starting step 2 form validation
+[2025-09-09 12:23:16.173] [STEP-2] [FORM-SUBMIT] - Step 2 form submission started
+[2025-09-09 12:23:16.173] [API] [API-CALL-START] - Making API call to /api/onboarding/step-2
+[2025-09-09 12:23:18.178] [API] [API-RESPONSE] - Received response from /api/onboarding/step-2
+[2025-09-09 12:23:18.192] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 2 to step 3
+[2025-09-09 12:23:18.192] [STEP-2] [FORM-SUCCESS] - Step 2 completed successfully
+[2025-09-09 12:23:18.209] [MODAL] [STEP_CHANGE] - Modal moved to step 3
+[2025-09-09 12:23:19.414] [STEP-3] [PLAN-SELECT] - User selected a plan
+[2025-09-09 12:23:20.838] [STEP-3] [TRIAL-START-ATTEMPT] - User clicked start trial button
+[2025-09-09 12:23:20.845] [API] [API-CALL-START] - Making API call to save selected plan
+[2025-09-09 12:23:22.204] [API] [API-RESPONSE] - Received response from save-plan API
+[2025-09-09 12:23:24.477] [PAYMENT] [PLAN-SAVED] - Plan selection saved successfully
+[2025-09-09 12:23:24.477] [API] [API-CALL-START] - Making API call to create Stripe checkout
+[2025-09-09 12:23:26.352] [API] [API-RESPONSE] - Received response from Stripe checkout API
+[2025-09-09 12:23:26.368] [PAYMENT] [STRIPE-REDIRECT] - Redirecting user to Stripe checkout
+[2025-09-09 12:27:24.620] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 12:27:24.859] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 12:27:24.902] [MODAL] [OPEN] - Modal opened
+[2025-09-09 12:27:24.947] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-09 12:27:31.383] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-09 12:27:32.477] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-09 12:27:32.890] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-09-09 12:27:32.904] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-09-09 12:27:32.904] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-09-09 12:27:34.562] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-09-09 12:27:34.568] [STEP-1] [FORM-SUCCESS] - Step 1 completed successfully
+[2025-09-09 12:27:34.568] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 1 to step 2
+[2025-09-09 12:27:34.581] [MODAL] [STEP_CHANGE] - Modal moved to step 2
+[2025-09-09 12:27:35.334] [STEP-2] [EXAMPLE-SELECTED] - User selected example prompt
+[2025-09-09 12:27:35.942] [STEP-2] [FORM-SUBMIT] - Step 2 form submission started
+[2025-09-09 12:27:35.952] [STEP-2] [FORM-VALIDATION] - Starting step 2 form validation
+[2025-09-09 12:27:35.952] [API] [API-CALL-START] - Making API call to /api/onboarding/step-2
+[2025-09-09 12:27:37.994] [API] [API-RESPONSE] - Received response from /api/onboarding/step-2
+[2025-09-09 12:27:38.004] [STEP-2] [FORM-SUCCESS] - Step 2 completed successfully
+[2025-09-09 12:27:38.004] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 2 to step 3
+[2025-09-09 12:27:38.022] [MODAL] [STEP_CHANGE] - Modal moved to step 3
+[2025-09-09 12:27:40.661] [STEP-3] [PLAN-SELECT] - User selected a plan
+[2025-09-09 12:27:41.519] [STEP-3] [TRIAL-START-ATTEMPT] - User clicked start trial button
+[2025-09-09 12:27:41.545] [API] [API-CALL-START] - Making API call to save selected plan
+[2025-09-09 12:27:44.036] [API] [API-RESPONSE] - Received response from save-plan API
+[2025-09-09 12:27:46.280] [PAYMENT] [PLAN-SAVED] - Plan selection saved successfully
+[2025-09-09 12:27:46.280] [API] [API-CALL-START] - Making API call to create Stripe checkout
+[2025-09-09 12:27:47.490] [API] [API-RESPONSE] - Received response from Stripe checkout API
+[2025-09-09 12:27:47.508] [PAYMENT] [STRIPE-REDIRECT] - Redirecting user to Stripe checkout
+[2025-09-09 12:28:24.785] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 12:28:24.945] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 12:59:33.018] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 12:59:33.018] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 12:59:33.623] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 12:59:33.722] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 12:59:33.722] [MODAL] [OPEN] - Modal opened
+[2025-09-09 12:59:33.767] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-09 12:59:41.943] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 12:59:42.071] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 12:59:42.071] [MODAL] [OPEN] - Modal opened
+[2025-09-09 12:59:42.125] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-09 12:59:50.764] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-09 12:59:50.864] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-09 12:59:51.056] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-09 12:59:51.459] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-09 12:59:51.560] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-09 12:59:51.627] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-09 12:59:51.750] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-09 12:59:52.293] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-09 12:59:52.909] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-09 12:59:53.354] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-09 12:59:54.104] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-09 12:59:54.235] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-09 12:59:54.395] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-09 12:59:54.416] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-09 12:59:55.672] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-09 12:59:55.808] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-09 12:59:55.873] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-09 12:59:55.958] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-09 12:59:56.688] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-09 12:59:56.909] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-09 12:59:57.915] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-09-09 12:59:57.924] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-09-09 12:59:57.924] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-09-09 13:00:03.420] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-09-09 13:00:03.434] [STEP-1] [FORM-SUCCESS] - Step 1 completed successfully
+[2025-09-09 13:00:03.434] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 1 to step 2
+[2025-09-09 13:00:03.434] [MODAL] [STEP_CHANGE] - Modal moved to step 2
+[2025-09-09 13:00:04.210] [STEP-2] [EXAMPLE-SELECTED] - User selected example prompt
+[2025-09-09 13:00:04.790] [STEP-2] [FORM-SUBMIT] - Step 2 form submission started
+[2025-09-09 13:00:04.796] [API] [API-CALL-START] - Making API call to /api/onboarding/step-2
+[2025-09-09 13:00:04.796] [STEP-2] [FORM-VALIDATION] - Starting step 2 form validation
+[2025-09-09 13:00:06.899] [API] [API-RESPONSE] - Received response from /api/onboarding/step-2
+[2025-09-09 13:00:06.906] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 2 to step 3
+[2025-09-09 13:00:06.906] [STEP-2] [FORM-SUCCESS] - Step 2 completed successfully
+[2025-09-09 13:00:06.927] [MODAL] [STEP_CHANGE] - Modal moved to step 3
+[2025-09-09 13:00:07.929] [STEP-3] [PLAN-SELECT] - User selected a plan
+[2025-09-09 13:00:09.637] [STEP-3] [TRIAL-START-ATTEMPT] - User clicked start trial button
+[2025-09-09 13:00:09.642] [API] [API-CALL-START] - Making API call to save selected plan
+[2025-09-09 13:00:11.033] [API] [API-RESPONSE] - Received response from save-plan API
+[2025-09-09 13:00:13.473] [API] [API-CALL-START] - Making API call to create Stripe checkout
+[2025-09-09 13:00:13.473] [PAYMENT] [PLAN-SAVED] - Plan selection saved successfully
+[2025-09-09 13:00:14.755] [API] [API-RESPONSE] - Received response from Stripe checkout API
+[2025-09-09 13:00:14.762] [PAYMENT] [STRIPE-REDIRECT] - Redirecting user to Stripe checkout
+[2025-09-09 13:01:59.457] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 13:01:59.457] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 13:10:57.965] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 13:10:57.965] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 13:10:57.965] [MODAL] [OPEN] - Modal opened
+[2025-09-09 13:10:57.965] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-09 13:10:58.245] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-09 13:10:59.381] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-09 13:10:59.804] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-09-09 13:10:59.811] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-09-09 13:10:59.811] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-09-09 13:11:02.305] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-09-09 13:11:02.315] [STEP-1] [FORM-SUCCESS] - Step 1 completed successfully
+[2025-09-09 13:11:02.315] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 1 to step 2
+[2025-09-09 13:11:02.326] [MODAL] [STEP_CHANGE] - Modal moved to step 2
+[2025-09-09 13:11:03.173] [STEP-2] [EXAMPLE-SELECTED] - User selected example prompt
+[2025-09-09 13:11:03.986] [STEP-2] [FORM-VALIDATION] - Starting step 2 form validation
+[2025-09-09 13:11:03.993] [API] [API-CALL-START] - Making API call to /api/onboarding/step-2
+[2025-09-09 13:11:03.993] [STEP-2] [FORM-SUBMIT] - Step 2 form submission started
+[2025-09-09 13:11:05.438] [API] [API-RESPONSE] - Received response from /api/onboarding/step-2
+[2025-09-09 13:11:05.444] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 2 to step 3
+[2025-09-09 13:11:05.444] [STEP-2] [FORM-SUCCESS] - Step 2 completed successfully
+[2025-09-09 13:11:05.460] [MODAL] [STEP_CHANGE] - Modal moved to step 3
+[2025-09-09 13:11:06.197] [STEP-3] [PLAN-SELECT] - User selected a plan
+[2025-09-09 13:11:07.337] [STEP-3] [TRIAL-START-ATTEMPT] - User clicked start trial button
+[2025-09-09 13:11:07.340] [API] [API-CALL-START] - Making API call to save selected plan
+[2025-09-09 13:11:08.855] [API] [API-RESPONSE] - Received response from save-plan API
+[2025-09-09 13:11:10.757] [API] [API-CALL-START] - Making API call to create Stripe checkout
+[2025-09-09 13:11:10.757] [PAYMENT] [PLAN-SAVED] - Plan selection saved successfully
+[2025-09-09 13:11:11.970] [API] [API-RESPONSE] - Received response from Stripe checkout API
+[2025-09-09 13:11:11.976] [PAYMENT] [STRIPE-REDIRECT] - Redirecting user to Stripe checkout
+[2025-09-09 13:12:31.149] [MODAL] [CLOSE] - Modal closeed
+[2025-09-09 13:12:31.149] [MODAL] [CLOSE] - Modal closeed

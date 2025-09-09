@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { updateUserProfile } from '@/lib/db/queries/user-queries';
 import OnboardingLogger from '@/lib/utils/onboarding-logger';
 
 export async function POST(req: NextRequest) {
@@ -50,13 +48,10 @@ export async function POST(req: NextRequest) {
     });
 
     // Update user profile with intended plan (do not change currentPlan here)
-    await db.update(userProfiles)
-      .set({
-        intendedPlan: selectedPlan,
-        billingSyncStatus: 'plan_selected', // will be confirmed by Stripe webhook
-        updatedAt: new Date()
-      })
-      .where(eq(userProfiles.userId, userId));
+    await updateUserProfile(userId, {
+      intendedPlan: selectedPlan,
+      billingSyncStatus: 'plan_selected', // will be confirmed by Stripe webhook
+    });
 
     await OnboardingLogger.logPayment('DB-UPDATE-SUCCESS', 'Database updated successfully with intended plan selection', userId, {
       selectedPlan,

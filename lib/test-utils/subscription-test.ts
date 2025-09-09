@@ -1,5 +1,7 @@
 import { db } from '@/lib/db';
-import { userProfiles, campaigns, scrapingJobs, scrapingResults, subscriptionPlans } from '@/lib/db/schema';
+import { campaigns, scrapingJobs, scrapingResults, subscriptionPlans } from '@/lib/db/schema';
+// TODO: This test utility file needs complete rewrite for normalized database schema
+// import { createUser, getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
 import { eq } from 'drizzle-orm';
 import { PlanEnforcementService } from '@/lib/services/plan-enforcement';
 

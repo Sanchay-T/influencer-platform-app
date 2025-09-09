@@ -1,7 +1,5 @@
 import { auth, clerkClient } from '@clerk/nextjs/server';
-import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
 
 /**
  * Unified admin authentication function
@@ -32,9 +30,10 @@ export async function isAdminUser(): Promise<boolean> {
     }
 
     // Method 1: Check environment variable (primary method)
-    const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(',') || [];
+    const adminEmailsString = process.env.NEXT_PUBLIC_ADMIN_EMAILS;
+    const adminEmails = adminEmailsString ? adminEmailsString.split(',').map(email => email.trim()) : [];
     console.log('🔍 [ADMIN-CHECK] Admin emails from env:', adminEmails);
-    const isEnvAdmin = adminEmails.includes(userEmail);
+    const isEnvAdmin = userEmail && Array.isArray(adminEmails) && adminEmails.includes(userEmail);
     
     if (isEnvAdmin) {
       console.log('✅ [ADMIN-CHECK] User is admin via environment variable:', userEmail);
@@ -43,10 +42,7 @@ export async function isAdminUser(): Promise<boolean> {
 
     // Method 2: Check database admin status (future feature)
     try {
-      const userProfile = await db.query.userProfiles.findFirst({
-        where: eq(userProfiles.userId, userId),
-        columns: { isAdmin: true }
-      });
+      const userProfile = await getUserProfile(userId);
 
       console.log('🔍 [ADMIN-CHECK] Database admin check result:', userProfile?.isAdmin);
       if (userProfile?.isAdmin) {
@@ -108,12 +104,9 @@ export async function promoteUserToAdmin(targetUserId: string): Promise<{ succes
     }
 
     // Update user's admin status in database
-    await db.update(userProfiles)
-      .set({ 
-        isAdmin: true,
-        updatedAt: new Date()
-      })
-      .where(eq(userProfiles.userId, targetUserId));
+    await updateUserProfile(targetUserId, { 
+      isAdmin: true
+    });
 
     console.log('✅ [ADMIN-PROMOTION] User promoted to admin:', targetUserId);
     return { success: true, message: 'User successfully promoted to admin' };
@@ -142,12 +135,9 @@ export async function demoteUserFromAdmin(targetUserId: string): Promise<{ succe
     }
 
     // Update user's admin status in database
-    await db.update(userProfiles)
-      .set({ 
-        isAdmin: false,
-        updatedAt: new Date()
-      })
-      .where(eq(userProfiles.userId, targetUserId));
+    await updateUserProfile(targetUserId, { 
+      isAdmin: false
+    });
 
     console.log('✅ [ADMIN-DEMOTION] User demoted from admin:', targetUserId);
     return { success: true, message: 'User successfully demoted from admin' };
@@ -175,8 +165,14 @@ export async function getAllAdminUsers() {
 
     // Get database admins (if field exists)
     try {
-      const dbAdmins = await db.query.userProfiles.findMany({
-        where: eq(userProfiles.isAdmin, true),
+      // For listing all admin users, we need to use raw database query
+      // since getUserProfile is for individual users
+      const { db } = await import('@/lib/db');
+      const { users } = await import('@/lib/db/schema');
+      const { eq } = await import('drizzle-orm');
+      
+      const dbAdmins = await db.query.users.findMany({
+        where: eq(users.isAdmin, true),
         columns: {
           userId: true,
           fullName: true,

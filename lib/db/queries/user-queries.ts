@@ -26,6 +26,9 @@ import { eq, and } from 'drizzle-orm';
  * This function provides backward compatibility by joining all normalized tables
  */
 export async function getUserProfile(userId: string): Promise<UserProfileComplete | null> {
+  console.log(`🔍 [USER-QUERIES] getUserProfile called for userId: ${userId}`);
+  console.log(`🔍 [USER-QUERIES] Starting normalized database query with JOIN across 5 tables`);
+  
   const result = await db
     .select({
       // Core user data
@@ -86,11 +89,30 @@ export async function getUserProfile(userId: string): Promise<UserProfileComplet
     .leftJoin(userSystemData, eq(users.id, userSystemData.userId))
     .where(eq(users.userId, userId));
     
+  console.log(`🔍 [USER-QUERIES] Database query completed. Result count: ${result.length}`);
+  
   const userRecord = result[0];
   
-  if (!userRecord || !userRecord.id) {
+  if (!userRecord) {
+    console.log(`❌ [USER-QUERIES] No user record found - user does not exist in normalized database`);
+    console.log(`❌ [USER-QUERIES] This means: user needs to be created via Clerk webhook or signup process`);
     return null;
   }
+  
+  if (!userRecord.id) {
+    console.log(`❌ [USER-QUERIES] User record found but missing ID - data integrity issue`);
+    console.log(`❌ [USER-QUERIES] User record:`, userRecord);
+    return null;
+  }
+  
+  console.log(`✅ [USER-QUERIES] User found in normalized database:`, {
+    id: userRecord.id,
+    userId: userRecord.userId,
+    email: userRecord.email,
+    currentPlan: userRecord.currentPlan,
+    onboardingStep: userRecord.onboardingStep,
+    trialStatus: userRecord.trialStatus
+  });
   
   // Transform to match expected format
   return {
@@ -126,7 +148,21 @@ export async function createUser(userData: {
   currentPlan?: string;
   intendedPlan?: string;
 }): Promise<UserProfileComplete> {
+  console.log(`🏗️ [USER-QUERIES] createUser called for userId: ${userData.userId}`);
+  console.log(`🏗️ [USER-QUERIES] Creating user across normalized tables with data:`, {
+    userId: userData.userId,
+    email: userData.email,
+    fullName: userData.fullName,
+    onboardingStep: userData.onboardingStep || 'pending',
+    currentPlan: userData.currentPlan || 'free',
+    hasTrialStart: !!userData.trialStartDate,
+    hasTrialEnd: !!userData.trialEndDate
+  });
+  
   return db.transaction(async (tx) => {
+    console.log(`🏗️ [USER-QUERIES] Starting database transaction for user creation`);
+    
+    try {
     // 1. Insert core user data
     const [newUser] = await tx.insert(users).values({
       userId: userData.userId,
@@ -215,6 +251,21 @@ export async function createUser(userData: {
       lastWebhookEvent: newSystemData.lastWebhookEvent,
       lastWebhookTimestamp: newSystemData.lastWebhookTimestamp,
     } as UserProfileComplete;
+    
+    console.log(`✅ [USER-QUERIES] User created successfully across all 5 normalized tables:`, {
+      userId: newUser.userId,
+      internalId: newUser.id,
+      email: userData.email,
+      currentPlan: newSubscription.currentPlan,
+      trialStatus: newSubscription.trialStatus,
+      onboardingStep: newUser.onboardingStep
+    });
+    
+    } catch (error) {
+      console.error(`❌ [USER-QUERIES] Database transaction failed during user creation:`, error);
+      console.error(`❌ [USER-QUERIES] Failed for userId: ${userData.userId}`);
+      throw error;
+    }
   });
 }
 

@@ -60,8 +60,8 @@ graph TD
 | **🚀 API Endpoints** | [`/app/api/CLAUDE.md`](./app/api/CLAUDE.md) | 70+ endpoints across 25 categories, authentication, scraping APIs |
 | **⚛️ React Components** | [`/app/components/CLAUDE.md`](./app/components/CLAUDE.md) | 42+ components, state management, UI patterns, performance |
 | **🛠️ Core Libraries** | [`/lib/CLAUDE.md`](./lib/CLAUDE.md) | Database models, platform integrations, services, utilities |
-| **🗄️ Database Schema** | [`/supabase/CLAUDE.md`](./supabase/CLAUDE.md) | 9 tables, 23 migrations, relationships, query patterns |
-| **🔧 Scripts & Tools** | [`/scripts/CLAUDE.md`](./scripts/CLAUDE.md) | 60+ utility scripts, development tools, automation |
+| **🗄️ Database Schema** | [`/supabase/CLAUDE.md`](./supabase/CLAUDE.md) | 13 tables, 27 migrations, normalized architecture, comprehensive testing |
+| **🔧 Scripts & Tools** | [`/scripts/CLAUDE.md`](./scripts/CLAUDE.md) | 70+ utility scripts, database normalization tools, professional testing framework |
 | **⚙️ Configuration** | [`/CONFIGURATION.md`](./CONFIGURATION.md) | 100+ env vars, build config, deployment settings |
 
 ---
@@ -131,7 +131,7 @@ sequenceDiagram
 
 ### **Dual Admin System**
 - **Environment-based**: `NEXT_PUBLIC_ADMIN_EMAILS` for emergency access
-- **Database-based**: `userProfiles.isAdmin` for normal admin operations
+- **Database-based**: `users.isAdmin` in normalized database for normal admin operations
 - **Authentication**: Clerk integration with role-based permissions
 
 ### **API Security**
@@ -167,7 +167,7 @@ sequenceDiagram
 - **Component Loading**: 5ms (cached) vs 500ms (fresh)
 - **Image Processing**: Automatic HEIC→JPEG conversion with CDN bypass
 - **Background Jobs**: Real-time progress tracking with 99% success rate
-- **Database Queries**: Optimized with 15+ specialized indexes
+- **Database Queries**: Optimized with 20+ specialized indexes across normalized tables
 
 ### **Monitoring & Debugging**
 - **Real-time Logging**: Comprehensive logging patterns throughout
