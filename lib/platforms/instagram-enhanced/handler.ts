@@ -91,6 +91,9 @@ const openai = new OpenAI({
 const keywordCache = new Map<string, { data: any; timestamp: number }>();
 const searchCache = new Map<string, { data: any; timestamp: number }>();
 
+// Email extraction regex (used for normalizing bios to emails)
+const emailRegex = /[\w\.-]+@[\w\.-]+\.\w+/g;
+
 // AI Keyword Generation Strategy Interface
 interface KeywordStrategy {
   primary: string[];
@@ -114,6 +117,151 @@ interface InstagramCreator {
   isPrivate: boolean;
   externalUrl?: string;
   category?: string;
+}
+
+// Normalize platform-specific creators into the unified "creator" shape used by the UI
+function normalizeInstagramCreators(creators: InstagramCreator[]) {
+  return creators.map((c) => ({
+    platform: 'Instagram',
+    creator: {
+      uniqueId: c.username,
+      username: c.username,
+      name: c.fullName || c.username || 'N/A',
+      followers: c.followerCount || 0,
+      verified: !!c.isVerified,
+      bio: c.biography || '',
+      emails: (c.biography?.match(emailRegex) || []),
+      profilePicUrl: c.profilePicUrl || '',
+      avatarUrl: c.profilePicUrl || '',
+      externalUrl: c.externalUrl,
+      category: c.category,
+      private: !!c.isPrivate,
+      mediaCount: c.mediaCount || 0,
+    },
+    // Enhanced Instagram does not attach a specific video record; keep structure consistent
+    video: undefined,
+  }));
+}
+
+// Upsert results for a job: if a result row exists, update creators; otherwise, insert a new row
+async function upsertCreators(jobId: string, creators: any[]) {
+  const existing = await db.query.scrapingResults.findFirst({
+    where: eq(scrapingResults.jobId, jobId),
+    columns: { id: true }
+  });
+
+  if (existing) {
+    await db.update(scrapingResults)
+      .set({ creators, createdAt: new Date() })
+      .where(eq(scrapingResults.id, existing.id));
+  } else {
+    await db.insert(scrapingResults).values({ jobId, creators, createdAt: new Date() });
+  }
+}
+
+// Run keyword searches with a bounded concurrency pool, incrementally saving results
+async function concurrentSearchAndStream(
+  keywords: string[],
+  targetResults: number,
+  jobId: string,
+  maxConcurrency: number
+) {
+  const enhancedLogger = new EnhancedInstagramLogger(jobId);
+
+  // Shared aggregation state
+  const allResults: Array<{ keyword: string; results: InstagramCreator[]; apiCalls: number; error?: string }>[] = [] as any;
+  const aggregatedCreators: any[] = [];
+  const seenIds = new Set<string>();
+
+  // Throttled incremental save config
+  const SAVE_MS = parseInt(process.env.INSTAGRAM_ENHANCED_INCREMENTAL_SAVE_MS || '2000', 10);
+  const SAVE_DELTA = parseInt(process.env.INSTAGRAM_ENHANCED_INCREMENTAL_SAVE_MIN || '25', 10);
+  let lastSavedAt = 0;
+  let lastSavedCount = 0;
+
+  let index = 0;
+  let totalApiCalls = 0;
+
+  const resultsPerKeyword = Math.max(10, Math.ceil(targetResults / Math.max(1, keywords.length)));
+
+  function shouldSave(currentCount: number) {
+    const now = Date.now();
+    if (currentCount >= targetResults) return true;
+    if (currentCount - lastSavedCount < SAVE_DELTA) return false;
+    return now - lastSavedAt >= SAVE_MS;
+  }
+
+  async function handleIncrementalSave() {
+    try {
+      const progress = Math.min(99, Math.round((aggregatedCreators.length / Math.max(1, targetResults)) * 100));
+      await upsertCreators(jobId, aggregatedCreators);
+      await db.update(scrapingJobs)
+        .set({ processedResults: aggregatedCreators.length, progress: String(progress), updatedAt: new Date() })
+        .where(eq(scrapingJobs.id, jobId));
+
+      lastSavedAt = Date.now();
+      lastSavedCount = aggregatedCreators.length;
+
+      enhancedLogger.logPerformance({
+        message: 'Incremental save',
+        jobId,
+        progress,
+        savedCount: lastSavedCount
+      });
+    } catch (e) {
+      // Non-fatal
+      console.log('⚠️ [ENHANCED-INSTAGRAM] Incremental save failed:', (e as Error).message);
+    }
+  }
+
+  async function worker() {
+    while (true) {
+      // Early stop if reached target
+      if (aggregatedCreators.length >= targetResults) return;
+
+      const current = index++;
+      if (current >= keywords.length) return;
+      const keyword = keywords[current];
+
+      try {
+        const result = await searchKeywordWithRetry(keyword, resultsPerKeyword, jobId, 3);
+        totalApiCalls += result.apiCalls || 0;
+
+        // Add to allResults array preserving per-keyword structure
+        allResults.push([{ keyword, results: result.results, apiCalls: result.apiCalls, error: result.error }]);
+
+        // Normalize and merge into aggregated set
+        const normalized = normalizeInstagramCreators(result.results || []);
+        for (const nc of normalized) {
+          const uid = nc?.creator?.uniqueId || nc?.creator?.username || '';
+          if (!uid) continue;
+          if (seenIds.has(uid)) continue;
+          seenIds.add(uid);
+          aggregatedCreators.push(nc);
+        }
+
+        // Incremental save if thresholds met
+        if (shouldSave(aggregatedCreators.length)) {
+          await handleIncrementalSave();
+        }
+
+      } catch (err) {
+        // Non-fatal per keyword
+        enhancedLogger.logBatching({ message: 'Keyword search error', keyword, error: (err as Error).message });
+      }
+    }
+  }
+
+  const concurrency = Math.max(1, Math.min(maxConcurrency, keywords.length));
+  const workers = Array.from({ length: concurrency }, () => worker());
+  await Promise.all(workers);
+
+  // Final incremental save before returning
+  if (aggregatedCreators.length > lastSavedCount) {
+    await handleIncrementalSave();
+  }
+
+  return { allResults: allResults.flat(), aggregatedCreators, totalApiCalls };
 }
 
 /**
@@ -502,232 +650,78 @@ function cleanupCache() {
  * Mock implementation - replace with actual Instagram API call
  */
 async function searchInstagramKeyword(keyword: string, resultsPerKeyword: number, jobId: string): Promise<{keyword: string, results: InstagramCreator[], apiCalls: number}> {
-  // TODO: Replace with actual Instagram API integration
-  // For now, return mock data that matches the expected structure
-  
-  logger.debug('Mock Instagram API search', {
-    jobId,
-    keyword,
-    targetResults: resultsPerKeyword
-  }, LogCategory.INSTAGRAM);
-  
-  // Simulate API delay - FIXED: Reduced for better performance
-  await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 300));
-  
-  // Generate mock creators - FIXED: More realistic results per keyword
-  const mockCreators: InstagramCreator[] = [];
-  const resultCount = Math.min(resultsPerKeyword, Math.max(resultsPerKeyword * 0.8, 10) + Math.floor(Math.random() * 5));
-  
-  for (let i = 0; i < resultCount; i++) {
-    mockCreators.push({
-      id: `mock_${keyword.replace(/\s+/g, '_')}_${i}_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
-      username: `${keyword.replace(/\s+/g, '')}creator${i}`,
-      fullName: `${keyword} Creator ${i}`,
-      isVerified: Math.random() > 0.8,
-      profilePicUrl: `https://picsum.photos/150/150?random=${i}`,
-      biography: `Passionate about ${keyword}. Creating inspiring content daily! 📸✨`,
-      followerCount: 1000 + Math.floor(Math.random() * 50000),
-      followingCount: 500 + Math.floor(Math.random() * 2000),
-      mediaCount: 50 + Math.floor(Math.random() * 500),
-      isPrivate: Math.random() > 0.9,
-      externalUrl: Math.random() > 0.7 ? `https://${keyword.replace(/\s+/g, '')}.com` : undefined,
-      category: 'Personal Blog'
+  const RAPIDAPI_KEY = process.env.RAPIDAPI_INSTAGRAM_KEY;
+  const RAPIDAPI_HOST = 'instagram-premium-api-2023.p.rapidapi.com';
+  const BASE_URL = `https://${RAPIDAPI_HOST}`;
+
+  if (!RAPIDAPI_KEY) {
+    logger.warn('RAPIDAPI key missing; falling back to empty results', { jobId }, LogCategory.INSTAGRAM);
+    return { keyword, results: [], apiCalls: 0 };
+  }
+
+  const count = Math.min(Math.max(resultsPerKeyword, 10), 50); // 10..50 per call
+  const url = `${BASE_URL}/v2/search/reels?query=${encodeURIComponent(keyword)}&count=${count}`;
+
+  const start = Date.now();
+  const resp = await fetch(url, {
+    headers: {
+      'x-rapidapi-key': RAPIDAPI_KEY,
+      'x-rapidapi-host': RAPIDAPI_HOST
+    }
+  });
+
+  const duration = Date.now() - start;
+  logger.info('Instagram reels search API call', { jobId, keyword, duration, count }, LogCategory.INSTAGRAM);
+
+  if (!resp.ok) {
+    const text = await resp.text().catch(() => '');
+    logger.warn('Instagram reels API non-OK response', { jobId, keyword, status: resp.status, body: text.substring(0, 200) }, LogCategory.INSTAGRAM);
+    return { keyword, results: [], apiCalls: 1 };
+  }
+
+  const data = await resp.json().catch(() => ({}));
+  const modules = Array.isArray(data?.reels_serp_modules) ? data.reels_serp_modules : [];
+  const clips: any[] = [];
+  for (const m of modules) {
+    if (m && m.module_type === 'clips' && Array.isArray(m.clips)) clips.push(...m.clips);
+  }
+
+  const creators: InstagramCreator[] = [];
+  for (const clip of clips.slice(0, count)) {
+    const media = clip?.media || {};
+    const user = media?.user || {};
+    // Map to our minimal creator shape; biography not provided in this endpoint
+    const username = user?.username || '';
+    const fullName = user?.full_name || username || '';
+    const id = String(media?.pk || user?.pk || `${username}_${media?.code || ''}` || `${keyword}_${Math.random().toString(36).slice(2)}`);
+    creators.push({
+      id,
+      username,
+      fullName,
+      isVerified: !!user?.is_verified,
+      profilePicUrl: user?.profile_pic_url || '',
+      biography: '',
+      followerCount: 0,
+      followingCount: 0,
+      mediaCount: 0,
+      isPrivate: !!user?.is_private,
+      externalUrl: undefined,
+      category: undefined
     });
   }
-  
-  return {
-    keyword,
-    results: mockCreators,
-    apiCalls: 1
-  };
+
+  return { keyword, results: creators, apiCalls: 1 };
 }
 
 /**
  * 🚀 ENHANCED Parallel Batching System - Optimized for Speed & Logging
  */
 async function batchedParallelSearch(keywords: string[], maxResults: number, jobId: string) {
-  const enhancedLogger = new EnhancedInstagramLogger(jobId);
-  const startTime = Date.now();
+  // New implementation delegates to a bounded concurrency pool with incremental saves
+  const MAX_CONCURRENCY = parseInt(process.env.INSTAGRAM_ENHANCED_MAX_CONCURRENCY || '10', 10);
+  const { allResults, aggregatedCreators } = await concurrentSearchAndStream(keywords, maxResults, jobId, MAX_CONCURRENCY);
   
-  // OPTIMIZED: More aggressive parallelization
-  let BATCH_SIZE: number;
-  if (maxResults <= 24) {
-    BATCH_SIZE = 4; // Small requests: very fast parallel processing
-  } else if (maxResults <= 60) {
-    BATCH_SIZE = 4; // Medium requests: fast parallel approach
-  } else {
-    BATCH_SIZE = 3; // Large requests: still aggressive parallel (was 2)
-  }
-  
-  const BASE_BATCH_DELAY = 500; // OPTIMIZED: Reduced from 800ms to 500ms
-  const resultsPerKeyword = Math.ceil(maxResults / keywords.length);
-  
-  enhancedLogger.logBatching({
-    message: 'Batching strategy initialized',
-    totalKeywords: keywords.length,
-    maxResults,
-    batchSize: BATCH_SIZE,
-    resultsPerKeyword,
-    baseDelay: BASE_BATCH_DELAY,
-    optimizations: 'Increased batch size, reduced delays'
-  });
-  
-  logger.info('AI batching strategy initialized', {
-    jobId,
-    totalKeywords: keywords.length,
-    maxResults,
-    batchSize: BATCH_SIZE,
-    resultsPerKeyword,
-    baseDelay: BASE_BATCH_DELAY
-  }, LogCategory.INSTAGRAM);
-  
-  // Split keywords into batches
-  const batches: string[][] = [];
-  for (let i = 0; i < keywords.length; i += BATCH_SIZE) {
-    batches.push(keywords.slice(i, i + BATCH_SIZE));
-  }
-  
-  logger.debug('Batches created', {
-    jobId,
-    totalBatches: batches.length,
-    expectedDuration: Math.round((batches.length * BASE_BATCH_DELAY / 1000))
-  }, LogCategory.INSTAGRAM);
-  
-  const allResults: any[] = [];
-  let totalApiCalls = 0;
-  let totalErrors = 0;
-  let totalCacheHits = 0;
-  
-  // Process each batch sequentially with adaptive delays
-  for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-    const currentBatch = batches[batchIndex];
-    const batchStartTime = Date.now();
-    
-    enhancedLogger.logBatching({
-      message: `Starting batch ${batchIndex + 1}/${batches.length}`,
-      batchIndex: batchIndex + 1,
-      totalBatches: batches.length,
-      keywords: currentBatch,
-      batchSize: currentBatch.length,
-      estimatedDuration: `${(currentBatch.length * 0.5).toFixed(1)}s`,
-      previousTotalResults: allResults.length
-    });
-    
-    logger.info('Processing batch', {
-      jobId,
-      batchNumber: batchIndex + 1,
-      totalBatches: batches.length,
-      keywords: currentBatch
-    }, LogCategory.INSTAGRAM);
-    
-    // Process current batch in parallel with staggered starts
-    const batchPromises = currentBatch.map((keyword, index) => 
-      new Promise<any>(resolve => {
-        const staggerDelay = index * 300; // 300ms stagger within batch
-        
-        setTimeout(async () => {
-          try {
-            const result = await searchKeywordWithRetry(keyword, resultsPerKeyword, jobId);
-            
-            // Track cache hits
-            if (result.apiCalls === 0 && result.results.length > 0) {
-              totalCacheHits++;
-            }
-            
-            resolve(result);
-          } catch (error) {
-            logger.error('Batch processing error', error as Error, {
-              jobId,
-              keyword,
-              batchIndex
-            }, LogCategory.INSTAGRAM);
-            
-            resolve({ 
-              keyword, 
-              results: [], 
-              apiCalls: 0, 
-              error: `Batch processing error: ${error instanceof Error ? error.message : 'Unknown'}`
-            });
-          }
-        }, staggerDelay);
-      })
-    );
-    
-    // Wait for all promises in current batch to complete
-    const batchResults = await Promise.all(batchPromises);
-    allResults.push(...batchResults);
-    
-    // Calculate batch statistics
-    const batchApiCalls = batchResults.reduce((sum, r) => sum + (r.apiCalls || 0), 0);
-    const batchErrors = batchResults.filter(r => r.error).length;
-    const batchSuccesses = batchResults.filter(r => !r.error && r.results.length > 0).length;
-    const batchResultCount = batchResults.reduce((sum, r) => sum + (r.results?.length || 0), 0);
-    
-    totalApiCalls += batchApiCalls;
-    totalErrors += batchErrors;
-    
-    const batchTime = Date.now() - batchStartTime;
-    
-    enhancedLogger.logBatching({
-      message: `Batch ${batchIndex + 1} completed`,
-      batchIndex: batchIndex + 1,
-      duration: batchTime,
-      apiCalls: batchApiCalls,
-      successes: batchSuccesses,
-      errors: batchErrors,
-      resultsGenerated: batchResultCount,
-      totalResultsSoFar: allResults.reduce((sum, r) => sum + (r.results?.length || 0), 0),
-      keywordPerformance: batchResults.map(r => ({
-        keyword: r.keyword,
-        results: r.results?.length || 0,
-        error: r.error ? true : false,
-        cached: r.apiCalls === 0 && r.results?.length > 0
-      }))
-    });
-    
-    logger.info('Batch completed', {
-      jobId,
-      batchNumber: batchIndex + 1,
-      duration: batchTime,
-      apiCalls: batchApiCalls,
-      successes: batchSuccesses,
-      errors: batchErrors
-    }, LogCategory.INSTAGRAM);
-    
-    // Adaptive delay calculation based on batch performance
-    if (batchIndex < batches.length - 1) {
-      let adaptiveDelay = BASE_BATCH_DELAY;
-      
-      if (batchErrors > 0) {
-        const errorMultiplier = 1 + (batchErrors * 0.5);
-        adaptiveDelay *= errorMultiplier;
-      }
-      
-      if (batchTime < 2000 && batchErrors === 0) {
-        adaptiveDelay *= 0.8; // 20% reduction for fast batches
-      }
-      
-      const finalDelay = Math.max(adaptiveDelay, 200); // Minimum 200ms
-      
-      logger.debug('Adaptive delay before next batch', {
-        jobId,
-        delay: Math.round(finalDelay),
-        reason: batchErrors > 0 ? 'errors_detected' : batchTime < 2000 ? 'fast_batch' : 'normal'
-      }, LogCategory.INSTAGRAM);
-      
-      await new Promise(resolve => setTimeout(resolve, finalDelay));
-    }
-  }
-  
-  logger.info('All batches completed', {
-    jobId,
-    totalBatches: batches.length,
-    totalApiCalls,
-    totalErrors,
-    totalCacheHits,
-    successRate: Math.round(((allResults.length - totalErrors) / allResults.length) * 100)
-  }, LogCategory.INSTAGRAM);
-  
+  // Maintain backward-compatible return structure
   return allResults;
 }
 
@@ -841,44 +835,10 @@ export async function processEnhancedInstagramJob(jobId: string) {
         .map(([keyword, count]) => ({ keyword, uniqueResults: count }))
     });
     
-    // Step 4: Save enhanced results to database (PREVENT DUPLICATES)
+    // Step 4: Save enhanced results to database (normalized, incremental already saved during run)
     if (finalCreators.length > 0) {
-      // Check if results already exist for this job to prevent duplicates
-      const existingResults = await db.query.scrapingResults.findFirst({
-        where: eq(scrapingResults.jobId, jobId),
-        columns: { id: true, creators: true }
-      });
-      
-      if (existingResults) {
-        enhancedLogger.logPerformance({
-          message: 'WARNING: Results already exist, updating instead of inserting',
-          jobId,
-          existingResultsCount: Array.isArray(existingResults.creators) ? existingResults.creators.length : 0,
-          newResultsCount: finalCreators.length,
-          action: 'UPDATE_EXISTING'
-        });
-        
-        // Update existing results instead of creating new ones
-        await db.update(scrapingResults)
-          .set({
-            creators: finalCreators,
-            createdAt: new Date()
-          })
-          .where(eq(scrapingResults.jobId, jobId));
-      } else {
-        enhancedLogger.logPerformance({
-          message: 'Saving new results to database',
-          jobId,
-          resultsCount: finalCreators.length,
-          action: 'INSERT_NEW'
-        });
-        
-        await db.insert(scrapingResults).values({
-          jobId: jobId,
-          creators: finalCreators,
-          createdAt: new Date()
-        });
-      }
+      const normalizedFinal = normalizeInstagramCreators(finalCreators);
+      await upsertCreators(jobId, normalizedFinal);
     }
     
     // Update job completion with enhanced metadata
@@ -897,10 +857,9 @@ export async function processEnhancedInstagramJob(jobId: string) {
           searchEfficiency: `${(finalCreators.length / Math.max(totalApiCalls, 1)).toFixed(1)} unique results per API call`,
           duplicatesRemoved: duplicatesRemoved,
           totalFetched: totalFetched,
-          batchingStats: {
-            totalBatches: Math.ceil(keywordStrategy.combined.length / (job.targetResults <= 24 ? 3 : job.targetResults <= 60 ? 2 : 1)),
-            averageResultsPerKeyword: Math.round(finalCreators.length / keywordStrategy.combined.length * 10) / 10,
-            successRate: `${Math.round(((keywordStrategy.combined.length - Object.values(keywordStats).filter(v => v === 0).length) / keywordStrategy.combined.length) * 100)}%`
+          execution: {
+            mode: 'concurrency_pool',
+            maxConcurrency: parseInt(process.env.INSTAGRAM_ENHANCED_MAX_CONCURRENCY || '10', 10)
           }
         })
       })

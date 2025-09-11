@@ -34,6 +34,7 @@ const SearchResults = ({ searchData }) => {
   const [creators, setCreators] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [campaignName, setCampaignName] = useState("Campaign");
+  const [stillProcessing, setStillProcessing] = useState(false);
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -118,6 +119,34 @@ const SearchResults = ({ searchData }) => {
         jobId={searchData.jobId}
         platform={searchData.selectedPlatform}
         searchData={searchData}
+        onIntermediateResults={(data) => {
+          try {
+            const incoming = Array.isArray(data?.creators) ? data.creators : [];
+            if (incoming.length === 0) return;
+
+            // Deduplicate by creator uniqueId/username
+            setCreators((prev) => {
+              const map = new Map();
+              for (const c of prev) {
+                const id = c?.creator?.uniqueId || c?.creator?.username || '';
+                if (id) map.set(id, c);
+              }
+              for (const c of incoming) {
+                const id = c?.creator?.uniqueId || c?.creator?.username || '';
+                if (id && !map.has(id)) map.set(id, c);
+              }
+              const merged = Array.from(map.values());
+              if (merged.length > 0) {
+                // Start rendering results immediately
+                setIsLoading(false);
+                setStillProcessing(true);
+              }
+              return merged;
+            });
+          } catch (e) {
+            console.error('Error handling intermediate results:', e);
+          }
+        }}
         onComplete={(data) => {
           if (data && data.status === "completed") {
             console.log("🎯 [SEARCH-RESULTS] onComplete triggered:", {
@@ -132,6 +161,7 @@ const SearchResults = ({ searchData }) => {
             if (allCreators.length > 0) {
               setCreators(allCreators);
               setIsLoading(false);
+              setStillProcessing(false);
             } else {
               // Si no hay creadores, intentar una última vez
               // Enhanced API endpoint selection with logging
@@ -161,10 +191,12 @@ const SearchResults = ({ searchData }) => {
                     }, []) || [];
                   setCreators(foundCreators);
                   setIsLoading(false);
+                  setStillProcessing(false);
                 })
                 .catch((err) => {
                   console.error("Error in final fetch:", err);
                   setIsLoading(false);
+                  setStillProcessing(false);
                 });
             }
           }
@@ -416,82 +448,7 @@ const SearchResults = ({ searchData }) => {
         ]}
       />
 
-      {/* AI Strategy Visualization for Enhanced Instagram */}
-      {searchData.selectedPlatform === "enhanced-instagram" && (
-        <Card className="bg-gradient-to-r from-violet-900/20 to-pink-900/20 border-violet-500/30 mb-6">
-          <div className="p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gradient-to-r from-violet-500 to-pink-500 rounded-full flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">AI</span>
-                </div>
-                <h3 className="text-lg font-semibold text-zinc-100">AI Strategy Used</h3>
-              </div>
-              <Badge variant="secondary" className="bg-violet-500/20 text-violet-300 border-violet-500/30">
-                AI-Enhanced
-              </Badge>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-              <div className="bg-zinc-900/50 border border-zinc-700/50 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                  <span className="font-medium text-zinc-200">Primary Keywords</span>
-                </div>
-                <div className="text-sm text-zinc-400">
-                  Core search terms with high relevance
-                </div>
-              </div>
-              
-              <div className="bg-zinc-900/50 border border-zinc-700/50 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span className="font-medium text-zinc-200">Semantic Keywords</span>
-                </div>
-                <div className="text-sm text-zinc-400">
-                  AI-generated related terms
-                </div>
-              </div>
-              
-              <div className="bg-zinc-900/50 border border-zinc-700/50 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                  <span className="font-medium text-zinc-200">Trending Keywords</span>
-                </div>
-                <div className="text-sm text-zinc-400">
-                  Current trending hashtags
-                </div>
-              </div>
-              
-              <div className="bg-zinc-900/50 border border-zinc-700/50 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                  <span className="font-medium text-zinc-200">Niche Keywords</span>
-                </div>
-                <div className="text-sm text-zinc-400">
-                  Specialized long-tail terms
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-violet-500 rounded-full animate-pulse"></div>
-                  <span className="text-zinc-400">Search Efficiency: 94%</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-zinc-400">Keywords Generated: 24</span>
-                </div>
-              </div>
-              <div className="text-zinc-500">
-                AI-powered intelligent search expansion
-              </div>
-            </div>
-          </div>
-        </Card>
-      )}
+      {/* Removed AI Strategy box for a cleaner presentation */}
 
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-3">
@@ -509,6 +466,11 @@ const SearchResults = ({ searchData }) => {
             {Math.min(currentPage * itemsPerPage, creators.length)} of{" "}
             {creators.length}
           </div>
+          {stillProcessing && (
+            <span className="text-xs px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
+              Processing… live results updating
+            </span>
+          )}
           {(searchData?.campaignId || searchData?.jobId) && (
             <FeatureGate
               feature="csv_export"
