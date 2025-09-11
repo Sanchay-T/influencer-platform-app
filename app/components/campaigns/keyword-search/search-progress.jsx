@@ -99,6 +99,8 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
           // Keyword search endpoints (existing logic)
           if (normalizedPlatform === 'instagram') {
             apiEndpoint = `/api/scraping/instagram-reels?jobId=${jobId}`;
+          } else if (normalizedPlatform === 'enhanced-instagram') {
+            apiEndpoint = `/api/scraping/instagram-enhanced?jobId=${jobId}`;
           } else if (normalizedPlatform === 'youtube') {
             apiEndpoint = `/api/scraping/youtube?jobId=${jobId}`;
           } else {
@@ -625,10 +627,24 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
     
     // Special handling for Instagram reels bio/email enhancement progress
     const isInstagramReels = platformName.toLowerCase() === 'instagram' && !isSimilarSearch;
+    const isEnhancedInstagram = platformName.toLowerCase() === 'enhanced-instagram' && !isSimilarSearch;
     const isTikTokKeyword = platformName.toLowerCase() === 'tiktok' && !isSimilarSearch;
     
     if (processedResults > 0) {
-      if (isInstagramReels) {
+      if (isEnhancedInstagram) {
+        // 🎯 ENHANCED INSTAGRAM PROGRESS: AI-powered progress messages
+        const targetText = targetResults > 0 ? ` (${processedResults}/${targetResults})` : '';
+        if (displayProgress <= 15) {
+          return `AI generating strategic keywords...`;
+        } else if (displayProgress <= 25) {
+          return `Generated keywords in 4 categories, starting search...`;
+        } else if (displayProgress <= 75) {
+          const batchCount = Math.ceil(processedResults / 20);
+          return `Processing batch ${batchCount} with intelligent delays${targetText}`;
+        } else {
+          return `Deduplicating and finalizing results${targetText}`;
+        }
+      } else if (isInstagramReels) {
         // 🎯 EXACT COUNT MESSAGING: Show progress toward target for Instagram reels
         const targetText = targetResults > 0 ? ` (${processedResults}/${targetResults})` : '';
         return `Enhancing Instagram creator profiles${targetText} - ${Math.round(displayProgress)}%`;
@@ -670,6 +686,12 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
         if (displayProgress < 50) return `Analyzing ${platformName.toLowerCase()} creator relationships...`;
         if (displayProgress < 75) return `Processing similar ${platformName.toLowerCase()} profiles...`;
         return 'Finalizing similar creator results...';
+      } else if (isEnhancedInstagram) {
+        // Enhanced Instagram specific messages
+        if (displayProgress <= 15) return `AI generating strategic keywords...`;
+        if (displayProgress <= 25) return `Generated keywords in 4 categories, starting search...`;
+        if (displayProgress <= 75) return `Processing with intelligent delays...`;
+        return `Deduplicating and finalizing results...`;
       } else if (isInstagramReels) {
         // Instagram reels specific messages
         if (displayProgress < 10) return `Searching Instagram reels for your keywords...`;
@@ -774,8 +796,14 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
                   {(() => {
                     const platformName = platform || 'TikTok';
                     const isInstagramReels = platformName.toLowerCase() === 'instagram' && !searchData?.targetUsername;
+                    const isEnhancedInstagram = platformName.toLowerCase() === 'enhanced-instagram' && !searchData?.targetUsername;
                     
-                    if (isInstagramReels) {
+                    if (isEnhancedInstagram) {
+                      // 🎯 ENHANCED INSTAGRAM DISPLAY: Show AI-powered progress
+                      return targetResults > 0 
+                        ? `${processedResults}/${targetResults} AI-enhanced` 
+                        : `${processedResults} AI-processed`;
+                    } else if (isInstagramReels) {
                       // 🎯 EXACT COUNT DISPLAY: Show progress toward target for Instagram
                       return targetResults > 0 
                         ? `${processedResults}/${targetResults} creators` 

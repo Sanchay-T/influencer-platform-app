@@ -1,4 +1,4 @@
-import { auth } from '@clerk/nextjs/server'
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test'
 import { db } from '@/lib/db'
 import { campaigns, scrapingJobs } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
       requestId
     );
 
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
     
     if (!userId) {
       await BillingLogger.logAPI(
@@ -235,7 +235,7 @@ export async function GET(request: Request) {
   console.log('🔍 [CAMPAIGNS-API] GET request received at:', new Date().toISOString());
   try {
     console.log('🔐 [CAMPAIGNS-API] Getting authenticated user from Clerk');
-    const { userId } = await auth()
+    const { userId } = await getAuthOrTest()
     
     if (!userId) {
       console.error('❌ [CAMPAIGNS-API] Unauthorized - No valid user session');

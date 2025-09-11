@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { db } from '@/lib/db';
 import { scrapingJobs, scrapingResults, campaigns, type JobStatus } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     console.log('🔍 [INSTAGRAM-REELS-API] Step 1: Verifying user authentication');
     
     // Verify user authentication with Clerk
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
     
     if (!userId) {
       console.error('❌ [INSTAGRAM-REELS-API] Authentication error: No user found');
@@ -252,7 +252,7 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     // Verify user authentication with Clerk
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
     
     if (!userId) {
       console.error('❌ [INSTAGRAM-REELS-API-GET] Authentication error: No user found');

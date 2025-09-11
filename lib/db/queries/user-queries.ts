@@ -19,7 +19,7 @@ import {
   type UserUsage,
   type UserSystemData
 } from '../schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 
 /**
  * Get complete user profile (replaces old userProfiles queries)
@@ -528,8 +528,8 @@ export async function incrementUsage(
     .update(userUsage)
     .set({
       ...(type === 'campaigns' 
-        ? { usageCampaignsCurrent: db.sql`usage_campaigns_current + ${amount}` }
-        : { usageCreatorsCurrentMonth: db.sql`usage_creators_current_month + ${amount}` }
+        ? { usageCampaignsCurrent: sql`usage_campaigns_current + ${amount}` }
+        : { usageCreatorsCurrentMonth: sql`usage_creators_current_month + ${amount}` }
       ),
       updatedAt: new Date(),
     })

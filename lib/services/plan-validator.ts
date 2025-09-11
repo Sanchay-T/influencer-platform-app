@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { campaigns, scrapingJobs, subscriptionPlans } from '@/lib/db/schema';
+import { campaigns, scrapingJobs, subscriptionPlans, users, userUsage } from '@/lib/db/schema';
 import { getUserProfile, incrementUsage } from '@/lib/db/queries/user-queries';
 import { eq, count, and, gte, sql } from 'drizzle-orm';
 import BillingLogger from '@/lib/loggers/billing-logger';
@@ -268,8 +268,8 @@ export class PlanValidator {
     // Check if subscription/trial is active
     if (!planStatus.isActive) {
       // 🔒 SECURITY: Special handling for paid plans without completed onboarding
-      const userProfile = await db.query.userProfiles.findFirst({
-        where: eq(userProfiles.userId, userId)
+      const userProfile = await db.query.users.findFirst({
+        where: eq(users.userId, userId)
       });
       
       const isPaidPlan = planStatus.currentPlan !== 'free';
@@ -694,13 +694,13 @@ export class PlanValidator {
         logRequestId
       );
 
-      await db.update(userProfiles)
+      await db.update(userUsage)
         .set({
           usageCreatorsCurrentMonth: 0,
           usageResetDate: new Date(),
           updatedAt: new Date()
         })
-        .where(eq(userProfiles.userId, userId));
+        .where(eq(userUsage.userId, userId as any));
 
     } catch (error) {
       await BillingLogger.logError(

@@ -28,6 +28,7 @@
     "reset-user": "node scripts/reset-user-onboarding.js",
     "reset-user:simple": "node scripts/reset-user-simple.js",
     "reset-user:ts": "tsx scripts/reset-user-onboarding.ts",
+    "upgrade-to-fame-flex": "DATABASE_URL=\"postgresql://postgres.cufwvosytcmaggyyfsix:DKVCh52QAgEMzGHT@aws-1-ap-south-1.pooler.supabase.com:6543/postgres\" npx tsx scripts/upgrade-user-to-fame-flex.ts",
     "find-user-id": "node scripts/find-user-id.js",
     "validate:deployment": "node scripts/validate-deployment.js",
     "validate:deployment:prod": "node scripts/validate-deployment.js --environment production",

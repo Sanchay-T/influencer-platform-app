@@ -1,4 +1,5 @@
 import { withSentryConfig } from "@sentry/nextjs";
+import path from 'path'
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -16,6 +17,8 @@ const nextConfig = {
         message: /Critical dependency/,
       },
     ];
+    
+    // Note: We no longer alias '@clerk/nextjs/server' to avoid edge/runtime conflicts.
     
     return config;
   },

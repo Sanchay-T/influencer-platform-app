@@ -10,6 +10,7 @@ import { processYouTubeJob } from '@/lib/platforms/youtube/handler'
 import { processTikTokSimilarJob } from '@/lib/platforms/tiktok-similar/handler'
 import { processInstagramSimilarJob } from '@/lib/platforms/instagram-similar/handler'
 import { processYouTubeSimilarJob } from '@/lib/platforms/youtube-similar/handler'
+import { processEnhancedInstagramJob } from '@/lib/platforms/instagram-enhanced/handler'
 import { SystemConfig } from '@/lib/config/system-config'
 import { ImageCache } from '@/lib/services/image-cache'
 import { PlanValidator } from '@/lib/services/plan-validator'
@@ -200,10 +201,12 @@ export async function POST(req: Request) {
     }
 
     // Parse request body
+    let qstashJobData: any = {};
     try {
       const data = JSON.parse(body)
       jobId = data.jobId
-      logger.debug('Request body parsed successfully', { requestId, jobId }, LogCategory.WEBHOOK);
+      qstashJobData = data; // Store the full QStash payload
+      logger.debug('Request body parsed successfully', { requestId, jobId, hasAdditionalData: !!data.platform }, LogCategory.WEBHOOK);
     } catch (error: any) {
       logger.error('Failed to parse request body JSON', error, { requestId }, LogCategory.WEBHOOK);
       return NextResponse.json({ 
@@ -328,9 +331,95 @@ export async function POST(req: Request) {
       })
     }
 
-    // DETECTAR SI ES UN JOB DE INSTAGRAM REELS SEARCH
-    if (job.platform === 'Instagram' && job.keywords && !job.runId) {
-      console.log('✅ [PLATFORM-DETECTION] Instagram reels job detected!');
+    // DETECT ENHANCED INSTAGRAM AI JOB (highest priority) - ENHANCED DETECTION LOGGING
+    const enhancedMetadata = job.metadata ? JSON.parse(job.metadata) : {};
+    
+    // COMPREHENSIVE JOB DETECTION LOGGING
+    console.log(`🔍 [JOB-DETECTION] Job details:`, {
+      jobId,
+      platform: job.platform,
+      hasKeywords: !!job.keywords,
+      hasMetadata: !!job.metadata,
+      metadataSearchType: enhancedMetadata.searchType,
+      detectionMatch: job.platform === 'Instagram' && job.keywords && enhancedMetadata.searchType === 'instagram_enhanced'
+    });
+    
+    if (job.platform === 'Instagram' && job.keywords && enhancedMetadata.searchType === 'instagram_enhanced') {
+      console.log(`✅ [ENHANCED-INSTAGRAM-DETECTED] Processing Enhanced Instagram AI job`);
+      
+      logger.info('Enhanced Instagram AI job detected', {
+        requestId,
+        jobId,
+        userId: job.userId,
+        keywords: job.keywords,
+        targetResults: job.targetResults,
+        aiEnhanced: true,
+        detectionPath: 'ENHANCED_METADATA_MATCH'
+      }, LogCategory.INSTAGRAM);
+      
+      try {
+        await processEnhancedInstagramJob(jobId);
+        
+        return NextResponse.json({
+          success: true,
+          message: 'Enhanced Instagram AI job processed successfully',
+          jobId: jobId,
+          searchType: 'instagram_enhanced',
+          aiEnhanced: true
+        });
+      } catch (enhancedError: any) {
+        logger.error('Enhanced Instagram AI job processing failed', enhancedError, {
+          requestId,
+          jobId,
+          userId: job.userId
+        }, LogCategory.INSTAGRAM);
+        
+        // Update job status to error
+        await db.update(scrapingJobs)
+          .set({
+            status: 'error',
+            error: enhancedError.message,
+            updatedAt: new Date()
+          })
+          .where(eq(scrapingJobs.id, jobId));
+        
+        return NextResponse.json({
+          success: false,
+          error: 'Enhanced Instagram AI job processing failed',
+          details: enhancedError.message,
+          jobId: jobId
+        }, { status: 500 });
+      }
+    }
+
+    // FALLBACK DETECTION FOR ENHANCED INSTAGRAM (if metadata missing/not working)
+    if (job.platform === 'Instagram' && job.keywords && !job.runId && enhancedMetadata.searchType !== 'instagram_enhanced') {
+      console.log(`🔄 [FALLBACK-DETECTION] Instagram job without enhanced metadata - checking if from enhanced route`);
+      
+      // Check if this might be an Enhanced Instagram job based on other indicators
+      const isLikelyEnhanced = job.keywords?.length === 1 && job.targetResults >= 100;
+      
+      if (isLikelyEnhanced) {
+        console.log(`✅ [ENHANCED-INSTAGRAM-FALLBACK] Treating as Enhanced Instagram job (single keyword + high target)`);
+        
+        try {
+          await processEnhancedInstagramJob(jobId);
+          
+          return NextResponse.json({
+            success: true,
+            message: 'Enhanced Instagram AI job processed successfully (fallback detection)',
+            jobId: jobId,
+            searchType: 'instagram_enhanced',
+            aiEnhanced: true,
+            detectionMethod: 'FALLBACK'
+          });
+        } catch (enhancedError: any) {
+          console.error(`❌ [ENHANCED-INSTAGRAM-FALLBACK-ERROR] Failed:`, enhancedError);
+          // Fall through to regular Instagram processing
+        }
+      }
+      
+      console.log('✅ [PLATFORM-DETECTION] Regular Instagram reels job detected!');
       console.log('\n\n========== INSTAGRAM REELS JOB PROCESSING ==========');
       console.log('🔄 [RAPIDAPI-INSTAGRAM] Processing reels job:', job.id);
       
@@ -2281,6 +2370,7 @@ export async function POST(req: Request) {
         throw youtubeError;
       }
     }
+    
     
     // If no platform matches, return error
     console.log('❌ [PLATFORM-DETECTION] NO MATCHING CONDITION FOUND!');

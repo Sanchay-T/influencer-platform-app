@@ -5,6 +5,7 @@ import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { toast } from "react-hot-toast";
 import { useUser } from '@clerk/nextjs';
 
@@ -56,7 +57,7 @@ export default function KeywordSearchForm({ onSubmit }) {
     setIsLoading(true);
     
     if (!selectedPlatform) {
-      toast.error("Please select a platform (TikTok, Instagram, or YouTube)");
+      toast.error("Please select a platform (TikTok, Instagram, Enhanced Instagram, or YouTube)");
       setIsLoading(false);
       return;
     }
@@ -86,29 +87,64 @@ export default function KeywordSearchForm({ onSubmit }) {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-8">
           <div className="space-y-4">
-            <label className="text-sm font-medium">Platforms</label>
-            <div className="flex space-x-4">
-              <div className="flex items-center">
-                <Checkbox
-                  checked={selectedPlatform === "tiktok"}
-                  onCheckedChange={() => handlePlatformChange("tiktok")}
-                />
-                <span className="ml-2">TikTok</span>
-              </div>
-              <div className="flex items-center">
-                <Checkbox
-                  checked={selectedPlatform === "instagram"}
-                  onCheckedChange={() => handlePlatformChange("instagram")}
-                />
-                <span className="ml-2">Instagram</span>
-              </div>
-              <div className="flex items-center">
-                <Checkbox
-                  checked={selectedPlatform === "youtube"}
-                  onCheckedChange={() => handlePlatformChange("youtube")}
-                />
-                <span className="ml-2">YouTube</span>
-              </div>
+            <label className="text-sm font-medium">Platform Selection</label>
+            <div className="space-y-3">
+              {[
+                {
+                  value: "tiktok",
+                  title: "TikTok", 
+                  description: "Standard TikTok keyword search"
+                },
+                {
+                  value: "instagram",
+                  title: "Instagram", 
+                  description: "Standard Instagram Reels search"
+                },
+                {
+                  value: "enhanced-instagram",
+                  title: "Enhanced Instagram (AI-Powered)", 
+                  description: "AI-enhanced Instagram Reels search with intelligent keyword expansion",
+                  isNew: true
+                },
+                {
+                  value: "youtube",
+                  title: "YouTube", 
+                  description: "Standard YouTube keyword search"
+                }
+              ].map((platform) => (
+                <div 
+                  key={platform.value}
+                  className={`flex items-start space-x-3 p-3 border rounded-lg cursor-pointer transition-all duration-200 ${
+                    selectedPlatform === platform.value
+                      ? "border-primary bg-primary/10"
+                      : "border-zinc-700 hover:border-zinc-600"
+                  }`}
+                  onClick={() => handlePlatformChange(platform.value)}
+                >
+                  <div className="flex items-center pt-1">
+                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                      selectedPlatform === platform.value
+                        ? "border-primary bg-primary"
+                        : "border-zinc-400"
+                    }`}>
+                      {selectedPlatform === platform.value && (
+                        <div className="w-2 h-2 rounded-full bg-white"></div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-zinc-200">{platform.title}</span>
+                      {platform.isNew && (
+                        <span className="px-2 py-0.5 bg-violet-500/20 text-violet-300 text-xs rounded-full border border-violet-500/30">
+                          NEW
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-zinc-400 mt-1">{platform.description}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 

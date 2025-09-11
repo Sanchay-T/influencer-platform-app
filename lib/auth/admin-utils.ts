@@ -1,4 +1,6 @@
 import { auth, clerkClient } from '@clerk/nextjs/server';
+import { headers } from 'next/headers';
+import { verifyTestAuthHeaders } from '@/lib/auth/testable-auth';
 import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
 
 /**
@@ -8,7 +10,21 @@ import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries
 export async function isAdminUser(): Promise<boolean> {
   try {
     console.log('🔍 [ADMIN-CHECK] Starting admin authentication check');
-    
+    // In test mode, allow header-based admin without invoking Clerk
+    if (process.env.ENABLE_TEST_AUTH === 'true' && process.env.NODE_ENV !== 'production') {
+      try {
+        const h = await headers();
+        const payload = verifyTestAuthHeaders(h);
+        if (payload) {
+          const adminEmailsString = process.env.NEXT_PUBLIC_ADMIN_EMAILS;
+          const adminEmails = adminEmailsString ? adminEmailsString.split(',').map(email => email.trim()) : [];
+          const isHeaderAdmin = !!payload.admin || (!!payload.email && adminEmails.includes(payload.email));
+          console.log('🔍 [ADMIN-CHECK] Header-based admin (pre-check):', isHeaderAdmin);
+          if (isHeaderAdmin) return true;
+        }
+      } catch {}
+    }
+
     // Get authenticated user
     const { userId } = await auth();
     console.log('🔍 [ADMIN-CHECK] User ID from auth:', userId);
