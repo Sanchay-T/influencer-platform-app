@@ -35,7 +35,12 @@ const SearchResults = ({ searchData }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [campaignName, setCampaignName] = useState("Campaign");
   const [stillProcessing, setStillProcessing] = useState(false);
+  const [enhancedMeta, setEnhancedMeta] = useState(null);
+  const [progressInfo, setProgressInfo] = useState(null);
   const itemsPerPage = 10;
+
+  // Normalize platform from either selectedPlatform (wizard) or platform (reopen flow)
+  const platformNormalized = (searchData?.selectedPlatform || searchData?.platform || 'tiktok').toString().toLowerCase();
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -48,20 +53,14 @@ const SearchResults = ({ searchData }) => {
           searchData: searchData,
         });
 
-        const apiEndpoint =
-          searchData.selectedPlatform === "Instagram"
-            ? "/api/scraping/instagram-reels"
-            : searchData.selectedPlatform === "enhanced-instagram"
-              ? "/api/scraping/instagram-enhanced"
-              : searchData.selectedPlatform === "YouTube"
-                ? "/api/scraping/youtube"
-                : "/api/scraping/tiktok";
+        let apiEndpoint = '/api/scraping/tiktok';
+        if (platformNormalized === 'instagram') apiEndpoint = '/api/scraping/instagram-reels';
+        else if (platformNormalized === 'enhanced-instagram') apiEndpoint = '/api/scraping/instagram-enhanced';
+        else if (platformNormalized === 'youtube') apiEndpoint = '/api/scraping/youtube';
 
         console.log("🌐 [API-ENDPOINT] Using endpoint:", apiEndpoint);
 
-        const response = await fetch(
-          `${apiEndpoint}?jobId=${searchData.jobId}`,
-        );
+        const response = await fetch(`${apiEndpoint}?jobId=${searchData.jobId}`);
         const data = await response.json();
 
         if (data.error) {
@@ -113,12 +112,49 @@ const SearchResults = ({ searchData }) => {
   // Validación básica - moved after hooks to avoid conditional hook calls
   if (!searchData?.jobId) return null;
 
+  // Unified completion handler (used for both initial and silent polling)
+  const handleSearchComplete = (data) => {
+    if (data && data.status === "completed") {
+      // Use creators directly from data.creators (already processed with bio/email)
+      const allCreators = data.creators || [];
+      if (allCreators.length > 0) {
+        setCreators(allCreators);
+        setIsLoading(false);
+        setStillProcessing(false);
+      } else {
+        // As a fallback, re-fetch latest results from the corresponding endpoint
+        let apiEndpoint = '/api/scraping/tiktok';
+        if (platformNormalized === 'instagram') apiEndpoint = '/api/scraping/instagram-reels';
+        else if (platformNormalized === 'enhanced-instagram') apiEndpoint = '/api/scraping/instagram-enhanced';
+        else if (platformNormalized === 'youtube') apiEndpoint = '/api/scraping/youtube';
+
+        fetch(`${apiEndpoint}?jobId=${searchData.jobId}`)
+          .then((response) => response.json())
+          .then((result) => {
+            const foundCreators =
+              result.results?.reduce((acc, res) => {
+                return [...acc, ...(res.creators || [])];
+              }, []) || [];
+            setCreators(foundCreators);
+            setIsLoading(false);
+            setStillProcessing(false);
+          })
+          .catch(() => {
+            setIsLoading(false);
+            setStillProcessing(false);
+          });
+      }
+    }
+  };
+
   if (isLoading) {
     return (
       <SearchProgress
         jobId={searchData.jobId}
-        platform={searchData.selectedPlatform}
+        platform={searchData.selectedPlatform || searchData.platform}
         searchData={searchData}
+        onMeta={setEnhancedMeta}
+        onProgress={setProgressInfo}
         onIntermediateResults={(data) => {
           try {
             const incoming = Array.isArray(data?.creators) ? data.creators : [];
@@ -147,60 +183,7 @@ const SearchResults = ({ searchData }) => {
             console.error('Error handling intermediate results:', e);
           }
         }}
-        onComplete={(data) => {
-          if (data && data.status === "completed") {
-            console.log("🎯 [SEARCH-RESULTS] onComplete triggered:", {
-              creatorsCount: data.creators?.length || 0,
-              hasCreators: !!data.creators,
-              platform: searchData.selectedPlatform,
-            });
-
-            // Use creators directly from data.creators (already processed with bio/email)
-            const allCreators = data.creators || [];
-
-            if (allCreators.length > 0) {
-              setCreators(allCreators);
-              setIsLoading(false);
-              setStillProcessing(false);
-            } else {
-              // Si no hay creadores, intentar una última vez
-              // Enhanced API endpoint selection with logging
-              let apiEndpoint;
-              if (searchData.selectedPlatform === "youtube") {
-                apiEndpoint = "/api/scraping/youtube";
-              } else if (searchData.selectedPlatform === "instagram") {
-                apiEndpoint = "/api/scraping/instagram-reels";
-              } else if (searchData.selectedPlatform === "enhanced-instagram") {
-                apiEndpoint = "/api/scraping/instagram-enhanced";
-              } else {
-                apiEndpoint = "/api/scraping/tiktok";
-              }
-
-              console.log("🔍 [SEARCH-RESULTS] Final status check:", {
-                platform: searchData.selectedPlatform,
-                apiEndpoint: apiEndpoint,
-                jobId: searchData.jobId,
-              });
-
-              fetch(`${apiEndpoint}?jobId=${searchData.jobId}`)
-                .then((response) => response.json())
-                .then((result) => {
-                  const foundCreators =
-                    result.results?.reduce((acc, res) => {
-                      return [...acc, ...(res.creators || [])];
-                    }, []) || [];
-                  setCreators(foundCreators);
-                  setIsLoading(false);
-                  setStillProcessing(false);
-                })
-                .catch((err) => {
-                  console.error("Error in final fetch:", err);
-                  setIsLoading(false);
-                  setStillProcessing(false);
-                });
-            }
-          }
-        }}
+        onComplete={handleSearchComplete}
       />
     );
   }
@@ -348,8 +331,8 @@ const SearchResults = ({ searchData }) => {
   };
 
   const renderProfileLink = (creator) => {
-    // Check platform from searchData
-    const platform = searchData.selectedPlatform || "TikTok";
+    // Check platform from normalized source
+    const platform = platformNormalized;
 
     console.log("🔗 [PROFILE-LINK] Generating profile link for:", {
       platform,
@@ -357,7 +340,7 @@ const SearchResults = ({ searchData }) => {
       videoUrl: creator.video?.url,
     });
 
-    if (platform === "TikTok" || platform === "tiktok") {
+    if (platform === "tiktok") {
       // Try to extract username from video URL first (most reliable)
       if (creator.video?.url) {
         const match = creator.video.url.match(/@([^\/]+)/);
@@ -453,7 +436,7 @@ const SearchResults = ({ searchData }) => {
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-3">
           <h2 className="text-2xl font-bold text-zinc-100">Results Found</h2>
-          {searchData.selectedPlatform === "enhanced-instagram" && (
+          {platformNormalized === "enhanced-instagram" && (
             <Badge variant="secondary" className="bg-gradient-to-r from-violet-500/20 to-pink-500/20 text-violet-300 border-violet-500/30">
               AI-Enhanced
             </Badge>
@@ -489,7 +472,43 @@ const SearchResults = ({ searchData }) => {
         </div>
       </div>
 
+      {/* Silent poller to keep progress flowing while table renders */}
+      {!isLoading && stillProcessing && (
+        <div className="hidden" aria-hidden="true">
+          <SearchProgress 
+            jobId={searchData.jobId}
+            platform={searchData.selectedPlatform || searchData.platform}
+            searchData={searchData}
+            onMeta={setEnhancedMeta}
+            onProgress={setProgressInfo}
+            onComplete={handleSearchComplete}
+          />
+        </div>
+      )}
+
       <div className="rounded-lg border border-zinc-800 bg-zinc-900/30 relative w-full overflow-hidden">
+        {stillProcessing && (
+          <div className="absolute top-0 left-0 h-[2px] bg-primary transition-all duration-500 z-40" 
+               style={{ width: `${Math.min(progressInfo?.progress ?? 0, 95)}%` }}
+               aria-hidden="true"
+          />
+        )}
+
+        {stillProcessing && (
+          <div className="px-4 py-2 border-b border-zinc-800 bg-zinc-900/50 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs text-zinc-400" aria-live="polite">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-pink-400" />
+              <span>
+                Processing{progressInfo?.processedResults != null && progressInfo?.targetResults != null
+                  ? ` ${progressInfo.processedResults}/${progressInfo.targetResults}`
+                  : ''}
+              </span>
+                  {platformNormalized === 'enhanced-instagram' && enhancedMeta?.execution?.maxConcurrency && (
+                    <span className="text-zinc-500">• Parallel ×{enhancedMeta.execution.maxConcurrency}</span>
+                  )}
+                </div>
+          </div>
+        )}
         {isPageLoading && (
           <div className="absolute inset-0 bg-zinc-900/50 flex items-center justify-center z-50">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-200"></div>
@@ -616,9 +635,9 @@ const SearchResults = ({ searchData }) => {
                           rel="noopener noreferrer"
                           className="text-pink-400 hover:text-pink-300 hover:underline font-medium transition-colors duration-200 flex items-center gap-1"
                           title={`View ${creator.creator.name}'s profile on ${
-                            searchData.selectedPlatform === "enhanced-instagram" 
-                              ? "Instagram" 
-                              : searchData.selectedPlatform || "TikTok"
+                            platformNormalized === 'enhanced-instagram' ? 'Instagram' :
+                            platformNormalized === 'instagram' ? 'Instagram' :
+                            platformNormalized === 'youtube' ? 'YouTube' : 'TikTok'
                           }`}
                         >
                           {creator.creator.name}

@@ -7,7 +7,7 @@ import { Loader2, CheckCircle2, AlertCircle, RefreshCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useRouter } from 'next/navigation'
 
-export default function SearchProgress({ jobId, onComplete, onIntermediateResults, platform = 'tiktok', searchData }) {
+export default function SearchProgress({ jobId, onComplete, onIntermediateResults, platform = 'tiktok', searchData, onMeta, onProgress }) {
   // Debug logging for props
   console.log('🚀 [SEARCH-PROGRESS] Component initialized with props:', {
     jobId: jobId,
@@ -176,6 +176,24 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
           resultsLength: data.results?.length || 0,
           firstResultCreatorsCount: data.results?.[0]?.creators?.length || 0
         });
+
+        // Surface enhanced job metadata and progress to parent (for UI banners)
+        try {
+          if (typeof onMeta === 'function' && data?.metadata) {
+            onMeta(data.metadata)
+          }
+          if (typeof onProgress === 'function') {
+            const jd = data.job || data
+            onProgress({
+              processedResults: jd?.processedResults ?? null,
+              targetResults: jd?.targetResults ?? null,
+              progress: parseFloat(jd?.progress || '0'),
+              status: jd?.status || 'processing'
+            })
+          }
+        } catch (metaErr) {
+          console.log('⚠️ [SEARCH-PROGRESS] onMeta/onProgress callback error (non-fatal):', metaErr)
+        }
         
         // 🚨 COMPREHENSIVE POLLING DEBUG: Log exact data structure received
         console.log('🚨 [POLLING-DEBUG] Complete API response analysis:', {
