@@ -95,14 +95,16 @@ const sentryWebpackConfig = {
     },
   },
   
-  // Error handling
+  // Error handling: never fail the build due to Sentry plugin errors unless explicitly enabled
   errorHandler: (err, invokeErr, compilation) => {
-    console.warn('[SENTRY-WEBPACK] Upload warning:', err.message);
-    // Don't fail the build on Sentry upload errors in development
-    if (isDevelopment) {
+    console.warn('[SENTRY-WEBPACK] Non-fatal error:', err?.message || err);
+    if (process.env.SENTRY_STRICT === 'true') {
+      // Opt-in strict mode to fail builds on Sentry errors
+      invokeErr();
+    } else {
+      // Default: swallow errors to keep Vercel builds green
       return;
     }
-    invokeErr();
   },
   
   // Deployment tracking
