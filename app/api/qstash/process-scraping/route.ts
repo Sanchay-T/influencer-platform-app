@@ -1070,6 +1070,10 @@ export async function POST(req: Request) {
                 });
                 
                 const userProfile = profileData.user || {};
+                // Ensure we capture the canonical username from profile lookup
+                if (userProfile.username && (!creatorData.username || creatorData.username.toLowerCase() !== String(userProfile.username).toLowerCase())) {
+                  creatorData.username = String(userProfile.username);
+                }
                 
                 enhancedBio = userProfile.biography || userProfile.bio || '';
                 const emailMatches = enhancedBio.match(emailRegex) || [];

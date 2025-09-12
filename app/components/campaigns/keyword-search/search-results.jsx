@@ -341,6 +341,14 @@ const SearchResults = ({ searchData }) => {
     });
 
     if (platform === "tiktok") {
+      // Prefer explicit username/uniqueId from data
+      const ttUsername = creator?.creator?.uniqueId || creator?.creator?.username;
+      if (ttUsername) {
+        const profileUrl = `https://www.tiktok.com/@${ttUsername}`;
+        console.log("🎯 [PROFILE-LINK] Using TikTok uniqueId/username:", profileUrl);
+        return profileUrl;
+      }
+
       // Try to extract username from video URL first (most reliable)
       if (creator.video?.url) {
         const match = creator.video.url.match(/@([^\/]+)/);
@@ -373,13 +381,18 @@ const SearchResults = ({ searchData }) => {
         return profileUrl;
       }
     } else if (platform === "Instagram" || platform === "instagram" || platform === "enhanced-instagram") {
-      // For Instagram (including enhanced-instagram), create Instagram profile links
-      const creatorName = creator.creator?.name;
+      // Prefer explicit Instagram username (uniqueId/username), then ownerUsername from backend, fallback to cleaned display name
+      const igUsername = creator?.creator?.uniqueId || creator?.creator?.username || creator?.ownerUsername;
+      if (igUsername) {
+        const profileUrl = `https://www.instagram.com/${igUsername}`;
+        console.log("🎯 [PROFILE-LINK] Using Instagram uniqueId/username:", profileUrl);
+        return profileUrl;
+      }
+      const creatorName = creator?.creator?.name;
       if (creatorName) {
-        // Clean the creator name to make it a valid Instagram username
         const cleanUsername = creatorName.replace(/\s+/g, "").toLowerCase().replace(/[^a-z0-9._]/g, "");
         const profileUrl = `https://www.instagram.com/${cleanUsername}`;
-        console.log("🎯 [PROFILE-LINK] Instagram profile URL:", profileUrl);
+        console.log("🎯 [PROFILE-LINK] Fallback from display name:", profileUrl);
         return profileUrl;
       }
     } else if (platform === "YouTube" || platform === "youtube") {
