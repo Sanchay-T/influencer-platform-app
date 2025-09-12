@@ -117,10 +117,12 @@ const sentryWebpackConfig = {
 
 // Enable Sentry webpack only when properly configured to avoid build failures on CI/Vercel
 const hasSentryCredentials = !!(process.env.SENTRY_AUTH_TOKEN && process.env.SENTRY_ORG && process.env.SENTRY_PROJECT);
-const enableSentryWebpack = (process.env.ENABLE_SENTRY_BUILD || 'true') !== 'false' && hasSentryCredentials;
+const enableSentryWebpack = process.env.ENABLE_SENTRY_BUILD === 'true' && hasSentryCredentials;
 
 if (!enableSentryWebpack) {
-  const reason = !hasSentryCredentials ? 'missing Sentry credentials (SENTRY_AUTH_TOKEN / SENTRY_ORG / SENTRY_PROJECT)' : 'explicitly disabled via ENABLE_SENTRY_BUILD=false';
+  const reason = !hasSentryCredentials 
+    ? 'missing Sentry credentials (SENTRY_AUTH_TOKEN / SENTRY_ORG / SENTRY_PROJECT)' 
+    : 'not explicitly enabled via ENABLE_SENTRY_BUILD=true';
   console.warn(`[SENTRY-WEBPACK] Skipping Sentry webpack plugin: ${reason}`);
 }
 
