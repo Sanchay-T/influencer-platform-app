@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
+import { users } from '@/lib/db/schema';
 import { ilike, or, asc, desc } from 'drizzle-orm';
 import { isAdminUser } from '@/lib/auth/admin-utils';
 
@@ -32,59 +32,41 @@ export async function GET(req: NextRequest) {
       const startTime = Date.now();
       
       // Optimized search - only select essential fields and prioritize exact matches
-      const users = await db
+      const userResults = await db
         .select({
-          user_id: userProfiles.userId,
-          full_name: userProfiles.fullName,
-          business_name: userProfiles.businessName,
-          trial_start_date: userProfiles.trialStartDate,
-          trial_end_date: userProfiles.trialEndDate,
-          trial_status: userProfiles.trialStatus,
-          onboarding_step: userProfiles.onboardingStep,
-          stripe_customer_id: userProfiles.stripeCustomerId,
+          user_id: users.userId,
+          full_name: users.fullName,
+          business_name: users.businessName,
+          onboarding_step: users.onboardingStep,
         })
-        .from(userProfiles)
+        .from(users)
         .where(
           or(
             // Start-of-string matches (fastest with indexes)
-            ilike(userProfiles.userId, `${query}%`),
-            ilike(userProfiles.fullName, `${query}%`),
+            ilike(users.userId, `${query}%`),
+            ilike(users.fullName, `${query}%`),
             // Contains matches (slower but necessary)
-            ilike(userProfiles.fullName, `%${query}%`),
-            ilike(userProfiles.businessName, `%${query}%`)
+            ilike(users.fullName, `%${query}%`),
+            ilike(users.businessName, `%${query}%`)
           )
         )
-        .orderBy(desc(userProfiles.createdAt))
+        .orderBy(desc(users.createdAt))
         .limit(8);
 
       const queryTime = Date.now() - startTime;
-      console.log(`✅ [ADMIN-SEARCH] Found ${users.length} users matching "${query}" (DB query: ${queryTime}ms)`);
+      console.log(`✅ [ADMIN-SEARCH] Found ${userResults.length} users matching "${query}" (DB query: ${queryTime}ms)`);
 
       // Add computed trial status
-      const usersWithStatus = users.map(user => {
-        let trialStatus = 'No Trial';
-        let timeRemaining = 'N/A';
-        
-        if (user.trial_start_date && user.trial_end_date) {
-          const now = new Date();
-          const endDate = new Date(user.trial_end_date);
-          const timeDiff = endDate.getTime() - now.getTime();
-          
-          if (timeDiff > 0) {
-            const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            trialStatus = 'Active';
-            timeRemaining = `${days}d ${hours}h`;
-          } else {
-            trialStatus = 'Expired';
-            timeRemaining = 'Expired';
-          }
-        }
-
+      const usersWithStatus = userResults.map(user => {
+        // Simplified status for normalized schema
         return {
           ...user,
-          computed_trial_status: trialStatus,
-          time_remaining: timeRemaining
+          trial_start_date: null,
+          trial_end_date: null,
+          trial_status: null,
+          stripe_customer_id: null,
+          computed_trial_status: 'Profile Only',
+          time_remaining: 'N/A'
         };
       });
 

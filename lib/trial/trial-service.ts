@@ -1,6 +1,4 @@
-import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
 // Removed Clerk billing dependency - using Stripe only
 
 // Trial status types
@@ -115,9 +113,7 @@ export async function startTrial(userId: string, clerkBillingData?: {
     console.log('🎯 [TRIAL-SERVICE] Starting trial for user:', userId);
 
     // First, get existing user profile to check for existing trial dates
-    const existingProfile = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.userId, userId)
-    });
+    const existingProfile = await getUserProfile(userId);
 
     let trialStartDate: Date;
     let trialEndDate: Date;
@@ -142,27 +138,22 @@ export async function startTrial(userId: string, clerkBillingData?: {
     }
 
     // Update user profile with trial information (do NOT override currentPlan - it's set by background job)
-    await db.update(userProfiles)
-      .set({
-        trialStartDate: trialStartDate,
-        trialEndDate: trialEndDate,
-        trialStatus: 'active',
-        subscriptionStatus: 'trialing',
-        // Keep legacy Stripe fields for compatibility
-        stripeCustomerId: clerkBillingData?.customerId || null,
-        stripeSubscriptionId: clerkBillingData?.subscriptionId || null,
-        updatedAt: new Date()
-      })
-      .where(eq(userProfiles.userId, userId));
+    await updateUserProfile(userId, {
+      trialStartDate: trialStartDate,
+      trialEndDate: trialEndDate,
+      trialStatus: 'active',
+      subscriptionStatus: 'trialing',
+      // Keep legacy Stripe fields for compatibility
+      stripeCustomerId: clerkBillingData?.customerId || null,
+      stripeSubscriptionId: clerkBillingData?.subscriptionId || null,
+    });
 
     console.log('✅ [TRIAL-SERVICE] Trial started successfully');
     console.log('💳 [TRIAL-SERVICE] Clerk billing data:', clerkBillingData || 'None');
     console.log('📋 [TRIAL-SERVICE] Current plan: (preserved from background job)');
 
     // Fetch updated user profile to get current plan (set by background job)
-    const userProfile = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.userId, userId)
-    });
+    const userProfile = await getUserProfile(userId);
 
     if (!userProfile) {
       throw new Error('User profile not found after trial update');
@@ -216,9 +207,7 @@ export async function getTrialStatus(userId: string): Promise<TrialData | null> 
     console.log('🔍 [TRIAL-SERVICE] Getting trial status for user:', userId);
 
     // Get user profile with trial data
-    const userProfile = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.userId, userId)
-    });
+    const userProfile = await getUserProfile(userId);
 
     if (!userProfile) {
       console.log('❌ [TRIAL-SERVICE] User profile not found');
@@ -293,13 +282,10 @@ export async function getTrialStatus(userId: string): Promise<TrialData | null> 
       console.log('⚠️ [TRIAL-SERVICE] Trial has expired, updating status');
       
       // Update status to expired
-      await db.update(userProfiles)
-        .set({
-          trialStatus: 'expired',
-          subscriptionStatus: 'canceled',
-          updatedAt: new Date()
-        })
-        .where(eq(userProfiles.userId, userId));
+      await updateUserProfile(userId, {
+        trialStatus: 'expired',
+        subscriptionStatus: 'canceled',
+      });
       
       currentTrialStatus = 'expired';
     }
@@ -341,13 +327,10 @@ export async function cancelTrial(userId: string): Promise<boolean> {
   try {
     console.log('🚫 [TRIAL-SERVICE] Canceling trial for user:', userId);
 
-    await db.update(userProfiles)
-      .set({
-        trialStatus: 'cancelled',
-        subscriptionStatus: 'canceled',
-        updatedAt: new Date()
-      })
-      .where(eq(userProfiles.userId, userId));
+    await updateUserProfile(userId, {
+      trialStatus: 'cancelled',
+      subscriptionStatus: 'canceled',
+    });
 
     console.log('✅ [TRIAL-SERVICE] Trial cancelled successfully');
     return true;
@@ -364,13 +347,10 @@ export async function convertTrial(userId: string): Promise<boolean> {
   try {
     console.log('💰 [TRIAL-SERVICE] Converting trial to paid for user:', userId);
 
-    await db.update(userProfiles)
-      .set({
-        trialStatus: 'converted',
-        subscriptionStatus: 'active',
-        updatedAt: new Date()
-      })
-      .where(eq(userProfiles.userId, userId));
+    await updateUserProfile(userId, {
+      trialStatus: 'converted',
+      subscriptionStatus: 'active',
+    });
 
     console.log('✅ [TRIAL-SERVICE] Trial converted successfully');
     return true;

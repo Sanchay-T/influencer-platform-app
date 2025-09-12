@@ -1,6 +1,7 @@
 import { Client } from '@upstash/qstash';
 import { db } from '@/lib/db';
-import { backgroundJobs, userProfiles, events } from '@/lib/db/schema';
+import { backgroundJobs, events } from '@/lib/db/schema';
+import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
 import { eq, and } from 'drizzle-orm';
 import { EventService, EVENT_TYPES, AGGREGATE_TYPES, SOURCE_SYSTEMS } from '@/lib/events/event-service';
 
@@ -212,9 +213,7 @@ export class JobProcessor {
       }
 
       // Get user profile
-      const userProfile = await db.query.userProfiles.findFirst({
-        where: eq(userProfiles.userId, userId)
-      });
+      const userProfile = await getUserProfile(userId);
 
       if (!userProfile) {
         return { success: false, error: 'User profile not found', retryable: false };
@@ -284,9 +283,7 @@ export class JobProcessor {
       if (stripeSubscriptionId) updateData.stripeSubscriptionId = stripeSubscriptionId;
       if (planId) updateData.currentPlan = planId;
 
-      await db.update(userProfiles)
-        .set(updateData)
-        .where(eq(userProfiles.userId, userId));
+      await updateUserProfile(userId, updateData);
 
       console.log('✅ [JOB-PROCESSOR] Onboarding completed successfully:', {
         userId,

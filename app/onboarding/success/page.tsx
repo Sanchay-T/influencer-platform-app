@@ -38,8 +38,13 @@ function OnboardingSuccessContent() {
   const sessionId = searchParams.get('session_id');
 
   useEffect(() => {
+    const pageLoadTestId = `SUCCESS_PAGE_LOAD_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    console.log(`🚨🚨🚨 [SUCCESS-PAGE-LOAD-TEST] ${pageLoadTestId} - SUCCESS PAGE HAS BEEN LOADED!`);
+    console.log(`🚨🚨🚨 [SUCCESS-PAGE-LOAD-TEST] ${pageLoadTestId} - sessionId from URL: ${sessionId}`);
+    
     const fetchSessionData = async () => {
       if (!sessionId) {
+        console.log(`❌ [SUCCESS-PAGE-LOAD-TEST] ${pageLoadTestId} - No sessionId found in URL, stopping`);
         setLoading(false);
         return;
       }
@@ -51,23 +56,49 @@ function OnboardingSuccessContent() {
           setSessionData(data);
           console.log('✅ [SUCCESS-PAGE] Session data loaded:', data);
           
-          // 🚀 NEW: Complete onboarding with Mock Stripe webhook simulation
-          console.log('🔔 [SUCCESS-PAGE] Triggering onboarding completion with Mock Stripe simulation...');
+          // 🚀 PROPER SAAS FLOW: Immediate plan update via central billing service
+          const upgradeTestId = `SUCCESS_PAGE_UPGRADE_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+          console.log(`🎯 [SUCCESS-PAGE-TEST] ${upgradeTestId} - Starting immediate plan upgrade...`);
+          console.log(`🔍 [SUCCESS-PAGE-TEST] ${upgradeTestId} - sessionId: ${sessionId}`);
+          console.log(`🔍 [SUCCESS-PAGE-TEST] ${upgradeTestId} - About to fetch: /api/stripe/checkout-success`);
+          
           try {
-            const completeResponse = await fetch('/api/onboarding/complete', {
-              method: 'PATCH',
+            const upgradeResponse = await fetch('/api/stripe/checkout-success', {
+              method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ completed: true, sessionId })
+              body: JSON.stringify({ sessionId })
             });
             
-            if (completeResponse.ok) {
-              const completeData = await completeResponse.json();
-              console.log('✅ [SUCCESS-PAGE] Onboarding completed successfully:', completeData);
+            console.log(`📡 [SUCCESS-PAGE-TEST] ${upgradeTestId} - Fetch completed. Response status: ${upgradeResponse.status}`);
+            console.log(`📡 [SUCCESS-PAGE-TEST] ${upgradeTestId} - Response ok: ${upgradeResponse.ok}`);
+            
+            if (upgradeResponse.ok) {
+              const upgradeData = await upgradeResponse.json();
+              console.log(`✅ [SUCCESS-PAGE-TEST] ${upgradeTestId} - Immediate upgrade processed successfully:`, upgradeData);
+              
+              // Also complete onboarding
+              const completeResponse = await fetch('/api/onboarding/complete', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ completed: true, sessionId })
+              });
+              
+              if (completeResponse.ok) {
+                console.log('✅ [SUCCESS-PAGE] Onboarding completed successfully');
+              }
             } else {
-              console.error('❌ [SUCCESS-PAGE] Failed to complete onboarding:', completeResponse.status);
+              console.error(`❌ [SUCCESS-PAGE-TEST] ${upgradeTestId} - Failed to process immediate upgrade:`, upgradeResponse.status);
+              try {
+                const errorData = await upgradeResponse.json();
+                console.error(`❌ [SUCCESS-PAGE-TEST] ${upgradeTestId} - Upgrade error details:`, errorData);
+              } catch (jsonError) {
+                console.error(`❌ [SUCCESS-PAGE-TEST] ${upgradeTestId} - Could not parse error response as JSON:`, jsonError);
+                const errorText = await upgradeResponse.text();
+                console.error(`❌ [SUCCESS-PAGE-TEST] ${upgradeTestId} - Raw error response:`, errorText);
+              }
             }
-          } catch (completeError) {
-            console.error('❌ [SUCCESS-PAGE] Error completing onboarding:', completeError);
+          } catch (upgradeError) {
+            console.error(`❌ [SUCCESS-PAGE-TEST] ${upgradeTestId} - Error processing immediate upgrade:`, upgradeError);
           }
         } else {
           console.error('❌ [SUCCESS-PAGE] Failed to fetch session data:', response.status);
@@ -84,8 +115,13 @@ function OnboardingSuccessContent() {
 
   const handleContinue = () => {
     setIsLoading(true);
-    // Redirect to homepage
-    router.push('/');
+    // ★ Check if this is an upgrade (not initial onboarding) and redirect to billing
+    if (sessionData?.isUpgrade) {
+      router.push('/billing?upgraded=1&plan=' + sessionData.planId);
+    } else {
+      // Redirect to homepage for initial onboarding
+      router.push('/');
+    }
   };
 
   if (loading) {

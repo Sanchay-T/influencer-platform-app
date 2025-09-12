@@ -17,19 +17,33 @@ export default function Home() {
   const [onboardingStatusLoaded, setOnboardingStatusLoaded] = useState(false);
 
   useEffect(() => {
+    console.log(`🚨🚨🚨 [PAGE-LOAD] useEffect triggered. userId: ${userId}`);
     if (userId) {
+      console.log(`🚨🚨🚨 [PAGE-LOAD] User authenticated, calling checkOnboardingStatus`);
       checkOnboardingStatus();
+    } else {
+      console.log(`🚨🚨🚨 [PAGE-LOAD] No userId yet, waiting for authentication`);
     }
   }, [userId]);
 
   const checkOnboardingStatus = async () => {
     try {
+      const onboardingTestId = `ONBOARDING_CHECK_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      console.log(`🚨🚨🚨 [ONBOARDING-CHECK] ${onboardingTestId} - STARTING ONBOARDING STATUS CHECK`);
+      console.log(`🚨🚨🚨 [ONBOARDING-CHECK] ${onboardingTestId} - This should determine if modal shows`);
+      
       const response = await fetch('/api/onboarding/status');
       const data = await response.json();
       
+      console.log(`🚨🚨🚨 [ONBOARDING-CHECK] ${onboardingTestId} - API Response:`, {
+        ok: response.ok,
+        status: response.status,
+        data: data
+      });
+      
       if (!response.ok) {
         // User profile doesn't exist - this is a NEW USER
-        console.log('👋 [ONBOARDING] New user detected, showing onboarding modal');
+        console.log(`🚨🚨🚨 [ONBOARDING-CHECK] ${onboardingTestId} - NEW USER DETECTED - SHOWING MODAL`);
         setShowOnboarding(true);
         setOnboardingStep(1);
         setOnboardingStatusLoaded(true); // ✅ Mark as loaded
@@ -39,8 +53,11 @@ export default function Home() {
       // Check onboarding completion status
       const step = data.onboardingStep;
       
+      console.log(`🔍 [ONBOARDING-TEST] ${onboardingTestId} - User onboarding step: ${step}`);
+      
       if (step === 'pending') {
         // User exists but hasn't started onboarding
+        console.log(`🚨🚨🚨 [ONBOARDING-CHECK] ${onboardingTestId} - PENDING ONBOARDING DETECTED - SHOWING MODAL`);
         setShowOnboarding(true);
         setOnboardingStep(1);
         setExistingData(data);

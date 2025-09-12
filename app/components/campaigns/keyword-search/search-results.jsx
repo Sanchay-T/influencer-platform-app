@@ -34,6 +34,7 @@ const SearchResults = ({ searchData }) => {
   const [creators, setCreators] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [campaignName, setCampaignName] = useState("Campaign");
+  const [stillProcessing, setStillProcessing] = useState(false);
   const itemsPerPage = 10;
 
   useEffect(() => {
@@ -50,9 +51,11 @@ const SearchResults = ({ searchData }) => {
         const apiEndpoint =
           searchData.selectedPlatform === "Instagram"
             ? "/api/scraping/instagram-reels"
-            : searchData.selectedPlatform === "YouTube"
-              ? "/api/scraping/youtube"
-              : "/api/scraping/tiktok";
+            : searchData.selectedPlatform === "enhanced-instagram"
+              ? "/api/scraping/instagram-enhanced"
+              : searchData.selectedPlatform === "YouTube"
+                ? "/api/scraping/youtube"
+                : "/api/scraping/tiktok";
 
         console.log("🌐 [API-ENDPOINT] Using endpoint:", apiEndpoint);
 
@@ -116,6 +119,34 @@ const SearchResults = ({ searchData }) => {
         jobId={searchData.jobId}
         platform={searchData.selectedPlatform}
         searchData={searchData}
+        onIntermediateResults={(data) => {
+          try {
+            const incoming = Array.isArray(data?.creators) ? data.creators : [];
+            if (incoming.length === 0) return;
+
+            // Deduplicate by creator uniqueId/username
+            setCreators((prev) => {
+              const map = new Map();
+              for (const c of prev) {
+                const id = c?.creator?.uniqueId || c?.creator?.username || '';
+                if (id) map.set(id, c);
+              }
+              for (const c of incoming) {
+                const id = c?.creator?.uniqueId || c?.creator?.username || '';
+                if (id && !map.has(id)) map.set(id, c);
+              }
+              const merged = Array.from(map.values());
+              if (merged.length > 0) {
+                // Start rendering results immediately
+                setIsLoading(false);
+                setStillProcessing(true);
+              }
+              return merged;
+            });
+          } catch (e) {
+            console.error('Error handling intermediate results:', e);
+          }
+        }}
         onComplete={(data) => {
           if (data && data.status === "completed") {
             console.log("🎯 [SEARCH-RESULTS] onComplete triggered:", {
@@ -130,6 +161,7 @@ const SearchResults = ({ searchData }) => {
             if (allCreators.length > 0) {
               setCreators(allCreators);
               setIsLoading(false);
+              setStillProcessing(false);
             } else {
               // Si no hay creadores, intentar una última vez
               // Enhanced API endpoint selection with logging
@@ -138,6 +170,8 @@ const SearchResults = ({ searchData }) => {
                 apiEndpoint = "/api/scraping/youtube";
               } else if (searchData.selectedPlatform === "instagram") {
                 apiEndpoint = "/api/scraping/instagram-reels";
+              } else if (searchData.selectedPlatform === "enhanced-instagram") {
+                apiEndpoint = "/api/scraping/instagram-enhanced";
               } else {
                 apiEndpoint = "/api/scraping/tiktok";
               }
@@ -157,10 +191,12 @@ const SearchResults = ({ searchData }) => {
                     }, []) || [];
                   setCreators(foundCreators);
                   setIsLoading(false);
+                  setStillProcessing(false);
                 })
                 .catch((err) => {
                   console.error("Error in final fetch:", err);
                   setIsLoading(false);
+                  setStillProcessing(false);
                 });
             }
           }
@@ -353,6 +389,16 @@ const SearchResults = ({ searchData }) => {
         console.log("🎯 [PROFILE-LINK] Cleaned creator name:", profileUrl);
         return profileUrl;
       }
+    } else if (platform === "Instagram" || platform === "instagram" || platform === "enhanced-instagram") {
+      // For Instagram (including enhanced-instagram), create Instagram profile links
+      const creatorName = creator.creator?.name;
+      if (creatorName) {
+        // Clean the creator name to make it a valid Instagram username
+        const cleanUsername = creatorName.replace(/\s+/g, "").toLowerCase().replace(/[^a-z0-9._]/g, "");
+        const profileUrl = `https://www.instagram.com/${cleanUsername}`;
+        console.log("🎯 [PROFILE-LINK] Instagram profile URL:", profileUrl);
+        return profileUrl;
+      }
     } else if (platform === "YouTube" || platform === "youtube") {
       // For YouTube, try to extract channel from video URL
       if (creator.video?.url) {
@@ -402,8 +448,17 @@ const SearchResults = ({ searchData }) => {
         ]}
       />
 
+      {/* Removed AI Strategy box for a cleaner presentation */}
+
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-zinc-100">Results Found</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-2xl font-bold text-zinc-100">Results Found</h2>
+          {searchData.selectedPlatform === "enhanced-instagram" && (
+            <Badge variant="secondary" className="bg-gradient-to-r from-violet-500/20 to-pink-500/20 text-violet-300 border-violet-500/30">
+              AI-Enhanced
+            </Badge>
+          )}
+        </div>
         <div className="flex items-center gap-4">
           <div className="text-sm text-zinc-400">
             Page {currentPage} of {Math.ceil(creators.length / itemsPerPage)} •
@@ -411,6 +466,11 @@ const SearchResults = ({ searchData }) => {
             {Math.min(currentPage * itemsPerPage, creators.length)} of{" "}
             {creators.length}
           </div>
+          {stillProcessing && (
+            <span className="text-xs px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
+              Processing… live results updating
+            </span>
+          )}
           {(searchData?.campaignId || searchData?.jobId) && (
             <FeatureGate
               feature="csv_export"
@@ -555,7 +615,11 @@ const SearchResults = ({ searchData }) => {
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-pink-400 hover:text-pink-300 hover:underline font-medium transition-colors duration-200 flex items-center gap-1"
-                          title={`View ${creator.creator.name}'s profile on ${searchData.selectedPlatform || "TikTok"}`}
+                          title={`View ${creator.creator.name}'s profile on ${
+                            searchData.selectedPlatform === "enhanced-instagram" 
+                              ? "Instagram" 
+                              : searchData.selectedPlatform || "TikTok"
+                          }`}
                         >
                           {creator.creator.name}
                           <svg

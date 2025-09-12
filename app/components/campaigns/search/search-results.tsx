@@ -2,6 +2,9 @@
 
 import * as React from "react";
 import type { HTMLAttributes } from "react";
+import { ErrorBoundary } from '@/components/error-boundary';
+import { useComponentLogger, useUserActionLogger, useApiLogger } from '@/lib/logging/react-logger';
+import { campaignLogger } from '@/lib/logging';
 import {
   Table,
   TableBody,
@@ -50,11 +53,14 @@ interface SearchResultsProps {
   jobId?: string | null;
 }
 
-export default function SearchResults({
+function SearchResultsContent({
   title,
   creators: initialCreators = [],
   jobId = null
 }: SearchResultsProps) {
+  const componentLogger = useComponentLogger('SearchResults', { title, jobId });
+  const userActionLogger = useUserActionLogger();
+  const apiLogger = useApiLogger();
   const [currentPage, setCurrentPage] = React.useState(1);
   const [creators, setCreators] = React.useState<Creator[]>(initialCreators);
   const [isLoading, setIsLoading] = React.useState(!!jobId);
@@ -79,10 +85,21 @@ export default function SearchResults({
           toast.error(`Error: ${data.error}`);
           setIsLoading(false);
         } else {
+          // Continue polling - log progress
+          campaignLogger.info('Job still in progress, continuing to poll', {
+            jobId,
+            status: data.status,
+            progress: data.progress,
+            operation: 'job-polling'
+          });
           setTimeout(pollResults, 5000);
         }
       } catch (error) {
-        console.error('Error:', error);
+        campaignLogger.error('Error polling job results', error instanceof Error ? error : new Error(String(error)), {
+          jobId,
+          title,
+          operation: 'job-polling-error'
+        });
         setIsLoading(false);
       }
     };
@@ -107,14 +124,45 @@ export default function SearchResults({
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-zinc-100">{title}</h2>
-        <Button className="bg-zinc-800 hover:bg-zinc-700 text-zinc-100">
+        <Button 
+          className="bg-zinc-800 hover:bg-zinc-700 text-zinc-100"
+          onClick={() => {
+            userActionLogger.logClick('export-results', {
+              title,
+              creatorCount: creators.length,
+              operation: 'export-campaign-results'
+            });
+            
+            componentLogger.logInfo('Export button clicked', {
+              title,
+              creatorCount: creators.length,
+              operation: 'export-clicked'
+            });
+          }}
+        >
           <Download className="h-4 w-4 mr-2" />
           Export
         </Button>
       </div>
 
       <div className="flex justify-between items-center">
-        <Button variant="outline" className="border-zinc-700/50 text-zinc-200 hover:bg-zinc-800/50">
+        <Button 
+          variant="outline" 
+          className="border-zinc-700/50 text-zinc-200 hover:bg-zinc-800/50"
+          onClick={() => {
+            userActionLogger.logClick('filter-results', {
+              title,
+              creatorCount: creators.length,
+              operation: 'filter-campaign-results'
+            });
+            
+            componentLogger.logInfo('Filter button clicked', {
+              title,
+              creatorCount: creators.length,
+              operation: 'filter-clicked'
+            });
+          }}
+        >
           <Filter className="h-4 w-4 mr-2" />
           Filter
         </Button>
@@ -187,14 +235,34 @@ export default function SearchResults({
           <PaginationContent>
             <PaginationItem>
               <PaginationPrevious
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                onClick={() => {
+                  const newPage = Math.max(1, currentPage - 1);
+                  if (newPage !== currentPage) {
+                    userActionLogger.logClick('pagination-previous', {
+                      fromPage: currentPage,
+                      toPage: newPage,
+                      operation: 'paginate-results'
+                    });
+                    setCurrentPage(newPage);
+                  }
+                }}
                 disabled={currentPage === 1}
               />
             </PaginationItem>
             {Array.from({ length: Math.ceil(creators.length / itemsPerPage) }).map((_, i) => (
               <PaginationItem key={i}>
                 <PaginationLink
-                  onClick={() => setCurrentPage(i + 1)}
+                  onClick={() => {
+                    const newPage = i + 1;
+                    if (newPage !== currentPage) {
+                      userActionLogger.logClick('pagination-page', {
+                        fromPage: currentPage,
+                        toPage: newPage,
+                        operation: 'paginate-results'
+                      });
+                      setCurrentPage(newPage);
+                    }
+                  }}
                   isActive={currentPage === i + 1}
                 >
                   {i + 1}
@@ -203,7 +271,18 @@ export default function SearchResults({
             ))}
             <PaginationItem>
               <PaginationNext
-                onClick={() => setCurrentPage(p => Math.min(Math.ceil(creators.length / itemsPerPage), p + 1))}
+                onClick={() => {
+                  const maxPage = Math.ceil(creators.length / itemsPerPage);
+                  const newPage = Math.min(maxPage, currentPage + 1);
+                  if (newPage !== currentPage) {
+                    userActionLogger.logClick('pagination-next', {
+                      fromPage: currentPage,
+                      toPage: newPage,
+                      operation: 'paginate-results'
+                    });
+                    setCurrentPage(newPage);
+                  }
+                }}
                 disabled={currentPage === Math.ceil(creators.length / itemsPerPage)}
               />
             </PaginationItem>
@@ -211,5 +290,13 @@ export default function SearchResults({
         </Pagination>
       </nav>
     </div>
+  );
+}
+
+export default function SearchResults(props: SearchResultsProps) {
+  return (
+    <ErrorBoundary componentName="SearchResults">
+      <SearchResultsContent {...props} />
+    </ErrorBoundary>
   );
 } 

@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { updateUserProfile } from '@/lib/db/queries/user-queries';
 import OnboardingLogger from '@/lib/utils/onboarding-logger';
 
 export async function POST(req: NextRequest) {
@@ -44,21 +42,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Selected plan is required' }, { status: 400 });
     }
 
-    await OnboardingLogger.logPayment('DB-UPDATE-START', 'Starting database update for plan selection', userId, {
+    await OnboardingLogger.logPayment('DB-UPDATE-START', 'Starting database update for intended plan selection', userId, {
       selectedPlan,
       requestId
     });
 
-    // Update user profile with selected plan
-    await db.update(userProfiles)
-      .set({
-        currentPlan: selectedPlan,
-        billingSyncStatus: 'plan_selected',
-        updatedAt: new Date()
-      })
-      .where(eq(userProfiles.userId, userId));
+    // Update user profile with intended plan (do not change currentPlan here)
+    await updateUserProfile(userId, {
+      intendedPlan: selectedPlan,
+      billingSyncStatus: 'plan_selected', // will be confirmed by Stripe webhook
+    });
 
-    await OnboardingLogger.logPayment('DB-UPDATE-SUCCESS', 'Database updated successfully with plan selection', userId, {
+    await OnboardingLogger.logPayment('DB-UPDATE-SUCCESS', 'Database updated successfully with intended plan selection', userId, {
       selectedPlan,
       billingSyncStatus: 'plan_selected',
       requestId

@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
 import { startTrial } from '@/lib/trial/trial-service';
 import { MockStripeService } from '@/lib/stripe/mock-stripe';
 import { scheduleTrialEmails } from '@/lib/email/trial-email-triggers';
@@ -43,9 +41,7 @@ export async function PATCH(request: Request) {
 
     // Get current user profile
     console.log('🔍 [ONBOARDING-COMPLETE] Fetching user profile');
-    const userProfile = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.userId, userId)
-    });
+    const userProfile = await getUserProfile(userId);
 
     if (!userProfile) {
       console.error('❌ [ONBOARDING-COMPLETE] User profile not found');
@@ -82,7 +78,7 @@ export async function PATCH(request: Request) {
     console.log('💳💳💳 [ONBOARDING-COMPLETE] ===============================');
     console.log('💳 [ONBOARDING-COMPLETE] User Email:', userEmail);
     console.log('💳 [ONBOARDING-COMPLETE] User ID:', userId);
-    console.log('💳 [ONBOARDING-COMPLETE] User Selected Plan:', userProfile.currentPlan || 'glow_up');
+    console.log('💳 [ONBOARDING-COMPLETE] Intended Plan:', userProfile.intendedPlan || userProfile.currentPlan || 'glow_up');
     console.log('💳 [ONBOARDING-COMPLETE] Environment:', process.env.NODE_ENV);
     console.log('💳 [ONBOARDING-COMPLETE] Use Real Stripe:', process.env.USE_REAL_STRIPE);
     
@@ -109,7 +105,7 @@ export async function PATCH(request: Request) {
       console.log('📋 [ONBOARDING-COMPLETE] Creating trial subscription...');
       const subscription = await StripeService.createTrialSubscription(
         customer.id, 
-        userProfile.currentPlan || 'glow_up'
+        userProfile.intendedPlan || userProfile.currentPlan || 'glow_up'
       );
       
       console.log('✅ [ONBOARDING-COMPLETE] Trial subscription created:', subscription.id);
@@ -182,12 +178,9 @@ export async function PATCH(request: Request) {
 
     // Step 3: Mark onboarding as completed
     console.log('📝 [ONBOARDING-COMPLETE] Marking onboarding as completed');
-    await db.update(userProfiles)
-      .set({
-        onboardingStep: 'completed',
-        updatedAt: new Date()
-      })
-      .where(eq(userProfiles.userId, userId));
+    await updateUserProfile(userId, {
+      onboardingStep: 'completed'
+    });
 
     console.log('✅ [ONBOARDING-COMPLETE] Onboarding marked as completed');
 
@@ -315,9 +308,7 @@ export async function GET(request: Request) {
     }
 
     // Get user profile with trial data
-    const userProfile = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.userId, userId)
-    });
+    const userProfile = await getUserProfile(userId);
 
     if (!userProfile) {
       return NextResponse.json({ 

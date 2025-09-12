@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { getUserProfile, updateUserProfile, createUser } from '@/lib/db/queries/user-queries';
 import { scheduleEmail, getUserEmailFromClerk, updateEmailScheduleStatus, shouldSendEmail } from '@/lib/email/email-service';
 
 export async function PATCH(request: Request) {
@@ -40,9 +38,7 @@ export async function PATCH(request: Request) {
     }
 
     // Check if user profile exists
-    const existingProfile = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.userId, userId)
-    });
+    const existingProfile = await getUserProfile(userId);
 
     if (existingProfile) {
       // Update existing profile
@@ -58,15 +54,12 @@ export async function PATCH(request: Request) {
       // Get user email from Clerk for database storage
       const userEmail = await getUserEmailFromClerk(userId);
       
-      await db.update(userProfiles)
-        .set({
-          fullName: fullName.trim(),
-          businessName: businessName.trim(),
-          email: userEmail, // ✅ Store email in database
-          onboardingStep: 'info_captured',
-          updatedAt: new Date()
-        })
-        .where(eq(userProfiles.userId, userId));
+      await updateUserProfile(userId, {
+        fullName: fullName.trim(),
+        businessName: businessName.trim(),
+        email: userEmail, // ✅ Store email in database
+        onboardingStep: 'info_captured',
+      });
 
       console.log('✅✅✅ [ONBOARDING-STEP1] PROFILE UPDATED SUCCESSFULLY');
       console.log('💾 [ONBOARDING-STEP1] Update completed in:', Date.now() - startTime, 'ms');
@@ -149,14 +142,12 @@ export async function PATCH(request: Request) {
       // Get user email from Clerk for database storage
       const userEmail = await getUserEmailFromClerk(userId);
       
-      await db.insert(userProfiles).values({
+      await createUser({
         userId,
         fullName: fullName.trim(),
         businessName: businessName.trim(),
         email: userEmail, // ✅ Store email in database
         onboardingStep: 'info_captured',
-        signupTimestamp: new Date(),
-        emailScheduleStatus: {}
       });
 
       console.log('✅✅✅ [ONBOARDING-STEP1] PROFILE CREATED SUCCESSFULLY');

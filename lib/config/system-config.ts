@@ -36,6 +36,26 @@ const DEFAULT_CONFIGS = {
   'cleanup.error_jobs_retention_days': { value: '7', type: 'number' },
   'cleanup.cancelled_jobs_retention_days': { value: '7', type: 'number' },
   'cleanup.timeout_jobs_retention_days': { value: '7', type: 'number' },
+  
+  // Logging Configuration
+  'logging.min_level_development': { value: 'DEBUG', type: 'string' },
+  'logging.min_level': { value: 'INFO', type: 'string' },
+  'logging.enable_sentry_development': { value: 'true', type: 'boolean' },
+  'logging.enable_sentry': { value: 'true', type: 'boolean' },
+  'logging.sentry_traces_sample_rate_development': { value: '1.0', type: 'number' },
+  'logging.sentry_traces_sample_rate': { value: '0.1', type: 'number' },
+  'logging.sentry_session_sample_rate_development': { value: '1.0', type: 'number' },
+  'logging.sentry_session_sample_rate': { value: '0.1', type: 'number' },
+  'logging.enable_performance_tracking_development': { value: 'true', type: 'boolean' },
+  'logging.enable_performance_tracking': { value: 'true', type: 'boolean' },
+  'logging.slow_operation_threshold_development': { value: '1000', type: 'number' },
+  'logging.slow_operation_threshold': { value: '5000', type: 'number' },
+  'logging.enable_rate_limiting_development': { value: 'false', type: 'boolean' },
+  'logging.enable_rate_limiting': { value: 'true', type: 'boolean' },
+  'logging.rate_limit_per_minute_development': { value: '1000', type: 'number' },
+  'logging.rate_limit_per_minute': { value: '100', type: 'number' },
+  'logging.log_retention_days_development': { value: '7', type: 'number' },
+  'logging.log_retention_days': { value: '30', type: 'number' },
 } as const;
 
 type ConfigKey = keyof typeof DEFAULT_CONFIGS;
@@ -120,6 +140,9 @@ function validateValue(value: string, type: string): any {
       }
       return value === 'true';
     
+    case 'string':
+      return String(value);
+    
     default:
       throw new Error(`Unsupported value type: ${type}`);
   }
@@ -168,15 +191,27 @@ export class SystemConfig {
         return validatedValue;
       }
       
-      throw new Error(`Configuration not found: ${category}.${key}`);
+      // Gracefully fall back to defaults instead of throwing
+      console.log(`🔧 [CONFIG-FALLBACK] Configuration not found in database: ${category}.${key}, using defaults`);
+      const fallbackConfig = DEFAULT_CONFIGS[cacheKey as ConfigKey];
+      if (fallbackConfig) {
+        const validatedValue = validateValue(fallbackConfig.value, fallbackConfig.type);
+        console.log(`🔧 [CONFIG-DEFAULT] Using default value: ${cacheKey} = ${fallbackConfig.value}`);
+        cache.set(cacheKey, validatedValue);
+        return validatedValue;
+      }
+      
+      // Only throw if no defaults are available
+      throw new Error(`Configuration not found: ${category}.${key} and no defaults available`);
       
     } catch (error) {
       console.error(`[CONFIG] Error loading config ${category}.${key}:`, error);
       
       // Emergency fallback to defaults
-      const defaultConfig = DEFAULT_CONFIGS[cacheKey as ConfigKey];
-      if (defaultConfig) {
-        const validatedValue = validateValue(defaultConfig.value, defaultConfig.type);
+      const emergencyConfig = DEFAULT_CONFIGS[cacheKey as ConfigKey];
+      if (emergencyConfig) {
+        console.log(`🔧 [CONFIG-EMERGENCY] Using emergency fallback for: ${cacheKey}`);
+        const validatedValue = validateValue(emergencyConfig.value, emergencyConfig.type);
         return validatedValue;
       }
       

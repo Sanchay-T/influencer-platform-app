@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
-import { userProfiles, events, backgroundJobs } from '@/lib/db/schema';
+import { events, backgroundJobs } from '@/lib/db/schema';
+import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { eq, desc, count } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
@@ -55,9 +56,7 @@ export async function GET(request: NextRequest) {
 
     // 2. Check user profile state
     console.log('🔍 [SYSTEM-HEALTH] Checking user profile state...');
-    const userProfile = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.userId, userId)
-    });
+    const userProfile = await getUserProfile(userId);
 
     if (userProfile) {
       diagnostics.checks.userProfile = {

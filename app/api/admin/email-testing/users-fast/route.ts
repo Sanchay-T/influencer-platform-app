@@ -34,23 +34,25 @@ export async function GET(req: NextRequest) {
     try {
       const dbStartTime = Date.now();
       
-      // Simple, fast query
+      // Simple, fast query using new normalized tables
       const users = await sql`
         SELECT 
-          user_id,
-          full_name,
-          business_name,
-          trial_start_date,
-          trial_end_date,
-          trial_status,
-          onboarding_step,
-          stripe_customer_id
-        FROM user_profiles 
+          u.user_id,
+          u.full_name,
+          u.business_name,
+          us.trial_start_date,
+          us.trial_end_date,
+          us.trial_status,
+          u.onboarding_step,
+          ub.stripe_customer_id
+        FROM users u
+        LEFT JOIN user_subscriptions us ON u.id = us.user_id
+        LEFT JOIN user_billing ub ON u.id = ub.user_id
         WHERE 
-          full_name ILIKE ${query + '%'} OR 
-          full_name ILIKE ${'%' + query + '%'} OR
-          user_id ILIKE ${query + '%'}
-        ORDER BY created_at DESC 
+          u.full_name ILIKE ${query + '%'} OR 
+          u.full_name ILIKE ${'%' + query + '%'} OR
+          u.user_id ILIKE ${query + '%'}
+        ORDER BY u.created_at DESC 
         LIMIT 5
       `;
       

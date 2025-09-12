@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import Stripe from 'stripe';
-import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { getUserProfile, updateUserProfile, getUserByStripeCustomerId } from '@/lib/db/queries/user-queries';
 import BillingLogger from '@/lib/loggers/billing-logger';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -262,22 +260,19 @@ async function handleCheckoutCompleted(event: Stripe.Event, requestId: string) {
       requestId
     );
 
-    await db.update(userProfiles)
-      .set({
-        stripeCustomerId: session.customer as string,
-        stripeSubscriptionId: session.subscription as string,
-        subscriptionStatus: 'trialing', // Will be updated when subscription is created
-        trialStatus: 'active',
-        currentPlan: planId as any,
-        planCampaignsLimit: planConfig.campaignsLimit,
-        planCreatorsLimit: planConfig.creatorsLimit,
-        planFeatures: planConfig.features,
-        lastWebhookEvent: 'checkout.session.completed',
-        lastWebhookTimestamp: new Date(),
-        billingSyncStatus: 'synced',
-        updatedAt: new Date()
-      })
-      .where(eq(userProfiles.userId, userId));
+    await updateUserProfile(userId, {
+      stripeCustomerId: session.customer as string,
+      stripeSubscriptionId: session.subscription as string,
+      subscriptionStatus: 'trialing', // Will be updated when subscription is created
+      trialStatus: 'active',
+      currentPlan: planId as any,
+      planCampaignsLimit: planConfig.campaignsLimit,
+      planCreatorsLimit: planConfig.creatorsLimit,
+      planFeatures: planConfig.features,
+      lastWebhookEvent: 'checkout.session.completed',
+      lastWebhookTimestamp: new Date(),
+      billingSyncStatus: 'synced'
+    });
 
     await BillingLogger.logPlanChange(
       'UPGRADE',
@@ -337,9 +332,7 @@ async function handleSubscriptionCreated(event: Stripe.Event, requestId: string)
   let targetUserId = userId;
   if (!targetUserId) {
     try {
-      const userProfile = await db.query.userProfiles.findFirst({
-        where: eq(userProfiles.stripeCustomerId, customerId)
-      });
+      const userProfile = await getUserByStripeCustomerId(customerId);
       targetUserId = userProfile?.userId;
     } catch (error) {
       await BillingLogger.logError(
@@ -376,18 +369,15 @@ async function handleSubscriptionCreated(event: Stripe.Event, requestId: string)
   try {
     const trialEndDate = subscription.trial_end ? new Date(subscription.trial_end * 1000) : null;
     
-    await db.update(userProfiles)
-      .set({
-        stripeSubscriptionId: subscription.id,
-        subscriptionStatus: subscription.status as any,
-        trialEndDate: trialEndDate,
-        subscriptionRenewalDate: new Date(subscription.current_period_end * 1000),
-        lastWebhookEvent: 'customer.subscription.created',
-        lastWebhookTimestamp: new Date(),
-        billingSyncStatus: 'synced',
-        updatedAt: new Date()
-      })
-      .where(eq(userProfiles.userId, targetUserId));
+    await updateUserProfile(targetUserId, {
+      stripeSubscriptionId: subscription.id,
+      subscriptionStatus: subscription.status as any,
+      trialEndDate: trialEndDate,
+      subscriptionRenewalDate: new Date(subscription.current_period_end * 1000),
+      lastWebhookEvent: 'customer.subscription.created',
+      lastWebhookTimestamp: new Date(),
+      billingSyncStatus: 'synced'
+    });
 
     await BillingLogger.logDatabase(
       'UPDATE',
@@ -401,6 +391,7 @@ async function handleSubscriptionCreated(event: Stripe.Event, requestId: string)
       },
       requestId
     );
+
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Database update failed';
@@ -427,10 +418,8 @@ async function handleSubscriptionUpdated(event: Stripe.Event, requestId: string)
   const subscription = event.data.object as Stripe.Subscription;
   const previousAttributes = event.data.previous_attributes as any;
   
-  // Find user by subscription ID
-  const userProfile = await db.query.userProfiles.findFirst({
-    where: eq(userProfiles.stripeSubscriptionId, subscription.id)
-  });
+  // Find user by customer ID associated with subscription
+  const userProfile = await getUserByStripeCustomerId(subscription.customer as string);
 
   if (!userProfile) {
     await BillingLogger.logError(
@@ -539,9 +528,7 @@ async function handleSubscriptionUpdated(event: Stripe.Event, requestId: string)
 
   // Update database
   try {
-    await db.update(userProfiles)
-      .set(updateData)
-      .where(eq(userProfiles.userId, userProfile.userId));
+    await updateUserProfile(userProfile.userId, updateData);
 
     await BillingLogger.logDatabase(
       'UPDATE',
@@ -554,6 +541,7 @@ async function handleSubscriptionUpdated(event: Stripe.Event, requestId: string)
       },
       requestId
     );
+
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Database update failed';
@@ -579,9 +567,7 @@ async function handleSubscriptionUpdated(event: Stripe.Event, requestId: string)
 async function handleSubscriptionDeleted(event: Stripe.Event, requestId: string) {
   const subscription = event.data.object as Stripe.Subscription;
   
-  const userProfile = await db.query.userProfiles.findFirst({
-    where: eq(userProfiles.stripeSubscriptionId, subscription.id)
-  });
+  const userProfile = await getUserByStripeCustomerId(subscription.customer as string);
 
   if (!userProfile) {
     await BillingLogger.logError(
@@ -607,21 +593,18 @@ async function handleSubscriptionDeleted(event: Stripe.Event, requestId: string)
 
   // Reset to free plan
   try {
-    await db.update(userProfiles)
-      .set({
-        currentPlan: 'free',
-        subscriptionStatus: 'canceled',
-        trialStatus: subscription.ended_at && subscription.ended_at < Date.now() / 1000 ? 'expired' : 'cancelled',
-        planCampaignsLimit: 0,
-        planCreatorsLimit: 0,
-        planFeatures: {},
-        subscriptionCancelDate: new Date(),
-        lastWebhookEvent: 'customer.subscription.deleted',
-        lastWebhookTimestamp: new Date(),
-        billingSyncStatus: 'synced',
-        updatedAt: new Date()
-      })
-      .where(eq(userProfiles.userId, userProfile.userId));
+    await updateUserProfile(userProfile.userId, {
+      currentPlan: 'free',
+      subscriptionStatus: 'canceled',
+      trialStatus: subscription.ended_at && subscription.ended_at < Date.now() / 1000 ? 'expired' : 'cancelled',
+      planCampaignsLimit: 0,
+      planCreatorsLimit: 0,
+      planFeatures: {},
+      subscriptionCancelDate: new Date(),
+      lastWebhookEvent: 'customer.subscription.deleted',
+      lastWebhookTimestamp: new Date(),
+      billingSyncStatus: 'synced'
+    });
 
     await BillingLogger.logPlanChange(
       'CANCEL',
@@ -655,11 +638,9 @@ async function handleSubscriptionDeleted(event: Stripe.Event, requestId: string)
  */
 async function handlePaymentSucceeded(event: Stripe.Event, requestId: string) {
   const invoice = event.data.object as Stripe.Invoice;
-  const subscriptionId = invoice.subscription as string;
+  const customerId = invoice.customer as string;
   
-  const userProfile = await db.query.userProfiles.findFirst({
-    where: eq(userProfiles.stripeSubscriptionId, subscriptionId)
-  });
+  const userProfile = await getUserByStripeCustomerId(customerId);
 
   if (!userProfile) {
     await BillingLogger.logStripe(
@@ -668,7 +649,7 @@ async function handlePaymentSucceeded(event: Stripe.Event, requestId: string) {
       undefined,
       {
         invoiceId: invoice.id,
-        subscriptionId,
+        customerId: customerId,
         amount: invoice.amount_paid,
         currency: invoice.currency
       },
@@ -683,7 +664,7 @@ async function handlePaymentSucceeded(event: Stripe.Event, requestId: string) {
     userProfile.userId,
     {
       invoiceId: invoice.id,
-      subscriptionId,
+      customerId: customerId,
       amount: invoice.amount_paid,
       currency: invoice.currency,
       periodStart: new Date(invoice.period_start * 1000).toISOString(),
@@ -719,9 +700,7 @@ async function handlePaymentSucceeded(event: Stripe.Event, requestId: string) {
     );
   }
 
-  await db.update(userProfiles)
-    .set(updateData)
-    .where(eq(userProfiles.userId, userProfile.userId));
+  await updateUserProfile(userProfile.userId, updateData);
 }
 
 /**
@@ -729,11 +708,9 @@ async function handlePaymentSucceeded(event: Stripe.Event, requestId: string) {
  */
 async function handlePaymentFailed(event: Stripe.Event, requestId: string) {
   const invoice = event.data.object as Stripe.Invoice;
-  const subscriptionId = invoice.subscription as string;
+  const customerId = invoice.customer as string;
   
-  const userProfile = await db.query.userProfiles.findFirst({
-    where: eq(userProfiles.stripeSubscriptionId, subscriptionId)
-  });
+  const userProfile = await getUserByStripeCustomerId(customerId);
 
   if (!userProfile) return;
 
@@ -743,7 +720,7 @@ async function handlePaymentFailed(event: Stripe.Event, requestId: string) {
     userProfile.userId,
     {
       invoiceId: invoice.id,
-      subscriptionId,
+      customerId: customerId,
       amount: invoice.amount_due,
       currency: invoice.currency,
       attemptCount: invoice.attempt_count
@@ -751,15 +728,12 @@ async function handlePaymentFailed(event: Stripe.Event, requestId: string) {
     requestId
   );
 
-  await db.update(userProfiles)
-    .set({
-      subscriptionStatus: 'past_due',
-      lastWebhookEvent: 'invoice.payment_failed',
-      lastWebhookTimestamp: new Date(),
-      billingSyncStatus: 'synced',
-      updatedAt: new Date()
-    })
-    .where(eq(userProfiles.userId, userProfile.userId));
+  await updateUserProfile(userProfile.userId, {
+    subscriptionStatus: 'past_due',
+    lastWebhookEvent: 'invoice.payment_failed',
+    lastWebhookTimestamp: new Date(),
+    billingSyncStatus: 'synced'
+  });
 }
 
 /**
@@ -768,9 +742,7 @@ async function handlePaymentFailed(event: Stripe.Event, requestId: string) {
 async function handleTrialWillEnd(event: Stripe.Event, requestId: string) {
   const subscription = event.data.object as Stripe.Subscription;
   
-  const userProfile = await db.query.userProfiles.findFirst({
-    where: eq(userProfiles.stripeSubscriptionId, subscription.id)
-  });
+  const userProfile = await getUserByStripeCustomerId(subscription.customer as string);
 
   if (!userProfile) return;
 
