@@ -22,6 +22,9 @@ export default function SimilarSearchResults({ searchData }) {
   const [creators, setCreators] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [campaignName, setCampaignName] = useState('Campaign');
+  const [stillProcessing, setStillProcessing] = useState(false);
+  const [progressInfo, setProgressInfo] = useState(null);
+  const [enhancedMeta, setEnhancedMeta] = useState(null);
   const itemsPerPage = 10;
 
   // Fetch campaign name for breadcrumbs
@@ -151,6 +154,37 @@ export default function SimilarSearchResults({ searchData }) {
       jobId={searchData.jobId}
       platform={searchData.platform}
       searchData={searchData}
+      onMeta={setEnhancedMeta}
+      onProgress={(p) => {
+        setProgressInfo(p);
+        if (p?.status === 'processing') setStillProcessing(true);
+      }}
+      onIntermediateResults={(data) => {
+        try {
+          const incoming = Array.isArray(data?.creators) ? data.creators : [];
+          if (incoming.length === 0) return;
+          // Deduplicate by creator uniqueId/username
+          setCreators((prev) => {
+            const map = new Map();
+            for (const c of prev) {
+              const id = c?.creator?.uniqueId || c?.creator?.username || c?.username || '';
+              if (id) map.set(id, c);
+            }
+            for (const c of incoming) {
+              const id = c?.creator?.uniqueId || c?.creator?.username || c?.username || '';
+              if (id && !map.has(id)) map.set(id, c);
+            }
+            const merged = Array.from(map.values());
+            if (merged.length > 0) {
+              setIsLoading(false);
+              setStillProcessing(true);
+            }
+            return merged;
+          });
+        } catch (e) {
+          console.error('Error handling intermediate results (similar):', e);
+        }
+      }}
       onComplete={handleResultsComplete} 
     />;
   }
@@ -240,6 +274,22 @@ export default function SimilarSearchResults({ searchData }) {
           { label: 'Search Results' }
         ]}
       />
+
+      {/* Silent poller to keep progress flowing while table renders */}
+      {stillProcessing && (
+        <div className="hidden" aria-hidden="true">
+          <SearchProgress 
+            jobId={searchData.jobId}
+            platform={searchData.platform}
+            searchData={searchData}
+            onMeta={setEnhancedMeta}
+            onProgress={setProgressInfo}
+            onComplete={(data) => {
+              if (data?.status === 'completed') setStillProcessing(false);
+            }}
+          />
+        </div>
+      )}
       
       <div className="flex justify-between items-center">
         <div>
@@ -261,6 +311,29 @@ export default function SimilarSearchResults({ searchData }) {
       </div>
 
       <div className="rounded-lg border border-zinc-800 bg-zinc-900/30 relative w-full overflow-hidden">
+        {stillProcessing && (
+          <div className="absolute top-0 left-0 h-[2px] bg-primary transition-all duration-500 z-40" 
+               style={{ width: `${Math.min(progressInfo?.progress ?? 0, 95)}%` }}
+               aria-hidden="true"
+          />
+        )}
+        {stillProcessing && (
+          <div className="px-4 py-2 border-b border-zinc-800 bg-zinc-900/50 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs text-zinc-400" aria-live="polite">
+              <span className="inline-flex items-center">
+                <svg className="h-3.5 w-3.5 animate-spin text-pink-400" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                </svg>
+              </span>
+              <span>
+                Processing{progressInfo?.processedResults != null && progressInfo?.targetResults != null
+                  ? ` ${progressInfo.processedResults}/${progressInfo.targetResults}`
+                  : ''}
+              </span>
+            </div>
+          </div>
+        )}
         {isPageLoading && (
           <div className="absolute inset-0 bg-zinc-900/50 flex items-center justify-center z-50">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-200"></div>

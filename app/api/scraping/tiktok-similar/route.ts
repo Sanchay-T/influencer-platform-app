@@ -155,7 +155,9 @@ export async function GET(req: Request) {
             jobId: true,
             creators: true,
             createdAt: true
-          }
+          },
+          orderBy: (scrapingResults, { desc }) => [desc(scrapingResults.createdAt)],
+          limit: 1
         }
       }
     });

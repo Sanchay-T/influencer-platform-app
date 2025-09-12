@@ -199,6 +199,63 @@ export async function processTikTokSimilarJob(job: any, jobId: string) {
           }, LogCategory.TIKTOK);
           
           allUsers.push(...transformedUsers);
+
+          // 💾 INTERMEDIATE SAVE: Append new transformed users and deduplicate for live preview
+          try {
+            // Load existing creators for this job
+            const existing = await db.query.scrapingResults.findFirst({
+              where: eq(scrapingResults.jobId, job.id)
+            });
+            const existingCreators = Array.isArray(existing?.creators) ? existing!.creators as any[] : [];
+
+            // Build a map by stable id (prefer username/uniqueId; fallback to id)
+            const byId = new Map<string, any>();
+            for (const c of existingCreators) {
+              const key = c?.creator?.uniqueId || c?.creator?.username || c?.username || c?.id || '';
+              if (key) byId.set(String(key).toLowerCase(), c);
+            }
+            for (const c of transformedUsers) {
+              const key = c?.creator?.uniqueId || c?.creator?.username || c?.username || c?.id || '';
+              if (key && !byId.has(String(key).toLowerCase())) byId.set(String(key).toLowerCase(), c);
+            }
+
+            const mergedCreators = Array.from(byId.values());
+
+            if (existing) {
+              await db.update(scrapingResults)
+                .set({ creators: mergedCreators, createdAt: new Date() })
+                .where(eq(scrapingResults.jobId, job.id));
+            } else {
+              await db.insert(scrapingResults).values({
+                jobId: job.id,
+                creators: mergedCreators,
+                createdAt: new Date()
+              });
+            }
+
+            // Update progress and processedResults to reflect current total
+            const currentTotal = mergedCreators.length;
+            const approxProgress = Math.min(90, 40 + Math.round((apiCallCount / Math.max(1, MAX_API_CALLS_FOR_TESTING)) * 50));
+            await db.update(scrapingJobs).set({
+              processedResults: currentTotal,
+              progress: String(approxProgress),
+              updatedAt: new Date()
+            }).where(eq(scrapingJobs.id, job.id));
+
+            logger.debug('TikTok similar intermediate save', {
+              requestId,
+              jobId,
+              currentTotal,
+              apiCallNumber: apiCallCount,
+              progress: approxProgress
+            }, LogCategory.TIKTOK);
+          } catch (saveErr: any) {
+            logger.warn('TikTok similar intermediate save failed (non-fatal)', {
+              requestId,
+              jobId,
+              error: saveErr?.message || String(saveErr)
+            }, LogCategory.TIKTOK);
+          }
         }
         
         // Add delay between requests (except for last one)
