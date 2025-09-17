@@ -54,7 +54,9 @@ export async function DELETE(_: Request, context: { params: Promise<{ id: string
   }
   try {
     const { id } = await context.params;
+    console.debug('[LIST-DELETE-API] Request received', { listId: id, userId });
     await deleteList(userId, id);
+    console.debug('[LIST-DELETE-API] Completed', { listId: id, userId });
     return NextResponse.json({ ok: true });
   } catch (error) {
     return handleError(error);
