@@ -158,6 +158,70 @@ if (!validation.allowed) {
 
 ---
 
+## Creator Lists API
+
+The creator list system allows users to curate, organize, and share sets of influencers discovered through search. Privacy flags have been removed—lists are now scoped by owner/collaborator role only.
+
+### `GET /api/lists`
+Returns every list the current user owns or collaborates on.
+
+```json
+{
+  "lists": [
+    {
+      "id": "uuid",
+      "name": "Holiday Outreach",
+      "description": "Influencers to ping during Q4",
+      "type": "campaign",
+      "creatorCount": 42,
+      "followerSum": 3184000,
+      "collaboratorCount": 3,
+      "viewerRole": "owner"
+    }
+  ]
+}
+```
+
+### `POST /api/lists`
+Creates a new list. Only `name`, `description`, and `type` are accepted (no privacy enum).
+
+```json
+{
+  "name": "VIP Outreach",
+  "description": "Creators we’re gifting next month",
+  "type": "favorites"
+}
+```
+
+### `GET /api/lists/[id]`
+Fetches full list detail (items, collaborators, recent activity).
+
+### `PATCH /api/lists/[id]`
+Updates list metadata (name, description, type). Returns the updated summary object.
+
+### `DELETE /api/lists/[id]`
+Deletes the list and all associated items via cascading FKs. The endpoint now completes without logging a follow-up activity entry to avoid FK violations.
+
+### `POST /api/lists/[id]/items`
+Adds one or more creators to a list. Accepts an array of creator snapshots (platform, externalId, handle, metrics, etc.).
+
+### `PATCH /api/lists/[id]/items`
+Persist drag-and-drop order or bucket moves from the UI Kanban. Body signature: `{ items: [{ id, position, bucket }] }`.
+
+### `DELETE /api/lists/[id]/items`
+Removes specific list items. Body signature: `{ itemIds: ["uuid"] }`.
+
+### `POST /api/lists/[id]/duplicate`
+Clone an existing list, copying creators and metadata for the current user.
+
+### `POST /api/lists/[id]/export`
+Queue a CSV export job (handled asynchronously).
+
+### `POST /api/lists/[id]/share`
+Invite collaborators by email (stored as pending until accepted).
+
+---
+
 ## Background Processing
 
 ### QStash Integration

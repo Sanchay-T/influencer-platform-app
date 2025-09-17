@@ -210,6 +210,31 @@ export const db = global.__db ?? drizzle(queryClient, { schema });
 - ✅ Automatic connection reuse across serverless invocations
 - ✅ Built-in diagnostics and connection analysis
 
+### Creator List Query Layer (`/lib/db/queries/list-queries.ts`)
+
+This module encapsulates all CRUD operations for the creator list system used across search results and the dedicated list views.
+
+```ts
+// Public helpers
+getListsForUser(clerkUserId)
+getListDetail(clerkUserId, listId)
+createList(clerkUserId, input)
+updateList(clerkUserId, listId, updates)
+deleteList(clerkUserId, listId)
+addCreatorsToList(clerkUserId, listId, creators)
+updateListItems(clerkUserId, listId, updates)
+removeListItems(clerkUserId, listId, itemIds)
+duplicateList(clerkUserId, listId, name?)
+recordExport(clerkUserId, listId, format)
+```
+
+**Highlights**
+- ♻️ **Profile Upserts** – `addCreatorsToList` reuses or refreshes `creator_profiles` records so lists share canonical creator metadata.
+- 📦 **Bulk Actions** – APIs accept arrays, enabling multi-select/multi-drag flows from the UI.
+- 🔄 **Ordering & Buckets** – Drag-and-drop state persists via `updateListItems`, normalizing positions per bucket.
+- 🔐 **Role Checks** – Access is constrained to owners/editors; privacy flags were removed in favor of collaborator roles.
+- 🗑️ **Clean Deletes** – List deletion now relies on cascading FKs only (activity logging removed) to avoid post-delete FK violations.
+
 ### **🆕 User Query Layer (`/lib/db/queries/user-queries.ts`)**
 
 **Comprehensive User Data Access System:**

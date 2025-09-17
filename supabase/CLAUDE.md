@@ -18,19 +18,19 @@ The influencer platform uses a **PostgreSQL database** hosted on **Supabase** wi
 
 ## Schema Overview
 
-The database consists of **13 core tables** organized into these domains:
+The database consists of **17 core tables** organized into these domains:
 
 ```
-┌─────────────────────┬─────────────────────┬─────────────────────┐
-│    Campaign Domain  │    User Domain      │   System Domain     │
-├─────────────────────┼─────────────────────┼─────────────────────┤
-│ campaigns           │ users               │ system_config       │
-│ scraping_jobs       │ user_subscriptions  │ events              │
-│ scraping_results    │ user_billing        │ background_jobs     │
-│ search_jobs*        │ user_usage          │                     │
-│ search_results*     │ user_system_data    │                     │
-│                     │ subscription_plans  │                     │
-└─────────────────────┴─────────────────────┴─────────────────────┘
+┌─────────────────────┬──────────────────────┬─────────────────────┬────────────────────────┐
+│    Campaign Domain  │    User Domain       │   System Domain     │  Creator Lists Domain  │
+├─────────────────────┼──────────────────────┼─────────────────────┼────────────────────────┤
+│ campaigns           │ users                │ system_config       │ creator_lists          │
+│ scraping_jobs       │ user_subscriptions   │ events              │ creator_list_items     │
+│ scraping_results    │ user_billing         │ background_jobs     │ creator_list_notes     │
+│ search_jobs*        │ user_usage           │                     │ creator_list_activities│
+│ search_results*     │ user_system_data     │                     │ creator_list_collabs   │
+│                     │ subscription_plans   │                     │ list_exports           |
+└─────────────────────┴──────────────────────┴─────────────────────┴────────────────────────┘
 * Legacy tables for alternative job processing
 ```
 
@@ -49,6 +49,12 @@ users (1) ──< (1) user_subscriptions
                   │                    └── background_jobs
                   │
                   └── search_jobs ──< search_results (legacy)
+
+creator_lists (1) ──< creator_list_items (M)
+      │
+      ├─< creator_list_collaborators (M)
+      ├─< creator_list_notes (M)
+      └─< list_exports (M)
 
 subscription_plans (plan configuration)
 system_configurations (singleton config store)
@@ -166,6 +172,44 @@ CREATE TABLE scraping_results (
   }
 ]
 ```
+
+### 3b. **creator_lists** - Saved Creator Sets
+```sql
+CREATE TABLE creator_lists (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    description TEXT,
+    type VARCHAR(24) DEFAULT 'custom' NOT NULL,
+    tags JSONB DEFAULT '[]'::jsonb NOT NULL,
+    stats JSONB DEFAULT '{}'::jsonb NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMP DEFAULT NOW() NOT NULL
+);
+
+CREATE TABLE creator_list_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    list_id UUID NOT NULL REFERENCES creator_lists(id) ON DELETE CASCADE,
+    creator_id UUID NOT NULL REFERENCES creator_profiles(id) ON DELETE CASCADE,
+    position INTEGER DEFAULT 0 NOT NULL,
+    bucket VARCHAR(32) DEFAULT 'backlog' NOT NULL,
+    added_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    added_at TIMESTAMP DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMP DEFAULT NOW() NOT NULL,
+    UNIQUE(list_id, creator_id)
+);
+```
+
+**Supporting Tables**
+- `creator_list_collaborators` – track shared access and invites
+- `creator_list_notes` – optional annotations per creator/list
+- `creator_list_activities` – audit log (delete flow no longer writes here)
+- `list_exports` – queued exports with status metadata
+
+**Design Notes**
+- Privacy enums removed; access is determined by owner/editor role lookups.
+- Creator profiles are shared across lists; items store ordering + bucket context for the Kanban UI.
+- Cascade deletes ensure collaborators/items/notes/exports are removed automatically when a list is deleted.
 
 ### 4. **users** - Core User Identity (Normalized from user_profiles)
 ```sql

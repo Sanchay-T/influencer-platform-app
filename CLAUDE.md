@@ -74,6 +74,12 @@ graph TD
 - **YouTube**: Keyword + Similar search with channel analysis
 - **Universal**: Cross-platform CSV export with contact information
 
+### **Creator List Management**
+- **Multi-select Saving**: Bulk-add creators from search with a compact overlay and inline list creation.
+- **List Workspace**: `/lists` index with quick create (name/type/description) and detailed Kanban board for each list.
+- **Collaboration & Export**: Share by email, duplicate lists, queue CSV exports, and view insights (average ER, follower totals).
+- **Destructive Actions**: Centered confirmation modal for deletions; cascades clear associated items, collaborators, and notes.
+
 ### **Background Processing Architecture**
 ```javascript
 // Job Flow Example

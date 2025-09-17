@@ -544,6 +544,37 @@ if (cachedData) {
 }
 ```
 
+---
+
+## 🗂️ Creator List Management Components
+
+### **AddToListButton** (`components/lists/add-to-list-button.tsx`)
+```tsx
+interface AddToListButtonProps {
+  creators?: CreatorSnapshot[]; // supports bulk add
+  creator?: CreatorSnapshot;    // single add fallback
+  onAdded?: (listId: string) => void;
+  buttonLabel?: string;
+}
+```
+
+**Key Behaviors**
+- ✅ **Compact Save Overlay**: Opens to a lightweight picker (search + list select) and keeps the “Create new list” form collapsed by default.
+- ✅ **Inline List Creation**: Expands with a smooth animation when “Create new list” is clicked; supports name + type without privacy toggles.
+- ✅ **Bulk & Single Add**: Consumes either one creator snapshot or an array and batches API writes to `POST /api/lists/{id}/items`.
+- ✅ **Smart Toasting**: Differentiates between fresh adds and duplicates (no privacy wording).
+
+### **ListsIndexPage** (`app/lists/page.tsx`)
+- Quick-create card without privacy controls (name, type, description only).
+- Grid view shows list name, type badge, counts, and tags; clicking routes to detail page.
+- Uses the same card system as campaigns for consistent styling.
+
+### **ListDetailPage** (`app/lists/[id]/page.tsx`)
+- Drag-and-drop Kanban buckets (Backlog, Shortlist, Contacted, Booked) powered by `@dnd-kit`.
+- Metadata editing, CSV export, duplication, and brand-new **destructive delete modal** with optimistic navigation.
+- Collaborator invite panel and insights card (average engagement, top category, counts).
+- Delete flow surfaces a center-screen modal matching the rest of the design language and only closes when the API call succeeds.
+
 ### 🔄 Context Usage
 
 ```jsx
