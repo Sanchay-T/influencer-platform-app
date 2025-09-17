@@ -1,9 +1,12 @@
 import { pgTable, uuid, text, varchar, timestamp, integer, jsonb, numeric, unique, boolean } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 
 // Status types
 export type JobStatus = 'pending' | 'processing' | 'completed' | 'error' | 'timeout';
 export type CampaignStatus = 'draft' | 'active' | 'completed' | 'archived';
+export type CreatorListType = 'campaign' | 'favorites' | 'industry' | 'research' | 'contacted' | 'custom';
+export type CreatorListPrivacy = 'private' | 'public' | 'workspace';
+export type CreatorListRole = 'owner' | 'editor' | 'viewer';
 
 // Campaigns table
 export const campaigns = pgTable('campaigns', {
@@ -201,6 +204,108 @@ export const events = pgTable('events', {
   causationId: text('causation_id'), // What caused this event
 });
 
+// Creator directory tables -------------------------------------------------
+export const creatorProfiles = pgTable('creator_profiles', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  platform: varchar('platform', { length: 32 }).notNull(),
+  externalId: text('external_id').notNull(),
+  handle: text('handle').notNull(),
+  displayName: text('display_name'),
+  avatarUrl: text('avatar_url'),
+  url: text('url'),
+  followers: integer('followers'),
+  engagementRate: numeric('engagement_rate'),
+  category: text('category'),
+  metadata: jsonb('metadata').notNull().default(sql`'{}'::jsonb`),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  uniquePlatformExternal: unique('creator_profiles_platform_external_unique').on(table.platform, table.externalId),
+}));
+
+export const creatorLists = pgTable('creator_lists', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  ownerId: uuid('owner_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  description: text('description'),
+  type: varchar('type', { length: 24 }).notNull().default('custom'),
+  privacy: varchar('privacy', { length: 16 }).notNull().default('private'),
+  tags: jsonb('tags').notNull().default(sql`'[]'::jsonb`),
+  settings: jsonb('settings').notNull().default(sql`'{}'::jsonb`),
+  stats: jsonb('stats').notNull().default(sql`'{}'::jsonb`),
+  isArchived: boolean('is_archived').notNull().default(false),
+  slug: text('slug'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  lastSharedAt: timestamp('last_shared_at'),
+});
+
+export const creatorListItems = pgTable('creator_list_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  listId: uuid('list_id').notNull().references(() => creatorLists.id, { onDelete: 'cascade' }),
+  creatorId: uuid('creator_id').notNull().references(() => creatorProfiles.id, { onDelete: 'cascade' }),
+  position: integer('position').notNull().default(0),
+  bucket: varchar('bucket', { length: 32 }).notNull().default('backlog'),
+  addedBy: uuid('added_by').references(() => users.id, { onDelete: 'set null' }),
+  addedAt: timestamp('added_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  notes: text('notes'),
+  metricsSnapshot: jsonb('metrics_snapshot').notNull().default(sql`'{}'::jsonb`),
+  customFields: jsonb('custom_fields').notNull().default(sql`'{}'::jsonb`),
+  pinned: boolean('pinned').notNull().default(false),
+  lastContactedAt: timestamp('last_contacted_at'),
+}, (table) => ({
+  uniqueListCreator: unique('creator_list_items_list_creator_unique').on(table.listId, table.creatorId),
+}));
+
+export const creatorListCollaborators = pgTable('creator_list_collaborators', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  listId: uuid('list_id').notNull().references(() => creatorLists.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
+  inviteEmail: text('invite_email'),
+  role: varchar('role', { length: 16 }).notNull().default('viewer'),
+  status: varchar('status', { length: 16 }).notNull().default('pending'),
+  invitationToken: text('invitation_token'),
+  invitedBy: uuid('invited_by').references(() => users.id, { onDelete: 'set null' }),
+  lastSeenAt: timestamp('last_seen_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  uniqueUserList: unique('creator_list_collaborators_user_list_unique').on(table.listId, table.userId),
+  uniqueInvite: unique('creator_list_collaborators_invite_unique').on(table.listId, table.inviteEmail),
+}));
+
+export const creatorListNotes = pgTable('creator_list_notes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  listId: uuid('list_id').notNull().references(() => creatorLists.id, { onDelete: 'cascade' }),
+  creatorId: uuid('creator_id').references(() => creatorProfiles.id, { onDelete: 'cascade' }),
+  authorId: uuid('author_id').references(() => users.id, { onDelete: 'set null' }),
+  body: text('body').notNull(),
+  isInternal: boolean('is_internal').notNull().default(false),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const creatorListActivities = pgTable('creator_list_activities', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  listId: uuid('list_id').notNull().references(() => creatorLists.id, { onDelete: 'cascade' }),
+  actorId: uuid('actor_id').references(() => users.id, { onDelete: 'set null' }),
+  action: varchar('action', { length: 64 }).notNull(),
+  payload: jsonb('payload').notNull().default(sql`'{}'::jsonb`),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const listExports = pgTable('list_exports', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  listId: uuid('list_id').notNull().references(() => creatorLists.id, { onDelete: 'cascade' }),
+  requestedBy: uuid('requested_by').references(() => users.id, { onDelete: 'set null' }),
+  format: varchar('format', { length: 16 }).notNull().default('csv'),
+  status: varchar('status', { length: 16 }).notNull().default('queued'),
+  fileUrl: text('file_url'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  completedAt: timestamp('completed_at'),
+});
+
 // Background Jobs table for QStash job tracking (Industry Standard)
 export const backgroundJobs = pgTable('background_jobs', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -305,6 +410,8 @@ export const usersRelations = relations(users, ({ one, many }) => ({
     references: [userSystemData.userId],
   }),
   campaigns: many(campaigns), // Assuming campaigns will reference users eventually
+  lists: many(creatorLists),
+  collaborations: many(creatorListCollaborators),
 }));
 
 // User subscriptions relations
@@ -339,6 +446,90 @@ export const userSystemDataRelations = relations(userSystemData, ({ one }) => ({
   }),
 }));
 
+export const creatorProfilesRelations = relations(creatorProfiles, ({ many }) => ({
+  items: many(creatorListItems),
+  notes: many(creatorListNotes),
+}));
+
+export const creatorListsRelations = relations(creatorLists, ({ one, many }) => ({
+  owner: one(users, {
+    fields: [creatorLists.ownerId],
+    references: [users.id],
+  }),
+  items: many(creatorListItems),
+  collaborators: many(creatorListCollaborators),
+  notes: many(creatorListNotes),
+  activities: many(creatorListActivities),
+  exports: many(listExports),
+}));
+
+export const creatorListItemsRelations = relations(creatorListItems, ({ one }) => ({
+  list: one(creatorLists, {
+    fields: [creatorListItems.listId],
+    references: [creatorLists.id],
+  }),
+  creator: one(creatorProfiles, {
+    fields: [creatorListItems.creatorId],
+    references: [creatorProfiles.id],
+  }),
+  addedByUser: one(users, {
+    fields: [creatorListItems.addedBy],
+    references: [users.id],
+  }),
+}));
+
+export const creatorListCollaboratorsRelations = relations(creatorListCollaborators, ({ one }) => ({
+  list: one(creatorLists, {
+    fields: [creatorListCollaborators.listId],
+    references: [creatorLists.id],
+  }),
+  user: one(users, {
+    fields: [creatorListCollaborators.userId],
+    references: [users.id],
+  }),
+  invitedByUser: one(users, {
+    fields: [creatorListCollaborators.invitedBy],
+    references: [users.id],
+  }),
+}));
+
+export const creatorListNotesRelations = relations(creatorListNotes, ({ one }) => ({
+  list: one(creatorLists, {
+    fields: [creatorListNotes.listId],
+    references: [creatorLists.id],
+  }),
+  creator: one(creatorProfiles, {
+    fields: [creatorListNotes.creatorId],
+    references: [creatorProfiles.id],
+  }),
+  author: one(users, {
+    fields: [creatorListNotes.authorId],
+    references: [users.id],
+  }),
+}));
+
+export const creatorListActivitiesRelations = relations(creatorListActivities, ({ one }) => ({
+  list: one(creatorLists, {
+    fields: [creatorListActivities.listId],
+    references: [creatorLists.id],
+  }),
+  actor: one(users, {
+    fields: [creatorListActivities.actorId],
+    references: [users.id],
+  }),
+}));
+
+export const listExportsRelations = relations(listExports, ({ one }) => ({
+  list: one(creatorLists, {
+    fields: [listExports.listId],
+    references: [creatorLists.id],
+  }),
+  requestedByUser: one(users, {
+    fields: [listExports.requestedBy],
+    references: [users.id],
+  }),
+}));
+
 // Export types for TypeScript
 export type Campaign = typeof campaigns.$inferSelect;
 export type NewCampaign = typeof campaigns.$inferInsert;
@@ -360,6 +551,20 @@ export type BackgroundJob = typeof backgroundJobs.$inferSelect;
 export type NewBackgroundJob = typeof backgroundJobs.$inferInsert;
 export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
 export type NewSubscriptionPlan = typeof subscriptionPlans.$inferInsert;
+export type CreatorProfile = typeof creatorProfiles.$inferSelect;
+export type NewCreatorProfile = typeof creatorProfiles.$inferInsert;
+export type CreatorList = typeof creatorLists.$inferSelect;
+export type NewCreatorList = typeof creatorLists.$inferInsert;
+export type CreatorListItem = typeof creatorListItems.$inferSelect;
+export type NewCreatorListItem = typeof creatorListItems.$inferInsert;
+export type CreatorListCollaborator = typeof creatorListCollaborators.$inferSelect;
+export type NewCreatorListCollaborator = typeof creatorListCollaborators.$inferInsert;
+export type CreatorListNote = typeof creatorListNotes.$inferSelect;
+export type NewCreatorListNote = typeof creatorListNotes.$inferInsert;
+export type CreatorListActivity = typeof creatorListActivities.$inferSelect;
+export type NewCreatorListActivity = typeof creatorListActivities.$inferInsert;
+export type ListExport = typeof listExports.$inferSelect;
+export type NewListExport = typeof listExports.$inferInsert;
 
 // =====================================================
 // NORMALIZED USER TABLE TYPES

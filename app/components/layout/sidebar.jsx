@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { LayoutDashboard, LogOut, UserRoundCog, Settings, Mail, CreditCard, TrendingUp } from "lucide-react";
+import { LayoutDashboard, LogOut, UserRoundCog, Settings, Mail, CreditCard, TrendingUp, ListTree } from "lucide-react";
 import { useRouter, usePathname } from 'next/navigation'
 import { useClerk, useUser } from '@clerk/nextjs'
 import { useAdmin } from '@/lib/hooks/use-admin'
@@ -18,6 +18,7 @@ export default function Sidebar({ onNavigate }) {
 
   const nav = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Lists', href: '/lists', icon: ListTree },
     { name: 'Profile Settings', href: '/profile', icon: UserRoundCog },
     { name: 'Billing & Plans', href: '/billing', icon: CreditCard },
   ]
