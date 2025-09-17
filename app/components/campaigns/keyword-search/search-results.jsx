@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ExternalLink, User, Loader2, LayoutList, LayoutGrid, Table2, MailCheck } from "lucide-react";
+import { ExternalLink, User, Loader2, LayoutGrid, Table2, MailCheck } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -31,10 +31,9 @@ import {
 import SearchProgress from "./search-progress";
 import Breadcrumbs from "../../breadcrumbs";
 
-const VIEW_MODES = ["table", "list", "gallery"];
+const VIEW_MODES = ["table", "gallery"];
 const VIEW_MODE_META = {
   table: { label: "Table", Icon: Table2 },
-  list: { label: "List", Icon: LayoutList },
   gallery: { label: "Gallery", Icon: LayoutGrid },
 };
 
@@ -184,7 +183,7 @@ const SearchResults = ({ searchData }) => {
   const [selectedCreators, setSelectedCreators] = useState({});
   const [viewMode, setViewMode] = useState("table");
   const [showEmailOnly, setShowEmailOnly] = useState(false);
-  const itemsPerPage = 10;
+  const itemsPerPage = viewMode === "gallery" ? 9 : 10;
 
   // Normalize platform from either selectedPlatform (wizard) or platform (reopen flow)
   const platformNormalized = (searchData?.selectedPlatform || searchData?.platform || 'tiktok').toString().toLowerCase();
@@ -538,178 +537,6 @@ const SearchResults = ({ searchData }) => {
               : "Try adjusting your search keywords"}
           </p>
         </div>
-        {viewMode === "list" && (
-          <div className="space-y-4 p-4 md:p-6">
-            {currentRows.map(({ id, snapshot, raw }) => {
-              const emails = extractEmails(raw);
-              const preview = resolveMediaPreview(raw, snapshot);
-              const profileUrl = renderProfileLink(raw);
-
-              return (
-                <Card key={id} className="border border-zinc-800 bg-zinc-900/50">
-                  <div className="flex flex-col gap-4 p-4 md:flex-row md:items-start md:gap-6">
-                    <div className="flex items-center gap-4 md:w-1/3">
-                      <Avatar className="h-14 w-14">
-                        {preview ? (
-                          <AvatarImage
-                            src={preview}
-                            alt={snapshot.displayName ?? snapshot.handle}
-                            onLoad={(e) => handleImageLoad(e, snapshot.handle)}
-                            onError={(e) => handleImageError(e, snapshot.handle, preview)}
-                            onLoadStart={(e) => handleImageStart(e, snapshot.handle)}
-                          />
-                        ) : null}
-                        <AvatarFallback className="bg-zinc-800 text-zinc-200">
-                          {snapshot.handle.slice(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="space-y-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <a
-                            href={profileUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="font-medium text-zinc-100 hover:text-pink-300 hover:underline"
-                          >
-                            {snapshot.displayName || snapshot.handle}
-                          </a>
-                          <Badge variant="outline" className="border-zinc-700 bg-zinc-900/80 text-xs text-zinc-300">
-                            {snapshot.platform?.toUpperCase() ?? ""}
-                          </Badge>
-                        </div>
-                        <div className="flex flex-wrap gap-3 text-xs text-zinc-400">
-                          {snapshot.followers != null && (
-                            <span>{formatFollowers(snapshot.followers)} followers</span>
-                          )}
-                          {snapshot.engagementRate != null && (
-                            <span>{snapshot.engagementRate}% ER</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex-1 space-y-3 text-sm text-zinc-300">
-                      <p>
-                        {raw?.creator?.bio || raw?.bio || raw?.description || "No bio available"}
-                      </p>
-                      {raw?.video?.description && (
-                        <div className="text-xs text-zinc-500">
-                          <span className="uppercase tracking-wide text-zinc-400">Latest content:</span>{" "}
-                          {raw.video.description}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex flex-col justify-between gap-3 md:w-1/4">
-                      <div className="space-y-2 text-sm text-zinc-300">
-                        <p className="font-medium text-zinc-200">Contact</p>
-                        {emails.length ? (
-                          emails.map((email) => (
-                            <a
-                              key={email}
-                              href={`mailto:${email}`}
-                              className="block truncate text-pink-400 hover:text-pink-300 hover:underline"
-                            >
-                              {email}
-                            </a>
-                          ))
-                        ) : (
-                          <span className="text-zinc-500">No email</span>
-                        )}
-                      </div>
-                      <AddToListButton
-                        creator={snapshot}
-                        buttonLabel="Save to list"
-                        variant="secondary"
-                        size="sm"
-                      />
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-        {viewMode === "gallery" && (
-          <div className="grid gap-4 p-4 md:p-6 md:grid-cols-2 xl:grid-cols-3">
-            {currentRows.map(({ id, snapshot, raw }) => {
-              const emails = extractEmails(raw);
-              const preview = resolveMediaPreview(raw, snapshot);
-              const profileUrl = renderProfileLink(raw);
-
-              return (
-                <Card key={id} className="overflow-hidden border border-zinc-800 bg-zinc-900/60">
-                  <div className="relative aspect-video w-full overflow-hidden bg-zinc-800/60">
-                    {preview ? (
-                      <img
-                        src={preview}
-                        alt={snapshot.displayName ?? snapshot.handle}
-                        className="h-full w-full object-cover"
-                        onLoad={(e) => handleImageLoad(e, snapshot.handle)}
-                        onError={(e) => handleImageError(e, snapshot.handle, preview)}
-                        onLoadStart={(e) => handleImageStart(e, snapshot.handle)}
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-xs text-zinc-500">
-                        No preview available
-                      </div>
-                    )}
-                  </div>
-                  <div className="space-y-3 p-4 text-sm text-zinc-300">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="font-semibold text-zinc-100">
-                          {snapshot.displayName || snapshot.handle}
-                        </p>
-                        <p className="text-xs text-zinc-500">@{snapshot.handle}</p>
-                      </div>
-                      <Badge variant="outline" className="border-zinc-700 bg-zinc-900/80 text-xs text-zinc-300">
-                        {snapshot.platform?.toUpperCase() ?? ""}
-                      </Badge>
-                    </div>
-                    <p className="line-clamp-3 text-xs text-zinc-400">
-                      {raw?.creator?.bio || raw?.bio || raw?.description || "No bio available"}
-                    </p>
-                    <div className="flex flex-wrap gap-3 text-xs text-zinc-400">
-                      {snapshot.followers != null && (
-                        <span>{formatFollowers(snapshot.followers)} followers</span>
-                      )}
-                      {snapshot.engagementRate != null && (
-                        <span>{snapshot.engagementRate}% ER</span>
-                      )}
-                    </div>
-                    <div className="space-y-1 text-xs text-zinc-400">
-                      {emails.length ? (
-                        emails.slice(0, 2).map((email) => (
-                          <a
-                            key={email}
-                            href={`mailto:${email}`}
-                            className="block truncate text-pink-400 hover:text-pink-300 hover:underline"
-                          >
-                            {email}
-                          </a>
-                        ))
-                      ) : (
-                        <span className="text-zinc-500">No email</span>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between pt-2">
-                      <Button variant="ghost" size="sm" className="gap-1 text-zinc-300 hover:text-pink-300" asChild>
-                        <a href={profileUrl} target="_blank" rel="noopener noreferrer">
-                          Profile <ExternalLink className="h-3 w-3" />
-                        </a>
-                      </Button>
-                      <AddToListButton
-                        creator={snapshot}
-                        buttonLabel="Save"
-                        variant="secondary"
-                        size="sm"
-                      />
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-        )}
       </div>
     );
   }
@@ -1265,10 +1092,10 @@ const SearchResults = ({ searchData }) => {
                     </TableCell>
                     <TableCell className="px-6 py-4 text-right">
                       <AddToListButton
-                        creators={[snapshot]}
-                        buttonLabel=""
+                        creator={snapshot}
+                        buttonLabel="Save"
                         variant="ghost"
-                        size="icon"
+                        size="sm"
                         className="text-zinc-400 hover:text-emerald-300"
                       />
                     </TableCell>
@@ -1277,6 +1104,155 @@ const SearchResults = ({ searchData }) => {
               })}
             </TableBody>
           </Table>
+        </div>
+        <div className={cn(
+          "w-full p-4 md:p-6",
+          viewMode === "gallery" ? "block" : "hidden"
+        )}>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {currentRows.map(({ id, snapshot, raw }) => {
+              const preview = resolveMediaPreview(raw, snapshot);
+              const emails = extractEmails(raw);
+              const profileUrl = renderProfileLink(raw);
+              const followerLabel = snapshot.followers != null ? formatFollowers(snapshot.followers) : null;
+              const rawViewCount =
+                raw?.video?.stats?.playCount ??
+                raw?.video?.stats?.viewCount ??
+                raw?.video?.playCount ??
+                raw?.video?.views ??
+                raw?.stats?.playCount ??
+                raw?.stats?.viewCount ??
+                null;
+              const viewCountNumber =
+                typeof rawViewCount === "number"
+                  ? rawViewCount
+                  : Number.isFinite(Number(rawViewCount))
+                  ? Number(rawViewCount)
+                  : null;
+              const viewCountLabel =
+                viewCountNumber != null ? Math.round(viewCountNumber).toLocaleString() : null;
+              const isSelected = !!selectedCreators[id];
+              const platformLabel = (snapshot.platform ?? 'creator').toString().toUpperCase();
+              const secondaryLine =
+                raw?.creator?.location ||
+                raw?.creator?.category ||
+                snapshot.category ||
+                platformLabel;
+
+              return (
+                <Card
+                  key={id}
+                  className={cn(
+                    "relative flex h-full flex-col overflow-hidden border border-zinc-800/70 bg-zinc-900/70 shadow-sm transition-colors duration-200 hover:border-pink-400/50 hover:shadow-lg hover:shadow-pink-500/10",
+                    isSelected && "border-emerald-400/60 ring-2 ring-emerald-500/30"
+                  )}
+                >
+                  <div className="absolute left-3 top-3 z-30 flex items-center">
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => toggleSelection(id, snapshot)}
+                      aria-label={`Select ${snapshot.handle}`}
+                      className="h-5 w-5 rounded border-pink-400/60 bg-zinc-900/80 data-[state=checked]:border-pink-500 data-[state=checked]:bg-pink-500"
+                    />
+                  </div>
+                  <div className="relative aspect-[9/16] w-full overflow-hidden bg-zinc-800/70">
+                    {preview ? (
+                      <img
+                        src={preview}
+                        alt={snapshot.displayName || snapshot.handle}
+                        className="h-full w-full object-cover"
+                        onLoad={(event) => handleImageLoad(event, snapshot.handle)}
+                        onError={(event) => handleImageError(event, snapshot.handle, preview)}
+                        onLoadStart={(event) => handleImageStart(event, snapshot.handle)}
+                      />
+                    ) : (
+                      <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-b from-zinc-800/60 to-zinc-900/60 text-xs text-zinc-500">
+                        <span className="rounded-full bg-zinc-900/70 px-2 py-1 text-[10px] uppercase tracking-wide text-zinc-300">
+                          {platformLabel}
+                        </span>
+                        <span>No preview available</span>
+                      </div>
+                    )}
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/45 via-black/10 to-black/0" />
+                    <div className="absolute right-3 top-3 rounded-full bg-zinc-950/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-100 shadow">
+                      @{snapshot.handle}
+                    </div>
+                  </div>
+                  <div className="flex flex-1 flex-col gap-3 p-4 text-sm text-zinc-300">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="line-clamp-1 text-base font-semibold text-zinc-100">
+                          {snapshot.displayName || snapshot.handle}
+                        </p>
+                        {secondaryLine ? (
+                          <p className="text-xs text-zinc-500">{secondaryLine}</p>
+                        ) : null}
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className="shrink-0 border-zinc-700 bg-zinc-900/70 text-[10px] tracking-wide text-zinc-300"
+                      >
+                        {platformLabel}
+                      </Badge>
+                    </div>
+                    <p className="line-clamp-3 text-xs text-zinc-400">
+                      {raw?.creator?.bio || raw?.bio || raw?.description || "No bio available"}
+                    </p>
+                    <div className="flex flex-wrap gap-2 text-[11px] text-zinc-300">
+                      {followerLabel && (
+                        <span className="rounded-full border border-zinc-700/70 bg-zinc-900/60 px-2 py-1 font-medium text-zinc-200">
+                          {followerLabel} followers
+                        </span>
+                      )}
+                      {snapshot.engagementRate != null && (
+                        <span className="rounded-full border border-zinc-700/70 bg-zinc-900/60 px-2 py-1 font-medium text-zinc-200">
+                          {snapshot.engagementRate}% ER
+                        </span>
+                      )}
+                      {viewCountLabel && (
+                        <span className="rounded-full border border-zinc-700/70 bg-zinc-900/60 px-2 py-1 font-medium text-zinc-200">
+                          {viewCountLabel} views
+                        </span>
+                      )}
+                    </div>
+                    <div className="space-y-1 text-xs text-zinc-400">
+                      {emails.length ? (
+                        emails.slice(0, 2).map((email) => (
+                          <a
+                            key={email}
+                            href={`mailto:${email}`}
+                            className="block truncate text-pink-400 hover:text-pink-300 hover:underline"
+                          >
+                            {email}
+                          </a>
+                        ))
+                      ) : (
+                        <span className="text-zinc-500">No email</span>
+                      )}
+                    </div>
+                    <div className="mt-auto flex items-center justify-between pt-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-1 text-zinc-300 hover:text-pink-300"
+                        asChild
+                      >
+                        <a href={profileUrl} target="_blank" rel="noopener noreferrer">
+                          Profile <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </Button>
+                      <AddToListButton
+                        creator={snapshot}
+                        buttonLabel="Save"
+                        variant="secondary"
+                        size="sm"
+                      />
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
         </div>
       </div>
 

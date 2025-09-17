@@ -101,6 +101,8 @@ export function AddToListButton({
     [lists, selectedList]
   );
 
+  const hasNoLists = !loadingLists && lists.length === 0;
+
   const resolvedLabel = buttonLabel ?? (creatorsToAdd.length > 1 ? 'Add creators' : 'Add to list');
   const buttonContent = children ?? (
     <>
@@ -116,6 +118,12 @@ export function AddToListButton({
     setNewListType('custom');
     setShowCreate(false);
   }, []);
+
+  useEffect(() => {
+    if (hasNoLists && !showCreate) {
+      setNewListType('favorites');
+    }
+  }, [hasNoLists, showCreate]);
 
   useEffect(() => {
     if (!open || lists.length) return;
@@ -139,10 +147,7 @@ export function AddToListButton({
   useEffect(() => {
     if (!open) return;
     setShowCreate(false);
-    if (!loadingLists && lists.length === 0) {
-      setShowCreate(true);
-    }
-  }, [open, loadingLists, lists.length]);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -351,7 +356,7 @@ export function AddToListButton({
             </div>
             <div className="space-y-3">
               <Button
-                variant={showCreate ? 'soft' : 'outline'}
+                variant={showCreate ? 'default' : hasNoLists ? 'secondary' : 'outline'}
                 size="sm"
                 className="w-full justify-between"
                 onClick={() => setShowCreate((value) => !value)}
@@ -360,6 +365,11 @@ export function AddToListButton({
                 <span>Create new list</span>
                 <Plus className={cn('h-4 w-4 transition-transform duration-200', showCreate ? 'rotate-45' : '')} />
               </Button>
+              {hasNoLists && !showCreate && (
+                <p className="text-center text-xs text-zinc-500">
+                  No lists yet. Tap "Create new list" to spin up a Favorites list.
+                </p>
+              )}
               <div
                 className={cn(
                   'space-y-3 overflow-hidden rounded-md border border-zinc-800/40 bg-zinc-950/70 px-3 transition-all duration-200',
