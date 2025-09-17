@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, User, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -9,6 +9,8 @@ import { Card } from "@/components/ui/card";
 import ExportButton from "../export-button";
 import { cn } from "@/lib/utils";
 import { FeatureGate } from "@/app/components/billing/protect";
+import { Checkbox } from "@/components/ui/checkbox";
+import { AddToListButton } from "@/components/lists/add-to-list-button";
 import {
   Table,
   TableBody,
@@ -37,10 +39,18 @@ const SearchResults = ({ searchData }) => {
   const [stillProcessing, setStillProcessing] = useState(false);
   const [enhancedMeta, setEnhancedMeta] = useState(null);
   const [progressInfo, setProgressInfo] = useState(null);
+  const [selectedCreators, setSelectedCreators] = useState({});
   const itemsPerPage = 10;
 
   // Normalize platform from either selectedPlatform (wizard) or platform (reopen flow)
   const platformNormalized = (searchData?.selectedPlatform || searchData?.platform || 'tiktok').toString().toLowerCase();
+
+  useEffect(() => {
+    setSelectedCreators({});
+  }, [searchData?.jobId]);
+
+  const selectedSnapshots = useMemo(() => Object.values(selectedCreators), [selectedCreators]);
+  const selectionCount = selectedSnapshots.length;
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -86,7 +96,7 @@ const SearchResults = ({ searchData }) => {
     };
 
     fetchResults();
-  }, [searchData.jobId]);
+  }, [searchData, searchData?.jobId, searchData?.selectedPlatform, searchData?.platform, searchData?.platforms, platformNormalized]);
 
   // Fetch campaign name for breadcrumbs
   useEffect(() => {
@@ -108,6 +118,177 @@ const SearchResults = ({ searchData }) => {
 
     fetchCampaignName();
   }, [searchData?.campaignId]);
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+
+  const renderProfileLink = useCallback((creator) => {
+    const platform = platformNormalized;
+
+    if (platform === "tiktok") {
+      const ttUsername = creator?.creator?.uniqueId || creator?.creator?.username;
+      if (ttUsername) {
+        return `https://www.tiktok.com/@${ttUsername}`;
+      }
+
+      if (creator.video?.url) {
+        const match = creator.video.url.match(/@([^\/]+)/);
+        if (match) {
+          return `https://www.tiktok.com/@${match[1]}`;
+        }
+      }
+
+      const creatorName = creator.creator?.name;
+      if (creatorName && !creatorName.includes(" ")) {
+        return `https://www.tiktok.com/@${creatorName}`;
+      }
+
+      if (creatorName) {
+        const cleanUsername = creatorName.replace(/\s+/g, "").toLowerCase();
+        return `https://www.tiktok.com/@${cleanUsername}`;
+      }
+    } else if (
+      platform === "Instagram" ||
+      platform === "instagram" ||
+      platform === "enhanced-instagram"
+    ) {
+      const igUsername =
+        creator?.creator?.uniqueId || creator?.creator?.username || creator?.ownerUsername;
+      if (igUsername) {
+        return `https://www.instagram.com/${igUsername}`;
+      }
+      const creatorName = creator?.creator?.name;
+      if (creatorName) {
+        const cleanUsername = creatorName
+          .replace(/\s+/g, "")
+          .toLowerCase()
+          .replace(/[^a-z0-9._]/g, "");
+        return `https://www.instagram.com/${cleanUsername}`;
+      }
+    } else if (platform === "YouTube" || platform === "youtube") {
+      if (creator.video?.url) {
+        if (
+          creator.video.url.includes("/channel/") ||
+          creator.video.url.includes("/c/") ||
+          creator.video.url.includes("/@")
+        ) {
+          const channelMatch = creator.video.url.match(/\/(channel\/[^\/]+|c\/[^\/]+|@[^\/]+)/);
+          if (channelMatch) {
+            return `https://www.youtube.com/${channelMatch[1]}`;
+          }
+        }
+
+        return creator.video.url;
+      }
+    }
+
+    return "#";
+  }, [platformNormalized]);
+
+  const currentCreators = useMemo(
+    () => creators.slice(startIndex, endIndex),
+    [creators, startIndex, endIndex]
+  );
+
+  const currentRows = useMemo(() => {
+    return currentCreators.map((creator, index) => {
+      const base = creator?.creator || creator;
+      const platformValue = base?.platform || creator.platform || platformNormalized || 'tiktok';
+      const platform = typeof platformValue === 'string' ? platformValue : String(platformValue);
+
+      const handleRaw =
+        base?.uniqueId ||
+        base?.username ||
+        base?.handle ||
+        base?.name ||
+        creator.username ||
+        `creator-${startIndex + index}`;
+      const handleValue = typeof handleRaw === 'string' ? handleRaw : String(handleRaw ?? `creator-${startIndex + index}`);
+      const handle = handleValue.trim().length ? handleValue : `creator-${startIndex + index}`;
+
+      const externalRaw =
+        base?.id ??
+        base?.userId ??
+        base?.user_id ??
+        base?.externalId ??
+        base?.profileId ??
+        creator.id ??
+        creator.externalId ??
+        handle ??
+        `creator-${startIndex + index}`;
+      const externalId = typeof externalRaw === 'string' ? externalRaw : String(externalRaw ?? `creator-${startIndex + index}`);
+
+      const snapshot = {
+        platform,
+        externalId,
+        handle,
+        displayName: base?.name || base?.displayName || creator.displayName || null,
+        avatarUrl:
+          base?.avatarUrl ||
+          base?.profile_pic_url ||
+          base?.profilePicUrl ||
+          creator.profile_pic_url ||
+          creator.profilePicUrl ||
+          creator.avatarUrl ||
+          null,
+        url: renderProfileLink(creator),
+        followers:
+          base?.stats?.followerCount ??
+          base?.followerCount ??
+          base?.followers ??
+          creator.followers ??
+          creator.stats?.followerCount ??
+          null,
+        engagementRate:
+          base?.stats?.engagementRate ??
+          base?.engagementRate ??
+          creator.engagementRate ??
+          null,
+        category: base?.category || base?.topic || base?.niche || creator.category || null,
+        metadata: creator,
+      };
+
+      return {
+        id: `${platform}-${externalId}`,
+        snapshot,
+        raw: creator,
+      };
+    });
+  }, [currentCreators, platformNormalized, startIndex, renderProfileLink]);
+
+  const currentRowIds = useMemo(() => currentRows.map((row) => row.id), [currentRows]);
+  const allSelectedOnPage = currentRowIds.length > 0 && currentRowIds.every((id) => selectedCreators[id]);
+  const someSelectedOnPage = currentRowIds.some((id) => selectedCreators[id]);
+
+  const toggleSelection = (rowId, snapshot) => {
+    setSelectedCreators((prev) => {
+      const next = { ...prev };
+      if (next[rowId]) {
+        delete next[rowId];
+      } else {
+        next[rowId] = snapshot;
+      }
+      return next;
+    });
+  };
+
+  const handleSelectPage = (shouldSelect) => {
+    setSelectedCreators((prev) => {
+      const next = { ...prev };
+      if (shouldSelect) {
+        currentRows.forEach(({ id, snapshot }) => {
+          next[id] = snapshot;
+        });
+      } else {
+        currentRows.forEach(({ id }) => {
+          delete next[id];
+        });
+      }
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelectedCreators({});
 
   // Validación básica - moved after hooks to avoid conditional hook calls
   if (!searchData?.jobId) return null;
@@ -198,11 +379,6 @@ const SearchResults = ({ searchData }) => {
       </div>
     );
   }
-
-  const currentCreators = creators.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage,
-  );
 
   const handlePageChange = async (newPage) => {
     if (newPage === currentPage) return;
@@ -330,104 +506,6 @@ const SearchResults = ({ searchData }) => {
     });
   };
 
-  const renderProfileLink = (creator) => {
-    // Check platform from normalized source
-    const platform = platformNormalized;
-
-    console.log("🔗 [PROFILE-LINK] Generating profile link for:", {
-      platform,
-      creatorName: creator.creator?.name,
-      videoUrl: creator.video?.url,
-    });
-
-    if (platform === "tiktok") {
-      // Prefer explicit username/uniqueId from data
-      const ttUsername = creator?.creator?.uniqueId || creator?.creator?.username;
-      if (ttUsername) {
-        const profileUrl = `https://www.tiktok.com/@${ttUsername}`;
-        console.log("🎯 [PROFILE-LINK] Using TikTok uniqueId/username:", profileUrl);
-        return profileUrl;
-      }
-
-      // Try to extract username from video URL first (most reliable)
-      if (creator.video?.url) {
-        const match = creator.video.url.match(/@([^\/]+)/);
-        if (match) {
-          const profileUrl = `https://www.tiktok.com/@${match[1]}`;
-          console.log(
-            "🎯 [PROFILE-LINK] Extracted from video URL:",
-            profileUrl,
-          );
-          return profileUrl;
-        }
-      }
-
-      // Fallback: use creator name if it looks like a username (no spaces)
-      const creatorName = creator.creator?.name;
-      if (creatorName && !creatorName.includes(" ")) {
-        const profileUrl = `https://www.tiktok.com/@${creatorName}`;
-        console.log(
-          "🎯 [PROFILE-LINK] Using creator name as username:",
-          profileUrl,
-        );
-        return profileUrl;
-      }
-
-      // Last fallback: construct from creator name by removing spaces
-      if (creatorName) {
-        const cleanUsername = creatorName.replace(/\s+/g, "").toLowerCase();
-        const profileUrl = `https://www.tiktok.com/@${cleanUsername}`;
-        console.log("🎯 [PROFILE-LINK] Cleaned creator name:", profileUrl);
-        return profileUrl;
-      }
-    } else if (platform === "Instagram" || platform === "instagram" || platform === "enhanced-instagram") {
-      // Prefer explicit Instagram username (uniqueId/username), then ownerUsername from backend, fallback to cleaned display name
-      const igUsername = creator?.creator?.uniqueId || creator?.creator?.username || creator?.ownerUsername;
-      if (igUsername) {
-        const profileUrl = `https://www.instagram.com/${igUsername}`;
-        console.log("🎯 [PROFILE-LINK] Using Instagram uniqueId/username:", profileUrl);
-        return profileUrl;
-      }
-      const creatorName = creator?.creator?.name;
-      if (creatorName) {
-        const cleanUsername = creatorName.replace(/\s+/g, "").toLowerCase().replace(/[^a-z0-9._]/g, "");
-        const profileUrl = `https://www.instagram.com/${cleanUsername}`;
-        console.log("🎯 [PROFILE-LINK] Fallback from display name:", profileUrl);
-        return profileUrl;
-      }
-    } else if (platform === "YouTube" || platform === "youtube") {
-      // For YouTube, try to extract channel from video URL
-      if (creator.video?.url) {
-        // YouTube video URLs contain channel info, try to construct channel URL
-        // Check if it's a channel URL pattern or just link to video
-        if (
-          creator.video.url.includes("/channel/") ||
-          creator.video.url.includes("/c/") ||
-          creator.video.url.includes("/@")
-        ) {
-          const channelMatch = creator.video.url.match(
-            /\/(channel\/[^\/]+|c\/[^\/]+|@[^\/]+)/,
-          );
-          if (channelMatch) {
-            const channelUrl = `https://www.youtube.com/${channelMatch[1]}`;
-            console.log("🎯 [PROFILE-LINK] YouTube channel URL:", channelUrl);
-            return channelUrl;
-          }
-        }
-
-        // Fallback: link to the video
-        console.log(
-          "🎯 [PROFILE-LINK] YouTube video URL fallback:",
-          creator.video.url,
-        );
-        return creator.video.url;
-      }
-    }
-
-    console.log("⚠️ [PROFILE-LINK] No valid profile link found, returning #");
-    return "#";
-  };
-
   return (
     <div className="space-y-4">
       <Breadcrumbs
@@ -455,18 +533,33 @@ const SearchResults = ({ searchData }) => {
             </Badge>
           )}
         </div>
-        <div className="flex items-center gap-4">
-          <div className="text-sm text-zinc-400">
-            Page {currentPage} of {Math.ceil(creators.length / itemsPerPage)} •
-            Showing {(currentPage - 1) * itemsPerPage + 1}-
-            {Math.min(currentPage * itemsPerPage, creators.length)} of{" "}
-            {creators.length}
+      <div className="flex items-center gap-4">
+        <div className="text-sm text-zinc-400">
+          Page {currentPage} of {Math.ceil(creators.length / itemsPerPage)} •
+          Showing {(currentPage - 1) * itemsPerPage + 1}-
+          {Math.min(currentPage * itemsPerPage, creators.length)} of{" "}
+          {creators.length}
+        </div>
+        {selectionCount > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-emerald-300">{selectionCount} selected</span>
+            <AddToListButton
+              creators={selectedSnapshots}
+              buttonLabel={`Save ${selectionCount} to list`}
+              variant="default"
+              size="sm"
+              onAdded={clearSelection}
+            />
+            <Button variant="ghost" size="sm" onClick={clearSelection}>
+              Clear
+            </Button>
           </div>
-          {stillProcessing && (
-            <span className="text-xs px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
-              Processing… live results updating
-            </span>
-          )}
+        )}
+        {stillProcessing && (
+          <span className="text-xs px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
+            Processing… live results updating
+          </span>
+        )}
           {(searchData?.campaignId || searchData?.jobId) && (
             <FeatureGate
               feature="csv_export"
@@ -532,17 +625,41 @@ const SearchResults = ({ searchData }) => {
           <Table className="w-full">
             <TableHeader>
               <TableRow className="border-b border-zinc-800">
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[50px]">Profile</TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[15%] min-w-[120px]">Username</TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[20%] min-w-[150px]">Bio</TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[20%] min-w-[150px]">Email</TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[25%] min-w-[200px]">Video Title</TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[10%] min-w-[80px]">Views</TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[60px]">Link</TableHead>
+                <TableHead className="px-4 py-3 w-12">
+                  <Checkbox
+                    aria-label="Select page"
+                    checked={allSelectedOnPage ? true : someSelectedOnPage ? 'indeterminate' : false}
+                    onCheckedChange={() => handleSelectPage(!allSelectedOnPage)}
+                  />
+                </TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[50px]">
+                  Profile
+                </TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[15%] min-w-[120px]">
+                  Username
+                </TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[20%] min-w-[150px]">
+                  Bio
+                </TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[20%] min-w-[150px]">
+                  Email
+                </TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[25%] min-w-[200px]">
+                  Video Title
+                </TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[10%] min-w-[80px]">
+                  Views
+                </TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[60px]">
+                  Link
+                </TableHead>
+                <TableHead className="px-6 py-3 text-right text-xs font-medium text-zinc-400 uppercase tracking-wider w-[80px]">
+                  Save
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody className="divide-y divide-zinc-800">
-              {currentCreators.map((creator, index) => {
+              {currentRows.map(({ raw: creator, id: rowId, snapshot }, index) => {
                 // 🔍 INITIAL DATA DEBUG: Log the raw creator data structure
                 if (index === 0) {
                   console.group('📋 [DATA-STRUCTURE] First creator data sample');
@@ -607,8 +724,25 @@ const SearchResults = ({ searchData }) => {
                 });
                 console.groupEnd();
 
+                const isSelected = !!selectedCreators[rowId];
+
                 return (
-                  <TableRow key={index} className="table-row">
+                  <TableRow
+                    key={rowId}
+                    className={cn(
+                      "table-row transition-colors",
+                      isSelected ? "bg-emerald-500/5" : undefined
+                    )}
+                  >
+                    <TableCell className="px-4 py-4 w-12 align-middle">
+                      <div className="flex h-full items-center justify-center">
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => toggleSelection(rowId, snapshot)}
+                          aria-label={`Select ${snapshot.handle}`}
+                        />
+                      </div>
+                    </TableCell>
                     <TableCell className="px-6 py-4">
                       <Avatar className="w-10 h-10">
                         <AvatarImage
@@ -744,6 +878,15 @@ const SearchResults = ({ searchData }) => {
                           View
                         </a>
                       )}
+                    </TableCell>
+                    <TableCell className="px-6 py-4 text-right">
+                      <AddToListButton
+                        creators={[snapshot]}
+                        buttonLabel=""
+                        variant="ghost"
+                        size="icon"
+                        className="text-zinc-400 hover:text-emerald-300"
+                      />
                     </TableCell>
                   </TableRow>
                 );

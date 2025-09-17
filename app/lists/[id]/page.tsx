@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
+import { createPortal } from 'react-dom';
+import { useParams, useRouter } from 'next/navigation';
 import {
   DndContext,
   DragOverlay,
@@ -60,7 +61,6 @@ type CreatorListSummary = {
   id: string;
   name: string;
   description: string | null;
-  privacy: string;
   type: string;
   stats: Record<string, unknown>;
   tags: string[];
@@ -88,16 +88,21 @@ type ListDetail = {
 
 type ColumnState = Record<string, CreatorListItem[]>;
 
-export default function ListDetailPage({ params }: { params: { id: string } }) {
+export default function ListDetailPage() {
   const router = useRouter();
+  const params = useParams<{ id: string }>();
+  const listId = params?.id;
   const [detail, setDetail] = useState<ListDetail | null>(null);
   const [columns, setColumns] = useState<ColumnState>({});
   const [loading, setLoading] = useState(true);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [savingOrder, setSavingOrder] = useState(false);
   const [editingMeta, setEditingMeta] = useState(false);
-  const [metaForm, setMetaForm] = useState({ name: '', description: '', privacy: 'private', type: 'custom' });
+  const [metaForm, setMetaForm] = useState({ name: '', description: '', type: 'custom' });
   const [inviteEmail, setInviteEmail] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletePending, setDeletePending] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -106,11 +111,19 @@ export default function ListDetailPage({ params }: { params: { id: string } }) {
   );
 
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!listId) {
+      return;
+    }
+
     let mounted = true;
     const load = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/lists/${params.id}`);
+        const res = await fetch(`/api/lists/${listId}`);
         if (!res.ok) {
           if (res.status === 404) {
             toast.error('List not found');
@@ -126,7 +139,6 @@ export default function ListDetailPage({ params }: { params: { id: string } }) {
           setMetaForm({
             name: data.list.name,
             description: data.list.description ?? '',
-            privacy: data.list.privacy,
             type: data.list.type,
           });
         }
@@ -141,7 +153,7 @@ export default function ListDetailPage({ params }: { params: { id: string } }) {
     return () => {
       mounted = false;
     };
-  }, [params.id, router]);
+  }, [listId, router]);
 
   const allBuckets = useMemo(() => {
     const defaults = ['backlog', 'shortlist', 'contacted', 'booked'];
@@ -208,7 +220,8 @@ export default function ListDetailPage({ params }: { params: { id: string } }) {
           updates.push({ id: item.id, bucket, position: index });
         });
       }
-      await fetch(`/api/lists/${params.id}/items`, {
+      if (!listId) return;
+      await fetch(`/api/lists/${listId}/items`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items: updates }),
@@ -253,6 +266,60 @@ export default function ListDetailPage({ params }: { params: { id: string } }) {
       toast.error((error as Error).message);
     }
   };
+
+  const handleDelete = async () => {
+    if (!detail) return;
+    try {
+      setDeletePending(true);
+      const res = await fetch(`/api/lists/${detail.list.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        throw new Error(payload?.error ?? 'Unable to delete list');
+      }
+      toast.success('List deleted');
+      setShowDeleteConfirm(false);
+      setDeletePending(false);
+      router.push('/lists');
+  } catch (error) {
+    console.error('[LIST-DELETE]', error);
+    toast.error((error as Error).message);
+    setDeletePending(false);
+  }
+  };
+
+  const deleteModal = isMounted && showDeleteConfirm
+    ? createPortal(
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+          <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950/95 p-6 shadow-[0_30px_60px_rgba(0,0,0,0.45)]">
+            <h2 className="text-lg font-semibold text-zinc-100">Delete this list?</h2>
+            <p className="mt-2 text-sm text-zinc-400">
+              This will permanently remove <span className="font-medium text-zinc-200">{detail?.list.name}</span> and all saved creators inside it.
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (deletePending) return;
+                  setShowDeleteConfirm(false);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={deletePending}
+                className="min-w-[96px]"
+              >
+                {deletePending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Delete
+              </Button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )
+    : null;
 
   const handleExport = async (format: string) => {
     if (!detail) return;
@@ -331,7 +398,6 @@ export default function ListDetailPage({ params }: { params: { id: string } }) {
                   </div>
                 )}
                 <div className="flex flex-wrap gap-2 text-xs text-zinc-400">
-                  <Badge className="bg-zinc-800/80 text-zinc-200">{detail.list.privacy.toUpperCase()}</Badge>
                   <Badge className="bg-emerald-500/10 border border-emerald-500/40 text-emerald-200">
                     {detail.list.creatorCount} creators
                   </Badge>
@@ -360,6 +426,9 @@ export default function ListDetailPage({ params }: { params: { id: string } }) {
                     </Button>
                     <Button size="sm" variant="outline" onClick={handleDuplicate}>
                       <MoreHorizontal className="mr-2 h-4 w-4" /> Duplicate
+                    </Button>
+                    <Button size="sm" variant="destructive" onClick={() => setShowDeleteConfirm(true)}>
+                      Delete
                     </Button>
                   </>
                 )}
@@ -460,6 +529,7 @@ export default function ListDetailPage({ params }: { params: { id: string } }) {
           </Card>
         </aside>
       </div>
+      {deleteModal}
     </DashboardLayout>
   );
 }
@@ -593,4 +663,3 @@ function findBucketForItem(columns: ColumnState, id: string) {
   }
   return 'backlog';
 }
-

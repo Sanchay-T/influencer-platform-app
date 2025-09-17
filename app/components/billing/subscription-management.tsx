@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ErrorBoundary } from '../error-boundary';
 import { useComponentLogger, useUserActionLogger } from '@/lib/logging/react-logger';
@@ -57,15 +57,9 @@ function SubscriptionManagementContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [usageInfo, setUsageInfo] = useState<any>(null);
-  // Removed manual sync - should be automatic via checkout success
+  const [cacheTtlMs, setCacheTtlMs] = useState<number | null>(null);
 
-  useEffect(() => {
-    fetchSubscriptionData();
-  }, []);
-
-  // Removed manual sync function - billing should update automatically via checkout success
-
-  const fetchSubscriptionData = async () => {
+  const fetchSubscriptionData = useCallback(async () => {
     try {
       setIsLoading(true);
       setError('');
@@ -79,6 +73,8 @@ function SubscriptionManagementContent() {
         throw new Error('Failed to fetch billing status');
       }
       const billingData = await billingResponse.json();
+      const ttlHeader = billingResponse.headers.get('x-cache-ttl-ms');
+      setCacheTtlMs(ttlHeader ? Number(ttlHeader) : null);
       
       console.log(`📊 [SUBSCRIPTION-TEST] ${fetchTestId} - Billing data received:`, {
         currentPlan: billingData.currentPlan,
@@ -123,7 +119,24 @@ function SubscriptionManagementContent() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  // Removed manual sync - should be automatic via checkout success
+
+  useEffect(() => {
+    fetchSubscriptionData();
+  }, [fetchSubscriptionData]);
+
+  useEffect(() => {
+    if (cacheTtlMs == null) return;
+    const ttlMs = cacheTtlMs || 30_000;
+    const timer = setTimeout(() => {
+      fetchSubscriptionData();
+    }, ttlMs);
+    return () => clearTimeout(timer);
+  }, [cacheTtlMs, fetchSubscriptionData]);
+
+  // Removed manual sync function - billing should update automatically via checkout success
 
   const getPlanIcon = (plan: string) => {
     switch (plan) {

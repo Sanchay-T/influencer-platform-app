@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ListTree, Plus, Shield, Users } from 'lucide-react';
+import { Loader2, ListTree, Plus, Users } from 'lucide-react';
 import clsx from 'clsx';
 import toast from 'react-hot-toast';
 
@@ -20,18 +20,11 @@ const listTypeOptions = [
   { value: 'custom', label: 'Custom' },
 ];
 
-const privacyLabels: Record<string, string> = {
-  private: 'Private',
-  public: 'Public',
-  workspace: 'Workspace',
-};
-
 type ListSummary = {
   id: string;
   name: string;
   description: string | null;
   type: string;
-  privacy: string;
   tags: string[];
   stats: Record<string, unknown>;
   creatorCount: number;
@@ -51,14 +44,13 @@ export default function ListsIndexPage() {
     name: '',
     description: '',
     type: 'custom',
-    privacy: 'private',
   });
 
   const filteredLists = useMemo(() => {
     if (!search.trim()) return lists;
     const query = search.toLowerCase();
     return lists.filter((list) =>
-      [list.name, list.description, list.type, list.privacy]
+      [list.name, list.description, list.type]
         .filter(Boolean)
         .some((value) => value!.toString().toLowerCase().includes(query))
     );
@@ -103,7 +95,6 @@ export default function ListsIndexPage() {
           name: form.name,
           description: form.description,
           type: form.type,
-          privacy: form.privacy,
         }),
       });
       if (!res.ok) {
@@ -112,7 +103,7 @@ export default function ListsIndexPage() {
       }
       const data = await res.json();
       setLists((prev) => [data.list, ...prev]);
-      setForm({ name: '', description: '', type: form.type, privacy: form.privacy });
+      setForm({ name: '', description: '', type: form.type });
       toast.success('List created');
     } catch (error) {
       console.error(error);
@@ -149,10 +140,10 @@ export default function ListsIndexPage() {
         <Card className="bg-zinc-900/80 border border-zinc-700/40">
           <CardHeader>
             <CardTitle className="text-sm text-zinc-300">Quick create</CardTitle>
-            <CardDescription className="text-zinc-500">Give your list a name, choose a type, and decide who can see it.</CardDescription>
+            <CardDescription className="text-zinc-500">Name your list, choose a type, and jot a quick description.</CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="md:col-span-2 space-y-2">
+          <CardContent className="grid grid-cols-1 md:grid-cols-6 gap-4">
+            <div className="md:col-span-3 space-y-2">
               <label className="text-xs uppercase tracking-wide text-zinc-500">List name</label>
               <Input
                 value={form.name}
@@ -162,9 +153,9 @@ export default function ListsIndexPage() {
               />
               {createError && <p className="text-xs text-red-500">{createError}</p>}
             </div>
-            <div className="space-y-2">
+            <div className="md:col-span-3 space-y-2">
               <label className="text-xs uppercase tracking-wide text-zinc-500">List type</label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {listTypeOptions.map((option) => (
                   <button
                     key={option.value}
@@ -182,28 +173,7 @@ export default function ListsIndexPage() {
                 ))}
               </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-xs uppercase tracking-wide text-zinc-500">Privacy</label>
-              <div className="grid grid-cols-1 gap-2">
-                {['private', 'workspace', 'public'].map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => setForm((prev) => ({ ...prev, privacy: value }))}
-                    className={clsx(
-                      'rounded-md border px-3 py-2 text-sm transition-all text-left flex items-center gap-2',
-                      form.privacy === value
-                        ? 'border-sky-500/70 bg-sky-500/10 text-sky-200'
-                        : 'border-zinc-700/40 bg-zinc-950/40 text-zinc-400 hover:text-zinc-200'
-                    )}
-                  >
-                    <Shield className="h-4 w-4" />
-                    {privacyLabels[value] ?? value}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="md:col-span-4 space-y-2">
+            <div className="md:col-span-6 space-y-2">
               <label className="text-xs uppercase tracking-wide text-zinc-500">Description</label>
               <Input
                 value={form.description}
@@ -246,7 +216,7 @@ export default function ListsIndexPage() {
                       )}
                     </div>
                     <Badge variant="secondary" className="bg-zinc-800/80 text-zinc-200">
-                      {privacyLabels[list.privacy] ?? list.privacy}
+                      {list.type}
                     </Badge>
                   </div>
                 </CardHeader>

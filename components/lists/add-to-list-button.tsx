@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -45,13 +45,39 @@ const listTypeOptions = [
   { value: 'custom', label: 'Custom' },
 ];
 
-const privacyOptions = [
-  { value: 'private', label: 'Private', helper: 'Only visible to you' },
-  { value: 'workspace', label: 'Workspace', helper: 'Share with teammates' },
-  { value: 'public', label: 'Public', helper: 'Generate a public link' },
-];
+type ButtonVariant = ComponentProps<typeof Button>['variant'];
+type ButtonSize = ComponentProps<typeof Button>['size'];
 
-export function AddToListButton({ creator }: { creator: CreatorSnapshot }) {
+interface AddToListButtonProps {
+  creator?: CreatorSnapshot;
+  creators?: CreatorSnapshot[];
+  buttonLabel?: string;
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  className?: string;
+  children?: ReactNode;
+  disabled?: boolean;
+  onAdded?: (listId: string) => void;
+}
+
+export function AddToListButton({
+  creator,
+  creators,
+  buttonLabel,
+  variant = 'outline',
+  size = 'sm',
+  className,
+  children,
+  disabled,
+  onAdded,
+}: AddToListButtonProps) {
+  const creatorsToAdd = useMemo(() => {
+    if (Array.isArray(creators) && creators.length) {
+      return creators;
+    }
+    return creator ? [creator] : [];
+  }, [creator, creators]);
+
   const [open, setOpen] = useState(false);
   const [lists, setLists] = useState<ListSummary[]>([]);
   const [selectedList, setSelectedList] = useState('');
@@ -61,7 +87,7 @@ export function AddToListButton({ creator }: { creator: CreatorSnapshot }) {
   const [newListName, setNewListName] = useState('');
   const [filter, setFilter] = useState('');
   const [newListType, setNewListType] = useState('custom');
-  const [newListPrivacy, setNewListPrivacy] = useState('private');
+  const [showCreate, setShowCreate] = useState(false);
   const overlayRef = useRef<HTMLDivElement | null>(null);
 
   const filteredLists = useMemo(() => {
@@ -75,12 +101,20 @@ export function AddToListButton({ creator }: { creator: CreatorSnapshot }) {
     [lists, selectedList]
   );
 
+  const resolvedLabel = buttonLabel ?? (creatorsToAdd.length > 1 ? 'Add creators' : 'Add to list');
+  const buttonContent = children ?? (
+    <>
+      <Plus className={cn('h-4 w-4', resolvedLabel ? 'mr-2' : '')} />
+      {resolvedLabel}
+    </>
+  );
+
   const resetPanel = useCallback(() => {
     setSelectedList('');
     setFilter('');
     setNewListName('');
     setNewListType('custom');
-    setNewListPrivacy('private');
+    setShowCreate(false);
   }, []);
 
   useEffect(() => {
@@ -104,13 +138,28 @@ export function AddToListButton({ creator }: { creator: CreatorSnapshot }) {
 
   useEffect(() => {
     if (!open) return;
+    setShowCreate(false);
+    if (!loadingLists && lists.length === 0) {
+      setShowCreate(true);
+    }
+  }, [open, loadingLists, lists.length]);
+
+  useEffect(() => {
+    if (!open) return;
 
     const handleClick = (event: MouseEvent) => {
-      if (!overlayRef.current) return;
-      if (!overlayRef.current.contains(event.target as Node)) {
-        setOpen(false);
-        resetPanel();
+      const target = event.target as HTMLElement | null;
+      if (!overlayRef.current || !target) return;
+
+      const clickedInsideOverlay = overlayRef.current.contains(target);
+      const clickedInsideSelect = !!target.closest('[data-radix-popper-content-wrapper]');
+
+      if (clickedInsideOverlay || clickedInsideSelect) {
+        return;
       }
+
+      setOpen(false);
+      resetPanel();
     };
 
     const handleKeydown = (event: KeyboardEvent) => {
@@ -136,7 +185,7 @@ export function AddToListButton({ creator }: { creator: CreatorSnapshot }) {
       const res = await fetch('/api/lists', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newListName, privacy: newListPrivacy, type: newListType }),
+        body: JSON.stringify({ name: newListName, type: newListType }),
       });
       if (!res.ok) throw new Error('Unable to create list');
       const data = await res.json();
@@ -159,47 +208,94 @@ export function AddToListButton({ creator }: { creator: CreatorSnapshot }) {
     }
     setAdding(true);
     try {
+      const payload = creatorsToAdd.map((entry) => ({
+        platform: entry.platform,
+        externalId: entry.externalId,
+        handle: entry.handle,
+        displayName: entry.displayName,
+        avatarUrl: entry.avatarUrl,
+        url: entry.url,
+        followers: entry.followers,
+        engagementRate: entry.engagementRate,
+        category: entry.category,
+        metadata: entry.metadata ?? {},
+      }));
+
       const res = await fetch(`/api/lists/${selectedList}/items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          creators: [
-            {
-              platform: creator.platform,
-              externalId: creator.externalId,
-              handle: creator.handle,
-              displayName: creator.displayName,
-              avatarUrl: creator.avatarUrl,
-              url: creator.url,
-              followers: creator.followers,
-              engagementRate: creator.engagementRate,
-              category: creator.category,
-              metadata: creator.metadata ?? {},
-            },
-          ],
-        }),
+        body: JSON.stringify({ creators: payload }),
       });
-      if (!res.ok) throw new Error('Unable to add creator');
-      toast.success(
-        selectedListSummary ? `Added to “${selectedListSummary.name}”` : 'Creator saved to list'
+      const responseBody = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(responseBody?.error ?? 'Unable to add creator');
+      }
+
+      const addedCount = Number(responseBody?.added ?? creatorsToAdd.length ?? 0);
+
+      setLists((prev) =>
+        prev.map((list) =>
+          list.id === selectedList
+            ? { ...list, creatorCount: list.creatorCount + addedCount }
+            : list
+        )
       );
+
+      const successLabel = selectedListSummary?.name;
+      if (addedCount === 0) {
+        toast((successLabel ? `Already saved in “${successLabel}”` : 'Creator already saved'), {
+          icon: 'ℹ️',
+        });
+      } else if (successLabel) {
+        toast.success(
+          addedCount > 1
+            ? `Added ${addedCount} creators to “${successLabel}”`
+            : `Added to “${successLabel}”`
+        );
+      } else {
+        toast.success(
+          addedCount > 1 ? 'Creators saved to list' : 'Creator saved to list'
+        );
+      }
+
+      console.debug('[AddToList] added creators', {
+        listId: selectedList,
+        added: addedCount,
+        attempted: creatorsToAdd.length,
+      });
+
+      onAdded?.(selectedList);
       setOpen(false);
       resetPanel();
     } catch (error) {
-      console.error(error);
+      console.error('[AddToList] error adding creators', error);
       toast.error((error as Error).message);
     } finally {
       setAdding(false);
     }
   };
 
+  if (!creatorsToAdd.length) {
+    return null;
+  }
+
   return (
     <div className="relative inline-block">
-      <Button variant="outline" size="sm" onClick={() => setOpen((value) => !value)}>
-        <Plus className="mr-2 h-4 w-4" /> Add to list
+      <Button
+        variant={variant}
+        size={size}
+        className={className}
+        disabled={disabled}
+        onClick={() => setOpen((value) => !value)}
+        aria-label={typeof resolvedLabel === 'string' && resolvedLabel.length === 0 ? 'Add to list' : undefined}
+      >
+        {buttonContent}
       </Button>
       {open && (
-        <Card ref={overlayRef} className="absolute z-50 mt-2 w-80 bg-zinc-950/95 border border-zinc-700/60 shadow-xl">
+        <Card
+          ref={overlayRef}
+          className="absolute right-0 z-50 mt-2 w-80 max-w-[calc(100vw-1.5rem)] origin-top-right rounded-xl bg-zinc-950/95 border border-zinc-700/60 shadow-xl"
+        >
           <CardHeader>
             <CardTitle className="text-sm text-zinc-100">Save to list</CardTitle>
           </CardHeader>
@@ -246,9 +342,6 @@ export function AddToListButton({ creator }: { creator: CreatorSnapshot }) {
                 <div className="rounded-md border border-zinc-700/60 bg-zinc-900/60 px-3 py-2 text-xs text-zinc-400">
                   <div className="flex items-center justify-between text-zinc-200">
                     <span className="font-medium">{selectedListSummary.name}</span>
-                    <span className="uppercase tracking-wide text-[10px]">
-                      {selectedListSummary.privacy}
-                    </span>
                   </div>
                   <p className="mt-1">
                     {selectedListSummary.creatorCount} creators saved · {selectedListSummary.type} list
@@ -256,53 +349,61 @@ export function AddToListButton({ creator }: { creator: CreatorSnapshot }) {
                 </div>
               )}
             </div>
-            <div className="space-y-2">
-              <p className="text-xs uppercase tracking-wide text-zinc-500">Create new</p>
-              <div className="flex gap-2">
-                <Input
-                  value={newListName}
-                  onChange={(event) => setNewListName(event.target.value)}
-                  placeholder="New list name"
-                  className="bg-zinc-900/60 border-zinc-700/50"
-                />
-                <Button size="sm" onClick={handleCreateList} disabled={creating || !newListName.trim()}>
-                  {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                </Button>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                {listTypeOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setNewListType(option.value)}
-                    className={cn(
-                      'rounded-md border px-2 py-2 text-[11px] font-medium transition-colors',
-                      newListType === option.value
-                        ? 'border-emerald-500/70 bg-emerald-500/10 text-emerald-200'
-                        : 'border-zinc-700/50 bg-zinc-900/40 text-zinc-400 hover:text-zinc-200'
-                    )}
+            <div className="space-y-3">
+              <Button
+                variant={showCreate ? 'soft' : 'outline'}
+                size="sm"
+                className="w-full justify-between"
+                onClick={() => setShowCreate((value) => !value)}
+                aria-expanded={showCreate}
+              >
+                <span>Create new list</span>
+                <Plus className={cn('h-4 w-4 transition-transform duration-200', showCreate ? 'rotate-45' : '')} />
+              </Button>
+              <div
+                className={cn(
+                  'space-y-3 overflow-hidden rounded-md border border-zinc-800/40 bg-zinc-950/70 px-3 transition-all duration-200',
+                  showCreate
+                    ? 'max-h-[520px] py-3 opacity-100'
+                    : 'max-h-0 py-0 opacity-0 pointer-events-none border-transparent'
+                )}
+              >
+                <div className="flex gap-2">
+                  <Input
+                    value={newListName}
+                    onChange={(event) => setNewListName(event.target.value)}
+                    placeholder="New list name"
+                    className="bg-zinc-900/60 border-zinc-700/50"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={handleCreateList}
+                    disabled={creating || !newListName.trim()}
+                    className="shrink-0"
                   >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-              <div className="grid grid-cols-1 gap-2">
-                {privacyOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setNewListPrivacy(option.value)}
-                    className={cn(
-                      'rounded-md border px-3 py-2 text-left text-[11px] transition-colors',
-                      newListPrivacy === option.value
-                        ? 'border-sky-500/70 bg-sky-500/10 text-sky-200'
-                        : 'border-zinc-700/50 bg-zinc-900/40 text-zinc-400 hover:text-zinc-200'
-                    )}
-                  >
-                    <span className="block font-medium uppercase tracking-wide">{option.label}</span>
-                    <span className="text-[10px] text-zinc-500">{option.helper}</span>
-                  </button>
-                ))}
+                    {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                  </Button>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] uppercase tracking-wide text-zinc-500">List type</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {listTypeOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setNewListType(option.value)}
+                        className={cn(
+                          'rounded-md border px-2 py-2 text-[11px] font-medium transition-colors',
+                          newListType === option.value
+                            ? 'border-emerald-500/70 bg-emerald-500/10 text-emerald-200'
+                            : 'border-zinc-700/50 bg-zinc-900/40 text-zinc-400 hover:text-zinc-200'
+                        )}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
             <div className="flex justify-end gap-2">

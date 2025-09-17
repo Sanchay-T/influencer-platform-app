@@ -17,20 +17,21 @@ function handleError(error: unknown) {
   return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
 }
 
-export async function GET(_: Request, { params }: { params: { id: string } }) {
+export async function GET(_: Request, context: { params: Promise<{ id: string }> }) {
   const { userId } = await auth();
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   try {
-    const detail = await getListDetail(userId, params.id);
+    const { id } = await context.params;
+    const detail = await getListDetail(userId, id);
     return NextResponse.json(detail);
   } catch (error) {
     return handleError(error);
   }
 }
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   const { userId } = await auth();
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -38,20 +39,22 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   try {
     const body = await request.json();
-    const updated = await updateList(userId, params.id, body);
+    const { id } = await context.params;
+    const updated = await updateList(userId, id, body);
     return NextResponse.json({ list: updated });
   } catch (error) {
     return handleError(error);
   }
 }
 
-export async function DELETE(_: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_: Request, context: { params: Promise<{ id: string }> }) {
   const { userId } = await auth();
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   try {
-    await deleteList(userId, params.id);
+    const { id } = await context.params;
+    await deleteList(userId, id);
     return NextResponse.json({ ok: true });
   } catch (error) {
     return handleError(error);

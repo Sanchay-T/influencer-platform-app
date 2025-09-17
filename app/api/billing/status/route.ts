@@ -6,6 +6,8 @@ import { getUserProfile, createUser } from '@/lib/db/queries/user-queries';
 import { eq } from 'drizzle-orm';
 import { BillingService, type PlanKey } from '@/lib/services/billing-service';
 
+const CACHE_TTL_MS = 30_000; // mirror BillingService cache window
+
 // Helper function for billing amounts
 function getBillingAmount(plan: PlanKey): number {
   const amounts = {
@@ -40,7 +42,7 @@ export async function GET(request: NextRequest) {
     
     try {
       // Get complete billing state from central service
-      const billingState = await BillingService.getBillingState(userId);
+      const { state: billingState, cacheHit } = await BillingService.getBillingStateWithCache(userId);
       
       // Transform to API response format
       const response = {
@@ -121,6 +123,8 @@ export async function GET(request: NextRequest) {
       res.headers.set('x-request-id', reqId);
       res.headers.set('x-started-at', ts);
       res.headers.set('x-duration-ms', String(duration));
+      res.headers.set('x-cache-hit', cacheHit ? 'true' : 'false');
+      res.headers.set('x-cache-ttl-ms', String(CACHE_TTL_MS));
       console.log(`🟣 [BILLING-STATUS:${reqId}] END duration=${duration}ms`);
       return res;
       
@@ -146,7 +150,7 @@ export async function GET(request: NextRequest) {
       });
       
       // Retry with central service
-      const billingState = await BillingService.getBillingState(userId);
+      const { state: billingState } = await BillingService.getBillingStateWithCache(userId, { skipCache: true });
       
       // Transform billing state to response format
       const response = {
@@ -173,6 +177,8 @@ export async function GET(request: NextRequest) {
       const res = NextResponse.json(response);
       res.headers.set('x-request-id', reqId);
       res.headers.set('x-duration-ms', String(duration));
+      res.headers.set('x-cache-hit', 'false');
+      res.headers.set('x-cache-ttl-ms', String(CACHE_TTL_MS));
       return res;
     }
 

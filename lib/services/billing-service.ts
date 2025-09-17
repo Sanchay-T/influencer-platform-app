@@ -22,6 +22,19 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-06-20',
 });
 
+const CACHE_TTL_MS = 30_000; // 30 seconds
+
+interface CachedBillingState {
+  state: BillingState;
+  timestamp: number;
+}
+
+const billingCache = new Map<string, CachedBillingState>();
+
+function invalidateCache(userId: string) {
+  billingCache.delete(userId);
+}
+
 // ═══════════════════════════════════════════════════════════════
 // TYPES & INTERFACES
 // ═══════════════════════════════════════════════════════════════
@@ -140,8 +153,21 @@ export class BillingService {
    * ★ PRIMARY METHOD: Get Complete Billing State
    * Used by ALL components, APIs, and services
    */
-  static async getBillingState(userId: string): Promise<BillingState> {
-    console.log(`🔍 [BILLING-SERVICE] getBillingState called for user: ${userId}`);
+  static async getBillingStateWithCache(
+    userId: string,
+    options?: { skipCache?: boolean }
+  ): Promise<{ state: BillingState; cacheHit: boolean }> {
+    const skipCache = options?.skipCache ?? false;
+
+    if (!skipCache) {
+      const cached = billingCache.get(userId);
+      if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+        console.log(`🔁 [BILLING-SERVICE] Cache hit for user ${userId}`);
+        return { state: cached.state, cacheHit: true };
+      }
+    }
+
+    console.log(`🔍 [BILLING-SERVICE] Fetching billing state for user: ${userId}`);
     const userProfile = await getUserProfile(userId);
     console.log(`📊 [BILLING-SERVICE] getUserProfile result:`, userProfile ? 'FOUND' : 'NULL');
     
@@ -176,7 +202,7 @@ export class BillingService {
     const hasActiveTrial = userProfile.trialStatus === 'active' && !trialTimeDisplay.isExpired;
     const isActive = hasActiveSubscription || hasActiveTrial;
     
-    return {
+    const state: BillingState = {
       userId,
       currentPlan: userProfile.currentPlan as PlanKey || 'free',
       intendedPlan: userProfile.intendedPlan as PlanKey,
@@ -202,6 +228,14 @@ export class BillingService {
       canAccessFeatures: isActive,
       lastSyncTime: new Date()
     };
+
+    billingCache.set(userId, { state, timestamp: Date.now() });
+    return { state, cacheHit: false };
+  }
+
+  static async getBillingState(userId: string): Promise<BillingState> {
+    const { state } = await this.getBillingStateWithCache(userId);
+    return state;
   }
   
   /**
@@ -252,7 +286,8 @@ export class BillingService {
     // Update database IMMEDIATELY
     try {
       await updateUserProfile(userId, updateData);
-      console.log(`✅ [BILLING-SERVICE-TEST] ${billingTestId} - updateUserProfile completed successfully`);
+    console.log(`✅ [BILLING-SERVICE-TEST] ${billingTestId} - updateUserProfile completed successfully`);
+    invalidateCache(userId);
     } catch (updateError) {
       console.error(`❌ [BILLING-SERVICE-TEST] ${billingTestId} - updateUserProfile FAILED:`, updateError);
       throw updateError;
@@ -340,6 +375,7 @@ export class BillingService {
         planCampaignsLimit: PLAN_CONFIGS[stripePlan].limits.campaigns,
         planCreatorsLimit: PLAN_CONFIGS[stripePlan].limits.creators,
       });
+      invalidateCache(userId);
       
       await this.logBillingEvent(userId, 'state_reconciled', {
         changes,
@@ -361,7 +397,7 @@ export class BillingService {
     requiredAmount?: number
   ): Promise<{ allowed: boolean; reason?: string; upgradeRequired?: boolean }> {
     
-    const state = await this.getBillingState(userId);
+    const { state } = await this.getBillingStateWithCache(userId);
     
     if (!state.isActive) {
       return {
