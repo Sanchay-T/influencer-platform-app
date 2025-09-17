@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, User, Loader2 } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { ExternalLink, User, Loader2, LayoutList, LayoutGrid, Table2, MailCheck } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -30,6 +31,147 @@ import {
 import SearchProgress from "./search-progress";
 import Breadcrumbs from "../../breadcrumbs";
 
+const VIEW_MODES = ["table", "list", "gallery"];
+const VIEW_MODE_META = {
+  table: { label: "Table", Icon: Table2 },
+  list: { label: "List", Icon: LayoutList },
+  gallery: { label: "Gallery", Icon: LayoutGrid },
+};
+
+const hasContactEmail = (creator) => {
+  if (!creator) return false;
+
+  const emailArrays = [
+    creator?.creator?.emails,
+    creator?.emails,
+    creator?.contact?.emails,
+  ].filter((value) => Array.isArray(value));
+
+  for (const list of emailArrays) {
+    if (list.some((email) => typeof email === "string" && email.trim().length > 0)) {
+      return true;
+    }
+  }
+
+  const emailCandidates = [
+    creator?.creator?.email,
+    creator?.email,
+    creator?.contact?.email,
+  ];
+
+  return emailCandidates.some((email) => typeof email === "string" && email.trim().length > 0);
+};
+
+const extractEmails = (creator) => {
+  if (!creator) return [];
+
+  const collected = new Set();
+
+  const candidateLists = [
+    creator?.creator?.emails,
+    creator?.emails,
+    creator?.contact?.emails,
+  ];
+
+  for (const maybeList of candidateLists) {
+    if (Array.isArray(maybeList)) {
+      for (const email of maybeList) {
+        if (typeof email === "string" && email.trim().length > 0) {
+          collected.add(email.trim());
+        }
+      }
+    }
+  }
+
+  const fallbackCandidates = [
+    creator?.creator?.email,
+    creator?.email,
+    creator?.contact?.email,
+  ];
+
+  for (const email of fallbackCandidates) {
+    if (typeof email === "string" && email.trim().length > 0) {
+      collected.add(email.trim());
+    }
+  }
+
+  return Array.from(collected);
+};
+
+const formatFollowers = (value) => {
+  if (value == null) return null;
+
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return null;
+
+  if (Math.abs(numeric) >= 1_000_000) {
+    return `${(numeric / 1_000_000).toFixed(1)}M`;
+  }
+
+  if (Math.abs(numeric) >= 1_000) {
+    return `${(numeric / 1_000).toFixed(1)}K`;
+  }
+
+  return Math.round(numeric).toLocaleString();
+};
+
+const dedupeCreators = (creators = []) => {
+  const seen = new Set();
+  const unique = [];
+
+  for (const creator of creators) {
+    if (!creator) continue;
+
+    const keyParts = [
+      creator?.creator?.channelId,
+      creator?.creator?.id,
+      creator?.creator?.uniqueId,
+      creator?.creator?.username,
+      creator?.channelId,
+      creator?.id,
+      creator?.uniqueId,
+      creator?.username,
+      creator?.video?.url,
+    ];
+
+    const key = keyParts.find((part) => typeof part === "string" && part.trim().length > 0);
+    const normalizedKey = key ? key.trim().toLowerCase() : JSON.stringify(keyParts);
+
+    if (seen.has(normalizedKey)) continue;
+
+    seen.add(normalizedKey);
+    unique.push(creator);
+  }
+
+  return unique;
+};
+
+const resolveMediaPreview = (creator, snapshot) => {
+  if (!creator) return snapshot?.avatarUrl ?? null;
+
+  const video = creator.video || creator.latestVideo || creator.content;
+  const sources = [
+    video?.cover,
+    video?.coverUrl,
+    video?.thumbnail,
+    video?.thumbnailUrl,
+    video?.thumbnail_url,
+    video?.image,
+    creator?.thumbnailUrl,
+    creator?.thumbnail,
+    creator?.previewImage,
+    snapshot?.avatarUrl,
+  ];
+
+  for (const source of sources) {
+    if (typeof source === "string" && source.trim().length > 0) {
+      return source;
+    }
+  }
+
+  return snapshot?.avatarUrl ?? null;
+};
+
 const SearchResults = ({ searchData }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isPageLoading, setIsPageLoading] = useState(false);
@@ -40,6 +182,8 @@ const SearchResults = ({ searchData }) => {
   const [enhancedMeta, setEnhancedMeta] = useState(null);
   const [progressInfo, setProgressInfo] = useState(null);
   const [selectedCreators, setSelectedCreators] = useState({});
+  const [viewMode, setViewMode] = useState("table");
+  const [showEmailOnly, setShowEmailOnly] = useState(false);
   const itemsPerPage = 10;
 
   // Normalize platform from either selectedPlatform (wizard) or platform (reopen flow)
@@ -49,8 +193,27 @@ const SearchResults = ({ searchData }) => {
     setSelectedCreators({});
   }, [searchData?.jobId]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [showEmailOnly, viewMode]);
+
   const selectedSnapshots = useMemo(() => Object.values(selectedCreators), [selectedCreators]);
   const selectionCount = selectedSnapshots.length;
+
+  const filteredCreators = useMemo(() => {
+    if (!showEmailOnly) return creators;
+    return creators.filter((creator) => hasContactEmail(creator));
+  }, [creators, showEmailOnly]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(filteredCreators.length / itemsPerPage));
+    if (currentPage > totalPages) {
+      setCurrentPage(1);
+    }
+  }, [filteredCreators.length, currentPage, itemsPerPage]);
+
+  const totalResults = filteredCreators.length;
+  const totalPages = Math.max(1, Math.ceil(Math.max(totalResults, 1) / itemsPerPage));
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -86,8 +249,9 @@ const SearchResults = ({ searchData }) => {
 
         // Debug logs removed - data flow working correctly
 
-        if (allCreators.length > 0) {
-          setCreators(allCreators);
+        const dedupedCreators = dedupeCreators(allCreators);
+        setCreators(dedupedCreators);
+        if (dedupedCreators.length > 0) {
           setIsLoading(false);
         }
       } catch (error) {
@@ -186,8 +350,8 @@ const SearchResults = ({ searchData }) => {
   }, [platformNormalized]);
 
   const currentCreators = useMemo(
-    () => creators.slice(startIndex, endIndex),
-    [creators, startIndex, endIndex]
+    () => filteredCreators.slice(startIndex, endIndex),
+    [filteredCreators, startIndex, endIndex]
   );
 
   const currentRows = useMemo(() => {
@@ -297,7 +461,7 @@ const SearchResults = ({ searchData }) => {
   const handleSearchComplete = (data) => {
     if (data && data.status === "completed") {
       // Use creators directly from data.creators (already processed with bio/email)
-      const allCreators = data.creators || [];
+      const allCreators = dedupeCreators(data.creators || []);
       if (allCreators.length > 0) {
         setCreators(allCreators);
         setIsLoading(false);
@@ -316,7 +480,7 @@ const SearchResults = ({ searchData }) => {
               result.results?.reduce((acc, res) => {
                 return [...acc, ...(res.creators || [])];
               }, []) || [];
-            setCreators(foundCreators);
+            setCreators(dedupeCreators(foundCreators));
             setIsLoading(false);
             setStillProcessing(false);
           })
@@ -343,18 +507,8 @@ const SearchResults = ({ searchData }) => {
 
             // Deduplicate by creator uniqueId/username
             setCreators((prev) => {
-              const map = new Map();
-              for (const c of prev) {
-                const id = c?.creator?.uniqueId || c?.creator?.username || '';
-                if (id) map.set(id, c);
-              }
-              for (const c of incoming) {
-                const id = c?.creator?.uniqueId || c?.creator?.username || '';
-                if (id && !map.has(id)) map.set(id, c);
-              }
-              const merged = Array.from(map.values());
-              if (merged.length > 0) {
-                // Start rendering results immediately
+              const merged = dedupeCreators([...prev, ...incoming]);
+              if (merged.length > prev.length) {
                 setIsLoading(false);
                 setStillProcessing(true);
               }
@@ -369,13 +523,193 @@ const SearchResults = ({ searchData }) => {
     );
   }
 
-  if (!creators.length) {
+  if (!filteredCreators.length) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
         <div className="text-center text-zinc-400">
-          <p>No creators found matching your criteria</p>
-          <p className="text-sm mt-2">Try adjusting your search keywords</p>
+          <p>
+            {showEmailOnly
+              ? "No creators with a contact email match your filters"
+              : "No creators found matching your criteria"}
+          </p>
+          <p className="text-sm mt-2">
+            {showEmailOnly
+              ? "Try disabling the email filter or rerun your search"
+              : "Try adjusting your search keywords"}
+          </p>
         </div>
+        {viewMode === "list" && (
+          <div className="space-y-4 p-4 md:p-6">
+            {currentRows.map(({ id, snapshot, raw }) => {
+              const emails = extractEmails(raw);
+              const preview = resolveMediaPreview(raw, snapshot);
+              const profileUrl = renderProfileLink(raw);
+
+              return (
+                <Card key={id} className="border border-zinc-800 bg-zinc-900/50">
+                  <div className="flex flex-col gap-4 p-4 md:flex-row md:items-start md:gap-6">
+                    <div className="flex items-center gap-4 md:w-1/3">
+                      <Avatar className="h-14 w-14">
+                        {preview ? (
+                          <AvatarImage
+                            src={preview}
+                            alt={snapshot.displayName ?? snapshot.handle}
+                            onLoad={(e) => handleImageLoad(e, snapshot.handle)}
+                            onError={(e) => handleImageError(e, snapshot.handle, preview)}
+                            onLoadStart={(e) => handleImageStart(e, snapshot.handle)}
+                          />
+                        ) : null}
+                        <AvatarFallback className="bg-zinc-800 text-zinc-200">
+                          {snapshot.handle.slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <a
+                            href={profileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-medium text-zinc-100 hover:text-pink-300 hover:underline"
+                          >
+                            {snapshot.displayName || snapshot.handle}
+                          </a>
+                          <Badge variant="outline" className="border-zinc-700 bg-zinc-900/80 text-xs text-zinc-300">
+                            {snapshot.platform?.toUpperCase() ?? ""}
+                          </Badge>
+                        </div>
+                        <div className="flex flex-wrap gap-3 text-xs text-zinc-400">
+                          {snapshot.followers != null && (
+                            <span>{formatFollowers(snapshot.followers)} followers</span>
+                          )}
+                          {snapshot.engagementRate != null && (
+                            <span>{snapshot.engagementRate}% ER</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex-1 space-y-3 text-sm text-zinc-300">
+                      <p>
+                        {raw?.creator?.bio || raw?.bio || raw?.description || "No bio available"}
+                      </p>
+                      {raw?.video?.description && (
+                        <div className="text-xs text-zinc-500">
+                          <span className="uppercase tracking-wide text-zinc-400">Latest content:</span>{" "}
+                          {raw.video.description}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-col justify-between gap-3 md:w-1/4">
+                      <div className="space-y-2 text-sm text-zinc-300">
+                        <p className="font-medium text-zinc-200">Contact</p>
+                        {emails.length ? (
+                          emails.map((email) => (
+                            <a
+                              key={email}
+                              href={`mailto:${email}`}
+                              className="block truncate text-pink-400 hover:text-pink-300 hover:underline"
+                            >
+                              {email}
+                            </a>
+                          ))
+                        ) : (
+                          <span className="text-zinc-500">No email</span>
+                        )}
+                      </div>
+                      <AddToListButton
+                        creator={snapshot}
+                        buttonLabel="Save to list"
+                        variant="secondary"
+                        size="sm"
+                      />
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+        {viewMode === "gallery" && (
+          <div className="grid gap-4 p-4 md:p-6 md:grid-cols-2 xl:grid-cols-3">
+            {currentRows.map(({ id, snapshot, raw }) => {
+              const emails = extractEmails(raw);
+              const preview = resolveMediaPreview(raw, snapshot);
+              const profileUrl = renderProfileLink(raw);
+
+              return (
+                <Card key={id} className="overflow-hidden border border-zinc-800 bg-zinc-900/60">
+                  <div className="relative aspect-video w-full overflow-hidden bg-zinc-800/60">
+                    {preview ? (
+                      <img
+                        src={preview}
+                        alt={snapshot.displayName ?? snapshot.handle}
+                        className="h-full w-full object-cover"
+                        onLoad={(e) => handleImageLoad(e, snapshot.handle)}
+                        onError={(e) => handleImageError(e, snapshot.handle, preview)}
+                        onLoadStart={(e) => handleImageStart(e, snapshot.handle)}
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-xs text-zinc-500">
+                        No preview available
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-3 p-4 text-sm text-zinc-300">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-semibold text-zinc-100">
+                          {snapshot.displayName || snapshot.handle}
+                        </p>
+                        <p className="text-xs text-zinc-500">@{snapshot.handle}</p>
+                      </div>
+                      <Badge variant="outline" className="border-zinc-700 bg-zinc-900/80 text-xs text-zinc-300">
+                        {snapshot.platform?.toUpperCase() ?? ""}
+                      </Badge>
+                    </div>
+                    <p className="line-clamp-3 text-xs text-zinc-400">
+                      {raw?.creator?.bio || raw?.bio || raw?.description || "No bio available"}
+                    </p>
+                    <div className="flex flex-wrap gap-3 text-xs text-zinc-400">
+                      {snapshot.followers != null && (
+                        <span>{formatFollowers(snapshot.followers)} followers</span>
+                      )}
+                      {snapshot.engagementRate != null && (
+                        <span>{snapshot.engagementRate}% ER</span>
+                      )}
+                    </div>
+                    <div className="space-y-1 text-xs text-zinc-400">
+                      {emails.length ? (
+                        emails.slice(0, 2).map((email) => (
+                          <a
+                            key={email}
+                            href={`mailto:${email}`}
+                            className="block truncate text-pink-400 hover:text-pink-300 hover:underline"
+                          >
+                            {email}
+                          </a>
+                        ))
+                      ) : (
+                        <span className="text-zinc-500">No email</span>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between pt-2">
+                      <Button variant="ghost" size="sm" className="gap-1 text-zinc-300 hover:text-pink-300" asChild>
+                        <a href={profileUrl} target="_blank" rel="noopener noreferrer">
+                          Profile <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </Button>
+                      <AddToListButton
+                        creator={snapshot}
+                        buttonLabel="Save"
+                        variant="secondary"
+                        size="sm"
+                      />
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
       </div>
     );
   }
@@ -390,7 +724,7 @@ const SearchResults = ({ searchData }) => {
   };
 
   const getPageNumbers = () => {
-    const totalPages = Math.ceil(creators.length / itemsPerPage);
+    const totalPages = Math.ceil(filteredCreators.length / itemsPerPage);
     const maxVisiblePages = 5;
     const pageNumbers = [];
 
@@ -533,12 +867,50 @@ const SearchResults = ({ searchData }) => {
             </Badge>
           )}
         </div>
-      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <div className="inline-flex items-center gap-1 rounded-md border border-zinc-800 bg-zinc-900/60 p-1">
+              {VIEW_MODES.map((mode) => {
+                const meta = VIEW_MODE_META[mode];
+                const Icon = meta?.Icon ?? Table2;
+                const isActive = viewMode === mode;
+                return (
+                  <Button
+                    key={mode}
+                    type="button"
+                    variant={isActive ? "default" : "ghost"}
+                    size="sm"
+                    className={cn(
+                      "gap-2",
+                      !isActive && "text-zinc-400 hover:text-zinc-100"
+                    )}
+                    onClick={() => setViewMode(mode)}
+                    aria-pressed={isActive}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span className="hidden md:inline">{meta?.label ?? mode}</span>
+                  </Button>
+                );
+              })}
+            </div>
+            <Separator orientation="vertical" className="hidden h-6 md:block" />
+            <Button
+              type="button"
+              variant={showEmailOnly ? "default" : "outline"}
+              size="sm"
+              className="gap-2"
+              onClick={() => setShowEmailOnly((prev) => !prev)}
+              aria-pressed={showEmailOnly}
+            >
+              <MailCheck className="h-4 w-4" />
+              Email only
+            </Button>
+          </div>
         <div className="text-sm text-zinc-400">
-          Page {currentPage} of {Math.ceil(creators.length / itemsPerPage)} •
+          Page {currentPage} of {totalPages} •
           Showing {(currentPage - 1) * itemsPerPage + 1}-
-          {Math.min(currentPage * itemsPerPage, creators.length)} of{" "}
-          {creators.length}
+          {Math.min(currentPage * itemsPerPage, totalResults)} of{" "}
+          {totalResults}
         </div>
         {selectionCount > 0 && (
           <div className="flex items-center gap-2">
@@ -621,7 +993,7 @@ const SearchResults = ({ searchData }) => {
           </div>
         )}
 
-        <div className="w-full overflow-x-auto">
+        <div className={cn("w-full", viewMode === "table" ? "overflow-x-auto" : "hidden")}>
           <Table className="w-full">
             <TableHeader>
               <TableRow className="border-b border-zinc-800">
@@ -637,6 +1009,9 @@ const SearchResults = ({ searchData }) => {
                 </TableHead>
                 <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[15%] min-w-[120px]">
                   Username
+                </TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[10%] min-w-[120px]">
+                  Followers
                 </TableHead>
                 <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[20%] min-w-[150px]">
                   Bio
@@ -806,6 +1181,15 @@ const SearchResults = ({ searchData }) => {
                         <span className="text-zinc-500">N/A</span>
                       )}
                     </TableCell>
+                    <TableCell className="px-6 py-4">
+                      {snapshot.followers != null ? (
+                        <span className="text-sm text-zinc-200">
+                          {formatFollowers(snapshot.followers)}
+                        </span>
+                      ) : (
+                        <span className="text-zinc-500 text-sm">N/A</span>
+                      )}
+                    </TableCell>
                     <TableCell className="px-6 py-4 max-w-0">
                       <div
                         className="truncate"
@@ -937,7 +1321,7 @@ const SearchResults = ({ searchData }) => {
           variant="outline"
           onClick={() => handlePageChange(currentPage + 1)}
           disabled={
-            currentPage === Math.ceil(creators.length / itemsPerPage) ||
+            currentPage === totalPages ||
             isPageLoading
           }
           className="px-3"
@@ -947,10 +1331,10 @@ const SearchResults = ({ searchData }) => {
         <Button
           variant="outline"
           onClick={() =>
-            handlePageChange(Math.ceil(creators.length / itemsPerPage))
+            handlePageChange(totalPages)
           }
           disabled={
-            currentPage === Math.ceil(creators.length / itemsPerPage) ||
+            currentPage === totalPages ||
             isPageLoading
           }
           className="px-3"
