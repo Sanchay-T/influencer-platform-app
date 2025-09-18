@@ -373,9 +373,14 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
                 {job.status === 'completed' && (
                   <span>{creatorsFound} creators</span>
                 )}
-                {job.status !== 'completed' && job.progress != null && (
+                {job.status !== 'completed' && job.status !== 'failed' && job.status !== 'error' && job.status !== 'timeout' && job.progress != null && (
                   <span className="flex items-center gap-2 text-xs text-indigo-200">
                     <Loader2 className="h-3 w-3 animate-spin" />
+                    {Math.round(job.progress)}%
+                  </span>
+                )}
+                {['failed', 'error', 'timeout'].includes(job.status ?? '') && job.progress != null && (
+                  <span className="text-xs text-rose-300">
                     {Math.round(job.progress)}%
                   </span>
                 )}
