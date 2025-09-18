@@ -7,6 +7,7 @@ import DashboardHeader from "./dashboard-header";
 import AccessGuardOverlay from "../billing/access-guard-overlay";
 
 const DESKTOP_HEADER_HEIGHT = 64;
+const SIDEBAR_PIN_STORAGE_KEY = 'dashboard-sidebar-pinned';
 
 export default function DashboardLayout({ 
   children, 
@@ -18,11 +19,34 @@ export default function DashboardLayout({
   const [sidebarSheetOpen, setSidebarSheetOpen] = useState(false);
   const [sidebarPinned, setSidebarPinned] = useState(false);
   const [desktopPeekOpen, setDesktopPeekOpen] = useState(false);
-  const hasInitialized = useRef(false);
+  const hasHydratedSidebarPinned = useRef(false);
   const desktopSidebarStyle = useMemo(() => ({
     top: `${DESKTOP_HEADER_HEIGHT}px`,
     height: `calc(100vh - ${DESKTOP_HEADER_HEIGHT}px)`
   }), []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const stored = window.localStorage.getItem(SIDEBAR_PIN_STORAGE_KEY);
+      if (stored !== null) {
+        setSidebarPinned(stored === 'true');
+      }
+    } catch {
+      // graceful fallback when storage is unavailable
+    } finally {
+      hasHydratedSidebarPinned.current = true;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !hasHydratedSidebarPinned.current) return;
+    try {
+      window.localStorage.setItem(SIDEBAR_PIN_STORAGE_KEY, sidebarPinned ? 'true' : 'false');
+    } catch {
+      // ignore persistence failures (e.g., private mode)
+    }
+  }, [sidebarPinned]);
 
   // Track breakpoint to auto-open on large screens and close on small screens
   useEffect(() => {
@@ -34,10 +58,6 @@ export default function DashboardLayout({
       if (!matches) {
         setSidebarSheetOpen(false);
         setDesktopPeekOpen(false);
-      }
-      if (!hasInitialized.current) {
-        hasInitialized.current = true;
-        setSidebarPinned(false);
       }
     };
     update();
