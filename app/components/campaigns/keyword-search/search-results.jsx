@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ExternalLink, User, Loader2, LayoutGrid, Table2, MailCheck } from "lucide-react";
+import { ExternalLink, User, Loader2, LayoutGrid, Table2, MailCheck, Youtube } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -145,11 +145,27 @@ const dedupeCreators = (creators = []) => {
   return unique;
 };
 
-const resolveMediaPreview = (creator, snapshot) => {
+const resolveMediaPreview = (creator, snapshot, platformHint) => {
   if (!creator) return snapshot?.avatarUrl ?? null;
 
   const video = creator.video || creator.latestVideo || creator.content;
-  const sources = [
+  const platform = (platformHint || snapshot?.platform || '').toString().toLowerCase();
+
+  const videoFirstSources = [
+    video?.thumbnail,
+    video?.thumbnailUrl,
+    video?.thumbnail_url,
+    video?.cover,
+    video?.coverUrl,
+    video?.image,
+    video?.previewImage,
+    creator?.thumbnailUrl,
+    creator?.thumbnail,
+    creator?.previewImage,
+    snapshot?.avatarUrl
+  ];
+
+  const defaultSources = [
     video?.cover,
     video?.coverUrl,
     video?.thumbnail,
@@ -161,6 +177,8 @@ const resolveMediaPreview = (creator, snapshot) => {
     creator?.previewImage,
     snapshot?.avatarUrl,
   ];
+
+  const sources = platform === 'youtube' ? videoFirstSources : defaultSources;
 
   for (const source of sources) {
     if (typeof source === "string" && source.trim().length > 0) {
@@ -1138,10 +1156,11 @@ const SearchResults = ({ searchData }) => {
         )}>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
             {currentRows.map(({ id, snapshot, raw }) => {
-              const preview = resolveMediaPreview(raw, snapshot);
-              const emails = extractEmails(raw);
-              const profileUrl = renderProfileLink(raw);
-              const followerLabel = snapshot.followers != null ? formatFollowers(snapshot.followers) : null;
+            const platformLabelNormalized = (snapshot.platform ?? platformNormalized ?? '').toLowerCase();
+            const preview = resolveMediaPreview(raw, snapshot, platformLabelNormalized);
+            const emails = extractEmails(raw);
+            const profileUrl = renderProfileLink(raw);
+            const followerLabel = snapshot.followers != null ? formatFollowers(snapshot.followers) : null;
               const rawViewCount =
                 raw?.video?.stats?.playCount ??
                 raw?.video?.stats?.viewCount ??
@@ -1160,6 +1179,7 @@ const SearchResults = ({ searchData }) => {
                 viewCountNumber != null ? Math.round(viewCountNumber).toLocaleString() : null;
               const isSelected = !!selectedCreators[id];
               const platformLabel = (snapshot.platform ?? 'creator').toString().toUpperCase();
+              const isYouTube = platformLabelNormalized === 'youtube';
               const secondaryLine =
                 raw?.creator?.location ||
                 raw?.creator?.category ||
@@ -1182,7 +1202,7 @@ const SearchResults = ({ searchData }) => {
                       className="h-5 w-5 rounded border-pink-400/60 bg-zinc-900/80 data-[state=checked]:border-pink-500 data-[state=checked]:bg-pink-500"
                     />
                   </div>
-                  <div className="relative aspect-[9/16] w-full overflow-hidden bg-zinc-800/70">
+                  <div className={cn("relative w-full overflow-hidden bg-zinc-800/70", isYouTube ? "aspect-video" : "aspect-[9/16]") }>
                     {preview ? (
                       <img
                         src={preview}
@@ -1204,6 +1224,12 @@ const SearchResults = ({ searchData }) => {
                     <div className="absolute right-3 top-3 rounded-full bg-zinc-950/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-zinc-100 shadow">
                       @{snapshot.handle}
                     </div>
+                    {isYouTube && (
+                      <div className="absolute left-3 bottom-3 flex items-center gap-2 rounded-full bg-red-600/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow">
+                        <Youtube className="h-3.5 w-3.5" />
+                        YouTube
+                      </div>
+                    )}
                   </div>
                   <div className="flex flex-1 flex-col gap-3 p-4 text-sm text-zinc-300">
                     <div className="flex items-start justify-between gap-3">
