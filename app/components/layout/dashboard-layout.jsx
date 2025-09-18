@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import Sidebar from "./sidebar";
 import DashboardHeader from "./dashboard-header";
@@ -17,9 +17,15 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const [isLarge, setIsLarge] = useState(false);
   const [sidebarSheetOpen, setSidebarSheetOpen] = useState(false);
-  const [sidebarPinned, setSidebarPinned] = useState(false);
+  const [sidebarPinned, setSidebarPinned] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return window.localStorage.getItem(SIDEBAR_PIN_STORAGE_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
   const [desktopPeekOpen, setDesktopPeekOpen] = useState(false);
-  const hasHydratedSidebarPinned = useRef(false);
   const desktopSidebarStyle = useMemo(() => ({
     top: `${DESKTOP_HEADER_HEIGHT}px`,
     height: `calc(100vh - ${DESKTOP_HEADER_HEIGHT}px)`
@@ -27,20 +33,6 @@ export default function DashboardLayout({
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    try {
-      const stored = window.localStorage.getItem(SIDEBAR_PIN_STORAGE_KEY);
-      if (stored !== null) {
-        setSidebarPinned(stored === 'true');
-      }
-    } catch {
-      // graceful fallback when storage is unavailable
-    } finally {
-      hasHydratedSidebarPinned.current = true;
-    }
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || !hasHydratedSidebarPinned.current) return;
     try {
       window.localStorage.setItem(SIDEBAR_PIN_STORAGE_KEY, sidebarPinned ? 'true' : 'false');
     } catch {
