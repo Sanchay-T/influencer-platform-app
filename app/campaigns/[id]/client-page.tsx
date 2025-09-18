@@ -124,8 +124,13 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
   const searchParams = useSearchParams()
   const [jobs, setJobs] = useState<ScrapingJob[]>(() => campaign?.scrapingJobs ?? [])
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'overview' | 'creators' | 'activity'>('creators')
+  const [activeTab, setActiveTab] = useState<'creators' | 'activity'>('creators')
   const activeJobRef = useRef<ScrapingJob | null>(null)
+  const prevRunLogRef = useRef<{ id: string | null; status?: string } | null>(null)
+  const prevTabRef = useRef<'creators' | 'activity' | null>(null)
+  const logUXEvent = useCallback((event: string, detail: Record<string, unknown>) => {
+    console.log(`[RUN-UX][${new Date().toISOString()}] ${event}`, detail)
+  }, [])
 
   useEffect(() => {
     setJobs(campaign?.scrapingJobs ?? [])
@@ -155,16 +160,6 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
 
   const creatorsCount = useMemo(() => getCreatorsCount(selectedJob), [selectedJob])
 
-  useEffect(() => {
-    if (!selectedJob) return
-    if (selectedJob.status !== 'completed' && activeTab === 'creators') {
-      setActiveTab('overview')
-    }
-    if (selectedJob.status === 'completed' && activeTab === 'overview') {
-      setActiveTab('creators')
-    }
-  }, [activeTab, selectedJob])
-
   const isCampaignActive = useMemo(() => {
     return sortedJobs.some((job) => isActiveJob(job))
   }, [sortedJobs])
@@ -186,6 +181,30 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
   useEffect(() => {
     activeJobRef.current = activeJob
   }, [activeJob])
+
+  useEffect(() => {
+    if (!selectedJob) return
+    const prev = prevRunLogRef.current
+    if (!prev || prev.id !== selectedJob.id || prev.status !== selectedJob.status) {
+      logUXEvent('run-selected', {
+        jobId: selectedJob.id,
+        status: selectedJob.status,
+        progress: selectedJob.progress ?? null,
+        createdAt: selectedJob.createdAt,
+        completedAt: selectedJob.completedAt,
+        resultsCount: selectedJob.results?.[0]?.creators?.length ?? 0
+      })
+      prevRunLogRef.current = { id: selectedJob.id, status: selectedJob.status }
+    }
+  }, [logUXEvent, selectedJob])
+
+  useEffect(() => {
+    if (!selectedJob) return
+    if (prevTabRef.current !== activeTab || (prevRunLogRef.current?.id && prevRunLogRef.current.id !== selectedJob.id)) {
+      logUXEvent('tab-changed', { tab: activeTab, jobId: selectedJob.id })
+      prevTabRef.current = activeTab
+    }
+  }, [activeTab, logUXEvent, selectedJob])
 
   useEffect(() => {
     if (!activeJob) return
@@ -216,14 +235,18 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
         setJobs((prev) =>
           prev.map((job) =>
             job.id === current.id
-              ? { ...job, status: data.status ?? job.status, progress: data.progress ?? job.progress }
+              ? {
+                  ...job,
+                  status: data.status ?? job.status,
+                  progress: data.progress ?? job.progress,
+                  results: Array.isArray(data.results) && data.results.length > 0 ? data.results : job.results
+                }
               : job
           )
         )
 
         if (['completed', 'error', 'timeout'].includes(data.status)) {
           clearInterval(interval)
-          setTimeout(() => router.refresh(), 1200)
         }
       } catch (error) {
         console.error('Error polling job status:', error)
@@ -232,17 +255,27 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
     }, 3000)
 
     return () => clearInterval(interval)
-  }, [activeJob, router])
+  }, [activeJob])
 
   const handleSelectJob = useCallback(
     (jobId: string) => {
+      const job = sortedJobs.find((j) => j.id === jobId)
+      logUXEvent('run-click', {
+        jobId,
+        status: job?.status,
+        progress: job?.progress ?? null,
+        creators: job?.results?.[0]?.creators?.length ?? 0
+      })
       setSelectedJobId(jobId)
       const params = new URLSearchParams(searchParams?.toString())
       params.set('jobId', jobId)
       const query = params.toString()
-      router.replace(`${pathname}${query ? `?${query}` : ''}`, { scroll: false })
+      if (typeof window !== 'undefined') {
+        const nextUrl = `${pathname}${query ? `?${query}` : ''}`
+        window.history.replaceState(null, '', nextUrl)
+      }
     },
-    [pathname, router, searchParams]
+    [logUXEvent, pathname, searchParams, sortedJobs]
   )
 
   const handleStartSearch = useCallback(
@@ -359,7 +392,7 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
     </Card>
   )
 
-  const renderOverview = () => (
+  const renderRunSummary = () => (
     <Card className="bg-zinc-900/80 border border-zinc-800/60">
       <CardHeader className="pb-4">
         <CardTitle className="text-lg font-semibold text-zinc-100">Run snapshot</CardTitle>
@@ -428,7 +461,7 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
     </Card>
   )
 
-  const renderActivity = () => (
+  const renderActivityLog = () => (
     <Card className="bg-zinc-900/80 border border-zinc-800/60">
       <CardHeader className="pb-4">
         <CardTitle className="text-lg font-semibold text-zinc-100">Activity log</CardTitle>
@@ -497,23 +530,55 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
       )
     }
 
-    if (selectedJob.status !== 'completed' || getCreatorsCount(selectedJob) === 0) {
+    if (['failed', 'error', 'timeout'].includes(selectedJob.status ?? '')) {
       return (
-        <Card className="bg-zinc-900/80 border border-zinc-800/60">
-          <CardContent className="py-16 text-center text-sm text-zinc-400 space-y-2">
-            <Loader2 className="h-5 w-5 mx-auto animate-spin text-zinc-400" />
-            <p>{isActiveJob(selectedJob) ? 'This run is still processing. Results will appear once completed.' : 'No creators captured for this run yet.'}</p>
+        <Card className="bg-zinc-900/80 border border-rose-500/40">
+          <CardContent className="py-8 px-6">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2 text-rose-300">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="font-medium">Run did not complete successfully</span>
+              </div>
+              <p className="text-sm text-zinc-400">
+                {selectedJob.error || 'The scraping service reported a failure before any results were returned.'}
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-zinc-700/60 text-zinc-200 hover:bg-zinc-800/60"
+                  onClick={() => router.refresh()}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" /> Retry fetch
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="bg-pink-600/80 text-white hover:bg-pink-500"
+                  onClick={() => handleStartSearch('default')}
+                >
+                  Start new search
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )
     }
+
+    const jobCreators = selectedJob.results?.flatMap(result =>
+      Array.isArray(result?.creators) ? result.creators : []
+    ) ?? []
 
     if (campaign.searchType === 'keyword') {
       const searchData = {
         jobId: selectedJob.id,
         campaignId: campaign.id,
         keywords: selectedJob.keywords ?? [],
-        platform: selectedJob.platform ?? 'TikTok'
+        platform: selectedJob.platform ?? 'tiktok',
+        selectedPlatform: selectedJob.platform ?? 'tiktok',
+        status: selectedJob.status,
+        initialCreators: jobCreators
       }
 
       return (
@@ -531,10 +596,12 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
 
     const searchData = {
       jobId: selectedJob.id,
-      platform: selectedJob.platform ?? 'Instagram',
+      platform: selectedJob.platform ?? 'instagram',
+      selectedPlatform: selectedJob.platform ?? 'instagram',
       targetUsername: selectedJob.targetUsername,
-      creators: selectedJob.results?.[0]?.creators ?? [],
-      campaignId: campaign.id
+      creators: jobCreators,
+      campaignId: campaign.id,
+      status: selectedJob.status
     }
 
     return (
@@ -625,15 +692,8 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as typeof activeTab)}>
             <TabsList className="bg-zinc-900/80 border border-zinc-800/60 flex-wrap gap-1">
               <TabsTrigger
-                value="overview"
-                className="data-[state=active]:bg-zinc-800 data-[state=active]:text-zinc-100"
-              >
-                Overview
-              </TabsTrigger>
-              <TabsTrigger
                 value="creators"
                 className="data-[state=active]:bg-zinc-800 data-[state=active]:text-zinc-100"
-                disabled={!selectedJob || selectedJob.status !== 'completed' || getCreatorsCount(selectedJob) === 0}
               >
                 Creators
               </TabsTrigger>
@@ -644,12 +704,18 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
                 Activity
               </TabsTrigger>
             </TabsList>
-            <TabsContent value="overview">{renderOverview()}</TabsContent>
-            <TabsContent value="creators" className="space-y-4 min-w-0">
-              {renderResults()}
-            </TabsContent>
-            <TabsContent value="activity">{renderActivity()}</TabsContent>
           </Tabs>
+
+          {activeTab === 'creators' ? (
+            <div className="space-y-4 min-w-0">
+              {renderResults()}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {renderRunSummary()}
+              {renderActivityLog()}
+            </div>
+          )}
         </div>
       </div>
     </div>

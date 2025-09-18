@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import DashboardLayout from "../../../components/layout/dashboard-layout";
 import KeywordSearchForm from "../../../components/campaigns/keyword-search/keyword-search-form";
 import KeywordReview from "../../../components/campaigns/keyword-search/keyword-review";
-import SearchResults from "../../../components/campaigns/keyword-search/search-results";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 
@@ -22,34 +21,33 @@ export default function KeywordSearch() {
 
   useEffect(() => {
     console.log('🔄 [KEYWORD-SEARCH-PAGE] Initializing keyword search page');
-    
-    const initializeFromUrl = () => {
-      try {
-        // Extraer el campaignId de la URL si existe
-        const urlParams = new URLSearchParams(window.location.search);
-        const campaignId = urlParams.get('campaignId');
-        
-        if (campaignId) {
-          console.log('📋 [KEYWORD-SEARCH-PAGE] Campaign ID found in URL:', campaignId);
-          setSearchData(prev => ({
-            ...prev,
-            campaignId
-          }));
-        } else {
-          console.log('❌ [KEYWORD-SEARCH-PAGE] No campaign ID found in URL');
-        }
-      } catch (error) {
-        console.error('💥 [KEYWORD-SEARCH-PAGE] Error parsing URL params:', error);
-      }
-    };
+    let campaignResolved = false;
 
-    const initializeFromSession = () => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const campaignIdFromUrl = urlParams.get('campaignId');
+
+      if (campaignIdFromUrl) {
+        console.log('📋 [KEYWORD-SEARCH-PAGE] Campaign ID found in URL:', campaignIdFromUrl);
+        campaignResolved = true;
+        setSearchData(prev => ({
+          ...prev,
+          campaignId: campaignIdFromUrl
+        }));
+      } else {
+        console.log('❌ [KEYWORD-SEARCH-PAGE] No campaign ID found in URL');
+      }
+    } catch (error) {
+      console.error('💥 [KEYWORD-SEARCH-PAGE] Error parsing URL params:', error);
+    }
+
+    if (!campaignResolved) {
       try {
-        // Intenta obtener datos de la campaña de sessionStorage
         const campaignData = sessionStorage.getItem('currentCampaign');
         if (campaignData) {
           const campaign = JSON.parse(campaignData);
           console.log('📋 [KEYWORD-SEARCH-PAGE] Campaign found in session storage:', campaign.id);
+          campaignResolved = true;
           setSearchData(prev => ({
             ...prev,
             campaignId: campaign.id
@@ -60,15 +58,8 @@ export default function KeywordSearch() {
       } catch (error) {
         console.error('💥 [KEYWORD-SEARCH-PAGE] Error parsing session storage:', error);
       }
-    };
-
-    // Inicializar de URL o sessionStorage
-    initializeFromUrl();
-    if (!searchData.campaignId) {
-      initializeFromSession();
     }
 
-    // Finalizar carga
     setIsLoading(false);
     console.log('✅ [KEYWORD-SEARCH-PAGE] Initialization complete');
   }, []);
@@ -142,21 +133,20 @@ export default function KeywordSearch() {
       const data = await response.json();
       console.log('✅ [KEYWORD-SEARCH-PAGE] API response data:', data);
       
-      setSearchData(prev => ({ 
-        ...prev, 
-        keywords,
-        jobId: data.jobId,
-        selectedPlatform: searchData.platforms.includes('enhanced-instagram') ? 'enhanced-instagram' : 
-                         searchData.platforms.includes('instagram') ? 'Instagram' : 
-                         searchData.platforms.includes('youtube') ? 'YouTube' : 'TikTok'
-      }));
-      setStep(3);
-      console.log('🔄 [KEYWORD-SEARCH-PAGE] Moving to step 3 (results)');
-      toast.success('Campaign started successfully');
-    } catch (error) {
-      console.error('💥 [KEYWORD-SEARCH-PAGE] Error:', error);
-      toast.error(error.message || "Failed to start campaign");
-    }
+    setSearchData(prev => ({ 
+      ...prev, 
+      keywords,
+      jobId: data.jobId,
+      selectedPlatform: searchData.platforms.includes('enhanced-instagram') ? 'enhanced-instagram' : 
+                       searchData.platforms.includes('instagram') ? 'Instagram' : 
+                       searchData.platforms.includes('youtube') ? 'YouTube' : 'TikTok'
+    }));
+    toast.success('Campaign started successfully');
+    router.push(`/campaigns/${campaignId}?jobId=${data.jobId}`);
+  } catch (error) {
+    console.error('💥 [KEYWORD-SEARCH-PAGE] Error:', error);
+    toast.error(error.message || "Failed to start campaign");
+  }
   };
 
   if (isLoading) {
@@ -189,11 +179,6 @@ export default function KeywordSearch() {
           <KeywordReview 
             onSubmit={handleKeywordsSubmit}
             isLoading={isLoading}
-          />
-        )}
-        {step === 3 && (
-          <SearchResults 
-            searchData={searchData}
           />
         )}
       </div>

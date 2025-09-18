@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ExternalLink, User, Loader2, LayoutGrid, Table2, MailCheck } from "lucide-react";
@@ -174,8 +174,15 @@ const resolveMediaPreview = (creator, snapshot) => {
 const SearchResults = ({ searchData }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isPageLoading, setIsPageLoading] = useState(false);
-  const [creators, setCreators] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const initialCreators = useMemo(() => {
+    if (Array.isArray(searchData?.initialCreators)) return searchData.initialCreators;
+    if (Array.isArray(searchData?.creators)) return searchData.creators;
+    return [];
+  }, [searchData?.initialCreators, searchData?.creators]);
+
+  const [creators, setCreators] = useState(initialCreators);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
   const [campaignName, setCampaignName] = useState("Campaign");
   const [stillProcessing, setStillProcessing] = useState(false);
   const [enhancedMeta, setEnhancedMeta] = useState(null);
@@ -184,6 +191,11 @@ const SearchResults = ({ searchData }) => {
   const [viewMode, setViewMode] = useState("table");
   const [showEmailOnly, setShowEmailOnly] = useState(false);
   const itemsPerPage = viewMode === "gallery" ? 9 : 10;
+  const resultsCacheRef = useRef(new Map());
+
+  const jobStatusRaw = searchData?.status;
+  const jobStatus = typeof jobStatusRaw === 'string' ? jobStatusRaw.toLowerCase() : '';
+  const jobIsActive = jobStatus === 'processing' || jobStatus === 'pending';
 
   // Normalize platform from either selectedPlatform (wizard) or platform (reopen flow)
   const platformNormalized = (searchData?.selectedPlatform || searchData?.platform || 'tiktok').toString().toLowerCase();
@@ -191,6 +203,39 @@ const SearchResults = ({ searchData }) => {
   useEffect(() => {
     setSelectedCreators({});
   }, [searchData?.jobId]);
+
+  useEffect(() => {
+    const cacheKey = searchData?.jobId;
+    if (!cacheKey) {
+      setCreators([]);
+      setIsFetching(false);
+      setStillProcessing(false);
+      setIsLoading(false);
+      return;
+    }
+
+    setCurrentPage(1);
+    setEmailOverlayDismissed(false);
+    setProgressInfo(null);
+    setEnhancedMeta(null);
+
+    const cached = resultsCacheRef.current.get(cacheKey);
+    if (cached && cached.length) {
+      setCreators(cached);
+      setIsLoading(false);
+      setIsFetching(true);
+    } else if (initialCreators.length) {
+      setCreators(dedupeCreators(initialCreators));
+      setIsLoading(false);
+      setIsFetching(true);
+    } else {
+      setCreators([]);
+      setIsLoading(true);
+      setIsFetching(true);
+    }
+
+    setStillProcessing(jobIsActive);
+  }, [searchData?.jobId, jobIsActive, initialCreators]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -201,10 +246,18 @@ const SearchResults = ({ searchData }) => {
 
   const [emailOverlayDismissed, setEmailOverlayDismissed] = useState(false);
 
+  useEffect(() => {
+    if (searchData?.jobId && creators.length) {
+      resultsCacheRef.current.set(searchData.jobId, creators);
+    }
+  }, [creators, searchData?.jobId]);
+
   const filteredCreators = useMemo(() => {
     if (!showEmailOnly) return creators;
     return creators.filter((creator) => hasContactEmail(creator));
   }, [creators, showEmailOnly]);
+
+  const waitingForResults = (jobIsActive || stillProcessing || isFetching || isLoading) && creators.length === 0;
 
   const showFilteredEmpty = useMemo(
     () => showEmailOnly && creators.length > 0 && filteredCreators.length === 0,
@@ -230,20 +283,16 @@ const SearchResults = ({ searchData }) => {
   useEffect(() => {
     const fetchResults = async () => {
       try {
+        if (!searchData?.jobId) {
+          setIsFetching(false);
+          return;
+        }
+        setIsFetching(true);
         // Determine API endpoint based on platform
-        console.log("🔍 [API-ENDPOINT] Platform detection:", {
-          selectedPlatform: searchData.selectedPlatform,
-          selectedPlatformType: typeof searchData.selectedPlatform,
-          platforms: searchData.platforms,
-          searchData: searchData,
-        });
-
         let apiEndpoint = '/api/scraping/tiktok';
         if (platformNormalized === 'instagram') apiEndpoint = '/api/scraping/instagram-reels';
         else if (platformNormalized === 'enhanced-instagram') apiEndpoint = '/api/scraping/instagram-enhanced';
         else if (platformNormalized === 'youtube') apiEndpoint = '/api/scraping/youtube';
-
-        console.log("🌐 [API-ENDPOINT] Using endpoint:", apiEndpoint);
 
         const response = await fetch(`${apiEndpoint}?jobId=${searchData.jobId}`);
         const data = await response.json();
@@ -263,16 +312,24 @@ const SearchResults = ({ searchData }) => {
 
         const dedupedCreators = dedupeCreators(allCreators);
         setCreators(dedupedCreators);
-        if (dedupedCreators.length > 0) {
+        if (searchData?.jobId && dedupedCreators.length) {
+          resultsCacheRef.current.set(searchData.jobId, dedupedCreators);
+        }
+        if (dedupedCreators.length) {
           setIsLoading(false);
+        }
+        if (!jobIsActive) {
+          setStillProcessing(false);
         }
       } catch (error) {
         console.error("Error fetching results:", error);
+      } finally {
+        setIsFetching(false);
       }
     };
 
     fetchResults();
-  }, [searchData, searchData?.jobId, searchData?.selectedPlatform, searchData?.platform, searchData?.platforms, platformNormalized]);
+  }, [searchData, searchData?.jobId, searchData?.selectedPlatform, searchData?.platform, searchData?.platforms, platformNormalized, jobIsActive]);
 
   // Fetch campaign name for breadcrumbs
   useEffect(() => {
@@ -473,15 +530,19 @@ const SearchResults = ({ searchData }) => {
   const handleSearchComplete = (data) => {
     if (data && data.status === "completed") {
       // Use creators directly from data.creators (already processed with bio/email)
-      const allCreators = dedupeCreators(data.creators || []);
-      if (allCreators.length > 0) {
-        setCreators(allCreators);
-        setIsLoading(false);
-        setStillProcessing(false);
-      } else {
-        // As a fallback, re-fetch latest results from the corresponding endpoint
-        let apiEndpoint = '/api/scraping/tiktok';
-        if (platformNormalized === 'instagram') apiEndpoint = '/api/scraping/instagram-reels';
+        const allCreators = dedupeCreators(data.creators || []);
+        if (allCreators.length > 0) {
+          setCreators(allCreators);
+          setIsLoading(false);
+          setStillProcessing(false);
+          setIsFetching(false);
+          if (searchData?.jobId) {
+            resultsCacheRef.current.set(searchData.jobId, allCreators);
+          }
+        } else {
+          // As a fallback, re-fetch latest results from the corresponding endpoint
+          let apiEndpoint = '/api/scraping/tiktok';
+          if (platformNormalized === 'instagram') apiEndpoint = '/api/scraping/instagram-reels';
         else if (platformNormalized === 'enhanced-instagram') apiEndpoint = '/api/scraping/instagram-enhanced';
         else if (platformNormalized === 'youtube') apiEndpoint = '/api/scraping/youtube';
 
@@ -492,50 +553,45 @@ const SearchResults = ({ searchData }) => {
               result.results?.reduce((acc, res) => {
                 return [...acc, ...(res.creators || [])];
               }, []) || [];
-            setCreators(dedupeCreators(foundCreators));
-            setIsLoading(false);
+            const deduped = dedupeCreators(foundCreators);
+            setCreators(deduped);
+            if (deduped.length) {
+              setIsLoading(false);
+            }
             setStillProcessing(false);
+            setIsFetching(false);
+            if (searchData?.jobId && deduped.length) {
+              resultsCacheRef.current.set(searchData.jobId, deduped);
+            }
           })
           .catch(() => {
             setIsLoading(false);
             setStillProcessing(false);
+            setIsFetching(false);
           });
+        }
       }
-    }
   };
 
-  if (isLoading) {
-    return (
-      <SearchProgress
-        jobId={searchData.jobId}
-        platform={searchData.selectedPlatform || searchData.platform}
-        searchData={searchData}
-        onMeta={setEnhancedMeta}
-        onProgress={setProgressInfo}
-        onIntermediateResults={(data) => {
-          try {
-            const incoming = Array.isArray(data?.creators) ? data.creators : [];
-            if (incoming.length === 0) return;
-
-            // Deduplicate by creator uniqueId/username
-            setCreators((prev) => {
-              const merged = dedupeCreators([...prev, ...incoming]);
-              if (merged.length > prev.length) {
-                setIsLoading(false);
-                setStillProcessing(true);
-              }
-              return merged;
-            });
-          } catch (e) {
-            console.error('Error handling intermediate results:', e);
-          }
-        }}
-        onComplete={handleSearchComplete}
-      />
-    );
-  }
-
   if (!filteredCreators.length && !showFilteredEmpty) {
+    if (waitingForResults) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[240px] text-sm text-zinc-400 gap-2">
+          <Loader2 className="h-4 w-4 animate-spin text-pink-400" />
+          Waiting for results...
+        </div>
+      );
+    }
+
+    if (isFetching) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[240px] text-sm text-zinc-400 gap-2">
+          <Loader2 className="h-4 w-4 animate-spin text-zinc-300" />
+          Fetching results...
+        </div>
+      );
+    }
+
     return (
       <div className="flex justify-center items-center min-h-[400px]">
         <div className="text-center text-zinc-400">
@@ -616,68 +672,25 @@ const SearchResults = ({ searchData }) => {
   };
 
   // Enhanced image loading handlers with comprehensive logging
-  const handleImageLoad = (e, username) => {
+  const handleImageLoad = (e) => {
     const img = e.target;
-    console.group(`✅ [BROWSER-IMAGE-SUCCESS] Image loaded: ${username}`);
-    console.log('📏 Natural size:', img.naturalWidth + 'x' + img.naturalHeight);
-    console.log('📐 Display size:', img.width + 'x' + img.height);
-    console.log('🔗 Loaded URL:', img.src);
-    console.log('⏱️ Load time:', (Date.now() - parseInt(img.dataset.startTime || '0')) + 'ms');
-    console.log('🌐 Request headers available:', !!img.crossOrigin);
-    console.log('📊 Image element state:', {
-      complete: img.complete,
-      loading: img.loading,
-      decoded: img.decode ? 'supported' : 'not supported'
-    });
-    console.groupEnd();
+    if (img) {
+      delete img.dataset.startTime;
+    }
   };
 
-  const handleImageError = (e, username, originalUrl) => {
+  const handleImageError = (e) => {
     const img = e.target;
-    console.group(`❌ [BROWSER-IMAGE-ERROR] Image failed: ${username}`);
-    console.error('🔗 Failed URL:', img.src);
-    console.error('📍 Original URL:', originalUrl);
-    console.error('⏱️ Time to failure:', (Date.now() - parseInt(img.dataset.startTime || '0')) + 'ms');
-    console.error('🌐 Network info:', {
-      crossOrigin: img.crossOrigin,
-      referrerPolicy: img.referrerPolicy,
-      loading: img.loading
-    });
-    console.error('📊 Error details:', {
-      naturalWidth: img.naturalWidth,
-      naturalHeight: img.naturalHeight,
-      complete: img.complete,
-      currentSrc: img.currentSrc
-    });
-    
-    // Try to get more error info
-    const urlObj = new URL(img.src, window.location.origin);
-    console.error('🔍 URL Analysis:', {
-      protocol: urlObj.protocol,
-      hostname: urlObj.hostname,
-      pathname: urlObj.pathname,
-      search: urlObj.search,
-      isBlob: urlObj.hostname.includes('blob.vercel-storage'),
-      isProxy: urlObj.pathname.includes('/api/proxy/image'),
-      isDataUrl: img.src.startsWith('data:'),
-      urlLength: img.src.length
-    });
-    console.groupEnd();
-
-    // Hide broken image
-    img.style.display = "none";
+    if (img) {
+      img.style.display = "none";
+    }
   };
 
-  const handleImageStart = (e, username) => {
+  const handleImageStart = (e) => {
     const img = e.target;
-    img.dataset.startTime = Date.now().toString();
-    console.log(`🚀 [BROWSER-IMAGE-START] Loading image for: ${username}`, {
-      src: img.src,
-      timestamp: new Date().toISOString(),
-      isProxy: img.src.includes('/api/proxy/image'),
-      isBlob: img.src.includes('blob.vercel-storage.com'),
-      srcLength: img.src.length
-    });
+    if (img) {
+      img.dataset.startTime = Date.now().toString();
+    }
   };
 
   const shouldShowEmailOverlay = showFilteredEmpty && !emailOverlayDismissed;
@@ -817,7 +830,7 @@ const SearchResults = ({ searchData }) => {
       )}
 
       {/* Silent poller to keep progress flowing while table renders */}
-      {!isLoading && stillProcessing && (
+      {(jobIsActive || stillProcessing) && (
         <div className="hidden" aria-hidden="true">
           <SearchProgress 
             jobId={searchData.jobId}
@@ -825,6 +838,22 @@ const SearchResults = ({ searchData }) => {
             searchData={searchData}
             onMeta={setEnhancedMeta}
             onProgress={setProgressInfo}
+            onIntermediateResults={(data) => {
+              try {
+                const incoming = Array.isArray(data?.creators) ? data.creators : [];
+                if (incoming.length === 0) return;
+
+                setCreators((prev) => {
+                  const merged = dedupeCreators([...prev, ...incoming]);
+                  if (searchData?.jobId && merged.length) {
+                    resultsCacheRef.current.set(searchData.jobId, merged);
+                  }
+                  return merged;
+                });
+              } catch (e) {
+                console.error('Error handling intermediate results:', e);
+              }
+            }}
             onComplete={handleSearchComplete}
           />
         </div>
@@ -888,10 +917,10 @@ const SearchResults = ({ searchData }) => {
                 <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[25%] min-w-[200px]">
                   Video Title
                 </TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[10%] min-w-[80px]">
+                <TableHead className="px-6 py-3 text-right text-xs font-medium text-zinc-400 uppercase tracking-wider w-[10%] min-w-[80px]">
                   Views
                 </TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[60px]">
+                <TableHead className="px-6 py-3 text-center text-xs font-medium text-zinc-400 uppercase tracking-wider w-[60px]">
                   Link
                 </TableHead>
                 <TableHead className="px-6 py-3 text-right text-xs font-medium text-zinc-400 uppercase tracking-wider w-[80px]">
@@ -901,24 +930,6 @@ const SearchResults = ({ searchData }) => {
             </TableHeader>
             <TableBody className="divide-y divide-zinc-800">
                 {currentRows.map(({ raw: creator, id: rowId, snapshot }, index) => {
-                // 🔍 INITIAL DATA DEBUG: Log the raw creator data structure
-                if (index === 0) {
-                  console.group('📋 [DATA-STRUCTURE] First creator data sample');
-                  console.log('Raw creator object:', creator);
-                  console.log('Creator structure analysis:', {
-                    hasCreatorProperty: !!creator.creator,
-                    creatorKeys: creator.creator ? Object.keys(creator.creator) : 'no creator property',
-                    topLevelKeys: Object.keys(creator),
-                    possibleImageUrls: {
-                      'creator.creator?.avatarUrl': creator.creator?.avatarUrl,
-                      'creator.creator?.profile_pic_url': creator.creator?.profile_pic_url,
-                      'creator.creator?.profilePicUrl': creator.creator?.profilePicUrl,
-                      'creator.profile_pic_url': creator.profile_pic_url,
-                      'creator.profilePicUrl': creator.profilePicUrl
-                    }
-                  });
-                  console.groupEnd();
-                }
                 const avatarUrl =
                   creator.creator?.avatarUrl ||
                   creator.creator?.profile_pic_url ||
@@ -927,17 +938,6 @@ const SearchResults = ({ searchData }) => {
                   creator.profilePicUrl ||
                   "";
                 
-                // 🔍 COMPREHENSIVE DEBUG: Log all avatar URL sources
-                console.group(`🖼️ [IMAGE-DEBUG-${index}] Processing avatar for: ${creator.creator?.name || 'Unknown'}`);
-                console.log('📊 All avatar URL sources:', {
-                  'creator.creator?.avatarUrl': creator.creator?.avatarUrl,
-                  'creator.creator?.profile_pic_url': creator.creator?.profile_pic_url,
-                  'creator.creator?.profilePicUrl': creator.creator?.profilePicUrl,
-                  'creator.profile_pic_url': creator.profile_pic_url,
-                  'creator.profilePicUrl': creator.profilePicUrl,
-                  'finalAvatarUrl': avatarUrl
-                });
-
                 // 🔧 FIXED: Handle already-proxied URLs and blob URLs
                 const isBlobUrl = avatarUrl && avatarUrl.includes('blob.vercel-storage.com');
                 const isAlreadyProxied = avatarUrl && avatarUrl.startsWith('/api/proxy/image');
@@ -953,18 +953,6 @@ const SearchResults = ({ searchData }) => {
                 } else {
                   imageUrl = "";
                 }
-
-                console.log('🎯 Image URL decision:', {
-                  originalUrl: avatarUrl,
-                  isBlobUrl: isBlobUrl,
-                  isAlreadyProxied: isAlreadyProxied,
-                  needsProxying: needsProxying,
-                  finalImageUrl: imageUrl,
-                  urlLength: imageUrl.length,
-                  urlType: isBlobUrl ? 'BLOB_DIRECT' : isAlreadyProxied ? 'ALREADY_PROXIED' : needsProxying ? 'NEWLY_PROXIED' : 'EMPTY'
-                });
-                console.groupEnd();
-
                 const isSelected = !!selectedCreators[rowId];
 
                 return (
@@ -1106,7 +1094,7 @@ const SearchResults = ({ searchData }) => {
                         <span className="text-zinc-500 text-sm">No email</span>
                       )}
                     </TableCell>
-                    <TableCell className="max-w-0">
+                    <TableCell className="px-6 py-4 max-w-0">
                       <div
                         className="truncate"
                         title={creator.video?.description || "No title"}
@@ -1114,10 +1102,10 @@ const SearchResults = ({ searchData }) => {
                         {creator.video?.description || "No title"}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="px-6 py-4 text-right tabular-nums">
                       {(creator.video?.statistics?.views || 0).toLocaleString()}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="px-6 py-4 text-center">
                       {creator.video?.url && (
                         <a
                           href={creator.video.url}

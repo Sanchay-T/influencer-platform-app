@@ -94,7 +94,8 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
         onSuccess({
           jobId: data.jobId,
           platform: selectedPlatform,
-          targetUsername: username
+          targetUsername: username,
+          campaignId
         });
       }
       

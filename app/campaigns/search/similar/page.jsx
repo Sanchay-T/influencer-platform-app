@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/app/components/layout/dashboard-layout";
 import { SimilarSearchForm } from '@/app/components/campaigns/similar-search/similar-search-form';
-import SimilarSearchResults from '@/app/components/campaigns/similar-search/search-results';
+import { useRouter } from 'next/navigation';
 
 export default function SimilarCreatorSearch() {
+  const router = useRouter();
   const [step, setStep] = useState(1);
   const [searchData, setSearchData] = useState({
     jobId: null,
@@ -53,7 +54,10 @@ export default function SimilarCreatorSearch() {
       platform: data.platform,
       targetUsername: data.targetUsername
     }));
-    setStep(2); // Move to results step
+    if (data?.campaignId || searchData.campaignId) {
+      const campaignId = data?.campaignId || searchData.campaignId;
+      router.push(`/campaigns/${campaignId}?jobId=${data.jobId}`);
+    }
   };
 
   if (isLoading) {
@@ -86,9 +90,6 @@ export default function SimilarCreatorSearch() {
             campaignId={searchData.campaignId}
             onSuccess={handleSearchSubmit}
           />
-        )}
-        {step === 2 && (
-          <SimilarSearchResults searchData={searchData} />
         )}
       </div>
     </DashboardLayout>
