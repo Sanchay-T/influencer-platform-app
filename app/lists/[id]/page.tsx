@@ -70,19 +70,9 @@ type CreatorListSummary = {
   viewerRole: string;
 };
 
-type Collaborator = {
-  id: string;
-  inviteEmail: string | null;
-  userId: string | null;
-  role: string;
-  status: string;
-  updatedAt: string;
-};
-
 type ListDetail = {
   list: CreatorListSummary;
   items: CreatorListItem[];
-  collaborators: Collaborator[];
   activities: Array<{ id: string; action: string; createdAt: string; payload: Record<string, unknown> }>;
 };
 
@@ -99,7 +89,6 @@ export default function ListDetailPage() {
   const [savingOrder, setSavingOrder] = useState(false);
   const [editingMeta, setEditingMeta] = useState(false);
   const [metaForm, setMetaForm] = useState({ name: '', description: '', type: 'custom' });
-  const [inviteEmail, setInviteEmail] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletePending, setDeletePending] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -321,34 +310,48 @@ export default function ListDetailPage() {
       )
     : null;
 
-  const handleExport = async (format: string) => {
+  const handleExport = () => {
     if (!detail) return;
-    try {
-      const res = await fetch(`/api/lists/${detail.list.id}/export`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ format }),
-      });
-      if (!res.ok) throw new Error('Unable to queue export');
-      toast.success('Export requested');
-    } catch (error) {
-      toast.error((error as Error).message);
-    }
-  };
 
-  const handleInvite = async () => {
-    if (!detail || !inviteEmail.trim()) return;
-    try {
-      await fetch(`/api/lists/${detail.list.id}/share`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ collaborators: [{ inviteEmail, role: 'editor' }] }),
-      });
-      toast.success('Invite sent');
-      setInviteEmail('');
-    } catch (error) {
-      toast.error('Unable to send invite');
-    }
+    const headers = ['Handle', 'Display Name', 'Platform', 'Bucket', 'Followers', 'Engagement Rate', 'Category', 'Notes'];
+    const rows = detail.items.map((item) => {
+      const creator = item.creator;
+      return [
+        creator.handle,
+        creator.displayName ?? '',
+        creator.platform,
+        item.bucket,
+        creator.followers ?? '',
+        creator.engagementRate ?? '',
+        creator.category ?? '',
+        item.notes ?? ''
+      ];
+    });
+
+    const escapeCsv = (value: unknown) => {
+      if (value == null) return '';
+      const stringValue = String(value);
+      if (stringValue.includes('"') || stringValue.includes(',') || stringValue.includes('\n')) {
+        return '"' + stringValue.replace(/"/g, '""') + '"';
+      }
+      return stringValue;
+    };
+
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map(escapeCsv).join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const safeName = detail.list.name.replace(/[^a-z0-9-_]+/gi, '-').toLowerCase();
+    link.download = `${safeName || 'creator-list'}-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success('CSV downloaded');
   };
 
   if (loading || !detail) {
@@ -421,7 +424,7 @@ export default function ListDetailPage() {
                     <Button size="sm" variant="outline" onClick={() => setEditingMeta(true)}>
                       Edit details
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleExport('csv')}>
+                    <Button size="sm" variant="outline" onClick={handleExport}>
                       <Link2 className="mr-2 h-4 w-4" /> Export CSV
                     </Button>
                     <Button size="sm" variant="outline" onClick={handleDuplicate}>
@@ -472,50 +475,6 @@ export default function ListDetailPage() {
         </div>
 
         <aside className="space-y-6">
-          <Card className="bg-zinc-900/80 border border-zinc-700/40">
-            <CardHeader>
-              <CardTitle className="text-sm text-zinc-200">Collaborators</CardTitle>
-              <CardDescription className="text-xs text-zinc-500">
-                Share access with teammates to coordinate outreach.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <Input
-                  value={inviteEmail}
-                  onChange={(event) => setInviteEmail(event.target.value)}
-                  placeholder="Invite by email"
-                  className="bg-zinc-950/60 border-zinc-700/40"
-                />
-                <Button size="sm" onClick={handleInvite} disabled={!inviteEmail.trim()}>
-                  <Share2 className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="space-y-3">
-                {detail.collaborators.map((collaborator) => (
-                  <div key={collaborator.id} className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-zinc-800 text-zinc-300">
-                        {collaborator.inviteEmail?.[0]?.toUpperCase() ?? 'U'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-zinc-100 truncate">
-                        {collaborator.inviteEmail ?? collaborator.userId ?? 'Pending user'}
-                      </p>
-                      <p className="text-xs text-zinc-500 capitalize">
-                        {collaborator.role} · {collaborator.status}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-                {detail.collaborators.length === 0 && (
-                  <p className="text-sm text-zinc-500">No collaborators yet.</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
           <Card className="bg-zinc-900/80 border border-zinc-700/40">
             <CardHeader>
               <CardTitle className="text-sm text-zinc-200">List insights</CardTitle>

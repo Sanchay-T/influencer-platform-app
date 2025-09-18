@@ -279,11 +279,13 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
   )
 
   const handleStartSearch = useCallback(
-    (type: 'keyword' | 'similar' | 'default') => {
+    (type?: 'keyword' | 'similar') => {
       if (!campaign) return
-      const nextType = type === 'default' ? campaign.searchType : type
-      const searchPath = nextType === 'similar' ? 'similar' : 'keyword'
-      router.push(`/campaigns/search/${searchPath}?campaignId=${campaign.id}`)
+      if (!type) {
+        router.push(`/campaigns/search?campaignId=${campaign.id}`)
+        return
+      }
+      router.push(`/campaigns/search/${type}?campaignId=${campaign.id}`)
     },
     [campaign, router]
   )
@@ -322,7 +324,7 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
             type="button"
             size="sm"
             variant="outline"
-            onClick={() => handleStartSearch('default')}
+            onClick={() => handleStartSearch()}
             className="gap-2"
           >
             <Play className="h-4 w-4" />
