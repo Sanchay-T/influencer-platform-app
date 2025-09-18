@@ -199,13 +199,26 @@ const SearchResults = ({ searchData }) => {
   const selectedSnapshots = useMemo(() => Object.values(selectedCreators), [selectedCreators]);
   const selectionCount = selectedSnapshots.length;
 
+  const [emailOverlayDismissed, setEmailOverlayDismissed] = useState(false);
+
   const filteredCreators = useMemo(() => {
     if (!showEmailOnly) return creators;
     return creators.filter((creator) => hasContactEmail(creator));
   }, [creators, showEmailOnly]);
 
+  const showFilteredEmpty = useMemo(
+    () => showEmailOnly && creators.length > 0 && filteredCreators.length === 0,
+    [showEmailOnly, creators.length, filteredCreators.length]
+  );
+
   useEffect(() => {
-    const totalPages = Math.max(1, Math.ceil(filteredCreators.length / itemsPerPage));
+    if (!showFilteredEmpty) {
+      setEmailOverlayDismissed(false);
+    }
+  }, [showFilteredEmpty]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(Math.max(filteredCreators.length, 1) / itemsPerPage));
     if (currentPage > totalPages) {
       setCurrentPage(1);
     }
@@ -522,7 +535,7 @@ const SearchResults = ({ searchData }) => {
     );
   }
 
-  if (!filteredCreators.length) {
+  if (!filteredCreators.length && !showFilteredEmpty) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
         <div className="text-center text-zinc-400">
@@ -551,7 +564,7 @@ const SearchResults = ({ searchData }) => {
   };
 
   const getPageNumbers = () => {
-    const totalPages = Math.ceil(filteredCreators.length / itemsPerPage);
+    const totalPages = Math.ceil(Math.max(totalResults, 1) / itemsPerPage);
     const maxVisiblePages = 5;
     const pageNumbers = [];
 
@@ -667,6 +680,8 @@ const SearchResults = ({ searchData }) => {
     });
   };
 
+  const shouldShowEmailOverlay = showFilteredEmpty && !emailOverlayDismissed;
+
   return (
     <div className="space-y-4">
       <Breadcrumbs
@@ -777,6 +792,30 @@ const SearchResults = ({ searchData }) => {
         </div>
       </div>
 
+      {shouldShowEmailOverlay && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/80 px-4">
+          <div className="w-full max-w-md space-y-4 rounded-2xl border border-zinc-700/60 bg-zinc-900/95 p-6 text-center shadow-xl">
+            <h3 className="text-lg font-semibold text-zinc-100">No creators with a contact email</h3>
+            <p className="text-sm text-zinc-400">
+              We didn’t find any creators in this list with a visible email. You can disable the filter to review all results or keep the filter and try another search.
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
+              <Button size="sm" className="bg-emerald-500 text-emerald-950" onClick={() => setShowEmailOnly(false)}>
+                Show all creators
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setEmailOverlayDismissed(true)}
+                className="border-zinc-700 text-zinc-200 hover:bg-zinc-800"
+              >
+                Keep email filter
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Silent poller to keep progress flowing while table renders */}
       {!isLoading && stillProcessing && (
         <div className="hidden" aria-hidden="true">
@@ -861,7 +900,7 @@ const SearchResults = ({ searchData }) => {
               </TableRow>
             </TableHeader>
             <TableBody className="divide-y divide-zinc-800">
-              {currentRows.map(({ raw: creator, id: rowId, snapshot }, index) => {
+                {currentRows.map(({ raw: creator, id: rowId, snapshot }, index) => {
                 // 🔍 INITIAL DATA DEBUG: Log the raw creator data structure
                 if (index === 0) {
                   console.group('📋 [DATA-STRUCTURE] First creator data sample');

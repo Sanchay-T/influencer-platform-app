@@ -121,6 +121,7 @@ const SearchResults = () => {
   const [showEmailOnly, setShowEmailOnly] = useState(false);
   const [galleryPage, setGalleryPage] = useState(1);
   const [selectedCreators, setSelectedCreators] = useState({});
+  const [emailOverlayDismissed, setEmailOverlayDismissed] = useState(false);
 
   useEffect(() => {
     console.log('=== INICIO DE BÚSQUEDA ===');
@@ -244,6 +245,11 @@ const SearchResults = () => {
     return creators.filter((creator) => hasContactEmail(creator));
   }, [creators, showEmailOnly]);
 
+  const showFilteredEmpty = useMemo(
+    () => showEmailOnly && creators.length > 0 && filteredCreators.length === 0,
+    [showEmailOnly, creators.length, filteredCreators.length]
+  );
+
   const selectedSnapshots = useMemo(() => Object.values(selectedCreators), [selectedCreators]);
   const selectionCount = selectedSnapshots.length;
 
@@ -261,11 +267,19 @@ const SearchResults = () => {
 
   const clearSelection = () => setSelectedCreators({});
 
+  const emailMatchCount = filteredCreators.length;
   const totalResults = filteredCreators.length;
 
   useEffect(() => {
     setGalleryPage(1);
+    setEmailOverlayDismissed(false);
   }, [showEmailOnly, viewMode, results.length]);
+
+  useEffect(() => {
+    if (!showFilteredEmpty) {
+      setEmailOverlayDismissed(false);
+    }
+  }, [showFilteredEmpty]);
 
   const totalGalleryPages = Math.max(1, Math.ceil(Math.max(totalResults, 1) / GALLERY_ITEMS_PER_PAGE));
   const galleryStartIndex = (galleryPage - 1) * GALLERY_ITEMS_PER_PAGE + 1;
@@ -343,14 +357,39 @@ const SearchResults = () => {
   }
 
   const baseSubtitle = showEmailOnly
-    ? `${totalResults} creator${totalResults === 1 ? '' : 's'} with contact emails (of ${creators.length} total)`
+    ? `${emailMatchCount} creator${emailMatchCount === 1 ? '' : 's'} with contact emails (of ${creators.length} total)`
     : `${totalResults} creator${totalResults === 1 ? '' : 's'} found`;
   const subtitle = viewMode === 'gallery' && totalResults > 0
     ? `${baseSubtitle} | Page ${galleryPage} of ${totalGalleryPages} | Showing ${galleryStartIndex}-${galleryEndIndex} of ${totalResults}`
     : baseSubtitle;
+  const shouldShowEmailOverlay = showFilteredEmpty && !emailOverlayDismissed;
 
   return (
     <div className="space-y-6">
+      {shouldShowEmailOverlay ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/80 px-4">
+          <div className="w-full max-w-md space-y-4 rounded-2xl border border-zinc-700/60 bg-zinc-900/95 p-6 text-center shadow-xl">
+            <h3 className="text-lg font-semibold text-zinc-100">No creators with a contact email</h3>
+            <p className="text-sm text-zinc-400">
+              We didn’t find any creators with visible emails. Disable the filter to review all results or keep the filter and try a different search.
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
+              <Button size="sm" className="bg-emerald-500 text-emerald-950" onClick={() => setShowEmailOnly(false)}>
+                Show all creators
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setEmailOverlayDismissed(true)}
+                className="border-zinc-700 text-zinc-200 hover:bg-zinc-800"
+              >
+                Keep email filter
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-xl font-semibold text-zinc-100">Search results</h2>
@@ -417,7 +456,7 @@ const SearchResults = () => {
         </div>
       </div>
 
-      {totalResults === 0 ? (
+      {totalResults === 0 && !showFilteredEmpty ? (
         <div className="rounded-xl border border-zinc-700/40 bg-zinc-900/60 p-10 text-center text-sm text-zinc-400">
           {showEmailOnly ? (
             <>
