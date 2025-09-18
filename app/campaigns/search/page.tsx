@@ -1,10 +1,10 @@
 'use client'
 
+import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import DashboardLayout from '@/app/components/layout/dashboard-layout'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Loader2 } from 'lucide-react'
-import { useState } from 'react'
 
 const searchOptions = [
   {
@@ -19,7 +19,15 @@ const searchOptions = [
   }
 ]
 
-export default function CampaignSearchChooser() {
+export default function CampaignSearchPage() {
+  return (
+    <Suspense fallback={<CampaignSearchFallback />}>
+      <CampaignSearchChooser />
+    </Suspense>
+  )
+}
+
+function CampaignSearchChooser() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const campaignId = searchParams?.get('campaignId') ?? ''
@@ -64,6 +72,28 @@ export default function CampaignSearchChooser() {
                   )}
                 </button>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </DashboardLayout>
+  )
+}
+
+function CampaignSearchFallback() {
+  return (
+    <DashboardLayout>
+      <div className="flex min-h-[60vh] items-center justify-center px-4">
+        <Card className="w-full max-w-3xl border border-zinc-700/50 bg-zinc-900/80">
+          <CardHeader className="space-y-2 text-center">
+            <CardTitle className="text-2xl font-bold text-zinc-100">Loading search options…</CardTitle>
+            <CardDescription className="text-sm text-zinc-400">
+              Preparing campaign search tools.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-pink-400" />
             </div>
           </CardContent>
         </Card>
