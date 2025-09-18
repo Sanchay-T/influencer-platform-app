@@ -189,6 +189,29 @@ const resolveMediaPreview = (creator, snapshot, platformHint) => {
   return snapshot?.avatarUrl ?? null;
 };
 
+const ensureImageUrl = (value) => {
+  if (typeof value !== "string") return "";
+  const url = value.trim();
+  if (!url) return "";
+
+  if (
+    url.startsWith("/api/proxy/image") ||
+    url.startsWith("data:") ||
+    url.startsWith("blob:") ||
+    url.includes("blob.vercel-storage.com")
+  ) {
+    return url;
+  }
+
+  const normalized = url.startsWith("//") ? `https:${url}` : url;
+
+  if (normalized.startsWith("http://") || normalized.startsWith("https://")) {
+    return `/api/proxy/image?url=${encodeURIComponent(normalized)}`;
+  }
+
+  return normalized;
+};
+
 const SearchResults = ({ searchData }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isPageLoading, setIsPageLoading] = useState(false);
@@ -955,22 +978,7 @@ const SearchResults = ({ searchData }) => {
                   creator.profile_pic_url ||
                   creator.profilePicUrl ||
                   "";
-                
-                // 🔧 FIXED: Handle already-proxied URLs and blob URLs
-                const isBlobUrl = avatarUrl && avatarUrl.includes('blob.vercel-storage.com');
-                const isAlreadyProxied = avatarUrl && avatarUrl.startsWith('/api/proxy/image');
-                const needsProxying = avatarUrl && !isBlobUrl && !isAlreadyProxied;
-                
-                let imageUrl;
-                if (isBlobUrl) {
-                  imageUrl = avatarUrl; // Use blob URL directly
-                } else if (isAlreadyProxied) {
-                  imageUrl = avatarUrl; // Use already-proxied URL directly
-                } else if (needsProxying) {
-                  imageUrl = `/api/proxy/image?url=${encodeURIComponent(avatarUrl)}`; // Proxy raw URLs
-                } else {
-                  imageUrl = "";
-                }
+                const imageUrl = ensureImageUrl(avatarUrl);
                 const isSelected = !!selectedCreators[rowId];
 
                 return (
@@ -1158,6 +1166,7 @@ const SearchResults = ({ searchData }) => {
             {currentRows.map(({ id, snapshot, raw }) => {
             const platformLabelNormalized = (snapshot.platform ?? platformNormalized ?? '').toLowerCase();
             const preview = resolveMediaPreview(raw, snapshot, platformLabelNormalized);
+            const previewUrl = ensureImageUrl(preview);
             const emails = extractEmails(raw);
             const profileUrl = renderProfileLink(raw);
             const followerLabel = snapshot.followers != null ? formatFollowers(snapshot.followers) : null;
@@ -1203,9 +1212,9 @@ const SearchResults = ({ searchData }) => {
                     />
                   </div>
                   <div className={cn("relative w-full overflow-hidden bg-zinc-800/70", isYouTube ? "aspect-video" : "aspect-[9/16]") }>
-                    {preview ? (
+                    {previewUrl ? (
                       <img
-                        src={preview}
+                        src={previewUrl}
                         alt={snapshot.displayName || snapshot.handle}
                         className="h-full w-full object-cover"
                         onLoad={(event) => handleImageLoad(event, snapshot.handle)}
