@@ -107,6 +107,25 @@ export async function POST(req: Request) {
     // Parse request body
     const body = await req.json();
     const { name, description, searchType } = body;
+    const normalizedSearchType =
+      searchType === 'similar'
+        ? 'similar'
+        : searchType === 'keyword'
+          ? 'keyword'
+          : 'keyword';
+
+    if (!searchType || !['keyword', 'similar'].includes(searchType)) {
+      await BillingLogger.logAPI(
+        'RESPONSE',
+        'Campaign search type defaulted to keyword',
+        userId,
+        {
+          providedType: searchType,
+          requestId
+        },
+        requestId
+      );
+    }
 
     await BillingLogger.logAPI(
       'RESPONSE',
@@ -128,7 +147,7 @@ export async function POST(req: Request) {
       {
         table: 'campaigns',
         operation: 'insert',
-        data: { name, searchType, status: 'draft' }
+        data: { name, searchType: normalizedSearchType, status: 'draft' }
       },
       requestId
     );
@@ -137,7 +156,7 @@ export async function POST(req: Request) {
       userId: userId,
       name,
       description,
-      searchType,
+      searchType: normalizedSearchType,
       status: 'draft'
     }).returning();
 
@@ -149,7 +168,7 @@ export async function POST(req: Request) {
         table: 'campaigns',
         recordId: campaign.id,
         campaignName: campaign.name,
-        searchType: campaign.searchType
+        searchType: normalizedSearchType
       },
       requestId
     );
@@ -162,7 +181,7 @@ export async function POST(req: Request) {
       {
         campaignId: campaign.id,
         campaignName: campaign.name,
-        searchType: campaign.searchType,
+        searchType: normalizedSearchType,
         usageType: 'campaigns'
       },
       requestId
@@ -187,7 +206,7 @@ export async function POST(req: Request) {
       {
         campaignId: campaign.id,
         campaignName: campaign.name,
-        searchType: campaign.searchType,
+        searchType: normalizedSearchType,
         executionTime: Date.now(),
         requestId
       },
