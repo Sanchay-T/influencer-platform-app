@@ -4,8 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "react-hot-toast";
 import { useUser } from '@clerk/nextjs';
 
@@ -42,10 +41,6 @@ export default function KeywordSearchForm({ onSubmit }) {
       </Card>
     );
   }
-
-  const handlePlatformChange = (platform) => {
-    setSelectedPlatform(platform);
-  };
 
   const getActualScraperLimit = (uiValue) => {
     // Retornamos el valor real del slider (1000-5000)
@@ -92,59 +87,62 @@ export default function KeywordSearchForm({ onSubmit }) {
               {[
                 {
                   value: "tiktok",
-                  title: "TikTok", 
+                  title: "TikTok",
                   description: "Standard TikTok keyword search"
                 },
                 {
                   value: "instagram",
-                  title: "Instagram", 
+                  title: "Instagram",
                   description: "Standard Instagram Reels search"
                 },
                 {
                   value: "enhanced-instagram",
-                  title: "Enhanced Instagram (AI-Powered)", 
+                  title: "Enhanced Instagram (AI-Powered)",
                   description: "AI-enhanced Instagram Reels search with intelligent keyword expansion",
-                  isNew: true
+                  badge: "NEW"
                 },
                 {
                   value: "youtube",
-                  title: "YouTube", 
+                  title: "YouTube",
                   description: "Standard YouTube keyword search"
                 }
-              ].map((platform) => (
-                <div 
-                  key={platform.value}
-                  className={`flex items-start space-x-3 p-3 border rounded-lg cursor-pointer transition-all duration-200 ${
-                    selectedPlatform === platform.value
-                      ? "border-primary bg-primary/10"
-                      : "border-zinc-700 hover:border-zinc-600"
-                  }`}
-                  onClick={() => handlePlatformChange(platform.value)}
-                >
-                  <div className="flex items-center pt-1">
-                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                      selectedPlatform === platform.value
-                        ? "border-primary bg-primary"
-                        : "border-zinc-400"
-                    }`}>
-                      {selectedPlatform === platform.value && (
-                        <div className="w-2 h-2 rounded-full bg-white"></div>
-                      )}
+              ].map((platform) => {
+                const isActive = selectedPlatform === platform.value;
+
+                return (
+                  <button
+                    key={platform.value}
+                    type="button"
+                    onClick={() => setSelectedPlatform(platform.value)}
+                    className={`w-full rounded-lg border p-4 text-left transition-all ${
+                      isActive
+                        ? "border-primary bg-primary/10"
+                        : "border-zinc-700 hover:border-zinc-600"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div
+                        className={`flex h-5 w-5 flex-none items-center justify-center rounded-full border-2 ${
+                          isActive ? "border-primary bg-primary" : "border-zinc-400"
+                        }`}
+                      >
+                        {isActive && <span className="h-2 w-2 rounded-full bg-white" />}
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-zinc-100">{platform.title}</span>
+                          {platform.badge && (
+                            <Badge variant="outline" className="uppercase tracking-wide text-xs">
+                              {platform.badge}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-zinc-400">{platform.description}</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-zinc-200">{platform.title}</span>
-                      {platform.isNew && (
-                        <span className="px-2 py-0.5 bg-violet-500/20 text-violet-300 text-xs rounded-full border border-violet-500/30">
-                          NEW
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-zinc-400 mt-1">{platform.description}</p>
-                  </div>
-                </div>
-              ))}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
