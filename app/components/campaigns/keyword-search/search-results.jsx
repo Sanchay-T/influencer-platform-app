@@ -720,6 +720,8 @@ const SearchResults = ({ searchData }) => {
           },
           { label: "Search Results" },
         ]}
+        backHref={searchData?.campaignId ? `/campaigns/search?campaignId=${searchData.campaignId}` : '/campaigns/search'}
+        backLabel="Back to Search Options"
       />
 
       {/* Removed AI Strategy box for a cleaner presentation */}

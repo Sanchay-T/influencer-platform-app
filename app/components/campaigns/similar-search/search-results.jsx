@@ -350,16 +350,18 @@ export default function SimilarSearchResults({ searchData }) {
 
   return (
     <div className="space-y-4">
-      <Breadcrumbs 
+      <Breadcrumbs
         items={[
           { label: 'Dashboard', href: '/dashboard' },
-          { 
-            label: campaignName, 
+          {
+            label: campaignName,
             href: searchData?.campaignId ? `/campaigns/${searchData.campaignId}` : '/dashboard',
             type: 'campaign'
           },
           { label: 'Search Results' }
         ]}
+        backHref={searchData?.campaignId ? `/campaigns/search?campaignId=${searchData.campaignId}` : '/campaigns/search'}
+        backLabel="Back to Search Options"
       />
 
       {/* Silent poller to keep progress flowing while table renders */}

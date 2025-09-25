@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "react-hot-toast";
@@ -132,28 +131,67 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-4">
             <label className="text-sm font-medium">Platform</label>
-            <div className="flex space-x-4">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Checkbox disabled checked={false} />
-                <span className="ml-1">TikTok</span>
-                <Badge variant="outline" className="uppercase tracking-wide text-xs">
-                  Coming Soon
-                </Badge>
-              </div>
-              <div className="flex items-center">
-                <Checkbox
-                  checked={selectedPlatform === "instagram"}
-                  onCheckedChange={() => setSelectedPlatform("instagram")}
-                />
-                <span className="ml-2">Instagram</span>
-              </div>
-              <div className="flex items-center">
-                <Checkbox
-                  checked={selectedPlatform === "youtube"}
-                  onCheckedChange={() => setSelectedPlatform("youtube")}
-                />
-                <span className="ml-2">YouTube</span>
-              </div>
+            <div className="space-y-3">
+              {[
+                {
+                  value: 'tiktok',
+                  title: 'TikTok',
+                  description: 'Discover lookalike creators on TikTok',
+                  disabled: true,
+                  badge: 'Coming Soon',
+                },
+                {
+                  value: 'instagram',
+                  title: 'Instagram',
+                  description: 'Find Instagram creators similar to a known handle',
+                },
+                {
+                  value: 'youtube',
+                  title: 'YouTube',
+                  description: 'Identify YouTube channels with matching audiences',
+                },
+              ].map((platform) => {
+                const isActive = selectedPlatform === platform.value;
+                const isDisabled = Boolean(platform.disabled);
+                return (
+                  <button
+                    key={platform.value}
+                    type="button"
+                    onClick={() => {
+                      if (!isDisabled) {
+                        setSelectedPlatform(platform.value);
+                      }
+                    }}
+                    disabled={isDisabled}
+                    className={`w-full rounded-lg border p-4 text-left transition-all ${
+                      isActive
+                        ? 'border-primary bg-primary/10'
+                        : 'border-zinc-700 hover:border-zinc-600'
+                    } ${isDisabled ? 'cursor-not-allowed opacity-70' : ''}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div
+                        className={`flex h-5 w-5 flex-none items-center justify-center rounded-full border-2 ${
+                          isActive ? 'border-primary bg-primary' : 'border-zinc-400'
+                        }`}
+                      >
+                        {isActive && <span className="h-2 w-2 rounded-full bg-white" />}
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-zinc-100">{platform.title}</span>
+                          {platform.badge && (
+                            <Badge variant="outline" className="uppercase tracking-wide text-xs">
+                              {platform.badge}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-zinc-400">{platform.description}</p>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
