@@ -130,7 +130,7 @@ export default function ListsIndexPage() {
               onChange={(event) => setSearch(event.target.value)}
               className="bg-zinc-900/60 border-zinc-700/50"
             />
-            <Button onClick={handleCreate} disabled={creating} className="bg-emerald-500 hover:bg-emerald-400 text-zinc-900">
+            <Button onClick={handleCreate} disabled={creating} className="bg-pink-600 hover:bg-pink-500 text-white">
               {creating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
               Create List
             </Button>
@@ -164,7 +164,7 @@ export default function ListsIndexPage() {
                     className={clsx(
                       'rounded-md border px-3 py-2 text-sm transition-all',
                       form.type === option.value
-                        ? 'border-emerald-500/70 bg-emerald-500/10 text-emerald-300'
+                        ? 'border-pink-600/70 bg-pink-600/10 text-pink-300'
                         : 'border-zinc-700/40 bg-zinc-950/40 text-zinc-400 hover:text-zinc-200'
                     )}
                   >
@@ -202,15 +202,15 @@ export default function ListsIndexPage() {
             {filteredLists.map((list) => (
               <Card
                 key={list.id}
-                className="bg-zinc-900/70 border border-zinc-700/40 hover:border-zinc-500/50 transition-all cursor-pointer"
+                className="bg-zinc-900/70 border border-zinc-700/40 hover:border-pink-500/50 transition-all cursor-pointer overflow-hidden"
                 onClick={() => router.push(`/lists/${list.id}`)}
               >
                 <CardHeader>
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <CardTitle className="text-base text-zinc-100">{list.name}</CardTitle>
+                    <div className="min-w-0">
+                      <CardTitle className="text-base text-zinc-100 truncate break-words">{list.name}</CardTitle>
                       {list.description && (
-                        <CardDescription className="text-xs text-zinc-500 mt-1 line-clamp-2">
+                        <CardDescription className="text-xs text-zinc-500 mt-1 line-clamp-2 break-words">
                           {list.description}
                         </CardDescription>
                       )}
@@ -226,7 +226,7 @@ export default function ListsIndexPage() {
                       {list.type}
                     </Badge>
                     {list.viewerRole !== 'owner' && (
-                      <span className="text-emerald-300/80">Shared with you</span>
+                      <span className="text-pink-300/80">Shared with you</span>
                     )}
                   </div>
                   <div className="grid grid-cols-3 gap-3">
@@ -237,7 +237,7 @@ export default function ListsIndexPage() {
                   {list.tags?.length ? (
                     <div className="flex flex-wrap gap-2">
                       {list.tags.slice(0, 3).map((tag) => (
-                        <Badge key={tag} className="bg-emerald-500/10 text-emerald-200 border border-emerald-500/40">
+                        <Badge key={tag} className="bg-pink-600/10 text-pink-200 border border-pink-600/40">
                           #{tag}
                         </Badge>
                       ))}

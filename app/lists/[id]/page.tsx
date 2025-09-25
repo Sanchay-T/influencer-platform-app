@@ -313,9 +313,37 @@ export default function ListDetailPage() {
   const handleExport = () => {
     if (!detail) return;
 
-    const headers = ['Handle', 'Display Name', 'Platform', 'Bucket', 'Followers', 'Engagement Rate', 'Category', 'Notes'];
+    const headers = ['Handle', 'Display Name', 'Platform', 'Bucket', 'Followers', 'Engagement Rate', 'Category', 'Email', 'Notes'];
+
+    const extractEmails = (meta: any): string[] => {
+      if (!meta || typeof meta !== 'object') return [];
+      const set = new Set<string>();
+      const candidateLists = [
+        (meta as any)?.emails,
+        (meta as any)?.creator?.emails,
+        (meta as any)?.contact?.emails,
+      ];
+      for (const list of candidateLists) {
+        if (Array.isArray(list)) {
+          for (const e of list) {
+            if (typeof e === 'string' && e.trim()) set.add(e.trim());
+          }
+        }
+      }
+      const singletons = [
+        (meta as any)?.email,
+        (meta as any)?.creator?.email,
+        (meta as any)?.contact?.email,
+      ];
+      for (const e of singletons) {
+        if (typeof e === 'string' && e.trim()) set.add(e.trim());
+      }
+      return Array.from(set);
+    };
+
     const rows = detail.items.map((item) => {
       const creator = item.creator;
+      const emails = extractEmails(creator?.metadata);
       return [
         creator.handle,
         creator.displayName ?? '',
@@ -324,6 +352,7 @@ export default function ListDetailPage() {
         creator.followers ?? '',
         creator.engagementRate ?? '',
         creator.category ?? '',
+        emails.join('; '),
         item.notes ?? ''
       ];
     });
