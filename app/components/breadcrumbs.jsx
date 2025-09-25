@@ -5,10 +5,20 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import Link from 'next/link'
 
-export default function Breadcrumbs({ items, showBackButton = true }) {
+export default function Breadcrumbs({
+  items,
+  showBackButton = true,
+  backHref,
+  backLabel = 'Back to Campaign',
+}) {
   const router = useRouter();
 
   const handleBack = () => {
+    if (backHref) {
+      router.push(backHref);
+      return;
+    }
+
     // Find the campaign item to navigate back to
     const campaignItem = items.find(item => item.type === 'campaign');
     if (campaignItem && campaignItem.href) {
@@ -44,14 +54,14 @@ export default function Breadcrumbs({ items, showBackButton = true }) {
       </nav>
       
       {showBackButton && (
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           size="sm"
           onClick={handleBack}
           className="flex items-center gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to Campaign
+          {backLabel}
         </Button>
       )}
     </div>

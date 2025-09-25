@@ -123,6 +123,12 @@ export async function POST(req: NextRequest) {
     }
     console.log('✅ [INSTAGRAM-REELS-API] Campaign verified successfully');
 
+    if (campaign.searchType !== 'keyword') {
+      await db.update(campaigns)
+        .set({ searchType: 'keyword', updatedAt: new Date() })
+        .where(eq(campaigns.id, campaignId));
+    }
+
     // 🛡️ PLAN VALIDATION - Check plan limits and adjust if needed
     console.log('🛡️ [INSTAGRAM-REELS-API] Step 5: Validating user plan limits for job creation');
     const jobValidation = await PlanEnforcementService.validateJobCreation(userId, targetResults);

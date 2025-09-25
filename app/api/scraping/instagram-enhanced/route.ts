@@ -125,6 +125,18 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
             campaignName: campaign.name
         }, LogCategory.INSTAGRAM);
 
+        if (campaign.searchType !== 'keyword') {
+            await logDbOperation(
+                'campaign_search_type_update',
+                async () =>
+                    db
+                        .update(campaigns)
+                        .set({ searchType: 'keyword', updatedAt: new Date() })
+                        .where(eq(campaigns.id, campaignId)),
+                { requestId }
+            );
+        }
+
         logPhase('business');
         
         // Enhanced plan validation for AI-powered search

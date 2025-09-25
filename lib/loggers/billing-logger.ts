@@ -22,7 +22,62 @@ interface BillingLogEntry {
 }
 
 export class BillingLogger {
-  private static logDirectory = process.cwd() + '/billing-check';
+  private static logDirectory: string | null = null;
+  private static fileLoggingDisabled = false;
+  private static runtimeWarningIssued = false;
+
+  private static resolveLogDirectory(): string {
+    if (process.env.BILLING_LOG_DIR) {
+      return process.env.BILLING_LOG_DIR;
+    }
+
+    // Vercel/Serverless environments only allow writing to /tmp
+    if (
+      process.env.VERCEL ||
+      process.env.AWS_REGION ||
+      process.env.AWS_LAMBDA_FUNCTION_NAME ||
+      process.env.NEXT_RUNTIME
+    ) {
+      return path.join('/tmp', 'billing-check');
+    }
+
+    return path.join(process.cwd(), 'billing-check');
+  }
+
+  private static getLogDirectory(): string | null {
+    if (this.fileLoggingDisabled) {
+      return null;
+    }
+
+    if (!this.logDirectory) {
+      this.logDirectory = this.resolveLogDirectory();
+    }
+
+    return this.logDirectory;
+  }
+
+  private static notifyRuntimeFallback(): void {
+    if (this.runtimeWarningIssued) {
+      return;
+    }
+
+    this.runtimeWarningIssued = true;
+    console.warn(
+      '⚠️ [BILLING-LOGGER] File system logging disabled for this runtime. Falling back to console logging only.'
+    );
+  }
+
+  private static logToConsole(entry: BillingLogEntry): void {
+    const { eventType, action, message, data, metadata, requestId, sessionId, userId } = entry;
+    const context = {
+      requestId,
+      sessionId,
+      userId,
+      data,
+      metadata
+    };
+    console.log(`🏦 [BILLING-LOGGER:${eventType}] ${action} - ${message}`, context);
+  }
   
   /**
    * Generate a unique session ID for tracking related events
@@ -48,35 +103,47 @@ export class BillingLogger {
   /**
    * Get the log file path for the current date
    */
-  private static getLogFilePath(): string {
+  private static getLogFilePath(logDirectory: string): string {
     const dateString = this.getDateString();
-    return path.join(this.logDirectory, `billing-${dateString}.log`);
+    return path.join(logDirectory, `billing-${dateString}.log`);
   }
 
   /**
    * Core logging function
    */
   private static async writeLog(entry: BillingLogEntry): Promise<void> {
+    const logDirectory = this.getLogDirectory();
+
+    if (!logDirectory) {
+      this.logToConsole(entry);
+      return;
+    }
+
     try {
-      // Ensure directory exists
-      await fs.mkdir(this.logDirectory, { recursive: true });
-      
-      // Format log entry
-      const logLine = JSON.stringify({
-        ...entry,
-        timestamp: new Date().toISOString(),
-      }) + '\n';
-      
-      // Write to file
-      const logPath = this.getLogFilePath();
+      await fs.mkdir(logDirectory, { recursive: true });
+
+      const logLine =
+        JSON.stringify({
+          ...entry,
+          timestamp: new Date().toISOString()
+        }) + '\n';
+
+      const logPath = this.getLogFilePath(logDirectory);
       await fs.appendFile(logPath, logLine);
-      
-      // Also log to console in development
+
       if (process.env.NODE_ENV === 'development') {
-        console.log(`🏦 [BILLING-LOG] ${entry.eventType}:${entry.action}`, entry.message, entry.data || '');
+        this.logToConsole(entry);
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.code === 'EROFS' || error?.code === 'EACCES' || error?.code === 'EPERM') {
+        this.fileLoggingDisabled = true;
+        this.notifyRuntimeFallback();
+        this.logToConsole(entry);
+        return;
+      }
+
       console.error('❌ [BILLING-LOGGER] Failed to write log:', error);
+      this.logToConsole(entry);
     }
   }
 
@@ -495,7 +562,12 @@ export class BillingLogger {
     eventType?: string
   ): Promise<BillingLogEntry[]> {
     try {
-      const logPath = this.getLogFilePath();
+      const logDirectory = this.getLogDirectory();
+      if (!logDirectory) {
+        return [];
+      }
+
+      const logPath = this.getLogFilePath(logDirectory);
       const content = await fs.readFile(logPath, 'utf-8');
       const lines = content.split('\n').filter(line => line.trim());
       
@@ -531,7 +603,12 @@ export class BillingLogger {
    */
   static async cleanupOldLogs(): Promise<void> {
     try {
-      const files = await fs.readdir(this.logDirectory);
+      const logDirectory = this.getLogDirectory();
+      if (!logDirectory) {
+        return;
+      }
+
+      const files = await fs.readdir(logDirectory);
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - 30);
 
@@ -541,7 +618,7 @@ export class BillingLogger {
           if (dateMatch) {
             const fileDate = new Date(dateMatch[1]);
             if (fileDate < cutoffDate) {
-              await fs.unlink(path.join(this.logDirectory, file));
+              await fs.unlink(path.join(logDirectory, file));
               console.log(`🗑️ [BILLING-LOGGER] Cleaned up old log file: ${file}`);
             }
           }

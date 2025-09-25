@@ -1,13 +1,10 @@
 'use client'
 
 import { useState, useEffect } from "react";
-import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { toast } from "react-hot-toast";
 import { useUser } from '@clerk/nextjs';
+import { Check } from "lucide-react";
 
 export default function KeywordSearchForm({ onSubmit }) {
   const [selectedPlatform, setSelectedPlatform] = useState("tiktok");
@@ -29,23 +26,19 @@ export default function KeywordSearchForm({ onSubmit }) {
 
   if (!isLoaded || !user) {
     return (
-      <Card className="bg-zinc-900/80 border border-zinc-700/50">
-        <CardHeader>
-          <CardTitle>Configure Keyword Search</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <div className="rounded-lg text-card-foreground shadow-sm bg-zinc-900/80 border border-zinc-700/50">
+        <div className="flex flex-col space-y-1.5 p-6">
+          <div className="text-2xl font-semibold leading-none tracking-tight">Configure Keyword Search</div>
+        </div>
+        <div className="p-6 pt-0">
           <div className="flex justify-center items-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-200"></div>
             <span className="ml-3 text-zinc-300">Loading...</span>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
-
-  const handlePlatformChange = (platform) => {
-    setSelectedPlatform(platform);
-  };
 
   const getActualScraperLimit = (uiValue) => {
     // Retornamos el valor real del slider (1000-5000)
@@ -79,72 +72,62 @@ export default function KeywordSearchForm({ onSubmit }) {
     return count / 100; // 1000 creators = 10 credits, 2000 = 20, etc.
   };
 
+  const platformOptions = [
+    { value: "tiktok", label: "TikTok" },
+    { value: "instagram", label: "Instagram" },
+    { value: "enhanced-instagram", label: "Enhanced Instagram (AI-Powered)", badge: "New" },
+    { value: "youtube", label: "YouTube" },
+  ];
+
   return (
-    <Card className="bg-zinc-900/80 border border-zinc-700/50">
-      <CardHeader>
-        <CardTitle>Configure Keyword Search</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <div className="rounded-lg text-card-foreground shadow-sm bg-zinc-900/80 border border-zinc-700/50">
+      <div className="flex flex-col space-y-1.5 p-6">
+        <div className="text-2xl font-semibold leading-none tracking-tight">Configure Keyword Search</div>
+      </div>
+      <div className="p-6 pt-0">
         <form onSubmit={handleSubmit} className="space-y-8">
           <div className="space-y-4">
-            <label className="text-sm font-medium">Platform Selection</label>
-            <div className="space-y-3">
-              {[
-                {
-                  value: "tiktok",
-                  title: "TikTok", 
-                  description: "Standard TikTok keyword search"
-                },
-                {
-                  value: "instagram",
-                  title: "Instagram", 
-                  description: "Standard Instagram Reels search"
-                },
-                {
-                  value: "enhanced-instagram",
-                  title: "Enhanced Instagram (AI-Powered)", 
-                  description: "AI-enhanced Instagram Reels search with intelligent keyword expansion",
-                  isNew: true
-                },
-                {
-                  value: "youtube",
-                  title: "YouTube", 
-                  description: "Standard YouTube keyword search"
-                }
-              ].map((platform) => (
-                <div 
-                  key={platform.value}
-                  className={`flex items-start space-x-3 p-3 border rounded-lg cursor-pointer transition-all duration-200 ${
-                    selectedPlatform === platform.value
-                      ? "border-primary bg-primary/10"
-                      : "border-zinc-700 hover:border-zinc-600"
-                  }`}
-                  onClick={() => handlePlatformChange(platform.value)}
-                >
-                  <div className="flex items-center pt-1">
-                    <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                      selectedPlatform === platform.value
-                        ? "border-primary bg-primary"
-                        : "border-zinc-400"
-                    }`}>
-                      {selectedPlatform === platform.value && (
-                        <div className="w-2 h-2 rounded-full bg-white"></div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-zinc-200">{platform.title}</span>
-                      {platform.isNew && (
-                        <span className="px-2 py-0.5 bg-violet-500/20 text-violet-300 text-xs rounded-full border border-violet-500/30">
-                          NEW
+            <label className="text-sm font-medium">Platform</label>
+            <div className="flex flex-wrap gap-4">
+              {platformOptions.map((platform) => {
+                const isActive = selectedPlatform === platform.value;
+
+                return (
+                  <div key={platform.value} className="flex items-center">
+                    <button
+                      type="button"
+                      role="checkbox"
+                      aria-checked={isActive}
+                      data-state={isActive ? 'checked' : 'unchecked'}
+                      value="on"
+                      onClick={() => setSelectedPlatform(platform.value)}
+                      className="peer h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                    >
+                      {isActive && (
+                        <span data-state="checked" className="flex items-center justify-center text-current pointer-events-none">
+                          <Check className="h-4 w-4" />
                         </span>
                       )}
-                    </div>
-                    <p className="text-xs text-zinc-400 mt-1">{platform.description}</p>
+                    </button>
+                    <input
+                      aria-hidden="true"
+                      tabIndex={-1}
+                      type="checkbox"
+                      className="sr-only"
+                      checked={isActive}
+                      readOnly
+                    />
+                    <span className="ml-2 flex items-center gap-2">
+                      {platform.label}
+                      {platform.badge && (
+                        <span className="ml-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-emerald-200">
+                          {platform.badge}
+                        </span>
+                      )}
+                    </span>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -175,15 +158,15 @@ export default function KeywordSearchForm({ onSubmit }) {
             </div>
           </div>
 
-          <Button 
-            type="submit" 
-            className="w-full"
+          <button
+            type="submit"
             disabled={isLoading}
+            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full"
           >
             {isLoading ? 'Processing...' : 'Continue'}
-          </Button>
+          </button>
         </form>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
-} 
+}

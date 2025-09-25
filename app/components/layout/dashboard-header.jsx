@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { Search, PlusCircle, Menu } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -10,16 +10,9 @@ import { useEffect, useRef, useState } from 'react'
 import { useBilling } from '@/lib/hooks/use-billing'
 
 export default function DashboardHeader({ onToggleSidebar, isSidebarOpen }) {
-  const pathname = usePathname()
   const router = useRouter()
   const [q, setQ] = useState('')
   const inputRef = useRef(null)
-
-  const tabs = [
-    { name: 'Dashboard', href: '/dashboard' },
-    { name: 'Campaigns', href: '/' },
-    // Removed "Influencers" tab to avoid clutter in navbar
-  ]
 
   // Gate: whether user can create more campaigns (use billing hook to avoid duplicate fetch)
   const { isLoaded: billingLoaded, usageInfo } = useBilling()
@@ -73,26 +66,9 @@ export default function DashboardHeader({ onToggleSidebar, isSidebarOpen }) {
                 'mr-1 inline-flex items-center justify-center rounded-md p-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 focus:outline-none focus:ring-2 focus:ring-pink-500/30 lg:hidden',
                 isSidebarOpen && 'bg-zinc-800/60 text-zinc-100'
               )}
-            >
+              >
               <Menu className="h-5 w-5" />
             </button>
-            {tabs.map((t) => {
-              const isActive = pathname === t.href
-              return (
-                <Link
-                  key={t.name}
-                  href={t.href}
-                  className={cn(
-                    'text-sm font-medium px-3 pb-2 transition-colors border-b-2',
-                    isActive
-                      ? 'text-zinc-100 border-pink-400'
-                      : 'text-zinc-400 border-transparent hover:text-zinc-200 hover:border-pink-400/50'
-                  )}
-                >
-                  {t.name}
-                </Link>
-              )
-            })}
           </div>
 
           <div className="flex items-center gap-3">
