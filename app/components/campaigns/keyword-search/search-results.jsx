@@ -269,6 +269,7 @@ const SearchResults = ({ searchData }) => {
   }, [creators, showEmailOnly]);
 
   const waitingForResults = (jobIsActive || stillProcessing || isFetching || isLoading) && creators.length === 0;
+  const shouldPoll = Boolean(searchData?.jobId) && (jobIsActive || stillProcessing || isFetching || isLoading);
 
   const showFilteredEmpty = useMemo(
     () => showEmailOnly && creators.length > 0 && filteredCreators.length === 0,
@@ -305,7 +306,7 @@ const SearchResults = ({ searchData }) => {
         else if (platformNormalized === 'enhanced-instagram') apiEndpoint = '/api/scraping/instagram-enhanced';
         else if (platformNormalized === 'youtube') apiEndpoint = '/api/scraping/youtube';
 
-        const response = await fetch(`${apiEndpoint}?jobId=${searchData.jobId}`);
+        const response = await fetch(`${apiEndpoint}?jobId=${searchData.jobId}` , { credentials: 'include' });
         const data = await response.json();
 
         if (data.error) {
@@ -435,6 +436,7 @@ const SearchResults = ({ searchData }) => {
   );
 
   const currentRows = useMemo(() => {
+    const seenRowKeys = new Set();
     return currentCreators.map((creator, index) => {
       const base = creator?.creator || creator;
       const platformValue = base?.platform || creator.platform || platformNormalized || 'tiktok';
@@ -461,6 +463,17 @@ const SearchResults = ({ searchData }) => {
         handle ??
         `creator-${startIndex + index}`;
       const externalId = typeof externalRaw === 'string' ? externalRaw : String(externalRaw ?? `creator-${startIndex + index}`);
+
+      // Normalize for stable keys
+      const idPlatform = (platform || platformNormalized || 'tiktok').toString().toLowerCase();
+      const idExternal = (externalId || handle).toString().toLowerCase();
+      let keyId = `${idPlatform}-${idExternal}`;
+      if (seenRowKeys.has(keyId)) {
+        let i = 1;
+        while (seenRowKeys.has(`${keyId}-${i}`)) i++;
+        keyId = `${keyId}-${i}`;
+      }
+      seenRowKeys.add(keyId);
 
       const snapshot = {
         platform,
@@ -493,7 +506,7 @@ const SearchResults = ({ searchData }) => {
       };
 
       return {
-        id: `${platform}-${externalId}`,
+        id: keyId,
         snapshot,
         raw: creator,
       };
@@ -557,7 +570,7 @@ const SearchResults = ({ searchData }) => {
         else if (platformNormalized === 'enhanced-instagram') apiEndpoint = '/api/scraping/instagram-enhanced';
         else if (platformNormalized === 'youtube') apiEndpoint = '/api/scraping/youtube';
 
-        fetch(`${apiEndpoint}?jobId=${searchData.jobId}`)
+        fetch(`${apiEndpoint}?jobId=${searchData.jobId}`, { credentials: 'include' })
           .then((response) => response.json())
           .then((result) => {
             const foundCreators =
@@ -587,10 +600,34 @@ const SearchResults = ({ searchData }) => {
   if (!filteredCreators.length && !showFilteredEmpty) {
     if (waitingForResults) {
       return (
-        <div className="flex flex-col items-center justify-center min-h-[240px] text-sm text-zinc-400 gap-2">
-          <Loader2 className="h-4 w-4 animate-spin text-pink-400" />
-          Waiting for results...
-        </div>
+        <>
+          {/* Keep polling even while showing the minimal loader */}
+          {shouldPoll && (
+            <div className="hidden" aria-hidden="true">
+              <SearchProgress 
+                jobId={searchData.jobId}
+                platform={searchData.selectedPlatform || searchData.platform}
+                searchData={searchData}
+                onMeta={setEnhancedMeta}
+                onProgress={setProgressInfo}
+                onIntermediateResults={(data) => {
+                  try {
+                    const incoming = Array.isArray(data?.creators) ? data.creators : [];
+                    if (incoming.length === 0) return;
+                    setCreators((prev) => dedupeCreators([...prev, ...incoming], { platformHint: platformNormalized }));
+                  } catch (e) {
+                    console.error('Error handling intermediate results (initial wait):', e);
+                  }
+                }}
+                onComplete={handleSearchComplete}
+              />
+            </div>
+          )}
+          <div className="flex flex-col items-center justify-center min-h-[240px] text-sm text-zinc-400 gap-2">
+            <Loader2 className="h-4 w-4 animate-spin text-pink-400" />
+            Waiting for results...
+          </div>
+        </>
       );
     }
 
@@ -726,8 +763,8 @@ const SearchResults = ({ searchData }) => {
 
       {/* Removed AI Strategy box for a cleaner presentation */}
 
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 md:gap-4">
+        <div className="flex items-center gap-3 min-w-0">
           <h2 className="text-2xl font-bold text-zinc-100">Results Found</h2>
           {platformNormalized === "enhanced-instagram" && (
             <Badge variant="secondary" className="bg-gradient-to-r from-violet-500/20 to-pink-500/20 text-violet-300 border-violet-500/30">
@@ -735,8 +772,8 @@ const SearchResults = ({ searchData }) => {
             </Badge>
           )}
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3 md:gap-4 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
             <div className="inline-flex items-center gap-1 rounded-md border border-zinc-800 bg-zinc-900/60 p-1">
               {VIEW_MODES.map((mode) => {
                 const meta = VIEW_MODE_META[mode];
@@ -774,7 +811,7 @@ const SearchResults = ({ searchData }) => {
               Email only
             </Button>
           </div>
-        <div className="text-sm text-zinc-400">
+        <div className="text-sm text-zinc-400 order-3 md:order-none">
           Page {currentPage} of {totalPages} •
           Showing {(currentPage - 1) * itemsPerPage + 1}-
           {Math.min(currentPage * itemsPerPage, totalResults)} of{" "}
@@ -843,7 +880,7 @@ const SearchResults = ({ searchData }) => {
       )}
 
       {/* Silent poller to keep progress flowing while table renders */}
-      {(jobIsActive || stillProcessing) && (
+      {shouldPoll && (
         <div className="hidden" aria-hidden="true">
           <SearchProgress 
             jobId={searchData.jobId}
@@ -901,7 +938,7 @@ const SearchResults = ({ searchData }) => {
           </div>
         )}
 
-        <div className={cn("w-full", viewMode === "table" ? "overflow-x-auto" : "hidden")}>
+        <div className={cn("w-full", viewMode === "table" ? "overflow-x-auto" : "hidden")}> 
           <Table className="w-full">
             <TableHeader>
               <TableRow className="border-b border-zinc-800">
@@ -912,22 +949,22 @@ const SearchResults = ({ searchData }) => {
                     onCheckedChange={() => handleSelectPage(!allSelectedOnPage)}
                   />
                 </TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[50px]">
+                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider min-w-[56px]">
                   Profile
                 </TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[15%] min-w-[120px]">
+                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider min-w-[160px]">
                   Username
                 </TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[10%] min-w-[120px]">
+                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider min-w-[120px]">
                   Followers
                 </TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[20%] min-w-[150px]">
+                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider min-w-[220px]">
                   Bio
                 </TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[20%] min-w-[150px]">
+                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider min-w-[200px]">
                   Email
                 </TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[25%] min-w-[200px]">
+                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider min-w-[220px]">
                   Video Title
                 </TableHead>
                 <TableHead className="px-6 py-3 text-right text-xs font-medium text-zinc-400 uppercase tracking-wider w-[10%] min-w-[80px]">

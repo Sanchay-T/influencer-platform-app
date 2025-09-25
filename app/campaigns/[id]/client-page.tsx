@@ -217,7 +217,7 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
           return
         }
 
-        const response = await fetch(`/api/scraping/${current.platform.toLowerCase()}?jobId=${current.id}`)
+        const response = await fetch(`/api/scraping/${current.platform.toLowerCase()}?jobId=${current.id}`, { credentials: 'include' })
         const data = await response.json()
 
         if (!response.ok || data.error) {

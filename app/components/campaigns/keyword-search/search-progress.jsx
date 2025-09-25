@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { useRouter } from 'next/navigation'
 
 export default function SearchProgress({ jobId, onComplete, onIntermediateResults, platform = 'tiktok', searchData, onMeta, onProgress }) {
-  const DEBUG = false
+  const DEBUG = (typeof window !== 'undefined' && (window.localStorage?.getItem('debug:progress') === '1')) || process.env.NEXT_PUBLIC_DEBUG_PROGRESS === '1'
   const debugLog = (...args) => {
     if (DEBUG) console.log(...args)
   }
@@ -141,6 +141,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
             headers: {
               'Content-Type': 'application/json'
             },
+            credentials: 'include',
             signal: controller.signal
           });
           
@@ -151,7 +152,8 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
           response = await fetch(apiEndpoint, {
             headers: {
               'Content-Type': 'application/json'
-            }
+            },
+            credentials: 'include'
             // No timeout for fallback
           });
         }
@@ -164,17 +166,33 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
             platform: platform,
             status: response.status
           });
-          
+
           // If it's a 404, throw an error to trigger retry
           if (response.status === 404) {
             throw new Error(`API endpoint not found: ${apiEndpoint}`);
           }
-          
-          // If it's a 401, it's likely a temporary auth issue - continue polling
-          if (response.status === 401) {
-            debugWarn('⚠️ [SEARCH-PROGRESS] 401 Unauthorized - continuing to poll (may be temporary)');
-            // Don't throw error, just continue polling
-            return;
+
+          // If it's a 401, try a snapshot fallback from the campaign API, then continue polling
+          if (response.status === 401 && searchData?.campaignId) {
+            try {
+              const snapRes = await fetch(`/api/campaigns/${searchData.campaignId}`, { credentials: 'include' });
+              if (snapRes.ok) {
+                const snap = await snapRes.json();
+                const job = Array.isArray(snap?.scrapingJobs) ? snap.scrapingJobs.find((j) => j.id === jobId) : null;
+                if (job && Array.isArray(job.results) && job.results.length > 0) {
+                  const creators = job.results.flatMap((r) => Array.isArray(r?.creators) ? r.creators : []);
+                  if (creators.length > 0 && typeof onIntermediateResults === 'function') {
+                    onIntermediateResults({ creators, progress: job.progress ?? 0, status: job.status, isPartial: true });
+                  }
+                  if (typeof onProgress === 'function') {
+                    onProgress({ processedResults: job.processedResults ?? creators.length, targetResults: job.targetResults ?? null, progress: parseFloat(job.progress || '0'), status: job.status || 'processing' })
+                  }
+                }
+              }
+            } catch (snapErr) {
+              debugWarn('⚠️ [SEARCH-PROGRESS] Snapshot fallback failed (non-fatal)', snapErr);
+            }
+            return; // keep polling
           }
         }
         

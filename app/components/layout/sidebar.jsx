@@ -1,5 +1,6 @@
 'use client'
 
+import React, { useEffect, useState } from 'react'
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { LayoutDashboard, LogOut, UserRoundCog, Settings, Mail, CreditCard, TrendingUp, ListTree, Pin, PinOff, Megaphone } from "lucide-react";
@@ -10,6 +11,8 @@ import TrialSidebarCompact from '@/app/components/trial/trial-sidebar-compact'
 import { cn } from '@/lib/utils'
 
 export default function Sidebar({ onNavigate, onTogglePin, isPinned = false, showAutoHideHint = false }) {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
   const router = useRouter()
   const pathname = usePathname()
   const { signOut } = useClerk()
@@ -54,9 +57,9 @@ export default function Sidebar({ onNavigate, onTogglePin, isPinned = false, sho
               variant="ghost"
               className="text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60"
               onClick={onTogglePin}
-              aria-label={isPinned ? 'Unpin sidebar' : 'Pin sidebar'}
+              aria-label={mounted ? (isPinned ? 'Unpin sidebar' : 'Pin sidebar') : undefined}
             >
-              {isPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+              {mounted ? (isPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />) : null}
             </Button>
           )}
         </div>
