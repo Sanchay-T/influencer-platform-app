@@ -18,6 +18,7 @@ import Breadcrumbs from "../../breadcrumbs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AddToListButton } from "@/components/lists/add-to-list-button";
 import { cn } from "@/lib/utils";
+import { dedupeCreators } from "../utils/dedupe-creators";
 
 export default function SimilarSearchResults({ searchData }) {
   const [currentPage, setCurrentPage] = useState(1);
@@ -30,6 +31,7 @@ export default function SimilarSearchResults({ searchData }) {
   const [enhancedMeta, setEnhancedMeta] = useState(null);
   const [selectedCreators, setSelectedCreators] = useState({});
   const itemsPerPage = 10;
+  const platformHint = (searchData?.platform || '').toString().toLowerCase();
 
   // Fetch campaign name for breadcrumbs
   useEffect(() => {
@@ -172,14 +174,18 @@ export default function SimilarSearchResults({ searchData }) {
       dataKeys: Object.keys(data),
       fullData: data
     });
-    
+
     if (data.status === 'completed') {
       console.log('✅ [RESULTS-HANDOFF] Setting final creators:', {
         creatorsReceived: data.creators?.length || 0,
         firstCreator: data.creators?.[0]
       });
-      setCreators(data.creators || []);
+      const finalCreators = dedupeCreators(Array.isArray(data.creators) ? data.creators : [], {
+        platformHint,
+      });
+      setCreators(finalCreators);
       setIsLoading(false);
+      setStillProcessing(false);
     } else {
       console.log('⚠️ [RESULTS-HANDOFF] Received non-completed status:', data.status);
     }
@@ -259,19 +265,9 @@ export default function SimilarSearchResults({ searchData }) {
         try {
           const incoming = Array.isArray(data?.creators) ? data.creators : [];
           if (incoming.length === 0) return;
-          // Deduplicate by creator uniqueId/username
           setCreators((prev) => {
-            const map = new Map();
-            for (const c of prev) {
-              const id = c?.creator?.uniqueId || c?.creator?.username || c?.username || '';
-              if (id) map.set(id, c);
-            }
-            for (const c of incoming) {
-              const id = c?.creator?.uniqueId || c?.creator?.username || c?.username || '';
-              if (id && !map.has(id)) map.set(id, c);
-            }
-            const merged = Array.from(map.values());
-            if (merged.length > 0) {
+            const merged = dedupeCreators([...prev, ...incoming], { platformHint });
+            if (merged.length > prev.length) {
               setIsLoading(false);
               setStillProcessing(true);
             }

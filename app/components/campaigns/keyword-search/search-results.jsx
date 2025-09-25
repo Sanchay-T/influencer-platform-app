@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { FeatureGate } from "@/app/components/billing/protect";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AddToListButton } from "@/components/lists/add-to-list-button";
+import { dedupeCreators } from "../utils/dedupe-creators";
 import {
   Table,
   TableBody,
@@ -112,37 +113,6 @@ const formatFollowers = (value) => {
   }
 
   return Math.round(numeric).toLocaleString();
-};
-
-const dedupeCreators = (creators = []) => {
-  const seen = new Set();
-  const unique = [];
-
-  for (const creator of creators) {
-    if (!creator) continue;
-
-    const keyParts = [
-      creator?.creator?.channelId,
-      creator?.creator?.id,
-      creator?.creator?.uniqueId,
-      creator?.creator?.username,
-      creator?.channelId,
-      creator?.id,
-      creator?.uniqueId,
-      creator?.username,
-      creator?.video?.url,
-    ];
-
-    const key = keyParts.find((part) => typeof part === "string" && part.trim().length > 0);
-    const normalizedKey = key ? key.trim().toLowerCase() : JSON.stringify(keyParts);
-
-    if (seen.has(normalizedKey)) continue;
-
-    seen.add(normalizedKey);
-    unique.push(creator);
-  }
-
-  return unique;
 };
 
 const resolveMediaPreview = (creator, snapshot, platformHint) => {
@@ -266,7 +236,7 @@ const SearchResults = ({ searchData }) => {
       setIsLoading(false);
       setIsFetching(true);
     } else if (initialCreators.length) {
-      setCreators(dedupeCreators(initialCreators));
+      setCreators(dedupeCreators(initialCreators, { platformHint: platformNormalized }));
       setIsLoading(false);
       setIsFetching(true);
     } else {
@@ -351,7 +321,7 @@ const SearchResults = ({ searchData }) => {
 
         // Debug logs removed - data flow working correctly
 
-        const dedupedCreators = dedupeCreators(allCreators);
+        const dedupedCreators = dedupeCreators(allCreators, { platformHint: platformNormalized });
         setCreators(dedupedCreators);
         if (searchData?.jobId && dedupedCreators.length) {
           resultsCacheRef.current.set(searchData.jobId, dedupedCreators);
@@ -571,7 +541,7 @@ const SearchResults = ({ searchData }) => {
   const handleSearchComplete = (data) => {
     if (data && data.status === "completed") {
       // Use creators directly from data.creators (already processed with bio/email)
-        const allCreators = dedupeCreators(data.creators || []);
+        const allCreators = dedupeCreators(data.creators || [], { platformHint: platformNormalized });
         if (allCreators.length > 0) {
           setCreators(allCreators);
           setIsLoading(false);
@@ -594,7 +564,7 @@ const SearchResults = ({ searchData }) => {
               result.results?.reduce((acc, res) => {
                 return [...acc, ...(res.creators || [])];
               }, []) || [];
-            const deduped = dedupeCreators(foundCreators);
+            const deduped = dedupeCreators(foundCreators, { platformHint: platformNormalized });
             setCreators(deduped);
             if (deduped.length) {
               setIsLoading(false);
@@ -885,7 +855,7 @@ const SearchResults = ({ searchData }) => {
                 if (incoming.length === 0) return;
 
                 setCreators((prev) => {
-                  const merged = dedupeCreators([...prev, ...incoming]);
+                  const merged = dedupeCreators([...prev, ...incoming], { platformHint: platformNormalized });
                   if (searchData?.jobId && merged.length) {
                     resultsCacheRef.current.set(searchData.jobId, merged);
                   }

@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "react-hot-toast";
 import { Loader2 } from "lucide-react";
 
 export function SimilarSearchForm({ campaignId, onSuccess }) {
   const [username, setUsername] = useState("");
-  const [selectedPlatform, setSelectedPlatform] = useState("tiktok"); // tiktok, instagram, or youtube
+  const [selectedPlatform, setSelectedPlatform] = useState("instagram"); // instagram or youtube
   const [searchState, setSearchState] = useState({
     status: 'idle', // idle, searching, processing
     message: '',
@@ -132,12 +133,12 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
           <div className="space-y-4">
             <label className="text-sm font-medium">Platform</label>
             <div className="flex space-x-4">
-              <div className="flex items-center">
-                <Checkbox
-                  checked={selectedPlatform === "tiktok"}
-                  onCheckedChange={() => setSelectedPlatform("tiktok")}
-                />
-                <span className="ml-2">TikTok</span>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Checkbox disabled checked={false} />
+                <span className="ml-1">TikTok</span>
+                <Badge variant="outline" className="uppercase tracking-wide text-xs">
+                  Coming Soon
+                </Badge>
               </div>
               <div className="flex items-center">
                 <Checkbox
