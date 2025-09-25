@@ -17,14 +17,16 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const [isLarge, setIsLarge] = useState(false);
   const [sidebarSheetOpen, setSidebarSheetOpen] = useState(false);
-  const [sidebarPinned, setSidebarPinned] = useState(() => {
-    if (typeof window === 'undefined') return false;
+  // Initialize deterministically for SSR; hydrate from localStorage after mount
+  const [sidebarPinned, setSidebarPinned] = useState(false);
+  useEffect(() => {
     try {
-      return window.localStorage.getItem(SIDEBAR_PIN_STORAGE_KEY) === 'true';
+      const stored = typeof window !== 'undefined' ? window.localStorage.getItem(SIDEBAR_PIN_STORAGE_KEY) : null;
+      if (stored === 'true') setSidebarPinned(true);
     } catch {
-      return false;
+      // ignore
     }
-  });
+  }, []);
   const [desktopPeekOpen, setDesktopPeekOpen] = useState(false);
   const desktopSidebarStyle = useMemo(() => ({
     top: `${DESKTOP_HEADER_HEIGHT}px`,

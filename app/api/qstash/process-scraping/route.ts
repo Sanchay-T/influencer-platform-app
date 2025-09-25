@@ -23,6 +23,23 @@ import { LogLevel, LogCategory } from '@/lib/logging/types'
 const fs = require('fs');
 const path = require('path');
 
+// Lightweight per-run file logger for after-the-fact analysis
+function appendRunLog(jobId: string, entry: Record<string, any>) {
+  try {
+    const dir = path.join(process.cwd(), 'logs', 'runs', 'tiktok');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const file = path.join(dir, `${jobId}.jsonl`);
+    const payload = {
+      ts: new Date().toISOString(),
+      jobId,
+      ...entry,
+    };
+    fs.appendFileSync(file, JSON.stringify(payload) + '\n');
+  } catch (err) {
+    // Do not throw from logger
+  }
+}
+
 // Initialize image cache
 const imageCache = new ImageCache();
 
@@ -1928,6 +1945,7 @@ export async function POST(req: Request) {
           })
           .where(eq(scrapingJobs.id, job.id));
         console.log('🚀 [IMMEDIATE-PROGRESS] Updated progress to 10% - API call started!');
+        appendRunLog(job.id, { type: 'progress_update', stage: 'api_start', progress: 10 });
         
         const response = await fetch(apiUrl, {
           headers: { 'x-api-key': process.env.SCRAPECREATORS_API_KEY! }
@@ -1944,6 +1962,7 @@ export async function POST(req: Request) {
           totalResults: apiResponse?.total || 0,
           hasMore: !!apiResponse?.has_more
         });
+        appendRunLog(job.id, { type: 'api_response', count: apiResponse?.search_item_list?.length || 0, total: apiResponse?.total || 0, hasMore: !!apiResponse?.has_more });
         
         // ENHANCED LOGGING FOR ANALYSIS TEAM - VERY VISIBLE
         console.log('\n🚨🚨🚨 TIKTOK API CALL DETECTED 🚨🚨🚨');
@@ -1988,6 +2007,7 @@ export async function POST(req: Request) {
           })
           .where(eq(scrapingJobs.id, job.id));
         console.log('🚀 [IMMEDIATE-PROGRESS] Updated progress to 15% - Processing creators!');
+        appendRunLog(job.id, { type: 'progress_update', stage: 'processing_start', progress: 15 });
         
         for (let i = 0; i < rawResults.length; i += batchSize) {
           const batch = rawResults.slice(i, i + batchSize);
@@ -2125,8 +2145,9 @@ export async function POST(req: Request) {
                 updatedAt: new Date()
               })
               .where(eq(scrapingJobs.id, jobId));
-            
+
             console.log('💾 [GRANULAR-PROGRESS] Updated database with processing progress:', Math.round(processingProgress) + '%');
+            appendRunLog(job.id, { type: 'batch_progress', batchEndIndex: i + batch.length, batchSize: batch.length, processedThisRun: creators.length, tempProcessedResults, progress: Math.min(Math.round(processingProgress), 90) });
           }
           
           // Small delay between batches to make progress visible
@@ -2157,22 +2178,24 @@ export async function POST(req: Request) {
             // Append new creators to existing results
             const existingCreators = Array.isArray(existingResults.creators) ? existingResults.creators : [];
             const updatedCreators = [...existingCreators, ...creators];
-            
+
             await db.update(scrapingResults)
               .set({
                 creators: updatedCreators
               })
               .where(eq(scrapingResults.jobId, jobId));
-              
+
             console.log('✅ [TIKTOK-KEYWORD] Appended', creators.length, 'new creators to existing', existingCreators.length, 'results');
+            appendRunLog(job.id, { type: 'results_append', added: creators.length, prevTotal: existingCreators.length, newTotal: updatedCreators.length });
           } else {
             // Create first result entry
             await db.insert(scrapingResults).values({
               jobId: jobId,
               creators: creators
             });
-            
+
             console.log('✅ [TIKTOK-KEYWORD] Created first result entry with', creators.length, 'creators');
+            appendRunLog(job.id, { type: 'results_first_save', count: creators.length });
           }
         }
         
@@ -2195,8 +2218,9 @@ export async function POST(req: Request) {
             cursor: (job.cursor || 0) + creators.length
           })
           .where(eq(scrapingJobs.id, jobId));
-        
+
         console.log('✅ [PROGRESS-UPDATE] Database updated successfully');
+        appendRunLog(job.id, { type: 'job_progress_commit', processedRuns: newProcessedRuns, processedResults: newProcessedResults, cursor: (job.cursor || 0) + creators.length, progress: Math.round(progress) });
         
         // Schedule next call or complete
         if (newProcessedRuns < MAX_API_CALLS_FOR_TESTING && newProcessedResults < job.targetResults) {

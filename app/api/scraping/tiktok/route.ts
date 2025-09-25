@@ -10,6 +10,18 @@ import { PlanValidator } from '@/lib/services/plan-validator'
 import BillingLogger from '@/lib/loggers/billing-logger'
 import { logger, LogCategory } from '@/lib/logging';
 import { withApiLogging, logDbOperation, createApiResponse, createErrorResponse } from '@/lib/middleware/api-logger';
+const fs = require('fs');
+const path = require('path');
+
+function appendRunLog(jobId: string, entry: Record<string, any>) {
+  try {
+    const dir = path.join(process.cwd(), 'logs', 'runs', 'tiktok');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const file = path.join(dir, `${jobId}.jsonl`);
+    const payload = { ts: new Date().toISOString(), jobId, source: 'poll', ...entry };
+    fs.appendFileSync(file, JSON.stringify(payload) + '\n');
+  } catch {}
+}
 
 // Definir la interfaz para la respuesta de ScrapeCreators
 interface ScrapeCreatorsResponse {
@@ -416,6 +428,19 @@ export const GET = withApiLogging(async (req: Request, { requestId, logPhase, lo
         }
 
         logPhase('business');
+        try {
+          const resultsArray = Array.isArray(job.results) ? job.results : (job.results ? [job.results] : []);
+          const first = resultsArray[0];
+          const currentCount = first && Array.isArray((first as any).creators) ? (first as any).creators.length : 0;
+          appendRunLog(job.id, {
+            type: 'poll_snapshot',
+            status: job.status,
+            progress: parseFloat(job.progress || '0'),
+            processedResults: job.processedResults,
+            targetResults: job.targetResults,
+            currentSavedCreators: currentCount,
+          });
+        } catch {}
         
         // Check for job timeout
         if (job.timeoutAt && new Date(job.timeoutAt) < new Date()) {
@@ -523,14 +548,21 @@ export const GET = withApiLogging(async (req: Request, { requestId, logPhase, lo
             targetResults: job.targetResults
         }, LogCategory.TIKTOK);
 
-        return createApiResponse({
+        const payload = {
             status: job.status,
             processedResults: job.processedResults,
             targetResults: job.targetResults,
             error: job.error,
             results: job.results,
             progress: parseFloat(job.progress || '0')
-        }, 200, requestId);
+        };
+        try {
+          const resultsArray = Array.isArray(job.results) ? job.results : (job.results ? [job.results] : []);
+          const first = resultsArray[0];
+          const currentCount = first && Array.isArray((first as any).creators) ? (first as any).creators.length : 0;
+          appendRunLog(job.id, { type: 'poll_return', status: payload.status, progress: payload.progress, currentSavedCreators: currentCount });
+        } catch {}
+        return createApiResponse(payload, 200, requestId);
     } catch (error) {
         log.error('TikTok API GET request failed', error as Error, {
             requestId,
