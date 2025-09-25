@@ -51,6 +51,12 @@ export async function POST(req: Request) {
     }
     console.log('✅ [YOUTUBE-SIMILAR-API] Campaign validated:', campaign.name);
 
+    if (campaign.searchType !== 'similar') {
+      await db.update(campaigns)
+        .set({ searchType: 'similar', updatedAt: new Date() })
+        .where(eq(campaigns.id, campaignId));
+    }
+
     // Check for existing pending/processing jobs for this campaign and platform
     console.log('🔍 [YOUTUBE-SIMILAR-API] Checking for existing jobs...');
     const existingJob = await db.query.scrapingJobs.findFirst({

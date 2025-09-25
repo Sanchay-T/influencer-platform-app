@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ApifyClient } from 'apify-client';
 import { db } from '@/lib/db';
-import { scrapingJobs, scrapingResults, type PlatformResult, type InstagramRelatedProfile } from '@/lib/db/schema';
+import { campaigns, scrapingJobs, scrapingResults, type PlatformResult, type InstagramRelatedProfile } from '@/lib/db/schema';
 import { auth } from '@clerk/nextjs/server';
 import { eq, and } from 'drizzle-orm';
 import { PlanEnforcementService } from '@/lib/services/plan-enforcement';
@@ -118,6 +118,10 @@ export async function POST(req: Request) {
           timeoutAt: new Date(Date.now() + TIMEOUT_MINUTES * 60 * 1000)
         })
         .returning();
+
+      await db.update(campaigns)
+        .set({ searchType: 'similar', updatedAt: new Date() })
+        .where(eq(campaigns.id, campaignId));
 
       console.log('✅ Job creado correctamente:', job.id);
 

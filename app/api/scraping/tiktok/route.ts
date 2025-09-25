@@ -146,12 +146,24 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
             }, LogCategory.TIKTOK);
             return createErrorResponse('Campaign not found or unauthorized', 404, requestId);
         }
-        
+
         log.info('TikTok API campaign verified', {
             requestId,
             campaignId,
             campaignName: campaign.name
         }, LogCategory.TIKTOK);
+
+        if (campaign.searchType !== 'keyword') {
+            await logDbOperation(
+                'campaign_search_type_update',
+                async () =>
+                    db
+                        .update(campaigns)
+                        .set({ searchType: 'keyword', updatedAt: new Date() })
+                        .where(eq(campaigns.id, campaignId)),
+                { requestId }
+            );
+        }
 
         logPhase('business');
         
