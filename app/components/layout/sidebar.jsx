@@ -20,7 +20,7 @@ export default function Sidebar({ onNavigate, onTogglePin, isPinned = false, sho
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Campaigns', href: '/', icon: Megaphone },
     { name: 'Lists', href: '/lists', icon: ListTree },
-    { name: 'Profile Settings', href: '/profile', icon: UserRoundCog },
+    { name: 'Account Settings', href: '/profile', icon: UserRoundCog },
     { name: 'Billing & Plans', href: '/billing', icon: CreditCard },
   ]
   const adminNav = [
