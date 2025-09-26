@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
+import { updateUserProfile } from '@/lib/db/queries/user-queries';
+import { users } from '@/lib/db/schema';
 import { eq, isNull, or } from 'drizzle-orm';
 import { getUserEmailFromClerk } from '@/lib/email/email-service';
 
@@ -23,10 +24,10 @@ export async function POST() {
     console.log('🔧 [ADMIN-BACKFILL] Starting email backfill process');
 
     // Find users with missing emails
-    const usersWithoutEmails = await db.query.userProfiles.findMany({
+    const usersWithoutEmails = await db.query.users.findMany({
       where: or(
-        isNull(userProfiles.email),
-        eq(userProfiles.email, '')
+        isNull(users.email),
+        eq(users.email, '')
       )
     });
 
@@ -42,12 +43,9 @@ export async function POST() {
         const email = await getUserEmailFromClerk(user.userId);
         
         if (email) {
-          await db.update(userProfiles)
-            .set({ 
-              email,
-              updatedAt: new Date() 
-            })
-            .where(eq(userProfiles.userId, user.userId));
+          await updateUserProfile(user.userId, { 
+            email
+          });
           
           updatedCount++;
           const result = `✅ Updated ${user.userId}: ${email}`;

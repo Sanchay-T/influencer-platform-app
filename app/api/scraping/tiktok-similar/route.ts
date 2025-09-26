@@ -52,6 +52,12 @@ export async function POST(req: Request) {
     }
     console.log('✅ [TIKTOK-SIMILAR-API] Campaign verified');
 
+    if (campaign.searchType !== 'similar') {
+      await db.update(campaigns)
+        .set({ searchType: 'similar', updatedAt: new Date() })
+        .where(eq(campaigns.id, campaignId));
+    }
+
     // Sanitize username
     const sanitizedUsername = username.trim().replace(/^@/, '').replace(/\s+/g, '');
     console.log('✅ Username sanitized:', sanitizedUsername);
@@ -155,7 +161,9 @@ export async function GET(req: Request) {
             jobId: true,
             creators: true,
             createdAt: true
-          }
+          },
+          orderBy: (scrapingResults, { desc }) => [desc(scrapingResults.createdAt)],
+          limit: 1
         }
       }
     });

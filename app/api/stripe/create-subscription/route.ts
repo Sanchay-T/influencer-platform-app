@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { StripeService } from '@/lib/stripe/stripe-service';
 import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
 
 export async function POST(req: NextRequest) {
   try {
@@ -26,9 +25,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Get user profile
-    const profile = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.userId, userId)
-    });
+    const profile = await getUserProfile(userId);
 
     if (!profile || !profile.stripeCustomerId) {
       return NextResponse.json({ error: 'User profile or Stripe customer not found' }, { status: 404 });
@@ -66,9 +63,7 @@ export async function POST(req: NextRequest) {
       updateData.trialConversionDate = new Date();
     }
 
-    await db.update(userProfiles)
-      .set(updateData)
-      .where(eq(userProfiles.userId, userId));
+    await updateUserProfile(userId, updateData);
 
     console.log(`✅ [STRIPE-SUBSCRIPTION] ${immediate ? 'Immediate' : 'Trial'} subscription created:`, subscription.id);
 

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { isAdminUser } from '@/lib/auth/admin-utils';
 
 /**
@@ -25,9 +24,7 @@ export async function POST(req: Request) {
     console.log('🔐 [TEST-LOGIN] Attempting test login for userId:', userId);
 
     // Verify the test user exists in database
-    const testUser = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.userId, userId)
-    });
+    const testUser = await getUserProfile(userId);
 
     if (!testUser) {
       console.error('❌ [TEST-LOGIN] Test user not found:', userId);
@@ -112,9 +109,7 @@ export async function GET(req: Request) {
 
     let testUserProfile = null;
     if (currentTestUserId && testAuthEnabled) {
-      testUserProfile = await db.query.userProfiles.findFirst({
-        where: eq(userProfiles.userId, currentTestUserId)
-      });
+      testUserProfile = await getUserProfile(currentTestUserId);
     }
 
     return NextResponse.json({

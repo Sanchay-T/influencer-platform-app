@@ -10,19 +10,40 @@ import { processYouTubeJob } from '@/lib/platforms/youtube/handler'
 import { processTikTokSimilarJob } from '@/lib/platforms/tiktok-similar/handler'
 import { processInstagramSimilarJob } from '@/lib/platforms/instagram-similar/handler'
 import { processYouTubeSimilarJob } from '@/lib/platforms/youtube-similar/handler'
+import { processEnhancedInstagramJob } from '@/lib/platforms/instagram-enhanced/handler'
 import { SystemConfig } from '@/lib/config/system-config'
 import { ImageCache } from '@/lib/services/image-cache'
 import { PlanValidator } from '@/lib/services/plan-validator'
 import BillingLogger from '@/lib/loggers/billing-logger'
+import { backgroundJobLogger, jobLog, JobState, JobProgress } from '@/lib/logging/background-job-logger'
+import { logger } from '@/lib/logging'
+import { LogLevel, LogCategory } from '@/lib/logging/types'
 
 // Inline API logging function (Vercel-compatible)
 const fs = require('fs');
 const path = require('path');
 
+// Lightweight per-run file logger for after-the-fact analysis
+function appendRunLog(jobId: string, entry: Record<string, any>) {
+  try {
+    const dir = path.join(process.cwd(), 'logs', 'runs', 'tiktok');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const file = path.join(dir, `${jobId}.jsonl`);
+    const payload = {
+      ts: new Date().toISOString(),
+      jobId,
+      ...entry,
+    };
+    fs.appendFileSync(file, JSON.stringify(payload) + '\n');
+  } catch (err) {
+    // Do not throw from logger
+  }
+}
+
 // Initialize image cache
 const imageCache = new ImageCache();
 
-function logApiCall(platform: string, searchType: string, request: any, response: any) {
+function logApiCall(platform: string, searchType: string, request: any, response: any, jobId?: string) {
   try {
     // Ensure directories exist
     const logDir = path.join(process.cwd(), 'logs/api-raw', searchType);
@@ -44,20 +65,28 @@ function logApiCall(platform: string, searchType: string, request: any, response
     
     fs.writeFileSync(filepath, JSON.stringify(logData, null, 2));
     
-    // ENHANCED LOGGING - VERY VISIBLE IN TERMINAL
-    console.log('\n🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨');
-    console.log('📁 RAW API DATA SAVED TO FILE - CHECK THIS IMMEDIATELY!');
-    console.log(`🔥 PLATFORM: ${platform.toUpperCase()}`);
-    console.log(`🔥 SEARCH TYPE: ${searchType.toUpperCase()}`);
-    console.log(`🔥 FULL FILE PATH: ${filepath}`);
-    console.log(`🔥 FILENAME: ${filename}`);
-    console.log(`🔥 REQUEST SIZE: ${JSON.stringify(request).length} characters`);
-    console.log(`🔥 RESPONSE SIZE: ${JSON.stringify(response).length} characters`);
-    console.log('🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨\n');
+    // Use structured logging instead of verbose console logs
+    logger.debug('API data cached to file', {
+      jobId,
+      platform,
+      searchType,
+      filepath: filename, // Only filename for cleaner logs
+      requestSize: JSON.stringify(request).length,
+      responseSize: JSON.stringify(response).length,
+      metadata: {
+        fullPath: filepath,
+        cacheOperation: 'api-raw-data'
+      }
+    }, LogCategory.API);
     
     return true;
   } catch (error) {
-    console.error('❌ [INLINE-LOGGING] Failed to save API data:', error);
+    logger.error('Failed to cache API data', error instanceof Error ? error : new Error(String(error)), {
+      jobId,
+      platform,
+      searchType,
+      metadata: { operation: 'api-data-cache' }
+    }, LogCategory.API);
     return false;
   }
 }
@@ -66,7 +95,7 @@ function logApiCall(platform: string, searchType: string, request: any, response
  * Unified progress calculation for all platforms
  * Formula: (apiCalls × 0.3) + (results × 0.7) for consistent progress across platforms
  */
-function calculateUnifiedProgress(processedRuns, maxRuns, processedResults, targetResults) {
+function calculateUnifiedProgress(processedRuns: number, maxRuns: number, processedResults: number, targetResults: number, jobId?: string): number {
   // API calls progress (30% weight)
   const apiCallsProgress = maxRuns > 0 ? (processedRuns / maxRuns) * 100 * 0.3 : 0;
   
@@ -76,16 +105,20 @@ function calculateUnifiedProgress(processedRuns, maxRuns, processedResults, targ
   // Combined progress, capped at 100%
   const totalProgress = Math.min(apiCallsProgress + resultsProgress, 100);
   
-  console.log('📊 [UNIFIED-PROGRESS] Calculation:', {
+  // Use structured progress logging instead of verbose console output
+  logger.debug('Progress calculation', {
+    jobId,
     processedRuns,
     maxRuns,
     processedResults,
     targetResults,
-    apiCallsProgress: Math.round(apiCallsProgress * 10) / 10,
-    resultsProgress: Math.round(resultsProgress * 10) / 10,
-    totalProgress: Math.round(totalProgress * 10) / 10,
-    formula: `(${processedRuns}/${maxRuns} × 30%) + (${processedResults}/${targetResults} × 70%) = ${Math.round(totalProgress)}%`
-  });
+    metadata: {
+      apiCallsProgress: Math.round(apiCallsProgress * 10) / 10,
+      resultsProgress: Math.round(resultsProgress * 10) / 10,
+      totalProgress: Math.round(totalProgress * 10) / 10,
+      formula: `(${processedRuns}/${maxRuns} × 30%) + (${processedResults}/${targetResults} × 70%)`
+    }
+  }, LogCategory.JOB);
   
   return totalProgress;
 }
@@ -108,19 +141,22 @@ console.log('🌐 [ENV-CHECK] Site URL configuration:', {
 let apiResponse: any = null; // Declare apiResponse at a higher scope
 
 export async function POST(req: Request) {
-  console.log('\n\n🚀🚀🚀🚀🚀 [QSTASH-WEBHOOK] RECEIVED POST REQUEST 🚀🚀🚀🚀🚀')
-  console.log('📅 [QSTASH-WEBHOOK] Timestamp:', new Date().toISOString())
-  console.log('🌐 [QSTASH-WEBHOOK] Request URL:', req.url)
-  console.log('🔑 [QSTASH-WEBHOOK] User-Agent:', req.headers.get('user-agent'))
-  console.log('🔑 [QSTASH-WEBHOOK] QStash headers present:', {
-    signature: !!req.headers.get('Upstash-Signature'),
-    messageId: req.headers.get('Upstash-Message-Id'),
-    timestamp: req.headers.get('Upstash-Timestamp')
-  })
-  console.log('🚀 INICIO DE SOLICITUD POST A /api/qstash/process-scraping')
+  const qstashMessageId = req.headers.get('Upstash-Message-Id') || 'unknown';
+  const requestId = `qstash-${qstashMessageId}`;
   
-  const signature = req.headers.get('Upstash-Signature')
-  console.log('🔑 Firma QStash recibida:', signature ? 'Sí' : 'No');
+  // Initialize with basic request context
+  logger.info('QStash webhook received', {
+    requestId,
+    qstashMessageId,
+    url: req.url,
+    userAgent: req.headers.get('user-agent'),
+    metadata: {
+      hasSignature: !!req.headers.get('Upstash-Signature'),
+      timestamp: req.headers.get('Upstash-Timestamp')
+    }
+  }, LogCategory.WEBHOOK);
+  
+  const signature = req.headers.get('Upstash-Signature');
   
   // DEVELOPMENT: Skip signature verification for ngrok
   const isDevelopment = process.env.NODE_ENV === 'development' || 
@@ -128,93 +164,114 @@ export async function POST(req: Request) {
                        (req.headers.get('host') || '').includes('localhost');
   
   if (!signature && !isDevelopment) {
-    console.error('❌ Firma QStash no proporcionada');
+    logger.error('QStash signature missing', undefined, { requestId }, LogCategory.WEBHOOK);
     return NextResponse.json({ error: 'Missing signature' }, { status: 401 })
   }
 
   try {
-    console.log('🔍 Paso 1: Obteniendo URL base');
-    // Obtener la URL base del ambiente actual
+    // Determine base URL
     const currentHost = req.headers.get('host') || process.env.VERCEL_URL || 'influencerplatform.vercel.app';
     const protocol = currentHost.includes('localhost') ? 'http' : 'https';
     const baseUrl = `${protocol}://${currentHost}`;
     
-    console.log('🌐 URL Base:', baseUrl);
-    console.log('🌐 Host:', currentHost);
-    console.log('🌐 Protocolo:', protocol);
+    logger.debug('Request environment determined', {
+      requestId,
+      baseUrl,
+      host: currentHost,
+      protocol,
+      isDevelopment
+    }, LogCategory.WEBHOOK);
 
-    console.log('🔍 Paso 2: Leyendo cuerpo de la solicitud');
-    // Leer el cuerpo una sola vez
+    // Read request body
     const body = await req.text()
-    console.log('📝 Longitud del cuerpo de la solicitud:', body.length);
-    console.log('📝 Primeros 100 caracteres del cuerpo:', body.substring(0, 100));
+    logger.debug('Request body read', {
+      requestId,
+      bodyLength: body.length,
+      bodyPreview: body.substring(0, 100)
+    }, LogCategory.WEBHOOK);
     
     let jobId: string
 
-    console.log('🔍 Paso 3: Verificando firma QStash');
-    // Skip signature verification in development
+    // Verify QStash signature
     if (!isDevelopment && signature) {
       try {
-        console.log('🔐 Verificando firma con URL:', `${baseUrl}/api/qstash/process-scraping`);
         const isValid = await receiver.verify({
           signature,
           body,
           url: `${baseUrl}/api/qstash/process-scraping`
         })
 
-        console.log('🔐 Resultado de verificación de firma:', isValid ? 'Válida' : 'Inválida');
-
         if (!isValid) {
-          console.error('❌ Firma QStash inválida');
+          logger.error('QStash signature verification failed', undefined, { requestId, baseUrl }, LogCategory.WEBHOOK);
           return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
         }
+        
+        logger.debug('QStash signature verified successfully', { requestId }, LogCategory.WEBHOOK);
       } catch (verifyError: any) {
-        console.error('❌ Error al verificar la firma:', verifyError);
-        console.error('❌ Mensaje de error:', verifyError.message);
-        console.error('❌ Stack trace:', verifyError.stack);
+        logger.error('QStash signature verification error', verifyError, { requestId }, LogCategory.WEBHOOK);
         return NextResponse.json({ 
           error: `Signature verification error: ${verifyError.message || 'Unknown error'}` 
         }, { status: 401 })
       }
     } else {
-      console.log('⚠️ [DEVELOPMENT] Skipping QStash signature verification');
+      logger.debug('Skipping QStash signature verification (development)', { requestId }, LogCategory.WEBHOOK);
     }
 
-    console.log('🔍 Paso 4: Parseando cuerpo JSON');
+    // Parse request body
+    let qstashJobData: any = {};
     try {
-      // Parsear el cuerpo como JSON
       const data = JSON.parse(body)
       jobId = data.jobId
-      console.log('✅ JSON parseado correctamente');
-      console.log('📋 Job ID extraído:', jobId);
+      qstashJobData = data; // Store the full QStash payload
+      logger.debug('Request body parsed successfully', { requestId, jobId, hasAdditionalData: !!data.platform }, LogCategory.WEBHOOK);
     } catch (error: any) {
-      console.error('❌ Error al parsear el cuerpo de la solicitud:', error);
-      console.error('❌ Mensaje de error:', error.message);
-      console.error('❌ Stack trace:', error.stack);
+      logger.error('Failed to parse request body JSON', error, { requestId }, LogCategory.WEBHOOK);
       return NextResponse.json({ 
         error: `Invalid JSON body: ${error.message || 'Unknown error'}` 
       }, { status: 400 })
     }
 
     if (!jobId) {
-      console.error('❌ Job ID no proporcionado en el cuerpo');
+      logger.error('Job ID missing in request body', undefined, { requestId }, LogCategory.WEBHOOK);
       return NextResponse.json({ error: 'Job ID is required' }, { status: 400 })
     }
 
-    console.log('🔍 Paso 5: Obteniendo job de la base de datos');
+    // Start background job tracking now that we have jobId
+    const backgroundJobId = jobLog.start({
+      jobType: 'qstash-processing',
+      qstashMessageId,
+      requestId,
+      metadata: { operation: 'process-scraping' }
+    });
+    
+    logger.info('Starting QStash job processing', { 
+      requestId, 
+      jobId, 
+      backgroundJobId 
+    }, LogCategory.JOB);
     
     // Email extraction regex (used across all platforms)
     const emailRegex = /[\w\.-]+@[\w\.-]+\.\w+/g;
     
-    // Obtener job de la base de datos
+    // Get job from database
     let job;
     try {
       job = await db.query.scrapingJobs.findFirst({
         where: (jobs, { eq }) => eq(jobs.id, jobId)
       })
-      console.log('📋 Resultado de búsqueda de job:', job ? 'Job encontrado' : 'Job no encontrado');
+      
+      logger.debug('Job database lookup completed', { 
+        requestId, 
+        jobId, 
+        backgroundJobId,
+        found: !!job 
+      }, LogCategory.DATABASE);
     } catch (dbError: any) {
-      console.error('❌ Error al obtener el job de la base de datos:', dbError);
+      logger.error('Failed to fetch job from database', dbError, { 
+        requestId, 
+        jobId, 
+        backgroundJobId 
+      }, LogCategory.DATABASE);
       console.error('❌ Mensaje de error:', dbError.message);
       console.error('❌ Stack trace:', dbError.stack);
       return NextResponse.json({ 
@@ -229,37 +286,40 @@ export async function POST(req: Request) {
     console.log('✅ Job encontrado correctamente');
     console.log('📋 Detalles del job:', JSON.stringify(job, null, 2));
     
-    // 🚨 ENHANCED PLATFORM DETECTION LOGGING 🚨
-    console.log('\n🚨🚨🚨 PLATFORM DETECTION DEBUG 🚨🚨🚨');
-    console.log('🔍 Job Platform:', `"${job.platform}"`);
-    console.log('🔍 Platform Type:', typeof job.platform);
-    console.log('🔍 Has Keywords:', !!job.keywords);
-    console.log('🔍 Keywords Value:', job.keywords);
-    console.log('🔍 Has Target Username:', !!job.targetUsername);
-    console.log('🔍 Target Username Value:', job.targetUsername);
-    console.log('🔍 Platform === "Tiktok":', job.platform === 'Tiktok');
-    console.log('🔍 Platform === "TikTok":', job.platform === 'TikTok');
-    console.log('🔍 Platform === "Instagram":', job.platform === 'Instagram');
-    console.log('🔍 Platform === "YouTube":', job.platform === 'YouTube');
-    console.log('🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨\n');
+    // Platform detection and configuration
+    logger.debug('Platform detection and job analysis', {
+      requestId,
+      jobId,
+      backgroundJobId,
+      platform: job.platform,
+      hasKeywords: !!job.keywords,
+      keywords: job.keywords,
+      hasTargetUsername: !!job.targetUsername,
+      targetUsername: job.targetUsername,
+      metadata: {
+        platformType: typeof job.platform,
+        isKeywordSearch: !!job.keywords && !job.targetUsername,
+        isSimilarSearch: !job.keywords && !!job.targetUsername
+      }
+    }, LogCategory.JOB);
 
     // Load dynamic configuration
-    console.log('🔧 [CONFIG] Loading dynamic system configurations...');
     const MAX_API_CALLS_FOR_TESTING = await SystemConfig.get('api_limits', 'max_api_calls_for_testing');
     const TIKTOK_CONTINUATION_DELAY_MS = await SystemConfig.get('qstash_delays', 'tiktok_continuation_delay');
     const TIKTOK_CONTINUATION_DELAY = `${TIKTOK_CONTINUATION_DELAY_MS}ms`;
     const INSTAGRAM_REELS_DELAY_MS = await SystemConfig.get('qstash_delays', 'instagram_reels_delay');
     const INSTAGRAM_REELS_DELAY = `${INSTAGRAM_REELS_DELAY_MS}ms`;
-    console.log('🔧 [CONFIG] Max API calls for testing:', MAX_API_CALLS_FOR_TESTING);
-    console.log('🔧 [CONFIG] TikTok continuation delay:', TIKTOK_CONTINUATION_DELAY);
-    console.log('🔧 [CONFIG] Instagram reels delay:', INSTAGRAM_REELS_DELAY);
     
-    // 🚀 SYSTEM ENHANCEMENTS ACTIVE
-    console.log('\n🚀 [ENHANCED-SYSTEM] Instagram Reels Maximization Features Active:');
-    console.log('🌍 [ENHANCEMENT] Global search (removed US region restriction)');
-    console.log('🔍 [ENHANCEMENT] Smart keyword expansion (4 variations per input)');
-    console.log('📊 [ENHANCEMENT] Increased limits: 15 API calls → 200+ target creators');
-    console.log('✨ [ENHANCEMENT] Relaxed quality filtering: 300+ followers or verified/business');
+    logger.debug('System configuration loaded', {
+      requestId,
+      jobId,
+      backgroundJobId,
+      config: {
+        maxApiCalls: MAX_API_CALLS_FOR_TESTING,
+        tiktokDelay: TIKTOK_CONTINUATION_DELAY,
+        instagramDelay: INSTAGRAM_REELS_DELAY
+      }
+    }, LogCategory.CONFIG);
     console.log('🧠 [ENHANCEMENT] Smart continuation with keyword fallbacks');
     console.log('🎯 [ENHANCEMENT] Expected results: 50-200+ creators (vs previous 3-11)\n');
 
@@ -288,9 +348,95 @@ export async function POST(req: Request) {
       })
     }
 
-    // DETECTAR SI ES UN JOB DE INSTAGRAM REELS SEARCH
-    if (job.platform === 'Instagram' && job.keywords && !job.runId) {
-      console.log('✅ [PLATFORM-DETECTION] Instagram reels job detected!');
+    // DETECT ENHANCED INSTAGRAM AI JOB (highest priority) - ENHANCED DETECTION LOGGING
+    const enhancedMetadata = job.metadata ? JSON.parse(job.metadata) : {};
+    
+    // COMPREHENSIVE JOB DETECTION LOGGING
+    console.log(`🔍 [JOB-DETECTION] Job details:`, {
+      jobId,
+      platform: job.platform,
+      hasKeywords: !!job.keywords,
+      hasMetadata: !!job.metadata,
+      metadataSearchType: enhancedMetadata.searchType,
+      detectionMatch: job.platform === 'Instagram' && job.keywords && enhancedMetadata.searchType === 'instagram_enhanced'
+    });
+    
+    if (job.platform === 'Instagram' && job.keywords && enhancedMetadata.searchType === 'instagram_enhanced') {
+      console.log(`✅ [ENHANCED-INSTAGRAM-DETECTED] Processing Enhanced Instagram AI job`);
+      
+      logger.info('Enhanced Instagram AI job detected', {
+        requestId,
+        jobId,
+        userId: job.userId,
+        keywords: job.keywords,
+        targetResults: job.targetResults,
+        aiEnhanced: true,
+        detectionPath: 'ENHANCED_METADATA_MATCH'
+      }, LogCategory.INSTAGRAM);
+      
+      try {
+        await processEnhancedInstagramJob(jobId);
+        
+        return NextResponse.json({
+          success: true,
+          message: 'Enhanced Instagram AI job processed successfully',
+          jobId: jobId,
+          searchType: 'instagram_enhanced',
+          aiEnhanced: true
+        });
+      } catch (enhancedError: any) {
+        logger.error('Enhanced Instagram AI job processing failed', enhancedError, {
+          requestId,
+          jobId,
+          userId: job.userId
+        }, LogCategory.INSTAGRAM);
+        
+        // Update job status to error
+        await db.update(scrapingJobs)
+          .set({
+            status: 'error',
+            error: enhancedError.message,
+            updatedAt: new Date()
+          })
+          .where(eq(scrapingJobs.id, jobId));
+        
+        return NextResponse.json({
+          success: false,
+          error: 'Enhanced Instagram AI job processing failed',
+          details: enhancedError.message,
+          jobId: jobId
+        }, { status: 500 });
+      }
+    }
+
+    // FALLBACK DETECTION FOR ENHANCED INSTAGRAM (if metadata missing/not working)
+    if (job.platform === 'Instagram' && job.keywords && !job.runId && enhancedMetadata.searchType !== 'instagram_enhanced') {
+      console.log(`🔄 [FALLBACK-DETECTION] Instagram job without enhanced metadata - checking if from enhanced route`);
+      
+      // Check if this might be an Enhanced Instagram job based on other indicators
+      const isLikelyEnhanced = job.keywords?.length === 1 && job.targetResults >= 100;
+      
+      if (isLikelyEnhanced) {
+        console.log(`✅ [ENHANCED-INSTAGRAM-FALLBACK] Treating as Enhanced Instagram job (single keyword + high target)`);
+        
+        try {
+          await processEnhancedInstagramJob(jobId);
+          
+          return NextResponse.json({
+            success: true,
+            message: 'Enhanced Instagram AI job processed successfully (fallback detection)',
+            jobId: jobId,
+            searchType: 'instagram_enhanced',
+            aiEnhanced: true,
+            detectionMethod: 'FALLBACK'
+          });
+        } catch (enhancedError: any) {
+          console.error(`❌ [ENHANCED-INSTAGRAM-FALLBACK-ERROR] Failed:`, enhancedError);
+          // Fall through to regular Instagram processing
+        }
+      }
+      
+      console.log('✅ [PLATFORM-DETECTION] Regular Instagram reels job detected!');
       console.log('\n\n========== INSTAGRAM REELS JOB PROCESSING ==========');
       console.log('🔄 [RAPIDAPI-INSTAGRAM] Processing reels job:', job.id);
       
@@ -941,6 +1087,10 @@ export async function POST(req: Request) {
                 });
                 
                 const userProfile = profileData.user || {};
+                // Ensure we capture the canonical username from profile lookup
+                if (userProfile.username && (!creatorData.username || creatorData.username.toLowerCase() !== String(userProfile.username).toLowerCase())) {
+                  creatorData.username = String(userProfile.username);
+                }
                 
                 enhancedBio = userProfile.biography || userProfile.bio || '';
                 const emailMatches = enhancedBio.match(emailRegex) || [];
@@ -1795,6 +1945,7 @@ export async function POST(req: Request) {
           })
           .where(eq(scrapingJobs.id, job.id));
         console.log('🚀 [IMMEDIATE-PROGRESS] Updated progress to 10% - API call started!');
+        appendRunLog(job.id, { type: 'progress_update', stage: 'api_start', progress: 10 });
         
         const response = await fetch(apiUrl, {
           headers: { 'x-api-key': process.env.SCRAPECREATORS_API_KEY! }
@@ -1811,6 +1962,7 @@ export async function POST(req: Request) {
           totalResults: apiResponse?.total || 0,
           hasMore: !!apiResponse?.has_more
         });
+        appendRunLog(job.id, { type: 'api_response', count: apiResponse?.search_item_list?.length || 0, total: apiResponse?.total || 0, hasMore: !!apiResponse?.has_more });
         
         // ENHANCED LOGGING FOR ANALYSIS TEAM - VERY VISIBLE
         console.log('\n🚨🚨🚨 TIKTOK API CALL DETECTED 🚨🚨🚨');
@@ -1855,6 +2007,7 @@ export async function POST(req: Request) {
           })
           .where(eq(scrapingJobs.id, job.id));
         console.log('🚀 [IMMEDIATE-PROGRESS] Updated progress to 15% - Processing creators!');
+        appendRunLog(job.id, { type: 'progress_update', stage: 'processing_start', progress: 15 });
         
         for (let i = 0; i < rawResults.length; i += batchSize) {
           const batch = rawResults.slice(i, i + batchSize);
@@ -1992,8 +2145,9 @@ export async function POST(req: Request) {
                 updatedAt: new Date()
               })
               .where(eq(scrapingJobs.id, jobId));
-            
+
             console.log('💾 [GRANULAR-PROGRESS] Updated database with processing progress:', Math.round(processingProgress) + '%');
+            appendRunLog(job.id, { type: 'batch_progress', batchEndIndex: i + batch.length, batchSize: batch.length, processedThisRun: creators.length, tempProcessedResults, progress: Math.min(Math.round(processingProgress), 90) });
           }
           
           // Small delay between batches to make progress visible
@@ -2024,22 +2178,24 @@ export async function POST(req: Request) {
             // Append new creators to existing results
             const existingCreators = Array.isArray(existingResults.creators) ? existingResults.creators : [];
             const updatedCreators = [...existingCreators, ...creators];
-            
+
             await db.update(scrapingResults)
               .set({
                 creators: updatedCreators
               })
               .where(eq(scrapingResults.jobId, jobId));
-              
+
             console.log('✅ [TIKTOK-KEYWORD] Appended', creators.length, 'new creators to existing', existingCreators.length, 'results');
+            appendRunLog(job.id, { type: 'results_append', added: creators.length, prevTotal: existingCreators.length, newTotal: updatedCreators.length });
           } else {
             // Create first result entry
             await db.insert(scrapingResults).values({
               jobId: jobId,
               creators: creators
             });
-            
+
             console.log('✅ [TIKTOK-KEYWORD] Created first result entry with', creators.length, 'creators');
+            appendRunLog(job.id, { type: 'results_first_save', count: creators.length });
           }
         }
         
@@ -2062,8 +2218,9 @@ export async function POST(req: Request) {
             cursor: (job.cursor || 0) + creators.length
           })
           .where(eq(scrapingJobs.id, jobId));
-        
+
         console.log('✅ [PROGRESS-UPDATE] Database updated successfully');
+        appendRunLog(job.id, { type: 'job_progress_commit', processedRuns: newProcessedRuns, processedResults: newProcessedResults, cursor: (job.cursor || 0) + creators.length, progress: Math.round(progress) });
         
         // Schedule next call or complete
         if (newProcessedRuns < MAX_API_CALLS_FOR_TESTING && newProcessedResults < job.targetResults) {
@@ -2241,6 +2398,7 @@ export async function POST(req: Request) {
         throw youtubeError;
       }
     }
+    
     
     // If no platform matches, return error
     console.log('❌ [PLATFORM-DETECTION] NO MATCHING CONDITION FOUND!');

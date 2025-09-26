@@ -51,6 +51,54 @@ function logApiCall(platform: string, searchType: string, request: any, response
   }
 }
 
+type StoredYouTubeCreatorRecord = {
+  creator?: {
+    channelId?: string;
+    handle?: string;
+    name?: string;
+  };
+  video?: {
+    url?: string;
+  };
+  [key: string]: any;
+};
+
+function dedupeYouTubeCreators<T extends StoredYouTubeCreatorRecord>(creators: T[] = []): T[] {
+  const seen = new Set<string>();
+  const unique: T[] = [];
+
+  for (const creator of creators) {
+    if (!creator || typeof creator !== 'object') {
+      continue;
+    }
+
+    const channelId = creator?.creator?.channelId ?? creator?.channelId;
+    const handle = creator?.creator?.handle ?? creator?.handle;
+    const videoUrl = creator?.video?.url ?? creator?.url;
+
+    const keySource =
+      (typeof channelId === 'string' && channelId.length > 0 && channelId) ||
+      (typeof handle === 'string' && handle.length > 0 && handle) ||
+      (typeof videoUrl === 'string' && videoUrl.length > 0 && videoUrl) ||
+      JSON.stringify({
+        channelId: channelId ?? null,
+        handle: handle ?? null,
+        videoUrl: videoUrl ?? null,
+      });
+
+    const normalizedKey = typeof keySource === 'string' ? keySource.toLowerCase() : String(keySource);
+
+    if (seen.has(normalizedKey)) {
+      continue;
+    }
+
+    seen.add(normalizedKey);
+    unique.push(creator);
+  }
+
+  return unique;
+}
+
 // Dynamic while loop approach - keep calling until target is reached
 const MAX_SAFETY_LIMIT = 20; // Safety limit to prevent infinite loops
 
@@ -119,10 +167,53 @@ export async function processYouTubeJob(job: any, jobId: string): Promise<any> {
 
   console.log('✅ Keywords found for YouTube:', job.keywords);
 
-  // EXACT COUNT STEP 2: Dynamic While Loop Approach
+  // Reconcile existing stored creators to ensure counts reflect unique channels
+  let existingResultsRecord = await db.query.scrapingResults.findFirst({
+    where: eq(scrapingResults.jobId, jobId)
+  });
+
+  let hasExistingResults = !!existingResultsRecord;
+  let existingCreators: StoredYouTubeCreatorRecord[] = [];
+  if (existingResultsRecord && Array.isArray(existingResultsRecord.creators)) {
+    const normalizedExisting = existingResultsRecord.creators as StoredYouTubeCreatorRecord[];
+    existingCreators = dedupeYouTubeCreators(normalizedExisting);
+
+    if (existingCreators.length !== normalizedExisting.length) {
+      console.log('♻️ [DEDUP] Normalizing existing YouTube creators to remove duplicates', {
+        before: normalizedExisting.length,
+        after: existingCreators.length
+      });
+
+      await db.update(scrapingResults)
+        .set({ creators: existingCreators })
+        .where(eq(scrapingResults.jobId, jobId));
+    }
+  }
+
+  let currentResults = existingCreators.length;
   const currentRuns = job.processedRuns || 0;
-  const currentResults = job.processedResults || 0;
-  
+
+  if ((job.processedResults || 0) !== currentResults) {
+    const reconciledProgress = calculateExactCountProgress(currentResults, targetResults);
+    console.log('♻️ [DEDUP] Syncing job processedResults to unique YouTube creators', {
+      previousProcessedResults: job.processedResults,
+      reconciledResults: currentResults
+    });
+
+    await db.update(scrapingJobs)
+      .set({
+        processedResults: currentResults,
+        progress: reconciledProgress.toString(),
+        updatedAt: new Date()
+      })
+      .where(eq(scrapingJobs.id, jobId));
+
+    job.processedResults = currentResults;
+    job.progress = reconciledProgress.toString();
+  }
+
+  // EXACT COUNT STEP 2: Dynamic While Loop Approach
+
   // Check if we should continue making API calls (dynamic decision)
   if (!shouldContinueApiCalls(currentResults, targetResults, currentRuns)) {
     const reason = currentResults >= targetResults ? 'Target reached' : 'Safety limit reached';
@@ -227,8 +318,8 @@ export async function processYouTubeJob(job: any, jobId: string): Promise<any> {
       })
       .where(eq(scrapingJobs.id, jobId));
 
-    // Initialize totalProcessedResults for cases where no results are found
-    let totalProcessedResults = job.processedResults || 0;
+    // Initialize totalProcessedResults using reconciled unique count
+    let totalProcessedResults = currentResults;
 
     // Process the API response and save results
     if (youtubeResponse && youtubeResponse.videos && youtubeResponse.videos.length > 0) {
@@ -238,69 +329,34 @@ export async function processYouTubeJob(job: any, jobId: string): Promise<any> {
       // Email extraction regex
       const emailRegex = /[\w\.-]+@[\w\.-]+\.\w+/g;
       
-      // Sequential processing to avoid API rate limits and enhance with profile data
-      const creators = [];
-      for (let i = 0; i < youtubeResponse.videos.length; i++) {
-        const video = youtubeResponse.videos[i];
+      // Bounded-concurrency processing for faster keyword runs
+      const creators: any[] = [];
+      const videos = youtubeResponse.videos;
+      const CONCURRENCY = parseInt(process.env.YT_PROFILE_CONCURRENCY || '5', 10);
+
+      async function processVideo(video: any, idx: number) {
         const channel = video.channel || {};
-        
-        console.log(`\n📝 [BIO-EXTRACTION] Processing video ${i + 1}/${youtubeResponse.videos.length}:`, {
-          videoTitle: video.title,
-          channelTitle: channel.title,
-          channelHandle: channel.handle
-        });
-        
-        // Enhanced Profile Fetching: Get full channel data for bio/email
+        // Enhanced Profile Fetching
         let enhancedBio = '';
-        let enhancedEmails = [];
-        let enhancedLinks = [];
-        let channelDescription = '';
+        let enhancedEmails: string[] = [];
+        let enhancedLinks: string[] = [];
         let subscriberCount = 0;
-        
+
         if (channel.handle) {
           try {
-            console.log(`🔍 [PROFILE-FETCH] Attempting to fetch full channel profile for ${channel.handle}`);
-            
             const channelData = await getYouTubeChannelProfile(channel.handle);
-            
-            // Extract bio/description
-            channelDescription = channelData.description || '';
+            const channelDescription = channelData.description || '';
             enhancedBio = channelDescription;
-            
-            // Extract emails from multiple sources
             const emailsFromDescription = channelDescription.match(emailRegex) || [];
             const directEmail = channelData.email ? [channelData.email] : [];
-            enhancedEmails = [...new Set([...directEmail, ...emailsFromDescription])]; // Remove duplicates
-            
-            // Extract social links
+            enhancedEmails = [...new Set([...directEmail, ...emailsFromDescription])];
             enhancedLinks = channelData.links || [];
             subscriberCount = channelData.subscriberCount || 0;
-            
-            console.log(`✅ [PROFILE-FETCH] Successfully fetched channel profile for ${channel.handle}:`, {
-              bioFound: !!enhancedBio,
-              bioLength: enhancedBio.length,
-              emailsFound: enhancedEmails.length,
-              linksFound: enhancedLinks.length,
-              subscribers: channelData.subscriberCountText,
-              bioPreview: enhancedBio.substring(0, 100) + (enhancedBio.length > 100 ? '...' : '')
-            });
-            
           } catch (profileError: any) {
             console.log(`❌ [PROFILE-FETCH] Error fetching channel profile for ${channel.handle}:`, profileError.message);
-            // Continue with basic data if profile fetch fails
           }
         }
-        
-        // Log email extraction results
-        console.log(`📧 [EMAIL-EXTRACTION] Email extraction result:`, {
-          channelHandle: channel.handle,
-          bioInput: enhancedBio.substring(0, 100) + (enhancedBio.length > 100 ? '...' : ''),
-          emailsFound: enhancedEmails,
-          emailCount: enhancedEmails.length,
-          linksFound: enhancedLinks.length
-        });
-        
-        // Transform video with enhanced data
+
         const creatorData = {
           creator: {
             name: channel.title || 'Unknown Channel',
@@ -318,97 +374,125 @@ export async function processYouTubeJob(job: any, jobId: string): Promise<any> {
             url: video.url || '',
             statistics: {
               views: video.viewCountInt || 0,
-              likes: 0, // Not available in YouTube search API
-              comments: 0, // Not available in YouTube search API
-              shares: 0 // Not available in YouTube search API
+              likes: 0,
+              comments: 0,
+              shares: 0
             }
           },
-          hashtags: [], // Extract from title if needed
+          hashtags: [],
           publishedTime: video.publishedTime || '',
           lengthSeconds: video.lengthSeconds || 0,
           platform: 'YouTube',
           keywords: job.keywords
         };
-        
         creators.push(creatorData);
-        
-        // Log transformation result
-        console.log(`🔄 [TRANSFORMATION] Enhanced creator data:`, {
-          creatorName: creatorData.creator.name,
-          bioLength: creatorData.creator.bio?.length || 0,
-          emailCount: creatorData.creator.emails?.length || 0,
-          linksCount: creatorData.creator.socialLinks?.length || 0,
-          videoTitle: creatorData.video.description,
-          followers: creatorData.creator.followers
-        });
-        
-        // Add delay between profile API calls to avoid rate limiting
-        if (i < youtubeResponse.videos.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay
-        }
+      }
+
+      for (let i = 0; i < videos.length; i += CONCURRENCY) {
+        const slice = videos.slice(i, i + CONCURRENCY);
+        await Promise.all(slice.map((v: any, idx: number) => processVideo(v, i + idx)));
       }
       
       console.log(`✅ [PROFILE-ENHANCEMENT] Completed enhanced profile fetching for ${creators.length} channels`);
-      
+
+      const uniqueNewCreators = dedupeYouTubeCreators(creators);
+      if (uniqueNewCreators.length !== creators.length) {
+        console.log('♻️ [DEDUP] Removed duplicate channels within current batch', {
+          before: creators.length,
+          after: uniqueNewCreators.length
+        });
+      }
+
       // EXACT COUNT STEP 4: Result Trimming
-      let creatorsToSave = creators;
-      
-      if (creators.length > 0) {
+      let creatorsToSave = uniqueNewCreators;
+
+      if (creatorsToSave.length > 0) {
         // Check if adding these results would exceed the target
-        const totalAfterAdding = currentResults + creators.length;
-        
+        const totalAfterAdding = currentResults + creatorsToSave.length;
+
         if (totalAfterAdding > targetResults) {
           const remainingSlots = targetResults - currentResults;
-          creatorsToSave = creators.slice(0, remainingSlots);
+          creatorsToSave = creatorsToSave.slice(0, remainingSlots);
           console.log(`✂️ [EXACT-COUNT] Trimming results to exact target:`, {
-            originalCount: creators.length,
+            originalCount: uniqueNewCreators.length,
             trimmedCount: creatorsToSave.length,
             currentResults,
             targetResults,
             totalAfterTrim: currentResults + creatorsToSave.length
           });
         }
-        
+
+        const dedupedCreatorsToSave = dedupeYouTubeCreators(creatorsToSave);
+        if (dedupedCreatorsToSave.length !== creatorsToSave.length) {
+          console.log('♻️ [DEDUP] Removed duplicates after trimming', {
+            before: creatorsToSave.length,
+            after: dedupedCreatorsToSave.length
+          });
+        }
+
         console.log('💾 [YOUTUBE] Saving results to database:', {
-          creatorCount: creatorsToSave.length,
+          creatorCount: dedupedCreatorsToSave.length,
           jobId: job.id,
           apiCall: newProcessedRuns,
           currentTotal: currentResults,
-          newTotal: currentResults + creatorsToSave.length,
+          newTotal: currentResults + dedupedCreatorsToSave.length,
           targetResults
         });
-        
-        // Check if there are existing results to append to
-        const existingResults = await db.query.scrapingResults.findFirst({
-          where: eq(scrapingResults.jobId, job.id)
-        });
-        
-        if (existingResults) {
-          // Append new creators to existing results
-          const existingCreators = Array.isArray(existingResults.creators) ? existingResults.creators : [];
-          const updatedCreators = [...existingCreators, ...creatorsToSave];
-          
-          await db.update(scrapingResults)
-            .set({
-              creators: updatedCreators
-            })
-            .where(eq(scrapingResults.jobId, job.id));
-            
-          console.log('✅ [YOUTUBE] Appended', creatorsToSave.length, 'new creators to existing', existingCreators.length, 'results');
+
+        const previousUniqueCount = existingCreators.length;
+
+        if (dedupedCreatorsToSave.length > 0) {
+          if (hasExistingResults) {
+            const mergedCreators = dedupeYouTubeCreators([
+              ...existingCreators,
+              ...dedupedCreatorsToSave
+            ]);
+
+            const addedCount = Math.max(mergedCreators.length - previousUniqueCount, 0);
+            const skippedCount = Math.max(dedupedCreatorsToSave.length - addedCount, 0);
+
+            await db.update(scrapingResults)
+              .set({
+                creators: mergedCreators
+              })
+              .where(eq(scrapingResults.jobId, job.id));
+
+            console.log('✅ [YOUTUBE] Upserted unique creators', {
+              appended: addedCount,
+              skipped: skippedCount,
+              previousTotal: previousUniqueCount,
+              newTotal: mergedCreators.length
+            });
+
+            existingCreators = mergedCreators;
+            totalProcessedResults = mergedCreators.length;
+            currentResults = totalProcessedResults;
+          } else {
+            await db.insert(scrapingResults).values({
+              jobId: job.id,
+              creators: dedupedCreatorsToSave,
+              createdAt: new Date()
+            });
+
+            console.log('✅ [YOUTUBE] Created first result entry with', dedupedCreatorsToSave.length, 'unique creators');
+
+            existingCreators = dedupedCreatorsToSave;
+            totalProcessedResults = existingCreators.length;
+            currentResults = totalProcessedResults;
+            hasExistingResults = true;
+          }
         } else {
-          // Create first result entry
-          await db.insert(scrapingResults).values({
-            jobId: job.id,
-            creators: creatorsToSave,
-            createdAt: new Date()
-          });
-          
-          console.log('✅ [YOUTUBE] Created first result entry with', creatorsToSave.length, 'creators');
+          console.log('ℹ️ [YOUTUBE] All fetched creators were duplicates of existing results');
+          totalProcessedResults = existingCreators.length;
+          currentResults = totalProcessedResults;
         }
+      } else {
+        console.log('ℹ️ [YOUTUBE] No new creators available after deduplication');
+        totalProcessedResults = existingCreators.length;
+        currentResults = totalProcessedResults;
       }
-      
-      // Update total processed results after trimming
-      totalProcessedResults = (job.processedResults || 0) + (creatorsToSave?.length || 0);
+
+      job.processedResults = totalProcessedResults;
       
       // Calculate exact count progress
       const progress = calculateExactCountProgress(totalProcessedResults, targetResults);

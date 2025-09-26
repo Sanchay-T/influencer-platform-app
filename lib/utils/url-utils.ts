@@ -8,9 +8,11 @@
  * - Production: Use the live domain
  */
 export function getClientUrl(): string {
-  // In development, use localhost for browser redirects (user experience)
+  // In development, detect the actual running port
   if (process.env.NODE_ENV === 'development') {
-    return 'http://localhost:3000';
+    // Check for custom port configuration
+    const localPort = process.env.LOCAL_PORT || process.env.PORT || '3000';
+    return `http://localhost:${localPort}`;
   }
   
   // In production, use the configured site URL

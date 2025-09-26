@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Table,
   TableBody,
@@ -15,6 +15,10 @@ import { User } from "lucide-react";
 import ExportButton from '../export-button';
 import SearchProgress from '../keyword-search/search-progress';
 import Breadcrumbs from "../../breadcrumbs";
+import { Checkbox } from "@/components/ui/checkbox";
+import { AddToListButton } from "@/components/lists/add-to-list-button";
+import { cn } from "@/lib/utils";
+import { dedupeCreators } from "../utils/dedupe-creators";
 
 export default function SimilarSearchResults({ searchData }) {
   const [currentPage, setCurrentPage] = useState(1);
@@ -22,7 +26,12 @@ export default function SimilarSearchResults({ searchData }) {
   const [creators, setCreators] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [campaignName, setCampaignName] = useState('Campaign');
+  const [stillProcessing, setStillProcessing] = useState(false);
+  const [progressInfo, setProgressInfo] = useState(null);
+  const [enhancedMeta, setEnhancedMeta] = useState(null);
+  const [selectedCreators, setSelectedCreators] = useState({});
   const itemsPerPage = 10;
+  const platformHint = (searchData?.platform || '').toString().toLowerCase();
 
   // Fetch campaign name for breadcrumbs
   useEffect(() => {
@@ -45,6 +54,115 @@ export default function SimilarSearchResults({ searchData }) {
     fetchCampaignName();
   }, [searchData?.campaignId]);
 
+  useEffect(() => {
+    setSelectedCreators({});
+  }, [searchData?.jobId]);
+
+  const selectedSnapshots = useMemo(() => Object.values(selectedCreators), [selectedCreators]);
+  const selectionCount = selectedSnapshots.length;
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+
+  const renderProfileLink = useCallback((creator) => {
+    if (creator.profileUrl) {
+      return creator.profileUrl;
+    }
+
+    const platform = creator.platform || searchData.platform || 'Instagram';
+    if (platform === 'TikTok' || platform === 'tiktok') {
+      return `https://www.tiktok.com/@${creator.username}`;
+    }
+    if (platform === 'YouTube' || platform === 'youtube') {
+      return `https://www.youtube.com/${creator.handle || `@${creator.username}`}`;
+    }
+    return `https://instagram.com/${creator.username}`;
+  }, [searchData.platform]);
+
+  const currentRows = useMemo(() => {
+    return creators.slice(startIndex, endIndex).map((creator, index) => {
+      const platformValue = creator.platform || searchData.platform || 'instagram';
+      const platform = typeof platformValue === 'string' ? platformValue : String(platformValue);
+
+      const handleRaw =
+        creator.username ||
+        creator.handle ||
+        creator.name ||
+        creator.channelId ||
+        `creator-${startIndex + index}`;
+      const handleValue = typeof handleRaw === 'string' ? handleRaw : String(handleRaw ?? `creator-${startIndex + index}`);
+      const handle = handleValue.trim().length ? handleValue : `creator-${startIndex + index}`;
+
+      const externalRaw =
+        creator.id ??
+        creator.profile_id ??
+        creator.profileId ??
+        creator.channelId ??
+        creator.externalId ??
+        handle ??
+        `creator-${startIndex + index}`;
+      const externalId = typeof externalRaw === 'string' ? externalRaw : String(externalRaw ?? `creator-${startIndex + index}`);
+
+      const snapshot = {
+        platform,
+        externalId,
+        handle,
+        displayName: creator.full_name || creator.name || null,
+        avatarUrl: creator.profile_pic_url || creator.thumbnail || creator.avatarUrl || null,
+        url: renderProfileLink(creator),
+        followers:
+          creator.followers ||
+          creator.followers_count ||
+          creator.followersCount ||
+          creator.subscriberCount ||
+          null,
+        engagementRate: creator.engagementRate || creator.engagement_rate || null,
+        category: creator.category || creator.niche || null,
+        metadata: creator,
+      };
+
+      return {
+        id: `${platform}-${externalId}`,
+        snapshot,
+        raw: creator,
+      };
+    });
+  }, [creators, startIndex, endIndex, searchData.platform, renderProfileLink]);
+
+  const currentRowIds = useMemo(() => currentRows.map((row) => row.id), [currentRows]);
+  const allSelectedOnPage = currentRowIds.length > 0 && currentRowIds.every((id) => selectedCreators[id]);
+  const someSelectedOnPage = currentRowIds.some((id) => selectedCreators[id]);
+
+  const toggleSelection = (rowId, snapshot) => {
+    setSelectedCreators((prev) => {
+      const next = { ...prev };
+      if (next[rowId]) {
+        delete next[rowId];
+      } else {
+        next[rowId] = snapshot;
+      }
+      return next;
+    });
+  };
+
+  const handleSelectPage = (shouldSelect) => {
+    setSelectedCreators((prev) => {
+      const next = { ...prev };
+      if (shouldSelect) {
+        currentRows.forEach(({ id, snapshot }) => {
+          next[id] = snapshot;
+        });
+      } else {
+        currentRows.forEach(({ id }) => {
+          delete next[id];
+        });
+      }
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelectedCreators({});
+
   // Validación básica
   if (!searchData?.jobId) return null;
 
@@ -56,34 +174,21 @@ export default function SimilarSearchResults({ searchData }) {
       dataKeys: Object.keys(data),
       fullData: data
     });
-    
+
     if (data.status === 'completed') {
       console.log('✅ [RESULTS-HANDOFF] Setting final creators:', {
         creatorsReceived: data.creators?.length || 0,
         firstCreator: data.creators?.[0]
       });
-      setCreators(data.creators || []);
+      const finalCreators = dedupeCreators(Array.isArray(data.creators) ? data.creators : [], {
+        platformHint,
+      });
+      setCreators(finalCreators);
       setIsLoading(false);
+      setStillProcessing(false);
     } else {
       console.log('⚠️ [RESULTS-HANDOFF] Received non-completed status:', data.status);
     }
-  };
-
-  const renderProfileLink = (creator) => {
-    // Use profileUrl if available (from enhanced backend data), otherwise generate
-    if (creator.profileUrl) {
-      return creator.profileUrl;
-    }
-    
-    // Fallback: Check platform from creator data or searchData
-    const platform = creator.platform || searchData.platform || 'Instagram';
-    if (platform === 'TikTok' || platform === 'tiktok') {
-      return `https://www.tiktok.com/@${creator.username}`;
-    }
-    if (platform === 'YouTube' || platform === 'youtube') {
-      return `https://www.youtube.com/${creator.handle || `@${creator.username}`}`;
-    }
-    return `https://instagram.com/${creator.username}`;
   };
 
   const getImageUrl = (originalUrl) => {
@@ -151,6 +256,27 @@ export default function SimilarSearchResults({ searchData }) {
       jobId={searchData.jobId}
       platform={searchData.platform}
       searchData={searchData}
+      onMeta={setEnhancedMeta}
+      onProgress={(p) => {
+        setProgressInfo(p);
+        if (p?.status === 'processing') setStillProcessing(true);
+      }}
+      onIntermediateResults={(data) => {
+        try {
+          const incoming = Array.isArray(data?.creators) ? data.creators : [];
+          if (incoming.length === 0) return;
+          setCreators((prev) => {
+            const merged = dedupeCreators([...prev, ...incoming], { platformHint });
+            if (merged.length > prev.length) {
+              setIsLoading(false);
+              setStillProcessing(true);
+            }
+            return merged;
+          });
+        } catch (e) {
+          console.error('Error handling intermediate results (similar):', e);
+        }
+      }}
       onComplete={handleResultsComplete} 
     />;
   }
@@ -175,11 +301,6 @@ export default function SimilarSearchResults({ searchData }) {
 
   // Calcular el total de páginas
   const totalPages = Math.ceil(creators.length / itemsPerPage);
-  
-  // Obtener los elementos de la página actual
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentItems = creators.slice(startIndex, endIndex);
 
   const handlePageChange = async (newPage) => {
     if (newPage === currentPage) return;
@@ -229,17 +350,35 @@ export default function SimilarSearchResults({ searchData }) {
 
   return (
     <div className="space-y-4">
-      <Breadcrumbs 
+      <Breadcrumbs
         items={[
           { label: 'Dashboard', href: '/dashboard' },
-          { 
-            label: campaignName, 
+          {
+            label: campaignName,
             href: searchData?.campaignId ? `/campaigns/${searchData.campaignId}` : '/dashboard',
             type: 'campaign'
           },
           { label: 'Search Results' }
         ]}
+        backHref={searchData?.campaignId ? `/campaigns/search?campaignId=${searchData.campaignId}` : '/campaigns/search'}
+        backLabel="Back to Search Options"
       />
+
+      {/* Silent poller to keep progress flowing while table renders */}
+      {stillProcessing && (
+        <div className="hidden" aria-hidden="true">
+          <SearchProgress 
+            jobId={searchData.jobId}
+            platform={searchData.platform}
+            searchData={searchData}
+            onMeta={setEnhancedMeta}
+            onProgress={setProgressInfo}
+            onComplete={(data) => {
+              if (data?.status === 'completed') setStillProcessing(false);
+            }}
+          />
+        </div>
+      )}
       
       <div className="flex justify-between items-center">
         <div>
@@ -256,11 +395,49 @@ export default function SimilarSearchResults({ searchData }) {
           <div className="text-sm text-muted-foreground">
             Page {currentPage} of {totalPages} • Showing {startIndex + 1}-{Math.min(endIndex, creators.length)} of {creators.length}
           </div>
+          {selectionCount > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-emerald-300">{selectionCount} selected</span>
+              <AddToListButton
+                creators={selectedSnapshots}
+                buttonLabel={`Save ${selectionCount} to list`}
+                variant="default"
+                size="sm"
+                onAdded={clearSelection}
+              />
+              <Button variant="ghost" size="sm" onClick={clearSelection}>
+                Clear
+              </Button>
+            </div>
+          )}
           {searchData?.jobId && <ExportButton jobId={searchData.jobId} />}
         </div>
       </div>
 
       <div className="rounded-lg border border-zinc-800 bg-zinc-900/30 relative w-full overflow-hidden">
+        {stillProcessing && (
+          <div className="absolute top-0 left-0 h-[2px] bg-primary transition-all duration-500 z-40" 
+               style={{ width: `${Math.min(progressInfo?.progress ?? 0, 95)}%` }}
+               aria-hidden="true"
+          />
+        )}
+        {stillProcessing && (
+          <div className="px-4 py-2 border-b border-zinc-800 bg-zinc-900/50 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs text-zinc-400" aria-live="polite">
+              <span className="inline-flex items-center">
+                <svg className="h-3.5 w-3.5 animate-spin text-pink-400" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                </svg>
+              </span>
+              <span>
+                Processing{progressInfo?.processedResults != null && progressInfo?.targetResults != null
+                  ? ` ${progressInfo.processedResults}/${progressInfo.targetResults}`
+                  : ''}
+              </span>
+            </div>
+          </div>
+        )}
         {isPageLoading && (
           <div className="absolute inset-0 bg-zinc-900/50 flex items-center justify-center z-50">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-200"></div>
@@ -270,26 +447,67 @@ export default function SimilarSearchResults({ searchData }) {
           <Table className="w-full">
           <TableHeader>
             <TableRow className="border-b border-zinc-800">
-              <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[50px]">Profile</TableHead>
-              <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[15%] min-w-[120px]">{searchData.platform === 'youtube' ? 'Channel Name' : 'Username'}</TableHead>
-              <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[15%] min-w-[100px]">Full Name</TableHead>
-              <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[25%] min-w-[200px]">Bio</TableHead>
-              <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[20%] min-w-[150px]">Email</TableHead>
+              <TableHead className="px-4 py-3 w-12">
+                <Checkbox
+                  aria-label="Select page"
+                  checked={allSelectedOnPage ? true : someSelectedOnPage ? 'indeterminate' : false}
+                  onCheckedChange={() => handleSelectPage(!allSelectedOnPage)}
+                />
+              </TableHead>
+              <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[50px]">
+                Profile
+              </TableHead>
+              <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[15%] min-w-[120px]">
+                {searchData.platform === 'youtube' ? 'Channel Name' : 'Username'}
+              </TableHead>
+              <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[15%] min-w-[100px]">
+                Full Name
+              </TableHead>
+              <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[25%] min-w-[200px]">
+                Bio
+              </TableHead>
+              <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[20%] min-w-[150px]">
+                Email
+              </TableHead>
               {searchData.platform !== 'youtube' && (
                 <>
-                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[7%] min-w-[60px]">Private</TableHead>
-                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[7%] min-w-[60px]">Verified</TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[7%] min-w-[60px]">
+                    Private
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[7%] min-w-[60px]">
+                    Verified
+                  </TableHead>
                 </>
               )}
+              <TableHead className="px-6 py-3 text-right text-xs font-medium text-zinc-400 uppercase tracking-wider w-[80px]">
+                Save
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody className="divide-y divide-zinc-800">
-            {currentItems.map((creator) => {
+            {currentRows.map(({ raw: creator, id: rowId, snapshot }) => {
               const imageUrl = getImageUrl(
                 creator.profile_pic_url || creator.thumbnail || ''
               );
+              const isSelected = !!selectedCreators[rowId];
+
               return (
-                <TableRow key={creator.id} className="table-row">
+                <TableRow
+                  key={rowId}
+                  className={cn(
+                    "table-row transition-colors",
+                    isSelected ? "bg-emerald-500/5" : undefined
+                  )}
+                >
+                  <TableCell className="px-4 py-4 w-12 align-middle">
+                    <div className="flex h-full items-center justify-center">
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleSelection(rowId, snapshot)}
+                        aria-label={`Select ${snapshot.handle}`}
+                      />
+                    </div>
+                  </TableCell>
                   <TableCell className="px-6 py-4">
                     <Avatar className="w-10 h-10">
                       <AvatarImage 
@@ -361,10 +579,19 @@ export default function SimilarSearchResults({ searchData }) {
                   </TableCell>
                   {searchData.platform !== 'youtube' && (
                     <>
-                      <TableCell>{creator.is_private ? "Yes" : "No"}</TableCell>
-                      <TableCell>{creator.is_verified ? "Yes" : "No"}</TableCell>
+                      <TableCell className="px-6 py-4">{creator.is_private ? "Yes" : "No"}</TableCell>
+                      <TableCell className="px-6 py-4">{creator.is_verified ? "Yes" : "No"}</TableCell>
                     </>
                   )}
+                  <TableCell className="px-6 py-4 text-right">
+                    <AddToListButton
+                      creators={[snapshot]}
+                      buttonLabel=""
+                      variant="ghost"
+                      size="icon"
+                      className="text-zinc-400 hover:text-emerald-300"
+                    />
+                  </TableCell>
                 </TableRow>
               );
             })}

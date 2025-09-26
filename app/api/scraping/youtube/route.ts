@@ -99,6 +99,13 @@ export async function POST(req: Request) {
         }
         console.log('✅ Campaign verified successfully');
 
+        if (campaign.searchType !== 'keyword') {
+            await db
+                .update(campaigns)
+                .set({ searchType: 'keyword', updatedAt: new Date() })
+                .where(eq(campaigns.id, campaignId));
+        }
+
         // 🛡️ PLAN VALIDATION - Check if user can create scraping jobs
         console.log('🛡️ [YOUTUBE-API] Step 7a: Validating user plan limits for job creation');
         const jobValidation = await PlanEnforcementService.validateJobCreation(userId, targetResults);

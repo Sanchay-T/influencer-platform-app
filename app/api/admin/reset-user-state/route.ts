@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
-import { userProfiles, campaigns, scrapingJobs, scrapingResults } from '@/lib/db/schema';
+import { campaigns, scrapingJobs, scrapingResults } from '@/lib/db/schema';
+import { updateUserProfile } from '@/lib/db/queries/user-queries';
 import { eq } from 'drizzle-orm';
 
 export async function GET() {
@@ -72,48 +73,43 @@ export async function POST(request: Request) {
       const now = new Date();
       const trialEndDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
 
-      await db.update(userProfiles)
-        .set({
-          // Onboarding reset
-          onboardingStep: 'pending',
-          
-          // Trial system - Fresh 7-day trial
-          trialStartDate: now,
-          trialEndDate: trialEndDate,
-          trialStatus: 'active',
-          
-          // Plan reset to free tier
-          currentPlan: 'free',
-          subscriptionStatus: 'none',
-          
-          // Reset all plan limits
-          planCampaignsLimit: 0,  // Free plan has 0 campaigns
-          planCreatorsLimit: 0,   // Free plan has 0 creators
-          planFeatures: {},
-          
-          // Reset usage tracking
-          usageCampaignsCurrent: 0,
-          usageCreatorsCurrentMonth: 0,
-          usageResetDate: now,
-          
-          // Clear Stripe data
-          stripeCustomerId: null,
-          stripeSubscriptionId: null,
-          paymentMethodId: null,
-          cardBrand: null,
-          cardLast4: null,
-          cardExpMonth: null,
-          cardExpYear: null,
-          lastWebhookEvent: null,
-          lastWebhookTimestamp: null,
-          
-          // Billing sync
-          billingSyncStatus: 'pending',
-          
-          // Timestamps
-          updatedAt: now
-        })
-        .where(eq(userProfiles.userId, targetUserId));
+      await updateUserProfile(targetUserId, {
+        // Onboarding reset
+        onboardingStep: 'pending',
+        
+        // Trial system - Fresh 7-day trial
+        trialStartDate: now,
+        trialEndDate: trialEndDate,
+        trialStatus: 'active',
+        
+        // Plan reset to free tier
+        currentPlan: 'free',
+        subscriptionStatus: 'none',
+        
+        // Reset all plan limits
+        planCampaignsLimit: 0,  // Free plan has 0 campaigns
+        planCreatorsLimit: 0,   // Free plan has 0 creators
+        planFeatures: {},
+        
+        // Reset usage tracking
+        usageCampaignsCurrent: 0,
+        usageCreatorsCurrentMonth: 0,
+        usageResetDate: now,
+        
+        // Clear Stripe data
+        stripeCustomerId: null,
+        stripeSubscriptionId: null,
+        paymentMethodId: null,
+        cardBrand: null,
+        cardLast4: null,
+        cardExpMonth: null,
+        cardExpYear: null,
+        lastWebhookEvent: null,
+        lastWebhookTimestamp: null,
+        
+        // Billing sync
+        billingSyncStatus: 'pending',
+      });
 
       results.push(`✅ Reset user profile to fresh onboarding state`);
       results.push(`✅ Started fresh 7-day trial (expires: ${trialEndDate.toISOString()})`);

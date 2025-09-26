@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { StripeService } from '@/lib/stripe/stripe-service';
 import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
 
 export async function POST(req: NextRequest) {
   try {
@@ -26,9 +25,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Get user profile
-    const profile = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.userId, userId)
-    });
+    const profile = await getUserProfile(userId);
 
     if (!profile) {
       return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
@@ -42,15 +39,12 @@ export async function POST(req: NextRequest) {
         planId
       );
 
-      // Update user profile
-      await db.update(userProfiles)
-        .set({
-          currentPlan: planId,
-          subscriptionStatus: subscription.status,
-          billingSyncStatus: 'subscription_updated',
-          updatedAt: new Date()
-        })
-        .where(eq(userProfiles.userId, userId));
+      // Update user profile: do NOT flip currentPlan here; wait for webhook confirmation
+      await updateUserProfile(userId, {
+        subscriptionStatus: subscription.status,
+        intendedPlan: planId,
+        billingSyncStatus: 'upgrade_requested', // 16 chars - fits in varchar(20)
+      });
 
       // Try to extract payment intent client secret if confirmation is required
       let paymentIntentClientSecret = null as string | null;
@@ -89,20 +83,15 @@ export async function POST(req: NextRequest) {
       paymentMethodId
     );
 
-    // Update user profile
-    const updateData: any = {
+    // Update user profile: do NOT flip currentPlan here; wait for webhook confirmation
+    await updateUserProfile(userId, {
       stripeSubscriptionId: subscription.id,
-      currentPlan: planId,
       subscriptionStatus: subscription.status,
-      billingSyncStatus: 'subscription_created',
+      intendedPlan: planId,
+      billingSyncStatus: 'sub_pending_webhook', // 19 chars - fits in varchar(20)
       trialStatus: 'converted',
       trialConversionDate: new Date(),
-      updatedAt: new Date()
-    };
-
-    await db.update(userProfiles)
-      .set(updateData)
-      .where(eq(userProfiles.userId, userId));
+    });
 
     // Extract payment intent if exists
     const latestInvoice = subscription.latest_invoice;

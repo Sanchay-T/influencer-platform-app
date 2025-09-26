@@ -153,7 +153,7 @@ export default function ProfileSettingsPage() {
       <div className="py-6 space-y-8 max-w-6xl mx-auto">
         {/* Page Header */}
         <div className="mb-2">
-          <h1 className="text-2xl font-bold text-zinc-100">Profile Settings</h1>
+          <h1 className="text-2xl font-bold text-zinc-100">Account Settings</h1>
           <p className="mt-1 text-sm text-zinc-400">
             Manage your account information{isAdmin ? ', trial status, and email preferences' : ' and trial status'}
           </p>

@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import { isAdminUser } from '@/lib/auth/admin-utils';
 import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { getUserProfile } from '@/lib/db/queries/user-queries';
 
 export async function GET(request: Request) {
   try {
@@ -28,9 +27,7 @@ export async function GET(request: Request) {
     console.log('🔍 [ADMIN-BILLING] Getting billing status for user:', userId);
 
     // Get billing status from database
-    const userProfile = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.userId, userId)
-    });
+    const userProfile = await getUserProfile(userId);
 
     if (!userProfile) {
       return NextResponse.json(

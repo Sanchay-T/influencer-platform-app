@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import Stripe from 'stripe';
 import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { getUserProfile } from '@/lib/db/queries/user-queries';
+import { getClientUrl } from '@/lib/utils/url-utils';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-06-20',
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const profile = await db.query.userProfiles.findFirst({ where: eq(userProfiles.userId, userId) });
+    const profile = await getUserProfile(userId);
     if (!profile?.stripeSubscriptionId || !profile?.stripeCustomerId) {
       return NextResponse.json({ error: 'No Stripe subscription found' }, { status: 400 });
     }
@@ -32,8 +32,8 @@ export async function POST(req: NextRequest) {
         mode: 'setup',
         customer: profile.stripeCustomerId,
         payment_method_types: ['card'],
-        success_url: `${process.env.NEXT_PUBLIC_SITE_URL || ''}/billing?setup_complete=1`,
-        cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL || ''}/billing`,
+        success_url: `${getClientUrl()}/billing?setup_complete=1`,
+        cancel_url: `${getClientUrl()}/billing`,
       });
       return NextResponse.json({ error: 'no_payment_method', setupUrl: setup.url }, { status: 400 });
     }

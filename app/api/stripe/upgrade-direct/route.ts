@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import Stripe from 'stripe';
 import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { getClientUrl } from '@/lib/utils/url-utils';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -53,7 +52,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Load profile
-    const profile = await db.query.userProfiles.findFirst({ where: eq(userProfiles.userId, userId) });
+    const profile = await getUserProfile(userId);
     if (!profile) return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
     if (!profile.stripeCustomerId) return NextResponse.json({ error: 'Stripe customer missing' }, { status: 400 });
     if (!profile.stripeSubscriptionId) {
@@ -178,7 +177,7 @@ export async function POST(req: NextRequest) {
     try {
       const { userId } = await auth();
       if (userId) {
-        const profile = await db.query.userProfiles.findFirst({ where: eq(userProfiles.userId, userId) });
+        const profile = await getUserProfile(userId);
         if (profile?.stripeCustomerId) {
           const portal = await stripe.billingPortal.sessions.create({
             customer: profile.stripeCustomerId,

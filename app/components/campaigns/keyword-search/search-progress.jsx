@@ -7,9 +7,22 @@ import { Loader2, CheckCircle2, AlertCircle, RefreshCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useRouter } from 'next/navigation'
 
-export default function SearchProgress({ jobId, onComplete, onIntermediateResults, platform = 'tiktok', searchData }) {
+export default function SearchProgress({ jobId, onComplete, onIntermediateResults, platform = 'tiktok', searchData, onMeta, onProgress }) {
+  const DEBUG = (typeof window !== 'undefined' && (window.localStorage?.getItem('debug:progress') === '1')) || process.env.NEXT_PUBLIC_DEBUG_PROGRESS === '1'
+  const debugLog = (...args) => {
+    if (DEBUG) console.log(...args)
+  }
+  const debugWarn = (...args) => {
+    if (DEBUG) console.warn(...args)
+  }
+  const debugGroup = (...args) => {
+    if (DEBUG && console.group) console.group(...args)
+  }
+  const debugGroupEnd = () => {
+    if (DEBUG && console.groupEnd) console.groupEnd()
+  }
   // Debug logging for props
-  console.log('🚀 [SEARCH-PROGRESS] Component initialized with props:', {
+  debugLog('🚀 [SEARCH-PROGRESS] Component initialized with props:', {
     jobId: jobId,
     platform: platform,
     searchData: searchData,
@@ -21,7 +34,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
   // Instagram similar search detection (case-insensitive)
   const platformNormalized = (searchData?.platform || platform || '').toLowerCase();
   const isInstagramSimilar = searchData?.targetUsername && platformNormalized === 'instagram';
-  console.log('🔍 [SEARCH-PROGRESS] Search type detection:', {
+  debugLog('🔍 [SEARCH-PROGRESS] Search type detection:', {
     isInstagramSimilar,
     platform: searchData?.platform || platform,
     platformNormalized,
@@ -43,7 +56,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
   const router = useRouter();
   
   // 🚨 VALIDATION LOG: Track component state initialization
-  console.log('🔍 [STATE-VALIDATION] SearchProgress state initialized:', {
+  debugLog('🔍 [STATE-VALIDATION] SearchProgress state initialized:', {
     jobId,
     initialIntermediateCreators: intermediateCreators.length,
     initialRenderKey: renderKey,
@@ -66,7 +79,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
     const poll = async () => {
       try {
         // Enhanced polling with platform-aware endpoint and logging
-        console.log('\n🔄 [SEARCH-PROGRESS] Starting poll:', {
+        debugLog('\n🔄 [SEARCH-PROGRESS] Starting poll:', {
           jobId: jobId,
           pollNumber: pollIntervalRef.current ? 'ongoing' : 'first',
           timestamp: new Date().toISOString()
@@ -77,7 +90,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
         const normalizedPlatform = platform?.toLowerCase?.() || String(platform).toLowerCase();
         const isSimilarSearch = searchData?.targetUsername; // Similar search has targetUsername, keyword search has keywords
         
-        console.log('🔍 [ENDPOINT-DETECTION] API endpoint selection:', {
+        debugLog('🔍 [ENDPOINT-DETECTION] API endpoint selection:', {
           platform: platform,
           normalizedPlatform: normalizedPlatform,
           searchData: searchData,
@@ -99,6 +112,8 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
           // Keyword search endpoints (existing logic)
           if (normalizedPlatform === 'instagram') {
             apiEndpoint = `/api/scraping/instagram-reels?jobId=${jobId}`;
+          } else if (normalizedPlatform === 'enhanced-instagram') {
+            apiEndpoint = `/api/scraping/instagram-enhanced?jobId=${jobId}`;
           } else if (normalizedPlatform === 'youtube') {
             apiEndpoint = `/api/scraping/youtube?jobId=${jobId}`;
           } else {
@@ -106,7 +121,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
           }
         }
         
-        console.log('🎯 [SEARCH-PROGRESS] Using endpoint:', {
+        debugLog('🎯 [SEARCH-PROGRESS] Using endpoint:', {
           platform: platform,
           platformType: typeof platform,
           normalizedPlatform: normalizedPlatform,
@@ -126,17 +141,19 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
             headers: {
               'Content-Type': 'application/json'
             },
+            credentials: 'include',
             signal: controller.signal
           });
           
           clearTimeout(timeoutId);
         } catch (fetchError) {
           // If fetch fails with timeout/network error, try simple fetch as fallback
-          console.log('⚠️ [FETCH-FALLBACK] First fetch failed, trying simple fallback...', fetchError.message);
+          debugLog('⚠️ [FETCH-FALLBACK] First fetch failed, trying simple fallback...', fetchError.message);
           response = await fetch(apiEndpoint, {
             headers: {
               'Content-Type': 'application/json'
-            }
+            },
+            credentials: 'include'
             // No timeout for fallback
           });
         }
@@ -149,23 +166,39 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
             platform: platform,
             status: response.status
           });
-          
+
           // If it's a 404, throw an error to trigger retry
           if (response.status === 404) {
             throw new Error(`API endpoint not found: ${apiEndpoint}`);
           }
-          
-          // If it's a 401, it's likely a temporary auth issue - continue polling
-          if (response.status === 401) {
-            console.warn('⚠️ [SEARCH-PROGRESS] 401 Unauthorized - continuing to poll (may be temporary)');
-            // Don't throw error, just continue polling
-            return;
+
+          // If it's a 401, try a snapshot fallback from the campaign API, then continue polling
+          if (response.status === 401 && searchData?.campaignId) {
+            try {
+              const snapRes = await fetch(`/api/campaigns/${searchData.campaignId}`, { credentials: 'include' });
+              if (snapRes.ok) {
+                const snap = await snapRes.json();
+                const job = Array.isArray(snap?.scrapingJobs) ? snap.scrapingJobs.find((j) => j.id === jobId) : null;
+                if (job && Array.isArray(job.results) && job.results.length > 0) {
+                  const creators = job.results.flatMap((r) => Array.isArray(r?.creators) ? r.creators : []);
+                  if (creators.length > 0 && typeof onIntermediateResults === 'function') {
+                    onIntermediateResults({ creators, progress: job.progress ?? 0, status: job.status, isPartial: true });
+                  }
+                  if (typeof onProgress === 'function') {
+                    onProgress({ processedResults: job.processedResults ?? creators.length, targetResults: job.targetResults ?? null, progress: parseFloat(job.progress || '0'), status: job.status || 'processing' })
+                  }
+                }
+              }
+            } catch (snapErr) {
+              debugWarn('⚠️ [SEARCH-PROGRESS] Snapshot fallback failed (non-fatal)', snapErr);
+            }
+            return; // keep polling
           }
         }
         
         const data = await response.json();
         
-        console.log('📡 [SEARCH-PROGRESS] Poll response:', {
+        debugLog('📡 [SEARCH-PROGRESS] Poll response:', {
           status: response.status,
           jobStatus: data.job?.status || data.status,
           progress: data.job?.progress || data.progress,
@@ -174,9 +207,27 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
           resultsLength: data.results?.length || 0,
           firstResultCreatorsCount: data.results?.[0]?.creators?.length || 0
         });
+
+        // Surface enhanced job metadata and progress to parent (for UI banners)
+        try {
+          if (typeof onMeta === 'function' && data?.metadata) {
+            onMeta(data.metadata)
+          }
+          if (typeof onProgress === 'function') {
+            const jd = data.job || data
+            onProgress({
+              processedResults: jd?.processedResults ?? null,
+              targetResults: jd?.targetResults ?? null,
+              progress: parseFloat(jd?.progress || '0'),
+              status: jd?.status || 'processing'
+            })
+          }
+        } catch (metaErr) {
+          debugLog('⚠️ [SEARCH-PROGRESS] onMeta/onProgress callback error (non-fatal):', metaErr)
+        }
         
         // 🚨 COMPREHENSIVE POLLING DEBUG: Log exact data structure received
-        console.log('🚨 [POLLING-DEBUG] Complete API response analysis:', {
+        debugLog('🚨 [POLLING-DEBUG] Complete API response analysis:', {
           responseType: typeof data,
           responseKeys: Object.keys(data),
           hasResults: !!data.results,
@@ -221,7 +272,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
         const currentProcessedResults = jobData.processedResults;
         const currentTargetResults = jobData.targetResults;
         
-        console.log('📈 [SEARCH-PROGRESS] Job data extraction:', {
+        debugLog('📈 [SEARCH-PROGRESS] Job data extraction:', {
           hasJobProperty: !!data.job,
           status: currentStatus,
           progress: currentProgress,
@@ -232,12 +283,12 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
         // First, check if we have explicit progress from the API
         if (currentProgress !== undefined && currentProgress !== null) {
           calculatedProgress = parseFloat(currentProgress);
-          console.log('📈 [SEARCH-PROGRESS] Using explicit progress:', calculatedProgress);
+          debugLog('📈 [SEARCH-PROGRESS] Using explicit progress:', calculatedProgress);
         } 
         // Otherwise, calculate from processed results
         else if (currentProcessedResults && currentTargetResults) {
           calculatedProgress = (currentProcessedResults / currentTargetResults) * 100;
-          console.log('📈 [SEARCH-PROGRESS] Calculated from results:', {
+          debugLog('📈 [SEARCH-PROGRESS] Calculated from results:', {
             processedResults: currentProcessedResults,
             targetResults: currentTargetResults,
             calculated: calculatedProgress
@@ -248,7 +299,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
           const elapsedSeconds = (new Date() - startTime) / 1000;
           const estimatedTotalSeconds = 180; // Estimated total time in seconds
           calculatedProgress = Math.min(elapsedSeconds / estimatedTotalSeconds * 100, 99);
-          console.log('📈 [SEARCH-PROGRESS] Time-based estimate:', {
+          debugLog('📈 [SEARCH-PROGRESS] Time-based estimate:', {
             elapsedSeconds: elapsedSeconds,
             calculatedProgress: calculatedProgress
           });
@@ -256,7 +307,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
         
         // IMPORTANT: Check if Instagram job is stuck at 99%
         if (normalizedPlatform === 'instagram' && calculatedProgress >= 99 && currentStatus !== 'completed') {
-          console.warn('⚠️ [SEARCH-PROGRESS] Instagram job stuck at 99%!', {
+          debugWarn('⚠️ [SEARCH-PROGRESS] Instagram job stuck at 99%!', {
             jobId: jobId,
             status: currentStatus,
             progress: calculatedProgress,
@@ -297,17 +348,17 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
             searchType: searchData?.targetUsername ? 'similar' : 'keyword'
           };
           
-          console.log('🔍 [INTERMEDIATE-DEBUG] Raw results data:', debugInfo);
+          debugLog('🔍 [INTERMEDIATE-DEBUG] Raw results data:', debugInfo);
           
           // 🚨 SUPER VISIBLE: Also log to console in a way that's easy to see
-          console.warn('🚨 INTERMEDIATE RESULTS DEBUG:', debugInfo);
+          debugWarn('🚨 INTERMEDIATE RESULTS DEBUG:', debugInfo);
           
           const foundCreators = data.results.reduce((acc, result) => {
             return [...acc, ...(result.creators || [])];
           }, []);
           
           // 🚨 CRITICAL DEBUG: Log detailed creator extraction
-          console.log('🚨 [CREATOR-EXTRACTION] Detailed analysis:', {
+          debugLog('🚨 [CREATOR-EXTRACTION] Detailed analysis:', {
             totalResultObjects: data.results.length,
             creatorsInEachResult: data.results.map((r, idx) => ({
               resultIndex: idx,
@@ -320,21 +371,21 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
             extractionMethod: 'reduce accumulation'
           });
           
-          console.log('🔍 [INTERMEDIATE-DEBUG] Extracted creators:', {
+          debugLog('🔍 [INTERMEDIATE-DEBUG] Extracted creators:', {
             foundCount: foundCreators.length,
             firstCreator: foundCreators[0],
             searchType: searchData?.targetUsername ? 'similar' : 'keyword'
           });
           
           if (foundCreators.length > 0) {
-            console.log('🎯 [SEARCH-PROGRESS] Found intermediate results:', {
+            debugLog('🎯 [SEARCH-PROGRESS] Found intermediate results:', {
               count: foundCreators.length,
               progress: calculatedProgress,
               status: currentStatus
             });
             
             // 🚨 VALIDATION LOG: Deep analysis of data source and freshness
-            console.log('🚨 [DATA-FRESHNESS-VALIDATION] Analyzing found creators before state update:', {
+            debugLog('🚨 [DATA-FRESHNESS-VALIDATION] Analyzing found creators before state update:', {
               jobId,
               dataSource: 'API polling response',
               foundCreatorsCount: foundCreators.length,
@@ -348,7 +399,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
             // 🔄 LIVE UPDATES: Only add NEW creators, don't replace entire list
             setIntermediateCreators(prevCreators => {
               // 🔍 DETAILED DEBUGGING: Log exactly what we're comparing
-              console.log('🔍 [LIVE-UPDATE-DEBUG] Comparing creators:', {
+              debugLog('🔍 [LIVE-UPDATE-DEBUG] Comparing creators:', {
                 previousCount: prevCreators.length,
                 newCount: foundCreators.length,
                 prevFirstCreator: prevCreators[0]?.creator?.name || 'none',
@@ -364,7 +415,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
               const newNames = foundCreators.map(c => c.creator?.name).join(',');
               const contentChanged = prevNames !== newNames;
               
-              console.log('🚨 [CONTENT-COMPARISON] Creator content analysis:', {
+              debugLog('🚨 [CONTENT-COMPARISON] Creator content analysis:', {
                 lengthChanged: foundCreators.length !== prevCreators.length,
                 contentChanged: contentChanged,
                 prevNamesString: prevNames.substring(0, 100) + '...',
@@ -373,7 +424,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
               
               // Check if we have new creators to add OR content changed
               if (foundCreators.length > prevCreators.length || contentChanged) {
-                console.log('📈 [LIVE-UPDATE] Updating creators:', {
+                debugLog('📈 [LIVE-UPDATE] Updating creators:', {
                   previousCount: prevCreators.length,
                   newCount: foundCreators.length,
                   newCreatorsAdded: foundCreators.length - prevCreators.length,
@@ -382,7 +433,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
                 });
                 
                 // 🎯 SUPER VISIBLE: Alert for debugging live updates
-                console.warn('🚨 CREATORS UPDATE DETECTED!', {
+                debugWarn('🚨 CREATORS UPDATE DETECTED!', {
                   reason: foundCreators.length > prevCreators.length ? 'length increase' : 'content change',
                   from: prevCreators.length,
                   to: foundCreators.length
@@ -390,13 +441,13 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
                 
                 // 🔄 FORCE RE-RENDER: Trigger React to re-render the cards
                 setRenderKey(prev => prev + 1);
-                console.log('🔄 [FORCE-RENDER] Triggered re-render with key:', renderKey + 1);
+                debugLog('🔄 [FORCE-RENDER] Triggered re-render with key:', renderKey + 1);
                 
                 return foundCreators; // Update with new list
               }
               
               // Even if no new creators, log the current state
-              console.log('📊 [LIVE-UPDATE] No changes detected - Current count:', prevCreators.length, 'API count:', foundCreators.length);
+              debugLog('📊 [LIVE-UPDATE] No changes detected - Current count:', prevCreators.length, 'API count:', foundCreators.length);
               return prevCreators; // Keep existing if no new creators
             });
             setShowIntermediateResults(true);
@@ -420,14 +471,14 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
           const finalCount = data.finalCount || data.exactCountDelivered || currentProcessedResults;
           
           if (isPartialCompletion) {
-            console.log('⚠️ [PARTIAL-COMPLETION] Job completed with partial results due to API issues:', {
+            debugLog('⚠️ [PARTIAL-COMPLETION] Job completed with partial results due to API issues:', {
               finalCount: finalCount,
               targetRequested: data.targetRequested || currentTargetResults,
               completionType: data.partialCompletion ? 'partial' : data.gracefulCompletion ? 'graceful' : 'error_recovered',
               message: data.message
             });
           } else {
-            console.log('🎉 [SEARCH-PROGRESS] Job completed successfully! Stopping polling.');
+            debugLog('🎉 [SEARCH-PROGRESS] Job completed successfully! Stopping polling.');
           }
           
           clearTimeout(pollIntervalRef.current);
@@ -444,7 +495,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
         
         // Also check if Apify status shows completed but job status hasn't updated
         if (data.apifyStatus && data.apifyStatus.status === 'SUCCEEDED' && currentStatus !== 'completed') {
-          console.warn('⚠️ [SEARCH-PROGRESS] Apify succeeded but job not marked complete! Apify finished at:', data.apifyStatus.finishedAt);
+          debugWarn('⚠️ [SEARCH-PROGRESS] Apify succeeded but job not marked complete! Apify finished at:', data.apifyStatus.finishedAt);
           // The GET endpoint should handle this, but log it for debugging
         }
         
@@ -454,7 +505,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
         if (shouldContinuePolling) {
           const nextInterval = getPollingInterval(calculatedProgress);
           
-          console.log('🔄 [ADAPTIVE-POLLING] Scheduling next poll:', {
+          debugLog('🔄 [ADAPTIVE-POLLING] Scheduling next poll:', {
             currentProgress: Math.round(calculatedProgress),
             nextInterval: nextInterval + 'ms',
             intervalType: nextInterval === 1500 ? 'fast' : nextInterval === 2000 ? 'medium' : 'slow'
@@ -462,7 +513,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
           
           pollIntervalRef.current = setTimeout(poll, nextInterval);
         } else {
-          console.log('⏹️ [POLLING] Stopping polling - job complete');
+          debugLog('⏹️ [POLLING] Stopping polling - job complete');
           clearTimeout(pollIntervalRef.current);
         }
         
@@ -475,17 +526,17 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
         
         if (error.name === 'AbortError' || error.message.includes('timeout')) {
           errorMessage = 'Request timeout - server may be processing';
-          console.log('⏱️ [POLL-TIMEOUT] Request timed out, will retry...');
+          debugLog('⏱️ [POLL-TIMEOUT] Request timed out, will retry...');
         } else if (error.message.includes('Failed to fetch')) {
           errorMessage = 'Network error - checking connection';
-          console.log('🌐 [NETWORK-ERROR] Network connectivity issue, will retry...');
+          debugLog('🌐 [NETWORK-ERROR] Network connectivity issue, will retry...');
         } else if (error.message.includes('NetworkError')) {
           errorMessage = 'Server temporarily unavailable';
-          console.log('🚫 [SERVER-ERROR] Server connection failed, will retry...');
+          debugLog('🚫 [SERVER-ERROR] Server connection failed, will retry...');
         }
         
         // 🚨 VALIDATION LOG: Check if component shows stale data during connection errors
-        console.log('🚨 [ERROR-STATE-CHECK] Component state during polling error:', {
+        debugLog('🚨 [ERROR-STATE-CHECK] Component state during polling error:', {
           errorType: error.name,
           errorMessage: errorMessage,
           originalError: error.message,
@@ -505,7 +556,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
           setRetryCount(prev => prev + 1);
           // Exponential backoff for retries
           const retryDelay = Math.min(3000 * Math.pow(2, retryCount), 15000); // Max 15 seconds
-          console.log(`🔄 [RETRY] Retrying in ${retryDelay}ms (attempt ${retryCount + 1}/${maxRetries})`);
+          debugLog(`🔄 [RETRY] Retrying in ${retryDelay}ms (attempt ${retryCount + 1}/${maxRetries})`);
           pollIntervalRef.current = setTimeout(poll, retryDelay);
         }
       }
@@ -525,7 +576,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
     if (!jobId) return;
     
     // 🚨 VALIDATION LOG: Component lifecycle and state reset
-    console.log('🚨 [LIFECYCLE-VALIDATION] Component mounting/jobId change:', {
+    debugLog('🚨 [LIFECYCLE-VALIDATION] Component mounting/jobId change:', {
       newJobId: jobId,
       currentIntermediateCreators: intermediateCreators.length,
       currentRenderKey: renderKey,
@@ -536,8 +587,8 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
     
     // Check if we have stale data that should be cleared
     if (intermediateCreators.length > 0) {
-      console.log('🧹 [STATE-CLEANUP] WARNING: Found stale intermediate creators from previous job, should clear them');
-      console.log('🧹 [STALE-DATA]:', {
+      debugLog('🧹 [STATE-CLEANUP] WARNING: Found stale intermediate creators from previous job, should clear them');
+      debugLog('🧹 [STALE-DATA]:', {
         staleCount: intermediateCreators.length,
         staleNames: intermediateCreators.slice(0, 5).map(c => c.creator?.name),
         oldRenderKey: renderKey
@@ -609,7 +660,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
     try {
       isSimilarSearch = searchData && typeof searchData === 'object' && searchData.targetUsername;
       targetUser = searchData?.targetUsername || '';
-      console.log('🔍 [PROGRESS-STAGE] Search type detection:', {
+      debugLog('🔍 [PROGRESS-STAGE] Search type detection:', {
         searchData: searchData,
         searchDataType: typeof searchData,
         targetUsername: searchData?.targetUsername,
@@ -625,10 +676,24 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
     
     // Special handling for Instagram reels bio/email enhancement progress
     const isInstagramReels = platformName.toLowerCase() === 'instagram' && !isSimilarSearch;
+    const isEnhancedInstagram = platformName.toLowerCase() === 'enhanced-instagram' && !isSimilarSearch;
     const isTikTokKeyword = platformName.toLowerCase() === 'tiktok' && !isSimilarSearch;
     
     if (processedResults > 0) {
-      if (isInstagramReels) {
+      if (isEnhancedInstagram) {
+        // 🎯 ENHANCED INSTAGRAM PROGRESS: AI-powered progress messages
+        const targetText = targetResults > 0 ? ` (${processedResults}/${targetResults})` : '';
+        if (displayProgress <= 15) {
+          return `AI generating strategic keywords...`;
+        } else if (displayProgress <= 25) {
+          return `Generated keywords in 4 categories, starting search...`;
+        } else if (displayProgress <= 75) {
+          const batchCount = Math.ceil(processedResults / 20);
+          return `Processing batch ${batchCount} with intelligent delays${targetText}`;
+        } else {
+          return `Deduplicating and finalizing results${targetText}`;
+        }
+      } else if (isInstagramReels) {
         // 🎯 EXACT COUNT MESSAGING: Show progress toward target for Instagram reels
         const targetText = targetResults > 0 ? ` (${processedResults}/${targetResults})` : '';
         return `Enhancing Instagram creator profiles${targetText} - ${Math.round(displayProgress)}%`;
@@ -670,6 +735,12 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
         if (displayProgress < 50) return `Analyzing ${platformName.toLowerCase()} creator relationships...`;
         if (displayProgress < 75) return `Processing similar ${platformName.toLowerCase()} profiles...`;
         return 'Finalizing similar creator results...';
+      } else if (isEnhancedInstagram) {
+        // Enhanced Instagram specific messages
+        if (displayProgress <= 15) return `AI generating strategic keywords...`;
+        if (displayProgress <= 25) return `Generated keywords in 4 categories, starting search...`;
+        if (displayProgress <= 75) return `Processing with intelligent delays...`;
+        return `Deduplicating and finalizing results...`;
       } else if (isInstagramReels) {
         // Instagram reels specific messages
         if (displayProgress < 10) return `Searching Instagram reels for your keywords...`;
@@ -774,8 +845,14 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
                   {(() => {
                     const platformName = platform || 'TikTok';
                     const isInstagramReels = platformName.toLowerCase() === 'instagram' && !searchData?.targetUsername;
+                    const isEnhancedInstagram = platformName.toLowerCase() === 'enhanced-instagram' && !searchData?.targetUsername;
                     
-                    if (isInstagramReels) {
+                    if (isEnhancedInstagram) {
+                      // 🎯 ENHANCED INSTAGRAM DISPLAY: Show AI-powered progress
+                      return targetResults > 0 
+                        ? `${processedResults}/${targetResults} AI-enhanced` 
+                        : `${processedResults} AI-processed`;
+                    } else if (isInstagramReels) {
                       // 🎯 EXACT COUNT DISPLAY: Show progress toward target for Instagram
                       return targetResults > 0 
                         ? `${processedResults}/${targetResults} creators` 
@@ -828,7 +905,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
             {/* Creator List with LIVE UPDATES and smooth animations */}
             <div key={renderKey} className="space-y-3 max-h-96 overflow-y-auto scroll-smooth">
               {/* 🔍 TARGETED DEBUG: Log what cards are being rendered */}
-              {console.log('🎨 [CARD-RENDER] Rendering creator cards:', {
+              {debugLog('🎨 [CARD-RENDER] Rendering creator cards:', {
                 renderKey: renderKey,
                 totalCreators: intermediateCreators.length,
                 cardsToShow: Math.min(5, intermediateCreators.length),
@@ -858,7 +935,7 @@ export default function SearchProgress({ jobId, onComplete, onIntermediateResult
                 }
                 
                 // 🔍 TARGETED DEBUG: Log each card being rendered
-                console.log(`🎭 [CARD-${index}] Rendering card:`, {
+                debugLog(`🎭 [CARD-${index}] Rendering card:`, {
                   index: index,
                   actualIndex: actualIndex,
                   name: creator.creator?.name,

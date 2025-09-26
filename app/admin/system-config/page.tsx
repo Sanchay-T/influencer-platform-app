@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { ErrorBoundary } from '@/app/components/error-boundary';
+import { useComponentLogger, useUserActionLogger } from '@/lib/logging/react-logger';
+import { adminLogger } from '@/lib/logging';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -60,7 +63,9 @@ const CATEGORY_ICONS = {
   'cleanup': '🧹'
 };
 
-export default function SystemConfigPage() {
+function SystemConfigPageContent() {
+  const componentLogger = useComponentLogger('SystemConfigPage');
+  const userActionLogger = useUserActionLogger();
   const [configData, setConfigData] = useState<ConfigData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -90,7 +95,9 @@ export default function SystemConfigPage() {
       setConfigData(data);
     } catch (err: any) {
       setError(err.message);
-      console.error('Error loading configurations:', err);
+      adminLogger.error('Error loading configurations', err instanceof Error ? err : new Error(String(err)), {
+        operation: 'load-configurations'
+      });
     } finally {
       setLoading(false);
     }
@@ -113,7 +120,9 @@ export default function SystemConfigPage() {
       await loadConfigurations();
     } catch (err: any) {
       setError(err.message);
-      console.error('Error initializing defaults:', err);
+      adminLogger.error('Error initializing defaults', err instanceof Error ? err : new Error(String(err)), {
+        operation: 'initialize-defaults'
+      });
     } finally {
       setInitLoading(false);
     }
@@ -148,7 +157,11 @@ export default function SystemConfigPage() {
       });
     } catch (err: any) {
       setError(err.message);
-      console.error('Error saving configuration:', err);
+      adminLogger.error('Error saving configuration', err instanceof Error ? err : new Error(String(err)), {
+        operation: 'save-configuration',
+        configKey: config.key,
+        configCategory: config.category
+      });
     } finally {
       setSaving(false);
     }
@@ -300,7 +313,22 @@ export default function SystemConfigPage() {
             
             <div className="flex items-end">
               <Button 
-                onClick={() => saveConfiguration(newConfigData)}
+                onClick={() => {
+                  userActionLogger.logClick('add-new-configuration', {
+                    category: newConfigData.category,
+                    key: newConfigData.key,
+                    valueType: newConfigData.valueType
+                  });
+                  
+                  adminLogger.info('Adding new configuration', {
+                    category: newConfigData.category,
+                    key: newConfigData.key,
+                    valueType: newConfigData.valueType,
+                    operation: 'add-config-attempt'
+                  });
+                  
+                  saveConfiguration(newConfigData);
+                }}
                 disabled={!newConfigData.category || !newConfigData.key || !newConfigData.value || saving}
                 className="w-full"
               >
@@ -383,7 +411,23 @@ export default function SystemConfigPage() {
                                 rows={2}
                               />
                               <div className="flex gap-2">
-                                <Button size="sm" onClick={() => saveConfiguration(editingConfig)}>
+                                <Button size="sm" onClick={() => {
+                                  userActionLogger.logClick('save-configuration-edit', {
+                                    configId: editingConfig.id,
+                                    configKey: editingConfig.key,
+                                    configCategory: editingConfig.category
+                                  });
+                                  
+                                  adminLogger.info('Saving configuration edit', {
+                                    configId: editingConfig.id,
+                                    configKey: editingConfig.key,
+                                    configCategory: editingConfig.category,
+                                    newValue: editingConfig.value,
+                                    operation: 'save-config-edit'
+                                  });
+                                  
+                                  saveConfiguration(editingConfig);
+                                }}>
                                   <Save className="h-4 w-4 mr-1" />
                                   Save
                                 </Button>
@@ -413,7 +457,22 @@ export default function SystemConfigPage() {
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => setEditingConfig(config)}
+                            onClick={() => {
+                              userActionLogger.logClick('edit-configuration', {
+                                configId: config.id,
+                                configKey: config.key,
+                                configCategory: config.category
+                              });
+                              
+                              componentLogger.logInfo('Configuration edit started', {
+                                configId: config.id,
+                                configKey: config.key,
+                                configCategory: config.category,
+                                operation: 'start-config-edit'
+                              });
+                              
+                              setEditingConfig(config);
+                            }}
                           >
                             Edit
                           </Button>
@@ -442,5 +501,13 @@ export default function SystemConfigPage() {
         </Card>
       )}
     </div>
+  );
+}
+
+export default function SystemConfigPage() {
+  return (
+    <ErrorBoundary componentName="SystemConfigPage">
+      <SystemConfigPageContent />
+    </ErrorBoundary>
   );
 }

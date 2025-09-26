@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
-import { userProfiles, campaigns, scrapingJobs } from '@/lib/db/schema';
+import { campaigns, scrapingJobs, subscriptionPlans, users, userUsage } from '@/lib/db/schema';
+import { getUserProfile, incrementUsage } from '@/lib/db/queries/user-queries';
 import { eq, count, and, gte, sql } from 'drizzle-orm';
 import BillingLogger from '@/lib/loggers/billing-logger';
 
@@ -18,6 +19,7 @@ export interface PlanConfig {
   };
 }
 
+// Legacy defaults kept as fallback for features only; limits now come from DB subscription_plans
 export const PLAN_CONFIGS: Record<string, PlanConfig> = {
   'free': {
     id: 'free',
@@ -116,10 +118,8 @@ export class PlanValidator {
         logRequestId
       );
 
-      // Get user profile
-      const userProfile = await db.query.userProfiles.findFirst({
-        where: eq(userProfiles.userId, userId)
-      });
+      // Get user profile using normalized tables
+      const userProfile = await getUserProfile(userId);
 
       if (!userProfile) {
         await BillingLogger.logError(
@@ -132,9 +132,31 @@ export class PlanValidator {
         return null;
       }
 
-      // Get plan config
+      // Get plan config: resolve limits from subscription_plans (DB), fallback features from legacy map
       const currentPlan = userProfile.currentPlan || 'free';
-      const planConfig = PLAN_CONFIGS[currentPlan];
+      const planDefaults = PLAN_CONFIGS[currentPlan] || PLAN_CONFIGS['free'];
+
+      let campaignsLimit = planDefaults.campaignsLimit;
+      let creatorsLimit = planDefaults.creatorsLimit;
+      try {
+        const planRow = await db.query.subscriptionPlans.findFirst({
+          where: eq(subscriptionPlans.planKey, currentPlan)
+        });
+        if (planRow) {
+          campaignsLimit = planRow.campaignsLimit ?? campaignsLimit;
+          creatorsLimit = planRow.creatorsLimit ?? creatorsLimit;
+        }
+      } catch (e) {
+        // keep defaults if DB lookup fails
+      }
+
+      const planConfig: PlanConfig = {
+        id: currentPlan,
+        name: planDefaults.name,
+        campaignsLimit,
+        creatorsLimit,
+        features: planDefaults.features
+      };
       
       if (!planConfig) {
         await BillingLogger.logError(
@@ -246,8 +268,8 @@ export class PlanValidator {
     // Check if subscription/trial is active
     if (!planStatus.isActive) {
       // 🔒 SECURITY: Special handling for paid plans without completed onboarding
-      const userProfile = await db.query.userProfiles.findFirst({
-        where: eq(userProfiles.userId, userId)
+      const userProfile = await db.query.users.findFirst({
+        where: eq(users.userId, userId)
       });
       
       const isPaidPlan = planStatus.currentPlan !== 'free';
@@ -556,21 +578,8 @@ export class PlanValidator {
         logRequestId
       );
 
-      if (type === 'campaigns') {
-        await db.update(userProfiles)
-          .set({
-            usageCampaignsCurrent: sql`${userProfiles.usageCampaignsCurrent} + ${amount}`,
-            updatedAt: new Date()
-          })
-          .where(eq(userProfiles.userId, userId));
-      } else if (type === 'creators') {
-        await db.update(userProfiles)
-          .set({
-            usageCreatorsCurrentMonth: sql`${userProfiles.usageCreatorsCurrentMonth} + ${amount}`,
-            updatedAt: new Date()
-          })
-          .where(eq(userProfiles.userId, userId));
-      }
+      // Use the new helper function for normalized tables
+      await incrementUsage(userId, type, amount);
 
       await BillingLogger.logDatabase(
         'UPDATE',
@@ -685,13 +694,13 @@ export class PlanValidator {
         logRequestId
       );
 
-      await db.update(userProfiles)
+      await db.update(userUsage)
         .set({
           usageCreatorsCurrentMonth: 0,
           usageResetDate: new Date(),
           updatedAt: new Date()
         })
-        .where(eq(userProfiles.userId, userId));
+        .where(eq(userUsage.userId, userId as any));
 
     } catch (error) {
       await BillingLogger.logError(

@@ -1,1888 +1,223 @@
-# Multi-Platform Influencer Platform - Complete Technical Documentation
-
-## Overview
-This document details the complete end-to-end flow for multi-platform influencer campaign creation, background processing, and results display. Supports TikTok keyword/similar search, Instagram similar search, and YouTube keyword search with comprehensive image handling and async processing.
-
-## Architecture Overview
-
-```mermaid
-graph TD
-    A[User Creates Campaign] --> B[Campaign Saved to DB]
-    B --> C{Search Type?}
-    C -->|Keyword| D[Platform Selection: TikTok/YouTube]
-    C -->|Similar| E[Platform Selection: TikTok/Instagram]
-    D --> F[Keywords Configuration]
-    E --> G[Username Input]
-    F --> H[Scraping Job Created]
-    G --> H
-    H --> I[QStash Message Published]
-    I --> J[Background Processing]
-    J --> K[Platform-Specific API Call]
-    K --> L[Data Transformation]
-    L --> M[HEIC Image Processing]
-    M --> N[Results Saved to DB]
-    N --> O[Job Status Updated]
-    O --> P[Frontend Displays Results]
-    P --> Q[CSV Export Available]
-```
-
-## Supported Platforms & Search Types
-
-| Platform | Keyword Search | Similar Search | Bio/Email Extraction | Image Support | API Endpoint |
-|----------|---------------|----------------|---------------------|---------------|--------------|
-| **TikTok** | ✅ | ✅ | ✅ Universal Enhanced Profile Fetching | HEIC → JPEG | `/api/scraping/tiktok`, `/api/scraping/tiktok-similar` |
-| **Instagram** | ✅ Reels Search | ✅ | ✅ Direct from API | Standard | `/api/scraping/instagram-reels`, `/api/scraping/instagram` |
-| **YouTube** | ✅ | ✅ | ✅ Enhanced Profile Fetching | Thumbnails | `/api/scraping/youtube`, `/api/scraping/youtube-similar` |
-
-**Total Platform Combinations Supported: 6**
-- TikTok Keyword Search
-- TikTok Similar Search  
-- Instagram Reels Search
-- Instagram Similar Search
-- YouTube Keyword Search
-- YouTube Similar Search
-
-## Major Platform Enhancements & New Features
-
-### 🚀 Recently Added Capabilities (2024-2025)
-
-#### **🏎️ Performance Caching System (NEW)**
-- ✅ **100x Performance Improvement** - Eliminated 500ms loading delays with localStorage caching
-- ✅ **Instant Data Loading** - Components load in 5ms instead of 500ms on repeat visits
-- ✅ **Smart Background Updates** - Fresh data loads invisibly while showing cached content
-- ✅ **Comprehensive Monitoring** - Real-time performance tracking and benchmarks
-- ✅ **Automatic Cache Management** - 2-minute TTL with graceful fallbacks
-- 📚 **Detailed Guide**: [Performance Caching System →](docs/performance/CACHING-SYSTEM.md)
-
-#### **🎯 Exact Creator Count Delivery (NEW)**
-- ✅ **Precise Result Targeting** - Dynamic API calling to deliver exactly 100, 500, or 1000 creators
-- ✅ **Smart While Loop Logic** - Continues API calls until target count reached (no more, no less)
-- ✅ **Universal Implementation** - Works across TikTok, Instagram, YouTube platforms
-- ✅ **Early Stopping Mechanism** - Prevents over-fetching with intelligent completion detection
-- ✅ **Progress Tracking** - Real-time updates showing progress toward target count
-- 📚 **Technical Details**: [Exact Count Delivery →](docs/backend/EXACT-COUNT-DELIVERY.md)
-
-#### **⚡ Enhanced Error Handling & Recovery (NEW)**
-- ✅ **Comprehensive Error Recovery** - Graceful handling of API failures and network issues
-- ✅ **React Performance Fixes** - Resolved hooks order violations and hydration errors
-- ✅ **Automatic Fallbacks** - System continues working even when individual APIs fail
-- ✅ **Debug-Friendly Logging** - Detailed error tracking for faster troubleshooting
-- 📚 **Error Guide**: [Error Handling & Recovery →](docs/troubleshooting/ERROR-HANDLING.md)
-
-#### **🎨 UI/UX Improvements (NEW)**
-- ✅ **Brand Consistency** - Updated from "usegemz" to "Gemz" across entire frontend
-- ✅ **Fixed UI Duplications** - Resolved duplicate "Choose Your Plan" sections
-- ✅ **Enhanced Trial Components** - Unified timer logic with precise countdown display
-- ✅ **Skeleton Loading States** - Smooth loading experiences with optimistic UI
-- 📚 **UI Changes**: [Frontend Improvements →](docs/frontend/UI-IMPROVEMENTS.md)
-
-#### **YouTube Similar Search**
-- ✅ **Channel-based similarity matching** using target channel analysis
-- ✅ **Enhanced bio/email extraction** from channel descriptions
-- ✅ **Social media links extraction** from channel about pages
-- ✅ **Subscriber count and engagement metrics**
-- ✅ **API Endpoint**: `/api/scraping/youtube-similar`
-
-#### **Instagram Reels Search**  
-- ✅ **Reels-based content discovery** for Instagram creators
-- ✅ **Posts and creators analysis** from reels feeds
-- ✅ **Enhanced profile data extraction** with bio/email enhancement
-- ✅ **Live intermediate results** with real-time preview cards
-- ✅ **Parallel batch processing** for faster bio/email extraction
-- ✅ **Follower count extraction** from profile API calls
-- ✅ **API Endpoint**: `/api/scraping/instagram-reels`
-
-#### **Advanced Bio & Email Extraction System**
-- ✅ **Universal enhanced profile fetching** for TikTok keyword and similar search
-- ✅ **Email regex extraction** from all creator bio content  
-- ✅ **Contact information aggregation** across all platforms
-- ✅ **CSV export integration** with bio/email columns
-- ✅ **Individual profile API calls** with timeout handling and error recovery
-
-#### **Comprehensive Admin System**
-- ✅ **Real-time system configuration** management with hot-reloading
-- ✅ **User management and admin promotion** capabilities
-- ✅ **Advanced email testing system** with 5 email types and scheduling
-- ✅ **Test user creation** for development workflows
-- ✅ **Audit logging** for all admin actions
-
-#### **7-Day Trial System**
-- ✅ **Automated trial lifecycle** with QStash scheduling
-- ✅ **Email sequence automation** (welcome, day 2, day 5, expiry)
-- ✅ **Mock Stripe integration** for payment flow testing
-- ✅ **Trial countdown and status tracking**
-
-#### **Dynamic System Configuration**
-- ✅ **Database-backed configuration** with in-memory caching
-- ✅ **Hot-reloadable settings** for API limits, timeouts, delays
-- ✅ **Admin interface** for real-time configuration management
-- ✅ **Environment-specific configs** for dev/staging/production
-
-#### **Enhanced CSV Export System**
-- ✅ **Platform-specific export formats** with bio/email integration
-- ✅ **Campaign-level aggregation** across multiple jobs
-- ✅ **Enhanced data columns** including contact information
-- ✅ **Unified cross-platform export** for mixed campaign data
-
-## Database Schema
-
-### Core Tables (Enhanced)
-```sql
--- Main campaigns table
-campaigns {
-  id: uuid (PK)
-  userId: uuid
-  name: text
-  description: text
-  searchType: varchar ('keyword' | 'similar')
-  status: varchar ('draft' | 'active' | 'completed')
-  createdAt: timestamp
-  updatedAt: timestamp
-}
-
--- Background processing jobs (enhanced with all 6 platforms)
-scrapingJobs {
-  id: uuid (PK)
-  userId: text
-  campaignId: uuid (FK -> campaigns.id)
-  keywords: jsonb (string[] for keyword search)
-  targetUsername: text (for similar search)
-  platform: varchar ('TikTok' | 'Instagram' | 'YouTube')
-  searchType: varchar ('keyword' | 'similar' | 'hashtag')  -- NEW: Enhanced search types
-  status: varchar ('pending' | 'processing' | 'completed' | 'error' | 'timeout')
-  processedRuns: integer (tracks API calls made)
-  processedResults: integer (total creators found)
-  targetResults: integer (goal: 100, 500, 1000)
-  cursor: integer (pagination for API)
-  progress: decimal (0-100)
-  timeoutAt: timestamp
-  createdAt: timestamp
-  updatedAt: timestamp
-  startedAt: timestamp
-  completedAt: timestamp
-  error: text
-}
-
--- Final results storage (enhanced with bio/email data)
-scrapingResults {
-  id: uuid (PK)
-  jobId: uuid (FK -> scrapingJobs.id)
-  creators: jsonb (Platform-specific creator data with bio/email)
-  createdAt: timestamp
-}
-
--- User profiles with trial and admin features
-userProfiles {
-  id: uuid (PK)
-  userId: text (unique, Clerk user ID)
-  isAdmin: boolean (default: false)             -- NEW: Admin role flag
-  onboardingStep: varchar ('pending' | 'completed')
-  trialStartedAt: timestamp                     -- NEW: Trial system
-  trialExpiresAt: timestamp                     -- NEW: Trial system
-  trialStatus: varchar ('inactive' | 'active' | 'expired')  -- NEW: Trial system
-  createdAt: timestamp
-  updatedAt: timestamp
-}
-
--- System configurations for dynamic settings
-systemConfigurations {
-  id: uuid (PK)
-  category: varchar(50) (e.g. 'api_limits', 'timeouts')  -- NEW: Config system
-  key: varchar(100) (e.g. 'max_api_calls_tiktok')        -- NEW: Config system
-  value: text (string representation of value)            -- NEW: Config system
-  valueType: varchar(20) ('number' | 'duration' | 'boolean')  -- NEW: Config system
-  description: text                                       -- NEW: Config system
-  isHotReloadable: boolean (default: true)               -- NEW: Config system
-  createdAt: timestamp
-  updatedAt: timestamp
-  UNIQUE(category, key)
-}
-
--- Admin actions audit log
-adminActions {
-  id: uuid (PK)
-  adminUserId: text (Clerk user ID)             -- NEW: Admin audit system
-  actionType: varchar(50) ('config_update', 'user_promotion', 'email_sent')  -- NEW
-  targetUserId: text (optional)                 -- NEW: Admin audit system
-  details: jsonb (action-specific data)         -- NEW: Admin audit system
-  createdAt: timestamp
-}
-
--- Email queue for trial system
-emailQueue {
-  id: uuid (PK)
-  userId: text (Clerk user ID)                  -- NEW: Email system
-  emailType: varchar(50) ('welcome', 'trial_day2', 'trial_expiry')  -- NEW
-  scheduledFor: timestamp                       -- NEW: Email system
-  sentAt: timestamp (nullable)                  -- NEW: Email system
-  status: varchar(20) ('pending' | 'sent' | 'failed')  -- NEW: Email system
-  qstashMessageId: text (nullable)              -- NEW: Email system
-  createdAt: timestamp
-}
-```
-
-## 📚 Comprehensive Documentation System
-
-### **Complete Technical Documentation Created**
-
-The platform now includes comprehensive documentation covering all systems:
-
-#### **Performance Documentation** (`/docs/performance/`) **NEW**
-- 🚀 **[Caching System](docs/performance/CACHING-SYSTEM.md)** - Complete performance overhaul details
-- 📊 **[Benchmarks & Monitoring](docs/performance/BENCHMARKS-AND-MONITORING.md)** - Real-time performance tracking
-
-#### **Frontend Documentation** (`/docs/frontend/`)
-- 🎯 **URL Structure & Routing** - Complete mapping of all application routes
-- 🎨 **Design System & Components** - UI component library and styling patterns  
-- 🔄 **User Flow & Real-time Features** - Interactive flows and live updates
-- ✨ **[UI Improvements](docs/frontend/UI-IMPROVEMENTS.md)** - Recent fixes and enhancements **NEW**
-
-#### **Backend Documentation** (`/docs/backend/`)
-
-##### **Authentication System** (`/docs/backend/auth/`)
-- 🔐 **Clerk Integration** - Complete authentication setup and patterns
-- 🛡️ **Admin Authentication** - Dual admin system with environment + database roles
-
-##### **Database Documentation** (`/docs/backend/database/`)  
-- 🗄️ **Complete Schema** - All 6 tables with relationships and JSONB structures
-- 📊 **Entity Relationships** - Visual diagrams of data relationships
-
-##### **QStash Integration** (`/docs/backend/qstash/`)
-- ⚡ **Background Processing** - Job lifecycle and webhook handling
-- 🔄 **Platform-specific Processing** - Each platform's async workflow
-
-##### **API Documentation** (`/docs/backend/apis/`)
-- 🌐 **All 6 Platform APIs** - Complete endpoint documentation
-- 📧 **Bio & Email Extraction** - Advanced contact information system
-
-##### **Trial System** (`/docs/backend/trial-system/`)
-- ⏰ **7-Day Trial Flow** - Complete automation with email sequences
-- 💳 **Mock Stripe Integration** - Payment flow simulation
-- 🔧 **Enhanced Components** - Fixed timer inconsistencies and unified data sources **NEW**
-
-##### **Core Backend Systems** (`/docs/backend/`)
-- 🎯 **[Exact Count Delivery](docs/backend/EXACT-COUNT-DELIVERY.md)** - Dynamic API calling for precise results **NEW**
-- ⚛️ **[React Performance](docs/backend/REACT-PERFORMANCE.md)** - Hooks optimization and error fixes **NEW**
-- 🖼️ **Image Proxy System** - HEIC conversion and CDN bypass strategies
-- ⚙️ **System Configuration** - Dynamic settings with hot-reloading
-- 📊 **CSV Export System** - Multi-platform export with bio/email integration  
-- 🛡️ **Admin Features** - Complete admin management system
-
-#### **Troubleshooting Documentation** (`/docs/troubleshooting/`) **NEW**
-- 🔧 **[Error Handling & Recovery](docs/troubleshooting/ERROR-HANDLING.md)** - Comprehensive error resolution guide
-- 📈 **Performance Issues** - Caching and optimization troubleshooting
-- 🐛 **Common Problems** - React, API, and deployment issue solutions
-
-### **Documentation Features**
-- ✅ **ASCII Architecture Diagrams** - Visual system flows
-- ✅ **Complete Code Examples** - Real implementation snippets
-- ✅ **Comprehensive Error Handling** - Debug patterns and recovery
-- ✅ **Performance Monitoring** - Logging and metrics patterns with benchmarks **NEW**
-- ✅ **Configuration Examples** - Environment and deployment setup
-- ✅ **Performance Benchmarks** - Real-world timing and optimization data **NEW**
-
-## Complete End-to-End Flow
-
-### **Enhanced Performance & Reliability**
-
-#### **Instant Loading Experience**
-```mermaid
-graph TD
-    A[User Visits Page] --> B{Cache Available?}
-    B -->|Yes| C[Show Cached Data Instantly ~5ms]
-    B -->|No| D[Show Skeleton Loading]
-    C --> E[Background API Update]
-    D --> F[API Call ~500ms]
-    E --> G[Update Cache Silently]
-    F --> H[Display Fresh Data]
-    G --> I[User Sees Updated Content]
-    H --> I
-```
-
-#### **Exact Count Delivery System**
-```mermaid
-graph TD
-    A[User Selects Count: 100/500/1000] --> B[Initialize Job]
-    B --> C[Start API Calls]
-    C --> D{Current Results < Target?}
-    D -->|Yes| E[Make Next API Call]
-    D -->|No| F[Stop & Trim to Exact Count]
-    E --> G[Process & Deduplicate Results]
-    G --> H[Update Progress]
-    H --> D
-    F --> I[Display Exact Count Results]
-```
-
-## Complete End-to-End Flow
-
-### 1. Campaign Creation Flow
-
-#### Frontend Routes & Components
-- **Main Campaign Page**: `/app/campaigns/new/page.jsx`
-- **Campaign Form**: `/app/components/campaigns/campaign-form.jsx`
-- **Keyword Search**: `/app/campaigns/search/keyword/page.jsx`
-- **Similar Search**: `/app/campaigns/search/similar/page.jsx`
-
-### 2. Platform-Specific Implementations
-
-## TikTok Keyword Search Implementation
-
-### File Structure
-```
-/app/api/scraping/tiktok/route.ts                    # TikTok keyword API endpoint
-/app/api/qstash/process-scraping/route.ts            # Background processor (inline TikTok handling)
-/app/components/campaigns/keyword-search/
-  ├── keyword-search-form.jsx                       # Platform + keyword selection
-  ├── search-results.jsx                             # Results display with image handling
-  └── search-progress.jsx                            # Progress UI component
-```
-
-### API Flow
-1. **POST `/api/scraping/tiktok`**
-   - Creates job with `platform: 'TikTok'` and `keywords: string[]`
-   - Publishes to QStash for background processing
-   - Returns `jobId` for polling
-
-2. **QStash Processing** (`/app/api/qstash/process-scraping/route.ts`)
-   ```javascript
-   // TikTok keyword search handling (inline)
-   if (job.platform === 'TikTok' && job.keywords) {
-     // Call ScrapeCreators TikTok API
-     const apiUrl = `${process.env.SCRAPECREATORS_API_URL}?query=${keywords}&cursor=${cursor}`;
-     
-     // Transform response to common format
-     const creators = transformTikTokResponse(apiResponse);
-     
-     // Save results and schedule continuation if needed
-     if (processedRuns < MAX_API_CALLS_FOR_TESTING) {
-       await qstash.publishJSON({ url: callbackUrl, body: { jobId }, delay: '2s' });
-     }
-   }
-   ```
-
-3. **GET `/api/scraping/tiktok?jobId=xxx`**
-   - Returns job status and results for frontend polling
-
-### Data Transformation with Image Caching
-```javascript
-// TikTok API Response → Common Format with Cached Images
-const imageCache = new ImageCache();
-
-const creators = await Promise.all(apiResponse.search_item_list.map(async (item) => {
-  const awemeInfo = item.aweme_info || {};
-  const author = awemeInfo.author || {};
-  
-  // Cache the profile image during processing
-  const originalImageUrl = author.avatar_medium?.url_list?.[0] || '';
-  const cachedImageUrl = await imageCache.getCachedImageUrl(originalImageUrl, 'TikTok', author.unique_id);
-  
-  return {
-    creator: {
-      name: author.nickname || author.unique_id,
-      followers: author.follower_count || 0,
-      avatarUrl: cachedImageUrl,        // ✅ Now uses cached blob URL
-      profilePicUrl: cachedImageUrl,    // ✅ Permanent, never expires
-    },
-    video: {
-      description: awemeInfo.desc || 'No description',
-      url: awemeInfo.share_url || '',
-      statistics: {
-        likes: awemeInfo.statistics?.digg_count || 0,
-        comments: awemeInfo.statistics?.comment_count || 0,
-        views: awemeInfo.statistics?.play_count || 0
-      }
-    },
-    hashtags: awemeInfo.text_extra?.filter(e => e.type === 1).map(e => e.hashtag_name) || [],
-    platform: 'TikTok'
-  };
-}));
-```
-
-## TikTok Similar Search Implementation
-
-### File Structure
-```
-/app/api/scraping/tiktok-similar/route.ts             # TikTok similar API endpoint
-/lib/platforms/tiktok-similar/
-  ├── types.ts                                       # TypeScript interfaces
-  ├── api.ts                                         # ScrapeCreators API calls
-  ├── transformer.ts                                 # Data transformation
-  └── handler.ts                                     # Background processing logic
-/app/components/campaigns/similar-search/
-  ├── similar-search-form.jsx                       # Username input form
-  ├── search-results.jsx                             # Results with progress UI
-  └── similar-search-progress.jsx                    # Progress component
-```
-
-### Enhanced Bio/Email Extraction + Image Caching Architecture
-```javascript
-// lib/platforms/tiktok-similar/handler.ts
-export async function processTikTokSimilarJob(job: any, jobId: string) {
-  // Step 1: Get target user profile
-  const profileData = await getTikTokProfile(job.targetUsername);
-  
-  // Step 2: Extract keywords from profile
-  const keywords = extractSearchKeywords(profileData);
-  
-  // Step 3: Search for similar users using keywords
-  const searchResults = await searchTikTokUsers(keywords[0]);
-  
-  // Step 4: Enhanced transformation with bio enhancement + image caching
-  const creators = await Promise.all(
-    searchResults.users.map(user => transformTikTokUserWithEnhancedBio(user, keyword))
-  );
-  
-  // Step 5: Save results and handle continuation
-  if (processedRuns < MAX_API_CALLS_FOR_TESTING) {
-    await qstash.publishJSON({ url: callbackUrl, body: { jobId }, delay: '2s' });
-  } else {
-    await markJobCompleted(jobId);
-  }
-}
-```
-
-### Image Caching in TikTok Similar Search
-```javascript
-// lib/platforms/tiktok-similar/transformer.ts
-export async function transformTikTokUserWithEnhancedBio(userItem, searchKeyword) {
-  const imageCache = new ImageCache();
-  const userInfo = userItem.user_info;
-  
-  // Enhanced bio fetching
-  let bio = userInfo.search_user_desc || '';
-  try {
-    const profileData = await getTikTokProfile(userInfo.unique_id);
-    bio = profileData.user?.signature || bio;
-  } catch (error) {
-    // Continue with basic bio
-  }
-  
-  // Cache the profile image during processing
-  const originalImageUrl = userInfo.avatar_medium?.url_list?.[0] || '';
-  const cachedImageUrl = await imageCache.getCachedImageUrl(originalImageUrl, 'TikTok', userInfo.unique_id);
-  
-  return {
-    id: userInfo.uid,
-    username: userInfo.unique_id,
-    full_name: userInfo.nickname,
-    is_verified: userInfo.verification_type > 0,
-    profile_pic_url: cachedImageUrl,        // ✅ Cached blob URL
-    profilePicUrl: cachedImageUrl,          // ✅ Never expires
-    bio: bio,                               // ✅ Enhanced bio
-    emails: bio.match(emailRegex) || [],    // ✅ Email extraction
-    platform: 'TikTok'
-  };
-}
-```
-
-### QStash Integration
-```javascript
-// /app/api/qstash/process-scraping/route.ts
-else if (job.platform === 'TikTok' && job.targetUsername) {
-  const result = await processTikTokSimilarJob(job, jobId);
-  return NextResponse.json(result);
-}
-```
-
-## YouTube Keyword Search Implementation
-
-### File Structure
-```
-/app/api/scraping/youtube/route.ts                   # YouTube API endpoint
-/lib/platforms/youtube/
-  ├── types.ts                                       # YouTube-specific interfaces
-  ├── api.ts                                         # ScrapeCreators YouTube API
-  ├── transformer.ts                                 # YouTube data transformation
-  └── handler.ts                                     # Background processing
-```
-
-### Modular Processing
-```javascript
-// lib/platforms/youtube/handler.ts
-export async function processYouTubeJob(job: any, jobId: string) {
-  // Check testing limits
-  if (currentRuns >= MAX_API_CALLS_FOR_TESTING) {
-    return markJobCompleted(jobId);
-  }
-
-  // Call YouTube API
-  const searchParams = { keywords: job.keywords, mode: 'keyword' };
-  const youtubeResponse = await searchYouTube(searchParams);
-  
-  // Transform and save
-  const creators = transformYouTubeVideos(youtubeResponse.videos, job.keywords);
-  await saveResults(jobId, creators);
-  
-  // Schedule continuation or complete
-  if (newProcessedRuns < MAX_API_CALLS_FOR_TESTING) {
-    await scheduleNextCall(jobId);
-  } else {
-    await markJobCompleted(jobId);
-  }
-}
-```
-
-### YouTube Data Transformation
-```javascript
-// lib/platforms/youtube/transformer.ts
-export function transformYouTubeVideo(video, keywords = []) {
-  return {
-    creator: {
-      name: video.channel?.title || 'Unknown Channel',
-      followers: 0, // Not available in YouTube search API
-      avatarUrl: video.channel?.thumbnail || ''
-    },
-    video: {
-      description: video.title || 'No title',
-      url: video.url || '',
-      statistics: {
-        views: video.viewCountInt || 0, // Only views available
-        likes: 0, comments: 0, shares: 0 // Not available in search API
-      }
-    },
-    hashtags: extractHashtags(video.title || ''),
-    publishedTime: video.publishedTime || '',
-    lengthSeconds: video.lengthSeconds || 0,
-    platform: 'YouTube'
-  };
-}
-```
-
-## Instagram Similar Search Implementation
-
-### File Structure
-```
-/app/api/scraping/instagram/route.ts                 # Instagram API endpoint
-/app/api/qstash/process-scraping/route.ts            # Inline Instagram processing
-```
-
-### Inline Processing (Single API Call)
-```javascript
-// Instagram processing in QStash handler (lines 164-399)
-if (job.platform === 'Instagram' && job.targetUsername) {
-  // Single API call - no continuation needed
-  const apiUrl = `${process.env.SCRAPECREATORS_INSTAGRAM_API_URL}?handle=${job.targetUsername}`;
-  const response = await fetch(apiUrl, { headers: { 'x-api-key': apiKey } });
-  
-  // Transform related profiles
-  const relatedProfiles = response.data.user.edge_related_profiles.edges.map(edge => ({
-    id: edge.node.id,
-    username: edge.node.username,
-    full_name: edge.node.full_name,
-    is_private: edge.node.is_private,
-    is_verified: edge.node.is_verified,
-    profile_pic_url: edge.node.profile_pic_url
-  }));
-  
-  // Save and complete immediately
-  await saveResults(jobId, relatedProfiles);
-  await markJobCompleted(jobId);
-}
-```
-
-## Instagram Reels Search Implementation
-
-### File Structure
-```
-/app/api/scraping/instagram-reels/route.ts               # Instagram reels API endpoint
-/app/api/qstash/process-scraping/route.ts               # Background processing (lines 400-700)
-/app/components/campaigns/keyword-search/
-  ├── keyword-search-form.jsx                           # Platform + keyword selection
-  ├── search-results.jsx                                # Results display with bio/email
-  └── search-progress.jsx                               # Progress UI with live preview
-```
-
-### Advanced Implementation Features
-
-#### 1. **RapidAPI Integration**
-```javascript
-// RapidAPI Instagram Reels Search
-const RAPIDAPI_KEY = process.env.RAPIDAPI_INSTAGRAM_KEY;
-const RAPIDAPI_HOST = 'instagram-premium-api-2023.p.rapidapi.com';
-
-const searchReels = async (keywords) => {
-  const response = await fetch(`https://${RAPIDAPI_HOST}/reels/search`, {
-    method: 'POST',
-    headers: {
-      'X-RapidAPI-Key': RAPIDAPI_KEY,
-      'X-RapidAPI-Host': RAPIDAPI_HOST,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      keywords: keywords,
-      count: 50
-    })
-  });
-  
-  return await response.json();
-};
-```
-
-#### 2. **Parallel Bio/Email Enhancement**
-```javascript
-// Batch processing with parallel API calls
-const BATCH_SIZE = 3;
-const batches = [];
-
-for (let i = 0; i < creators.length; i += BATCH_SIZE) {
-  batches.push(creators.slice(i, i + BATCH_SIZE));
-}
-
-// Process each batch in parallel
-for (const [batchIndex, batch] of batches.entries()) {
-  const batchPromises = batch.map(async ([userId, creatorData]) => {
-    let enhancedBio = '';
-    let enhancedEmails = [];
-    
-    // Enhanced profile fetching with timeout
-    try {
-      const profileResponse = await fetch(`${RAPIDAPI_BASE_URL}/v2/user/by/id?id=${userId}`, {
-        headers: {
-          'X-RapidAPI-Key': RAPIDAPI_KEY,
-          'X-RapidAPI-Host': RAPIDAPI_HOST
-        }
-      });
-      
-      if (profileResponse.ok) {
-        const profileData = await profileResponse.json();
-        const userProfile = profileData.user || {};
-        
-        // Extract bio and email
-        enhancedBio = userProfile.biography || userProfile.bio || '';
-        const emailMatches = enhancedBio.match(emailRegex) || [];
-        enhancedEmails = emailMatches;
-        
-        // Extract follower count
-        const followerCount = userProfile.follower_count || userProfile.followers || 0;
-        if (followerCount > 0) {
-          creatorData.followerCount = followerCount;
-        }
-      }
-    } catch (error) {
-      console.log(`❌ [BIO-ENHANCEMENT] Error for @${creatorData.username}:`, error.message);
-    }
-    
-    return {
-      creator: {
-        name: creatorData.fullName || creatorData.username,
-        uniqueId: creatorData.username,
-        followers: creatorData.followerCount || 0,
-        avatarUrl: creatorData.profilePicUrl || '',
-        bio: enhancedBio,
-        emails: enhancedEmails
-      },
-      video: {
-        description: media.caption?.text || '',
-        url: `https://www.instagram.com/reel/${media.code}`,
-        statistics: {
-          likes: media.like_count || 0,
-          comments: media.comment_count || 0,
-          views: media.play_count || 0
-        }
-      },
-      platform: 'Instagram'
-    };
-  });
-  
-  const batchResults = await Promise.all(batchPromises);
-  transformedCreators.push(...batchResults);
-  
-  // 🔄 INTERMEDIATE RESULTS: Save cumulative results for live preview
-  await db.insert(scrapingResults).values({
-    jobId: job.id,
-    creators: transformedCreators,
-    createdAt: new Date()
-  });
-  
-  // Update progress
-  const currentProgress = Math.round(40 + ((processedCreators / totalCreators) * 50));
-  await db.update(scrapingJobs).set({
-    progress: currentProgress.toString(),
-    processedResults: processedCreators
-  }).where(eq(scrapingJobs.id, job.id));
-}
-```
-
-#### 3. **Live Preview System**
-```javascript
-// Frontend automatically detects intermediate results
-if (currentStatus === 'processing' && data.results && data.results.length > 0) {
-  const foundCreators = data.results.reduce((acc, result) => {
-    return [...acc, ...(result.creators || [])];
-  }, []);
-  
-  // Update intermediate results for live preview
-  setIntermediateCreators(foundCreators);
-  setShowIntermediateResults(true);
-}
-```
-
-#### 4. **Enhanced Data Structure**
-```javascript
-// Complete Instagram reel creator data
-const instagramCreator = {
-  creator: {
-    name: 'Creator Name',
-    uniqueId: 'username',
-    followers: 12500,           // ✅ Enhanced from profile API
-    avatarUrl: 'profile_pic_url',
-    bio: 'Creator bio text...',  // ✅ Enhanced from profile API
-    emails: ['email@domain.com'] // ✅ Enhanced from bio extraction
-  },
-  video: {
-    description: 'Reel description',
-    url: 'https://www.instagram.com/reel/ABC123',
-    statistics: {
-      likes: 1234,
-      comments: 56,
-      views: 12500
-    }
-  },
-  hashtags: ['#trending', '#viral'],
-  platform: 'Instagram',
-  postType: 'Video',
-  enhancementStatus: 'completed'
-};
-```
-
-### Performance Optimizations
-
-#### 1. **Request Limiting**
-```javascript
-// Single request for testing
-const INSTAGRAM_REELS_MAX_REQUESTS = 1;
-```
-
-#### 2. **Progress Tracking**
-```javascript
-// Real-time progress updates
-const progressStages = {
-  0-10: 'Searching Instagram reels...',
-  10-25: 'Found reels, getting creator profiles...',
-  25-40: 'Processing reels data...',
-  40-100: 'Enhancing X/Y creators (Z%)'
-};
-```
-
-#### 3. **Error Recovery**
-```javascript
-// Graceful error handling
-try {
-  // Profile API call
-} catch (profileError) {
-  console.log('⚠️ Profile enhancement failed, using basic data');
-  // Continue with basic creator data
-}
-```
-
-### Key Features
-
-- ✅ **Live Preview Cards**: Real-time intermediate results display
-- ✅ **Bio/Email Enhancement**: Individual profile API calls for complete data
-- ✅ **Follower Count Extraction**: Accurate follower counts from profile API
-- ✅ **Parallel Processing**: Batch processing for 3x faster performance
-- ✅ **Error Recovery**: Graceful handling of failed API calls
-- ✅ **Progress Tracking**: Detailed progress messages and percentages
-- ✅ **Single Request Testing**: Configurable API limits for development
-
-## Universal Image Cache Service - Production Ready
-
-### Overview
-The platform features a comprehensive image caching system that downloads and stores creator profile images in Vercel Blob Storage, eliminating dependencies on external CDNs and ensuring permanent image URLs.
-
-### File Structure
-```
-/lib/services/image-cache.ts                         # Universal image caching service
-/app/api/proxy/image/route.ts                        # Fallback image proxy with HEIC conversion
-```
-
-### Core Features
-- **Permanent Storage**: Images cached in Vercel Blob Storage never expire
-- **HEIC Conversion**: Automatic conversion of HEIC images to JPEG format
-- **Platform Agnostic**: Works with TikTok, Instagram, YouTube, and future platforms
-- **Intelligent Caching**: Checks cache before downloading, avoids duplicates
-- **Graceful Fallbacks**: Falls back to proxy system if caching fails
-
-### Implementation
-```javascript
-// lib/services/image-cache.ts
-export class ImageCache {
-  async getCachedImageUrl(originalUrl: string, platform: string, userId?: string): Promise<string> {
-    if (!originalUrl) return '';
-    
-    const cacheKey = await this.generateCacheKey(originalUrl, platform, userId);
-    
-    // Check if already cached
-    const { blobs } = await list({ prefix: cacheKey.split('/')[0] + '/', limit: 1000 });
-    const existing = blobs.find(blob => blob.pathname === cacheKey);
-    if (existing) {
-      return existing.url; // Return cached blob URL
-    }
-
-    // Download and cache
-    return await this.downloadAndCache(originalUrl, cacheKey, platform);
-  }
-
-  private async downloadAndCache(url: string, cacheKey: string, platform: string): Promise<string> {
-    // Platform-specific headers
-    const headers = platform === 'TikTok' ? {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      'Referer': 'https://www.tiktok.com/',
-      'Origin': 'https://www.tiktok.com'
-    } : {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-    };
-
-    const response = await fetch(url, { headers });
-    let buffer = Buffer.from(await response.arrayBuffer());
-    
-    // Convert HEIC to JPEG if needed
-    if (url.includes('.heic')) {
-      const convert = require('heic-convert');
-      buffer = Buffer.from(await convert({ buffer, format: 'JPEG', quality: 0.85 }));
-    }
-
-    // Store in Vercel Blob
-    const blob = await put(cacheKey, buffer, {
-      access: 'public',
-      contentType: 'image/jpeg'
-    });
-
-    return blob.url; // Return permanent blob URL
-  }
-}
-```
-
-### Platform Integration
-
-#### TikTok Keyword Search
-```javascript
-// app/api/qstash/process-scraping/route.ts
-const imageCache = new ImageCache();
-const originalImageUrl = author.avatar_medium?.url_list?.[0] || '';
-const cachedImageUrl = await imageCache.getCachedImageUrl(originalImageUrl, 'TikTok', author.unique_id);
-
-const creatorData = {
-  creator: {
-    avatarUrl: cachedImageUrl,        // ✅ Permanent blob URL
-    profilePicUrl: cachedImageUrl,    // ✅ Never expires
-  }
-};
-```
-
-#### TikTok Similar Search
-```javascript
-// lib/platforms/tiktok-similar/transformer.ts
-export async function transformTikTokUserWithEnhancedBio(userItem, searchKeyword) {
-  const imageCache = new ImageCache();
-  const originalImageUrl = userInfo.avatar_medium?.url_list?.[0] || '';
-  const cachedImageUrl = await imageCache.getCachedImageUrl(originalImageUrl, 'TikTok', userInfo.unique_id);
-  
-  return {
-    profile_pic_url: cachedImageUrl,     // ✅ Cached blob URL
-    profilePicUrl: cachedImageUrl,       // ✅ Never expires
-  };
-}
-```
-
-### Environment Configuration
-```bash
-# .env.local
-BLOB_READ_WRITE_TOKEN=vercel_blob_rw_xxx...
-
-# Vercel Dashboard
-# Storage → search-profile-pics → API → Read/Write Token
-```
-
-### Benefits
-- **Reliability**: No more broken images from expired TikTok signatures
-- **Performance**: Faster loading from Vercel's global CDN
-- **Consistency**: All platforms use the same caching strategy
-- **Cost Efficiency**: Reduced external API calls for repeated image requests
-- **Scalability**: Vercel Blob handles global distribution automatically
-
-### Cache Structure
-```
-Blob Storage Structure:
-├── tiktok/
-│   ├── abc123.jpg (user: @creator1)
-│   ├── def456.jpg (user: @creator2)
-│   └── ...
-├── instagram/
-│   ├── xyz789.jpg
-│   └── ...
-└── youtube/
-    ├── uvw012.jpg
-    └── ...
-```
-
-### URL Transformation
-```javascript
-// Before (External CDN - expires)
-"https://p16-sign-va.tiktokcdn.com/tos-maliva-avt-0068/abc123~c5_720x720.jpeg?x-expires=1640995200&x-signature=xyz"
-
-// After (Vercel Blob - permanent)
-"https://uqsunxfcuh4kck1e.public.blob.vercel-storage.com/tiktok/abc123.jpg"
-```
-
-## Image Proxy System - Universal HEIC & CDN Handling
-
-### File Structure
-```
-/app/api/proxy/image/route.ts                        # Universal image proxy with HEIC conversion
-```
-
-### Comprehensive Image Processing Pipeline
-
-#### 1. HEIC Conversion (Vercel-Compatible)
-```javascript
-// Primary: heic-convert package (works on Vercel)
-import convert from 'heic-convert';
-
-if (isHeic || contentType === 'image/heic') {
-  try {
-    const outputBuffer = await convert({
-      buffer: buffer,
-      format: 'JPEG',
-      quality: 0.85
-    });
-    buffer = Buffer.from(outputBuffer);
-    contentType = 'image/jpeg';
-    console.log('✅ [IMAGE-PROXY] HEIC conversion successful with heic-convert');
-  } catch (heicError) {
-    // Fallback to Sharp if available
-    console.log('🔄 [IMAGE-PROXY] Trying Sharp as fallback...');
-  }
-}
-```
-
-#### 2. TikTok CDN 403 Handling (5-Layer Strategy)
-```javascript
-// Layer 1: Enhanced headers with TikTok referrer
-const fetchHeaders = {
-  'User-Agent': 'Mozilla/5.0...',
-  'Referer': 'https://www.tiktok.com/',
-  'Origin': 'https://www.tiktok.com'
-};
-
-// Layer 2: Remove referrer headers
-if (response.status === 403) {
-  delete headers['Referer'];
-  delete headers['Origin'];
-  response = await fetch(url, { headers });
-}
-
-// Layer 3: Simplify URL (remove query parameters)
-if (still403) {
-  const simplifiedUrl = imageUrl.split('?')[0];
-  response = await fetch(simplifiedUrl, { headers });
-}
-
-// Layer 4: Minimal curl-like headers
-if (still403) {
-  const minimalHeaders = { 'User-Agent': 'curl/7.68.0', 'Accept': '*/*' };
-  response = await fetch(simplifiedUrl, { headers: minimalHeaders });
-}
-
-// Layer 5: Alternative CDN domains
-if (still403) {
-  const cdnDomains = ['p16-sign-va.tiktokcdn.com', 'p19-sign-va.tiktokcdn.com'];
-  for (const domain of cdnDomains) {
-    const altUrl = simplifiedUrl.replace(/p\d+-[^.]+\.tiktokcdn[^/]*/, domain);
-    response = await fetch(altUrl, { headers: minimalHeaders });
-    if (response.ok) break;
-  }
-}
-```
-
-#### 3. SVG Placeholder Generation
-```javascript
-// Final fallback: Generate colored avatar placeholders
-if (allAttemptsFailed && imageUrl.includes('tiktokcdn')) {
-  const username = extractUsernameFromUrl(imageUrl);
-  const color = `hsl(${username.charCodeAt(0) * 7 % 360}, 70%, 50%)`;
-  const initial = username.charAt(0).toUpperCase();
-  
-  const placeholderSvg = `
-    <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="100" cy="100" r="100" fill="${color}"/>
-      <text x="100" y="120" font-family="Arial" font-size="80" font-weight="bold" 
-            fill="white" text-anchor="middle">${initial}</text>
-    </svg>
-  `;
-  
-  return new NextResponse(Buffer.from(placeholderSvg), {
-    headers: { 'Content-Type': 'image/svg+xml' }
-  });
-}
-```
-
-### Response Headers for Debugging
-```javascript
-headers: {
-  'Content-Type': contentType,
-  'X-Image-Proxy-Time': totalTime.toString(),
-  'X-Image-Proxy-Source': 'heic-converted' | 'original' | 'placeholder-403',
-  'X-Image-Original-Format': 'heic' | 'other' | 'blocked',
-  'X-Image-Fetch-Strategy': 'initial-success' | 'no-referrer' | 'simplified-url' | 'minimal-headers' | 'alternative-domain' | 'placeholder',
-  'X-Image-Final-Status': response.status.toString()
-}
-```
-
-## Frontend Image Loading with Enhanced Debugging
-
-### Universal Image Loading Handlers
-```javascript
-// app/components/campaigns/keyword-search/search-results.jsx
-// app/components/campaigns/similar-search/search-results.jsx
-
-const handleImageLoad = (e, username) => {
-  const img = e.target;
-  console.log('✅ [BROWSER-IMAGE] Image loaded successfully for', username);
-  console.log('  📏 Natural size:', img.naturalWidth + 'x' + img.naturalHeight);
-  console.log('  🔗 Loaded URL:', img.src);
-  console.log('  ⏱️ Load time:', (Date.now() - parseInt(img.dataset.startTime || '0')) + 'ms');
-};
-
-const handleImageError = (e, username, originalUrl) => {
-  console.error('❌ [BROWSER-IMAGE] Image failed to load for', username);
-  console.error('  🔗 Failed URL:', img.src);
-  console.error('  📍 Original URL:', originalUrl);
-  img.style.display = 'none'; // Hide broken images
-};
-
-// Usage in AvatarImage
-<AvatarImage
-  src={getProxiedImageUrl(creator.profile_pic_url)}
-  onLoad={(e) => handleImageLoad(e, creator.username)}
-  onError={(e) => handleImageError(e, creator.username, creator.profile_pic_url)}
-  onLoadStart={(e) => handleImageStart(e, creator.username)}
-/>
-```
-
-## CSV Export System
-
-### Universal Export Handler
-```javascript
-// app/api/export/csv/route.ts
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const jobId = searchParams.get('jobId');
-  
-  // Get job with results
-  const job = await db.query.scrapingJobs.findFirst({
-    where: eq(scrapingJobs.id, jobId),
-    with: { results: true }
-  });
-  
-  // Platform-specific CSV generation
-  if (job.platform === 'YouTube') {
-    return generateYouTubeCSV(job);
-  } else if (job.platform === 'TikTok') {
-    return generateTikTokCSV(job);
-  } else if (job.platform === 'Instagram') {
-    return generateInstagramCSV(job);
-  }
-}
-```
-
-### Platform-Specific CSV Formats
-
-#### YouTube CSV Export
-```javascript
-headers = [
-  'Channel Name', 'Video Title', 'Video URL', 'Views', 
-  'Duration (seconds)', 'Published Date', 'Hashtags', 'Keywords', 'Platform'
-];
-
-row = [
-  creator.name,
-  video.description, // Video title
-  video.url,
-  stats.views || 0,
-  item.lengthSeconds || 0,
-  publishedDate,
-  hashtags,
-  keywords,
-  'YouTube'
-];
-```
-
-#### TikTok CSV Export (Keyword & Similar)
-```javascript
-headers = [
-  'Creator Name', 'Followers', 'Video Description', 'Video URL',
-  'Likes', 'Comments', 'Shares', 'Views', 'Hashtags', 'Platform', 'Keywords'
-];
-
-row = [
-  creator.name,
-  creator.followers || 0,
-  video.description,
-  video.url,
-  stats.likes || 0,
-  stats.comments || 0,
-  stats.shares || 0,
-  stats.views || 0,
-  hashtags,
-  'TikTok',
-  keywords
-];
-```
-
-#### Instagram CSV Export (Similar)
-```javascript
-headers = [
-  'Username', 'Full Name', 'Private', 'Verified', 'Platform', 'Search Type'
-];
-
-row = [
-  creator.username,
-  creator.full_name,
-  creator.is_private ? 'Yes' : 'No',
-  creator.is_verified ? 'Yes' : 'No',
-  'Instagram',
-  'Similar'
-];
-```
-
-## Bio & Email Extraction System
-
-### Overview
-The platform features an advanced bio and email extraction system that automatically retrieves creator profile information including bio content and email addresses. This system provides enhanced profile fetching for both TikTok keyword and similar search to ensure comprehensive bio/email data extraction.
-
-### Architecture
-
-```mermaid
-graph TD
-    A[TikTok Search API] --> B{Search Type}
-    B -->|Keyword Search| C{Bio Data Available?}
-    B -->|Similar Search| D[Enhanced Profile Fetching Required]
-    C -->|No bio found| D
-    C -->|Bio exists| E[Use Existing Bio]
-    D --> F[Individual Profile API Calls]
-    F --> G[Extract Bio + Email Regex]
-    E --> G
-    G --> H[Store Enhanced Data]
-    H --> I[Frontend Display]
-    H --> J[CSV Export]
-```
-
-### Universal Bio/Email Extraction
-**TikTok Keyword Search**: Enhanced profile fetching when `author.signature` is undefined from search API.
-**TikTok Similar Search**: Enhanced profile fetching to get full bio content instead of basic `search_user_desc`.
-**Solution**: Individual profile API calls using `transformTikTokUserWithEnhancedBio()` for complete profile information.
-
-### Implementation Details
-
-#### 1. **TikTok Keyword Search** (`/app/api/qstash/process-scraping/route.ts`)
-Enhanced profile fetching when `author.signature` is undefined:
-
-```javascript
-// Enhanced Profile Fetching: If no bio found, try to get full profile data
-let enhancedBio = bio;
-let enhancedEmails = extractedEmails;
-
-if (!bio && author.unique_id) {
-  try {
-    console.log(`🔍 [PROFILE-FETCH] Attempting to fetch full profile for @${author.unique_id}`);
-    
-    const profileApiUrl = `https://api.scrapecreators.com/v1/tiktok/profile?handle=${encodeURIComponent(author.unique_id)}`;
-    const profileResponse = await fetch(profileApiUrl, {
-      headers: { 'x-api-key': process.env.SCRAPECREATORS_API_KEY! }
-    });
-    
-    if (profileResponse.ok) {
-      const profileData = await profileResponse.json();
-      const profileUser = profileData.user || {};
-      
-      enhancedBio = profileUser.signature || profileUser.desc || profileUser.bio || '';
-      const enhancedEmailMatches = enhancedBio.match(emailRegex) || [];
-      enhancedEmails = enhancedEmailMatches;
-    }
-  } catch (profileError) {
-    console.log(`❌ [PROFILE-FETCH] Error fetching profile for @${author.unique_id}:`, profileError.message);
-  }
-}
-```
-
-#### 2. **TikTok Similar Search** (`/lib/platforms/tiktok-similar/transformer.ts`)
-Enhanced bio extraction using `transformTikTokUserWithEnhancedBio()`:
-
-```javascript
-export async function transformTikTokUserWithEnhancedBio(userItem, searchKeyword) {
-  const userInfo = userItem.user_info;
-  let bio = userInfo.search_user_desc || '';
-  
-  // Enhanced profile fetching with 10s timeout
-  try {
-    const { getTikTokProfile } = await import('./api');
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Profile fetch timeout (10s)')), 10000);
-    });
-    
-    const profileData = await Promise.race([
-      getTikTokProfile(userInfo.unique_id),
-      timeoutPromise
-    ]);
-    
-    const enhancedBio = profileData.user?.signature || bio;
-    if (enhancedBio && enhancedBio.length > bio.length) {
-      bio = enhancedBio;
-    }
-  } catch (profileError) {
-    console.log(`⚠️ [ENHANCED-BIO] Failed to fetch profile: ${profileError.message}`);
-  }
-  
-  // Extract emails from enhanced bio
-  const emailRegex = /[\w\.-]+@[\w\.-]+\.\w+/g;
-  const extractedEmails = bio.match(emailRegex) || [];
-  
-  return { bio, emails: extractedEmails, ...otherUserData };
-}
-```
-
-#### 3. **Universal Email Extraction**
-Both search types use the same email regex pattern:
-
-```javascript
-const emailRegex = /[\w\.-]+@[\w\.-]+\.\w+/g;
-const extractedEmails = bio.match(emailRegex) || [];
-```
-
-**Enhanced Creator Data Structure** (Lines 784-795):
-```javascript
-creator: {
-  name: author.nickname || author.unique_id || 'Unknown Creator',
-  followers: author.follower_count || 0,
-  avatarUrl: (author.avatar_medium?.url_list?.[0] || '').replace('.heic', '.jpeg'),
-  profilePicUrl: (author.avatar_medium?.url_list?.[0] || '').replace('.heic', '.jpeg'),
-  bio: enhancedBio,                    // ✅ Enhanced bio from profile API
-  emails: enhancedEmails,              // ✅ Extracted emails array
-  uniqueId: author.unique_id || '',
-  verified: author.is_verified || false
-}
-```
-
-#### 2. **Sequential Processing with Rate Limiting** (Lines 714-823)
-
-**Rate-Limited Processing**:
-```javascript
-// Sequential processing to avoid API rate limits
-const creators = [];
-for (let i = 0; i < apiResponse.search_item_list.length; i++) {
-  const item = apiResponse.search_item_list[i];
-  // ... process each creator
-  
-  creators.push(creatorData);
-  
-  // Add delay between profile API calls
-  if (i < apiResponse.search_item_list.length - 1) {
-    await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
-  }
-}
-```
-
-#### 3. **Frontend Display Enhancement** (`/app/components/campaigns/keyword-search/search-results.jsx`)
-
-**New Table Columns** (Lines 310-317):
-```javascript
-<TableHeader>
-  <TableRow>
-    <TableHead>Profile</TableHead>
-    <TableHead>Creator Name</TableHead>
-    <TableHead>Bio</TableHead>           // ✅ NEW
-    <TableHead>Email</TableHead>         // ✅ NEW
-    <TableHead>Date</TableHead>
-    <TableHead>Video Title</TableHead>
-    // ... rest of columns
-  </TableRow>
-</TableHeader>
-```
-
-**Bio Display Component** (Lines 380-388):
-```javascript
-<TableCell>
-  <div className="max-w-[200px] truncate" title={creator.creator?.bio || 'No bio available'}>
-    {creator.creator?.bio ? (
-      <span className="text-sm text-gray-700">{creator.creator.bio}</span>
-    ) : (
-      <span className="text-gray-400 text-sm">No bio</span>
-    )}
-  </div>
-</TableCell>
-```
-
-**Email Display Component** (Lines 389-420):
-```javascript
-<TableCell>
-  {creator.creator?.emails && creator.creator.emails.length > 0 ? (
-    <div className="space-y-1">
-      {creator.creator.emails.map((email, emailIndex) => (
-        <div key={emailIndex} className="flex items-center gap-1">
-          <a 
-            href={`mailto:${email}`}
-            className="text-blue-600 hover:underline text-sm"
-            title={`Send email to ${email}`}
-          >
-            {email}
-          </a>
-          <svg className="w-3 h-3 opacity-60 text-blue-600" /* email icon SVG */>
-        </div>
-      ))}
-    </div>
-  ) : (
-    <span className="text-gray-400 text-sm">No email</span>
-  )}
-</TableCell>
-```
-
-**Clickable Creator Names** (Lines 351-375):
-```javascript
-<TableCell>
-  {creator.creator?.name && creator.creator.name !== 'N/A' ? (
-    <a 
-      href={renderProfileLink(creator)}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-blue-600 hover:text-blue-800 hover:underline font-medium transition-colors duration-200 flex items-center gap-1"
-      title={`View ${creator.creator.name}'s profile on ${searchData.selectedPlatform || 'TikTok'}`}
-    >
-      {creator.creator.name}
-      <svg className="w-3 h-3 opacity-70" /* external link icon */>
-    </a>
-  ) : (
-    <span className="text-gray-500">N/A</span>
-  )}
-</TableCell>
-```
-
-#### 4. **CSV Export Enhancement** (`/app/api/export/csv/route.ts`)
-
-**Updated TikTok CSV Headers** (Lines 335-350):
-```javascript
-headers = [
-  'Username',
-  'Followers',
-  'Bio',           // ✅ NEW
-  'Email',         // ✅ NEW
-  'Video URL',
-  'Description',
-  'Likes',
-  'Comments',
-  'Shares',
-  'Views',
-  'Hashtags',
-  'Created Date',
-  'Keywords',
-  'Platform'
-];
-```
-
-**Enhanced CSV Row Data** (Lines 386-394):
-```javascript
-// Extract bio and emails for TikTok export
-const bio = (creator.bio || '').replace(/"/g, '""'); // Escape quotes for CSV
-const emails = Array.isArray(creator.emails) ? creator.emails.join('; ') : '';
-
-row = [
-  `"${creator.name || ''}"`,
-  `"${creator.followers || 0}"`,
-  `"${bio}"`,        // ✅ NEW: Full bio in CSV
-  `"${emails}"`,     // ✅ NEW: All emails (semicolon-separated)
-  // ... rest of row data
-];
-```
-
-### Comprehensive Logging System
-
-#### **Profile Fetching Logs**:
-```javascript
-🔍 [PROFILE-ENHANCEMENT] Starting enhanced profile data fetching for creators with missing bio data
-🔍 [PROFILE-ENHANCEMENT] Processing 30 creators
-🔍 [PROFILE-FETCH] Attempting to fetch full profile for @therightonehq
-✅ [PROFILE-FETCH] Successfully fetched profile for @therightonehq: {
-  bioFound: true,
-  bioLength: 85,
-  emailsFound: 1,
-  bioPreview: "Your source for Apple news, rumors, and reviews 📱💻⌚ Contact us: tips@apple..."
-}
-```
-
-#### **Bio & Email Extraction Logs**:
-```javascript
-📝 [BIO-EXTRACTION] Processing bio for item: {
-  authorUniqueId: 'appleinsiderofficial',
-  authorNickname: 'AppleInsider',
-  rawSignature: undefined,
-  finalBio: 'Your source for Apple news, rumors, and reviews 📱💻⌚ Contact us: tips@appleinsider.com 📧',
-  bioLength: 85,
-  bioValue: 'Your source for Apple news, rumors, and reviews...'
-}
-📧 [EMAIL-EXTRACTION] Email extraction result: {
-  bioInput: 'Your source for Apple news, rumors, and reviews 📱💻⌚ Contact us: tips@appleinsider.com 📧',
-  emailsFound: ['tips@appleinsider.com'],
-  emailCount: 1
-}
-```
-
-#### **Transformation Logs**:
-```javascript
-📧 [TRANSFORMATION] Bio & Email extraction: {
-  bioLength: 85,
-  bioPreview: "Your source for Apple news, rumors, and reviews 📱💻⌚ Contact us: tips@apple...",
-  extractedEmails: ["tips@appleinsider.com"],
-  emailCount: 1
-}
-```
-
-### Email Pattern Matching
-
-**Supported Email Formats**:
-- ✅ `tips@appleinsider.com`
-- ✅ `contact@example.co.uk`
-- ✅ `hello.world@company-name.org`
-- ✅ `user123@domain.io`
-- ✅ `support+help@business.com`
-
-**Regex Pattern**: `/[\w\.-]+@[\w\.-]+\.\w+/g`
-
-### Performance Optimizations
-
-1. **Sequential Processing**: Prevents API rate limiting
-2. **100ms Delays**: Between profile API calls
-3. **Error Handling**: Failed profile fetches don't break the process
-4. **Graceful Fallbacks**: Shows "No bio" instead of crashing
-5. **Comprehensive Caching**: Profile data is cached within the same processing run
-
-### Features & Benefits
-
-#### **For Users**:
-- ✅ **Lead Generation**: Automatically extract contact emails from creator bios
-- ✅ **Professional Outreach**: Direct mailto links for immediate contact
-- ✅ **Complete Profiles**: Full bio context for better creator understanding
-- ✅ **Time Saving**: No manual copy-pasting of email addresses
-
-#### **For Developers**:
-- ✅ **Comprehensive Logging**: Detailed debugging information
-- ✅ **Error Recovery**: Robust error handling and fallbacks
-- ✅ **Rate Limiting**: Respects API limits with controlled concurrency
-- ✅ **CSV Integration**: Bio and email data included in exports
-
-### Debugging & Monitoring
-
-#### **Success Indicators**:
-```javascript
-✅ [PROFILE-FETCH] Successfully fetched profile for @username
-📧 [EMAIL-EXTRACTION] Email extraction result: { emailsFound: ["email@domain.com"], emailCount: 1 }
-🔄 [TRANSFORMATION] Bio & Email extraction: { bioLength: 85, emailCount: 1 }
-```
-
-#### **Error Patterns**:
-```javascript
-⚠️ [PROFILE-FETCH] Failed to fetch profile for @username: 429
-❌ [PROFILE-FETCH] Error fetching profile for @username: Network timeout
-📝 [BIO-DEBUG] Signature field analysis: { hasSignature: false, signatureValue: 'NO_SIGNATURE_FOUND' }
-```
-
-### Testing & Validation
-
-**Test the system by**:
-1. **Running a TikTok keyword search** with creators known to have bios
-2. **Monitoring server logs** for profile fetching activity
-3. **Checking the results table** for bio and email columns
-4. **Testing CSV export** to verify data inclusion
-5. **Clicking email links** to test mailto functionality
-
-## Testing Configuration
-
-### API Call Limits
-```javascript
-// /app/api/qstash/process-scraping/route.ts
-const MAX_API_CALLS_FOR_TESTING = 1; // Limits to 1 API call for testing
-
-// For production, change to:
-const MAX_API_CALLS_FOR_TESTING = 999; // Or remove limit entirely
-```
-
-### Local Development Setup
-```bash
-# Install dependencies
-npm install heic-convert
-
-# Environment variables needed
-SCRAPECREATORS_API_KEY=xxx
-SCRAPECREATORS_API_URL=https://api.scrapecreators.com/v1/tiktok/search/keyword
-SCRAPECREATORS_INSTAGRAM_API_URL=https://api.scrapecreators.com/v1/instagram/profile
-QSTASH_TOKEN=xxx
-DATABASE_URL=xxx
-
-# For local development with QStash
-ngrok http 3000
-# Update NEXT_PUBLIC_SITE_URL to ngrok URL
-```
-
-## Environment Configuration
-
-### Required Environment Variables (Enhanced)
-```bash
-# Database
-DATABASE_URL="postgresql://user:pass@host:port/database"
-NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=xxx
-
-# Authentication (Clerk)
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_xxx
-CLERK_SECRET_KEY=sk_test_xxx
-NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
-NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
-NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/onboarding
-NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/onboarding
-
-# Admin System
-NEXT_PUBLIC_ADMIN_EMAILS=admin1@example.com,admin2@example.com  # NEW: Admin authentication
-
-# QStash (Background Processing)
-QSTASH_URL=https://qstash.upstash.io
-QSTASH_TOKEN=xxx
-QSTASH_CURRENT_SIGNING_KEY=xxx
-QSTASH_NEXT_SIGNING_KEY=xxx
-
-# External APIs (All 6 Platform Combinations)
-SCRAPECREATORS_API_URL=https://api.scrapecreators.com/v1/tiktok/search/keyword
-SCRAPECREATORS_TIKTOK_SIMILAR_API_URL=https://api.scrapecreators.com/v1/tiktok/similar  # NEW
-SCRAPECREATORS_INSTAGRAM_API_URL=https://api.scrapecreators.com/v1/instagram/profile
-SCRAPECREATORS_INSTAGRAM_REELS_API_URL=https://api.scrapecreators.com/v1/instagram/reels  # NEW
-SCRAPECREATORS_YOUTUBE_API_URL=https://api.scrapecreators.com/v1/youtube/search  # NEW
-SCRAPECREATORS_API_KEY=xxx
-
-# Vercel Blob Storage (Image Caching)
-BLOB_READ_WRITE_TOKEN=vercel_blob_rw_xxx...  # NEW: Universal image caching
-
-SCRAPECREATORS_YOUTUBE_SIMILAR_API_URL=https://api.scrapecreators.com/v1/youtube/similar  # NEW
-
-# Email System (Trial & Admin Features)
-RESEND_API_KEY=re_xxx  # NEW: Email service for trial system
-RESEND_FROM_EMAIL=noreply@yourdomain.com  # NEW: From email address
-
-# Trial System
-STRIPE_PUBLISHABLE_KEY=pk_test_xxx  # NEW: Mock Stripe integration
-STRIPE_SECRET_KEY=sk_test_xxx  # NEW: Mock Stripe integration
-
-# Deployment
-NEXT_PUBLIC_SITE_URL=https://your-app.vercel.app
-VERCEL_URL=your-app.vercel.app
-
-# Development & Testing
-NODE_ENV=development  # development | staging | production
-MAX_API_CALLS_FOR_TESTING=1  # NEW: Dynamic API limits via system config
-```
-
-### Environment-Specific Configuration
-
-#### **Development Environment**
-```bash
-# Local development settings
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
-MAX_API_CALLS_FOR_TESTING=1
-NODE_ENV=development
-```
-
-#### **Staging Environment**  
-```bash
-# Staging settings for testing
-NEXT_PUBLIC_SITE_URL=https://staging-app.vercel.app
-MAX_API_CALLS_FOR_TESTING=5
-NODE_ENV=staging
-```
-
-#### **Production Environment**
-```bash
-# Production settings with full API limits
-NEXT_PUBLIC_SITE_URL=https://your-app.vercel.app
-MAX_API_CALLS_FOR_TESTING=999
-NODE_ENV=production
-```
-
-### Package Dependencies
-```json
-{
-  "dependencies": {
-    "heic-convert": "^1.2.4",
-    "sharp": "^0.33.0",
-    "@upstash/qstash": "^1.0.0",
-    "drizzle-orm": "latest",
-    "postgres": "latest"
-  }
-}
-```
-
-## Deployment & Production Configuration
-
-### Vercel Deployment
-1. **Set Environment Variables** in Vercel dashboard
-2. **Update API Limits** for production:
-   ```javascript
-   const MAX_API_CALLS_FOR_TESTING = 999; // Remove testing restrictions
-   ```
-3. **Configure Domains** for CORS if needed
-4. **Monitor Function Logs** for image processing issues
-
-### Performance Optimizations
-1. **Database Indexing**
-   ```sql
-   CREATE INDEX idx_scraping_jobs_user_id ON scraping_jobs(user_id);
-   CREATE INDEX idx_scraping_jobs_status ON scraping_jobs(status);
-   CREATE INDEX idx_scraping_results_job_id ON scraping_results(job_id);
-   ```
-
-2. **Caching Strategy**
-   - Image proxy: 1 hour cache (`max-age=3600`)
-   - Placeholders: 5 minutes cache (`max-age=300`)
-   - Job status: No cache (real-time updates)
-
-3. **QStash Optimization**
-   - 2-second delays between API calls
-   - Maximum 3 retries per message
-   - Proper error handling and recovery
-
-## Monitoring & Debugging
-
-### Server-Side Logging
-Monitor these log patterns in Vercel Functions:
-
-#### Successful HEIC Conversion
-```
-🔄 [IMAGE-PROXY] Converting HEIC using heic-convert package...
-✅ [IMAGE-PROXY] HEIC conversion successful with heic-convert
-⏱️ [IMAGE-PROXY] Conversion time: 245ms
-📤 [IMAGE-PROXY] Sending response with content-type: image/jpeg
-```
-
-#### TikTok CDN Access Success
-```
-🎯 [IMAGE-PROXY] Using TikTok-specific headers
-📡 [IMAGE-PROXY] Fetch status: 403 Forbidden
-🔄 [IMAGE-PROXY] Retry 1: Removing referrer headers...
-📡 [IMAGE-PROXY] Retry 1 status: 200 OK
-```
-
-#### Placeholder Generation
-```
-❌ [IMAGE-PROXY] All fetch attempts failed: 403 Forbidden
-🔄 [IMAGE-PROXY] Serving placeholder for blocked TikTok image
-✅ [IMAGE-PROXY] Generated placeholder SVG
-```
-
-#### QStash Job Processing
-```
-🎬 Processing TikTok similar job for username: testuser
-🔍 Step 1: Getting TikTok profile data
-🔍 Step 2: Extracting keywords from profile
-✅ TikTok similar search completed successfully
-```
-
-### Browser-Side Debugging
-Monitor these patterns in browser console:
-
-#### Image Loading Success
-```
-🖼️ [BROWSER-IMAGE] Generating proxied URL:
-🚀 [BROWSER-IMAGE] Starting image load for username123
-✅ [BROWSER-IMAGE] Image loaded successfully for username123
-  📏 Natural size: 400x400
-  ⏱️ Load time: ~523ms
-```
-
-#### Image Loading Failure
-```
-❌ [BROWSER-IMAGE] Image failed to load for username123
-  🔗 Failed URL: /api/proxy/image?url=...
-  📍 Original URL: https://tiktokcdn.com/...
-```
-
-### Performance Monitoring Headers
-Check response headers for debugging:
-- `X-Image-Proxy-Time`: Processing time
-- `X-Image-Fetch-Strategy`: Which fetch method worked
-- `X-Image-Proxy-Source`: Conversion method used
-
-## Troubleshooting Common Issues
-
-### 0. Instagram Reels Jobs Stuck at 99%
-**Symptoms**: Instagram reels search gets stuck at 99% progress on Vercel
-**Root Cause**: Frontend-backend data structure mismatch in job status polling
-**Solution**: See detailed analysis in [`docs/instagram-reels-troubleshooting.md`](./docs/instagram-reels-troubleshooting.md)
-
-### 1. HEIC Images Not Converting
-**Symptoms**: Images show as broken or don't load
-**Check**: 
-- Verify `heic-convert` package is installed
-- Check server logs for conversion errors
-- Ensure Vercel has enough memory allocation
-
-**Solution**: The `heic-convert` package should handle this automatically
-
-### 2. TikTok Images Getting 403 Errors
-**Symptoms**: Multiple 403 Forbidden errors in logs
-**Check**:
-- Server logs show retry attempts
-- Response headers indicate which strategy worked
-- Placeholder generation as fallback
-
-**Solution**: The 5-layer retry strategy should handle most cases
-
-### 3. QStash Jobs Not Processing
-**Symptoms**: Jobs stuck in 'pending' status
-**Check**:
-- QStash signature verification
-- NEXT_PUBLIC_SITE_URL correctly set
-- Callback URL accessibility
-
-**Solution**: 
-```javascript
-// Verify QStash setup
-const isValid = await receiver.verify({
-  signature: req.headers.get('Upstash-Signature'),
-  body: await req.text(),
-  url: `${baseUrl}/api/qstash/process-scraping`
-});
-```
-
-### 4. Frontend Not Showing Results
-**Symptoms**: Infinite loading or no results display
-**Check**:
-- Browser console for polling errors
-- Job status API responses
-- Frontend polling interval (3 seconds)
-
-**Solution**: Check job polling logic and API endpoints
-
-### 5. CSV Export Issues
-**Symptoms**: Export button not working or wrong format
-**Check**:
-- Job ID passed correctly to export endpoint
-- Platform-specific CSV generation
-- Results data structure
-
-## Error Recovery & Resilience
-
-### Automatic Recovery Features
-1. **QStash Retries**: Up to 3 automatic retries per message
-2. **Image Fallbacks**: 5-layer strategy ending with placeholders
-3. **Job Timeouts**: 1-hour timeout with automatic cleanup
-4. **Progress Tracking**: Real-time status updates
-
-### Manual Recovery Procedures
-1. **Stuck Jobs**: Check job status and manually update if needed
-2. **Missing Images**: Clear browser cache and retry
-3. **API Limits**: Adjust `MAX_API_CALLS_FOR_TESTING` as needed
-
-## Future Platform Extensions
-
-### Adding New Platforms
-To add a new platform (e.g., LinkedIn), follow this pattern:
-
-1. **Create Platform Module**:
-   ```
-   /lib/platforms/linkedin/
-     ├── types.ts
-     ├── api.ts
-     ├── transformer.ts
-     └── handler.ts
-   ```
-
-2. **Add API Endpoint**:
-   ```
-   /app/api/scraping/linkedin/route.ts
-   ```
-
-3. **Update QStash Processor**:
-   ```javascript
-   else if (job.platform === 'LinkedIn') {
-     const result = await processLinkedInJob(job, jobId);
-     return NextResponse.json(result);
-   }
-   ```
-
-4. **Update Frontend**:
-   - Add platform option to forms
-   - Update results display components
-   - Add platform-specific CSV export
-
-5. **Update Database Schema**:
-   ```sql
-   ALTER TABLE scraping_jobs 
-   ALTER COLUMN platform TYPE varchar(50);
-   -- Now supports 'TikTok' | 'Instagram' | 'YouTube' | 'LinkedIn'
-   ```
-
-This modular architecture ensures new platforms can be added without affecting existing functionality.
+# 🎯 Multi-Platform Influencer Search Platform - Master Documentation Index
+
+## 🚀 Quick Start - Development Workflow
+
+### When You Run `npm start`:
+- ✅ **Environment**: Automatically loads `.env.development`
+- ✅ **Database**: Mumbai development instance (AWS South Asia, fresh/empty)
+- ✅ **Features**: All enhanced "intended plan" tracking preserved
+- ✅ **Cost Control**: Limited to 5 API calls (`TEST_TARGET_RESULTS=5`)
+- ✅ **Development Mode**: Test auth enabled, dev mode active
+
+### Available Commands:
+| Command        | Purpose                           | Environment              |
+|----------------|-----------------------------------|--------------------------|
+| `npm start`    | Development with .env.development | Mumbai DB, test features |
+| `npm run dev`  | Custom dev script (port handling) | Same as above            |
+| `npm start:prod` | Production build (if needed)    | Would use .env.prod      |
+
+### Key Development Benefits:
+- 🔧 **Clean Development**: Fresh database, no production data interference
+- 💰 **Cost Control**: Limited API calls during development
+- 🚀 **Enhanced Features**: "Intended plan" improvements preserved
+- 🌍 **Fast Response**: Mumbai database for low latency
+- 🔒 **Safe Testing**: No risk of affecting production data
 
 ---
 
-## 🎉 Platform Status Summary (2024-2025)
+## 📋 Architecture Overview
 
-### **Multi-Platform Influencer Search Platform - Production Ready**
+This is a **Next.js 14 multi-platform influencer search system** with:
+- **6 Platform Search Combinations** (TikTok, Instagram, YouTube with keyword/similar search)
+- **QStash Background Processing** for serverless job handling
+- **Universal Image Caching** with Vercel Blob Storage
+- **7-Day Trial System** with automated email sequences
+- **Comprehensive Admin Panel** with system configuration
+- **Performance Optimizations** (100x faster loading with caching)
 
-The platform has evolved into a **comprehensive, production-ready system** supporting all major social media platforms with advanced features:
-
-#### **🌐 Platform Coverage (6 Total Combinations)**
-- ✅ **TikTok**: Keyword + Similar Search with enhanced bio/email extraction
-- ✅ **Instagram**: Reels + Similar Search with full profile data
-- ✅ **YouTube**: Keyword + Similar Search with channel analysis
-
-#### **🚀 Core Systems (All Production-Ready)**
-- ✅ **Authentication**: Clerk integration with dual admin system
-- ✅ **Database**: 6-table schema with JSONB support and indexing
-- ✅ **Background Processing**: QStash-powered async job system
-- ✅ **Image Caching**: Universal Vercel Blob Storage with permanent URLs
-- ✅ **Image Handling**: Universal HEIC conversion and CDN bypass
-- ✅ **Email System**: 7-day trial automation with Resend integration
-- ✅ **Admin Panel**: Complete system management and configuration
-- ✅ **CSV Export**: Enhanced multi-platform export with contact data
-
-#### **🔧 Advanced Features**
-- ✅ **Dynamic Configuration**: Hot-reloadable system settings
-- ✅ **Bio/Email Extraction**: Automated contact information discovery
-- ✅ **Image Caching**: Permanent storage eliminating CDN dependencies
-- ✅ **Trial Management**: Complete 7-day trial flow with email sequences
-- ✅ **Real-time Updates**: Live progress tracking and status updates
-- ✅ **Comprehensive Logging**: Full debugging and monitoring capabilities
-
-#### **📚 Documentation Status**
-- ✅ **Complete Technical Docs**: 15+ comprehensive documentation files
-- ✅ **ASCII Architecture Diagrams**: Visual system flow representations
-- ✅ **Code Examples**: Real implementation snippets throughout
-- ✅ **Deployment Guides**: Environment setup and configuration
-- ✅ **Troubleshooting**: Error patterns and recovery procedures
-
-#### **💻 Technology Stack**
-- **Frontend**: Next.js 14, React, Tailwind CSS, shadcn/ui
-- **Backend**: Node.js, TypeScript, Drizzle ORM
-- **Database**: PostgreSQL (Supabase) with JSONB support
-- **Authentication**: Clerk with dual admin system
-- **Background Jobs**: QStash for serverless processing
-- **Email**: Resend with template system
-- **Image Processing**: HEIC conversion and CDN bypass
-- **Image Storage**: Vercel Blob Storage for permanent URLs
-- **Monitoring**: Comprehensive logging and error tracking
-
-### **🎯 Business Impact**
-- **Lead Generation**: Automated email extraction from creator profiles
-- **Multi-Platform Coverage**: Search across TikTok, Instagram, and YouTube
-- **Scalable Architecture**: Handles background processing for large datasets
-- **Admin Control**: Complete system management and user administration
-- **Trial System**: Automated user onboarding and conversion flow
-
-### **📈 Platform Metrics**
-- **6 Platform Search Combinations** fully implemented
-- **15+ Documentation Files** with comprehensive coverage
-- **6 Database Tables** with optimized relationships
-- **5 Email Templates** for trial automation
-- **100+ Configuration Settings** for system management
-- **Production-Ready** with comprehensive error handling
+### Technology Stack
+```mermaid
+graph TD
+    A[Next.js 14 Frontend] --> B[Drizzle ORM]
+    B --> C[PostgreSQL/Supabase]
+    A --> D[QStash Jobs]
+    D --> E[Platform APIs]
+    E --> F[TikTok/Instagram/YouTube]
+    A --> G[Vercel Blob Storage]
+    G --> H[Image Caching/HEIC Conversion]
+    A --> I[Clerk Authentication]
+    I --> J[Admin System]
+```
 
 ---
 
-**This documentation covers the complete multi-platform influencer search system with comprehensive image handling, async processing, advanced admin features, trial management, and extensive monitoring capabilities. The platform is now production-ready with full documentation coverage.**
+## 📚 Specialized Documentation Index
+
+### 🔗 **Navigate to Detailed Documentation:**
+
+| 📁 **Category** | 📄 **Documentation File** | 🎯 **Coverage** |
+|----------------|---------------------------|----------------|
+| **🚀 API Endpoints** | [`/app/api/CLAUDE.md`](./app/api/CLAUDE.md) | 70+ endpoints across 25 categories, authentication, scraping APIs |
+| **⚛️ React Components** | [`/app/components/CLAUDE.md`](./app/components/CLAUDE.md) | 42+ components, state management, UI patterns, performance |
+| **🛠️ Core Libraries** | [`/lib/CLAUDE.md`](./lib/CLAUDE.md) | Database models, platform integrations, services, utilities |
+| **🗄️ Database Schema** | [`/supabase/CLAUDE.md`](./supabase/CLAUDE.md) | 13 tables, 27 migrations, normalized architecture, comprehensive testing |
+| **🔧 Scripts & Tools** | [`/scripts/CLAUDE.md`](./scripts/CLAUDE.md) | 70+ utility scripts, database normalization tools, professional testing framework |
+| **⚙️ Configuration** | [`/CONFIGURATION.md`](./CONFIGURATION.md) | 100+ env vars, build config, deployment settings |
+
+---
+
+## 🌟 Core Features Overview
+
+### **Multi-Platform Search System**
+- **TikTok**: Keyword + Similar search with enhanced bio/email extraction
+- **Instagram**: Reels + Similar search with profile enhancement  
+- **YouTube**: Keyword + Similar search with channel analysis
+- **Universal**: Cross-platform CSV export with contact information
+
+### **Creator List Management**
+- **Multi-select Saving**: Bulk-add creators from search with a compact overlay and inline list creation.
+- **List Workspace**: `/lists` index with quick create (name/type/description) and detailed Kanban board for each list.
+- **Collaboration & Export**: Share by email, duplicate lists, queue CSV exports, and view insights (average ER, follower totals).
+- **Destructive Actions**: Centered confirmation modal for deletions; cascades clear associated items, collaborators, and notes.
+
+### **Background Processing Architecture**
+```javascript
+// Job Flow Example
+Campaign Creation → QStash Job → Platform API → Data Transform → Image Cache → Results Storage
+```
+
+### **Performance Enhancements**
+- ⚡ **100x Loading Speed**: localStorage caching (5ms vs 500ms)
+- 🖼️ **Permanent Image URLs**: Vercel Blob Storage with HEIC conversion
+- 🎯 **Exact Count Delivery**: Dynamic API calling for precise results (100/500/1000)
+
+### **Trial & Billing System**
+- 🕐 **7-Day Trials**: Automated lifecycle with email sequences
+- 💳 **Stripe Integration**: Mock payment flows and plan management
+- 📊 **Usage Tracking**: Real-time analytics and limits enforcement
+
+---
+
+## 🔄 Data Flow Architecture
+
+### **Search Workflow**
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant F as Frontend
+    participant A as API
+    participant Q as QStash
+    participant P as Platform APIs
+    participant D as Database
+    participant S as Storage
+
+    U->>F: Create Search Campaign
+    F->>A: POST /api/scraping/{platform}
+    A->>D: Save Job Record
+    A->>Q: Queue Background Job
+    Q->>P: Call Platform API
+    P->>Q: Return Creator Data
+    Q->>S: Cache Profile Images
+    Q->>D: Save Results
+    F->>A: Poll Job Status
+    A->>F: Return Results
+    F->>U: Display Creators
+```
+
+### **Key Data Entities**
+- **Campaigns**: User search campaigns with metadata
+- **Scraping Jobs**: Background processing tasks with progress tracking
+- **Scraping Results**: Platform-specific creator data with enhanced profiles
+- **User Profiles**: Authentication, trial status, subscription data
+- **System Configurations**: Dynamic settings with hot-reload capability
+
+---
+
+## 🛡️ Security & Authentication
+
+### **Dual Admin System**
+- **Environment-based**: `NEXT_PUBLIC_ADMIN_EMAILS` for emergency access
+- **Database-based**: `users.isAdmin` in normalized database for normal admin operations
+- **Authentication**: Clerk integration with role-based permissions
+
+### **API Security**
+- **Rate Limiting**: Configurable API call limits per environment
+- **Authentication**: Clerk-based user verification
+- **Admin Protection**: Separate admin endpoints with elevated permissions
+
+---
+
+## 🔍 Quick Navigation Guide
+
+### **For Developers New to the Codebase:**
+1. **Start Here**: [`/CONFIGURATION.md`](./CONFIGURATION.md) - Environment setup and configuration
+2. **Understand APIs**: [`/app/api/CLAUDE.md`](./app/api/CLAUDE.md) - All endpoint documentation
+3. **Learn Components**: [`/app/components/CLAUDE.md`](./app/components/CLAUDE.md) - UI architecture
+4. **Database Knowledge**: [`/supabase/CLAUDE.md`](./supabase/CLAUDE.md) - Schema and relationships
+
+### **For System Administration:**
+1. **Admin Features**: [`/app/api/CLAUDE.md`](./app/api/CLAUDE.md#admin-apis) - Admin endpoint documentation
+2. **User Management**: [`/scripts/CLAUDE.md`](./scripts/CLAUDE.md#user-management-tools) - User administration scripts
+3. **System Config**: [`/lib/CLAUDE.md`](./lib/CLAUDE.md#configuration-management) - Dynamic configuration system
+
+### **For Platform Integration:**
+1. **Platform APIs**: [`/lib/CLAUDE.md`](./lib/CLAUDE.md#platform-integrations) - TikTok, Instagram, YouTube clients
+2. **Background Jobs**: [`/lib/CLAUDE.md`](./lib/CLAUDE.md#background-job-system) - QStash integration patterns
+3. **Image Processing**: [`/lib/CLAUDE.md`](./lib/CLAUDE.md#core-services) - Universal image caching system
+
+---
+
+## 📊 Performance Metrics & Monitoring
+
+### **Current Performance Benchmarks**
+- **Component Loading**: 5ms (cached) vs 500ms (fresh)
+- **Image Processing**: Automatic HEIC→JPEG conversion with CDN bypass
+- **Background Jobs**: Real-time progress tracking with 99% success rate
+- **Database Queries**: Optimized with 20+ specialized indexes across normalized tables
+
+### **Monitoring & Debugging**
+- **Real-time Logging**: Comprehensive logging patterns throughout
+- **Error Recovery**: 5-layer image loading strategy with graceful fallbacks
+- **Performance Tracking**: Built-in benchmarking and performance headers
+
+---
+
+## 🎯 Production Readiness Status
+
+### ✅ **Production-Ready Systems**
+- Multi-platform search with all 6 combinations working
+- Background processing with QStash integration
+- Image caching with permanent URLs
+- Trial system with automated email sequences
+- Admin panel with comprehensive management
+- Performance optimizations with caching
+
+### 🔄 **Development Active Features**
+- Enhanced "intended plan" tracking
+- Mumbai development database
+- Cost-controlled API testing (5 calls max)
+- Development-specific authentication
+
+---
+
+## 📞 Support & Troubleshooting
+
+### **Common Issues & Solutions**
+- **Jobs Stuck in Processing**: Check QStash webhook configuration
+- **Images Not Loading**: Verify Vercel Blob Storage setup
+- **API Rate Limits**: Adjust `TEST_TARGET_RESULTS` in environment
+- **Database Connection Issues**: Check Mumbai instance connection
+
+### **Debug Resources**
+- **API Logs**: Monitor Vercel function logs
+- **Database Queries**: Use Supabase query performance insights
+- **Background Jobs**: Check QStash dashboard for job status
+- **Performance**: Built-in performance headers in all responses
+
+---
+
+*This documentation system is designed for maximum efficiency - each specialized file contains deep technical details while this index provides navigation and overview. Choose your path based on what you need to accomplish.*
+
+---
+
+**🏗️ Architecture Philosophy**: *Modular documentation that scales with your context needs - load only what you need to know, when you need to know it.*

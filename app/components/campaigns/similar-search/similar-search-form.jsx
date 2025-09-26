@@ -1,17 +1,14 @@
 'use client'
 
 import { useState } from 'react';
-import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "react-hot-toast";
-import { Loader2 } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 
 export function SimilarSearchForm({ campaignId, onSuccess }) {
   const [username, setUsername] = useState("");
-  const [selectedPlatform, setSelectedPlatform] = useState("tiktok"); // tiktok, instagram, or youtube
+  const [selectedPlatform, setSelectedPlatform] = useState("instagram"); // instagram or youtube
   const [searchState, setSearchState] = useState({
     status: 'idle', // idle, searching, processing
     message: '',
@@ -94,7 +91,8 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
         onSuccess({
           jobId: data.jobId,
           platform: selectedPlatform,
-          targetUsername: username
+          targetUsername: username,
+          campaignId
         });
       }
       
@@ -109,11 +107,11 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
 
 
   return (
-    <Card className="bg-zinc-900/80 border border-zinc-700/50">
-      <CardHeader>
-        <CardTitle>Find Similar Creators</CardTitle>
+    <div className="rounded-lg text-card-foreground shadow-sm bg-zinc-900/80 border border-zinc-700/50">
+      <div className="flex flex-col space-y-1.5 p-6">
+        <div className="text-2xl font-semibold leading-none tracking-tight">Find Similar Creators</div>
         {searchState.message && (
-          <div className="space-y-2">
+          <div className="space-y-2 pt-2">
             <div className="text-sm text-muted-foreground flex items-center gap-2">
               {searchState.status === 'processing' && (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -125,33 +123,63 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
             )}
           </div>
         )}
-      </CardHeader>
-      <CardContent>
+      </div>
+      <div className="p-6 pt-0">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-4">
             <label className="text-sm font-medium">Platform</label>
-            <div className="flex space-x-4">
-              <div className="flex items-center">
-                <Checkbox
-                  checked={selectedPlatform === "tiktok"}
-                  onCheckedChange={() => setSelectedPlatform("tiktok")}
-                />
-                <span className="ml-2">TikTok</span>
-              </div>
-              <div className="flex items-center">
-                <Checkbox
-                  checked={selectedPlatform === "instagram"}
-                  onCheckedChange={() => setSelectedPlatform("instagram")}
-                />
-                <span className="ml-2">Instagram</span>
-              </div>
-              <div className="flex items-center">
-                <Checkbox
-                  checked={selectedPlatform === "youtube"}
-                  onCheckedChange={() => setSelectedPlatform("youtube")}
-                />
-                <span className="ml-2">YouTube</span>
-              </div>
+            <div className="flex flex-wrap gap-4">
+              {[
+                { value: 'tiktok', label: 'TikTok', disabled: true },
+                { value: 'instagram', label: 'Instagram' },
+                { value: 'youtube', label: 'YouTube' },
+              ].map((platform) => {
+                const isActive = selectedPlatform === platform.value;
+                const isDisabled = Boolean(platform.disabled);
+
+                return (
+                  <div key={platform.value} className="flex items-center">
+                    <button
+                      type="button"
+                      role="checkbox"
+                      aria-checked={isActive}
+                      data-state={isActive ? 'checked' : 'unchecked'}
+                      value="on"
+                      disabled={isDisabled}
+                      onClick={() => {
+                        if (!isDisabled) {
+                          setSelectedPlatform(platform.value);
+                        }
+                      }}
+                      className={`peer h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground ${
+                        isDisabled ? 'opacity-70' : ''
+                      }`}
+                    >
+                      {isActive && (
+                        <span data-state="checked" className="flex items-center justify-center text-current pointer-events-none">
+                          <Check className="h-4 w-4" />
+                        </span>
+                      )}
+                    </button>
+                    <input
+                      aria-hidden="true"
+                      tabIndex={-1}
+                      type="checkbox"
+                      className="sr-only"
+                      checked={isActive}
+                      readOnly
+                    />
+                    <span className="ml-2">
+                      {platform.label}
+                      {platform.value === 'tiktok' && (
+                        <span className="ml-2 rounded-full border border-zinc-700 px-2 py-0.5 text-[10px] uppercase tracking-wide text-zinc-300">
+                          Coming Soon
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -163,9 +191,9 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
               value={username}
               onChange={handleUsernameChange}
               placeholder={
-                selectedPlatform === 'tiktok' ? "e.g. stoolpresidente" : 
-                selectedPlatform === 'youtube' ? "e.g. mkbhd" : 
-                "e.g. gainsbybrains"
+                selectedPlatform === 'tiktok' ? 'e.g. stoolpresidente' :
+                selectedPlatform === 'youtube' ? 'e.g. mkbhd' :
+                'e.g. gainsbybrains'
               }
               required
               disabled={searchState.status !== 'idle'}
@@ -175,15 +203,15 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
             )}
           </div>
 
-          <Button 
-            type="submit" 
-            className="w-full"
-            disabled={searchState.status !== 'idle' || !username.trim() || error}
+          <button
+            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 w-full"
+            type="submit"
+            disabled={searchState.status !== 'idle' || !username.trim() || Boolean(error)}
           >
             {searchState.status === 'idle' ? 'Find Similar Creators' : 'Processing...'}
-          </Button>
+          </button>
         </form>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

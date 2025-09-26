@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { updateUserProfile } from '@/lib/db/queries/user-queries';
 import { getTrialStatus } from '@/lib/trial/trial-service';
 
 export async function POST(req: NextRequest) {
@@ -23,14 +22,12 @@ export async function POST(req: NextRequest) {
         const nearExpiryDate = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
         const startDate = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000); // 6 days ago
         
-        await db.update(userProfiles)
-          .set({
-            trialStartDate: startDate,
-            trialEndDate: nearExpiryDate,
-            trialStatus: 'active',
-            subscriptionStatus: 'trialing'
-          })
-          .where(eq(userProfiles.userId, userId));
+        await updateUserProfile(userId, {
+          trialStartDate: startDate,
+          trialEndDate: nearExpiryDate,
+          trialStatus: 'active',
+          subscriptionStatus: 'trialing'
+        });
           
         console.log('🧪 [TRIAL-TESTING] Set trial to expire in 1 hour');
         break;
@@ -40,14 +37,12 @@ export async function POST(req: NextRequest) {
         const expiredDate = new Date(Date.now() - 60 * 60 * 1000); // 1 hour ago
         const expiredStartDate = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000); // 8 days ago
         
-        await db.update(userProfiles)
-          .set({
-            trialStartDate: expiredStartDate,
-            trialEndDate: expiredDate,
-            trialStatus: 'expired',
-            subscriptionStatus: 'canceled'
-          })
-          .where(eq(userProfiles.userId, userId));
+        await updateUserProfile(userId, {
+          trialStartDate: expiredStartDate,
+          trialEndDate: expiredDate,
+          trialStatus: 'expired',
+          subscriptionStatus: 'canceled'
+        });
           
         console.log('🧪 [TRIAL-TESTING] Set trial as expired 1 hour ago');
         break;
@@ -58,14 +53,12 @@ export async function POST(req: NextRequest) {
         const simulatedStart = new Date(Date.now() - day * 24 * 60 * 60 * 1000);
         const simulatedEnd = new Date(simulatedStart.getTime() + 7 * 24 * 60 * 60 * 1000);
         
-        await db.update(userProfiles)
-          .set({
-            trialStartDate: simulatedStart,
-            trialEndDate: simulatedEnd,
-            trialStatus: 'active',
-            subscriptionStatus: 'trialing'
-          })
-          .where(eq(userProfiles.userId, userId));
+        await updateUserProfile(userId, {
+          trialStartDate: simulatedStart,
+          trialEndDate: simulatedEnd,
+          trialStatus: 'active',
+          subscriptionStatus: 'trialing'
+        });
           
         console.log(`🧪 [TRIAL-TESTING] Simulated day ${day} of trial`);
         break;
@@ -75,14 +68,12 @@ export async function POST(req: NextRequest) {
         const resetStart = new Date();
         const resetEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
         
-        await db.update(userProfiles)
-          .set({
-            trialStartDate: resetStart,
-            trialEndDate: resetEnd,
-            trialStatus: 'active',
-            subscriptionStatus: 'trialing'
-          })
-          .where(eq(userProfiles.userId, userId));
+        await updateUserProfile(userId, {
+          trialStartDate: resetStart,
+          trialEndDate: resetEnd,
+          trialStatus: 'active',
+          subscriptionStatus: 'trialing'
+        });
           
         console.log('🧪 [TRIAL-TESTING] Reset to fresh 7-day trial');
         break;

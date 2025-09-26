@@ -10,131 +10,282 @@ import { getTikTokProfile, searchTikTokUsers } from './api';
 import { extractSearchKeywords, transformTikTokUsers, transformTikTokUser, transformTikTokUserWithEnhancedBio } from './transformer';
 import { TikTokSimilarCreator, TikTokSimilarSearchResult } from './types';
 import { SystemConfig } from '@/lib/config/system-config';
+import { logger, LogCategory } from '@/lib/logging';
+import { logDbOperation, logExternalCall } from '@/lib/middleware/api-logger';
 
 /**
  * Process TikTok similar creator search job
  */
 export async function processTikTokSimilarJob(job: any, jobId: string) {
-  console.log('🎬 Processing TikTok similar job for username:', job.targetUsername);
+  const requestId = `tiktok-similar-${jobId}-${Date.now()}`;
+  const timer = logger.startTimer(`tiktok_similar_job_${jobId}`);
+  
+  logger.info('TikTok similar job processing started', {
+    requestId,
+    jobId,
+    targetUsername: job.targetUsername,
+    platform: 'TikTok',
+    searchType: 'similar'
+  }, LogCategory.TIKTOK);
   
   // Load dynamic configuration
-  console.log('🔧 [CONFIG] Loading dynamic system configurations...');
   const MAX_API_CALLS_FOR_TESTING = await SystemConfig.get('api_limits', 'max_api_calls_tiktok_similar');
-  console.log('🔧 [CONFIG] Max API calls for TikTok similar:', MAX_API_CALLS_FOR_TESTING);
+  logger.debug('TikTok similar configuration loaded', {
+    requestId,
+    jobId,
+    maxApiCalls: MAX_API_CALLS_FOR_TESTING
+  }, LogCategory.CONFIG);
   
-  // Check testing limits (same as other platforms)
+  // Check testing limits
   const currentRuns = job.processedRuns || 0;
   if (currentRuns >= MAX_API_CALLS_FOR_TESTING) {
-    console.log(`🚫 TikTok Similar: Reached maximum API calls for testing (${MAX_API_CALLS_FOR_TESTING}). Completing job.`);
-    await db.update(scrapingJobs).set({ 
-      status: 'completed',
-      completedAt: new Date(),
-      error: `Test limit reached: Maximum ${MAX_API_CALLS_FOR_TESTING} API calls made`
-    }).where(eq(scrapingJobs.id, jobId));
+    logger.info('TikTok similar job reached API limit', {
+      requestId,
+      jobId,
+      currentRuns,
+      maxApiCalls: MAX_API_CALLS_FOR_TESTING
+    }, LogCategory.TIKTOK);
+    
+    await logDbOperation('complete_job_api_limit', async () => {
+      return await db.update(scrapingJobs).set({ 
+        status: 'completed',
+        completedAt: new Date(),
+        error: `Test limit reached: Maximum ${MAX_API_CALLS_FOR_TESTING} API calls made`
+      }).where(eq(scrapingJobs.id, jobId));
+    }, { requestId });
+    
+    timer.end();
     return { status: 'completed' };
   }
 
   // Update job to processing
-  await db.update(scrapingJobs).set({ 
-    status: 'processing',
-    startedAt: new Date(),
-    updatedAt: new Date(),
-    progress: '20'
-  }).where(eq(scrapingJobs.id, jobId));
+  await logDbOperation('update_job_processing', async () => {
+    return await db.update(scrapingJobs).set({ 
+      status: 'processing',
+      startedAt: new Date(),
+      updatedAt: new Date(),
+      progress: '20'
+    }).where(eq(scrapingJobs.id, jobId));
+  }, { requestId });
 
   try {
     // Step 1: Get target user profile
-    console.log('🔍 Step 1: Getting TikTok profile data');
-    const profileData = await getTikTokProfile(job.targetUsername);
+    const profileData = await logExternalCall(
+      'get_tiktok_profile',
+      () => getTikTokProfile(job.targetUsername),
+      {
+        requestId,
+        jobId,
+        targetUsername: job.targetUsername
+      },
+      LogCategory.TIKTOK
+    );
     
-    // Enhanced profile logging
-    console.log('🔄 [TRANSFORMATION] Profile data received for processing:', JSON.stringify(profileData, null, 2));
-    console.log('👤 [FIRST-PROFILE] Target profile processed:', {
+    logger.info('TikTok similar profile data retrieved', {
+      requestId,
+      jobId,
       username: profileData.user?.uniqueId,
       displayName: profileData.user?.nickname,
       followers: profileData.stats?.followerCount,
       verified: profileData.user?.verified,
-      privateAccount: profileData.user?.privateAccount,
-      description: profileData.user?.signature
-    });
+      privateAccount: profileData.user?.privateAccount
+    }, LogCategory.TIKTOK);
 
     // Update progress after profile fetch
-    await db.update(scrapingJobs).set({ 
-      progress: '40',
-      updatedAt: new Date()
-    }).where(eq(scrapingJobs.id, jobId));
+    await logDbOperation('update_job_progress_40', async () => {
+      return await db.update(scrapingJobs).set({ 
+        progress: '40',
+        updatedAt: new Date()
+      }).where(eq(scrapingJobs.id, jobId));
+    }, { requestId });
 
     // Step 2: Extract keywords for similarity search
-    console.log('🔍 Step 2: Extracting keywords from profile');
     const keywords = extractSearchKeywords(profileData);
-    console.log('🔄 [TRANSFORMATION] Keywords extracted from profile:', keywords);
-    console.log('📝 [TRANSFORMATION] Keyword extraction details:', {
-      totalKeywords: keywords.length,
+    
+    logger.info('TikTok similar keywords extracted', {
+      requestId,
+      jobId,
+      keywordCount: keywords.length,
       firstKeyword: keywords[0],
       source: 'profile_description_and_metadata'
-    });
+    }, LogCategory.TIKTOK);
 
     if (keywords.length === 0) {
+      logger.error('TikTok similar keyword extraction failed', new Error('No keywords found'), {
+        requestId,
+        jobId,
+        targetUsername: job.targetUsername
+      }, LogCategory.TIKTOK);
       throw new Error('No suitable keywords found in profile for similarity search');
     }
 
     // Step 3: Search for similar users using keywords
-    console.log('🔍 Step 3: Searching for similar users');
     const allUsers: TikTokSimilarCreator[] = [];
     let apiCallCount = 0;
     
+    logger.info('TikTok similar search phase started', {
+      requestId,
+      jobId,
+      keywordCount: keywords.length,
+      maxApiCalls: MAX_API_CALLS_FOR_TESTING
+    }, LogCategory.TIKTOK);
+    
     for (const keyword of keywords) {
       if (apiCallCount >= MAX_API_CALLS_FOR_TESTING) {
-        console.log(`🚫 Reached API call limit (${MAX_API_CALLS_FOR_TESTING})`);
+        logger.warn('TikTok similar API call limit reached', {
+          requestId,
+          jobId,
+          apiCallCount,
+          maxApiCalls: MAX_API_CALLS_FOR_TESTING
+        }, LogCategory.TIKTOK);
         break;
       }
       
-      console.log(`🔎 Searching with keyword: "${keyword}"`);
-      
       try {
-        const searchResponse = await searchTikTokUsers(keyword);
+        const searchResponse = await logExternalCall(
+          `search_tiktok_users_${keyword}`,
+          () => searchTikTokUsers(keyword),
+          {
+            requestId,
+            jobId,
+            keyword,
+            apiCallNumber: apiCallCount + 1
+          },
+          LogCategory.TIKTOK
+        );
         apiCallCount++;
         
-        console.log(`📡 API Call ${apiCallCount}/${MAX_API_CALLS_FOR_TESTING} - Found ${searchResponse.users?.length || 0} users`);
+        logger.debug('TikTok similar search API call completed', {
+          requestId,
+          jobId,
+          keyword,
+          apiCallNumber: apiCallCount,
+          maxApiCalls: MAX_API_CALLS_FOR_TESTING,
+          usersFound: searchResponse.users?.length || 0
+        }, LogCategory.TIKTOK);
         
         // Update progress based on API calls
-        const progressValue = 40 + (apiCallCount * 30); // 40% base + 30% per API call
-        await db.update(scrapingJobs).set({ 
-          progress: progressValue.toString(),
-          updatedAt: new Date()
-        }).where(eq(scrapingJobs.id, jobId));
+        const progressValue = 40 + (apiCallCount * 30);
+        await logDbOperation('update_job_progress_api_call', async () => {
+          return await db.update(scrapingJobs).set({ 
+            progress: progressValue.toString(),
+            updatedAt: new Date()
+          }).where(eq(scrapingJobs.id, jobId));
+        }, { requestId });
         
         if (searchResponse.users && searchResponse.users.length > 0) {
           // Enhanced transformation with individual profile API calls for bio/email extraction
-          console.log(`🔄 [ENHANCED-TRANSFORM] Processing ${searchResponse.users.length} users with enhanced bio extraction`);
+          logger.debug('TikTok similar transformation started', {
+            requestId,
+            jobId,
+            keyword,
+            userCount: searchResponse.users.length
+          }, LogCategory.TIKTOK);
           
           const transformedUsers = await Promise.all(
             searchResponse.users.map(user => transformTikTokUserWithEnhancedBio(user, keyword))
           );
           
-          console.log(`🔄 [TRANSFORMATION] Fast transformation completed: ${transformedUsers.length} total users for keyword "${keyword}"`);
-          if (transformedUsers[0]) {
-            console.log('👤 [FIRST-PROFILE] First transformed user from search:', JSON.stringify(transformedUsers[0], null, 2));
-          }
+          logger.info('TikTok similar transformation completed', {
+            requestId,
+            jobId,
+            keyword,
+            transformedCount: transformedUsers.length,
+            firstUserInfo: transformedUsers[0] ? {
+              id: transformedUsers[0].id,
+              username: transformedUsers[0].username,
+              followerCount: transformedUsers[0].followerCount
+            } : null
+          }, LogCategory.TIKTOK);
           
           allUsers.push(...transformedUsers);
-          console.log(`✅ Added ${transformedUsers.length} users for keyword "${keyword}"`);
+
+          // 💾 INTERMEDIATE SAVE: Append new transformed users and deduplicate for live preview
+          try {
+            // Load existing creators for this job
+            const existing = await db.query.scrapingResults.findFirst({
+              where: eq(scrapingResults.jobId, job.id)
+            });
+            const existingCreators = Array.isArray(existing?.creators) ? existing!.creators as any[] : [];
+
+            // Build a map by stable id (prefer username/uniqueId; fallback to id)
+            const byId = new Map<string, any>();
+            for (const c of existingCreators) {
+              const key = c?.creator?.uniqueId || c?.creator?.username || c?.username || c?.id || '';
+              if (key) byId.set(String(key).toLowerCase(), c);
+            }
+            for (const c of transformedUsers) {
+              const key = c?.creator?.uniqueId || c?.creator?.username || c?.username || c?.id || '';
+              if (key && !byId.has(String(key).toLowerCase())) byId.set(String(key).toLowerCase(), c);
+            }
+
+            const mergedCreators = Array.from(byId.values());
+
+            if (existing) {
+              await db.update(scrapingResults)
+                .set({ creators: mergedCreators, createdAt: new Date() })
+                .where(eq(scrapingResults.jobId, job.id));
+            } else {
+              await db.insert(scrapingResults).values({
+                jobId: job.id,
+                creators: mergedCreators,
+                createdAt: new Date()
+              });
+            }
+
+            // Update progress and processedResults to reflect current total
+            const currentTotal = mergedCreators.length;
+            const approxProgress = Math.min(90, 40 + Math.round((apiCallCount / Math.max(1, MAX_API_CALLS_FOR_TESTING)) * 50));
+            await db.update(scrapingJobs).set({
+              processedResults: currentTotal,
+              progress: String(approxProgress),
+              updatedAt: new Date()
+            }).where(eq(scrapingJobs.id, job.id));
+
+            logger.debug('TikTok similar intermediate save', {
+              requestId,
+              jobId,
+              currentTotal,
+              apiCallNumber: apiCallCount,
+              progress: approxProgress
+            }, LogCategory.TIKTOK);
+          } catch (saveErr: any) {
+            logger.warn('TikTok similar intermediate save failed (non-fatal)', {
+              requestId,
+              jobId,
+              error: saveErr?.message || String(saveErr)
+            }, LogCategory.TIKTOK);
+          }
         }
         
         // Add delay between requests (except for last one)
         if (apiCallCount < MAX_API_CALLS_FOR_TESTING && keyword !== keywords[keywords.length - 1]) {
-          console.log('⏳ Waiting 2 seconds before next request...');
+          logger.debug('TikTok similar API delay', {
+            requestId,
+            jobId,
+            delayMs: 2000
+          }, LogCategory.TIKTOK);
           await new Promise(resolve => setTimeout(resolve, 2000));
         }
         
       } catch (keywordError: any) {
-        console.error(`❌ Error searching for keyword "${keyword}":`, keywordError.message);
+        logger.error('TikTok similar keyword search failed', keywordError, {
+          requestId,
+          jobId,
+          keyword,
+          apiCallNumber: apiCallCount + 1
+        }, LogCategory.TIKTOK);
         // Continue with other keywords
       }
     }
 
     // Step 4: Process and deduplicate results
-    console.log('🔍 Step 4: Processing and filtering results');
+    logger.info('TikTok similar results processing started', {
+      requestId,
+      jobId,
+      totalUsers: allUsers.length,
+      apiCallsUsed: apiCallCount
+    }, LogCategory.TIKTOK);
     
     // Remove duplicates by user ID
     const uniqueUsers = allUsers.filter((user, index, self) => 
@@ -152,29 +303,45 @@ export async function processTikTokSimilarJob(job: any, jobId: string) {
       .sort((a, b) => b.followerCount - a.followerCount)
       .slice(0, 10);
     
-    // Enhanced final processing logging
-    console.log('🔄 [TRANSFORMATION] Final processing completed:');
-    console.log(`📊 [TRANSFORMATION] Results summary:`);
-    console.log(`   - Total found: ${uniqueUsers.length}`);
-    console.log(`   - After filtering: ${filteredUsers.length}`);
-    console.log(`   - Final results: ${sortedUsers.length}`);
-    console.log(`   - API calls used: ${apiCallCount}/${MAX_API_CALLS_FOR_TESTING}`);
-    
-    if (sortedUsers[0]) {
-      console.log('👤 [FIRST-PROFILE] Top ranked similar user:', JSON.stringify(sortedUsers[0], null, 2));
-    }
+    logger.info('TikTok similar results processing completed', {
+      requestId,
+      jobId,
+      totalFound: uniqueUsers.length,
+      afterFiltering: filteredUsers.length,
+      finalResults: sortedUsers.length,
+      apiCallsUsed: apiCallCount,
+      maxApiCalls: MAX_API_CALLS_FOR_TESTING,
+      topUser: sortedUsers[0] ? {
+        id: sortedUsers[0].id,
+        username: sortedUsers[0].username,
+        followerCount: sortedUsers[0].followerCount
+      } : null
+    }, LogCategory.TIKTOK);
     
     if (sortedUsers.length === 0) {
+      logger.error('TikTok similar no results after filtering', new Error('No similar creators found'), {
+        requestId,
+        jobId,
+        totalFound: uniqueUsers.length,
+        afterFiltering: filteredUsers.length
+      }, LogCategory.TIKTOK);
       throw new Error('No similar creators found after filtering');
     }
 
     // Step 5: Save results to database
-    console.log('🔍 Step 5: Saving results to database');
-    await db.insert(scrapingResults).values({
-      jobId: job.id,
-      creators: sortedUsers as any, // Cast to match schema
-      createdAt: new Date()
-    });
+    await logDbOperation('save_scraping_results', async () => {
+      return await db.insert(scrapingResults).values({
+        jobId: job.id,
+        creators: sortedUsers as any, // Cast to match schema
+        createdAt: new Date()
+      });
+    }, { requestId });
+    
+    logger.info('TikTok similar results saved to database', {
+      requestId,
+      jobId,
+      resultCount: sortedUsers.length
+    }, LogCategory.DATABASE);
 
     // Step 6: Update job progress and determine next action
     const newProcessedRuns = currentRuns + 1;
@@ -182,16 +349,28 @@ export async function processTikTokSimilarJob(job: any, jobId: string) {
     // Check if we should continue or complete based on testing limits
     if (newProcessedRuns >= MAX_API_CALLS_FOR_TESTING) {
       // Complete the job - reached testing limit
-      await db.update(scrapingJobs).set({ 
+      await logDbOperation('complete_job_success', async () => {
+        return await db.update(scrapingJobs).set({ 
+          status: 'completed',
+          processedRuns: newProcessedRuns,
+          processedResults: sortedUsers.length,
+          completedAt: new Date(),
+          updatedAt: new Date(),
+          progress: '100'
+        }).where(eq(scrapingJobs.id, jobId));
+      }, { requestId });
+
+      const duration = timer.end();
+      logger.info('TikTok similar job completed successfully', {
+        requestId,
+        jobId,
         status: 'completed',
         processedRuns: newProcessedRuns,
-        processedResults: sortedUsers.length,
-        completedAt: new Date(),
-        updatedAt: new Date(),
-        progress: '100'
-      }).where(eq(scrapingJobs.id, jobId));
-
-      console.log('✅ TikTok similar search completed successfully (reached test limit)');
+        resultsCount: sortedUsers.length,
+        totalProcessed: sortedUsers.length,
+        executionTime: duration,
+        reason: 'api_limit_reached'
+      }, LogCategory.TIKTOK);
       
       return {
         status: 'completed',
@@ -201,26 +380,35 @@ export async function processTikTokSimilarJob(job: any, jobId: string) {
       };
     } else {
       // Continue processing - schedule next QStash call
-      await db.update(scrapingJobs).set({ 
-        processedRuns: newProcessedRuns,
-        processedResults: sortedUsers.length,
-        updatedAt: new Date(),
-        progress: '70' // Intermediate progress
-      }).where(eq(scrapingJobs.id, jobId));
+      await logDbOperation('update_job_continue', async () => {
+        return await db.update(scrapingJobs).set({ 
+          processedRuns: newProcessedRuns,
+          processedResults: sortedUsers.length,
+          updatedAt: new Date(),
+          progress: '70' // Intermediate progress
+        }).where(eq(scrapingJobs.id, jobId));
+      }, { requestId });
 
-      // Schedule next processing iteration via QStash (like keyword search)
+      // Schedule next processing iteration via QStash
       const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL || 'http://localhost:3000';
-      console.log(`🔄 TikTok Similar: Scheduling next API call (${newProcessedRuns + 1}/${MAX_API_CALLS_FOR_TESTING})`);
       
       await qstash.publishJSON({
         url: `${baseUrl}/api/qstash/process-scraping`,
         body: { jobId: job.id },
-        delay: '2s', // Same delay as keyword search
+        delay: '2s',
         retries: 3,
         notifyOnFailure: true
       });
 
-      console.log('✅ TikTok similar search iteration completed, next call scheduled');
+      logger.info('TikTok similar job iteration completed', {
+        requestId,
+        jobId,
+        status: 'processing',
+        processedRuns: newProcessedRuns,
+        resultsCount: sortedUsers.length,
+        nextCallScheduled: true,
+        progress: '70%'
+      }, LogCategory.QSTASH);
       
       return {
         status: 'processing',
@@ -231,15 +419,26 @@ export async function processTikTokSimilarJob(job: any, jobId: string) {
     }
 
   } catch (error: any) {
-    console.error('❌ Error processing TikTok similar job:', error);
+    const duration = timer.end();
+    
+    logger.error('TikTok similar job processing failed', error, {
+      requestId,
+      jobId,
+      targetUsername: job.targetUsername,
+      executionTime: duration
+    }, LogCategory.TIKTOK);
     
     // Update job status to error
-    await db.update(scrapingJobs).set({ 
-      status: 'error', 
-      error: error.message || 'Unknown TikTok similar processing error', 
-      completedAt: new Date(), 
-      updatedAt: new Date() 
-    }).where(eq(scrapingJobs.id, jobId));
+    await logDbOperation('update_job_error', async () => {
+      return await db.update(scrapingJobs).set({ 
+        status: 'error', 
+        error: error.message || 'Unknown TikTok similar processing error', 
+        completedAt: new Date(), 
+        updatedAt: new Date() 
+      }).where(eq(scrapingJobs.id, jobId));
+    }, { requestId }).catch(dbError => {
+      logger.error('TikTok similar job error update failed', dbError, { requestId, jobId }, LogCategory.DATABASE);
+    });
     
     throw error;
   }

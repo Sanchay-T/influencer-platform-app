@@ -8,8 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "react-hot-toast";
-import SearchProgress from "./search-progress";
-import SearchResults from "./search-results";
 
 const MAX_KEYWORDS = 10;
 
@@ -17,8 +15,6 @@ export default function KeywordReview({ onSubmit, isLoading }) {
   const [keywords, setKeywords] = useState([]);
   const [newKeyword, setNewKeyword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [jobId, setJobId] = useState(null);
-  const [showResults, setShowResults] = useState(false);
 
   const handleAddKeyword = (e) => {
     e.preventDefault();
@@ -59,46 +55,14 @@ export default function KeywordReview({ onSubmit, isLoading }) {
 
     setIsSubmitting(true);
     try {
-      const result = await onSubmit(keywords);
-      if (result?.jobId) {
-        setJobId(result.jobId);
-      }
+      await onSubmit(keywords);
     } catch (error) {
       console.error('Error submitting keywords:', error);
       toast.error(error.message || "Failed to submit campaign. Please try again.");
+    } finally {
       setIsSubmitting(false);
     }
   };
-
-  const handleSearchComplete = (data) => {
-    if (data.status === 'completed') {
-      // Esperamos un momento antes de mostrar los resultados
-      // para que el usuario vea que llegó al 100%
-      setTimeout(() => {
-        setShowResults(true);
-      }, 1000);
-    }
-  };
-
-  // Si tenemos un jobId, mostrar el progreso o los resultados
-  if (jobId) {
-    // Si aún no es momento de mostrar resultados, mostrar el progreso
-    if (!showResults) {
-      return (
-        <Card className="bg-zinc-900/80 border border-zinc-700/50">
-          <CardHeader>
-            <CardTitle>Processing Campaign</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <SearchProgress jobId={jobId} onComplete={handleSearchComplete} />
-          </CardContent>
-        </Card>
-      );
-    }
-
-    // Si ya es momento de mostrar resultados, mostrarlos
-    return <SearchResults searchData={{ jobId, keywords }} />;
-  }
 
   return (
     <Card className="bg-zinc-900/80 border border-zinc-700/50">
@@ -139,7 +103,7 @@ export default function KeywordReview({ onSubmit, isLoading }) {
           </form>
           
           <p className="text-xs text-muted-foreground">
-            You can use single words or phrases with spaces (e.g., "airpods pro").
+            You can use single words or phrases with spaces (e.g., &ldquo;airpods pro&rdquo;).
           </p>
 
           <Button 
