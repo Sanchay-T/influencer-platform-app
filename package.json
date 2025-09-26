@@ -56,7 +56,10 @@
     "test:search:tiktok:similar": "tsx test-scripts/search/similar/tiktok-similar.test.ts",
     "test:search:youtube:similar": "tsx test-scripts/search/similar/youtube-similar.test.ts",
     "test:modash:instagram:search": "tsx test-scripts/modash/instagram-search.test.ts",
-    "test:modash:instagram:report": "tsx test-scripts/modash/instagram-report.test.ts"
+    "test:modash:instagram:report": "tsx test-scripts/modash/instagram-report.test.ts",
+    "test:legacy:tiktok:keyword": "tsx test-scripts/legacy/tiktok-keyword-old.test.ts",
+    "test:legacy:instagram:similar": "tsx test-scripts/legacy/instagram-similar-old.test.ts",
+    "compare:search": "tsx test-scripts/compare-search-results.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.23.3",

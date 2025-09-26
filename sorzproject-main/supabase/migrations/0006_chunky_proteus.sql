@@ -1,0 +1,1 @@
+ALTER TABLE "scraping_jobs" ADD COLUMN "progress" numeric DEFAULT '0';

@@ -1,0 +1,279 @@
+IMPLEMENTACIÓN DE UPSTASH QSTASH PARA SCRAPING DE TIKTOK
+==================================================
+
+1. ANÁLISIS DEL PROBLEMA Y ESTADO ACTUAL
+---------------------------------------
+
+1.1 Descripción del Problema
+---------------------------
+- Los endpoints de Vercel tienen un límite de 10 segundos en el plan gratuito
+- El proceso de scraping requiere múltiples llamadas a Apify que toman ~30 segundos cada una
+- Para obtener 2,000 resultados se necesitan aproximadamente 40 runs (~20 minutos)
+- Los archivos temporales en /tmp/ se pierden debido a la naturaleza serverless de Vercel
+
+1.2 Lógica Actual
+----------------
+a) Flujo de Usuario:
+   1. Usuario selecciona cantidad de resultados (1k-5k) en slider
+   2. Presiona "Submit campaign"
+   3. El sistema intenta ejecutar todo el proceso en una sola llamada HTTP
+   4. Se produce timeout después de 10 segundos
+
+b) Archivos Involucrados:
+   1. Frontend:
+      - app/components/campaigns/keyword-search/keyword-search-form.jsx
+      - app/components/campaigns/keyword-search/search-results.jsx
+      - app/components/campaigns/keyword-search/use-scraping-status.ts
+      - app/campaigns/search/keyword/page.jsx
+
+   2. Backend:
+      - app/api/scraping/tiktok/route.ts
+      - lib/db/schema.ts (definición de tablas)
+      - lib/utils/progress.ts (utilidades de progreso)
+
+c) Tablas en Base de Datos:
+   - scrapingJobs
+   - scrapingResults
+   - campaigns
+
+2. IMPLEMENTACIÓN DE LA SOLUCIÓN CON QSTASH
+-----------------------------------------
+
+2.1 Conceptos Básicos de QStash
+------------------------------
+QStash es un servicio de cola de mensajes y programación de tareas que se integra perfectamente con Next.js. Cada mensaje de QStash contiene dos piezas fundamentales de información:
+- URL (endpoint a llamar)
+- Request body (datos a procesar)
+
+2.2 Configuración Inicial
+------------------------
+1. Instalar dependencias:
+   ```bash
+   npm install @upstash/qstash
+   ```
+
+2. Configurar variables de entorno (.env):
+   ```bash
+   # Copiar estas tres variables del dashboard de QStash
+   QSTASH_TOKEN=
+   QSTASH_CURRENT_SIGNING_KEY=
+   QSTASH_NEXT_SIGNING_KEY=
+   VERCEL_URL=
+   ```
+
+2.3 Nueva Arquitectura
+---------------------
+a) Flujo Propuesto:
+   1. Usuario inicia búsqueda → Endpoint crea job y retorna jobId
+   2. QStash maneja cola de procesamiento
+   3. Worker procesa en background
+   4. Frontend polls estado del job
+
+b) Nuevos Archivos a Crear:
+
+1. lib/queue/qstash.ts - Cliente QStash
+   ```typescript
+   import { Client } from '@upstash/qstash'
+   
+   export const qstash = new Client({
+     token: process.env.QSTASH_TOKEN!
+   })
+   ```
+
+2. app/api/scraping/tiktok/route.ts - Endpoint inicial
+   ```typescript
+   import { qstash } from '@/lib/queue/qstash'
+   import { NextResponse } from 'next/server'
+   
+   export async function POST(req: Request) {
+     try {
+       // 1. Crear job en DB
+       const job = await createJob(...)
+       
+       // 2. Encolar procesamiento
+       const result = await qstash.publishJSON({
+         url: `${process.env.VERCEL_URL}/api/qstash/process-scraping`,
+         body: { jobId: job.id },
+         retries: 3,
+         delay: '0s', // Sin delay inicial
+         notifyOnFailure: true // Notificar en caso de fallo
+       })
+       
+       return NextResponse.json({
+         message: "Scraping job queued successfully!",
+         jobId: job.id,
+         qstashMessageId: result.messageId
+       })
+     } catch (error) {
+       console.error('Error queuing scraping job:', error)
+       return NextResponse.json(
+         { error: 'Failed to queue scraping job' },
+         { status: 500 }
+       )
+     }
+   }
+   ```
+
+3. app/api/qstash/process-scraping/route.ts - Worker que procesa
+   ```typescript
+   import { verifySignatureAppRouter } from '@upstash/qstash/nextjs'
+   import { processScrapingBatch } from '@/lib/scraping'
+   
+   async function handler(req: Request) {
+     try {
+       const { jobId } = await req.json()
+       
+       // Obtener job de la base de datos
+       const job = await getJob(jobId)
+       if (!job) throw new Error('Job not found')
+       
+       // Procesar siguiente batch
+       const results = await processScrapingBatch({
+         keywords: job.keywords,
+         batchSize: 1000,
+         currentResults: job.processedResults
+       })
+       
+       // Actualizar progreso
+       await updateJobProgress(jobId, {
+         processedRuns: job.processedRuns + 1,
+         processedResults: job.processedResults + results.length,
+         status: job.processedResults + results.length >= job.targetResults 
+           ? 'completed' 
+           : 'processing'
+       })
+       
+       return new Response('Batch processed successfully')
+     } catch (error) {
+       console.error('Error processing batch:', error)
+       throw error // QStash reintentará automáticamente
+     }
+   }
+   
+   // Verificar que la petición viene de QStash
+   export const POST = verifySignatureAppRouter(handler)
+   ```
+
+2.4 Sistema de Progreso Mejorado
+------------------------------
+1. Modificar tabla scrapingJobs:
+   ```sql
+   ALTER TABLE scraping_jobs
+   ADD COLUMN processed_runs INTEGER DEFAULT 0,
+   ADD COLUMN total_runs INTEGER,
+   ADD COLUMN processed_results INTEGER DEFAULT 0,
+   ADD COLUMN qstash_message_id TEXT,
+   ADD COLUMN last_error TEXT,
+   ADD COLUMN retry_count INTEGER DEFAULT 0;
+   ```
+
+2. Frontend para mostrar progreso (components/campaigns/keyword-search/search-results.jsx):
+   ```typescript
+   'use client'
+   
+   export default function SearchResults({ jobId }) {
+     const [progress, setProgress] = useState(null)
+     
+     useEffect(() => {
+       const pollProgress = async () => {
+         const response = await fetch(`/api/jobs/${jobId}/progress`)
+         const data = await response.json()
+         
+         setProgress(data)
+         
+         if (data.status !== 'completed' && data.status !== 'failed') {
+           setTimeout(pollProgress, 5000)
+         }
+       }
+       
+       pollProgress()
+     }, [jobId])
+     
+     return (
+       <div>
+         <ProgressBar 
+           value={progress?.processedResults || 0} 
+           max={progress?.targetResults || 100} 
+         />
+         <StatusMessage status={progress?.status} />
+         {progress?.lastError && (
+           <ErrorMessage error={progress.lastError} />
+         )}
+       </div>
+     )
+   }
+   ```
+
+3. PLAN DE PRUEBAS Y VERIFICACIÓN
+-------------------------------
+
+3.1 Pruebas en Producción
+------------------------
+1. Verificar Configuración:
+   □ Variables de entorno en Vercel
+   □ Endpoints públicamente accesibles
+   □ Firmas QStash configuradas
+
+2. Pruebas de Integración:
+   □ Crear campaña pequeña (1k resultados)
+   □ Verificar progreso en tiempo real
+   □ Confirmar reintentos automáticos
+   □ Validar resultados finales
+
+3. Pruebas de Carga:
+   □ Múltiples campañas simultáneas
+   □ Campaña grande (5k resultados)
+   □ Monitorear uso de recursos
+
+3.3 Monitoreo en Producción
+-------------------------
+1. Métricas Clave:
+   - Tiempo promedio de procesamiento por batch
+   - Tasa de éxito de jobs
+   - Frecuencia de reintentos
+   - Uso de recursos/costos
+
+2. Alertas:
+   - Jobs estancados > 30 minutos
+   - Tasa de error > 5%
+   - Uso de API cerca del límite
+
+3. Dashboard de Monitoreo:
+   - Estado actual de jobs
+   - Progreso de procesamiento
+   - Errores y reintentos
+   - Uso de recursos
+
+4. CONSIDERACIONES DE SEGURIDAD
+-----------------------------
+1. Verificación de Firmas:
+   - Siempre usar verifySignatureAppRouter
+   - Mantener keys seguras
+   - Rotar keys regularmente
+
+2. Rate Limiting:
+   - Implementar límites por usuario
+   - Monitorear uso de API
+   - Prevenir abuso
+
+3. Error Handling:
+   - Logging detallado
+   - Notificaciones de fallos
+   - Recuperación automática
+
+5. ESCALABILIDAD Y OPTIMIZACIÓN
+-----------------------------
+1. Optimizaciones:
+   - Batch processing
+   - Caché de resultados
+   - Compresión de datos
+
+2. Límites y Cuotas:
+   - Máximo de jobs simultáneos
+   - Tamaño máximo de payload
+   - Tiempo máximo de procesamiento
+
+3. Costos:
+   - Plan gratuito: Incluye primeros 100k requests
+   - Monitorear uso
+   - Optimizar número de requests

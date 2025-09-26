@@ -1,0 +1,113 @@
+DOCUMENTACIÓN API APIFY v2
+=======================
+
+1. ENDPOINTS PRINCIPALES
+----------------------
+
+1.1 Actors
+---------
+Base URL: https://api.apify.com/v2/acts
+
+a) Identificación de Actors:
+   - Por ID: "HG7ML7M8z78YcAPEB"
+   - Por nombre: "username~actor-name"
+
+b) Endpoints principales:
+   GET    /acts                   - Lista de actors
+   POST   /acts                   - Crear actor
+   GET    /acts/{actorId}        - Obtener actor
+   PUT    /acts/{actorId}        - Actualizar actor
+   DELETE /acts/{actorId}        - Eliminar actor
+
+1.2 Actor Runs
+-------------
+Base URL: https://api.apify.com/v2/acts/{actorId}/runs
+
+a) Ejecutar actor:
+   POST /acts/{actorId}/runs
+   Headers:
+   - Authorization: Bearer {token}
+   - Content-Type: application/json
+   
+   Body:
+   {
+     "startUrls": [{
+       "url": "https://tiktok.com/search?q=término"
+     }],
+     "maxItems": 1000,
+     "location": "US"
+   }
+
+b) Obtener resultados:
+   GET /datasets/{datasetId}/items
+   Headers:
+   - Authorization: Bearer {token}
+
+2. AUTENTICACIÓN
+---------------
+- Tipo: Bearer Token
+- Header: Authorization: Bearer {APIFY_TOKEN}
+- Todas las peticiones requieren autenticación
+
+3. MANEJO DE ERRORES
+------------------
+Códigos de estado:
+- 200: Éxito
+- 201: Creado
+- 400: Error en la petición
+- 401: No autorizado
+- 404: No encontrado
+- 500: Error del servidor
+
+4. LÍMITES Y CUOTAS
+-----------------
+- Límite de peticiones: Varía según plan
+- Tamaño máximo de payload: 9MB
+- Tiempo máximo de ejecución: Configurable
+
+5. MEJORES PRÁCTICAS
+------------------
+1. Usar IDs en lugar de nombres cuando sea posible
+2. Implementar retry strategy para errores 5xx
+3. Monitorear uso de recursos
+4. Cachear resultados cuando sea posible
+
+6. EJEMPLO DE INTEGRACIÓN
+----------------------
+```typescript
+async function runApifyActor(keywords: string[]) {
+  const response = await fetch(`https://api.apify.com/v2/acts/${ACTOR_ID}/runs`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${APIFY_TOKEN}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      startUrls: keywords.map(k => ({
+        url: `https://tiktok.com/search?q=${encodeURIComponent(k)}`
+      })),
+      maxItems: 1000,
+      location: "US"
+    })
+  });
+
+  const data = await response.json();
+  return data;
+}
+```
+
+7. NOTAS IMPORTANTES
+-----------------
+- La API es RESTful
+- Soporta rate limiting
+- Proporciona webhooks para notificaciones
+- Incluye endpoints para monitoreo
+- Documentación completa disponible en https://docs.apify.com/api/v2
+
+8. PRÓXIMOS PASOS
+---------------
+1. Implementar cliente HTTP
+2. Configurar retry strategy
+3. Manejar respuestas/errores
+4. Documentar endpoints usados
+5. Monitorear uso/costos
