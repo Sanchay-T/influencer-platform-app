@@ -1,0 +1,140 @@
+PROBLEMA DE TIMEOUTS EN SCRAPING DE TIKTOK - DOCUMENTACIÓN TÉCNICA
+
+CONTEXTO DEL PROYECTO
+--------------------
+- Plataforma de búsqueda de influencers que permite encontrar creadores de contenido en TikTok
+- Implementación actual usa Apify para scraping de datos de TikTok
+- Frontend en Next.js desplegado en Vercel
+- Base de datos en Supabase
+- ORM de Drizzle
+
+PROBLEMA ACTUAL
+--------------
+1. Timeouts en Vercel:
+   - Los endpoints en Vercel (plan gratuito) tienen un límite de 10 segundos
+   - Actualmente recibimos errores 504 en producción
+   - Logs de ejemplo:
+     ```
+     MAR 06 03:04:00.91 POST 504 influencerplatform-9aca1gyvn-jahirjmnzs-projects.vercel.app /api/scraping/tiktok
+     Progress saved to: /tmp/scraping-progress/dfbca46b-fe78-49fa-8b47-68f999f74db5.json
+     ```
+
+2. Proceso de Scraping Actual:
+   - Usuario selecciona cantidad de resultados (1k-5k) en un slider
+   - Cada búsqueda requiere múltiples runs de Apify
+   - Métricas actuales:
+     * Cada run de Apify toma ~30 segundos
+     * Para 2k resultados se necesitan ~40 runs
+     * Tiempo total aproximado: 20 minutos
+
+3. Limitaciones Técnicas:
+   - Los archivos temporales en /tmp/ se pierden en Vercel por su naturaleza serverless
+   - No hay persistencia entre ejecuciones
+   - El proceso excede significativamente los límites de timeout de Vercel
+
+SOLUCIONES PROPUESTAS
+--------------------
+1. SOLUCIÓN SIMPLE (MVP) - Vercel Cron Jobs
+   Pros:
+   - Incluido en plan gratuito de Vercel
+   - Implementación rápida
+   - No requiere infraestructura adicional
+   
+   Contras:
+   - Ejecución mínima cada 1 minuto
+   - Menos control sobre el proceso
+   
+   Implementación:
+   ```typescript
+   // Ejemplo de implementación con Cron Jobs
+   export async function processPendingJobs() {
+     const pendingJobs = await db.select().from(scrapingJobs)
+       .where(eq(scrapingJobs.status, 'pending'));
+     
+     for (const job of pendingJobs) {
+       await processJob(job);
+     }
+   }
+   ```
+
+2. SOLUCIÓN INTERMEDIA - Upstash QStash
+   Pros:
+   - Plan gratuito disponible
+   - Ejecución inmediata
+   - Mejor manejo de colas
+   
+   Contras:
+   - Requiere configuración adicional
+   - Dependencia de servicio externo
+   
+   Implementación:
+   ```typescript
+   // Ejemplo de implementación con QStash
+   export async function startJob(jobId: string) {
+     await qstash.publishJSON({
+       url: '/api/process-job',
+       body: { jobId }
+     });
+   }
+   ```
+
+3. SOLUCIÓN ROBUSTA - Worker Dedicado (Railway/Fly.io)
+   Pros:
+   - Control total sobre el proceso
+   - Sin límites de tiempo
+   - Escalable
+   
+   Contras:
+   - Mayor complejidad de implementación
+   - Requiere mantenimiento de infraestructura
+   
+   Implementación:
+   ```typescript
+   // Ejemplo de implementación con Worker
+   class ScrapingWorker {
+     async processJob(jobId: string) {
+       while (totalResults < targetLimit) {
+         await this.processNextBatch();
+         await this.updateProgress();
+       }
+     }
+   }
+   ```
+
+RECOMENDACIÓN
+------------
+Para un MVP que requiere implementación rápida pero considerando escalabilidad futura:
+
+1. Fase 1 (Inmediata):
+   - Implementar solución con Upstash QStash
+   - Beneficios:
+     * Implementación rápida
+     * Plan gratuito disponible
+     * Ejecución inmediata de jobs
+
+2. Fase 2 (Escalamiento):
+   - Migrar a worker dedicado cuando:
+     * El volumen de usuarios aumente
+     * Se necesite más control sobre el proceso
+     * Los costos justifiquen la infraestructura dedicada
+
+PASOS DE IMPLEMENTACIÓN RECOMENDADOS
+----------------------------------
+1. Modificar el endpoint actual para crear jobs en vez de procesar directamente
+2. Implementar sistema de cola con QStash
+3. Crear endpoint para procesamiento en background
+4. Implementar sistema robusto de tracking de progreso en Supabase
+5. Actualizar frontend para mostrar progreso en tiempo real
+
+CONSIDERACIONES DE COSTOS
+------------------------
+1. Vercel Cron Jobs: Incluido en plan gratuito
+2. Upstash QStash: Plan gratuito disponible, luego desde $0.99/mes
+3. Railway/Fly.io: Planes gratuitos disponibles, luego desde ~$5-10/mes
+
+MÉTRICAS A MONITOREAR
+--------------------
+1. Tiempo promedio de procesamiento por job
+2. Tasa de éxito de scraping
+3. Uso de recursos/costos
+4. Latencia de actualizaciones de progreso 

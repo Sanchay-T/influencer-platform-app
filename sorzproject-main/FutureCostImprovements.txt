@@ -1,0 +1,130 @@
+# Optimizaciones de Costos y Rendimiento - Endpoint de Campañas
+
+## Estado Actual
+
+### Optimizaciones Implementadas en API
+- Consultas paralelas para conteo y datos
+- Caché implementado (s-maxage=1, stale-while-revalidate=59)
+- Reducción de datos transferidos (columnas específicas)
+- Límite de scrapingJobs a 1 por campaña
+- Tiempo máximo de ejecución aumentado a 10s
+
+### Optimizaciones Implementadas en Cliente
+- Reintentos inteligentes (máx. 2 por error)
+- Límite global de 5 reintentos por sesión
+- Backoff exponencial (1s -> 2s -> máx 5s)
+- Filtrado de tipos de error para reintentos
+- Loading states y error handling mejorado
+
+## Bottlenecks Actuales
+
+1. Base de Datos
+   - Queries anidadas (campaigns -> scrapingJobs)
+   - Sin índices optimizados para ordenamiento
+   - Posible fragmentación en tablas grandes
+
+2. API
+   - Sin rate limiting implementado
+   - Caché de corta duración (1s)
+   - Sin compresión de respuesta
+
+3. Cliente
+   - Sin persistencia local de datos
+   - Recarga completa en cambio de página
+   - Sin precarga de páginas adyacentes
+
+## Trade-offs Actuales
+
+1. Caché Corto (1s)
+   + Datos más frescos
+   - Más carga en DB
+   - Más costos de computación
+
+2. Reintentos Automáticos
+   + Mejor UX
+   - Incremento potencial en costos
+   - Más carga en servidores
+
+3. Datos Limitados
+   + Respuestas más rápidas
+   + Menos costos de red
+   - Posibles llamadas adicionales para detalles
+
+## Mejoras Futuras Propuestas
+
+### Corto Plazo
+1. Implementar Circuit Breaker
+   ```javascript
+   // Ejemplo conceptual
+   if (errorRate > threshold) {
+     disableRetriesForMinutes(5)
+   }
+   ```
+
+2. Analytics de Errores
+   - Tracking de tipos de error
+   - Monitoreo de tasas de reintento
+   - Alertas en patrones anormales
+
+3. Límite Diario de Reintentos
+   ```javascript
+   const DAILY_RETRY_LIMIT = 20
+   // Persistir en localStorage
+   ```
+
+### Medio Plazo
+1. Optimización de Base de Datos
+   - Índices compuestos para ordenamiento
+   - Particionamiento de tablas grandes
+   - Materializar vistas comunes
+
+2. Mejoras de Caché
+   - Implementar Redis/Upstash
+   - Caché por usuario/segmento
+   - Invalidación selectiva
+
+3. Cliente
+   - Implementar SWR/React Query
+   - Caché local con IndexedDB
+   - Precarga de datos adyacentes
+
+### Largo Plazo
+1. Arquitectura
+   - Separar lectura/escritura (CQRS)
+   - Implementar Event Sourcing
+   - Microservicios por dominio
+
+2. Infraestructura
+   - CDN para assets estáticos
+   - Edge Functions para API
+   - DB read replicas
+
+## Costos y Recursos
+
+### Vercel
+- Función actual: ~1000ms promedio
+- Memoria: ~128MB
+- Ejecuciones: ~100/día estimado
+
+### Supabase
+- Queries/día: ~300 (con reintentos)
+- Ancho de banda: ~50MB/día
+- Rows escaneados: ~1000/día
+
+## Recomendaciones de Monitoreo
+1. Métricas clave:
+   - Tiempo de respuesta p95
+   - Tasa de reintentos
+   - Cache hit ratio
+   - Error rate por tipo
+
+2. Alertas:
+   - Latencia > 2s
+   - Error rate > 5%
+   - Reintentos > 20/hora
+
+## Notas Adicionales
+- Documentar cambios en métricas post-implementación
+- Revisar costos mensualmente
+- Ajustar límites según uso real
+- Considerar feedback de usuarios

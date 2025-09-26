@@ -1,0 +1,52 @@
+DE QUE TRATA EL PROYECTO:
+
+A platform to be able to search for influencers in your vertical for Brand Marketing Managers
+
+Funciona a través de crear campaign folders, una vez creado el campaign folder ya puedes buscar por Keyword-Based Search o Similar creator search
+
+Se cuenta con un scraper de Tiktok e Instagram con Apify y Make
+
+
+WORKFLOW:
+
+# Dashboard principal “Tus campañas” con botón de “Crear campaña”
+
+Una vez creado el folder de la campaña, título “Crear una campaña” se le pedirán datos con formulario:
+
+- Nombre de la campaña
+- Descripción del negocio (del usuario)
+
+## Método de búsqueda 1: "Keyword-Based Search" (input fields for industry keywords, hashtags, and phrases)
+
+Para buscar lista de influencer que coincidan con las keywords
+
+- Multiple Select de plataformas
+    - Tiktok
+    - Instagram
+- ¿Cuántos creadores necesitas?
+    - Slider con opciones de 1000, 2000, 3000, 4000, 5000
+    - Texto debajo que diga “This will use 10 or 20, or 30, or 40, or 50 of your 50 credits”
+- Botón de continuar
+- Pantalla de “Review your keywords”
+    - Lista de keywords sugeridas en etiqueta con “X” para eliminar, debajo un label para añadir etiquetas personalizadas
+- Botón de “enviar campaña”
+- Resultado de la búsqueda
+    - Título de la campaña
+    - Tabla con los influencer encontrados
+    - Opciones de filtro y botón de exportar la tabla
+
+
+-------------------------------------------------------------------------------------
+
+Necesito añadir autenticación con Supabase a mi proyecto de next js
+* Necesito crear el proceso de Onboarding
+* Para crear una cuenta se debe solicitar la siguiente información al usuario
+    * Name
+    * Company name
+    * Industry
+* La aplicación debe contar con Profile settings
+    * Profile admin settings should give you ability to reset or change your password, change the email on your account
+* NO estoy usando typescript
+* No quiero providers por el momento
+Por favor analiza mi codebase y la estructura de mi proyecto y detalla un prd en AuthDocs [prd] del paso a paso para lograrlo como ingeniero de software senior, para empezar a implementarlo por secciones
+Añadí referencias de documentación de Supabase, espero te sirva

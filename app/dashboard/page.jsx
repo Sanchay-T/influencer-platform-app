@@ -1,18 +1,59 @@
 'use client'
 
+import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import DashboardLayout from "../components/layout/dashboard-layout";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Loader2, PlusCircle, TrendingUp, BarChart3, Users, FileText } from "lucide-react";
-import Link from "next/link";
+import { Loader2, BarChart3 } from "lucide-react";
 import AnimatedSparkline from "../components/dashboard/animated-sparkline";
 import AnimatedBarChart from "../components/dashboard/animated-bar-chart";
 import RadialProgress from "../components/dashboard/radial-progress";
+import { FavoriteInfluencersGrid } from "../components/dashboard/favorite-influencers-grid";
+import { RecentListsSection } from "../components/dashboard/recent-lists";
+
+const DASHBOARD_OVERVIEW_PATH = '/api/dashboard/overview';
 
 export default function DashboardPage() {
+  const [favorites, setFavorites] = useState([]);
+  const [recentLists, setRecentLists] = useState([]);
+  const [loadingHighlights, setLoadingHighlights] = useState(true);
+  const [highlightsError, setHighlightsError] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadDashboardHighlights() {
+      setLoadingHighlights(true);
+      setHighlightsError(null);
+      try {
+        const response = await fetch(DASHBOARD_OVERVIEW_PATH);
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(payload.error || 'Failed to load dashboard data');
+        }
+        const data = await response.json();
+        if (!active) return;
+        setFavorites(data.favorites ?? []);
+        setRecentLists(data.recentLists ?? []);
+      } catch (error) {
+        if (!active) return;
+        setHighlightsError(error instanceof Error ? error.message : 'Failed to load dashboard data');
+        toast.error('Unable to load dashboard highlights right now.');
+      } finally {
+        if (active) {
+          setLoadingHighlights(false);
+        }
+      }
+    }
+
+    loadDashboardHighlights();
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <DashboardLayout>
-
       <div className="space-y-6">
         {/* Page header */}
         <div className="flex items-center justify-between">
@@ -66,6 +107,46 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Favorites section */}
+        <section className="space-y-4">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-pink-400"></span>
+            <h2 className="text-lg font-semibold text-zinc-100">Favorite Influencers</h2>
+          </div>
+          {loadingHighlights ? (
+            <div className="flex h-32 items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-900/60 text-sm text-zinc-500">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Loading favorites…
+            </div>
+          ) : highlightsError ? (
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 text-sm text-red-400">
+              {highlightsError}
+            </div>
+          ) : (
+            <FavoriteInfluencersGrid influencers={favorites} />
+          )}
+        </section>
+
+        {/* Recent lists */}
+        <section className="space-y-4">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-purple-400"></span>
+            <h2 className="text-lg font-semibold text-zinc-100">Recent Lists</h2>
+          </div>
+          {loadingHighlights ? (
+            <div className="flex h-32 items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-900/60 text-sm text-zinc-500">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Loading lists…
+            </div>
+          ) : highlightsError ? (
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 text-sm text-red-400">
+              {highlightsError}
+            </div>
+          ) : (
+            <RecentListsSection lists={recentLists} />
+          )}
+        </section>
 
         {/* Wide cards */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">

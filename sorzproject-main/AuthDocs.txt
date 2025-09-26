@@ -1,0 +1,265 @@
+## Aqui deben ir los requerimientos y la documentacion desglosada en secciones
+
+### PRD para Implementar Autenticación con Supabase en Proyecto Next.js
+
+1. Requerimientos Generales
+   - Implementar autenticación con Supabase usando email y contraseña (sin social providers).
+   - Solicitar campos adicionales al crear una cuenta: 
+     • Nombre (Name)  
+     • Nombre de la empresa (Company name)  
+     • Industria (Industry)  
+
+2. Arquitectura y Configuración de Supabase
+   - Crear variables de entorno en archivo .env.local:
+     - NEXT_PUBLIC_SUPABASE_URL
+     - NEXT_PUBLIC_SUPABASE_ANON_KEY
+   - Añadir el paquete @supabase/supabase-js para interactuar con la API de Supabase.  
+   - Organizar el código en dos tipos de clientes (siguiendo ejemplos de la documentación de Supabase):
+     • Client-side (para acciones como login desde componentes cliente).  
+     • Server-side (para proteger rutas y manejar cookies).  
+
+3. Flujo de Onboarding y Registro
+   - Crear una página o formulario de registro (ej. "app/register"):
+     • Recopilar Name, Company name, Industry, Email y Password.  
+     • Guardar los datos en la base de Supabase, incluido un registro en la tabla "auth.users".  
+     • Si se requiere más información del usuario, considerar una tabla aparte para el perfil (ej. user_profiles), vinculada con su user_id.  
+   - Validar campos y confirmar registro mediante email (si se mantiene la verificación por correo).  
+
+4. Flujo de Login
+   - Crear una página (ej. "app/login") que utilice Supabase Auth:
+     • Implementar signIn con email y password.  
+     • Manejar errores de autenticación y redireccionar al dashboard principal tras iniciar sesión.  
+
+5. Protegiendo Rutas con Middleware (Server-Side)
+   - Configurar un middleware (middleware.ts) para refrescar tokens y asegurar que las rutas privadas exijan un usuario autenticado.  
+   - Usar supabase.auth.getUser() en los Server Components para validar la sesión en lugar de supabase.auth.getSession().  
+
+6. Reset de Contraseña
+   - Permitir solicitar un correo de reset (en "Forgot Password" o en Profile Settings).  
+   - Configurar la plantilla de correo de Supabase Auth para enviar el enlace de reseteo al usuario.  
+
+7. UI con shadcn y Tailwind
+   - Para formularios de Login, Registro y Profile Settings, utilizar componentes de la librería shadcn (ej. Inputs, Buttons, etc.).  
+   - Adaptar estilos con Tailwind para mantener consistencia con el diseño existente en la aplicación.  
+
+8. Plan de Implementación por Fases
+   - Fase 1: Configurar Supabase (variables de entorno, instalación de paquetes, cliente).  
+   - Fase 2: Crear el flujo de registro y guardado de información del usuario (Name, Company name, Industry, Email, Password).  
+   - Fase 3: Implementar login y middleware para proteger rutas.
+
+9. Referencias Importantes
+   - Documentación de Supabase Auth (App Router Next.js, confirmación de email, etc.).  
+   - Ejemplos oficiales de Supabase, incluyendo la integración con SSR y middleware.  
+
+---------------------------------------------------------------
+
+# DOCUMENTACION DEL AVANCE
+
+## Fase 1: Configuración de Supabase
+Estado: En progreso 🟡
+
+### Paso 1: Crear proyecto en Supabase ✅
+- Cuenta creada en Supabase
+- Proyecto creado
+- Credenciales obtenidas:
+  - URL del proyecto: https://saentkscgkoplpztziro.supabase.co
+  - anon/public key: [Guardado de forma segura]
+
+### Paso 2: Instalar dependencias ✅
+Instaladas:
+- @supabase/supabase-js
+- @supabase/ssr (reemplaza @supabase/auth-helpers-nextjs por deprecación)
+
+### Paso 3: Configurar variables de entorno ✅
+Completado:
+1. Archivo .env.local creado en la raíz del proyecto
+2. Variables configuradas:
+   - NEXT_PUBLIC_SUPABASE_URL
+   - NEXT_PUBLIC_SUPABASE_ANON_KEY
+3. Archivo añadido a .gitignore
+
+### Paso 4: Configurar cliente de Supabase ✅
+Completado:
+1. Creado archivo app/lib/supabase.js con configuración del cliente
+2. Implementado middleware.js para protección de rutas
+3. Configurada redirección automática para rutas protegidas
+
+### Paso 5: Implementación de páginas de autenticación
+En progreso:
+1. Creada estructura base de autenticación ✅
+   - Creado layout para auth (app/auth/layout.jsx)
+   - Implementada página de login (app/auth/login/page.jsx)
+   - Actualizado Sidebar con funcionalidad de logout
+2. Pendiente:
+   - Página de registro con campos adicionales
+   - Funcionalidad de recuperación de contraseña
+   - Verificación de email
+
+### Paso 6: Configuración de Base de Datos con Drizzle ORM
+Estado: Revisión de Migración 🔍
+
+Proceso de Migraciones en Drizzle
+Estado: Documentación 📝
+
+1. Flujo de Trabajo de Migraciones:
+   
+   a) Definir Schema (app/db/schema.ts):
+   ```typescript
+   export const userProfiles = pgTable('user_profiles', {
+     id: uuid('id').primaryKey().defaultRandom(),
+     // ... resto de campos
+   });
+   ```
+
+   b) Generar Migración:
+   ```bash
+   npx drizzle-kit generate
+   ```
+   - Crea archivo SQL en /drizzle/XXXX_nombre.sql
+   - Genera snapshot en /drizzle/meta/
+   - No modifica la base de datos
+
+   c) Revisar SQL Generado:
+   - Verificar estructura de tabla
+   - Confirmar tipos de datos
+   - Validar constraints y defaults
+
+   d) Aplicar Migración:
+   ```bash
+   npx drizzle-kit migrate
+   ```
+   - Ejecuta el SQL en la base de datos
+   - Registra migración en __drizzle_migrations
+   - Actualiza el estado de la base de datos
+
+2. Archivos Generados:
+   ```
+   📦 drizzle
+   ├ 📂 meta             # Snapshots del estado de la DB
+   │ └ 📜 0001_snap.json
+   └ 📜 0001_xxx.sql    # SQL de la migración
+   ```
+
+3. Tabla de Control:
+   - Nombre: __drizzle_migrations
+   - Schema: public
+   - Registra:
+     • ID de migración
+     • Nombre del archivo
+     • Timestamp de ejecución
+
+### Referencia de Comandos Drizzle (Actualizada)
+Estado: Documentación 📝
+
+Comandos Correctos ✅:
+1. Generar migración:
+   ```bash
+   npx drizzle-kit generate
+   ```
+   - Genera archivos SQL
+   - Crea snapshots
+
+2. Aplicar migración:
+   ```bash
+   npx drizzle-kit migrate
+   ```
+   - Ejecuta las migraciones en la base de datos
+   - Crea schema si no existe
+   - Maneja la tabla de control de migraciones
+
+3. Introspección:
+   ```bash
+   npx drizzle-kit pull
+   ```
+   - Para bases de datos existentes
+
+Comandos Incorrectos ❌:
+1. ~~`npx drizzle-orm migrate`~~
+   - Este comando no existe
+   - Usar `npx drizzle-kit migrate` en su lugar
+
+2. ~~`npx drizzle-kit push:pg`~~
+   - Deprecado
+   - Usar `npx drizzle-kit push` si es necesario
+
+Estado Actual:
+- Migración en progreso
+- Schema "public" ya existe (normal)
+- Siguiente: Verificar en Supabase que la tabla user_profiles se haya creado
+
+## Fase 2: Implementación de Verificación de Email
+Estado: Completado ✅
+
+### Implementaciones Realizadas
+1. Página de verificación de email creada:
+   - Archivo: app/auth/verify-email/page.tsx
+   - UI implementada para mostrar mensaje de confirmación e instrucciones.
+
+2. Configuración de plantillas de email en Supabase:
+   - Plantilla de confirmación de email personalizada y probada.
+
+3. Manejo de confirmación implementado:
+   - Página para manejar el link de confirmación creada: app/auth/confirm-email/page.tsx
+   - Lógica de verificación implementada y redirección al dashboard tras verificación exitosa.
+
+## Fase 3: Implementación de Recuperación de Contraseña
+Estado: Completado ✅
+
+### Implementaciones Realizadas
+1. Página de recuperación de contraseña creada:
+   - Archivo: app/auth/forgot-password/page.tsx
+   - UI implementada para solicitar el email del usuario y enviar un email de recuperación.
+
+2. Integración con Supabase:
+   - Uso de `supabase.auth.resetPasswordForEmail` para enviar el email de recuperación.
+   - Configuración de la URL de redirección tras el restablecimiento de contraseña.
+
+3. Manejo de errores y mensajes:
+   - Mensaje de éxito mostrado al enviar el email de recuperación.
+   - Manejo de errores en caso de fallo al enviar el email.
+
+---------------------------------------------------------------
+
+Autenticacion finalizada.
+
+#Profile Settings
+Requerimiento:
+* Profile settings should give the user the ability to reset or change their password, change the email on their account
+
+El menú de Profile Settings se debe desplegar en la sidebar ubicada en app/components/layaout/sidebar.jsx
+
+## Documentacion del progreso:
+
+### Implementaciones Realizadas ✅
+1. Creación de la página de Profile Settings:
+   - Archivo: app/profile/page.tsx
+   - Implementada UI base con componentes de shadcn/ui
+   - Funcionalidad para cambiar email y contraseña
+
+2. Integración con Supabase:
+   - Uso de `supabase.auth.updateUser` para actualizar datos
+   - Manejo de respuestas y errores
+   - Mensajes de feedback para el usuario
+
+3. Navegación:
+   - Añadido enlace en la sidebar para acceder a Profile Settings
+   - Implementado DashboardLayout para mantener consistencia en la UI
+
+### Errores Actuales 🚫
+1. Problema con tipos en componentes Card:
+   ```
+   Error: El tipo "{ children: Element[]; }" no tiene propiedades en común con el tipo "IntrinsicAttributes & RefAttributes<unknown>"
+   ```
+   - Afecta a todos los componentes Card de shadcn
+   - Los componentes Card, CardHeader, CardTitle, CardDescription, CardContent y CardFooter están presentando errores de tipado
+   - Se intentó implementar `type CardProps = React.ComponentProps<typeof Card>` pero el error persiste
+
+### Próximos Pasos ⏳
+1. Resolver errores de tipado en componentes Card
+2. Mejorar la UI/UX del formulario
+3. Implementar validaciones adicionales
+4. Añadir confirmación antes de aplicar cambios
+
+---------------------------------------------------------------
+
+

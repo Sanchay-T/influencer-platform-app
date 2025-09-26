@@ -1,0 +1,99 @@
+# InfluencerHub - Documentación de Avance
+
+## Descripción General
+Plataforma para búsqueda de influencers que permite a los Brand Marketing Managers encontrar creadores de contenido relevantes para sus campañas.
+
+## Arquitectura de la Aplicación
+
+### Gestión de Estado
+- **Estado Local**: Utiliza React useState para manejo de estados componentes
+- **Estado Persistente**: Implementa una combinación de localStorage y sessionStorage
+  - localStorage: Almacenamiento permanente de campañas completadas
+  - sessionStorage: Almacenamiento temporal durante el flujo de creación
+
+### Flujo de Datos de Campaña
+1. **Creación Inicial** (`campaign-form.jsx`)
+   - Usuario ingresa nombre y descripción
+   - Datos temporales guardados en sessionStorage como 'currentCampaign'
+   - Estructura temporal:
+   ```javascript
+   {
+     name: string,
+     description: string,
+     searchType: string,
+     tempId: number
+   }
+   ```
+
+2. **Proceso de Búsqueda**
+   - Dos métodos disponibles:
+     - Keyword-Based Search
+     - Similar Creator Search
+   - Los resultados se procesan en `search-results.jsx`
+
+3. **Finalización de Campaña**
+   - Al completar la búsqueda, los datos temporales se convierten en permanentes
+   - Se guardan en localStorage con estructura:
+   ```javascript
+   {
+     ...campaignData,
+     searchResults: array,
+     completedAt: timestamp,
+     id: number
+   }
+   ```
+
+## Componentes Principales
+
+### CampaignForm
+- Maneja el inicio del flujo de campaña
+- Implementa un proceso de dos pasos:
+  1. Información básica
+  2. Selección de método de búsqueda
+
+### SearchResults
+- Muestra resultados de búsqueda paginados
+- Implementa scroll horizontal y vertical
+- Límite de 10 resultados por página
+- Formateo de números para mejor legibilidad
+
+### KeywordReview
+- Permite gestión de palabras clave
+- Interfaz para añadir/eliminar keywords
+- Diseño con badges de colores pastel
+
+## Mejoras Implementadas
+
+### Sistema de Almacenamiento Temporal
+- **Problema Resuelto**: Pérdida de contexto entre navegaciones
+- **Solución**: Implementación de sessionStorage para mantener estado durante el flujo
+- **Beneficios**:
+  - Previene guardado prematuro de campañas incompletas
+  - Mantiene consistencia de datos durante el flujo
+  - Permite recuperación de estado en caso de recarga
+
+### Paginación y Visualización
+- Implementación de tabla con scroll bidireccional
+- Límite de altura máxima (600px)
+- Paginación de 10 items por página
+- Headers de tabla fijos durante scroll
+
+## Pendientes y Consideraciones Futuras
+1. Implementar sistema de autenticación
+2. Añadir filtros avanzados en resultados
+3. Desarrollar sistema de exportación de datos
+4. Implementar persistencia en base de datos
+5. Añadir analytics y tracking de uso
+
+## Notas Técnicas
+- Framework: Next.js
+- UI Components: Shadcn/ui
+- Estilizado: Tailwind CSS
+- Estado: React Hooks
+- Persistencia: Web Storage API (localStorage/sessionStorage)
+
+## Convenciones de Código
+- Componentes en PascalCase
+- Hooks personalizados con prefijo 'use'
+- Archivos JSX para componentes React
+- Implementación de 'use client' para componentes del lado del cliente
