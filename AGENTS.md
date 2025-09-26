@@ -1,5 +1,23 @@
 # Repository Guidelines
 
+[# When you need to call tools from the shell, use this rubric:
+- Find Files: `fd`
+- Find Text: `rg` (ripgrep)
+- Find Code Structure (TS/TSX): `ast-grep`
+  - Default to TypeScript: `*.ts` → `ast-grep --lang ts -p '<pattern>'`
+  - For other languages, set `--lang` appropriately (e.g., `--lang rust`).
+- Select among matches: pipe to `fzf`
+- JSON: `ja`
+- YAML/XML: `yq`
+]
+
+## Development Best Practices
+- Embrace test-driven development (TDD): write failing tests before implementing or refactoring functionality.
+- Keep every source file under 300 lines. Split large implementations into composable, focused modules.
+- Add breadcrumb-style comments that outline linkage and usage, enabling newcomers to trace logic similar to a blockchain ledger.
+- Document how each major function or component is used elsewhere in the codebase and note any coupling or downstream effects.
+- Maintain thorough inline comments that clarify intent, data flow, and integration points.
+
 Scope: This guide applies to the WT‑2 worktree only. Treat all local instructions as WT‑2 specific.
 
 ## Project Structure & Modules
