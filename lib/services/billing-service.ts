@@ -17,6 +17,37 @@
 import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
 import { calculateTrialStatus } from './trial-status-calculator';
 import Stripe from 'stripe';
+import { createCategoryLogger, LogCategory } from '@/lib/logging';
+
+const serviceLogger = createCategoryLogger(LogCategory.BILLING);
+
+const toContext = (extra?: Record<string, unknown>) => {
+  if (!extra) return undefined;
+  const context: { userId?: string; metadata: Record<string, unknown> } = {
+    metadata: extra,
+  };
+  if (typeof extra.userId === 'string') {
+    context.userId = extra.userId;
+  }
+  return context;
+};
+
+const debug = (message: string, extra?: Record<string, unknown>) => {
+  serviceLogger.debug(message, toContext(extra));
+};
+
+const info = (message: string, extra?: Record<string, unknown>) => {
+  serviceLogger.info(message, toContext(extra));
+};
+
+const warn = (message: string, extra?: Record<string, unknown>) => {
+  serviceLogger.warn(message, toContext(extra));
+};
+
+const logError = (message: string, err: unknown, extra?: Record<string, unknown>) => {
+  const normalized = err instanceof Error ? err : new Error(String(err));
+  serviceLogger.error(message, normalized, toContext(extra));
+};
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-06-20',
@@ -162,22 +193,22 @@ export class BillingService {
     if (!skipCache) {
       const cached = billingCache.get(userId);
       if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-        console.log(`🔁 [BILLING-SERVICE] Cache hit for user ${userId}`);
+        debug('Billing cache hit', { userId });
         return { state: cached.state, cacheHit: true };
       }
     }
 
-    console.log(`🔍 [BILLING-SERVICE] Fetching billing state for user: ${userId}`);
+    debug('Fetching billing state', { userId });
     const userProfile = await getUserProfile(userId);
-    console.log(`📊 [BILLING-SERVICE] getUserProfile result:`, userProfile ? 'FOUND' : 'NULL');
+    debug('User profile lookup result', { userId, found: !!userProfile });
     
     if (!userProfile) {
-      console.error(`❌ [BILLING-SERVICE] User profile not found in normalized database: ${userId}`);
-      console.error(`❌ [BILLING-SERVICE] This suggests the user hasn't been migrated from old userProfiles table`);
+      warn('User profile not found in normalized database', { userId });
       throw new Error(`User profile not found: ${userId}`);
     }
     
-    console.log(`✅ [BILLING-SERVICE] User profile found:`, {
+    debug('User profile loaded for billing state', {
+      userId,
       currentPlan: userProfile.currentPlan,
       trialStatus: userProfile.trialStatus,
       onboardingStep: userProfile.onboardingStep
@@ -254,12 +285,12 @@ export class BillingService {
   ): Promise<BillingState> {
     
     const billingTestId = `BILLING_SERVICE_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    console.log(`🎯 [BILLING-SERVICE-TEST] ${billingTestId} - Starting immediate upgrade`);
-    console.log(`🚀 [BILLING-SERVICE] IMMEDIATE UPGRADE: ${userId} → ${newPlan} (source: ${source})`);
-    
+    info('Immediate upgrade started', { userId, newPlan, source, billingTestId });
+
     // Get current state
     const currentState = await this.getBillingState(userId);
-    console.log(`🔍 [BILLING-SERVICE-TEST] ${billingTestId} - Current state BEFORE update:`, {
+    debug('Current billing state before upgrade', {
+      billingTestId,
       currentPlan: currentState.currentPlan,
       subscriptionStatus: currentState.subscriptionStatus,
       trialStatus: currentState.trialStatus
@@ -281,15 +312,15 @@ export class BillingService {
       planCreatorsLimit: PLAN_CONFIGS[newPlan].limits.creators,
     };
     
-    console.log(`🔄 [BILLING-SERVICE-TEST] ${billingTestId} - Update data being applied:`, updateData);
+    debug('Applying billing state update', { billingTestId, updateData });
     
     // Update database IMMEDIATELY
     try {
       await updateUserProfile(userId, updateData);
-    console.log(`✅ [BILLING-SERVICE-TEST] ${billingTestId} - updateUserProfile completed successfully`);
-    invalidateCache(userId);
+      debug('Billing profile updated successfully', { userId, billingTestId });
+      invalidateCache(userId);
     } catch (updateError) {
-      console.error(`❌ [BILLING-SERVICE-TEST] ${billingTestId} - updateUserProfile FAILED:`, updateError);
+      logError('Failed to apply immediate upgrade update', updateError, { userId, billingTestId });
       throw updateError;
     }
     
@@ -302,11 +333,12 @@ export class BillingService {
       stripeSubscriptionId: stripeData.subscriptionId
     });
     
-    console.log(`✅ [BILLING-SERVICE] IMMEDIATE UPGRADE COMPLETE: ${userId} → ${newPlan}`);
-    
+    info('Immediate upgrade completed', { userId, newPlan, billingTestId });
+
     // Return fresh state
     const finalState = await this.getBillingState(userId);
-    console.log(`🔍 [BILLING-SERVICE-TEST] ${billingTestId} - Final state AFTER update:`, {
+    debug('Billing state after upgrade', {
+      billingTestId,
       currentPlan: finalState.currentPlan,
       subscriptionStatus: finalState.subscriptionStatus,
       trialStatus: finalState.trialStatus
@@ -461,7 +493,7 @@ export class BillingService {
     data: any
   ): Promise<void> {
     // This would integrate with your events table or logging service
-    console.log(`📊 [BILLING-EVENT] ${userId}: ${eventType}`, data);
+    debug('Billing event', { userId, eventType, data });
   }
 }
 

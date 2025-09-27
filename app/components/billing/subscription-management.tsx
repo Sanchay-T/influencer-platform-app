@@ -66,7 +66,10 @@ function SubscriptionManagementContent() {
 
       // Fetch billing status
       const fetchTestId = `SUBSCRIPTION_FETCH_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      console.log(`🎯 [SUBSCRIPTION-TEST] ${fetchTestId} - Fetching billing status from API`);
+      componentLogger.logInfo('Fetching billing status from API', {
+        operation: 'fetch-subscription-data',
+        fetchTestId
+      });
       
       const billingResponse = await fetch('/api/billing/status');
       if (!billingResponse.ok) {
@@ -76,13 +79,13 @@ function SubscriptionManagementContent() {
       const ttlHeader = billingResponse.headers.get('x-cache-ttl-ms');
       setCacheTtlMs(ttlHeader ? Number(ttlHeader) : null);
       
-      console.log(`📊 [SUBSCRIPTION-TEST] ${fetchTestId} - Billing data received:`, {
+      componentLogger.logInfo('Billing data received', {
+        operation: 'fetch-subscription-data',
+        fetchTestId,
         currentPlan: billingData.currentPlan,
         subscriptionStatus: billingData.subscriptionStatus,
         isTrialing: billingData.isTrialing,
-        hasActiveSubscription: billingData.hasActiveSubscription,
-        stripeCustomerId: billingData.stripeCustomerId,
-        stripeSubscriptionId: billingData.stripeSubscriptionId
+        hasActiveSubscription: billingData.hasActiveSubscription
       });
 
       // Check portal access

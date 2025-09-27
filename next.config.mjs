@@ -20,6 +20,14 @@ const nextConfig = {
         module: /libheif-js/,
         message: /Critical dependency/,
       },
+      {
+        module: /@opentelemetry\/instrumentation/,
+        message: /Critical dependency: the request of a dependency is an expression/,
+      },
+      {
+        module: /@sentry/,
+        message: /Critical dependency: the request of a dependency is an expression/,
+      },
     ];
     
     // Note: We no longer alias '@clerk/nextjs/server' to avoid edge/runtime conflicts.

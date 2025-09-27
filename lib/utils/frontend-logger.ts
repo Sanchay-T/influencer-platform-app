@@ -1,16 +1,10 @@
-/**
- * Frontend logging utility for comprehensive user flow tracking
- * This provides "insane logging" for production signup flows
- */
+import { emitClientLog } from '@/lib/logging/react/helpers';
+import { LogCategory, LogContext, LogLevel } from '@/lib/logging/types';
 
-interface LogContext {
-  userId?: string;
-  userEmail?: string;
-  step?: string;
-  action?: string;
-  data?: any;
-  timing?: number;
-  requestId?: string;
+// Breadcrumb: frontend logging facade -> consumed by client instrumentation (AuthLogger, NavigationLogger, onboarding flows).
+
+interface ExtendedLogContext extends LogContext {
+  metadata?: Record<string, unknown>;
 }
 
 interface ApiCallOptions {
@@ -19,264 +13,279 @@ interface ApiCallOptions {
   headers?: Record<string, string>;
 }
 
-export class FrontendLogger {
-  private static sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-  private static startTime = Date.now();
+const SESSION_ID = `session_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+const SESSION_START = Date.now();
+const SENSITIVE_FIELDS = ['password', 'token', 'secret', 'key', 'authorization'];
+
+function buildContext(base: LogContext | undefined, metadata?: Record<string, unknown>): ExtendedLogContext {
+  const context: ExtendedLogContext = { ...(base || {}) };
+  context.sessionId = context.sessionId ?? SESSION_ID;
+
+  if (metadata && Object.keys(metadata).length > 0) {
+    context.metadata = {
+      ...(context.metadata || {}),
+      ...metadata,
+    };
+  }
+
+  return context;
+}
+
+function sanitizePayload(payload: any): any {
+  if (!payload || typeof payload !== 'object') return payload;
+  const clone = Array.isArray(payload) ? [...payload] : { ...payload };
+
+  Object.keys(clone).forEach((key) => {
+    const value = clone[key];
+    if (value && typeof value === 'object') {
+      clone[key] = sanitizePayload(value);
+      return;
+    }
+
+    if (SENSITIVE_FIELDS.some((field) => key.toLowerCase().includes(field))) {
+      clone[key] = '[REDACTED]';
+    }
+  });
+
+  return clone;
+}
+
+class FrontendLogger {
+  private static emit(
+    level: LogLevel,
+    message: string,
+    category: LogCategory,
+    context?: LogContext,
+    metadata?: Record<string, unknown>,
+    error?: unknown,
+  ) {
+    emitClientLog(
+      level,
+      () => message,
+      () => buildContext(context, metadata),
+      category,
+      error instanceof Error ? error : undefined,
+    );
+  }
 
   /**
-   * Log major step headers with visual separators
+   * Log major step headers with optional context. Defaults to DEBUG so it is silent unless explicitly enabled.
    */
   static logStepHeader(step: string, description: string, context?: LogContext) {
-    const timestamp = new Date().toISOString();
-    const sessionTime = Date.now() - this.startTime;
-    
-    console.log('[FRONTEND] ===============================');
-    console.log(`[FRONTEND] ${step.toUpperCase()}: ${description.toUpperCase()}`);
-    console.log('[FRONTEND] ===============================');
-    console.log(`[FRONTEND] Timestamp: ${timestamp}`);
-    console.log(`[FRONTEND] Session time: ${sessionTime}ms`);
-    console.log(`[FRONTEND] Session ID: ${this.sessionId}`);
-    
-    if (context) {
-      console.log(`[FRONTEND] Context:`, {
-        userId: context.userId || 'N/A',
-        userEmail: context.userEmail || 'N/A',
-        step: context.step || step,
-        ...context
-      });
-    }
+    const metadata = {
+      step,
+      description,
+      sessionTimeMs: Date.now() - SESSION_START,
+    };
+
+    FrontendLogger.emit(
+      LogLevel.DEBUG,
+      `Step: ${step}`,
+      LogCategory.UI,
+      context,
+      metadata,
+    );
   }
 
-  /**
-   * Log user actions with context
-   */
   static logUserAction(action: string, details: any, context?: LogContext) {
-    const timestamp = new Date().toISOString();
-    
-    console.log(`[FRONTEND-USER] USER ACTION: ${action.toUpperCase()}`);
-    console.log(`[FRONTEND-USER] Timestamp: ${timestamp}`);
-    console.log(`[FRONTEND-USER] Action details:`, details);
-    
-    if (context) {
-      console.log(`[FRONTEND-USER] Context:`, context);
-    }
+    FrontendLogger.emit(
+      LogLevel.DEBUG,
+      `User action: ${action}`,
+      LogCategory.UI,
+      context,
+      {
+        action,
+        details: sanitizePayload(details),
+      },
+    );
   }
 
-  /**
-   * Log form interactions
-   */
   static logFormAction(formName: string, action: 'submit' | 'validation' | 'error', data: any) {
-    console.log(`[FRONTEND-FORM] FORM ${action.toUpperCase()}: ${formName}`);
-    console.log(`[FRONTEND-FORM] Timestamp: ${new Date().toISOString()}`);
-    console.log(`[FRONTEND-FORM] Form data:`, {
-      formName,
-      action,
-      data: this.sanitizeFormData(data),
-      validation: action === 'validation' ? data : 'N/A'
-    });
+    FrontendLogger.emit(
+      LogLevel.DEBUG,
+      `Form ${action}: ${formName}`,
+      LogCategory.UI,
+      undefined,
+      {
+        formName,
+        action,
+        data: sanitizePayload(data),
+      },
+    );
   }
 
-  /**
-   * Log API calls with comprehensive tracking
-   */
   static async loggedApiCall(url: string, options: ApiCallOptions = {}, context?: LogContext): Promise<any> {
-    const startTime = Date.now();
-    const requestId = `api_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-    
-    console.log(`[FRONTEND-API] STARTING API CALL`);
-    console.log(`[FRONTEND-API] URL: ${url}`);
-    console.log(`[FRONTEND-API] Method: ${options.method || 'GET'}`);
-    console.log(`[FRONTEND-API] Request ID: ${requestId}`);
-    console.log(`[FRONTEND-API] Timestamp: ${new Date().toISOString()}`);
-    
-    if (options.body) {
-      console.log(`[FRONTEND-API] Request body:`, this.sanitizeApiData(options.body));
-    }
-    
-    if (context) {
-      console.log(`[FRONTEND-API] Context:`, context);
-    }
+    const method = options.method || 'GET';
+    const start = Date.now();
+    const requestId = `api_${start}_${Math.random().toString(36).substring(7)}`;
 
     try {
       const response = await fetch(url, {
-        method: options.method || 'GET',
+        method,
         headers: {
           'Content-Type': 'application/json',
-          ...options.headers
+          ...options.headers,
         },
-        body: options.body ? JSON.stringify(options.body) : undefined
+        body: options.body ? JSON.stringify(options.body) : undefined,
       });
 
-      const duration = Date.now() - startTime;
-      const responseData = await response.json();
+      const duration = Date.now() - start;
+      const data = await response.json();
 
-      if (response.ok) {
-        console.log(`[FRONTEND-API][OK] API CALL SUCCESSFUL`);
-        console.log(`[FRONTEND-API][OK] Status: ${response.status} ${response.statusText}`);
-        console.log(`[FRONTEND-API][OK] Duration: ${duration}ms`);
-        console.log(`[FRONTEND-API][OK] Request ID: ${requestId}`);
-        console.log(`[FRONTEND-API][OK] Response:`, responseData);
-      } else {
-        console.error(`[FRONTEND-API][ERROR] API CALL FAILED`);
-        console.error(`[FRONTEND-API][ERROR] Status: ${response.status} ${response.statusText}`);
-        console.error(`[FRONTEND-API][ERROR] Duration: ${duration}ms`);
-        console.error(`[FRONTEND-API][ERROR] Request ID: ${requestId}`);
-        console.error(`[FRONTEND-API][ERROR] Error response:`, responseData);
-      }
+      FrontendLogger.emit(
+        response.ok ? LogLevel.DEBUG : LogLevel.ERROR,
+        `API ${response.ok ? 'success' : 'failure'}: ${method} ${url}`,
+        LogCategory.API,
+        context,
+        {
+          url,
+          method,
+          status: response.status,
+          ok: response.ok,
+          durationMs: duration,
+          requestId,
+          payload: options.body ? sanitizePayload(options.body) : undefined,
+          response: sanitizePayload(data),
+        },
+        response.ok ? undefined : new Error(`Request failed with status ${response.status}`),
+      );
 
-      // Return a lightweight response-like object to avoid spreading native Response
-      // Keep common fields used by call sites
       return {
         ok: response.ok,
         status: response.status,
         statusText: response.statusText,
         headers: response.headers,
-        json: async () => responseData,
-        // Convenience fields
-        data: responseData,
-        _parsedData: responseData,
+        json: async () => data,
+        data,
+        _parsedData: data,
         _duration: duration,
         _requestId: requestId,
-        raw: response
+        raw: response,
       };
-
     } catch (error) {
-      const duration = Date.now() - startTime;
-      
-      console.error(`[FRONTEND-API][EXCEPTION] API CALL EXCEPTION`);
-      console.error(`[FRONTEND-API][EXCEPTION] Duration: ${duration}ms`);
-      console.error(`[FRONTEND-API][EXCEPTION] Request ID: ${requestId}`);
-      console.error(`[FRONTEND-API][EXCEPTION] Error:`, error);
-      
+      const duration = Date.now() - start;
+
+      FrontendLogger.emit(
+        LogLevel.ERROR,
+        `API exception: ${method} ${url}`,
+        LogCategory.API,
+        context,
+        {
+          url,
+          method,
+          durationMs: duration,
+          requestId,
+        },
+        error,
+      );
+
       throw error;
     }
   }
 
-  /**
-   * Log navigation actions
-   */
   static logNavigation(from: string, to: string, reason: string, context?: LogContext) {
-    console.log(`[FRONTEND-NAV] NAVIGATION: ${reason.toUpperCase()}`);
-    console.log(`[FRONTEND-NAV] From: ${from}`);
-    console.log(`[FRONTEND-NAV] To: ${to}`);
-    console.log(`[FRONTEND-NAV] Reason: ${reason}`);
-    console.log(`[FRONTEND-NAV] Timestamp: ${new Date().toISOString()}`);
-    
-    if (context) {
-      console.log(`[FRONTEND-NAV] Context:`, context);
-    }
+    FrontendLogger.emit(
+      LogLevel.DEBUG,
+      `Navigation: ${reason}`,
+      LogCategory.UI,
+      context,
+      {
+        from,
+        to,
+        reason,
+      },
+    );
   }
 
-  /**
-   * Log authentication events
-   */
   static logAuth(event: 'login' | 'logout' | 'session_check' | 'user_loaded', data: any) {
-    console.log(`[FRONTEND-AUTH] AUTH EVENT: ${event.toUpperCase()}`);
-    console.log(`[FRONTEND-AUTH] Timestamp: ${new Date().toISOString()}`);
-    console.log(`[FRONTEND-AUTH] Event data:`, {
-      event,
-      userId: data.userId || 'N/A',
-      userEmail: data.userEmail || 'N/A',
-      isLoaded: data.isLoaded,
-      isSignedIn: data.isSignedIn,
-      sessionId: this.sessionId
-    });
+    FrontendLogger.emit(
+      LogLevel.DEBUG,
+      `Auth event: ${event}`,
+      LogCategory.AUTH,
+      undefined,
+      sanitizePayload({ ...data, event }),
+    );
   }
 
-  /**
-   * Log success states
-   */
   static logSuccess(operation: string, result: any, context?: LogContext) {
-    console.log(`[FRONTEND-SUCCESS] SUCCESS: ${operation.toUpperCase()}`);
-    console.log(`[FRONTEND-SUCCESS] Timestamp: ${new Date().toISOString()}`);
-    console.log(`[FRONTEND-SUCCESS] Result:`, result);
-    
-    if (context) {
-      console.log(`[FRONTEND-SUCCESS] Context:`, context);
-    }
+    FrontendLogger.emit(
+      LogLevel.DEBUG,
+      `Success: ${operation}`,
+      LogCategory.UI,
+      context,
+      {
+        operation,
+        result: sanitizePayload(result),
+      },
+    );
   }
 
-  /**
-   * Log error states
-   */
   static logError(operation: string, error: any, context?: LogContext) {
-    console.error(`[FRONTEND-ERROR] ERROR IN: ${operation.toUpperCase()}`);
-    console.error(`[FRONTEND-ERROR] Timestamp: ${new Date().toISOString()}`);
-    console.error(`[FRONTEND-ERROR] Error:`, {
-      message: error.message || error,
-      stack: error.stack,
-      name: error.name
-    });
-    
-    if (context) {
-      console.error(`[FRONTEND-ERROR] Context:`, context);
-    }
+    const normalized = error instanceof Error ? error : new Error(typeof error === 'string' ? error : 'Unknown error');
+
+    FrontendLogger.emit(
+      LogLevel.ERROR,
+      `Error in ${operation}`,
+      LogCategory.UI,
+      context,
+      {
+        operation,
+        message: normalized.message,
+        name: normalized.name,
+      },
+      normalized,
+    );
   }
 
-  /**
-   * Log email/notification events
-   */
   static logEmailEvent(type: 'scheduled' | 'sent' | 'failed', emailType: string, details: any) {
-    console.log(`[FRONTEND-EMAIL] EMAIL ${type.toUpperCase()}: ${emailType}`);
-    console.log(`[FRONTEND-EMAIL] Timestamp: ${new Date().toISOString()}`);
-    console.log(`[FRONTEND-EMAIL] Details:`, details);
+    FrontendLogger.emit(
+      LogLevel.DEBUG,
+      `Email ${type}: ${emailType}`,
+      LogCategory.EMAIL,
+      undefined,
+      {
+        emailType,
+        state: type,
+        details: sanitizePayload(details),
+      },
+    );
   }
 
-  /**
-   * Log timing information
-   */
   static logTiming(operation: string, startTime: number, context?: LogContext) {
     const duration = Date.now() - startTime;
-    console.log(`[FRONTEND-TIMING] OPERATION COMPLETED: ${operation.toUpperCase()}`);
-    console.log(`[FRONTEND-TIMING] Duration: ${duration}ms`);
-    console.log(`[FRONTEND-TIMING] Operation: ${operation}`);
-    
-    if (context) {
-      console.log(`[FRONTEND-TIMING] Context:`, context);
-    }
+
+    FrontendLogger.emit(
+      LogLevel.DEBUG,
+      `Timing: ${operation}`,
+      LogCategory.PERFORMANCE,
+      context,
+      {
+        operation,
+        durationMs: duration,
+      },
+    );
   }
 
-  /**
-   * Sanitize form data to avoid logging sensitive information
-   */
-  private static sanitizeFormData(data: any): any {
-    if (typeof data !== 'object' || !data) return data;
-    
-    const sanitized = { ...data };
-    const sensitiveFields = ['password', 'token', 'secret', 'key'];
-    
-    Object.keys(sanitized).forEach(key => {
-      if (sensitiveFields.some(field => key.toLowerCase().includes(field))) {
-        sanitized[key] = '[REDACTED]';
-      }
-    });
-    
-    return sanitized;
-  }
-
-  /**
-   * Sanitize API data
-   */
-  private static sanitizeApiData(data: any): any {
-    return this.sanitizeFormData(data);
-  }
-
-  /**
-   * Get session info for debugging
-   */
   static getSessionInfo() {
+    if (typeof window === 'undefined') {
+      return {
+        sessionId: SESSION_ID,
+        sessionStartTime: SESSION_START,
+      };
+    }
+
     return {
-      sessionId: this.sessionId,
-      sessionStartTime: this.startTime,
-      sessionDuration: Date.now() - this.startTime,
+      sessionId: SESSION_ID,
+      sessionStartTime: SESSION_START,
+      sessionDuration: Date.now() - SESSION_START,
       url: window.location.href,
-      userAgent: navigator.userAgent,
-      timestamp: new Date().toISOString()
+      userAgent: window.navigator.userAgent,
+      timestamp: new Date().toISOString(),
     };
   }
 }
 
-// Export convenience methods
+// Export convenience bindings to preserve existing call sites
 export const logStepHeader = FrontendLogger.logStepHeader.bind(FrontendLogger);
 export const logUserAction = FrontendLogger.logUserAction.bind(FrontendLogger);
 export const logFormAction = FrontendLogger.logFormAction.bind(FrontendLogger);

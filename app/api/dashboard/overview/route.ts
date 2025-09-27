@@ -1,11 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import {
-  getFavoriteInfluencersForDashboard,
-  getSearchTelemetryForDashboard,
-} from '@/lib/db/queries/dashboard-queries';
-import { getListsForUser } from '@/lib/db/queries/list-queries';
-import { PlanValidator } from '@/lib/services/plan-validator';
+import { getDashboardOverview } from '@/lib/dashboard/overview';
 
 function errorResponse(error: unknown, status = 500) {
   console.error('[DASHBOARD_OVERVIEW_API]', error);
@@ -21,39 +16,9 @@ export async function GET() {
   }
 
   try {
-    const [favorites, lists, searchTelemetry, planStatus] = await Promise.all([
-      getFavoriteInfluencersForDashboard(userId, 10),
-      getListsForUser(userId),
-      getSearchTelemetryForDashboard(userId),
-      PlanValidator.getUserPlanStatus(userId),
-    ]);
+    const data = await getDashboardOverview(userId);
 
-    const recentLists = lists
-      .filter((list) => !list.isArchived)
-      .slice(0, 3)
-      .map((list) => ({
-        id: list.id,
-        name: list.name,
-        description: list.description,
-        creatorCount: list.creatorCount,
-        updatedAt: (list.updatedAt instanceof Date ? list.updatedAt : new Date(list.updatedAt)).toISOString(),
-        slug: list.slug ?? null,
-      }));
-
-    const searchLimit = planStatus?.planConfig.creatorsLimit ?? null;
-    const normalizedLimit = searchLimit === -1 ? null : searchLimit;
-
-    return NextResponse.json({
-      favorites,
-      recentLists,
-      metrics: {
-        averageSearchMs: searchTelemetry.averageDurationMs,
-        searchesLast30Days: searchTelemetry.totalJobs,
-        completedSearchesLast30Days: searchTelemetry.completedJobs,
-        searchLimit: normalizedLimit,
-        totalFavorites: favorites.length,
-      },
-    });
+    return NextResponse.json(data);
   } catch (error) {
     if ((error as Error).message === 'USER_NOT_FOUND') {
       return errorResponse('User record not found', 404);
