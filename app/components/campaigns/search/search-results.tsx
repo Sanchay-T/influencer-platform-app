@@ -105,7 +105,7 @@ function SearchResultsContent({
     };
 
     pollResults();
-  }, [jobId]);
+  }, [jobId, title]);
 
   const currentInfluencers = creators.slice(
     (currentPage - 1) * itemsPerPage,

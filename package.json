@@ -21,6 +21,7 @@
     "db:local:reset": "docker-compose down -v && docker-compose up -d",
     "db:local:setup": "./scripts/setup-local-db.sh",
     "db:local:test": "node scripts/test-local-db.js",
+    "db:reset:schema": "tsx scripts/reset-database-schema.ts",
     "db:seed:plans": "node scripts/seed-subscription-plans.js",
     "drop": "drizzle-kit drop",
     "test:tiktok-similar": "node run-tiktok-test.js",

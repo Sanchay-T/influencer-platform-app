@@ -1,3 +1,4 @@
+import '@/lib/config/load-env';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from './schema';
@@ -21,7 +22,38 @@ declare global {
   var __db: ReturnType<typeof drizzle> | undefined;
 }
 
-const connectionString = process.env.DATABASE_URL!;
+function resolveDatabaseUrl(): string {
+  if (process.env.DATABASE_URL) {
+    return process.env.DATABASE_URL;
+  }
+
+  try {
+    const dotenv = require('dotenv');
+    const candidates = ['.env.local', '.env.development', '.env'];
+    for (const path of candidates) {
+      const result = dotenv.config({ path });
+      if (result.parsed) {
+        for (const [key, value] of Object.entries(result.parsed)) {
+          if (process.env[key] === undefined) {
+            process.env[key] = value as string;
+          }
+        }
+        if (result.parsed.DATABASE_URL) {
+          return result.parsed.DATABASE_URL;
+        }
+      }
+    }
+  } catch {
+    // ignore, will throw below if still missing
+  }
+
+  throw new Error(
+    'DATABASE_URL environment variable is required but was not found. ' +
+    'Define it in your runtime environment or .env.local/.env.development.'
+  );
+}
+
+const connectionString = resolveDatabaseUrl();
 
 // Environment detection
 const isLocal = connectionString.includes('localhost') || connectionString.includes('127.0.0.1');

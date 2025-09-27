@@ -1,3 +1,4 @@
+import '@/lib/config/load-env';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { createUser } from '@/lib/db/queries/user-queries';
@@ -9,6 +10,9 @@ import { isAdminUser } from '@/lib/auth/admin-utils';
  */
 export async function POST(req: Request) {
   try {
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return NextResponse.json({ error: 'Test user creation disabled during build' }, { status: 503 });
+    }
     // Check admin authorization
     if (!(await isAdminUser())) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -84,6 +88,9 @@ export async function POST(req: Request) {
  */
 export async function GET(req: Request) {
   try {
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return NextResponse.json({ testUsers: [] });
+    }
     if (!(await isAdminUser())) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

@@ -226,7 +226,7 @@ const SearchResults = ({ searchData }) => {
 
   useEffect(() => {
     setSelectedCreators({});
-  }, [searchData?.jobId]);
+  }, [searchData?.jobId, initialCreators, platformNormalized]);
 
   // Reset only when switching to a different run (jobId changes)
   useEffect(() => {
@@ -258,7 +258,7 @@ const SearchResults = ({ searchData }) => {
       setIsLoading(true);
       setIsFetching(true);
     }
-  }, [searchData?.jobId]);
+  }, [searchData?.jobId, initialCreators, platformNormalized]);
 
   // Track processing flag separately so we don't reset pagination on progress updates
   useEffect(() => {

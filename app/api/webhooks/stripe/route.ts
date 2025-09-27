@@ -3,6 +3,9 @@ import { headers } from 'next/headers';
 import Stripe from 'stripe';
 import { getUserProfile, updateUserProfile, getUserByStripeCustomerId } from '@/lib/db/queries/user-queries';
 import BillingLogger from '@/lib/loggers/billing-logger';
+import { db } from '@/lib/db';
+import { subscriptionPlans } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-06-20',
@@ -10,24 +13,63 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
-// Plan configuration mapping
-const PLAN_CONFIGS = {
-  'glow_up': {
-    campaignsLimit: 3,
-    creatorsLimit: 1000,
-    features: { analytics: 'basic', support: 'email', api: false }
-  },
-  'viral_surge': {
-    campaignsLimit: 10,
-    creatorsLimit: 10000,
-    features: { analytics: 'advanced', support: 'priority', api: false }
-  },
-  'fame_flex': {
-    campaignsLimit: -1, // Unlimited
-    creatorsLimit: -1, // Unlimited
-    features: { analytics: 'advanced', support: 'priority', api: true }
-  }
+type PlanConfig = {
+  campaignsLimit: number;
+  creatorsLimit: number;
+  features: Record<string, unknown>;
 };
+
+const planConfigCache = new Map<string, PlanConfig>();
+let cachedPlanKeys: string[] | null = null;
+
+async function fetchAvailablePlanKeys(): Promise<string[]> {
+  if (cachedPlanKeys) return cachedPlanKeys;
+  try {
+    const rows = await db
+      .select({ planKey: subscriptionPlans.planKey })
+      .from(subscriptionPlans);
+    cachedPlanKeys = rows.map((row) => row.planKey);
+    return cachedPlanKeys;
+  } catch (error) {
+    console.error('[STRIPE-WEBHOOK] Failed to fetch plan keys:', error);
+    return cachedPlanKeys ?? [];
+  }
+}
+
+async function resolvePlanConfig(planKey: string | undefined | null): Promise<PlanConfig | null> {
+  if (!planKey) return null;
+  if (planConfigCache.has(planKey)) {
+    return planConfigCache.get(planKey)!;
+  }
+
+  try {
+    const plan = await db.query.subscriptionPlans.findFirst({
+      where: eq(subscriptionPlans.planKey, planKey),
+    });
+
+    if (!plan) {
+      // Refresh known plan keys so logging stays accurate
+      cachedPlanKeys = null;
+      await fetchAvailablePlanKeys();
+      return null;
+    }
+
+    const config: PlanConfig = {
+      campaignsLimit: plan.campaignsLimit ?? 0,
+      creatorsLimit: plan.creatorsLimit ?? 0,
+      features:
+        (plan.features && typeof plan.features === 'object'
+          ? (plan.features as Record<string, unknown>)
+          : {}) || {},
+    };
+
+    planConfigCache.set(planKey, config);
+    return config;
+  } catch (error) {
+    console.error('[STRIPE-WEBHOOK] Failed to resolve plan config:', error);
+    return null;
+  }
+}
 
 export async function POST(req: NextRequest) {
   const requestId = BillingLogger.generateRequestId();
@@ -231,7 +273,7 @@ async function handleCheckoutCompleted(event: Stripe.Event, requestId: string) {
   }
 
   // Update user profile with initial subscription data
-  const planConfig = PLAN_CONFIGS[planId as keyof typeof PLAN_CONFIGS];
+  const planConfig = await resolvePlanConfig(planId);
   if (!planConfig) {
     await BillingLogger.logError(
       'PLAN_CONFIG_ERROR',
@@ -239,7 +281,7 @@ async function handleCheckoutCompleted(event: Stripe.Event, requestId: string) {
       userId,
       {
         planId,
-        availablePlans: Object.keys(PLAN_CONFIGS),
+        availablePlans: await fetchAvailablePlanKeys(),
         recoverable: false
       },
       requestId
@@ -468,7 +510,7 @@ async function handleSubscriptionUpdated(event: Stripe.Event, requestId: string)
 
   // Handle plan changes
   if (newPlanId && newPlanId !== userProfile.currentPlan) {
-    const planConfig = PLAN_CONFIGS[newPlanId as keyof typeof PLAN_CONFIGS];
+    const planConfig = await resolvePlanConfig(newPlanId);
     if (planConfig) {
       updateData.currentPlan = newPlanId;
       updateData.planCampaignsLimit = planConfig.campaignsLimit;
@@ -484,6 +526,18 @@ async function handleSubscriptionUpdated(event: Stripe.Event, requestId: string)
           toPlan: newPlanId,
           reason: 'subscription_updated',
           effective: new Date().toISOString()
+        },
+        requestId
+      );
+    } else {
+      await BillingLogger.logError(
+        'PLAN_CONFIG_ERROR',
+        'Unable to resolve plan configuration during subscription update',
+        userProfile.userId,
+        {
+          requestedPlan: newPlanId,
+          availablePlans: await fetchAvailablePlanKeys(),
+          recoverable: true
         },
         requestId
       );

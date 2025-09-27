@@ -19,76 +19,114 @@ import { backgroundJobLogger, jobLog, JobState, JobProgress } from '@/lib/loggin
 import { logger } from '@/lib/logging'
 import { LogLevel, LogCategory } from '@/lib/logging/types'
 
+const enableFileLogging = process.env.ENABLE_QSTASH_FILE_LOGS === 'true';
 // Inline API logging function (Vercel-compatible)
-const fs = require('fs');
-const path = require('path');
+const fs = enableFileLogging ? require('fs') : null;
+const path = enableFileLogging ? require('path') : null;
+
+function ensureLogDirectory(...segments: string[]): string | null {
+  if (!enableFileLogging || !fs || !path) {
+    return null;
+  }
+  try {
+    const dir = path.join(process.cwd(), ...segments);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    return dir;
+  } catch (error) {
+    logger.warn('Failed to ensure log directory', {
+      error: error instanceof Error ? error.message : String(error),
+      segments,
+    }, LogCategory.SYSTEM);
+    return null;
+  }
+}
+
+function appendJsonLine(segments: string[], filename: string, payload: Record<string, any>) {
+  if (!enableFileLogging || !fs || !path) {
+    return;
+  }
+  const dir = ensureLogDirectory(...segments);
+  if (!dir) return;
+  try {
+    const file = path.join(dir, filename);
+    fs.appendFileSync(file, JSON.stringify(payload) + '\n');
+  } catch (error) {
+    logger.warn('Failed to append run log', {
+      filename,
+      error: error instanceof Error ? error.message : String(error),
+    }, LogCategory.SYSTEM);
+  }
+}
+
+function writeJsonFile(segments: string[], filename: string, payload: unknown, meta?: Record<string, any>) {
+  if (!enableFileLogging || !fs || !path) {
+    return false;
+  }
+  const dir = ensureLogDirectory(...segments);
+  if (!dir) return false;
+  try {
+    fs.writeFileSync(path.join(dir, filename), JSON.stringify(payload, null, 2));
+    return true;
+  } catch (error) {
+    logger.warn('Failed to write debug artifact', {
+      filename,
+      error: error instanceof Error ? error.message : String(error),
+      ...(meta || {}),
+    }, LogCategory.SYSTEM);
+    return false;
+  }
+}
 
 // Lightweight per-run file logger for after-the-fact analysis
 function appendRunLog(jobId: string, entry: Record<string, any>) {
-  try {
-    const dir = path.join(process.cwd(), 'logs', 'runs', 'tiktok');
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    const file = path.join(dir, `${jobId}.jsonl`);
-    const payload = {
-      ts: new Date().toISOString(),
-      jobId,
-      ...entry,
-    };
-    fs.appendFileSync(file, JSON.stringify(payload) + '\n');
-  } catch (err) {
-    // Do not throw from logger
+  if (!enableFileLogging) {
+    return;
   }
+  appendJsonLine(['logs', 'runs', 'tiktok'], `${jobId}.jsonl`, {
+    ts: new Date().toISOString(),
+    jobId,
+    ...entry,
+  });
 }
 
 // Initialize image cache
 const imageCache = new ImageCache();
 
 function logApiCall(platform: string, searchType: string, request: any, response: any, jobId?: string) {
-  try {
-    // Ensure directories exist
-    const logDir = path.join(process.cwd(), 'logs/api-raw', searchType);
-    if (!fs.existsSync(logDir)) {
-      fs.mkdirSync(logDir, { recursive: true });
-    }
-    
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `${platform}-${timestamp}.json`;
-    const filepath = path.join(logDir, filename);
-    
-    const logData = {
+  if (!enableFileLogging) {
+    logger.debug('Skipping API raw data file logging (disabled)', { jobId, platform, searchType }, LogCategory.API);
+    return false;
+  }
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const filename = `${platform}-${timestamp}.json`;
+  const success = writeJsonFile(
+    ['logs', 'api-raw', searchType],
+    filename,
+    {
       timestamp: new Date().toISOString(),
-      platform: platform,
-      searchType: searchType,
-      request: request,
-      response: response
-    };
-    
-    fs.writeFileSync(filepath, JSON.stringify(logData, null, 2));
-    
-    // Use structured logging instead of verbose console logs
+      platform,
+      searchType,
+      request,
+      response,
+    },
+    { jobId, platform, searchType }
+  );
+
+  if (success) {
     logger.debug('API data cached to file', {
       jobId,
       platform,
       searchType,
-      filepath: filename, // Only filename for cleaner logs
+      filepath: filename,
       requestSize: JSON.stringify(request).length,
       responseSize: JSON.stringify(response).length,
-      metadata: {
-        fullPath: filepath,
-        cacheOperation: 'api-raw-data'
-      }
     }, LogCategory.API);
-    
-    return true;
-  } catch (error) {
-    logger.error('Failed to cache API data', error instanceof Error ? error : new Error(String(error)), {
-      jobId,
-      platform,
-      searchType,
-      metadata: { operation: 'api-data-cache' }
-    }, LogCategory.API);
-    return false;
   }
+
+  return success;
 }
 
 /**
@@ -752,9 +790,9 @@ export async function POST(req: Request) {
         // Extract reels from the search results
         const allReels = [];
         if (reelsData?.reels_serp_modules && reelsData.reels_serp_modules.length > 0) {
-          for (const module of reelsData.reels_serp_modules) {
-            if (module.module_type === 'clips' && module.clips) {
-              allReels.push(...module.clips);
+          for (const moduleEntry of reelsData.reels_serp_modules) {
+            if (moduleEntry.module_type === 'clips' && moduleEntry.clips) {
+              allReels.push(...moduleEntry.clips);
             }
           }
         }
@@ -977,16 +1015,13 @@ export async function POST(req: Request) {
           }))
         };
         
-        try {
-          const fs = require('fs');
-          const path = require('path');
-          const logsDir = path.join(process.cwd(), 'logs', 'creator-debug');
-          fs.mkdirSync(logsDir, { recursive: true });
-          const filename = `stage1-${job.id}-call${job.processedRuns + 1}-${Date.now()}.json`;
-          fs.writeFileSync(path.join(logsDir, filename), JSON.stringify(stage1Data, null, 2));
-          console.log(`📁 [STAGE1-DEBUG] Saved stage 1 data to: logs/creator-debug/${filename}`);
-        } catch (err) {
-          console.log('⚠️ [STAGE1-DEBUG] Failed to save debug file:', err.message);
+        const stage1Filename = `stage1-${job.id}-call${job.processedRuns + 1}-${Date.now()}.json`;
+        if (writeJsonFile(['logs', 'creator-debug'], stage1Filename, stage1Data, { stage: 'stage1', jobId: job.id })) {
+          logger.debug('Stage 1 debug artifact saved', {
+            stage: 'stage1',
+            jobId: job.id,
+            filename: stage1Filename,
+          }, LogCategory.API);
         }
         
         console.log('📊 [RAPIDAPI-INSTAGRAM] Quality creators found:', uniqueCreators.size);
@@ -1232,16 +1267,14 @@ export async function POST(req: Request) {
           } : null).filter(Boolean)
         };
         
-        try {
-          const fs = require('fs');
-          const path = require('path');
-          const logsDir = path.join(process.cwd(), 'logs', 'creator-debug');
-          fs.mkdirSync(logsDir, { recursive: true });
-          const filename = `stage2-${job.id}-call${job.processedRuns + 1}-batch${batchIndex + 1}-${Date.now()}.json`;
-          fs.writeFileSync(path.join(logsDir, filename), JSON.stringify(stage2Data, null, 2));
-          console.log(`📁 [STAGE2-DEBUG] Saved stage 2 data to: logs/creator-debug/${filename}`);
-        } catch (err) {
-          console.log('⚠️ [STAGE2-DEBUG] Failed to save debug file:', err.message);
+        const stage2Filename = `stage2-${job.id}-call${job.processedRuns + 1}-batch${batchIndex + 1}-${Date.now()}.json`;
+        if (writeJsonFile(['logs', 'creator-debug'], stage2Filename, stage2Data, { stage: 'stage2', jobId: job.id, batchIndex })) {
+          logger.debug('Stage 2 debug artifact saved', {
+            stage: 'stage2',
+            jobId: job.id,
+            filename: stage2Filename,
+            batchIndex,
+          }, LogCategory.API);
         }
         
         // Update progress after batch completion
@@ -1332,15 +1365,13 @@ export async function POST(req: Request) {
               usernames: allAccumulatedCreators.map(c => c.creator?.uniqueId || c.creator?.username || 'unknown')
             };
             
-            try {
-              const fs = require('fs');
-              const path = require('path');
-              const logsDir = path.join(process.cwd(), 'logs', 'creator-debug');
-              const filename = `accumulation-${job.id}-call${job.processedRuns + 1}-${Date.now()}.json`;
-              fs.writeFileSync(path.join(logsDir, filename), JSON.stringify(accumulationDebug, null, 2));
-              console.log(`📁 [ACCUMULATION-DEBUG] Saved accumulation tracking to: logs/creator-debug/${filename}`);
-            } catch (err) {
-              console.log('⚠️ [ACCUMULATION-DEBUG] Failed to save debug file:', err.message);
+            const accumulationFilename = `accumulation-${job.id}-call${job.processedRuns + 1}-${Date.now()}.json`;
+            if (writeJsonFile(['logs', 'creator-debug'], accumulationFilename, accumulationDebug, { stage: 'accumulation', jobId: job.id })) {
+              logger.debug('Accumulation debug artifact saved', {
+                stage: 'accumulation',
+                jobId: job.id,
+                filename: accumulationFilename,
+              }, LogCategory.API);
             }
           } catch (intermediateError) {
             console.log('⚠️ [INTERMEDIATE-SAVE] Failed to save intermediate results:', intermediateError.message);
@@ -1381,16 +1412,13 @@ export async function POST(req: Request) {
           }))
         };
         
-        try {
-          const fs = require('fs');
-          const path = require('path');
-          const logsDir = path.join(process.cwd(), 'logs', 'creator-debug');
-          fs.mkdirSync(logsDir, { recursive: true });
-          const filename = `stage3-final-${job.id}-call${job.processedRuns + 1}-${Date.now()}.json`;
-          fs.writeFileSync(path.join(logsDir, filename), JSON.stringify(stage3Data, null, 2));
-          console.log(`📁 [STAGE3-DEBUG] Saved final stage data to: logs/creator-debug/${filename}`);
-        } catch (err) {
-          console.log('⚠️ [STAGE3-DEBUG] Failed to save debug file:', err.message);
+        const stage3Filename = `stage3-final-${job.id}-call${job.processedRuns + 1}-${Date.now()}.json`;
+        if (writeJsonFile(['logs', 'creator-debug'], stage3Filename, stage3Data, { stage: 'stage3', jobId: job.id })) {
+          logger.debug('Stage 3 debug artifact saved', {
+            stage: 'stage3',
+            jobId: job.id,
+            filename: stage3Filename,
+          }, LogCategory.API);
         }
         
         // Simple logging - just request and response
@@ -1433,16 +1461,13 @@ export async function POST(req: Request) {
           }))
         };
         
-        try {
-          const fs = require('fs');
-          const path = require('path');
-          const logsDir = path.join(process.cwd(), 'logs', 'creator-debug');
-          fs.mkdirSync(logsDir, { recursive: true });
-          const filename = `stage4-database-${job.id}-call${job.processedRuns + 1}-${Date.now()}.json`;
-          fs.writeFileSync(path.join(logsDir, filename), JSON.stringify(stage4Data, null, 2));
-          console.log(`📁 [STAGE4-DEBUG] Saved database stage data to: logs/creator-debug/${filename}`);
-        } catch (err) {
-          console.log('⚠️ [STAGE4-DEBUG] Failed to save debug file:', err.message);
+        const stage4Filename = `stage4-database-${job.id}-call${job.processedRuns + 1}-${Date.now()}.json`;
+        if (writeJsonFile(['logs', 'creator-debug'], stage4Filename, stage4Data, { stage: 'stage4', jobId: job.id })) {
+          logger.debug('Stage 4 debug artifact saved', {
+            stage: 'stage4',
+            jobId: job.id,
+            filename: stage4Filename,
+          }, LogCategory.API);
         }
         
         // Update job progress and stats

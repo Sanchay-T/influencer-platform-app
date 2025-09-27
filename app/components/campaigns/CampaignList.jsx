@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import CampaignCard from "./campaign-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
@@ -45,7 +45,7 @@ export default function CampaignList() {
   const [query, setQuery] = useState('');
   const [sortBy, setSortBy] = useState('newest'); // newest | updated | alpha
 
-  const fetchCampaigns = async (page = 1, retry = false) => {
+  const fetchCampaigns = useCallback(async (page = 1, retry = false) => {
     try {
       setLoading(true);
       setError(null);
@@ -88,11 +88,11 @@ export default function CampaignList() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pagination.limit, retryCount, totalRetries]);
 
   useEffect(() => {
     fetchCampaigns();
-  }, []);
+  }, [fetchCampaigns]);
 
   const handlePageChange = (page) => {
     fetchCampaigns(page);

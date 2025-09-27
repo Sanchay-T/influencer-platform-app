@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -123,25 +123,7 @@ const SearchResults = () => {
   const [selectedCreators, setSelectedCreators] = useState({});
   const [emailOverlayDismissed, setEmailOverlayDismissed] = useState(false);
 
-  useEffect(() => {
-    console.log('=== INICIO DE BÚSQUEDA ===');
-    console.log('Datos iniciales:', {
-      jobId: searchData.jobId,
-      scraperLimit: searchData.scraperLimit,
-      keywords: searchData.keywords
-    });
-
-    if (!searchData.jobId) {
-      console.log('No hay jobId, iniciando búsqueda...');
-      startSearch();
-      return;
-    }
-
-    console.log('Iniciando polling con jobId:', searchData.jobId);
-    pollResults();
-  }, [searchData.jobId]);
-
-  const pollResults = async () => {
+  const pollResults = useCallback(async () => {
     try {
       console.log('=== POLLING API ===');
       console.log('Consultando jobId:', searchData.jobId);
@@ -173,16 +155,18 @@ const SearchResults = () => {
         setLoading(false);
       } else {
         console.log('Búsqueda en progreso:', data.status);
-        setTimeout(pollResults, 30000);
+        setTimeout(() => {
+          pollResults();
+        }, 30000);
       }
     } catch (error) {
       console.error('Error en polling:', error);
       setError('Error al obtener resultados');
       setLoading(false);
     }
-  };
+  }, [searchData.jobId]);
 
-  const startSearch = async () => {
+  const startSearch = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -208,7 +192,25 @@ const SearchResults = () => {
       setError('Unable to start search');
       setLoading(false);
     }
-  };
+  }, [searchData.keywords, searchData.scraperLimit]);
+
+  useEffect(() => {
+    console.log('=== INICIO DE BÚSQUEDA ===');
+    console.log('Datos iniciales:', {
+      jobId: searchData.jobId,
+      scraperLimit: searchData.scraperLimit,
+      keywords: searchData.keywords
+    });
+
+    if (!searchData.jobId) {
+      console.log('No hay jobId, iniciando búsqueda...');
+      startSearch();
+      return;
+    }
+
+    console.log('Iniciando polling con jobId:', searchData.jobId);
+    pollResults();
+  }, [searchData.jobId, startSearch, pollResults]);
 
   const creators = useMemo(() => {
     const deduped = dedupeCreators(results);

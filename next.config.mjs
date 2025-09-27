@@ -1,5 +1,9 @@
 import { withSentryConfig } from "@sentry/nextjs";
 import path from 'path'
+import dotenv from 'dotenv';
+
+dotenv.config({ path: '.env.local' });
+dotenv.config({ path: '.env.development' });
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {

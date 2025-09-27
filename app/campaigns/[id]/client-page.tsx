@@ -161,8 +161,6 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
   }, [jobs])
 
   const selectedJob = useMemo(() => {
-    const startTime = performance.now()
-
     let job: ScrapingJob | null = null
     if (!selectedJobId) {
       job = sortedJobs[0] ?? null
@@ -175,7 +173,7 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
     // Job selection completed
 
     return job
-  }, [selectedJobId, sortedJobs, logEvent])
+  }, [selectedJobId, sortedJobs])
 
   useEffect(() => {
     const urlJobId = searchParams?.get('jobId')
@@ -356,6 +354,40 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
     },
     [campaign, router]
   )
+
+  const rawCreators = useMemo(() => {
+    if (!selectedJob?.results || selectedJob.results.length === 0) {
+      return []
+    }
+
+    return selectedJob.results.flatMap(result =>
+      Array.isArray(result?.creators) ? result.creators : []
+    )
+  }, [selectedJob])
+
+  const processedCreators = useMemo(() => {
+    if (!selectedJob || rawCreators.length === 0) {
+      return []
+    }
+
+    const cacheKey = `${selectedJob.id}-${rawCreators.length}`
+
+    if (dedupeCache.has(cacheKey)) {
+      return dedupeCache.get(cacheKey)!
+    }
+
+    const platformHint = selectedJob.platform?.toLowerCase() || 'tiktok'
+    const result = dedupeCreators(rawCreators, { platformHint })
+
+    dedupeCache.set(cacheKey, result)
+
+    if (dedupeCache.size > 50) {
+      const firstKey = dedupeCache.keys().next().value
+      dedupeCache.delete(firstKey)
+    }
+
+    return result
+  }, [rawCreators, selectedJob])
 
   if (!campaign) {
     return (
@@ -599,8 +631,6 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
   )
 
   const renderResults = () => {
-    const renderStart = performance.now()
-
     // Rendering results for selected job
 
     if (!selectedJob) {
@@ -649,37 +679,6 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
         </Card>
       )
     }
-
-    const rawCreators = selectedJob.results?.flatMap(result =>
-      Array.isArray(result?.creators) ? result.creators : []
-    ) ?? []
-
-    // Pre-process creators to eliminate stale data display
-    const processedCreators = useMemo(() => {
-      if (rawCreators.length === 0) return []
-
-      // Create cache key based on job ID and raw creators length
-      const cacheKey = `${selectedJob.id}-${rawCreators.length}`
-
-      // Check cache first
-      if (dedupeCache.has(cacheKey)) {
-        return dedupeCache.get(cacheKey)!
-      }
-
-      const platformHint = selectedJob.platform?.toLowerCase() || 'tiktok'
-      const result = dedupeCreators(rawCreators, { platformHint })
-
-      // Cache the result
-      dedupeCache.set(cacheKey, result)
-
-      // Limit cache size to prevent memory leaks
-      if (dedupeCache.size > 50) {
-        const firstKey = dedupeCache.keys().next().value
-        dedupeCache.delete(firstKey)
-      }
-
-      return result
-    }, [rawCreators, selectedJob.platform, selectedJob.id])
 
     if (campaign.searchType === 'keyword') {
       const searchData = {

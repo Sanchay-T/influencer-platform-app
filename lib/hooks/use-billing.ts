@@ -315,9 +315,17 @@ export function useBilling(): BillingStatus {
 /**
  * Hook for checking specific plan access
  */
-export function usePlanAccess(requiredPlan: string) {
+export function usePlanAccess(requiredPlan?: string) {
   const { hasPlan, isLoaded } = useBilling()
   
+  if (!requiredPlan) {
+    return {
+      hasAccess: true,
+      isLoaded,
+      needsUpgrade: false
+    }
+  }
+
   return {
     hasAccess: hasPlan(requiredPlan),
     isLoaded,
@@ -328,9 +336,18 @@ export function usePlanAccess(requiredPlan: string) {
 /**
  * Hook for checking specific feature access
  */
-export function useFeatureAccess(requiredFeature: string) {
+export function useFeatureAccess(requiredFeature?: string) {
   const { canAccessFeature, isLoaded, currentPlan } = useBilling()
   
+  if (!requiredFeature) {
+    return {
+      hasAccess: true,
+      isLoaded,
+      currentPlan,
+      needsUpgrade: false
+    }
+  }
+
   return {
     hasAccess: canAccessFeature(requiredFeature),
     isLoaded,

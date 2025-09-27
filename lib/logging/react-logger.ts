@@ -284,7 +284,7 @@ export function usePerformanceLogger(componentName: string) {
       
       throw error;
     }
-  }, [componentName, createContext]);
+  }, [createContext]);
 
   const trackSyncOperation = useCallback(<T>(
     operationName: string,
