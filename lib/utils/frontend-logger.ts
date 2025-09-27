@@ -30,15 +30,15 @@ export class FrontendLogger {
     const timestamp = new Date().toISOString();
     const sessionTime = Date.now() - this.startTime;
     
-    console.log('🚀🚀🚀 [FRONTEND] ===============================');
-    console.log(`🚀🚀🚀 [FRONTEND] ${step.toUpperCase()}: ${description.toUpperCase()}`);
-    console.log('🚀🚀🚀 [FRONTEND] ===============================');
-    console.log(`📅 [FRONTEND] Timestamp: ${timestamp}`);
-    console.log(`⏱️ [FRONTEND] Session time: ${sessionTime}ms`);
-    console.log(`🆔 [FRONTEND] Session ID: ${this.sessionId}`);
+    console.log('[FRONTEND] ===============================');
+    console.log(`[FRONTEND] ${step.toUpperCase()}: ${description.toUpperCase()}`);
+    console.log('[FRONTEND] ===============================');
+    console.log(`[FRONTEND] Timestamp: ${timestamp}`);
+    console.log(`[FRONTEND] Session time: ${sessionTime}ms`);
+    console.log(`[FRONTEND] Session ID: ${this.sessionId}`);
     
     if (context) {
-      console.log(`📊 [FRONTEND] Context:`, {
+      console.log(`[FRONTEND] Context:`, {
         userId: context.userId || 'N/A',
         userEmail: context.userEmail || 'N/A',
         step: context.step || step,
@@ -53,12 +53,12 @@ export class FrontendLogger {
   static logUserAction(action: string, details: any, context?: LogContext) {
     const timestamp = new Date().toISOString();
     
-    console.log(`👤👤👤 [FRONTEND-USER] USER ACTION: ${action.toUpperCase()}`);
-    console.log(`👤 [FRONTEND-USER] Timestamp: ${timestamp}`);
-    console.log(`👤 [FRONTEND-USER] Action details:`, details);
+    console.log(`[FRONTEND-USER] USER ACTION: ${action.toUpperCase()}`);
+    console.log(`[FRONTEND-USER] Timestamp: ${timestamp}`);
+    console.log(`[FRONTEND-USER] Action details:`, details);
     
     if (context) {
-      console.log(`👤 [FRONTEND-USER] Context:`, context);
+      console.log(`[FRONTEND-USER] Context:`, context);
     }
   }
 
@@ -66,9 +66,9 @@ export class FrontendLogger {
    * Log form interactions
    */
   static logFormAction(formName: string, action: 'submit' | 'validation' | 'error', data: any) {
-    console.log(`📝📝📝 [FRONTEND-FORM] FORM ${action.toUpperCase()}: ${formName}`);
-    console.log(`📝 [FRONTEND-FORM] Timestamp: ${new Date().toISOString()}`);
-    console.log(`📝 [FRONTEND-FORM] Form data:`, {
+    console.log(`[FRONTEND-FORM] FORM ${action.toUpperCase()}: ${formName}`);
+    console.log(`[FRONTEND-FORM] Timestamp: ${new Date().toISOString()}`);
+    console.log(`[FRONTEND-FORM] Form data:`, {
       formName,
       action,
       data: this.sanitizeFormData(data),
@@ -83,18 +83,18 @@ export class FrontendLogger {
     const startTime = Date.now();
     const requestId = `api_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     
-    console.log(`🌐🌐🌐 [FRONTEND-API] STARTING API CALL`);
-    console.log(`🌐 [FRONTEND-API] URL: ${url}`);
-    console.log(`🌐 [FRONTEND-API] Method: ${options.method || 'GET'}`);
-    console.log(`🌐 [FRONTEND-API] Request ID: ${requestId}`);
-    console.log(`🌐 [FRONTEND-API] Timestamp: ${new Date().toISOString()}`);
+    console.log(`[FRONTEND-API] STARTING API CALL`);
+    console.log(`[FRONTEND-API] URL: ${url}`);
+    console.log(`[FRONTEND-API] Method: ${options.method || 'GET'}`);
+    console.log(`[FRONTEND-API] Request ID: ${requestId}`);
+    console.log(`[FRONTEND-API] Timestamp: ${new Date().toISOString()}`);
     
     if (options.body) {
-      console.log(`🌐 [FRONTEND-API] Request body:`, this.sanitizeApiData(options.body));
+      console.log(`[FRONTEND-API] Request body:`, this.sanitizeApiData(options.body));
     }
     
     if (context) {
-      console.log(`🌐 [FRONTEND-API] Context:`, context);
+      console.log(`[FRONTEND-API] Context:`, context);
     }
 
     try {
@@ -111,17 +111,17 @@ export class FrontendLogger {
       const responseData = await response.json();
 
       if (response.ok) {
-        console.log(`✅✅✅ [FRONTEND-API] API CALL SUCCESSFUL`);
-        console.log(`✅ [FRONTEND-API] Status: ${response.status} ${response.statusText}`);
-        console.log(`✅ [FRONTEND-API] Duration: ${duration}ms`);
-        console.log(`✅ [FRONTEND-API] Request ID: ${requestId}`);
-        console.log(`✅ [FRONTEND-API] Response:`, responseData);
+        console.log(`[FRONTEND-API][OK] API CALL SUCCESSFUL`);
+        console.log(`[FRONTEND-API][OK] Status: ${response.status} ${response.statusText}`);
+        console.log(`[FRONTEND-API][OK] Duration: ${duration}ms`);
+        console.log(`[FRONTEND-API][OK] Request ID: ${requestId}`);
+        console.log(`[FRONTEND-API][OK] Response:`, responseData);
       } else {
-        console.error(`❌❌❌ [FRONTEND-API] API CALL FAILED`);
-        console.error(`❌ [FRONTEND-API] Status: ${response.status} ${response.statusText}`);
-        console.error(`❌ [FRONTEND-API] Duration: ${duration}ms`);
-        console.error(`❌ [FRONTEND-API] Request ID: ${requestId}`);
-        console.error(`❌ [FRONTEND-API] Error response:`, responseData);
+        console.error(`[FRONTEND-API][ERROR] API CALL FAILED`);
+        console.error(`[FRONTEND-API][ERROR] Status: ${response.status} ${response.statusText}`);
+        console.error(`[FRONTEND-API][ERROR] Duration: ${duration}ms`);
+        console.error(`[FRONTEND-API][ERROR] Request ID: ${requestId}`);
+        console.error(`[FRONTEND-API][ERROR] Error response:`, responseData);
       }
 
       // Return a lightweight response-like object to avoid spreading native Response
@@ -143,10 +143,10 @@ export class FrontendLogger {
     } catch (error) {
       const duration = Date.now() - startTime;
       
-      console.error(`💥💥💥 [FRONTEND-API] API CALL EXCEPTION`);
-      console.error(`💥 [FRONTEND-API] Duration: ${duration}ms`);
-      console.error(`💥 [FRONTEND-API] Request ID: ${requestId}`);
-      console.error(`💥 [FRONTEND-API] Error:`, error);
+      console.error(`[FRONTEND-API][EXCEPTION] API CALL EXCEPTION`);
+      console.error(`[FRONTEND-API][EXCEPTION] Duration: ${duration}ms`);
+      console.error(`[FRONTEND-API][EXCEPTION] Request ID: ${requestId}`);
+      console.error(`[FRONTEND-API][EXCEPTION] Error:`, error);
       
       throw error;
     }
@@ -156,14 +156,14 @@ export class FrontendLogger {
    * Log navigation actions
    */
   static logNavigation(from: string, to: string, reason: string, context?: LogContext) {
-    console.log(`🧭🧭🧭 [FRONTEND-NAV] NAVIGATION: ${reason.toUpperCase()}`);
-    console.log(`🧭 [FRONTEND-NAV] From: ${from}`);
-    console.log(`🧭 [FRONTEND-NAV] To: ${to}`);
-    console.log(`🧭 [FRONTEND-NAV] Reason: ${reason}`);
-    console.log(`🧭 [FRONTEND-NAV] Timestamp: ${new Date().toISOString()}`);
+    console.log(`[FRONTEND-NAV] NAVIGATION: ${reason.toUpperCase()}`);
+    console.log(`[FRONTEND-NAV] From: ${from}`);
+    console.log(`[FRONTEND-NAV] To: ${to}`);
+    console.log(`[FRONTEND-NAV] Reason: ${reason}`);
+    console.log(`[FRONTEND-NAV] Timestamp: ${new Date().toISOString()}`);
     
     if (context) {
-      console.log(`🧭 [FRONTEND-NAV] Context:`, context);
+      console.log(`[FRONTEND-NAV] Context:`, context);
     }
   }
 
@@ -171,9 +171,9 @@ export class FrontendLogger {
    * Log authentication events
    */
   static logAuth(event: 'login' | 'logout' | 'session_check' | 'user_loaded', data: any) {
-    console.log(`🔐🔐🔐 [FRONTEND-AUTH] AUTH EVENT: ${event.toUpperCase()}`);
-    console.log(`🔐 [FRONTEND-AUTH] Timestamp: ${new Date().toISOString()}`);
-    console.log(`🔐 [FRONTEND-AUTH] Event data:`, {
+    console.log(`[FRONTEND-AUTH] AUTH EVENT: ${event.toUpperCase()}`);
+    console.log(`[FRONTEND-AUTH] Timestamp: ${new Date().toISOString()}`);
+    console.log(`[FRONTEND-AUTH] Event data:`, {
       event,
       userId: data.userId || 'N/A',
       userEmail: data.userEmail || 'N/A',
@@ -187,12 +187,12 @@ export class FrontendLogger {
    * Log success states
    */
   static logSuccess(operation: string, result: any, context?: LogContext) {
-    console.log(`🎉🎉🎉 [FRONTEND-SUCCESS] SUCCESS: ${operation.toUpperCase()}`);
-    console.log(`🎉 [FRONTEND-SUCCESS] Timestamp: ${new Date().toISOString()}`);
-    console.log(`🎉 [FRONTEND-SUCCESS] Result:`, result);
+    console.log(`[FRONTEND-SUCCESS] SUCCESS: ${operation.toUpperCase()}`);
+    console.log(`[FRONTEND-SUCCESS] Timestamp: ${new Date().toISOString()}`);
+    console.log(`[FRONTEND-SUCCESS] Result:`, result);
     
     if (context) {
-      console.log(`🎉 [FRONTEND-SUCCESS] Context:`, context);
+      console.log(`[FRONTEND-SUCCESS] Context:`, context);
     }
   }
 
@@ -200,16 +200,16 @@ export class FrontendLogger {
    * Log error states
    */
   static logError(operation: string, error: any, context?: LogContext) {
-    console.error(`💥💥💥 [FRONTEND-ERROR] ERROR IN: ${operation.toUpperCase()}`);
-    console.error(`💥 [FRONTEND-ERROR] Timestamp: ${new Date().toISOString()}`);
-    console.error(`💥 [FRONTEND-ERROR] Error:`, {
+    console.error(`[FRONTEND-ERROR] ERROR IN: ${operation.toUpperCase()}`);
+    console.error(`[FRONTEND-ERROR] Timestamp: ${new Date().toISOString()}`);
+    console.error(`[FRONTEND-ERROR] Error:`, {
       message: error.message || error,
       stack: error.stack,
       name: error.name
     });
     
     if (context) {
-      console.error(`💥 [FRONTEND-ERROR] Context:`, context);
+      console.error(`[FRONTEND-ERROR] Context:`, context);
     }
   }
 
@@ -217,9 +217,9 @@ export class FrontendLogger {
    * Log email/notification events
    */
   static logEmailEvent(type: 'scheduled' | 'sent' | 'failed', emailType: string, details: any) {
-    console.log(`📧📧📧 [FRONTEND-EMAIL] EMAIL ${type.toUpperCase()}: ${emailType}`);
-    console.log(`📧 [FRONTEND-EMAIL] Timestamp: ${new Date().toISOString()}`);
-    console.log(`📧 [FRONTEND-EMAIL] Details:`, details);
+    console.log(`[FRONTEND-EMAIL] EMAIL ${type.toUpperCase()}: ${emailType}`);
+    console.log(`[FRONTEND-EMAIL] Timestamp: ${new Date().toISOString()}`);
+    console.log(`[FRONTEND-EMAIL] Details:`, details);
   }
 
   /**
@@ -227,12 +227,12 @@ export class FrontendLogger {
    */
   static logTiming(operation: string, startTime: number, context?: LogContext) {
     const duration = Date.now() - startTime;
-    console.log(`⏱️⏱️⏱️ [FRONTEND-TIMING] OPERATION COMPLETED: ${operation.toUpperCase()}`);
-    console.log(`⏱️ [FRONTEND-TIMING] Duration: ${duration}ms`);
-    console.log(`⏱️ [FRONTEND-TIMING] Operation: ${operation}`);
+    console.log(`[FRONTEND-TIMING] OPERATION COMPLETED: ${operation.toUpperCase()}`);
+    console.log(`[FRONTEND-TIMING] Duration: ${duration}ms`);
+    console.log(`[FRONTEND-TIMING] Operation: ${operation}`);
     
     if (context) {
-      console.log(`⏱️ [FRONTEND-TIMING] Context:`, context);
+      console.log(`[FRONTEND-TIMING] Context:`, context);
     }
   }
 

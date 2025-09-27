@@ -27,7 +27,7 @@ const MAX_DESCRIPTION_LENGTH = 82;
 function truncate(text: string | null | undefined): string {
   if (!text) return '';
   if (text.length <= MAX_DESCRIPTION_LENGTH) return text;
-  return `${text.slice(0, MAX_DESCRIPTION_LENGTH).trimEnd()}…`;
+  return `${text.slice(0, MAX_DESCRIPTION_LENGTH).trimEnd()}...`;
 }
 
 // Card renderer invoked by RecentListsSection -> dashboard page integrates the section

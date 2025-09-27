@@ -143,7 +143,7 @@ export default function ListsIndexPage() {
       event.stopPropagation();
       if (deletingId) return;
 
-      const confirmed = window.confirm(`Delete “${list.name}”?`);
+      const confirmed = window.confirm(`Delete "${list.name}"?`);
       if (!confirmed) {
         setActionMenuId(null);
         return;
