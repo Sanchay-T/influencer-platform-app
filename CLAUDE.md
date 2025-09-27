@@ -34,6 +34,7 @@ This is a **Next.js 14 multi-platform influencer search system** with:
 - **7-Day Trial System** with automated email sequences
 - **Comprehensive Admin Panel** with system configuration
 - **Performance Optimizations** (100x faster loading with caching)
+- **Dashboard Analytics** with favorite influencers and search telemetry
 
 ### Technology Stack
 ```mermaid
@@ -57,12 +58,12 @@ graph TD
 
 | 📁 **Category** | 📄 **Documentation File** | 🎯 **Coverage** |
 |----------------|---------------------------|----------------|
-| **🚀 API Endpoints** | [`/app/api/CLAUDE.md`](./app/api/CLAUDE.md) | 70+ endpoints across 25 categories, authentication, scraping APIs |
-| **⚛️ React Components** | [`/app/components/CLAUDE.md`](./app/components/CLAUDE.md) | 42+ components, state management, UI patterns, performance |
-| **🛠️ Core Libraries** | [`/lib/CLAUDE.md`](./lib/CLAUDE.md) | Database models, platform integrations, services, utilities |
+| **🚀 API Endpoints** | [`/app/api/CLAUDE.md`](./app/api/CLAUDE.md) | 71+ endpoints across 25+ categories, dashboard analytics, scraping APIs |
+| **⚛️ React Components** | [`/app/components/CLAUDE.md`](./app/components/CLAUDE.md) | 46+ components, dashboard UI, state management, UI patterns, performance |
+| **🛠️ Core Libraries** | [`/lib/CLAUDE.md`](./lib/CLAUDE.md) | Database models, dashboard queries, platform integrations, enhanced testing |
 | **🗄️ Database Schema** | [`/supabase/CLAUDE.md`](./supabase/CLAUDE.md) | 13 tables, 27 migrations, normalized architecture, comprehensive testing |
-| **🔧 Scripts & Tools** | [`/scripts/CLAUDE.md`](./scripts/CLAUDE.md) | 70+ utility scripts, database normalization tools, professional testing framework |
-| **⚙️ Configuration** | [`/CONFIGURATION.md`](./CONFIGURATION.md) | 100+ env vars, build config, deployment settings |
+| **🔧 Scripts & Tools** | [`/scripts/CLAUDE.md`](./scripts/CLAUDE.md) | 85+ utility scripts, platform testing framework, database tools |
+| **⚙️ Configuration** | Environment files (`.env.development`, `.env.production`) | Environment variables, build config, deployment settings |
 
 ---
 
@@ -73,6 +74,12 @@ graph TD
 - **Instagram**: Reels + Similar search with profile enhancement  
 - **YouTube**: Keyword + Similar search with channel analysis
 - **Universal**: Cross-platform CSV export with contact information
+
+### **Dashboard Analytics System**
+- **Favorite Influencers**: Display of pinned creators across platforms with smart profile links
+- **Recent Lists**: Quick access to recently updated creator lists with metadata
+- **Search Telemetry**: Real-time metrics and usage analytics over 30-day periods
+- **User Plan Integration**: Plan status, limits, and usage tracking in unified view
 
 ### **Creator List Management**
 - **Multi-select Saving**: Bulk-add creators from search with a compact overlay and inline list creation.
@@ -90,6 +97,7 @@ Campaign Creation → QStash Job → Platform API → Data Transform → Image C
 - ⚡ **100x Loading Speed**: localStorage caching (5ms vs 500ms)
 - 🖼️ **Permanent Image URLs**: Vercel Blob Storage with HEIC conversion
 - 🎯 **Exact Count Delivery**: Dynamic API calling for precise results (100/500/1000)
+- 📊 **Dashboard Optimization**: Single-request data aggregation with normalized queries
 
 ### **Trial & Billing System**
 - 🕐 **7-Day Trials**: Automated lifecycle with email sequences
@@ -150,7 +158,7 @@ sequenceDiagram
 ## 🔍 Quick Navigation Guide
 
 ### **For Developers New to the Codebase:**
-1. **Start Here**: [`/CONFIGURATION.md`](./CONFIGURATION.md) - Environment setup and configuration
+1. **Start Here**: Environment files (`.env.development`, `.env.production`) - Environment setup and configuration
 2. **Understand APIs**: [`/app/api/CLAUDE.md`](./app/api/CLAUDE.md) - All endpoint documentation
 3. **Learn Components**: [`/app/components/CLAUDE.md`](./app/components/CLAUDE.md) - UI architecture
 4. **Database Knowledge**: [`/supabase/CLAUDE.md`](./supabase/CLAUDE.md) - Schema and relationships
@@ -174,11 +182,13 @@ sequenceDiagram
 - **Image Processing**: Automatic HEIC→JPEG conversion with CDN bypass
 - **Background Jobs**: Real-time progress tracking with 99% success rate
 - **Database Queries**: Optimized with 20+ specialized indexes across normalized tables
+- **Dashboard Loading**: Sub-second aggregation of favorites, lists, and telemetry data
 
 ### **Monitoring & Debugging**
-- **Real-time Logging**: Comprehensive logging patterns throughout
+- **Real-time Logging**: Comprehensive logging patterns with session tracking
 - **Error Recovery**: 5-layer image loading strategy with graceful fallbacks
 - **Performance Tracking**: Built-in benchmarking and performance headers
+- **Enhanced Telemetry**: Structured logging with categorized log levels and request correlation
 
 ---
 
@@ -191,6 +201,7 @@ sequenceDiagram
 - Trial system with automated email sequences
 - Admin panel with comprehensive management
 - Performance optimizations with caching
+- Dashboard analytics with favorite influencers and usage metrics
 
 ### 🔄 **Development Active Features**
 - Enhanced "intended plan" tracking

@@ -4,7 +4,7 @@
 
 The `/app/components` directory contains all React components for the multi-platform influencer search platform. The architecture follows a modular approach with components organized by feature domains including campaigns, authentication, billing/trial management, onboarding, layout, and shared utilities.
 
-**Total Components**: 42+ React components across 12+ feature areas
+**Total Components**: 46+ React components across 12+ feature areas
 **Technology Stack**: Next.js 14, TypeScript/JavaScript, Tailwind CSS, shadcn/ui
 **State Management**: React hooks, Clerk auth, custom hooks, local storage caching
 
@@ -123,6 +123,7 @@ interface SearchResultsProps {
 // - Comprehensive image caching with HEIC conversion
 // - Pagination with smart page numbering
 // - Platform-specific profile link generation
+// - Enhanced search progress integration
 ```
 
 **Key Features**:
@@ -132,6 +133,8 @@ interface SearchResultsProps {
 - ✅ **Pagination**: Advanced pagination with ellipsis and page jumping
 - ✅ **Profile Link Generation**: Platform-aware profile URL construction from video URLs or usernames
 - ✅ **Export Integration**: Feature-gated CSV export functionality
+- ✅ **Bulk Creator Selection**: Multi-select functionality with AddToListButton integration
+- ✅ **Enhanced Progress Integration**: Seamless integration with enhanced SearchProgress component
 
 #### **SearchProgress** (`campaigns/keyword-search/search-progress.jsx`)
 ```jsx
@@ -140,14 +143,73 @@ interface SearchProgressProps {
   platform: string;
   searchData: object;
   onComplete: (data: { status: string; creators?: any[] }) => void;
+  onIntermediateResults?: (creators: any[]) => void;
+  onMeta?: (meta: object) => void;
+  onProgress?: (progress: number) => void;
+}
+
+// Enhanced Features:
+// - Real-time job status polling with intelligent retry logic
+// - Intermediate results streaming during processing
+// - Advanced progress calculation with speed tracking
+// - Platform-specific stage messaging and error recovery
+// - Authentication retry handling (6 attempts vs 4 general)
+// - Comprehensive logging and performance monitoring
+```
+
+**Key Enhancements** (400 lines, major refactor):
+- ✅ **Intermediate Results**: Live streaming of creators as they're found via `IntermediateList` component
+- ✅ **Advanced Progress Tracking**: Speed calculation, processing rate monitoring, and target vs actual result tracking
+- ✅ **Intelligent Retry Logic**: Separate retry counts for auth failures (6) vs general errors (4)
+- ✅ **Enhanced Error Recovery**: Automatic recovery attempts with user feedback and manual retry options
+- ✅ **Performance Monitoring**: Processing speed calculation and performance metrics
+- ✅ **Helper Functions Integration**: Uses centralized utilities from `search-progress-helpers.ts`
+
+#### **SearchProgressHelpers** (`campaigns/keyword-search/search-progress-helpers.ts`)
+```typescript
+// Utility functions for search progress management
+export const MAX_AUTH_RETRIES = 6;
+export const MAX_GENERAL_RETRIES = 4;
+
+export function flattenCreators(results: any): any[];
+export function buildEndpoint(platform: string, hasTarget: boolean, jobId: string): string | null;
+export function clampProgress(value: any): number;
+export function computeStage(params: StageParams): string;
+
+// Features:
+// - Creator data normalization across platforms
+// - Dynamic API endpoint generation based on search type
+// - Progress value validation and clamping
+// - Platform-specific stage messaging for UX
+```
+
+**Key Features**:
+- ✅ **Data Normalization**: `flattenCreators` ensures consistent creator array structure across platforms
+- ✅ **Endpoint Resolution**: `buildEndpoint` mirrors API routing logic for TikTok, Instagram, YouTube searches
+- ✅ **Stage Messaging**: `computeStage` provides detailed, platform-aware progress descriptions
+- ✅ **Progress Management**: Safe progress value handling with bounds checking
+
+#### **SearchProgressIntermediateList** (`campaigns/keyword-search/search-progress-intermediate-list.tsx`)
+```tsx
+interface IntermediateListProps {
+  creators: any[];
+  status: string;
 }
 
 // Features:
-// - Real-time job status polling (3-second intervals)
-// - Progress percentage display
-// - Platform-specific progress messages
-// - Completion callback with creator data
+// - Live preview of latest 5 creators found during search
+// - Compact card layout with avatar placeholders
+// - Follower count display and streaming status indicator
+// - Scrollable container for viewing additional results
+// - Memoized for performance during rapid updates
 ```
+
+**Key Features**:
+- ✅ **Live Updates**: Shows latest 5 creators as they're discovered during search processing
+- ✅ **Compact Display**: Creator cards with initials, names, and follower counts
+- ✅ **Status Awareness**: Different messaging for "processing" vs "finished" states
+- ✅ **Performance Optimized**: React.memo prevents unnecessary re-renders during rapid updates
+- ✅ **Overflow Handling**: Scrollable container with "+X more creators" indicator
 
 #### **use-scraping-status.ts** (Custom Hook)
 ```typescript
@@ -418,6 +480,76 @@ interface BreadcrumbsProps {
 ```
 
 ## Dashboard & Analytics Components
+
+### 📊 Dashboard Components
+
+#### **FavoriteInfluencersGrid** (`dashboard/favorite-influencers-grid.tsx`)
+```tsx
+interface FavoriteInfluencer {
+  id: string;
+  displayName: string;
+  handle?: string | null;
+  category?: string | null;
+  platform: string;
+  followers?: number | null;
+  avatarUrl?: string | null;
+  profileUrl?: string | null;
+  listName?: string | null;
+  pinned?: boolean;
+}
+
+interface FavoriteInfluencersGridProps {
+  influencers: FavoriteInfluencer[];
+  emptyMessage?: string;
+}
+
+// Features:
+// - Responsive grid layout (1-5 columns based on screen size)
+// - Platform-specific badges and icons (TikTok, Instagram, YouTube)
+// - Star indicators for pinned influencers
+// - Clickable profile navigation with keyboard support
+// - Avatar fallbacks with initials
+```
+
+**Key Features**:
+- ✅ **Multi-Platform Support**: Platform-specific icons and color coding for TikTok, Instagram, YouTube
+- ✅ **Smart Profile Links**: Auto-generates profile URLs from handles when direct URLs unavailable
+- ✅ **Accessibility**: Full keyboard navigation support with Enter/Space key handling
+- ✅ **Visual Hierarchy**: Pinned creators marked with star icons, follower count formatting
+- ✅ **Responsive Design**: Adaptive grid from 1 column (mobile) to 5 columns (xl screens)
+- ✅ **List Context**: Shows which creator list the influencer was saved from
+
+#### **RecentListsSection** (`dashboard/recent-lists.tsx`)
+```tsx
+interface RecentList {
+  id: string;
+  name: string;
+  description?: string | null;
+  creatorCount: number;
+  updatedAt: string;
+  slug?: string | null;
+}
+
+interface RecentListsProps {
+  title?: string;
+  lists: RecentList[];
+  emptyMessage?: string;
+}
+
+// Features:
+// - Recent creator lists display with metadata
+// - Smart truncation for long descriptions (82 chars)
+// - Relative time formatting ("2 days ago", "just now")
+// - Creator count and list navigation
+// - Responsive grid layout
+```
+
+**Key Features**:
+- ✅ **Smart Truncation**: Description text intelligently cut at 82 characters with ellipsis
+- ✅ **Relative Time**: Human-readable time display using `formatRelativeTime` utility
+- ✅ **Navigation**: Direct links to list detail pages using slug or ID fallback
+- ✅ **Creator Counts**: Displays number of influencers with proper pluralization
+- ✅ **Responsive Layout**: 1-3 column grid adapting to screen size
 
 ### 📊 Data Visualization
 

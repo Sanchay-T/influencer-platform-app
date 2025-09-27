@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document provides comprehensive documentation for the Influencer Platform API architecture. The platform supports multi-platform influencer search (TikTok, Instagram, YouTube), admin management, billing/subscription systems, and background job processing through QStash integration.
+This document provides comprehensive documentation for the Influencer Platform API architecture. The platform supports multi-platform influencer search (TikTok, Instagram, YouTube), admin management, billing/subscription systems, dashboard overview analytics, and background job processing through QStash integration.
 
 ### Architecture Summary
 - **Authentication**: Clerk-based user authentication with dual admin system
@@ -158,6 +158,74 @@ if (!validation.allowed) {
 
 ---
 
+## Dashboard Overview API
+
+### Dashboard Analytics
+**Endpoint**: `GET /api/dashboard/overview`
+
+**Authentication**: Requires valid Clerk authentication
+
+**Purpose**: Provides comprehensive dashboard data including favorite influencers, recent lists, search telemetry metrics, and user plan status for the main dashboard view.
+
+**Response**:
+```json
+{
+  "favorites": [
+    {
+      "id": "uuid",
+      "platform": "tiktok",
+      "externalId": "creator123",
+      "handle": "@creator_handle",
+      "name": "Creator Name",
+      "followerCount": 125000,
+      "profilePicUrl": "https://cached-image-url.com/image.jpg",
+      "bio": "Creator bio with contact info",
+      "emails": ["contact@creator.com"],
+      "verified": true,
+      "addedAt": "2025-01-15T10:30:00Z"
+    }
+  ],
+  "recentLists": [
+    {
+      "id": "uuid",
+      "name": "Holiday Campaign",
+      "description": "Q4 influencer outreach list",
+      "creatorCount": 42,
+      "updatedAt": "2025-01-15T14:20:00Z",
+      "slug": "holiday-campaign"
+    }
+  ],
+  "metrics": {
+    "averageSearchMs": 2847,
+    "searchesLast30Days": 15,
+    "completedSearchesLast30Days": 14,
+    "searchLimit": 1000,
+    "totalFavorites": 8
+  }
+}
+```
+
+**Features**:
+- ✅ **Favorite Influencers**: Returns up to 10 most recently added favorites
+- ✅ **Recent Lists**: Shows 3 most recently updated non-archived lists
+- ✅ **Search Telemetry**: Aggregated performance metrics over last 30 days
+- ✅ **Plan Integration**: Includes current plan limits and usage information
+- ✅ **Performance Optimized**: Single request fetches all dashboard data
+- ✅ **Normalized Database**: Uses updated database schema with proper relationships
+
+**Error Responses**:
+- `401`: Unauthorized - Invalid or missing authentication
+- `404`: User record not found in database
+- `500`: Internal server error during data aggregation
+
+**Data Sources**:
+- **Favorites**: From `list_items` with type 'favorites'
+- **Lists**: From `lists` table filtered by ownership/collaboration
+- **Telemetry**: Aggregated from `scraping_jobs` with performance calculations
+- **Plan Status**: From `PlanValidator` service with current subscription details
+
+---
+
 ## Creator Lists API
 
 The creator list system allows users to curate, organize, and share sets of influencers discovered through search. Privacy flags have been removed—lists are now scoped by owner/collaborator role only.
@@ -245,13 +313,14 @@ const isValid = await receiver.verify({
 
 **Job Processing Flow**:
 1. **Job Validation**: Verify job exists and is processable
-2. **Platform Detection**: Route to appropriate handler
+2. **Platform Detection**: Route to appropriate handler with enhanced detection logging
 3. **API Calls**: Make external API requests with rate limiting
 4. **Data Transformation**: Convert to unified format
 5. **Image Caching**: Cache profile images in Vercel Blob Storage
-6. **Bio Enhancement**: Individual profile calls for complete data
-7. **Progress Updates**: Real-time status and progress tracking
-8. **Completion**: Mark job as completed or schedule continuation
+6. **Bio Enhancement**: Individual profile calls for complete data with detailed logging
+7. **Progress Updates**: Real-time status and progress tracking with granular metrics
+8. **Telemetry Tracking**: Enhanced usage tracking with detailed request logging
+9. **Completion**: Mark job as completed or schedule continuation with performance metrics
 
 **Unified Progress Calculation**:
 ```typescript
@@ -260,6 +329,30 @@ function calculateUnifiedProgress(processedRuns, maxRuns, processedResults, targ
   const resultsProgress = (processedResults / targetResults) * 100 * 0.7;
   return Math.min(apiCallsProgress + resultsProgress, 100);
 }
+```
+
+**Enhanced Telemetry & Logging Features**:
+- ✅ **Structured Logging**: Uses logger service with categorized log levels
+- ✅ **Job Detection Logging**: Comprehensive platform and job type detection with fallback logic
+- ✅ **Bio Enhancement Tracking**: Detailed logging of profile API calls and email extraction
+- ✅ **Performance Metrics**: Request timing and processing duration tracking
+- ✅ **Progress Granularity**: Batch-level progress updates with detailed status messages
+- ✅ **API Call Documentation**: Per-request logging for debugging and optimization
+- ✅ **Error Context**: Enhanced error messages with job and user context
+- ✅ **Request Correlation**: Unique request IDs for tracking across systems
+
+**Enhanced Bio Enhancement Process**:
+```typescript
+// Individual profile API calls for complete data
+console.log(`🔍 [BIO-ENHANCEMENT] Fetching profile for @${username}`);
+const profileResponse = await fetch(profileApiUrl, headers);
+const enhancedBio = profileUser.biography || '';
+const enhancedEmails = enhancedBio.match(emailRegex) || [];
+console.log(`✅ [BIO-ENHANCEMENT] Enhanced @${username}:`, {
+  bioLength: enhancedBio.length,
+  emailsFound: enhancedEmails.length,
+  followerCount: realFollowerCount
+});
 ```
 
 ---
