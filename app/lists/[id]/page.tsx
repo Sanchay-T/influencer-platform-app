@@ -33,7 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Link2, MoreHorizontal, LayoutGrid, List as ListIcon } from 'lucide-react';
+import { Loader2, Link2, LayoutGrid, List as ListIcon, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
 
@@ -309,19 +309,6 @@ export default function ListDetailPage() {
     }
   };
 
-  const handleDuplicate = async () => {
-    if (!detail) return;
-    try {
-      const res = await fetch(`/api/lists/${detail.list.id}/duplicate`, { method: 'POST' });
-      if (!res.ok) throw new Error('Unable to duplicate list');
-      const data = await res.json();
-      toast.success('List duplicated');
-      router.push(`/lists/${data.list.id}`);
-    } catch (error) {
-      toast.error((error as Error).message);
-    }
-  };
-
   const handleDelete = async () => {
     if (!detail) return;
     try {
@@ -522,11 +509,14 @@ export default function ListDetailPage() {
                     <Button size="sm" variant="outline" onClick={handleExport}>
                       <Link2 className="mr-2 h-4 w-4" /> Export CSV
                     </Button>
-                    <Button size="sm" variant="outline" onClick={handleDuplicate}>
-                      <MoreHorizontal className="mr-2 h-4 w-4" /> Duplicate
-                    </Button>
-                    <Button size="sm" variant="destructive" onClick={() => setShowDeleteConfirm(true)}>
-                      Delete
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-pink-300 hover:text-pink-200 hover:bg-pink-500/10"
+                      onClick={() => setShowDeleteConfirm(true)}
+                      aria-label="Delete list"
+                    >
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </>
                 )}

@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { formatFollowerCount } from '@/lib/dashboard/formatters';
 import { cn } from '@/lib/utils';
 import { Instagram, Youtube, Music2, User } from 'lucide-react';
+import type { KeyboardEvent } from 'react';
 
 export type FavoriteInfluencer = {
   id: string;
@@ -64,9 +65,33 @@ function FavoriteInfluencerCard({ influencer }: { influencer: FavoriteInfluencer
   const followerDisplay = formatFollowerCount(influencer.followers ?? undefined);
   const normalizedPlatform = influencer.platform?.toLowerCase() ?? '';
   const isPinned = Boolean(influencer.pinned);
+  const profileUrl = resolveProfileUrl(influencer);
+  const canNavigate = Boolean(profileUrl);
+
+  const handleOpenProfile = () => {
+    if (!profileUrl) return;
+    window.open(profileUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!profileUrl) return;
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handleOpenProfile();
+    }
+  };
 
   return (
-    <Card className="relative flex flex-col gap-2 rounded-2xl border border-zinc-700/40 bg-zinc-900/70 p-4 transition hover:border-zinc-600/60 hover:bg-zinc-900/90">
+    <Card
+      className={cn(
+        'relative flex flex-col gap-2 rounded-2xl border border-zinc-700/40 bg-zinc-900/70 p-4 transition hover:border-zinc-600/60 hover:bg-zinc-900/90',
+        canNavigate && 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-400/60'
+      )}
+      role={canNavigate ? 'button' : undefined}
+      tabIndex={canNavigate ? 0 : undefined}
+      onClick={canNavigate ? handleOpenProfile : undefined}
+      onKeyDown={canNavigate ? handleKeyDown : undefined}
+    >
       {isPinned && (
         <span className="absolute right-3 top-3 text-xs text-amber-300">★</span>
       )}
@@ -100,6 +125,11 @@ function FavoriteInfluencerCard({ influencer }: { influencer: FavoriteInfluencer
       {influencer.listName ? (
         <p className="text-[11px] text-zinc-500">Saved in {influencer.listName}</p>
       ) : null}
+      {canNavigate ? (
+        <p className="text-[11px] text-pink-300">Open profile ↗</p>
+      ) : (
+        <p className="text-[11px] text-zinc-500">Profile link unavailable</p>
+      )}
     </Card>
   );
 }
@@ -120,4 +150,28 @@ export function FavoriteInfluencersGrid({ influencers, emptyMessage = 'No favori
       ))}
     </div>
   );
+}
+
+function resolveProfileUrl(influencer: FavoriteInfluencer): string | null {
+  if (typeof influencer.profileUrl === 'string' && influencer.profileUrl.trim().length > 0) {
+    return influencer.profileUrl.trim();
+  }
+
+  const normalizedHandle = influencer.handle?.replace(/^@/, '').trim();
+  if (!normalizedHandle) {
+    return null;
+  }
+
+  const platform = influencer.platform?.toLowerCase();
+  switch (platform) {
+    case 'tiktok':
+      return `https://www.tiktok.com/@${normalizedHandle}`;
+    case 'instagram':
+    case 'enhanced-instagram':
+      return `https://www.instagram.com/${normalizedHandle}`;
+    case 'youtube':
+      return `https://www.youtube.com/@${normalizedHandle}`;
+    default:
+      return null;
+  }
 }

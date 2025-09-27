@@ -7,7 +7,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Loader2, BarChart3 } from "lucide-react";
 import AnimatedSparkline from "../components/dashboard/animated-sparkline";
 import AnimatedBarChart from "../components/dashboard/animated-bar-chart";
-import RadialProgress from "../components/dashboard/radial-progress";
 import { FavoriteInfluencersGrid } from "../components/dashboard/favorite-influencers-grid";
 import { RecentListsSection } from "../components/dashboard/recent-lists";
 
@@ -18,6 +17,12 @@ export default function DashboardPage() {
   const [recentLists, setRecentLists] = useState([]);
   const [loadingHighlights, setLoadingHighlights] = useState(true);
   const [highlightsError, setHighlightsError] = useState(null);
+  const [metrics, setMetrics] = useState({
+    averageSearchMs: null,
+    searchCount: 0,
+    searchLimit: undefined,
+    totalFavorites: 0,
+  });
 
   useEffect(() => {
     let active = true;
@@ -33,8 +38,25 @@ export default function DashboardPage() {
         }
         const data = await response.json();
         if (!active) return;
-        setFavorites(data.favorites ?? []);
+        const favoritesPayload = Array.isArray(data.favorites) ? data.favorites : [];
+        setFavorites(favoritesPayload);
         setRecentLists(data.recentLists ?? []);
+        const metricPayload = data.metrics ?? {};
+        const rawLimit = metricPayload.searchLimit;
+        setMetrics({
+          averageSearchMs: typeof metricPayload.averageSearchMs === 'number' ? metricPayload.averageSearchMs : null,
+          searchCount: typeof metricPayload.searchesLast30Days === 'number' ? metricPayload.searchesLast30Days : 0,
+          searchLimit:
+            rawLimit === null
+              ? null
+              : typeof rawLimit === 'number'
+              ? rawLimit
+              : undefined,
+          totalFavorites:
+            typeof metricPayload.totalFavorites === 'number'
+              ? metricPayload.totalFavorites
+              : favoritesPayload.length,
+        });
       } catch (error) {
         if (!active) return;
         setHighlightsError(error instanceof Error ? error.message : 'Failed to load dashboard data');
@@ -64,46 +86,48 @@ export default function DashboardPage() {
           {/* Primary CTA already lives in the global header; remove duplicate here */}
         </div>
 
-        {/* Stat cards with sparklines */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+        {/* Key metrics overview */}
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
           <Card className="bg-zinc-900/80 border border-zinc-700/50">
-            <CardHeader className="pb-1">
-              <CardTitle className="text-sm font-medium text-zinc-400">Searches (7d)</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-zinc-400">Avg search time</CardTitle>
             </CardHeader>
-            <CardContent className="flex items-end justify-between">
-              <div>
-                <div className="text-3xl font-bold">128</div>
-                <div className="text-xs text-zinc-500">+12% vs prev</div>
-              </div>
-              <AnimatedSparkline data={[4,6,5,9,8,11,13]} />
+            <CardContent>
+              <p className="text-3xl font-bold text-zinc-100">
+                {formatDuration(metrics.averageSearchMs)}
+              </p>
+              <p className="mt-1 text-xs text-zinc-500">Completed jobs in the last 30 days</p>
             </CardContent>
           </Card>
 
           <Card className="bg-zinc-900/80 border border-zinc-700/50">
-            <CardHeader className="pb-1">
-              <CardTitle className="text-sm font-medium text-zinc-400">Creators Found</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-zinc-400">Searches (30d / limit)</CardTitle>
             </CardHeader>
-            <CardContent className="flex items-end justify-between">
-              <div>
-                <div className="text-3xl font-bold">2,945</div>
-                <div className="text-xs text-zinc-500">+5% vs prev</div>
+            <CardContent>
+              <div className="text-3xl font-bold text-zinc-100">
+                {metrics.searchCount}
+                <span className="text-base font-normal text-zinc-500">
+                  {renderLimit(metrics.searchLimit)}
+                </span>
               </div>
-              <AnimatedSparkline data={[8,9,7,10,12,11,15]} />
+              <p className="mt-1 text-xs text-zinc-500">
+                {metrics.searchLimit === null
+                  ? 'Unlimited plan window'
+                  : metrics.searchLimit === undefined
+                  ? 'Usage data unavailable'
+                  : 'Last 30 days usage versus plan limit'}
+              </p>
             </CardContent>
           </Card>
 
           <Card className="bg-zinc-900/80 border border-zinc-700/50">
-            <CardHeader className="pb-1">
-              <CardTitle className="text-sm font-medium text-zinc-400">Trial Conversion</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-zinc-400">Total favorites</CardTitle>
             </CardHeader>
-            <CardContent className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <RadialProgress value={42} />
-                <div>
-                  <div className="text-xl font-semibold">42%</div>
-                  <div className="text-xs text-zinc-500">last 30 days</div>
-                </div>
-              </div>
+            <CardContent>
+              <p className="text-3xl font-bold text-zinc-100">{metrics.totalFavorites}</p>
+              <p className="mt-1 text-xs text-zinc-500">Creators surfaced on your dashboard</p>
             </CardContent>
           </Card>
         </div>
@@ -182,4 +206,27 @@ export default function DashboardPage() {
       </div>
     </DashboardLayout>
   );
+}
+
+function formatDuration(value) {
+  if (typeof value !== 'number' || value <= 0) {
+    return '—';
+  }
+  const totalSeconds = Math.round(value / 1000);
+  if (totalSeconds < 60) {
+    return `${totalSeconds}s`;
+  }
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return seconds ? `${minutes}m ${seconds}s` : `${minutes}m`;
+}
+
+function renderLimit(limit) {
+  if (limit === null) {
+    return ' / ∞';
+  }
+  if (typeof limit !== 'number' || limit <= 0) {
+    return '';
+  }
+  return ` / ${limit}`;
 }
