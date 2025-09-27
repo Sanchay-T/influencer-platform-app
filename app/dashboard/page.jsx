@@ -141,7 +141,7 @@ export default function DashboardPage() {
           {loadingHighlights ? (
             <div className="flex h-32 items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-900/60 text-sm text-zinc-500">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Loading favorites…
+              Loading favorites...
             </div>
           ) : highlightsError ? (
             <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 text-sm text-red-400">
@@ -161,7 +161,7 @@ export default function DashboardPage() {
           {loadingHighlights ? (
             <div className="flex h-32 items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-900/60 text-sm text-zinc-500">
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Loading lists…
+              Loading lists...
             </div>
           ) : highlightsError ? (
             <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 text-sm text-red-400">
@@ -210,7 +210,7 @@ export default function DashboardPage() {
 
 function formatDuration(value) {
   if (typeof value !== 'number' || value <= 0) {
-    return '—';
+    return '--';
   }
   const totalSeconds = Math.round(value / 1000);
   if (totalSeconds < 60) {
@@ -223,7 +223,7 @@ function formatDuration(value) {
 
 function renderLimit(limit) {
   if (limit === null) {
-    return ' / ∞';
+    return ' / unlimited';
   }
   if (typeof limit !== 'number' || limit <= 0) {
     return '';

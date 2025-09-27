@@ -3,7 +3,7 @@
 // Used by app/components/dashboard/favorite-influencers-grid.tsx to condense follower metrics on cards
 export function formatFollowerCount(value: number | null | undefined): string {
   if (value === null || value === undefined || Number.isNaN(value)) {
-    return '—';
+    return '--';
   }
 
   const absValue = Math.abs(value);
@@ -29,9 +29,9 @@ export function formatFollowerCount(value: number | null | undefined): string {
 
 // Used by app/components/dashboard/recent-lists.tsx to render list recency in dashboard
 export function formatRelativeTime(value: string | Date | null | undefined, referenceDate: Date = new Date()): string {
-  if (!value) return '—';
+  if (!value) return '--';
   const target = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(target.getTime())) return '—';
+  if (Number.isNaN(target.getTime())) return '--';
 
   const diffMs = target.getTime() - referenceDate.getTime();
   const diffMinutes = Math.round(diffMs / 60000);

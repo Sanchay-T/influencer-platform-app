@@ -1993,6 +1993,7 @@ export async function POST(req: Request) {
         
         // Transform TikTok data with granular progress updates and enhanced bio fetching
         const rawResults = apiResponse.search_item_list || [];
+        const apiHasMore = Boolean(apiResponse?.has_more);
         const creators = [];
         const batchSize = 5; // Process in smaller batches for smoother progress
         
@@ -2222,8 +2223,12 @@ export async function POST(req: Request) {
         console.log('✅ [PROGRESS-UPDATE] Database updated successfully');
         appendRunLog(job.id, { type: 'job_progress_commit', processedRuns: newProcessedRuns, processedResults: newProcessedResults, cursor: (job.cursor || 0) + creators.length, progress: Math.round(progress) });
         
-        // Schedule next call or complete
-        if (newProcessedRuns < MAX_API_CALLS_FOR_TESTING && newProcessedResults < job.targetResults) {
+        // Decide whether to schedule another call or finish
+        const reachedTarget = job.targetResults > 0 && newProcessedResults >= job.targetResults;
+        const reachedApiLimit = newProcessedRuns >= MAX_API_CALLS_FOR_TESTING;
+        const exhaustedRemoteFeed = !apiHasMore || rawResults.length === 0;
+
+        if (!reachedTarget && !reachedApiLimit && !exhaustedRemoteFeed) {
           console.log('🔄 [TIKTOK-KEYWORD] Scheduling next API call:', {
             nextCallNumber: newProcessedRuns + 1,
             remainingCalls: MAX_API_CALLS_FOR_TESTING - newProcessedRuns,
@@ -2247,9 +2252,11 @@ export async function POST(req: Request) {
           });
         } else {
           // Determine why we're completing
-          const completionReason = newProcessedRuns >= MAX_API_CALLS_FOR_TESTING 
-            ? 'Reached max API calls limit' 
-            : 'Reached target results';
+          const completionReason = reachedApiLimit
+            ? 'Reached max API calls limit'
+            : exhaustedRemoteFeed && !reachedTarget
+              ? 'Upstream returned no additional creators'
+              : 'Reached target results';
           
           console.log('✅ [TIKTOK-KEYWORD] Job completed:', {
             reason: completionReason,
@@ -2301,10 +2308,14 @@ export async function POST(req: Request) {
           
           console.log(`📊 [USAGE-TRACKING] Tracked ${newProcessedResults} creators for user ${job.userId} (TikTok keyword search completed)`);
           
+          const partialCompletion = !reachedTarget;
           return NextResponse.json({ 
             status: 'completed',
             message: 'TikTok keyword search completed',
-            processedResults: newProcessedResults
+            processedResults: newProcessedResults,
+            targetResults: job.targetResults,
+            partialCompletion,
+            completionReason
           });
         }
         

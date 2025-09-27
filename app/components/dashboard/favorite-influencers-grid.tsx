@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { formatFollowerCount } from '@/lib/dashboard/formatters';
 import { cn } from '@/lib/utils';
-import { Instagram, Youtube, Music2, User } from 'lucide-react';
+import { Instagram, Youtube, Music2, User, Star } from 'lucide-react';
 import type { KeyboardEvent } from 'react';
 
 export type FavoriteInfluencer = {
@@ -93,7 +93,7 @@ function FavoriteInfluencerCard({ influencer }: { influencer: FavoriteInfluencer
       onKeyDown={canNavigate ? handleKeyDown : undefined}
     >
       {isPinned && (
-        <span className="absolute right-3 top-3 text-xs text-amber-300">★</span>
+        <Star className="absolute right-3 top-3 h-3.5 w-3.5 text-amber-300" aria-hidden="true" />
       )}
       <div className="flex items-center gap-3">
         <Avatar className="h-12 w-12">
@@ -126,7 +126,7 @@ function FavoriteInfluencerCard({ influencer }: { influencer: FavoriteInfluencer
         <p className="text-[11px] text-zinc-500">Saved in {influencer.listName}</p>
       ) : null}
       {canNavigate ? (
-        <p className="text-[11px] text-pink-300">Open profile ↗</p>
+        <p className="text-[11px] text-pink-300">Open profile {"->"}</p>
       ) : (
         <p className="text-[11px] text-zinc-500">Profile link unavailable</p>
       )}

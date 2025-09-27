@@ -618,6 +618,9 @@ const SearchResults = ({ searchData }) => {
                   try {
                     const incoming = Array.isArray(data?.creators) ? data.creators : [];
                     if (incoming.length === 0) return;
+                    setStillProcessing(true);
+                    setIsLoading(false);
+                    setIsFetching(false);
                     setCreators((prev) => dedupeCreators([...prev, ...incoming], { platformHint: platformNormalized }));
                   } catch (e) {
                     console.error('Error handling intermediate results (initial wait):', e);
@@ -897,6 +900,9 @@ const SearchResults = ({ searchData }) => {
                 const incoming = Array.isArray(data?.creators) ? data.creators : [];
                 if (incoming.length === 0) return;
 
+                setStillProcessing(true);
+                setIsLoading(false);
+                setIsFetching(false);
                 setCreators((prev) => {
                   const merged = dedupeCreators([...prev, ...incoming], { platformHint: platformNormalized });
                   if (searchData?.jobId && merged.length) {

@@ -637,7 +637,7 @@ export default function ListDetailPage() {
                                 </TableCell>
                                 <TableCell className="capitalize text-sm text-zinc-300">{item.creator.platform}</TableCell>
                                 <TableCell className="text-sm text-zinc-300">{formatFollowers(item.creator.followers ?? 0)}</TableCell>
-                                <TableCell className="text-sm text-zinc-400">{item.creator.category ?? '—'}</TableCell>
+                                <TableCell className="text-sm text-zinc-400">{item.creator.category ?? '--'}</TableCell>
                                 <TableCell className="w-[200px]">
                                   <Select value={item.bucket} onValueChange={(value) => handleStatusChange(item.id, value)}>
                                     <SelectTrigger className="bg-zinc-900/70 border-zinc-800 text-sm text-zinc-200">
@@ -683,7 +683,7 @@ export default function ListDetailPage() {
             )}
             {savingOrder && (
               <div className="flex items-center gap-2 text-xs text-zinc-500">
-                <Loader2 className="h-3 w-3 animate-spin" /> Saving changes…
+                <Loader2 className="h-3 w-3 animate-spin" /> Saving changes...
               </div>
             )}
           </div>
@@ -765,7 +765,7 @@ function GhostCard({ item }: { item: CreatorListItem }) {
           {item.creator.displayName && <p className="text-xs text-zinc-500">{item.creator.displayName}</p>}
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-500 sm:gap-3">
             <span>{followers} followers</span>
-            {item.creator.category && <span>· {item.creator.category}</span>}
+            {item.creator.category && <span>| {item.creator.category}</span>}
           </div>
           <div className="mt-3">
             {profileUrl ? (
@@ -812,7 +812,7 @@ function topCategory(items: CreatorListItem[]) {
     if (!item.creator.category) continue;
     counts.set(item.creator.category, (counts.get(item.creator.category) ?? 0) + 1);
   }
-  if (!counts.size) return '—';
+  if (!counts.size) return '--';
   return Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0][0];
 }
 
