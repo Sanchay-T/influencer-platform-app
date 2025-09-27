@@ -7,9 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ListTree, Plus, Star, Users } from 'lucide-react';
+import { Loader2, ListTree, MoreHorizontal, Plus, Trash2, Users } from 'lucide-react';
 import clsx from 'clsx';
 import toast from 'react-hot-toast';
+import { formatFollowerCount } from '@/lib/dashboard/formatters';
 
 const listTypeOptions = [
   { value: 'campaign', label: 'Campaign' },
@@ -51,7 +52,8 @@ export default function ListsIndexPage() {
     description: '',
     type: 'custom',
   });
-  const [favoriteUpdatingId, setFavoriteUpdatingId] = useState<string | null>(null);
+  const [actionMenuId, setActionMenuId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const filteredLists = useMemo(() => {
     if (!search.trim()) return lists;
@@ -120,58 +122,51 @@ export default function ListsIndexPage() {
     }
   };
 
-  // Lists page > Star toggle -> update creatorLists.settings.dashboardFavorite
-  const toggleDashboardFavorite = useCallback(
+  useEffect(() => {
+    if (!actionMenuId) return;
+    const closeMenu = () => setActionMenuId(null);
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setActionMenuId(null);
+      }
+    };
+    document.addEventListener('click', closeMenu);
+    document.addEventListener('keydown', handleKeydown);
+    return () => {
+      document.removeEventListener('click', closeMenu);
+      document.removeEventListener('keydown', handleKeydown);
+    };
+  }, [actionMenuId]);
+
+  const handleDeleteList = useCallback(
     async (event: MouseEvent, list: ListSummary) => {
       event.stopPropagation();
-      const canToggle = list.viewerRole === 'owner' || list.viewerRole === 'editor';
-      if (!canToggle) {
-        toast.error('Only owners or editors can change favorites.');
-        return;
-      }
-      if (favoriteUpdatingId === list.id) {
+      if (deletingId) return;
+
+      const confirmed = window.confirm(`Delete “${list.name}”?`);
+      if (!confirmed) {
+        setActionMenuId(null);
         return;
       }
 
-      const nextIsFavorite = !isListDashboardFavorite(list);
-      const nextSettings: ListSettings = {
-        ...(list.settings ?? {}),
-        dashboardFavorite: nextIsFavorite,
-      };
-
-      setFavoriteUpdatingId(list.id);
+      setDeletingId(list.id);
       try {
-        const res = await fetch(`/api/lists/${list.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ settings: nextSettings }),
-        });
-        const payload = await res.json().catch(() => ({}));
+        const res = await fetch(`/api/lists/${list.id}`, { method: 'DELETE' });
         if (!res.ok) {
-          throw new Error(payload?.error ?? 'Unable to update list');
+          const payload = await res.json().catch(() => ({}));
+          throw new Error(payload?.error ?? 'Unable to delete list');
         }
-        const updated = (payload?.list ?? null) as Partial<ListSummary> | null;
-        setLists((prev) =>
-          prev.map((item) =>
-            item.id === list.id
-              ? {
-                  ...item,
-                  ...updated,
-                  settings: (updated?.settings as ListSettings | null | undefined) ?? nextSettings,
-                  type: updated?.type ?? item.type,
-                }
-              : item
-          )
-        );
-        toast.success(nextIsFavorite ? 'Pinned to dashboard favorites' : 'Removed from dashboard favorites');
+        setLists((prev) => prev.filter((item) => item.id !== list.id));
+        toast.success('List deleted');
       } catch (error) {
-        console.error(error);
+        console.error('[LISTS-DELETE]', error);
         toast.error((error as Error).message);
       } finally {
-        setFavoriteUpdatingId(null);
+        setDeletingId(null);
+        setActionMenuId(null);
       }
     },
-    [favoriteUpdatingId]
+    [deletingId]
   );
 
   return (
@@ -260,12 +255,7 @@ export default function ListsIndexPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-            {filteredLists.map((list) => {
-              const isFavorite = isListDashboardFavorite(list);
-              const isUpdatingFavorite = favoriteUpdatingId === list.id;
-              const canToggleFavorite = list.viewerRole === 'owner' || list.viewerRole === 'editor';
-
-              return (
+            {filteredLists.map((list) => (
                 <Card
                   key={list.id}
                   className="bg-zinc-900/70 border border-zinc-700/40 hover:border-pink-500/50 transition-all cursor-pointer overflow-hidden"
@@ -281,29 +271,41 @@ export default function ListsIndexPage() {
                           </CardDescription>
                         )}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          aria-pressed={isFavorite}
-                          aria-label={isFavorite ? 'Remove from dashboard favorites' : 'Pin to dashboard favorites'}
-                          title={canToggleFavorite ? undefined : 'Only owners or editors can change favorites'}
-                          className={clsx(
-                            'rounded-full border border-zinc-700/50 bg-zinc-900/80 px-2 py-1.5 transition text-zinc-500 hover:text-amber-200 hover:border-amber-300/40',
-                            isFavorite && 'border-amber-300/60 bg-amber-500/10 text-amber-300',
-                            (isUpdatingFavorite || !canToggleFavorite) && 'cursor-not-allowed opacity-60 hover:border-zinc-700/50 hover:text-zinc-500'
-                          )}
-                          onClick={(event) => toggleDashboardFavorite(event, list)}
-                          disabled={isUpdatingFavorite}
-                        >
-                          {isUpdatingFavorite ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Star className="h-4 w-4" fill={isFavorite ? 'currentColor' : 'none'} />
-                          )}
-                        </button>
+                      <div className="relative flex items-center gap-2">
                         <Badge variant="secondary" className="bg-zinc-800/80 text-zinc-200">
                           {list.type}
                         </Badge>
+                        <button
+                          type="button"
+                          className="rounded-full border border-zinc-700/50 bg-zinc-900/80 px-2 py-1.5 text-zinc-500 transition hover:border-pink-500/50 hover:text-pink-200"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setActionMenuId((prev) => (prev === list.id ? null : list.id));
+                          }}
+                          aria-label="List actions"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                        {actionMenuId === list.id ? (
+                          <div
+                            className="absolute right-0 top-9 z-20 w-40 rounded-xl border border-zinc-700/50 bg-zinc-950/95 p-2 shadow-lg"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            <button
+                              type="button"
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-200 transition hover:bg-pink-500/10 hover:text-pink-200"
+                              onClick={(event) => handleDeleteList(event, list)}
+                              disabled={deletingId === list.id}
+                            >
+                              {deletingId === list.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4 text-pink-300" />
+                              )}
+                              Delete list
+                            </button>
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   </CardHeader>
@@ -318,7 +320,7 @@ export default function ListsIndexPage() {
                     </div>
                     <div className="grid grid-cols-3 gap-3">
                       <StatPill label="Creators" value={list.creatorCount} />
-                      <StatPill label="Followers" value={formatFollowers(list.followerSum)} />
+                      <StatPill label="Followers" value={formatFollowerCount(list.followerSum)} />
                       <StatPill label="Collaborators" value={list.collaboratorCount} icon={<Users className="h-4 w-4" />} />
                     </div>
                     {list.tags?.length ? (
@@ -337,8 +339,7 @@ export default function ListsIndexPage() {
                     ) : null}
                   </CardContent>
                 </Card>
-              );
-            })}
+              ))}
           </div>
         )}
       </div>
@@ -352,28 +353,12 @@ type StatPillProps = {
   icon?: React.ReactNode;
 };
 
-function StatPill({ label, value, icon }: StatPillProps) {
-  return (
-    <div className="rounded-xl border border-zinc-700/40 bg-zinc-950/60 px-3 py-2 text-center">
-      <div className="text-xs text-zinc-500 uppercase tracking-wide flex items-center justify-center gap-1">
-        {icon}
-        {label}
-      </div>
-      <div className="text-lg font-semibold text-zinc-100 mt-1">{value}</div>
+const StatPill = ({ label, value, icon }: StatPillProps) => (
+  <div className="rounded-xl border border-zinc-700/40 bg-zinc-950/60 px-3 py-2 text-center">
+    <div className="text-xs text-zinc-500 uppercase tracking-wide flex items-center justify-center gap-1">
+      {icon}
+      {label}
     </div>
-  );
-}
-
-function formatFollowers(value: number) {
-  if (!value) return '0';
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
-  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
-  return value.toString();
-}
-
-function isListDashboardFavorite(list: ListSummary) {
-  if (list.settings && 'dashboardFavorite' in list.settings) {
-    return Boolean(list.settings.dashboardFavorite);
-  }
-  return list.type === 'favorites';
-}
+    <div className="text-lg font-semibold text-zinc-100 mt-1">{value}</div>
+  </div>
+);
