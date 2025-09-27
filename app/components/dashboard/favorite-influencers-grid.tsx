@@ -54,9 +54,9 @@ function PlatformBadge({ platform }: { platform: string }) {
   };
   const Icon = config.icon;
   return (
-    <span className={cn('inline-flex items-center gap-1 text-xs font-medium text-zinc-400', config.accent)}>
-      <Icon className="h-3.5 w-3.5" />
-      <span>{config.label}</span>
+    <span className={cn('inline-flex items-center gap-1 text-xs font-medium text-zinc-400 min-w-0', config.accent)}>
+      <Icon className="h-3.5 w-3.5 flex-shrink-0" />
+      <span className="truncate">{config.label}</span>
     </span>
   );
 }
@@ -96,7 +96,7 @@ function FavoriteInfluencerCard({ influencer }: { influencer: FavoriteInfluencer
         <Star className="absolute right-3 top-3 h-3.5 w-3.5 text-amber-300" aria-hidden="true" />
       )}
       <div className="flex items-center gap-3">
-        <Avatar className="h-12 w-12">
+        <Avatar className="h-12 w-12 flex-shrink-0">
           {influencer.avatarUrl ? (
             <AvatarImage
               src={influencer.avatarUrl}
@@ -108,22 +108,22 @@ function FavoriteInfluencerCard({ influencer }: { influencer: FavoriteInfluencer
             {(influencer.displayName || influencer.handle || 'NA').slice(0, 2).toUpperCase()}
           </AvatarFallback>
         </Avatar>
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-semibold text-zinc-100">{influencer.displayName}</p>
+        <div className="space-y-1 min-w-0 flex-1">
+          <div className="flex items-center gap-2 min-w-0">
+            <p className="text-sm font-semibold text-zinc-100 truncate">{influencer.displayName}</p>
             {influencer.handle ? (
-              <span className="text-xs text-zinc-500">@{influencer.handle}</span>
+              <span className="text-xs text-zinc-500 truncate">@{influencer.handle}</span>
             ) : null}
           </div>
-          <p className="text-xs text-zinc-500">{influencer.category ?? 'General'}</p>
+          <p className="text-xs text-zinc-500 truncate">{influencer.category ?? 'General'}</p>
         </div>
       </div>
-      <div className="flex items-center justify-between text-xs text-zinc-400">
+      <div className="flex items-center justify-between text-xs text-zinc-400 gap-2">
         <PlatformBadge platform={influencer.platform} />
-        <span className="font-semibold text-zinc-200">{followerDisplay}</span>
+        <span className="font-semibold text-zinc-200 flex-shrink-0">{followerDisplay}</span>
       </div>
       {influencer.listName ? (
-        <p className="text-[11px] text-zinc-500">Saved in {influencer.listName}</p>
+        <p className="text-[11px] text-zinc-500 truncate">Saved in {influencer.listName}</p>
       ) : null}
       {canNavigate ? (
         <p className="text-[11px] text-pink-300">Open profile {"->"}</p>
@@ -144,7 +144,7 @@ export function FavoriteInfluencersGrid({ influencers, emptyMessage = 'No favori
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
       {influencers.map((influencer) => (
         <FavoriteInfluencerCard key={influencer.id} influencer={influencer} />
       ))}
