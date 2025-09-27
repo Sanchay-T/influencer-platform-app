@@ -47,3 +47,4 @@ next-env.d.ts
 /billing-check/*.log
 /billing-check/*.json
 .env*.local
+sorzproject-main/

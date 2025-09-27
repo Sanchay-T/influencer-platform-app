@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { subscriptionPlans, userProfiles } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { subscriptionPlans, users, userSubscriptions, userUsage } from '@/lib/db/schema';
+import { desc, eq, sql } from 'drizzle-orm';
 
 export async function GET() {
   try {
@@ -21,8 +21,29 @@ export async function GET() {
     const plans = await db.select().from(subscriptionPlans);
     console.log('✅ [STATUS] Found plans:', plans.length);
 
-    const users = await db.select().from(userProfiles);
-    console.log('✅ [STATUS] Found users:', users.length);
+    const [{ totalUsers }] = await db
+      .select({ totalUsers: sql<number>`COUNT(*)` })
+      .from(users);
+
+    const userSummaries = await db
+      .select({
+        userId: users.userId,
+        email: users.email,
+        currentPlan: userSubscriptions.currentPlan,
+        onboardingStep: users.onboardingStep,
+        campaignsUsed: userUsage.usageCampaignsCurrent,
+        campaignsLimit: userUsage.planCampaignsLimit,
+        creatorsUsed: userUsage.usageCreatorsCurrentMonth,
+        creatorsLimit: userUsage.planCreatorsLimit,
+        createdAt: users.createdAt,
+      })
+      .from(users)
+      .leftJoin(userSubscriptions, eq(userSubscriptions.userId, users.id))
+      .leftJoin(userUsage, eq(userUsage.userId, users.id))
+      .orderBy(desc(users.createdAt))
+      .limit(25);
+
+    console.log('✅ [STATUS] Sample users loaded:', userSummaries.length);
 
     const connectionString = process.env.DATABASE_URL;
     const isLocal = connectionString?.includes('localhost') || connectionString?.includes('127.0.0.1');
@@ -33,7 +54,7 @@ export async function GET() {
         environment: isLocal ? 'LOCAL' : 'REMOTE',
         connection: connectionString?.replace(/\/\/.*@/, '//***@'),
         plans: plans.length,
-        users: users.length,
+        users: totalUsers,
       },
       subscriptionPlans: plans.map(p => ({
         planKey: p.planKey,
@@ -42,13 +63,16 @@ export async function GET() {
         creatorsLimit: p.creatorsLimit,
         monthlyPrice: p.monthlyPrice
       })),
-      testUsers: users.map(u => ({
+      testUsers: userSummaries.map(u => ({
         userId: u.userId,
-        currentPlan: u.currentPlan,
-        campaignsUsed: u.usageCampaignsCurrent,
-        campaignsLimit: u.planCampaignsLimit,
-        creatorsUsed: u.usageCreatorsCurrentMonth,
-        creatorsLimit: u.planCreatorsLimit
+        email: u.email,
+        currentPlan: u.currentPlan || 'free',
+        onboardingStep: u.onboardingStep,
+        campaignsUsed: u.campaignsUsed ?? 0,
+        campaignsLimit: u.campaignsLimit ?? 0,
+        creatorsUsed: u.creatorsUsed ?? 0,
+        creatorsLimit: u.creatorsLimit ?? 0,
+        createdAt: u.createdAt
       }))
     });
   } catch (error) {

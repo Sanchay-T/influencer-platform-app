@@ -30,6 +30,8 @@ export async function validateMonitoringConfig(): Promise<MonitoringValidationRe
   };
 }
 
-export default {
+const monitoringConfig = {
   validateMonitoringConfig
 };
+
+export default monitoringConfig;

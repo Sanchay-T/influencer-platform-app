@@ -25,6 +25,11 @@ export async function isAdminUser(): Promise<boolean> {
       } catch {}
     }
 
+    if (!process.env.CLERK_SECRET_KEY) {
+      console.warn('⚠️ [ADMIN-CHECK] CLERK_SECRET_KEY missing; treating user as non-admin');
+      return false;
+    }
+
     // Get authenticated user
     const { userId } = await auth();
     console.log('🔍 [ADMIN-CHECK] User ID from auth:', userId);
@@ -85,6 +90,9 @@ export async function isAdminUser(): Promise<boolean> {
  */
 export async function getCurrentUserAdminInfo() {
   try {
+    if (!process.env.CLERK_SECRET_KEY) {
+      return { isAdmin: false, user: null };
+    }
     const { userId } = await auth();
     if (!userId) return { isAdmin: false, user: null };
 
