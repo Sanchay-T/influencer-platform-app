@@ -1,7 +1,6 @@
 import { db } from '@/lib/db';
-import { campaigns, scrapingJobs, scrapingResults, subscriptionPlans } from '@/lib/db/schema';
-// TODO: This test utility file needs complete rewrite for normalized database schema
-// import { createUser, getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
+import { campaigns, scrapingJobs, scrapingResults, subscriptionPlans, users, userSubscriptions, userUsage } from '@/lib/db/schema';
+import { createUser, getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
 import { eq } from 'drizzle-orm';
 import { PlanEnforcementService } from '@/lib/services/plan-enforcement';
 
@@ -59,35 +58,31 @@ export class SubscriptionTestUtils {
 
     for (const user of testUsers) {
       try {
-        // Check if user already exists
-        const existingUser = await db.query.userProfiles.findFirst({
-          where: eq(userProfiles.userId, user.userId)
-        });
+        // Check if user already exists using normalized schema
+        const existingUser = await getUserProfile(user.userId);
 
         if (existingUser) {
           console.log(`✅ [TEST-UTILS] User ${user.userId} already exists, updating...`);
-          await db.update(userProfiles)
-            .set({
-              name: user.name,
-              currentPlan: user.plan,
-              planCampaignsLimit: user.plan === 'glow_up' ? 3 : user.plan === 'viral_surge' ? 10 : -1,
-              planCreatorsLimit: user.plan === 'glow_up' ? 1000 : user.plan === 'viral_surge' ? 10000 : -1,
-              usageCampaignsCurrent: user.campaignsUsed,
-              usageCreatorsCurrentMonth: user.creatorsUsed,
-              updatedAt: new Date()
-            })
-            .where(eq(userProfiles.userId, user.userId));
+          await updateUserProfile(user.userId, {
+            fullName: user.name,
+            currentPlan: user.plan,
+            usageCampaignsCurrent: user.campaignsUsed,
+            usageCreatorsCurrentMonth: user.creatorsUsed
+          });
         } else {
           console.log(`➕ [TEST-UTILS] Creating new user ${user.userId}...`);
-          await db.insert(userProfiles).values({
+          await createUser({
             userId: user.userId,
-            name: user.name,
+            fullName: user.name,
+            businessName: `${user.name} Corp`,
+            brandDescription: 'Test user for platform testing',
+            industry: 'Technology',
+            onboardingStep: 'completed',
             currentPlan: user.plan,
-            planCampaignsLimit: user.plan === 'glow_up' ? 3 : user.plan === 'viral_surge' ? 10 : -1,
-            planCreatorsLimit: user.plan === 'glow_up' ? 1000 : user.plan === 'viral_surge' ? 10000 : -1,
+            subscriptionStatus: 'active',
+            trialStatus: 'converted',
             usageCampaignsCurrent: user.campaignsUsed,
-            usageCreatorsCurrentMonth: user.creatorsUsed,
-            onboardingStep: 'completed'
+            usageCreatorsCurrentMonth: user.creatorsUsed
           });
         }
       } catch (error) {
@@ -103,13 +98,10 @@ export class SubscriptionTestUtils {
    * Reset usage counters for a user
    */
   static async resetUserUsage(userId: string): Promise<void> {
-    await db.update(userProfiles)
-      .set({
-        usageCampaignsCurrent: 0,
-        usageCreatorsCurrentMonth: 0,
-        updatedAt: new Date()
-      })
-      .where(eq(userProfiles.userId, userId));
+    await updateUserProfile(userId, {
+      usageCampaignsCurrent: 0,
+      usageCreatorsCurrentMonth: 0
+    });
     
     console.log(`✅ [TEST-UTILS] Reset usage for user ${userId}`);
   }
@@ -124,14 +116,9 @@ export class SubscriptionTestUtils {
       fame_flex: { campaigns: -1, creators: -1 }
     };
 
-    await db.update(userProfiles)
-      .set({
-        currentPlan: newPlan,
-        planCampaignsLimit: limits[newPlan].campaigns,
-        planCreatorsLimit: limits[newPlan].creators,
-        updatedAt: new Date()
-      })
-      .where(eq(userProfiles.userId, userId));
+    await updateUserProfile(userId, {
+      currentPlan: newPlan
+    });
 
     console.log(`✅ [TEST-UTILS] Switched user ${userId} to ${newPlan} plan`);
   }
@@ -210,9 +197,7 @@ export class SubscriptionTestUtils {
     upgradeSuggestion: any;
   } | null> {
     try {
-      const user = await db.query.userProfiles.findFirst({
-        where: eq(userProfiles.userId, userId)
-      });
+      const user = await getUserProfile(userId);
 
       if (!user) {
         return null;
