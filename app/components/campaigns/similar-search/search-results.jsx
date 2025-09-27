@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Table,
   TableBody,
@@ -21,10 +21,36 @@ import { cn } from "@/lib/utils";
 import { dedupeCreators } from "../utils/dedupe-creators";
 
 export default function SimilarSearchResults({ searchData }) {
+  const componentMountTime = useRef(performance.now());
+  const componentId = useMemo(() =>
+    `similar-search-${searchData?.jobId}-${componentMountTime.current}`,
+    [searchData?.jobId]
+  );
+
+  console.log('📊 [SIMILAR-TABLE][MOUNT]', {
+    componentId,
+    jobId: searchData?.jobId,
+    mountTime: componentMountTime.current.toFixed(2) + 'ms',
+    timestamp: new Date().toISOString(),
+    initialCreatorsCount: Array.isArray(searchData?.creators) ? searchData.creators.length : 0,
+    searchDataKeys: Object.keys(searchData || {})
+  });
+
   const [currentPage, setCurrentPage] = useState(1);
   const [isPageLoading, setIsPageLoading] = useState(false);
   const [creators, setCreators] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Log whenever creators data changes
+  useEffect(() => {
+    console.log('📊 [SIMILAR-TABLE][CREATORS-CHANGED]', {
+      componentId,
+      jobId: searchData?.jobId,
+      newCreatorsCount: creators.length,
+      timestamp: new Date().toISOString(),
+      timeSinceMount: (performance.now() - componentMountTime.current).toFixed(2) + 'ms'
+    });
+  }, [creators, componentId, searchData?.jobId]);
   const [campaignName, setCampaignName] = useState('Campaign');
   const [stillProcessing, setStillProcessing] = useState(false);
   const [progressInfo, setProgressInfo] = useState(null);
