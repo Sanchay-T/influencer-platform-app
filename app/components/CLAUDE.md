@@ -532,11 +532,11 @@ interface FavoriteInfluencersGridProps {
   emptyMessage?: string;
 }
 
-// Enhanced Responsive Layout:
-// - Improved breakpoint progression: xl:grid-cols-4 2xl:grid-cols-5
-// - Better spacing and text truncation across all screen sizes
-// - Flexible layout components with min-w-0 and flex-shrink-0 classes
-// - Enhanced platform badge truncation support
+// Enhanced Responsive Grid System:
+// - Advanced breakpoint progression: lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5
+// - Comprehensive text overflow protection with truncate, min-w-0, flex-shrink-0
+// - Improved layout stability for long usernames and handles
+// - Enhanced platform badge with flexible icon positioning
 ```
 
 **Key Features**:
