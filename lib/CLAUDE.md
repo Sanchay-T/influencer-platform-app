@@ -1191,7 +1191,7 @@ The library includes a **professional-grade testing infrastructure** with compre
 
 **Comprehensive Plan Validation Testing System:**
 
-Enhanced testing utilities for validating subscription plans and limits with normalized table support:
+**🆕 RECENTLY UPDATED** - Enhanced testing utilities for validating subscription plans and limits with **full normalized table integration**:
 
 ```typescript
 export class SubscriptionTestUtils {
@@ -1223,8 +1223,24 @@ interface TestUser {
 }
 ```
 
+**🔄 MIGRATION COMPLETED (September 2025):**
+
+The subscription testing utilities have been **successfully migrated** from the deprecated `userProfiles` table to the new normalized schema:
+
+```typescript
+// ✅ BEFORE (deprecated userProfiles table):
+const existingUser = await db.query.userProfiles.findFirst({
+  where: eq(userProfiles.userId, user.userId)
+});
+
+// ✅ AFTER (normalized tables with query layer):
+const existingUser = await getUserProfile(user.userId);
+```
+
 **🆕 Key Testing Features:**
-- ✅ **Normalized Table Integration**: Full support for 5-table user system
+- ✅ **✨ Normalized Table Migration**: **COMPLETED** - Now uses `getUserProfile()`, `createUser()`, and `updateUserProfile()` functions
+- ✅ **Database Compatibility Fix**: Resolves "relation user_profiles does not exist" production errors
+- ✅ **Backward Compatibility**: Maintains all existing functionality while using new schema
 - ✅ **Plan Limit Validation**: Tests campaign and creator limits for all plans
 - ✅ **Edge Case Testing**: Users at limits, exceeded limits, plan transitions
 - ✅ **Automated Test Suite**: 4 comprehensive test scenarios with pass/fail tracking
