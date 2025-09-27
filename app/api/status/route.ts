@@ -5,6 +5,7 @@ import { eq } from 'drizzle-orm';
 
 export async function GET() {
   try {
+    // Simple test comment to verify pre-commit hook functionality
     // 🔍 DIAGNOSTIC LOGS - Environment Detection
     console.log('🔍 [STATUS-DEBUG] Environment Diagnostics:', {
       NODE_ENV: process.env.NODE_ENV,
