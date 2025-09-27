@@ -189,6 +189,9 @@ sequenceDiagram
 - **Error Recovery**: 5-layer image loading strategy with graceful fallbacks
 - **Performance Tracking**: Built-in benchmarking and performance headers
 - **Enhanced Telemetry**: Structured logging with categorized log levels and request correlation
+- **Component Performance Monitoring**: Mount time tracking and lifecycle telemetry for campaign components
+- **Deduplication Caching**: In-memory Map-based caching for expensive creator deduplication operations
+- **Smart Data Fetching**: Optimized API call prevention when initial data is available
 
 ---
 

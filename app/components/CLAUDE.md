@@ -114,6 +114,7 @@ interface SearchResultsProps {
     jobId: string;
     selectedPlatform: 'TikTok' | 'Instagram' | 'YouTube';
     campaignId?: string;
+    initialCreators?: any[];
   }
 }
 
@@ -124,6 +125,8 @@ interface SearchResultsProps {
 // - Pagination with smart page numbering
 // - Platform-specific profile link generation
 // - Enhanced search progress integration
+// - Performance monitoring and telemetry
+// - Smart data fetching optimization
 ```
 
 **Key Features**:
@@ -135,6 +138,9 @@ interface SearchResultsProps {
 - ✅ **Export Integration**: Feature-gated CSV export functionality
 - ✅ **Bulk Creator Selection**: Multi-select functionality with AddToListButton integration
 - ✅ **Enhanced Progress Integration**: Seamless integration with enhanced SearchProgress component
+- ✅ **Performance Telemetry**: Component mount time tracking with `componentMountTime` ref for UX insights
+- ✅ **Smart Data Fetching**: Avoids redundant API calls when `initialCreators` data is available
+- ✅ **Creator Change Logging**: Enhanced telemetry for component performance and data flow monitoring
 
 #### **SearchProgress** (`campaigns/keyword-search/search-progress.jsx`)
 ```jsx
@@ -245,8 +251,31 @@ interface SimilarSearchFormProps {
 // - Campaign integration
 ```
 
-#### **SimilarResults** & **SearchResults** (Similar Search)
-Similar structure to keyword search but optimized for username-based searches with related creator discovery.
+#### **SimilarSearchResults** (`campaigns/similar-search/search-results.jsx`)
+```jsx
+interface SimilarSearchResultsProps {
+  searchData: {
+    jobId: string;
+    platform: 'TikTok' | 'Instagram' | 'YouTube';
+    targetUsername: string;
+    creators?: any[];
+    campaignId?: string;
+  }
+}
+
+// Performance Features:
+// - Component lifecycle monitoring with mount time tracking
+// - Detailed performance logging for UX insights
+// - Creator data change tracking with useEffect telemetry
+// - Platform-aware profile link generation
+```
+
+**Key Features**:
+- ✅ **Similar Structure to Keyword Search**: Optimized for username-based searches with related creator discovery
+- ✅ **Performance Monitoring**: Component mount time tracking with `componentMountTime` ref
+- ✅ **Enhanced Telemetry**: Comprehensive logging of component lifecycle events and data changes
+- ✅ **Creator Change Tracking**: Detailed monitoring of creators data updates with performance timing
+- ✅ **Platform-Specific Optimization**: Username-based search flow optimized for TikTok/Instagram platforms
 
 ### 📤 Export Components
 
@@ -503,12 +532,11 @@ interface FavoriteInfluencersGridProps {
   emptyMessage?: string;
 }
 
-// Features:
-// - Responsive grid layout (1-5 columns based on screen size)
-// - Platform-specific badges and icons (TikTok, Instagram, YouTube)
-// - Star indicators for pinned influencers
-// - Clickable profile navigation with keyboard support
-// - Avatar fallbacks with initials
+// Enhanced Responsive Layout:
+// - Improved breakpoint progression: xl:grid-cols-4 2xl:grid-cols-5
+// - Better spacing and text truncation across all screen sizes
+// - Flexible layout components with min-w-0 and flex-shrink-0 classes
+// - Enhanced platform badge truncation support
 ```
 
 **Key Features**:
@@ -516,8 +544,11 @@ interface FavoriteInfluencersGridProps {
 - ✅ **Smart Profile Links**: Auto-generates profile URLs from handles when direct URLs unavailable
 - ✅ **Accessibility**: Full keyboard navigation support with Enter/Space key handling
 - ✅ **Visual Hierarchy**: Pinned creators marked with star icons, follower count formatting
-- ✅ **Responsive Design**: Adaptive grid from 1 column (mobile) to 5 columns (xl screens)
+- ✅ **Enhanced Responsive Design**: Optimized grid from 1 column (mobile) to 4 columns (xl) to 5 columns (2xl+)
 - ✅ **List Context**: Shows which creator list the influencer was saved from
+- ✅ **Improved Text Handling**: Comprehensive truncation with `truncate` class for names, handles, and categories
+- ✅ **Layout Flexibility**: Better flex layout behavior with `min-w-0 flex-1` for proper text overflow handling
+- ✅ **Platform Badge Optimization**: Enhanced truncation support for platform labels with `flex-shrink-0` icons
 
 #### **RecentListsSection** (`dashboard/recent-lists.tsx`)
 ```tsx
@@ -536,20 +567,22 @@ interface RecentListsProps {
   emptyMessage?: string;
 }
 
-// Features:
-// - Recent creator lists display with metadata
-// - Smart truncation for long descriptions (82 chars)
-// - Relative time formatting ("2 days ago", "just now")
-// - Creator count and list navigation
-// - Responsive grid layout
+// Enhanced Card Interaction & Layout:
+// - Full card wrapped in Link component for better clickability
+// - Improved text container layouts with min-w-0 flex-1 classes
+// - Enhanced description overflow with line-clamp-2 styling
+// - Better visual spacing with ml-2 for improved hierarchy
 ```
 
 **Key Features**:
 - ✅ **Smart Truncation**: Description text intelligently cut at 82 characters with ellipsis
 - ✅ **Relative Time**: Human-readable time display using `formatRelativeTime` utility
-- ✅ **Navigation**: Direct links to list detail pages using slug or ID fallback
+- ✅ **Enhanced Navigation**: Entire card wrapped in Link component for improved user interaction
 - ✅ **Creator Counts**: Displays number of influencers with proper pluralization
-- ✅ **Responsive Layout**: 1-3 column grid adapting to screen size
+- ✅ **Responsive Layout**: Optimized grid from 1 column (mobile) to 2 columns (md) to 3 columns (xl+)
+- ✅ **Improved Text Overflow**: Enhanced description handling with `line-clamp-2` and title truncation
+- ✅ **Better Layout Control**: Optimized flex containers with `min-w-0 flex-1` for proper text wrapping
+- ✅ **Visual Hierarchy**: Improved spacing with strategic `ml-2` classes for better component alignment
 
 ### 📊 Data Visualization
 
@@ -621,6 +654,28 @@ interface CampaignCounterProps {
 // - Loading states and error handling
 // - Auto-refresh on campaign creation
 ```
+
+#### **DedupeCreators Utility** (`campaigns/utils/dedupe-creators.js`)
+```javascript
+export const dedupeCreators = (creators = [], options = {}) => {
+  const { platformHint } = options;
+  // Returns deduplicated array of creators
+}
+
+// Performance Features:
+// - Platform-aware deduplication logic
+// - Comprehensive ID collection from nested objects
+// - Optimized for large datasets with Set-based tracking
+// - Fallback deduplication using JSON comparison
+```
+
+**Key Features**:
+- ✅ **Multi-Source ID Collection**: Extracts identifiers from creator, profile, video, and metadata objects
+- ✅ **Platform-Aware Logic**: Uses platformHint to create platform-specific composite keys
+- ✅ **Performance Optimized**: Set-based tracking for O(1) lookup performance on large datasets
+- ✅ **Comprehensive Field Mapping**: Handles 40+ potential ID fields across different API response formats
+- ✅ **Fallback Safety**: JSON-based deduplication when no unique identifiers found
+- ✅ **Memory Efficient**: Minimal memory footprint with normalized string comparisons
 
 #### **SubscriptionStatusModern** (`subscription-status-modern.tsx`)
 Modern subscription status display with plan details and upgrade prompts.
@@ -836,6 +891,54 @@ const handleImageError = (e, username, originalUrl) => {
 - **Instant Data Loading**: Components load in ~5ms on repeat visits vs 500ms
 - **Background Updates**: Fresh data loads invisibly while showing cached content
 - **Optimized Re-renders**: Careful dependency arrays and memoization
+- **Deduplication Caching**: Map-based caching system in Campaign Client Page prevents redundant processing
+- **Smart Data Fetching**: Search components avoid unnecessary API calls when data already available
+- **Performance Telemetry**: Component lifecycle monitoring with mount time tracking and UX insights
+
+### 🎯 Campaign Client Page Performance Features
+
+#### **Enhanced Job Switching Performance** (`campaigns/[id]/client-page.tsx`)
+```javascript
+// Deduplication cache for expensive operations
+const dedupeCache = new Map<string, any[]>()
+
+// Performance logging for UX insights
+const logEvent = useCallback((event: string, detail: Record<string, unknown>) => {
+  const timestamp = new Date().toISOString()
+  const perfNow = performance.now().toFixed(2)
+  console.log(`🏃 [RUN-SWITCH][${timestamp}][${perfNow}ms] ${event}`, detail)
+}, [])
+```
+
+**Key Optimizations**:
+- ✅ **Deduplication Caching**: Map-based cache for expensive creator deduplication operations
+- ✅ **Transition State Management**: Instant visual feedback with `setIsTransitioning(true)`
+- ✅ **Performance Logging**: Comprehensive timing and UX event logging with `logEvent` function
+- ✅ **Smart Cache Management**: Automatic cache size limiting (50 entries) to prevent memory leaks
+- ✅ **Job Selection Optimization**: Performance timing for job switching with transition tracking
+
+### 📊 Search Results Performance Monitoring
+
+#### **Component Lifecycle Tracking**
+```javascript
+// Mount time tracking for performance analysis
+const componentMountTime = useRef(performance.now())
+const componentId = useMemo(() =>
+  `keyword-search-${searchData?.jobId}-${componentMountTime.current}`,
+  [searchData?.jobId]
+)
+
+// Creator data change monitoring
+useEffect(() => {
+  // Enhanced telemetry for component performance insights
+}, [creators, componentId, searchData?.jobId])
+```
+
+**Telemetry Features**:
+- ✅ **Mount Time Tracking**: Performance monitoring from component initialization
+- ✅ **Data Change Logging**: Detailed tracking of creator data updates and timing
+- ✅ **Component Identification**: Unique IDs for debugging and performance correlation
+- ✅ **Smart Fetching Logic**: Prevents redundant API calls when initial data available
 
 ### 🎯 Production Readiness
 

@@ -33,7 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Link2, LayoutGrid, List as ListIcon, Trash2 } from 'lucide-react';
+import { Loader2, Link2, LayoutGrid, List as ListIcon, Trash2, Star } from 'lucide-react';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
 
@@ -284,6 +284,52 @@ export default function ListDetailPage() {
     } catch (error) {
       console.error(error);
       toast.error('Unable to update status, refreshing list.');
+      setColumns(bucketize(detail?.items ?? []));
+    } finally {
+      setSavingOrder(false);
+    }
+  };
+
+  const handleTogglePin = async (itemId: string) => {
+    if (!listId) return;
+
+    const currentItem = findItemById(columns, itemId);
+    if (!currentItem) return;
+
+    const newPinnedState = !currentItem.pinned;
+
+    // Optimistically update the UI
+    const nextColumns = { ...columns };
+    for (const bucket of Object.keys(nextColumns)) {
+      nextColumns[bucket] = nextColumns[bucket].map(item =>
+        item.id === itemId ? { ...item, pinned: newPinnedState } : item
+      );
+    }
+    setColumns(nextColumns);
+
+    try {
+      setSavingOrder(true);
+      await fetch(`/api/lists/${listId}/items`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: [{ id: itemId, pinned: newPinnedState }]
+        }),
+      });
+
+      // Update the detail state
+      setDetail((prev) => prev ? {
+        ...prev,
+        items: prev.items.map(item =>
+          item.id === itemId ? { ...item, pinned: newPinnedState } : item
+        )
+      } : prev);
+
+      toast.success(newPinnedState ? 'Creator pinned' : 'Creator unpinned');
+    } catch (error) {
+      console.error(error);
+      toast.error('Unable to update pin status');
+      // Revert optimistic update
       setColumns(bucketize(detail?.items ?? []));
     } finally {
       setSavingOrder(false);
@@ -564,7 +610,7 @@ export default function ListDetailPage() {
                 onDragEnd={handleDragEnd}
                 onDragCancel={() => setActiveId(null)}
               >
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-[repeat(auto-fit,minmax(260px,1fr))]">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {allBuckets.map((bucket) => (
                     <DroppableColumn
                       key={bucket}
@@ -575,7 +621,7 @@ export default function ListDetailPage() {
                       <SortableContext items={(columns[bucket] ?? []).map((item) => item.id)} strategy={verticalListSortingStrategy}>
                         <div className="space-y-3 min-h-[120px]">
                           {(columns[bucket] ?? []).map((item) => (
-                            <SortableCard key={item.id} item={item} />
+                            <SortableCard key={item.id} item={item} onTogglePin={handleTogglePin} />
                           ))}
                           {(columns[bucket] ?? []).length === 0 && (
                             <div className="rounded-lg border border-dashed border-zinc-700/50 bg-zinc-900/40 p-4 text-center text-sm text-zinc-500">
@@ -601,13 +647,14 @@ export default function ListDetailPage() {
                           <TableHead className="text-zinc-400">Followers</TableHead>
                           <TableHead className="text-zinc-400">Category</TableHead>
                           <TableHead className="text-zinc-400">Status</TableHead>
+                          <TableHead className="text-zinc-400">Pin</TableHead>
                           <TableHead className="text-right text-zinc-400">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {tableItems.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={6} className="py-10 text-center text-sm text-zinc-500">
+                            <TableCell colSpan={7} className="py-10 text-center text-sm text-zinc-500">
                               No creators saved yet. Add creators from search results or campaigns to populate this list.
                             </TableCell>
                           </TableRow>
@@ -628,7 +675,12 @@ export default function ListDetailPage() {
                                       </AvatarFallback>
                                     </Avatar>
                                     <div className="min-w-0">
-                                      <p className="truncate text-sm font-medium text-zinc-100">{item.creator.handle}</p>
+                                      <div className="flex items-center gap-2">
+                                        <p className="truncate text-sm font-medium text-zinc-100">{item.creator.handle}</p>
+                                        {item.pinned && (
+                                          <Star className="h-3.5 w-3.5 text-amber-300 fill-amber-300" aria-label="Pinned creator" />
+                                        )}
+                                      </div>
                                       {item.creator.displayName ? (
                                         <p className="truncate text-xs text-zinc-500">{item.creator.displayName}</p>
                                       ) : null}
@@ -651,6 +703,22 @@ export default function ListDetailPage() {
                                       ))}
                                     </SelectContent>
                                   </Select>
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className={clsx(
+                                      "text-xs transition-colors",
+                                      item.pinned
+                                        ? "text-amber-300 hover:text-amber-200"
+                                        : "text-zinc-500 hover:text-zinc-400"
+                                    )}
+                                    onClick={() => handleTogglePin(item.id)}
+                                    aria-label={item.pinned ? "Unpin creator" : "Pin creator"}
+                                  >
+                                    <Star className={clsx("h-3.5 w-3.5", item.pinned && "fill-current")} />
+                                  </Button>
                                 </TableCell>
                                 <TableCell className="text-right">
                                   {profileUrl ? (
@@ -727,7 +795,7 @@ function DroppableColumn({ id, label, count, children }: { id: string; label: st
   );
 }
 
-function SortableCard({ item }: { item: CreatorListItem }) {
+function SortableCard({ item, onTogglePin }: { item: CreatorListItem; onTogglePin?: (itemId: string) => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id, data: { bucket: item.bucket } });
   const style = {
     transform: CSS.Translate.toString(transform),
@@ -737,55 +805,84 @@ function SortableCard({ item }: { item: CreatorListItem }) {
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <GhostCard item={item} />
+      <GhostCard item={item} onTogglePin={onTogglePin} />
     </div>
   );
 }
 
-function GhostCard({ item }: { item: CreatorListItem }) {
+function GhostCard({ item, onTogglePin }: { item: CreatorListItem; onTogglePin?: (itemId: string) => void }) {
   const followers = formatFollowers(item.creator.followers ?? 0);
   const avatarSource = ensureImageUrl(resolveAvatarSource(item.creator));
   const profileUrl = resolveProfileUrl(item.creator);
   return (
     <div className="rounded-xl border border-zinc-800/60 bg-zinc-900/80 p-4 shadow-sm">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
-        <Avatar className="h-10 w-10">
-          {avatarSource ? (
-            <AvatarImage src={avatarSource} alt={item.creator.handle} className="object-cover" />
-          ) : null}
-          <AvatarFallback className="bg-zinc-800 text-zinc-200">
-            {item.creator.handle.slice(0, 2).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
-        <div className="flex-1 min-w-0">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm font-medium text-zinc-100 truncate">{item.creator.handle}</p>
-            <Badge className="bg-zinc-800/60 text-xs uppercase tracking-wide">{item.creator.platform}</Badge>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-start gap-3">
+          <Avatar className="h-10 w-10 flex-shrink-0">
+            {avatarSource ? (
+              <AvatarImage src={avatarSource} alt={item.creator.handle} className="object-cover" />
+            ) : null}
+            <AvatarFallback className="bg-zinc-800 text-zinc-200">
+              {item.creator.handle.slice(0, 2).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0 space-y-1">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <p className="text-sm font-medium text-zinc-100 truncate">{item.creator.handle}</p>
+                {item.pinned && (
+                  <Star className="h-3.5 w-3.5 text-amber-300 fill-amber-300 flex-shrink-0" aria-label="Pinned creator" />
+                )}
+              </div>
+              <Badge className="bg-zinc-800/60 text-xs uppercase tracking-wide flex-shrink-0">{item.creator.platform}</Badge>
+            </div>
+            {item.creator.displayName && <p className="text-xs text-zinc-500 truncate">{item.creator.displayName}</p>}
+            <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+              <span>{followers} followers</span>
+              {item.creator.category && <span>| {item.creator.category}</span>}
+            </div>
           </div>
-          {item.creator.displayName && <p className="text-xs text-zinc-500">{item.creator.displayName}</p>}
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-500 sm:gap-3">
-            <span>{followers} followers</span>
-            {item.creator.category && <span>| {item.creator.category}</span>}
-          </div>
-          <div className="mt-3">
-            {profileUrl ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="px-0 text-xs text-pink-300 hover:text-pink-200"
-                onMouseDown={(event) => event.stopPropagation()}
-                onPointerDown={(event) => event.stopPropagation()}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  window.open(profileUrl, '_blank', 'noopener,noreferrer');
-                }}
-              >
-                <Link2 className="mr-2 h-3 w-3" /> View profile
-              </Button>
-            ) : (
-              <span className="text-xs text-zinc-500">Profile link unavailable</span>
-            )}
-          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {profileUrl ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs text-pink-300 hover:text-pink-200 flex-shrink-0"
+              onMouseDown={(event) => event.stopPropagation()}
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation();
+                window.open(profileUrl, '_blank', 'noopener,noreferrer');
+              }}
+            >
+              <Link2 className="mr-1 h-3 w-3" /> View profile
+            </Button>
+          ) : (
+            <span className="text-xs text-zinc-500">Profile link unavailable</span>
+          )}
+          {onTogglePin && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className={clsx(
+                "h-7 px-2 text-xs transition-colors flex-shrink-0",
+                item.pinned
+                  ? "text-amber-300 hover:text-amber-200"
+                  : "text-zinc-500 hover:text-zinc-400"
+              )}
+              onMouseDown={(event) => event.stopPropagation()}
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation();
+                onTogglePin(item.id);
+              }}
+              aria-label={item.pinned ? "Unpin creator" : "Pin creator"}
+            >
+              <Star className={clsx("mr-1 h-3 w-3", item.pinned && "fill-current")} />
+              {item.pinned ? "Unpin" : "Pin"}
+            </Button>
+          )}
         </div>
       </div>
     </div>
