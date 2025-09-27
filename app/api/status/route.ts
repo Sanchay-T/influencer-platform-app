@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import { subscriptionPlans } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
-// Test comment to trigger documentation sync
+// Test comment to trigger documentation sync - second test
 
 export async function GET() {
   try {
