@@ -3,6 +3,8 @@ import { db } from '@/lib/db';
 import { subscriptionPlans } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
+// Test comment to trigger documentation sync
+
 export async function GET() {
   try {
     // 🔍 DIAGNOSTIC LOGS - Environment Detection
