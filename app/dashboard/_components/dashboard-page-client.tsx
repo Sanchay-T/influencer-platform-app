@@ -1,78 +1,33 @@
-'use client'
+'use client';
 
-import { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
-import DashboardLayout from "../components/layout/dashboard-layout";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Loader2, BarChart3 } from "lucide-react";
-import AnimatedSparkline from "../components/dashboard/animated-sparkline";
-import AnimatedBarChart from "../components/dashboard/animated-bar-chart";
-import { FavoriteInfluencersGrid } from "../components/dashboard/favorite-influencers-grid";
-import { RecentListsSection } from "../components/dashboard/recent-lists";
+import DashboardLayout from '@/app/components/layout/dashboard-layout';
+import AnimatedBarChart from '@/app/components/dashboard/animated-bar-chart';
+import AnimatedSparkline from '@/app/components/dashboard/animated-sparkline';
+import { FavoriteInfluencersGrid } from '@/app/components/dashboard/favorite-influencers-grid';
+import { RecentListsSection } from '@/app/components/dashboard/recent-lists';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { BarChart3 } from 'lucide-react';
+import type { DashboardOverviewMetrics, DashboardRecentList, DashboardFavorite } from '@/lib/dashboard/overview';
 
-const DASHBOARD_OVERVIEW_PATH = '/api/dashboard/overview';
+// Breadcrumb: DashboardPageClient <- app/dashboard/page.tsx (server) <- lib/dashboard/overview.ts (data source)
 
-export default function DashboardPage() {
-  const [favorites, setFavorites] = useState([]);
-  const [recentLists, setRecentLists] = useState([]);
-  const [loadingHighlights, setLoadingHighlights] = useState(true);
-  const [highlightsError, setHighlightsError] = useState(null);
-  const [metrics, setMetrics] = useState({
-    averageSearchMs: null,
-    searchCount: 0,
-    searchLimit: undefined,
-    totalFavorites: 0,
-  });
+interface DashboardPageClientProps {
+  favorites: DashboardFavorite[];
+  recentLists: DashboardRecentList[];
+  metrics: DashboardOverviewMetrics;
+}
 
-  useEffect(() => {
-    let active = true;
-
-    async function loadDashboardHighlights() {
-      setLoadingHighlights(true);
-      setHighlightsError(null);
-      try {
-        const response = await fetch(DASHBOARD_OVERVIEW_PATH);
-        if (!response.ok) {
-          const payload = await response.json().catch(() => ({}));
-          throw new Error(payload.error || 'Failed to load dashboard data');
-        }
-        const data = await response.json();
-        if (!active) return;
-        const favoritesPayload = Array.isArray(data.favorites) ? data.favorites : [];
-        setFavorites(favoritesPayload);
-        setRecentLists(data.recentLists ?? []);
-        const metricPayload = data.metrics ?? {};
-        const rawLimit = metricPayload.searchLimit;
-        setMetrics({
-          averageSearchMs: typeof metricPayload.averageSearchMs === 'number' ? metricPayload.averageSearchMs : null,
-          searchCount: typeof metricPayload.searchesLast30Days === 'number' ? metricPayload.searchesLast30Days : 0,
-          searchLimit:
-            rawLimit === null
-              ? null
-              : typeof rawLimit === 'number'
-              ? rawLimit
-              : undefined,
-          totalFavorites:
-            typeof metricPayload.totalFavorites === 'number'
-              ? metricPayload.totalFavorites
-              : favoritesPayload.length,
-        });
-      } catch (error) {
-        if (!active) return;
-        setHighlightsError(error instanceof Error ? error.message : 'Failed to load dashboard data');
-        toast.error('Unable to load dashboard highlights right now.');
-      } finally {
-        if (active) {
-          setLoadingHighlights(false);
-        }
-      }
-    }
-
-    loadDashboardHighlights();
-    return () => {
-      active = false;
-    };
-  }, []);
+export default function DashboardPageClient({
+  favorites,
+  recentLists,
+  metrics,
+}: DashboardPageClientProps) {
+  const normalizedMetrics = {
+    averageSearchMs: metrics.averageSearchMs ?? null,
+    searchCount: metrics.searchesLast30Days ?? 0,
+    searchLimit: metrics.searchLimit,
+    totalFavorites: metrics.totalFavorites ?? favorites.length,
+  };
 
   return (
     <DashboardLayout>
@@ -94,7 +49,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-zinc-100">
-                {formatDuration(metrics.averageSearchMs)}
+                {formatDuration(normalizedMetrics.averageSearchMs)}
               </p>
               <p className="mt-1 text-xs text-zinc-500">Completed jobs in the last 30 days</p>
             </CardContent>
@@ -106,15 +61,15 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-zinc-100">
-                {metrics.searchCount}
+                {normalizedMetrics.searchCount}
                 <span className="text-base font-normal text-zinc-500">
-                  {renderLimit(metrics.searchLimit)}
+                  {renderLimit(normalizedMetrics.searchLimit)}
                 </span>
               </div>
               <p className="mt-1 text-xs text-zinc-500">
-                {metrics.searchLimit === null
+                {normalizedMetrics.searchLimit === null
                   ? 'Unlimited plan window'
-                  : metrics.searchLimit === undefined
+                  : normalizedMetrics.searchLimit === undefined
                   ? 'Usage data unavailable'
                   : 'Last 30 days usage versus plan limit'}
               </p>
@@ -126,7 +81,7 @@ export default function DashboardPage() {
               <CardTitle className="text-sm font-medium text-zinc-400">Total favorites</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-zinc-100">{metrics.totalFavorites}</p>
+              <p className="text-3xl font-bold text-zinc-100">{normalizedMetrics.totalFavorites}</p>
               <p className="mt-1 text-xs text-zinc-500">Creators surfaced on your dashboard</p>
             </CardContent>
           </Card>
@@ -138,17 +93,12 @@ export default function DashboardPage() {
             <span className="h-2 w-2 rounded-full bg-pink-400"></span>
             <h2 className="text-lg font-semibold text-zinc-100">Favorite Influencers</h2>
           </div>
-          {loadingHighlights ? (
-            <div className="flex h-32 items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-900/60 text-sm text-zinc-500">
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Loading favorites...
-            </div>
-          ) : highlightsError ? (
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 text-sm text-red-400">
-              {highlightsError}
-            </div>
-          ) : (
+          {favorites.length > 0 ? (
             <FavoriteInfluencersGrid influencers={favorites} />
+          ) : (
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 text-sm text-zinc-500">
+              Save favorite creators to see them here instantly on every visit.
+            </div>
           )}
         </section>
 
@@ -158,17 +108,12 @@ export default function DashboardPage() {
             <span className="h-2 w-2 rounded-full bg-purple-400"></span>
             <h2 className="text-lg font-semibold text-zinc-100">Recent Lists</h2>
           </div>
-          {loadingHighlights ? (
-            <div className="flex h-32 items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-900/60 text-sm text-zinc-500">
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Loading lists...
-            </div>
-          ) : highlightsError ? (
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 text-sm text-red-400">
-              {highlightsError}
-            </div>
-          ) : (
+          {recentLists.length > 0 ? (
             <RecentListsSection lists={recentLists} />
+          ) : (
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 text-sm text-zinc-500">
+              New lists you create will appear here for quick follow-up.
+            </div>
           )}
         </section>
 
@@ -208,7 +153,7 @@ export default function DashboardPage() {
   );
 }
 
-function formatDuration(value) {
+function formatDuration(value: number | null | undefined) {
   if (typeof value !== 'number' || value <= 0) {
     return '--';
   }
@@ -221,7 +166,7 @@ function formatDuration(value) {
   return seconds ? `${minutes}m ${seconds}s` : `${minutes}m`;
 }
 
-function renderLimit(limit) {
+function renderLimit(limit: number | null | undefined) {
   if (limit === null) {
     return ' / unlimited';
   }

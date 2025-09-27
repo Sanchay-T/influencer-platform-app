@@ -14,14 +14,19 @@ function errorResponse(error: unknown, status = 500) {
 }
 
 export async function GET() {
+  const requestId = `lists_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  console.log(`[LISTS-API:${requestId}] incoming GET`);
   const { userId } = await auth();
+  console.log(`[LISTS-API:${requestId}] auth resolved`, { userId });
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   try {
     const lists = await getListsForUser(userId);
+    console.log(`[LISTS-API:${requestId}] returning ${lists.length} lists`);
     return NextResponse.json({ lists });
   } catch (error) {
+    console.error(`[LISTS-API:${requestId}] error`, error);
     if ((error as Error).message === 'USER_NOT_FOUND') {
       return errorResponse('User record not found', 404);
     }

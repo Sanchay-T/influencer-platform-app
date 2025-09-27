@@ -41,7 +41,7 @@ async function resolveInternalUserId(clerkUserId: string) {
   return user.id;
 }
 
-function nonArchivedFavoritesFilter(userId: string) {
+function accessibleListFilter(userId: string) {
   const collaboratorSubquery = db
     .select({ listId: creatorListCollaborators.listId })
     .from(creatorListCollaborators)
@@ -52,6 +52,10 @@ function nonArchivedFavoritesFilter(userId: string) {
       )
     );
 
+  return or(eq(creatorLists.ownerId, userId), inArray(creatorLists.id, collaboratorSubquery));
+}
+
+function favoriteListCondition() {
   const favoriteCondition = or(
     sql<boolean>`((${creatorLists.settings}->>'dashboardFavorite')::boolean IS TRUE)`,
     and(
@@ -60,11 +64,7 @@ function nonArchivedFavoritesFilter(userId: string) {
     )
   );
 
-  return and(
-    eq(creatorLists.isArchived, false),
-    favoriteCondition,
-    or(eq(creatorLists.ownerId, userId), inArray(creatorLists.id, collaboratorSubquery))
-  );
+  return favoriteCondition;
 }
 
 // Consumed by app/api/dashboard/overview/route.ts to hydrate dashboard favorites
@@ -92,7 +92,16 @@ export async function getFavoriteInfluencersForDashboard(
     .from(creatorListItems)
     .leftJoin(creatorLists, eq(creatorListItems.listId, creatorLists.id))
     .leftJoin(creatorProfiles, eq(creatorListItems.creatorId, creatorProfiles.id))
-    .where(nonArchivedFavoritesFilter(internalUserId))
+    .where(
+      and(
+        eq(creatorLists.isArchived, false),
+        or(
+          eq(creatorListItems.pinned, true),
+          favoriteListCondition()
+        ),
+        accessibleListFilter(internalUserId)
+      )
+    )
     .orderBy(desc(creatorListItems.pinned), desc(creatorListItems.updatedAt))
     .limit(limit);
 
