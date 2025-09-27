@@ -183,6 +183,14 @@ const ensureImageUrl = (value) => {
 };
 
 const SearchResults = ({ searchData }) => {
+  const componentMountTime = useRef(performance.now());
+  const componentId = useMemo(() =>
+    `keyword-search-${searchData?.jobId}-${componentMountTime.current}`,
+    [searchData?.jobId]
+  );
+
+  // Component mounted
+
   const [currentPage, setCurrentPage] = useState(1);
   const [isPageLoading, setIsPageLoading] = useState(false);
   const initialCreators = useMemo(() => {
@@ -192,6 +200,11 @@ const SearchResults = ({ searchData }) => {
   }, [searchData?.initialCreators, searchData?.creators]);
 
   const [creators, setCreators] = useState(initialCreators);
+
+  // Log whenever creators data changes
+  useEffect(() => {
+    // Creators data updated
+  }, [creators, componentId, searchData?.jobId]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [campaignName, setCampaignName] = useState("Campaign");
@@ -239,7 +252,7 @@ const SearchResults = ({ searchData }) => {
     } else if (initialCreators.length) {
       setCreators(dedupeCreators(initialCreators, { platformHint: platformNormalized }));
       setIsLoading(false);
-      setIsFetching(true);
+      setIsFetching(false); // Don't fetch when we already have data
     } else {
       setCreators([]);
       setIsLoading(true);
@@ -303,12 +316,21 @@ const SearchResults = ({ searchData }) => {
           setIsFetching(false);
           return;
         }
+
+        // Skip API call if we already have data and job is completed
+        if (creators.length > 0 && !jobIsActive && !stillProcessing) {
+          // Skipping API call - data already available
+          setIsFetching(false);
+          return;
+        }
         setIsFetching(true);
         // Determine API endpoint based on platform
         let apiEndpoint = '/api/scraping/tiktok';
         if (platformNormalized === 'instagram') apiEndpoint = '/api/scraping/instagram-reels';
         else if (platformNormalized === 'enhanced-instagram') apiEndpoint = '/api/scraping/instagram-enhanced';
         else if (platformNormalized === 'youtube') apiEndpoint = '/api/scraping/youtube';
+
+        // Making API call to fetch results
 
         const response = await fetch(`${apiEndpoint}?jobId=${searchData.jobId}` , { credentials: 'include' });
         const data = await response.json();
@@ -345,7 +367,7 @@ const SearchResults = ({ searchData }) => {
     };
 
     fetchResults();
-  }, [searchData, searchData?.jobId, searchData?.selectedPlatform, searchData?.platform, searchData?.platforms, platformNormalized, jobIsActive]);
+  }, [searchData, searchData?.jobId, searchData?.selectedPlatform, searchData?.platform, searchData?.platforms, platformNormalized, jobIsActive, creators.length, stillProcessing]);
 
   // Fetch campaign name for breadcrumbs
   useEffect(() => {
