@@ -25,6 +25,21 @@ import { dedupeCreators } from '@/app/components/campaigns/utils/dedupe-creators
 // Cache for expensive deduplication operations
 const dedupeCache = new Map<string, any[]>()
 
+const SHOW_DIAGNOSTICS = process.env.NEXT_PUBLIC_SHOW_SEARCH_DIAGNOSTICS === 'true'
+
+type SearchDiagnostics = {
+  engine: string
+  queueLatencyMs: number | null
+  processingMs: number | null
+  totalMs: number | null
+  apiCalls: number | null
+  processedCreators: number | null
+  batches: Array<{ index?: number; size?: number; durationMs?: number }>
+  startedAt?: string | null
+  finishedAt?: string | null
+  lastUpdated: string
+}
+
 interface ClientCampaignPageProps {
   campaign: Campaign | null
 }
@@ -82,6 +97,16 @@ function formatDate(value: Date | string | null | undefined, withTime = false) {
   })
 }
 
+function formatDuration(ms: number | null | undefined) {
+  if (ms === null || ms === undefined || Number.isNaN(ms)) return '—'
+  if (ms < 1000) return `${ms.toFixed(0)} ms`
+  const seconds = ms / 1000
+  if (seconds < 60) return `${seconds.toFixed(1)} s`
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = seconds % 60
+  return `${minutes}m ${remainingSeconds.toFixed(1)}s`
+}
+
 function getCreatorsCount(job?: ScrapingJob | null) {
   if (!job?.results?.length) return 0
   return job.results.reduce((total, result) => {
@@ -135,6 +160,7 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
   const prevRunLogRef = useRef<{ id: string | null; status?: string } | null>(null)
   const prevTabRef = useRef<'creators' | 'activity' | null>(null)
   const transitionStartTimeRef = useRef<number | null>(null)
+  const [diagnostics, setDiagnostics] = useState<Record<string, SearchDiagnostics>>({})
 
   const logEvent = useCallback((event: string, detail: Record<string, unknown>) => {
     const timestamp = new Date().toISOString()
@@ -187,6 +213,11 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
   }, [searchParams, sortedJobs, selectedJobId])
 
   const creatorsCount = useMemo(() => getCreatorsCount(selectedJob), [selectedJob])
+
+  const selectedDiagnostics = useMemo(() => {
+    if (!SHOW_DIAGNOSTICS || !selectedJob) return undefined
+    return diagnostics[selectedJob.id]
+  }, [diagnostics, selectedJob])
 
   const isCampaignActive = useMemo(() => {
     return sortedJobs.some((job) => isActiveJob(job))
@@ -247,6 +278,39 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
 
         const response = await fetch(`/api/scraping/${current.platform.toLowerCase()}?jobId=${current.id}`, { credentials: 'include' })
         const data = await response.json()
+
+        if (SHOW_DIAGNOSTICS && data) {
+          const timings = data?.benchmark?.timings ?? {}
+          const batches = Array.isArray(data?.benchmark?.batches) ? data.benchmark.batches : []
+          const startedAt = timings?.startedAt ? new Date(timings.startedAt) : null
+          const finishedAt = timings?.finishedAt ? new Date(timings.finishedAt) : null
+          const jobCreatedAt = current.createdAt ? new Date(current.createdAt) : null
+          const queueLatencyMs = jobCreatedAt && startedAt ? startedAt.getTime() - jobCreatedAt.getTime() : null
+          const processingMs = typeof timings?.totalDurationMs === 'number'
+            ? timings.totalDurationMs
+            : startedAt && finishedAt
+              ? finishedAt.getTime() - startedAt.getTime()
+              : null
+          const totalMs = queueLatencyMs !== null && processingMs !== null
+            ? queueLatencyMs + processingMs
+            : processingMs
+
+          setDiagnostics((prev) => ({
+            ...prev,
+            [current.id]: {
+              engine: data.engine ?? 'legacy',
+              queueLatencyMs,
+              processingMs,
+              totalMs,
+              apiCalls: data?.benchmark?.apiCalls ?? (Array.isArray(batches) ? batches.length : null),
+              processedCreators: data?.benchmark?.processedCreators ?? null,
+              batches,
+              startedAt: timings?.startedAt ?? null,
+              finishedAt: timings?.finishedAt ?? null,
+              lastUpdated: new Date().toISOString()
+            }
+          }))
+        }
 
         if (!response.ok || data.error) {
           clearInterval(interval)
@@ -549,6 +613,63 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
             {selectedJob?.keywords?.length ? buildKeywords(selectedJob) : selectedJob?.targetUsername ? `@${selectedJob.targetUsername}` : '—'}
           </div>
         </div>
+        {SHOW_DIAGNOSTICS && selectedDiagnostics && (
+          <div className="space-y-2">
+            <p className="text-xs uppercase tracking-wide text-indigo-300">Diagnostics (dev)</p>
+            <div className="space-y-1 rounded-md border border-indigo-500/30 bg-indigo-500/5 p-3 text-xs text-indigo-100">
+              <div className="flex justify-between">
+                <span>Engine</span>
+                <span className="font-mono text-indigo-200">{selectedDiagnostics.engine}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Queue wait</span>
+                <span>{formatDuration(selectedDiagnostics.queueLatencyMs)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Processing</span>
+                <span>{formatDuration(selectedDiagnostics.processingMs)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Total runtime</span>
+                <span>{formatDuration(selectedDiagnostics.totalMs)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>API calls</span>
+                <span>{selectedDiagnostics.apiCalls ?? '—'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Creators processed</span>
+                <span>{selectedDiagnostics.processedCreators ?? '—'}</span>
+              </div>
+              {selectedDiagnostics.startedAt && (
+                <div className="flex justify-between">
+                  <span>First fetch</span>
+                  <span>{formatDate(selectedDiagnostics.startedAt, true)}</span>
+                </div>
+              )}
+              {selectedDiagnostics.finishedAt && (
+                <div className="flex justify-between">
+                  <span>Last fetch</span>
+                  <span>{formatDate(selectedDiagnostics.finishedAt, true)}</span>
+                </div>
+              )}
+              <details className="mt-2">
+                <summary className="cursor-pointer text-indigo-300/80">Batch breakdown</summary>
+                <ul className="mt-1 space-y-1">
+                  {selectedDiagnostics.batches.map((batch, index) => (
+                    <li key={`${selectedJob?.id}-batch-${index}`} className="flex justify-between font-mono">
+                      <span>#{batch.index ?? index + 1} · {batch.size ?? '—'} creators</span>
+                      <span>{formatDuration(batch.durationMs ?? null)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+              <p className="text-end text-[10px] text-indigo-300/70">
+                updated {formatDate(selectedDiagnostics.lastUpdated, true)}
+              </p>
+            </div>
+          </div>
+        )}
         {creatorsCount > 0 && (
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-wide text-zinc-500">Sample creators</p>
