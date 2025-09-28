@@ -6,10 +6,8 @@ import { NextResponse } from 'next/server'
 import { Receiver } from "@upstash/qstash"
 import { Resend } from 'resend'
 import CampaignFinishedEmail from '@/components/email-template'
-import { processYouTubeJob } from '@/lib/platforms/youtube/handler'
 import { processTikTokSimilarJob } from '@/lib/platforms/tiktok-similar/handler'
 import { processInstagramSimilarJob } from '@/lib/platforms/instagram-similar/handler'
-import { processYouTubeSimilarJob } from '@/lib/platforms/youtube-similar/handler'
 import { processEnhancedInstagramJob } from '@/lib/platforms/instagram-enhanced/handler'
 import { SystemConfig } from '@/lib/config/system-config'
 import { ImageCache } from '@/lib/services/image-cache'
@@ -2362,30 +2360,6 @@ export async function POST(req: Request) {
       }
     }
     // CÓDIGO PARA YOUTUBE KEYWORD SEARCH
-    else if (job.platform === 'YouTube' && job.keywords) {
-      console.log('✅ [PLATFORM-DETECTION] YouTube keyword job detected!');
-      console.log('🎬 Processing YouTube keyword job for keywords:', job.keywords);
-      
-      try {
-        const result = await processYouTubeJob(job, jobId);
-        return NextResponse.json(result);
-      } catch (youtubeKeywordError: any) {
-        console.error('❌ Error processing YouTube keyword job:', youtubeKeywordError);
-        
-        // Ensure job status is updated on error
-        const currentJob = await db.query.scrapingJobs.findFirst({ where: eq(scrapingJobs.id, jobId) });
-        if (currentJob && currentJob.status !== 'error') {
-          await db.update(scrapingJobs).set({ 
-            status: 'error', 
-            error: youtubeKeywordError.message || 'Unknown YouTube keyword processing error', 
-            completedAt: new Date(), 
-            updatedAt: new Date() 
-          }).where(eq(scrapingJobs.id, jobId));
-        }
-        
-        throw youtubeKeywordError;
-      }
-    }
     // CÓDIGO PARA TIKTOK SIMILAR
     else if (job.platform === 'TikTok' && job.targetUsername) {
       console.log('🎬 Processing TikTok similar job for username:', job.targetUsername);
@@ -2411,29 +2385,6 @@ export async function POST(req: Request) {
       }
     }
     // CÓDIGO PARA YOUTUBE SIMILAR  
-    else if (job.platform === 'YouTube' && job.targetUsername) {
-      console.log('🎬 Processing YouTube similar job for username:', job.targetUsername);
-      
-      try {
-        const result = await processYouTubeSimilarJob(job, jobId);
-        return NextResponse.json(result);
-      } catch (youtubeError: any) {
-        console.error('❌ Error processing YouTube similar job:', youtubeError);
-        
-        // Ensure job status is updated on error
-        const currentJob = await db.query.scrapingJobs.findFirst({ where: eq(scrapingJobs.id, jobId) });
-        if (currentJob && currentJob.status !== 'error') {
-          await db.update(scrapingJobs).set({ 
-            status: 'error', 
-            error: youtubeError.message || 'Unknown YouTube similar processing error', 
-            completedAt: new Date(), 
-            updatedAt: new Date() 
-          }).where(eq(scrapingJobs.id, jobId));
-        }
-        
-        throw youtubeError;
-      }
-    }
     
     
     // If no platform matches, return error

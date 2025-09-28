@@ -145,4 +145,39 @@ export class SearchJobService {
       .where(eq(scrapingJobs.id, this.job.id));
     await this.refresh();
   }
+
+  async updateSearchParams(patch: Record<string, any>) {
+    const nextParams = {
+      ...(this.job.searchParams ?? {}),
+      ...patch,
+    };
+
+    await db
+      .update(scrapingJobs)
+      .set({ searchParams: nextParams, updatedAt: new Date() })
+      .where(eq(scrapingJobs.id, this.job.id));
+
+    await this.refresh();
+  }
+
+  async replaceCreators(creators: NormalizedCreator[]) {
+    const existing = await db.query.scrapingResults.findFirst({
+      where: (results, { eq }) => eq(results.jobId, this.job.id),
+    });
+
+    if (existing) {
+      await db
+        .update(scrapingResults)
+        .set({ creators })
+        .where(eq(scrapingResults.id, existing.id));
+    } else {
+      await db.insert(scrapingResults).values({
+        jobId: this.job.id,
+        creators,
+      });
+    }
+
+    await this.refresh();
+    return creators.length;
+  }
 }

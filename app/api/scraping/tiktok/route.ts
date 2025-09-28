@@ -179,13 +179,6 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
 
         logPhase('business');
         
-        const useNewSearchRunner = process.env.FEATURE_SEARCH_ENGINE_TIKTOK_KEYWORD === 'true';
-        log.info('TikTok search runner selection', {
-            requestId,
-            featureFlag: process.env.FEATURE_SEARCH_ENGINE_TIKTOK_KEYWORD,
-            useNewSearchRunner
-        }, LogCategory.TIKTOK);
-
         // Enhanced plan validation
         const billingRequestId = BillingLogger.generateRequestId();
         
@@ -284,25 +277,23 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
             
             // Create scraping job
             const [job] = await logDbOperation('create_scraping_job', async () => {
-                const jobValues = {
-                    userId: userId,
-                    keywords: sanitizedKeywords,
-                    targetResults: adjustedTargetResults,
-                    status: 'pending',
-                    processedRuns: 0,
-                    processedResults: 0,
-                    platform: 'Tiktok',
-                    region: 'US',
-                    campaignId,
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                    cursor: 0,
-                    timeoutAt: new Date(Date.now() + TIMEOUT_MINUTES * 60 * 1000),
-                    ...(useNewSearchRunner ? { searchParams: { runner: 'search-engine', platform: 'tiktok_keyword' } } : {}),
-                };
-
                 return await db.insert(scrapingJobs)
-                    .values(jobValues)
+                    .values({
+                        userId: userId,
+                        keywords: sanitizedKeywords,
+                        targetResults: adjustedTargetResults,
+                        status: 'pending',
+                        processedRuns: 0,
+                        processedResults: 0,
+                        platform: 'Tiktok',
+                        region: 'US',
+                        campaignId,
+                        createdAt: new Date(),
+                        updatedAt: new Date(),
+                        cursor: 0,
+                        timeoutAt: new Date(Date.now() + TIMEOUT_MINUTES * 60 * 1000),
+                        searchParams: { runner: 'search-engine', platform: 'tiktok_keyword' },
+                    })
                     .returning();
             }, { requestId });
 
@@ -319,8 +310,7 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
             
             // Queue job processing with QStash
             const { getWebhookUrl } = await import('@/lib/utils/url-utils');
-            const qstashCallbackPath = useNewSearchRunner ? '/api/qstash/process-search' : '/api/qstash/process-scraping';
-            const qstashCallbackUrl = `${getWebhookUrl()}${qstashCallbackPath}`;
+            const qstashCallbackUrl = `${getWebhookUrl()}/api/qstash/process-search`;
             
             let qstashMessageId: string | null = null;
             try {
@@ -358,7 +348,7 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
                 message: 'Scraping job started successfully',
                 jobId: job.id,
                 qstashMessageId,
-                engine: useNewSearchRunner ? 'search-engine' : 'legacy'
+                engine: 'search-engine'
             }, 200, requestId);
         } catch (dbError: any) {
             log.error('TikTok API database operation failed', dbError, {
@@ -567,7 +557,7 @@ export const GET = withApiLogging(async (req: Request, { requestId, logPhase, lo
             error: job.error,
             results: job.results,
             progress: parseFloat(job.progress || '0'),
-            engine: (job.searchParams as any)?.runner ?? 'legacy',
+            engine: (job.searchParams as any)?.runner ?? 'search-engine',
             benchmark: (job.searchParams as any)?.searchEngineBenchmark ?? null
         };
         try {
