@@ -19,6 +19,7 @@ import SimilarResultsTable from './results-table';
 import SimilarResultsGallery from './results-gallery';
 import { useViewPreferences } from './useViewPreferences';
 import { buildProfileLink } from '../keyword-search/utils/profile-link';
+import { deriveInitialStateFromSearchData } from './utils/initial-state';
 
 const VIEW_MODES = ['table', 'gallery'];
 const VIEW_MODE_META = {
@@ -125,8 +126,17 @@ export default function SimilarSearchResults({ searchData }) {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [isPageLoading, setIsPageLoading] = useState(false);
-  const [creators, setCreators] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const initialSeed = useMemo(
+    () =>
+      deriveInitialStateFromSearchData({
+        status: searchData?.status,
+        creators: searchData?.creators,
+      }),
+    [searchData?.status, searchData?.creators, searchData?.jobId]
+  );
+
+  const [creators, setCreators] = useState(initialSeed.creators);
+  const [isLoading, setIsLoading] = useState(initialSeed.isLoading);
   const [stillProcessing, setStillProcessing] = useState(false);
   const [progressInfo, setProgressInfo] = useState(null);
   const [, setEnhancedMeta] = useState(null);
@@ -155,6 +165,14 @@ export default function SimilarSearchResults({ searchData }) {
     setSelectedCreators({});
     setCurrentPage(1);
   }, [searchData?.jobId]);
+
+  useEffect(() => {
+    setCreators(initialSeed.creators);
+    setIsLoading(initialSeed.isLoading);
+    if (!initialSeed.isLoading) {
+      setStillProcessing(false);
+    }
+  }, [initialSeed.creators, initialSeed.isLoading]);
 
   useEffect(() => {
     setCurrentPage(1);
