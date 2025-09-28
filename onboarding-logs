@@ -192,3 +192,256 @@
 [2025-09-27 21:24:24.332] [MODAL] [CLOSE] - Modal closeed
 [2025-09-28 07:54:29.412] [MODAL] [CLOSE] - Modal closeed
 [2025-09-28 07:54:29.412] [MODAL] [CLOSE] - Modal closeed
+[2025-09-28 09:17:25.174] [MODAL] [CLOSE] - Modal closeed
+[2025-09-28 09:17:25.174] [MODAL] [CLOSE] - Modal closeed
+[2025-09-28 09:41:02.897] [MODAL] [CLOSE] - Modal closeed
+[2025-09-28 09:41:02.897] [MODAL] [CLOSE] - Modal closeed
+[2025-09-28 09:41:02.897] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-28 09:41:02.897] [MODAL] [OPEN] - Modal opened
+[2025-09-28 09:42:19.587] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-28 09:42:19.639] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-28 09:42:19.639] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-28 09:42:19.639] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-28 09:42:19.639] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-28 09:42:19.772] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-28 09:42:19.792] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-28 09:42:19.792] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-28 09:42:19.792] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-28 09:42:19.792] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-09-28 09:42:19.792] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-28 09:42:19.896] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-28 09:42:19.912] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-28 09:42:19.912] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-28 09:42:19.912] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-28 09:42:19.912] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-28 09:42:19.912] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-28 09:42:20.040] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-28 09:42:20.057] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-28 09:42:20.057] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-28 09:42:20.057] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-28 09:42:20.057] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-28 09:42:20.057] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-09-28 09:42:24.267] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-09-28 09:42:35.415] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-09-28 09:42:35.415] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-09-28 09:42:43.956] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-09-28 09:42:43.987] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 1 to step 2
+[2025-09-28 09:42:43.988] [MODAL] [OPEN] - Modal opened
+[2025-09-28 09:42:43.987] [STEP-1] [FORM-SUCCESS] - Step 1 completed successfully
+[2025-09-28 09:42:44.023] [MODAL] [STEP_CHANGE] - Modal moved to step 2
+[2025-09-28 09:43:01.302] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:01.505] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:01.505] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:01.505] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:01.505] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:01.593] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:01.818] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:01.841] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:01.841] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:01.841] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:01.841] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:01.879] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:02.114] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:02.149] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:02.204] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:02.204] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:02.204] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:02.204] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:02.390] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:02.401] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:02.421] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:02.421] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:02.421] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:02.421] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:02.549] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:02.565] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:02.581] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:02.582] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:02.581] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:02.582] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:02.722] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:02.738] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:02.738] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:02.738] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:02.738] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:02.738] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:02.955] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:02.979] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:02.979] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:02.979] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:02.980] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:02.980] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:03.110] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:03.129] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:03.129] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:03.129] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:03.129] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:03.129] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:03.292] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:03.319] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:03.337] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:03.337] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:03.337] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:03.337] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:03.517] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:03.536] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:03.558] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:03.559] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:03.559] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:03.559] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:03.799] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:03.856] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:03.856] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:03.856] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:03.856] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:03.856] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:04.100] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:04.132] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:04.133] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:04.133] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:04.133] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:04.133] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:04.323] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:04.359] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:04.359] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:04.359] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:04.359] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:04.359] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:04.585] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:04.619] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:04.619] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:04.619] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:04.619] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:04.619] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:04.855] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:04.886] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:04.886] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:04.886] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:04.886] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:04.886] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:05.101] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:05.138] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:05.138] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:05.138] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:05.138] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:05.138] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:05.336] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:05.366] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:05.366] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:05.366] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:05.366] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:05.419] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:05.597] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:05.634] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:05.634] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:05.634] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:05.634] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:05.634] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:05.847] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:09.088] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:09.088] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:09.088] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:09.088] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:09.131] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:09.536] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:09.552] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:09.552] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:09.552] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:09.601] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:09.699] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:09.711] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:09.711] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:09.711] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:09.711] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:09.752] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:09.837] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:09.856] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:09.856] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:09.856] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:09.856] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:09.889] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:09.993] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.006] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.025] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.025] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.025] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.066] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.158] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.183] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.183] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.183] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.183] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.212] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.305] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.313] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.314] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.314] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.314] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.359] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.432] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.449] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.449] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.449] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.449] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.487] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.582] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.601] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.601] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.601] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.602] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.627] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.725] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.739] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.739] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.761] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.761] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.793] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.880] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.892] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.892] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.892] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.892] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:10.922] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:11.010] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:11.027] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:11.035] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:11.035] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:11.035] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:11.067] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:11.157] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:11.174] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:11.174] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:11.174] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:11.174] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:11.201] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:11.303] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:11.333] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:11.333] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:11.333] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:11.333] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:11.917] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:12.093] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:12.162] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:12.162] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:12.162] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:12.162] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:12.312] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:12.389] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-09-28 09:43:12.479] [STEP-2] [FORM-VALIDATION] - Starting step 2 form validation
+[2025-09-28 09:43:12.530] [MODAL] [OPEN] - Modal opened
+[2025-09-28 09:43:12.581] [MODAL] [STEP_CHANGE] - Modal moved to step 3
+[2025-09-28 09:43:12.634] [STEP-2] [FORM-SUBMIT] - Step 2 form submission started
+[2025-09-28 09:43:12.661] [API] [API-RESPONSE] - Received response from /api/onboarding/step-2
+[2025-09-28 09:43:12.661] [API] [API-CALL-START] - Making API call to /api/onboarding/step-2
+[2025-09-28 09:43:12.684] [STEP-2] [FORM-SUCCESS] - Step 2 completed successfully
+[2025-09-28 09:43:12.718] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 2 to step 3
+[2025-09-28 09:45:26.317] [MODAL] [CLOSE] - Modal closeed
+[2025-09-28 09:45:26.633] [MODAL] [CLOSE] - Modal closeed
+[2025-09-28 09:45:26.725] [MODAL] [OPEN] - Modal opened
+[2025-09-28 09:45:26.748] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-09-28 09:45:41.921] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-09-28 09:45:41.924] [STEP-1] [VALIDATION-ERROR] - Step 1 validation failed - missing required fields
+[2025-09-28 09:46:00.908] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-09-28 09:46:00.913] [STEP-1] [VALIDATION-ERROR] - Step 1 validation failed - missing required fields
+[2025-09-28 09:46:20.098] [STEP-1] [VALIDATION-ERROR] - Step 1 validation failed - missing required fields
+[2025-09-28 09:46:20.122] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
