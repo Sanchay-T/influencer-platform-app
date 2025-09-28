@@ -12,14 +12,14 @@ const https = require('https');
 
 // ANSI color codes for better output
 const colors = {
-  reset: '\x1b[0m',
-  red: '\x1b[31m',
-  green: '\x1b[32m',
-  yellow: '\x1b[33m',
-  blue: '\x1b[34m',
-  magenta: '\x1b[35m',
-  cyan: '\x1b[36m',
-  bold: '\x1b[1m'
+  reset: '[0m',
+  red: '[31m',
+  green: '[32m',
+  yellow: '[33m',
+  blue: '[34m',
+  magenta: '[35m',
+  cyan: '[36m',
+  bold: '[1m'
 };
 
 // Configuration
@@ -41,27 +41,27 @@ const config = {
  */
 class Logger {
   static info(message, data = null) {
-    console.log(`${colors.blue}ℹ${colors.reset} ${colors.bold}[INFO]${colors.reset} ${message}`);
+    console.log(`${colors.blue}â¹${colors.reset} ${colors.bold}[INFO]${colors.reset} ${message}`);
     if (data) console.log(data);
   }
   
   static success(message, data = null) {
-    console.log(`${colors.green}✅${colors.reset} ${colors.bold}[SUCCESS]${colors.reset} ${message}`);
+    console.log(`${colors.green}â${colors.reset} ${colors.bold}[SUCCESS]${colors.reset} ${message}`);
     if (data) console.log(data);
   }
   
   static warn(message, data = null) {
-    console.log(`${colors.yellow}⚠️${colors.reset} ${colors.bold}[WARNING]${colors.reset} ${message}`);
+    console.log(`${colors.yellow}â ï¸${colors.reset} ${colors.bold}[WARNING]${colors.reset} ${message}`);
     if (data) console.log(data);
   }
   
   static error(message, data = null) {
-    console.log(`${colors.red}❌${colors.reset} ${colors.bold}[ERROR]${colors.reset} ${message}`);
+    console.log(`${colors.red}â${colors.reset} ${colors.bold}[ERROR]${colors.reset} ${message}`);
     if (data) console.error(data);
   }
   
   static step(step, total, message) {
-    console.log(`\\n${colors.cyan}[${step}/${total}]${colors.reset} ${colors.bold}${message}${colors.reset}`);
+    console.log(`\n${colors.cyan}[${step}/${total}]${colors.reset} ${colors.bold}${message}${colors.reset}`);
   }
   
   static separator() {
@@ -74,7 +74,7 @@ class Logger {
  */
 async function validateDeployment() {
   Logger.separator();
-  Logger.info('🚀 Starting Enhanced Deployment Validation (Phase 5)');
+  Logger.info('ð Starting Enhanced Deployment Validation (Phase 5)');
   Logger.info(`Environment: ${config.environment}`);
   Logger.info(`Sentry Environment: ${config.sentryEnvironment || 'Not set'}`);
   Logger.separator();
@@ -124,11 +124,11 @@ async function validateDeployment() {
   
   Logger.separator();
   if (exitCode === 0) {
-    Logger.success(`🎉 Deployment validation completed successfully in ${duration}s`);
-    Logger.success('✅ System is ready for deployment');
+    Logger.success(`ð Deployment validation completed successfully in ${duration}s`);
+    Logger.success('â System is ready for deployment');
   } else {
-    Logger.error(`💥 Deployment validation failed in ${duration}s`);
-    Logger.error('❌ System is NOT ready for deployment');
+    Logger.error(`ð¥ Deployment validation failed in ${duration}s`);
+    Logger.error('â System is NOT ready for deployment');
   }
   Logger.separator();
   
@@ -236,7 +236,7 @@ async function validateSecurityConfig() {
     
     // Check NODE_ENV
     if (process.env.NODE_ENV !== 'production') {
-      issues.push('NODE_ENV should be \"production\" in production environment');
+      issues.push('NODE_ENV should be "production" in production environment');
     }
   }
   
@@ -268,4 +268,427 @@ async function validateSecurityConfig() {
 
 /**
  * Validate external services
- */\nasync function validateExternalServices() {\n  const services = [\n    { name: 'Sentry', check: () => !!process.env.NEXT_PUBLIC_SENTRY_DSN },\n    { name: 'Database', check: () => !!process.env.DATABASE_URL },\n    { name: 'Clerk', check: () => !!process.env.CLERK_SECRET_KEY },\n    { name: 'Stripe', check: () => !!process.env.STRIPE_SECRET_KEY, required: config.environment === 'production' },\n    { name: 'QStash', check: () => !!process.env.QSTASH_TOKEN },\n    { name: 'Apify', check: () => !!process.env.APIFY_TOKEN },\n    { name: 'Resend', check: () => !!process.env.RESEND_API_KEY, required: config.environment === 'production' },\n    { name: 'Vercel Blob', check: () => !!process.env.BLOB_READ_WRITE_TOKEN }\n  ];\n  \n  const results = services.map(service => ({\n    name: service.name,\n    configured: service.check(),\n    required: service.required !== false\n  }));\n  \n  const missingRequired = results.filter(r => r.required && !r.configured);\n  const missingOptional = results.filter(r => !r.required && !r.configured);\n  \n  if (missingRequired.length > 0) {\n    Logger.error(`Missing required services: ${missingRequired.map(r => r.name).join(', ')}`);\n    throw new Error(`${missingRequired.length} required services not configured`);\n  }\n  \n  if (missingOptional.length > 0) {\n    Logger.warn(`Optional services not configured: ${missingOptional.map(r => r.name).join(', ')}`);\n  }\n  \n  const configuredCount = results.filter(r => r.configured).length;\n  Logger.success(`External services validated (${configuredCount}/${results.length} configured)`);\n}\n\n/**\n * Validate database connection\n */\nasync function validateDatabaseConnection() {\n  try {\n    // Try to run a simple database check script\n    const testScript = `\n      const { db } = require('./lib/db');\n      const SystemConfig = require('./lib/config/system-config').default;\n      \n      (async () => {\n        try {\n          await SystemConfig.get('api_limits', 'max_api_calls_for_testing');\n          console.log('Database connection successful');\n          process.exit(0);\n        } catch (error) {\n          console.error('Database connection failed:', error.message);\n          process.exit(1);\n        }\n      })();\n    `;\n    \n    const tempScript = path.join(process.cwd(), '.temp-db-test.js');\n    fs.writeFileSync(tempScript, testScript);\n    \n    try {\n      execSync(`node ${tempScript}`, { stdio: 'pipe', timeout: 10000 });\n      Logger.success('Database connection validated');\n    } finally {\n      // Clean up temp file\n      if (fs.existsSync(tempScript)) {\n        fs.unlinkSync(tempScript);\n      }\n    }\n    \n  } catch (error) {\n    Logger.error('Database connection validation failed:', error.message);\n    throw new Error('Database connection failed');\n  }\n}\n\n/**\n * Run application health check\n */\nasync function runHealthCheck() {\n  try {\n    // First, try to build the application\n    Logger.info('Building application...');\n    try {\n      execSync('npm run build', { stdio: 'pipe', timeout: 120000 });\n      Logger.success('Application build successful');\n    } catch (buildError) {\n      Logger.error('Application build failed');\n      throw new Error('Build failed');\n    }\n    \n    // If we have a health check URL, test it\n    if (config.healthCheckUrl.includes('localhost')) {\n      Logger.warn('Skipping health check - localhost URL detected');\n      return;\n    }\n    \n    const healthResponse = await makeHttpRequest(config.healthCheckUrl, {\n      method: 'GET',\n      timeout: config.timeout\n    });\n    \n    if (healthResponse.status === 'healthy' || healthResponse.status === 'degraded') {\n      Logger.success(`Health check passed - Status: ${healthResponse.status}`);\n      \n      if (healthResponse.status === 'degraded') {\n        Logger.warn('System status is degraded - check warnings');\n        if (healthResponse.checks) {\n          Object.entries(healthResponse.checks).forEach(([key, check]) => {\n            if (check.status === 'warn' || check.status === 'fail') {\n              Logger.warn(`${key}: ${check.message}`);\n            }\n          });\n        }\n      }\n    } else {\n      throw new Error(`Health check failed - Status: ${healthResponse.status}`);\n    }\n    \n  } catch (error) {\n    Logger.error('Health check failed:', error.message);\n    throw error;\n  }\n}\n\n/**\n * Run comprehensive deployment validation\n */\nasync function runComprehensiveValidation() {\n  try {\n    const validationResponse = await makeHttpRequest(config.validationUrl, {\n      method: 'POST',\n      headers: {\n        'Content-Type': 'application/json'\n      },\n      body: JSON.stringify({\n        type: 'pre-deployment',\n        environment: config.environment,\n        includeReport: false,\n        skipSlowChecks: false\n      }),\n      timeout: config.timeout\n    });\n    \n    if (validationResponse.deploymentReady) {\n      Logger.success('Comprehensive deployment validation passed');\n      \n      // Log summary\n      const { summary } = validationResponse;\n      Logger.info(`Validation Summary: ${summary.passed}/${summary.totalChecks} passed, ${summary.failed} failed, ${summary.warnings} warnings`);\n      \n      // Log warnings if any\n      if (validationResponse.warnings && validationResponse.warnings.length > 0) {\n        Logger.warn('Deployment warnings:');\n        validationResponse.warnings.forEach(warning => {\n          Logger.warn(`  • ${warning}`);\n        });\n      }\n    } else {\n      Logger.error('Comprehensive deployment validation failed');\n      \n      if (validationResponse.criticalIssues) {\n        Logger.error('Critical issues:');\n        validationResponse.criticalIssues.forEach(issue => {\n          Logger.error(`  • ${issue}`);\n        });\n      }\n      \n      if (validationResponse.recommendations) {\n        Logger.info('Recommendations:');\n        validationResponse.recommendations.forEach(rec => {\n          Logger.info(`  • ${rec}`);\n        });\n      }\n      \n      throw new Error(`Deployment validation failed with ${validationResponse.criticalIssues?.length || 0} critical issues`);\n    }\n    \n  } catch (error) {\n    if (config.validationUrl.includes('localhost')) {\n      Logger.warn('Skipping comprehensive validation - localhost URL detected');\n      return;\n    }\n    \n    Logger.error('Comprehensive validation failed:', error.message);\n    throw error;\n  }\n}\n\n/**\n * Generate deployment report\n */\nasync function generateDeploymentReport() {\n  const reportPath = path.join(process.cwd(), 'deployment-validation-report.md');\n  \n  try {\n    if (config.validationUrl.includes('localhost')) {\n      Logger.warn('Skipping report generation - localhost URL detected');\n      return;\n    }\n    \n    const reportResponse = await makeHttpRequest(`${config.validationUrl}?format=report`, {\n      method: 'GET',\n      timeout: config.timeout\n    });\n    \n    if (typeof reportResponse === 'string') {\n      fs.writeFileSync(reportPath, reportResponse);\n      Logger.success(`Deployment report generated: ${reportPath}`);\n    } else {\n      Logger.warn('Report generation skipped - invalid response format');\n    }\n    \n  } catch (error) {\n    Logger.warn('Report generation failed:', error.message);\n    // Don't fail the entire validation for report generation issues\n  }\n}\n\n/**\n * Helper functions\n */\n\nfunction getRequiredEnvironmentVariables() {\n  const baseVars = [\n    'NODE_ENV',\n    'DATABASE_URL',\n    'NEXT_PUBLIC_SUPABASE_URL',\n    'SUPABASE_SERVICE_ROLE_KEY',\n    'NEXT_PUBLIC_SUPABASE_ANON_KEY'\n  ];\n  \n  if (config.environment === 'production') {\n    return [\n      ...baseVars,\n      'NEXT_PUBLIC_SENTRY_DSN',\n      'SENTRY_AUTH_TOKEN',\n      'CLERK_SECRET_KEY',\n      'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',\n      'STRIPE_SECRET_KEY',\n      'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY',\n      'QSTASH_TOKEN',\n      'APIFY_TOKEN',\n      'RESEND_API_KEY',\n      'BLOB_READ_WRITE_TOKEN'\n    ];\n  }\n  \n  if (config.environment === 'development') {\n    return [\n      ...baseVars,\n      'ENABLE_TEST_AUTH',\n      'TEST_USER_ID'\n    ];\n  }\n  \n  return baseVars;\n}\n\nfunction validateProductionSpecificSettings() {\n  const issues = [];\n  \n  // Check Sentry sampling rates\n  const tracesSampleRate = parseFloat(process.env.SENTRY_TRACES_SAMPLE_RATE || '1.0');\n  if (tracesSampleRate > 0.5) {\n    Logger.warn(`High Sentry traces sample rate in production: ${tracesSampleRate}`);\n  }\n  \n  // Check for proper URL schemes\n  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;\n  if (siteUrl && !siteUrl.startsWith('https://')) {\n    issues.push('Production site URL should use HTTPS');\n  }\n  \n  // Check database pooling\n  const dbUrl = process.env.DATABASE_URL;\n  if (dbUrl && !dbUrl.includes('pooler.supabase.com')) {\n    Logger.warn('Database URL may not be using connection pooling');\n  }\n  \n  if (issues.length > 0) {\n    throw new Error(`Production validation issues: ${issues.join(', ')}`);\n  }\n}\n\nasync function makeHttpRequest(url, options = {}) {\n  return new Promise((resolve, reject) => {\n    const timeout = options.timeout || 10000;\n    const method = options.method || 'GET';\n    const headers = options.headers || {};\n    const body = options.body;\n    \n    const urlObj = new URL(url);\n    const requestOptions = {\n      hostname: urlObj.hostname,\n      port: urlObj.port || (urlObj.protocol === 'https:' ? 443 : 80),\n      path: urlObj.pathname + urlObj.search,\n      method,\n      headers: {\n        'User-Agent': 'deployment-validator/1.0',\n        ...headers\n      },\n      timeout\n    };\n    \n    if (body) {\n      requestOptions.headers['Content-Length'] = Buffer.byteLength(body);\n    }\n    \n    const protocol = urlObj.protocol === 'https:' ? https : require('http');\n    \n    const req = protocol.request(requestOptions, (res) => {\n      let data = '';\n      \n      res.on('data', (chunk) => {\n        data += chunk;\n      });\n      \n      res.on('end', () => {\n        try {\n          if (res.headers['content-type']?.includes('application/json')) {\n            resolve(JSON.parse(data));\n          } else {\n            resolve(data);\n          }\n        } catch (parseError) {\n          reject(new Error(`Failed to parse response: ${parseError.message}`));\n        }\n      });\n    });\n    \n    req.on('timeout', () => {\n      req.destroy();\n      reject(new Error('Request timeout'));\n    });\n    \n    req.on('error', (error) => {\n      reject(error);\n    });\n    \n    if (body) {\n      req.write(body);\n    }\n    \n    req.end();\n  });\n}\n\n/**\n * Parse command line arguments\n */\nfunction parseArgs() {\n  const args = process.argv.slice(2);\n  const options = {};\n  \n  for (let i = 0; i < args.length; i++) {\n    const arg = args[i];\n    \n    if (arg === '--environment' || arg === '-e') {\n      options.environment = args[++i];\n    } else if (arg === '--health-url') {\n      options.healthUrl = args[++i];\n    } else if (arg === '--validation-url') {\n      options.validationUrl = args[++i];\n    } else if (arg === '--timeout') {\n      options.timeout = parseInt(args[++i], 10) * 1000; // Convert to ms\n    } else if (arg === '--help' || arg === '-h') {\n      console.log(`\nDeployment Validation Script\n\nUsage: node scripts/validate-deployment.js [options]\n\nOptions:\n  -e, --environment <env>    Target environment (development, staging, production)\n  --health-url <url>         Health check endpoint URL\n  --validation-url <url>     Validation endpoint URL\n  --timeout <seconds>        Request timeout in seconds (default: 30)\n  -h, --help                Show this help message\n\nExamples:\n  node scripts/validate-deployment.js --environment production\n  node scripts/validate-deployment.js --health-url https://yourdomain.com/api/health\n      `);\n      process.exit(0);\n    }\n  }\n  \n  return options;\n}\n\n/**\n * Main execution\n */\nif (require.main === module) {\n  const options = parseArgs();\n  \n  // Override config with command line options\n  if (options.environment) config.environment = options.environment;\n  if (options.healthUrl) config.healthCheckUrl = options.healthUrl;\n  if (options.validationUrl) config.validationUrl = options.validationUrl;\n  if (options.timeout) config.timeout = options.timeout;\n  \n  validateDeployment();\n}\n\nmodule.exports = {\n  validateDeployment,\n  Logger,\n  config\n};
+ */
+async function validateExternalServices() {
+  const services = [
+    { name: 'Sentry', check: () => !!process.env.NEXT_PUBLIC_SENTRY_DSN },
+    { name: 'Database', check: () => !!process.env.DATABASE_URL },
+    { name: 'Clerk', check: () => !!process.env.CLERK_SECRET_KEY },
+    { name: 'Stripe', check: () => !!process.env.STRIPE_SECRET_KEY, required: config.environment === 'production' },
+    { name: 'QStash', check: () => !!process.env.QSTASH_TOKEN },
+    { name: 'Apify', check: () => !!process.env.APIFY_TOKEN },
+    { name: 'Resend', check: () => !!process.env.RESEND_API_KEY, required: config.environment === 'production' },
+    { name: 'Vercel Blob', check: () => !!process.env.BLOB_READ_WRITE_TOKEN }
+  ];
+  
+  const results = services.map(service => ({
+    name: service.name,
+    configured: service.check(),
+    required: service.required !== false
+  }));
+  
+  const missingRequired = results.filter(r => r.required && !r.configured);
+  const missingOptional = results.filter(r => !r.required && !r.configured);
+  
+  if (missingRequired.length > 0) {
+    Logger.error(`Missing required services: ${missingRequired.map(r => r.name).join(', ')}`);
+    throw new Error(`${missingRequired.length} required services not configured`);
+  }
+  
+  if (missingOptional.length > 0) {
+    Logger.warn(`Optional services not configured: ${missingOptional.map(r => r.name).join(', ')}`);
+  }
+  
+  const configuredCount = results.filter(r => r.configured).length;
+  Logger.success(`External services validated (${configuredCount}/${results.length} configured)`);
+}
+
+/**
+ * Validate database connection
+ */
+async function validateDatabaseConnection() {
+  try {
+    // Try to run a simple database check script
+    const testScript = `
+      const { Client } = require('pg');
+
+      (async () => {
+        const connectionString = process.env.DATABASE_URL;
+        if (!connectionString) {
+          console.error('DATABASE_URL is not set');
+          process.exit(1);
+          return;
+        }
+
+        const sslRequired = /supabase\.co|\.pooler\./.test(connectionString);
+        const client = new Client({
+          connectionString,
+          ssl: sslRequired ? { rejectUnauthorized: false } : undefined
+        });
+
+        try {
+          await client.connect();
+          await client.query('SELECT 1');
+          console.log('Database connection successful');
+          await client.end();
+          process.exit(0);
+        } catch (error) {
+          console.error('Database connection failed:', error.message);
+          process.exit(1);
+        }
+      })();
+    `;
+
+    const tempScript = path.join(process.cwd(), '.temp-db-test.js');
+    fs.writeFileSync(tempScript, testScript);
+
+    try {
+      execSync(`node ${tempScript}`, { stdio: 'pipe', timeout: 10000 });
+      Logger.success('Database connection validated');
+    } finally {
+      // Clean up temp file
+      if (fs.existsSync(tempScript)) {
+        fs.unlinkSync(tempScript);
+      }
+    }
+
+  } catch (error) {
+    Logger.error('Database connection validation failed:', error.message);
+    throw new Error('Database connection failed');
+  }
+}
+
+/**
+ * Run application health check
+ */
+async function runHealthCheck() {
+  try {
+    // First, try to build the application
+    Logger.info('Building application...');
+    try {
+      execSync('npm run build', { stdio: 'pipe', timeout: 120000 });
+      Logger.success('Application build successful');
+    } catch (buildError) {
+      Logger.error('Application build failed');
+      throw new Error('Build failed');
+    }
+    
+    // If we have a health check URL, test it
+    if (config.healthCheckUrl.includes('localhost')) {
+      Logger.warn('Skipping health check - localhost URL detected');
+      return;
+    }
+    
+    const healthResponse = await makeHttpRequest(config.healthCheckUrl, {
+      method: 'GET',
+      timeout: config.timeout
+    });
+    
+    if (healthResponse.status === 'healthy' || healthResponse.status === 'degraded') {
+      Logger.success(`Health check passed - Status: ${healthResponse.status}`);
+      
+      if (healthResponse.status === 'degraded') {
+        Logger.warn('System status is degraded - check warnings');
+        if (healthResponse.checks) {
+          Object.entries(healthResponse.checks).forEach(([key, check]) => {
+            if (check.status === 'warn' || check.status === 'fail') {
+              Logger.warn(`${key}: ${check.message}`);
+            }
+          });
+        }
+      }
+    } else {
+      throw new Error(`Health check failed - Status: ${healthResponse.status}`);
+    }
+    
+  } catch (error) {
+    Logger.error('Health check failed:', error.message);
+    throw error;
+  }
+}
+
+/**
+ * Run comprehensive deployment validation
+ */
+async function runComprehensiveValidation() {
+  try {
+    const validationResponse = await makeHttpRequest(config.validationUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        type: 'pre-deployment',
+        environment: config.environment,
+        includeReport: false,
+        skipSlowChecks: false
+      }),
+      timeout: config.timeout
+    });
+    
+    if (validationResponse.deploymentReady) {
+      Logger.success('Comprehensive deployment validation passed');
+      
+      // Log summary
+      const { summary } = validationResponse;
+      Logger.info(`Validation Summary: ${summary.passed}/${summary.totalChecks} passed, ${summary.failed} failed, ${summary.warnings} warnings`);
+      
+      // Log warnings if any
+      if (validationResponse.warnings && validationResponse.warnings.length > 0) {
+        Logger.warn('Deployment warnings:');
+        validationResponse.warnings.forEach(warning => {
+          Logger.warn(`  â¢ ${warning}`);
+        });
+      }
+    } else {
+      Logger.error('Comprehensive deployment validation failed');
+      
+      if (validationResponse.criticalIssues) {
+        Logger.error('Critical issues:');
+        validationResponse.criticalIssues.forEach(issue => {
+          Logger.error(`  â¢ ${issue}`);
+        });
+      }
+      
+      if (validationResponse.recommendations) {
+        Logger.info('Recommendations:');
+        validationResponse.recommendations.forEach(rec => {
+          Logger.info(`  â¢ ${rec}`);
+        });
+      }
+      
+      throw new Error(`Deployment validation failed with ${validationResponse.criticalIssues?.length || 0} critical issues`);
+    }
+    
+  } catch (error) {
+    if (config.validationUrl.includes('localhost')) {
+      Logger.warn('Skipping comprehensive validation - localhost URL detected');
+      return;
+    }
+    
+    Logger.error('Comprehensive validation failed:', error.message);
+    throw error;
+  }
+}
+
+/**
+ * Generate deployment report
+ */
+async function generateDeploymentReport() {
+  const reportPath = path.join(process.cwd(), 'deployment-validation-report.md');
+  
+  try {
+    if (config.validationUrl.includes('localhost')) {
+      Logger.warn('Skipping report generation - localhost URL detected');
+      return;
+    }
+    
+    const reportResponse = await makeHttpRequest(`${config.validationUrl}?format=report`, {
+      method: 'GET',
+      timeout: config.timeout
+    });
+    
+    if (typeof reportResponse === 'string') {
+      fs.writeFileSync(reportPath, reportResponse);
+      Logger.success(`Deployment report generated: ${reportPath}`);
+    } else {
+      Logger.warn('Report generation skipped - invalid response format');
+    }
+    
+  } catch (error) {
+    Logger.warn('Report generation failed:', error.message);
+    // Don't fail the entire validation for report generation issues
+  }
+}
+
+/**
+ * Helper functions
+ */
+
+function getRequiredEnvironmentVariables() {
+  const baseVars = [
+    'NODE_ENV',
+    'DATABASE_URL',
+    'NEXT_PUBLIC_SUPABASE_URL',
+    'SUPABASE_SERVICE_ROLE_KEY',
+    'NEXT_PUBLIC_SUPABASE_ANON_KEY'
+  ];
+  
+  if (config.environment === 'production') {
+    return [
+      ...baseVars,
+      'NEXT_PUBLIC_SENTRY_DSN',
+      'SENTRY_AUTH_TOKEN',
+      'CLERK_SECRET_KEY',
+      'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',
+      'STRIPE_SECRET_KEY',
+      'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY',
+      'QSTASH_TOKEN',
+      'APIFY_TOKEN',
+      'RESEND_API_KEY',
+      'BLOB_READ_WRITE_TOKEN'
+    ];
+  }
+  
+  if (config.environment === 'development') {
+    return [
+      ...baseVars,
+      'ENABLE_TEST_AUTH',
+      'TEST_USER_ID'
+    ];
+  }
+  
+  return baseVars;
+}
+
+function validateProductionSpecificSettings() {
+  const issues = [];
+  
+  // Check Sentry sampling rates
+  const tracesSampleRate = parseFloat(process.env.SENTRY_TRACES_SAMPLE_RATE || '1.0');
+  if (tracesSampleRate > 0.5) {
+    Logger.warn(`High Sentry traces sample rate in production: ${tracesSampleRate}`);
+  }
+  
+  // Check for proper URL schemes
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  if (siteUrl && !siteUrl.startsWith('https://')) {
+    issues.push('Production site URL should use HTTPS');
+  }
+  
+  // Check database pooling
+  const dbUrl = process.env.DATABASE_URL;
+  if (dbUrl && !dbUrl.includes('pooler.supabase.com')) {
+    Logger.warn('Database URL may not be using connection pooling');
+  }
+  
+  if (issues.length > 0) {
+    throw new Error(`Production validation issues: ${issues.join(', ')}`);
+  }
+}
+
+async function makeHttpRequest(url, options = {}) {
+  return new Promise((resolve, reject) => {
+    const timeout = options.timeout || 10000;
+    const method = options.method || 'GET';
+    const headers = options.headers || {};
+    const body = options.body;
+    
+    const urlObj = new URL(url);
+    const requestOptions = {
+      hostname: urlObj.hostname,
+      port: urlObj.port || (urlObj.protocol === 'https:' ? 443 : 80),
+      path: urlObj.pathname + urlObj.search,
+      method,
+      headers: {
+        'User-Agent': 'deployment-validator/1.0',
+        ...headers
+      },
+      timeout
+    };
+    
+    if (body) {
+      requestOptions.headers['Content-Length'] = Buffer.byteLength(body);
+    }
+    
+    const protocol = urlObj.protocol === 'https:' ? https : require('http');
+    
+    const req = protocol.request(requestOptions, (res) => {
+      let data = '';
+      
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      
+      res.on('end', () => {
+        try {
+          if (res.headers['content-type']?.includes('application/json')) {
+            resolve(JSON.parse(data));
+          } else {
+            resolve(data);
+          }
+        } catch (parseError) {
+          reject(new Error(`Failed to parse response: ${parseError.message}`));
+        }
+      });
+    });
+    
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('Request timeout'));
+    });
+    
+    req.on('error', (error) => {
+      reject(error);
+    });
+    
+    if (body) {
+      req.write(body);
+    }
+    
+    req.end();
+  });
+}
+
+/**
+ * Parse command line arguments
+ */
+function parseArgs() {
+  const args = process.argv.slice(2);
+  const options = {};
+  
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    
+    if (arg === '--environment' || arg === '-e') {
+      options.environment = args[++i];
+    } else if (arg === '--health-url') {
+      options.healthUrl = args[++i];
+    } else if (arg === '--validation-url') {
+      options.validationUrl = args[++i];
+    } else if (arg === '--timeout') {
+      options.timeout = parseInt(args[++i], 10) * 1000; // Convert to ms
+    } else if (arg === '--help' || arg === '-h') {
+      console.log(`
+Deployment Validation Script
+
+Usage: node scripts/validate-deployment.js [options]
+
+Options:
+  -e, --environment <env>    Target environment (development, staging, production)
+  --health-url <url>         Health check endpoint URL
+  --validation-url <url>     Validation endpoint URL
+  --timeout <seconds>        Request timeout in seconds (default: 30)
+  -h, --help                Show this help message
+
+Examples:
+  node scripts/validate-deployment.js --environment production
+  node scripts/validate-deployment.js --health-url https://yourdomain.com/api/health
+      `);
+      process.exit(0);
+    }
+  }
+  
+  return options;
+}
+
+/**
+ * Main execution
+ */
+if (require.main === module) {
+  const options = parseArgs();
+  
+  // Override config with command line options
+  if (options.environment) config.environment = options.environment;
+  if (options.healthUrl) config.healthCheckUrl = options.healthUrl;
+  if (options.validationUrl) config.validationUrl = options.validationUrl;
+  if (options.timeout) config.timeout = options.timeout;
+  
+  validateDeployment();
+}
+
+module.exports = {
+  validateDeployment,
+  Logger,
+  config
+};
