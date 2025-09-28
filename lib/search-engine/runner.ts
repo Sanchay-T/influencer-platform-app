@@ -5,6 +5,7 @@ import type { ProviderRunResult, SearchRuntimeConfig } from './types';
 import { runTikTokKeywordProvider } from './providers/tiktok-keyword';
 import { runYouTubeKeywordProvider } from './providers/youtube-keyword';
 import { runYouTubeSimilarProvider } from './providers/youtube-similar';
+import { runInstagramSimilarProvider } from './providers/instagram-similar';
 
 export interface SearchExecutionResult {
   service: SearchJobService;
@@ -13,14 +14,27 @@ export interface SearchExecutionResult {
 }
 
 async function resolveConfig(platform?: string): Promise<SearchRuntimeConfig> {
-  const maxApiCalls = await SystemConfig.get('api_limits', 'max_api_calls_for_testing');
+  const normalized = (platform ?? '').toLowerCase();
+
+  const apiLimitKey = normalized.includes('instagram')
+    ? 'max_api_calls_instagram_similar'
+    : 'max_api_calls_for_testing';
+
+  const delayKey = normalized.includes('instagram')
+    ? 'instagram_similar_delay'
+    : normalized.includes('youtube')
+      ? 'youtube_continuation_delay'
+      : 'tiktok_continuation_delay';
+
+  const maxApiCalls = await SystemConfig.get('api_limits', apiLimitKey);
+
   let continuationDelayMs: number;
   try {
-    const delayKey = platform === 'youtube' ? 'youtube_continuation_delay' : 'tiktok_continuation_delay';
     continuationDelayMs = await SystemConfig.get('qstash_delays', delayKey);
   } catch {
     continuationDelayMs = await SystemConfig.get('qstash_delays', 'tiktok_continuation_delay');
   }
+
   return {
     maxApiCalls: Number(maxApiCalls) || 1,
     continuationDelayMs: Number(continuationDelayMs) || 0,
@@ -44,6 +58,11 @@ function isYouTubeSimilar(jobPlatform?: string, targetUsername?: unknown): boole
   return !!targetUsername && (platform === 'youtube' || platform === 'youtube_similar');
 }
 
+function isInstagramSimilar(jobPlatform?: string, targetUsername?: unknown): boolean {
+  const platform = (jobPlatform ?? '').toLowerCase();
+  return !!targetUsername && (platform === 'instagram' || platform === 'instagram_similar');
+}
+
 export async function runSearchJob(jobId: string): Promise<SearchExecutionResult> {
   const service = await SearchJobService.load(jobId);
   if (!service) {
@@ -60,6 +79,8 @@ export async function runSearchJob(jobId: string): Promise<SearchExecutionResult
     providerResult = await runYouTubeKeywordProvider({ job, config }, service);
   } else if (isYouTubeSimilar(job.platform, job.targetUsername)) {
     providerResult = await runYouTubeSimilarProvider({ job, config }, service);
+  } else if (isInstagramSimilar(job.platform, job.targetUsername)) {
+    providerResult = await runInstagramSimilarProvider({ job, config }, service);
   } else {
     throw new Error(`Unsupported platform for new search runner: ${job.platform}`);
   }
