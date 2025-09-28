@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/pagination";
 import SearchProgress from "./search-progress";
 import Breadcrumbs from "../../breadcrumbs";
+import { buildProfileLink } from "./utils/profile-link";
 
 const VIEW_MODES = ["table", "gallery"];
 const VIEW_MODE_META = {
@@ -393,68 +394,10 @@ const SearchResults = ({ searchData }) => {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
 
-  const renderProfileLink = useCallback((creator) => {
-    const platform = platformNormalized;
-
-    if (platform === "tiktok") {
-      const ttUsername = creator?.creator?.uniqueId || creator?.creator?.username;
-      if (ttUsername) {
-        return `https://www.tiktok.com/@${ttUsername}`;
-      }
-
-      if (creator.video?.url) {
-        const match = creator.video.url.match(/@([^\/]+)/);
-        if (match) {
-          return `https://www.tiktok.com/@${match[1]}`;
-        }
-      }
-
-      const creatorName = creator.creator?.name;
-      if (creatorName && !creatorName.includes(" ")) {
-        return `https://www.tiktok.com/@${creatorName}`;
-      }
-
-      if (creatorName) {
-        const cleanUsername = creatorName.replace(/\s+/g, "").toLowerCase();
-        return `https://www.tiktok.com/@${cleanUsername}`;
-      }
-    } else if (
-      platform === "Instagram" ||
-      platform === "instagram" ||
-      platform === "enhanced-instagram"
-    ) {
-      const igUsername =
-        creator?.creator?.uniqueId || creator?.creator?.username || creator?.ownerUsername;
-      if (igUsername) {
-        return `https://www.instagram.com/${igUsername}`;
-      }
-      const creatorName = creator?.creator?.name;
-      if (creatorName) {
-        const cleanUsername = creatorName
-          .replace(/\s+/g, "")
-          .toLowerCase()
-          .replace(/[^a-z0-9._]/g, "");
-        return `https://www.instagram.com/${cleanUsername}`;
-      }
-    } else if (platform === "YouTube" || platform === "youtube") {
-      if (creator.video?.url) {
-        if (
-          creator.video.url.includes("/channel/") ||
-          creator.video.url.includes("/c/") ||
-          creator.video.url.includes("/@")
-        ) {
-          const channelMatch = creator.video.url.match(/\/(channel\/[^\/]+|c\/[^\/]+|@[^\/]+)/);
-          if (channelMatch) {
-            return `https://www.youtube.com/${channelMatch[1]}`;
-          }
-        }
-
-        return creator.video.url;
-      }
-    }
-
-    return "#";
-  }, [platformNormalized]);
+  const renderProfileLink = useCallback(
+    (creator) => buildProfileLink(creator, platformNormalized),
+    [platformNormalized]
+  );
 
   const currentCreators = useMemo(
     () => filteredCreators.slice(startIndex, endIndex),
