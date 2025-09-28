@@ -18,6 +18,7 @@ import { dedupeCreators } from '../utils/dedupe-creators';
 import SimilarResultsTable from './results-table';
 import SimilarResultsGallery from './results-gallery';
 import { useViewPreferences } from './useViewPreferences';
+import { buildProfileLink } from '../keyword-search/utils/profile-link';
 
 const VIEW_MODES = ['table', 'gallery'];
 const VIEW_MODE_META = {
@@ -197,30 +198,35 @@ export default function SimilarSearchResults({ searchData }) {
     return `/api/proxy/image?url=${encodeURIComponent(normalized)}`;
   }, []);
 
-  const renderProfileLink = useCallback((creator) => {
-    if (!creator) return '#';
-    if (creator.profileUrl) return creator.profileUrl;
-    const platform = normalizePlatform(creator.platform || searchData?.platform || 'instagram');
-    const username = creator.username || creator.handle || creator.name || '';
-    if (!username) return '#';
-    if (platform === 'tiktok') return `https://www.tiktok.com/@${username}`;
-    if (platform === 'youtube') {
-      const handle = creator.handle || creator.channelId || username;
-      return `https://www.youtube.com/${handle.startsWith('@') ? handle : `@${handle}`}`;
-    }
-    return `https://instagram.com/${username}`;
-  }, [searchData?.platform]);
+  const renderProfileLink = useCallback(
+    (creator) => {
+      if (!creator) return '#';
+      if (creator.profileUrl) return creator.profileUrl;
+      const platform = normalizePlatform(creator.platform || searchData?.platform || 'tiktok');
+      return buildProfileLink(creator, platform);
+    },
+    [searchData?.platform]
+  );
 
   const pageRows = useMemo(() => {
     return pageCreators.map((creator, index) => {
-      const platformValue = creator.platform || searchData?.platform || 'instagram';
-      const platform = normalizePlatform(platformValue) || 'instagram';
+      const base = (creator && typeof creator === 'object' && creator.creator && typeof creator.creator === 'object')
+        ? creator.creator
+        : creator;
+
+      const platformValue = creator.platform || base?.platform || searchData?.platform || 'tiktok';
+      const platform = normalizePlatform(platformValue) || 'tiktok';
 
       const handleRaw =
         creator.username ||
+        base?.username ||
+        base?.handle ||
+        base?.uniqueId ||
         creator.handle ||
-        creator.name ||
         creator.channelId ||
+        base?.channelId ||
+        creator.name ||
+        base?.name ||
         `creator-${startIndex + index}`;
       const handle = typeof handleRaw === 'string' && handleRaw.trim().length
         ? handleRaw.trim()
@@ -228,42 +234,83 @@ export default function SimilarSearchResults({ searchData }) {
 
       const externalRaw =
         creator.id ??
+        base?.id ??
         creator.profile_id ??
         creator.profileId ??
+        base?.profileId ??
         creator.channelId ??
+        base?.channelId ??
         creator.externalId ??
+        base?.externalId ??
         handle;
       const externalId = typeof externalRaw === 'string' && externalRaw.trim().length
         ? externalRaw.trim()
         : `${platform}-${handle}`;
 
-      const displayName = creator.full_name || creator.name || creator.title || null;
+      const displayName =
+        creator.full_name ||
+        creator.fullName ||
+        base?.full_name ||
+        base?.fullName ||
+        creator.name ||
+        base?.name ||
+        creator.title ||
+        null;
+
       const avatarSource =
         creator.profile_pic_url ||
+        base?.profile_pic_url ||
         creator.thumbnail ||
+        base?.thumbnail ||
         creator.thumbnailUrl ||
+        base?.thumbnailUrl ||
         creator.avatarUrl ||
+        base?.avatarUrl ||
         creator.picture ||
+        base?.picture ||
+        base?.profilePicUrl ||
+        creator.profilePicUrl ||
         null;
       const avatarUrl = ensureProxiedImage(avatarSource);
       const previewUrl = ensureProxiedImage(resolvePreviewImage(creator) || avatarSource);
 
       const followerRaw =
-        creator.followers ||
-        creator.followers_count ||
-        creator.followersCount ||
-        creator.subscriberCount ||
-        creator.subscribers ||
+        creator.followers ??
+        base?.followers ??
+        creator.followers_count ??
+        base?.followers_count ??
+        creator.followersCount ??
+        base?.followersCount ??
+        creator.subscriberCount ??
+        base?.subscriberCount ??
+        creator.subscribers ??
+        base?.subscribers ??
         null;
       const followerLabel = formatFollowers(followerRaw);
 
       const emails = extractEmails(creator);
-      const bio = creator.bio || creator.description || creator.about || null;
-      const category = creator.category || creator.niche || creator.genre || null;
-      const location = creator.location || creator.country || creator.region || null;
-      const engagementRate = creator.engagementRate || creator.engagement_rate || null;
-      const isPrivate = Boolean(creator.is_private ?? creator.isPrivate);
-      const isVerified = Boolean(creator.is_verified ?? creator.isVerified);
+      const bio = creator.bio || base?.bio || creator.description || creator.about || base?.description || base?.about || null;
+      const category = creator.category || base?.category || creator.niche || base?.niche || creator.genre || base?.genre || null;
+      const location = creator.location || base?.location || creator.country || base?.country || creator.region || base?.region || null;
+      const engagementRate =
+        creator.engagementRate ??
+        base?.engagementRate ??
+        creator.engagement_rate ??
+        base?.engagement_rate ??
+        null;
+      const isPrivate = Boolean(
+        creator.is_private ??
+        creator.isPrivate ??
+        base?.is_private ??
+        base?.isPrivate
+      );
+      const isVerified = Boolean(
+        creator.is_verified ??
+        creator.isVerified ??
+        base?.is_verified ??
+        base?.isVerified ??
+        base?.verified
+      );
 
       const snapshot = {
         platform,
