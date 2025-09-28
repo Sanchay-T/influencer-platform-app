@@ -31,7 +31,14 @@ const nextConfig = {
     ];
     
     // Note: We no longer alias '@clerk/nextjs/server' to avoid edge/runtime conflicts.
-    
+
+    // [webpack-alias] Ensure '@/...' imports resolve in CI/Vercel builds.
+    config.resolve = config.resolve ?? {};
+    config.resolve.alias = {
+      ...(config.resolve.alias ?? {}),
+      '@': path.resolve(process.cwd()),
+    };
+
     return config;
   },
   async rewrites() {
