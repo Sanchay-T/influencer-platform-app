@@ -1,1 +1,0 @@
-ALTER TABLE "scraping_jobs" ADD COLUMN "cursor" integer DEFAULT 0;
