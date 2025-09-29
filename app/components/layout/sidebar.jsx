@@ -41,7 +41,7 @@ export default function Sidebar({ onNavigate, onTogglePin, isPinned = false, sho
   }
 
   return (
-    <div className="flex h-full w-64 flex-col bg-zinc-900 border-r border-zinc-700/50">
+    <div className="flex h-full w-full max-w-xs sm:max-w-sm lg:w-64 lg:max-w-none flex-col bg-zinc-900 border-r border-zinc-700/50">
       <div className="flex h-16 items-center px-6 border-b border-zinc-800/50">
         <div className="flex w-full items-center justify-between">
           <div className="flex items-center space-x-3">

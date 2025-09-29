@@ -913,46 +913,47 @@ const SearchResults = ({ searchData }) => {
           </div>
         )}
 
-        <div className={cn("w-full", viewMode === "table" ? "overflow-x-auto" : "hidden")}> 
-          <Table className="w-full">
-            <TableHeader>
-              <TableRow className="border-b border-zinc-800">
-                <TableHead className="px-4 py-3 w-12">
-                  <Checkbox
-                    aria-label="Select page"
-                    checked={allSelectedOnPage ? true : someSelectedOnPage ? 'indeterminate' : false}
-                    onCheckedChange={() => handleSelectPage(!allSelectedOnPage)}
-                  />
-                </TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider min-w-[56px]">
-                  Profile
-                </TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider min-w-[160px]">
-                  Username
-                </TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider min-w-[120px]">
-                  Followers
-                </TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider min-w-[220px]">
-                  Bio
-                </TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider min-w-[200px]">
-                  Email
-                </TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider min-w-[220px]">
-                  Video Title
-                </TableHead>
-                <TableHead className="px-6 py-3 text-right text-xs font-medium text-zinc-400 uppercase tracking-wider w-[10%] min-w-[80px]">
-                  Views
-                </TableHead>
-                <TableHead className="px-6 py-3 text-center text-xs font-medium text-zinc-400 uppercase tracking-wider w-[60px]">
-                  Link
-                </TableHead>
-                <TableHead className="px-6 py-3 text-right text-xs font-medium text-zinc-400 uppercase tracking-wider w-[80px]">
-                  Save
-                </TableHead>
-              </TableRow>
-            </TableHeader>
+        <div className={cn("w-full", viewMode === "table" ? "block" : "hidden")}>
+          <div className="overflow-hidden lg:overflow-visible">
+            <Table className="w-full">
+              <TableHeader>
+                <TableRow className="border-b border-zinc-800">
+                  <TableHead className="w-12 px-4 py-3">
+                    <Checkbox
+                      aria-label="Select page"
+                      checked={allSelectedOnPage ? true : someSelectedOnPage ? 'indeterminate' : false}
+                      onCheckedChange={() => handleSelectPage(!allSelectedOnPage)}
+                    />
+                  </TableHead>
+                  <TableHead className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
+                    Profile
+                  </TableHead>
+                  <TableHead className="hidden sm:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
+                    Username
+                  </TableHead>
+                  <TableHead className="hidden md:table-cell px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-zinc-400">
+                    Followers
+                  </TableHead>
+                  <TableHead className="hidden xl:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
+                    Bio
+                  </TableHead>
+                  <TableHead className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
+                    Email
+                  </TableHead>
+                  <TableHead className="hidden xl:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
+                    Video Title
+                  </TableHead>
+                  <TableHead className="hidden lg:table-cell px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-zinc-400">
+                    Views
+                  </TableHead>
+                  <TableHead className="hidden lg:table-cell px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-zinc-400">
+                    Link
+                  </TableHead>
+                  <TableHead className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-zinc-400">
+                    Save
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
             <TableBody className="divide-y divide-zinc-800">
                 {currentRows.map(({ raw: creator, id: rowId, snapshot }, index) => {
                 const avatarUrl =
@@ -966,182 +967,223 @@ const SearchResults = ({ searchData }) => {
                 const isSelected = !!selectedCreators[rowId];
 
                 return (
-                  <TableRow
-                    key={rowId}
-                    className={cn(
-                      "table-row transition-colors",
-                      isSelected ? "bg-emerald-500/5" : undefined
-                    )}
-                  >
-                    <TableCell className="px-4 py-4 w-12 align-middle">
-                      <div className="flex h-full items-center justify-center">
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={() => toggleSelection(rowId, snapshot)}
-                          aria-label={`Select ${snapshot.handle}`}
-                        />
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-6 py-4">
-                      <Avatar className="w-10 h-10">
+                <TableRow
+                  key={rowId}
+                  className={cn(
+                    "table-row transition-colors align-top",
+                    isSelected ? "bg-emerald-500/5" : undefined
+                  )}
+                >
+                  <TableCell className="w-12 px-4 py-4 align-middle">
+                    <div className="flex h-full items-center justify-center">
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleSelection(rowId, snapshot)}
+                        aria-label={`Select ${snapshot.handle}`}
+                      />
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-4 py-4 align-top">
+                    <div className="flex items-start gap-3">
+                      <Avatar className="h-10 w-10 flex-shrink-0">
                         <AvatarImage
                           src={imageUrl}
-                          alt={creator.creator?.name}
-                          onLoad={(e) =>
-                            handleImageLoad(e, creator.creator?.name)
-                          }
+                          alt={creator.creator?.name || snapshot.handle}
+                          onLoad={(e) => handleImageLoad(e, creator.creator?.name)}
                           onError={(e) =>
                             handleImageError(
                               e,
                               creator.creator?.name,
-                              creator.creator?.profilePicUrl ||
-                                creator.creator?.avatarUrl,
+                              creator.creator?.profilePicUrl || creator.creator?.avatarUrl
                             )
                           }
-                          onLoadStart={(e) =>
-                            handleImageStart(e, creator.creator?.name)
-                          }
+                          onLoadStart={(e) => handleImageStart(e, creator.creator?.name)}
                           style={{
-                            maxWidth: "100%",
-                            height: "auto",
-                            backgroundColor: "#f3f4f6", // Light gray background while loading
+                            maxWidth: '100%',
+                            height: 'auto',
+                            backgroundColor: '#f3f4f6'
                           }}
                         />
                         <AvatarFallback>
                           <User className="h-4 w-4" />
                         </AvatarFallback>
                       </Avatar>
-                    </TableCell>
-                    <TableCell className="px-6 py-4">
-                      {creator.creator?.name &&
-                      creator.creator.name !== "N/A" ? (
-                        <a
-                          href={renderProfileLink(creator)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-pink-400 hover:text-pink-300 hover:underline font-medium transition-colors duration-200 flex items-center gap-1"
-                          title={`View ${creator.creator.name}'s profile on ${
-                            platformNormalized === 'enhanced-instagram' ? 'Instagram' :
-                            platformNormalized === 'instagram' ? 'Instagram' :
-                            platformNormalized === 'youtube' ? 'YouTube' : 'TikTok'
-                          }`}
-                        >
-                          {creator.creator.name}
-                          <svg
-                            className="w-3 h-3 opacity-70"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
+                      <div className="space-y-1 sm:hidden">
+                        {creator.creator?.name && creator.creator.name !== 'N/A' ? (
+                          <a
+                            href={renderProfileLink(creator)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-sm font-medium text-pink-400 transition-colors hover:text-pink-300 hover:underline"
                           >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                            />
-                          </svg>
-                        </a>
-                      ) : (
-                        <span className="text-zinc-500">N/A</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="px-6 py-4">
-                      {snapshot.followers != null ? (
-                        <span className="text-sm text-zinc-200">
-                          {formatFollowers(snapshot.followers)}
-                        </span>
-                      ) : (
-                        <span className="text-zinc-500 text-sm">N/A</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="px-6 py-4 max-w-0">
-                      <div
-                        className="truncate"
-                        title={creator.creator?.bio || "No bio available"}
-                      >
-                        {creator.creator?.bio ? (
-                          <span className="text-sm text-zinc-300">
-                            {creator.creator.bio}
-                          </span>
+                            {creator.creator.name}
+                            <svg className="h-3 w-3 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                              />
+                            </svg>
+                          </a>
                         ) : (
-                          <span className="text-zinc-500 text-sm">No bio</span>
+                          <span className="text-sm text-zinc-500">{snapshot.handle}</span>
                         )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-6 py-4 max-w-0">
-                      {creator.creator?.emails &&
-                      creator.creator.emails.length > 0 ? (
-                        <div className="space-y-1">
-                          {creator.creator.emails.map((email, emailIndex) => (
-                            <div
-                              key={emailIndex}
-                              className="flex items-center gap-1"
-                            >
-                              <a
-                                href={`mailto:${email}`}
-                              className="text-pink-400 hover:underline text-sm truncate block"
-                                title={`Send email to ${email}`}
-                              >
-                                {email}
-                              </a>
-                              <svg
-                                className="w-3 h-3 opacity-60 text-pink-400"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                                />
-                              </svg>
+                        <div className="text-xs text-zinc-400">@{snapshot.handle}</div>
+                        <div className="space-y-1 text-xs text-zinc-400">
+                          <div>
+                            <span className="font-medium text-zinc-300">Followers:</span>{' '}
+                            {snapshot.followers != null ? formatFollowers(snapshot.followers) : 'N/A'}
+                          </div>
+                          {creator.creator?.emails?.[0] && (
+                            <div className="break-words">
+                              <span className="font-medium text-zinc-300">Email:</span>{' '}
+                              {creator.creator.emails[0]}
                             </div>
-                          ))}
+                          )}
+                          {creator.video?.statistics?.views && (
+                            <div>
+                              <span className="font-medium text-zinc-300">Views:</span>{' '}
+                              {(creator.video.statistics.views || 0).toLocaleString()}
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <span className="text-zinc-500 text-sm">No email</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="px-6 py-4 max-w-0">
-                      <div
-                        className="truncate"
-                        title={creator.video?.description || "No title"}
-                      >
-                        {creator.video?.description || "No title"}
                       </div>
-                    </TableCell>
-                    <TableCell className="px-6 py-4 text-right tabular-nums">
-                      {(creator.video?.statistics?.views || 0).toLocaleString()}
-                    </TableCell>
-                    <TableCell className="px-6 py-4 text-center">
+                    </div>
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell px-4 py-4 align-top">
+                    {creator.creator?.name && creator.creator.name !== 'N/A' ? (
+                      <a
+                        href={renderProfileLink(creator)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-pink-400 transition-colors hover:text-pink-300 hover:underline"
+                        title={`View ${creator.creator.name}'s profile`}
+                      >
+                        {creator.creator.name}
+                        <svg className="h-3 w-3 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                          />
+                        </svg>
+                      </a>
+                    ) : (
+                      <span className="text-zinc-500">{snapshot.handle}</span>
+                    )}
+                    <div className="mt-2 space-y-1 text-xs text-zinc-400 lg:hidden">
+                      <div>
+                        <span className="font-medium text-zinc-300">Followers:</span>{' '}
+                        {snapshot.followers != null ? formatFollowers(snapshot.followers) : 'N/A'}
+                      </div>
+                      {creator.creator?.emails?.length ? (
+                        <div className="break-words">
+                          <span className="font-medium text-zinc-300">Email:</span>{' '}
+                          {creator.creator.emails[0]}
+                        </div>
+                      ) : null}
+                      {creator.video?.statistics?.views ? (
+                        <div>
+                          <span className="font-medium text-zinc-300">Views:</span>{' '}
+                          {(creator.video.statistics.views || 0).toLocaleString()}
+                        </div>
+                      ) : null}
                       {creator.video?.url && (
-                        <a
-                          href={creator.video.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-pink-400 hover:underline"
-                        >
-                          View
-                        </a>
+                        <div>
+                          <a
+                            href={creator.video.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-pink-400 hover:underline"
+                          >
+                            View content
+                          </a>
+                        </div>
                       )}
-                    </TableCell>
-                    <TableCell className="px-6 py-4 text-right">
-                      <AddToListButton
-                        creator={snapshot}
-                        buttonLabel="Save"
-                        variant="ghost"
-                        size="sm"
-                        className="text-zinc-400 hover:text-emerald-300"
-                      />
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell px-4 py-4 text-right text-sm text-zinc-200">
+                    {snapshot.followers != null ? formatFollowers(snapshot.followers) : 'N/A'}
+                  </TableCell>
+                  <TableCell className="hidden xl:table-cell max-w-0 px-4 py-4">
+                    <div className="truncate" title={creator.creator?.bio || 'No bio available'}>
+                      {creator.creator?.bio ? (
+                        <span className="text-sm text-zinc-300">{creator.creator.bio}</span>
+                      ) : (
+                        <span className="text-sm text-zinc-500">No bio</span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell max-w-0 px-4 py-4">
+                    {creator.creator?.emails && creator.creator.emails.length > 0 ? (
+                      <div className="space-y-1 text-sm">
+                        {creator.creator.emails.map((email, emailIndex) => (
+                          <div key={emailIndex} className="flex items-center gap-1">
+                            <a
+                              href={`mailto:${email}`}
+                              className="block truncate text-pink-400 hover:underline"
+                              title={`Send email to ${email}`}
+                            >
+                              {email}
+                            </a>
+                            <svg
+                              className="h-3 w-3 text-pink-400 opacity-60"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                              />
+                            </svg>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-sm text-zinc-500">No email</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="hidden xl:table-cell max-w-0 px-4 py-4">
+                    <div className="truncate" title={creator.video?.description || 'No title'}>
+                      {creator.video?.description || 'No title'}
+                    </div>
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell px-4 py-4 text-right text-sm tabular-nums">
+                    {(creator.video?.statistics?.views || 0).toLocaleString()}
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell px-4 py-4 text-center">
+                    {creator.video?.url && (
+                      <a
+                        href={creator.video.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-pink-400 hover:underline"
+                      >
+                        View
+                      </a>
+                    )}
+                  </TableCell>
+                  <TableCell className="px-4 py-4 text-right">
+                    <AddToListButton
+                      creator={snapshot}
+                      buttonLabel="Save"
+                      variant="ghost"
+                      size="sm"
+                      className="text-zinc-400 hover:text-emerald-300"
+                    />
+                  </TableCell>
+                </TableRow>
                 );
               })}
             </TableBody>
           </Table>
         </div>
+      </div>
         <div className={cn(
           "w-full p-4 md:p-6",
           viewMode === "gallery" ? "block" : "hidden"
@@ -1302,7 +1344,7 @@ const SearchResults = ({ searchData }) => {
         </div>
       </div>
 
-      <div className="flex items-center justify-center gap-2">
+      <div className="flex w-full flex-wrap items-center justify-center gap-2">
         <Button
           variant="outline"
           onClick={() => handlePageChange(1)}
@@ -1320,7 +1362,7 @@ const SearchResults = ({ searchData }) => {
           Previous
         </Button>
 
-        <div className="flex items-center gap-1">
+        <div className="flex w-full flex-wrap items-center justify-center gap-1 sm:w-auto">
           {getPageNumbers().map((pageNum, index) => (
             <React.Fragment key={index}>
               {pageNum === "..." ? (
