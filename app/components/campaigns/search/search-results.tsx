@@ -168,30 +168,30 @@ function SearchResultsContent({
         </Button>
       </div>
 
-      <div className="rounded-lg border border-zinc-800 bg-zinc-900/30 overflow-x-auto">
-        <div className="min-w-[1500px]">
-          <Table>
+      <div className="rounded-lg border border-zinc-800 bg-zinc-900/30">
+        <div className="overflow-hidden lg:overflow-visible">
+          <Table className="w-full">
             <TableHeader>
               <TableRow className="border-b border-zinc-800">
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">Profile</TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">Keywords</TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">Platform</TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">Total Likes</TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">Total Views</TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">Followers</TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">Region</TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">Videos</TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">Email</TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">Following</TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">Account Age</TableHead>
+                <TableHead className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">Profile</TableHead>
+                <TableHead className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">Keywords</TableHead>
+                <TableHead className="hidden sm:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">Platform</TableHead>
+                <TableHead className="hidden xl:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">Total Likes</TableHead>
+                <TableHead className="hidden xl:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">Total Views</TableHead>
+                <TableHead className="hidden sm:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">Followers</TableHead>
+                <TableHead className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">Region</TableHead>
+                <TableHead className="hidden xl:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">Videos</TableHead>
+                <TableHead className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">Email</TableHead>
+                <TableHead className="hidden xl:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">Following</TableHead>
+                <TableHead className="hidden xl:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">Account Age</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody className="divide-y divide-zinc-800">
               {currentInfluencers.map((influencer) => (
-                <TableRow key={influencer.id} className="table-row">
-                  <TableCell className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="relative w-10 h-10">
+                <TableRow key={influencer.id} className="table-row align-top">
+                  <TableCell className="px-4 py-4 align-top">
+                    <div className="flex items-start gap-3">
+                      <div className="relative h-10 w-10 flex-shrink-0">
                         <Image
                           src={influencer.profileImage}
                           alt={influencer.name}
@@ -199,30 +199,76 @@ function SearchResultsContent({
                           className="rounded-full object-cover"
                         />
                       </div>
-                      <div>
-                        <div className="font-semibold text-zinc-100">{influencer.name}</div>
-                        <div className="text-sm text-zinc-500">
-                          {influencer.username}
+                      <div className="min-w-0 space-y-1">
+                        <div className="font-semibold text-zinc-100 leading-tight">
+                          {influencer.name}
                         </div>
+                        <div className="text-sm text-zinc-500 truncate">{influencer.username}</div>
+                        <dl className="mt-3 space-y-1 text-xs text-zinc-400 sm:hidden">
+                          {influencer.keyword && (
+                            <div>
+                              <span className="font-medium text-zinc-300">Keywords:</span>{' '}
+                              {influencer.keyword}
+                            </div>
+                          )}
+                          <div>
+                            <span className="font-medium text-zinc-300">Platform:</span>{' '}
+                            {influencer.platform}
+                          </div>
+                          <div>
+                            <span className="font-medium text-zinc-300">Followers:</span>{' '}
+                            {influencer.followers.toLocaleString()}
+                          </div>
+                          {influencer.region && (
+                            <div>
+                              <span className="font-medium text-zinc-300">Region:</span>{' '}
+                              {influencer.region}
+                            </div>
+                          )}
+                          {influencer.email && (
+                            <div className="break-words">
+                              <span className="font-medium text-zinc-300">Email:</span>{' '}
+                              {influencer.email}
+                            </div>
+                          )}
+                        </dl>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="px-6 py-4 text-zinc-300">{influencer.keyword}</TableCell>
-                  <TableCell className="px-6 py-4">
+                  <TableCell className="hidden lg:table-cell px-4 py-4 text-sm text-zinc-300 break-words">
+                    {influencer.keyword || '—'}
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell px-4 py-4">
                     {influencer.platform === 'instagram' ? (
-                      <Instagram className="h-5 w-5" />
+                      <Instagram className="h-5 w-5" aria-label="Instagram" />
                     ) : (
-                      <MessageCircle className="h-5 w-5" />
+                      <MessageCircle className="h-5 w-5" aria-label="TikTok" />
                     )}
                   </TableCell>
-                  <TableCell className="px-6 py-4 text-zinc-300">{influencer.totalLikes.toLocaleString()}</TableCell>
-                  <TableCell className="px-6 py-4 text-zinc-300">{influencer.totalViews.toLocaleString()}</TableCell>
-                  <TableCell className="px-6 py-4 text-zinc-300">{influencer.followers.toLocaleString()}</TableCell>
-                  <TableCell className="px-6 py-4 text-zinc-300">{influencer.region}</TableCell>
-                  <TableCell className="px-6 py-4 text-zinc-300">{influencer.videos}</TableCell>
-                  <TableCell className="px-6 py-4 text-pink-400">{influencer.email}</TableCell>
-                  <TableCell className="px-6 py-4 text-zinc-300">{influencer.following.toLocaleString()}</TableCell>
-                  <TableCell className="px-6 py-4 text-zinc-300">{influencer.accountAge}</TableCell>
+                  <TableCell className="hidden xl:table-cell px-4 py-4 text-sm text-zinc-300">
+                    {influencer.totalLikes.toLocaleString()}
+                  </TableCell>
+                  <TableCell className="hidden xl:table-cell px-4 py-4 text-sm text-zinc-300">
+                    {influencer.totalViews.toLocaleString()}
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell px-4 py-4 text-sm text-zinc-300">
+                    {influencer.followers.toLocaleString()}
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell px-4 py-4 text-sm text-zinc-300">
+                    {influencer.region || '—'}
+                  </TableCell>
+                  <TableCell className="hidden xl:table-cell px-4 py-4 text-sm text-zinc-300">
+                    {influencer.videos}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell px-4 py-4 text-sm text-pink-400 break-words">
+                    {influencer.email || '—'}
+                  </TableCell>
+                  <TableCell className="hidden xl:table-cell px-4 py-4 text-sm text-zinc-300">
+                    {influencer.following.toLocaleString()}
+                  </TableCell>
+                  <TableCell className="hidden xl:table-cell px-4 py-4 text-sm text-zinc-300">
+                    {influencer.accountAge}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -232,7 +278,7 @@ function SearchResultsContent({
 
       <nav>
         <Pagination>
-          <PaginationContent>
+          <PaginationContent className="flex max-w-full flex-wrap items-center justify-center gap-2">
             <PaginationItem>
               <PaginationPrevious
                 onClick={() => {

@@ -226,20 +226,20 @@ export default function OnboardingStep1() {
       <div className="max-w-2xl mx-auto px-4">
         {/* Progress indicator */}
         <div className="mb-8">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-semibold">
+          <div className="mb-4 flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+            <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-semibold">
               1
             </div>
-            <div className="w-16 h-1 bg-zinc-700/50 rounded"></div>
-            <div className="w-8 h-8 bg-zinc-700/50 text-zinc-400 rounded-full flex items-center justify-center text-sm font-semibold">
+            <div className="h-1 w-10 rounded bg-zinc-700/50 sm:w-16"></div>
+            <div className="h-8 w-8 rounded-full bg-zinc-700/50 text-zinc-400 flex items-center justify-center text-sm font-semibold">
               2
             </div>
-            <div className="w-16 h-1 bg-zinc-700/50 rounded"></div>
-            <div className="w-8 h-8 bg-zinc-700/50 text-zinc-400 rounded-full flex items-center justify-center text-sm font-semibold">
+            <div className="h-1 w-10 rounded bg-zinc-700/50 sm:w-16"></div>
+            <div className="h-8 w-8 rounded-full bg-zinc-700/50 text-zinc-400 flex items-center justify-center text-sm font-semibold">
               3
             </div>
-            <div className="w-16 h-1 bg-zinc-700/50 rounded"></div>
-            <div className="w-8 h-8 bg-zinc-700/50 text-zinc-400 rounded-full flex items-center justify-center text-sm font-semibold">
+            <div className="h-1 w-10 rounded bg-zinc-700/50 sm:w-16"></div>
+            <div className="h-8 w-8 rounded-full bg-zinc-700/50 text-zinc-400 flex items-center justify-center text-sm font-semibold">
               4
             </div>
           </div>
