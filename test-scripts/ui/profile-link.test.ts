@@ -33,6 +33,16 @@ function expectEqual(actual: unknown, expected: unknown, message: string) {
     video: { url: 'https://www.youtube.com/watch?v=abcdef' }
   };
 
+  const youtubeCreatorWithIncorrectHint = {
+    platform: 'YouTube',
+    creator: {
+      name: 'Signal Boost',
+      channelId: 'UC999999999',
+      handle: '@signalboost'
+    },
+    video: { url: 'https://www.youtube.com/watch?v=hybrid' }
+  };
+
   const tiktokCreator = {
     creator: {
       uniqueId: 'dancequeen',
@@ -56,6 +66,12 @@ function expectEqual(actual: unknown, expected: unknown, message: string) {
     buildProfileLink(youtubeCreatorWithOnlyVideo, 'youtube'),
     'https://www.youtube.com/watch?v=abcdef',
     'YouTube link should fall back to video URL when no channel metadata'
+  );
+
+  expectEqual(
+    buildProfileLink(youtubeCreatorWithIncorrectHint, 'tiktok'),
+    'https://www.youtube.com/channel/UC999999999',
+    'YouTube link should override incorrect platform hints when creator metadata is authoritative'
   );
 
   expectEqual(
