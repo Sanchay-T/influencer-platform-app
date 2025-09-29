@@ -230,20 +230,20 @@ export default function OnboardingComplete() {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center px-4 py-10 sm:py-12">
       <div className="w-full max-w-2xl">
         {/* Progress indicator */}
         <div className="mb-8">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+          <div className="mb-4 flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+            <div className="h-8 w-8 rounded-full bg-green-600 text-white flex items-center justify-center text-sm font-semibold">
               ✓
             </div>
-            <div className="w-16 h-1 bg-green-600 rounded"></div>
-            <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+            <div className="h-1 w-10 rounded bg-green-600 sm:w-16"></div>
+            <div className="h-8 w-8 rounded-full bg-green-600 text-white flex items-center justify-center text-sm font-semibold">
               ✓
             </div>
-            <div className="w-16 h-1 bg-green-600 rounded"></div>
-            <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+            <div className="h-1 w-10 rounded bg-green-600 sm:w-16"></div>
+            <div className="h-8 w-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-semibold">
               3
             </div>
           </div>
