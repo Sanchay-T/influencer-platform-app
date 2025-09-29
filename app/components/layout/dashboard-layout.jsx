@@ -126,9 +126,11 @@ export default function DashboardLayout({
       {/* Mobile sidebar (overlay) */}
       <div
         className={
-          `fixed inset-y-0 left-0 z-40 w-64 transform transition-transform duration-200 lg:hidden ` +
+          `fixed inset-y-0 left-0 z-[80] w-full max-w-xs sm:max-w-sm transform transition-transform duration-200 lg:hidden ` +
           (sidebarSheetOpen ? 'translate-x-0' : '-translate-x-full')
         }
+        role="dialog"
+        aria-modal="true"
         aria-hidden={!sidebarSheetOpen}
       >
         <Sidebar
@@ -142,7 +144,7 @@ export default function DashboardLayout({
       {/* Overlay for mobile when sidebar is open */}
       {sidebarSheetOpen && !isLarge && (
         <div
-          className="fixed inset-0 z-30 bg-black/50"
+          className="fixed inset-0 z-[70] bg-black/50"
           onClick={() => setSidebarSheetOpen(false)}
         />
       )}
@@ -187,7 +189,7 @@ export default function DashboardLayout({
           onToggleSidebar={handleToggleSidebar}
           isSidebarOpen={isSidebarVisible}
         />
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
           <div className="px-4 sm:px-6 md:px-8 py-6">
             {children}
           </div>

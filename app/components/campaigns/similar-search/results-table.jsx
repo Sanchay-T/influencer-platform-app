@@ -58,39 +58,39 @@ export default function SimilarResultsTable({
     <Table className="w-full">
       <TableHeader>
         <TableRow className="border-b border-zinc-800">
-          <TableHead className="px-4 py-3 w-12">
+          <TableHead className="w-12 px-3 py-3">
             <Checkbox
               aria-label="Select page"
               checked={allSelectedOnPage ? true : someSelectedOnPage ? 'indeterminate' : false}
               onCheckedChange={() => onSelectPage(!allSelectedOnPage)}
             />
           </TableHead>
-          <TableHead className="px-6 py-3 text-xs font-medium uppercase tracking-wider text-zinc-400 w-[50px]">
+          <TableHead className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
             Profile
           </TableHead>
-          <TableHead className="px-6 py-3 text-xs font-medium uppercase tracking-wider text-zinc-400 w-[15%] min-w-[120px]">
+          <TableHead className="hidden sm:table-cell px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
             {normalizePlatform(platformHint) === 'youtube' ? 'Channel Name' : 'Username'}
           </TableHead>
-          <TableHead className="px-6 py-3 text-xs font-medium uppercase tracking-wider text-zinc-400 w-[15%] min-w-[100px]">
+          <TableHead className="hidden lg:table-cell px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
             Full Name
           </TableHead>
-          <TableHead className="px-6 py-3 text-xs font-medium uppercase tracking-wider text-zinc-400 w-[25%] min-w-[200px]">
+          <TableHead className="hidden xl:table-cell px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
             Bio
           </TableHead>
-          <TableHead className="px-6 py-3 text-xs font-medium uppercase tracking-wider text-zinc-400 w-[20%] min-w-[150px]">
+          <TableHead className="hidden lg:table-cell px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
             Email
           </TableHead>
           {shouldShowAccountColumns && (
             <>
-              <TableHead className="px-6 py-3 text-xs font-medium uppercase tracking-wider text-zinc-400 w-[7%] min-w-[60px]">
+              <TableHead className="hidden xl:table-cell px-3 py-3 text-xs font-medium uppercase tracking-wider text-zinc-400">
                 Private
               </TableHead>
-              <TableHead className="px-6 py-3 text-xs font-medium uppercase tracking-wider text-zinc-400 w-[7%] min-w-[60px]">
+              <TableHead className="hidden xl:table-cell px-3 py-3 text-xs font-medium uppercase tracking-wider text-zinc-400">
                 Verified
               </TableHead>
             </>
           )}
-          <TableHead className="px-6 py-3 text-xs font-medium uppercase tracking-wider text-zinc-400 text-right">
+          <TableHead className="px-3 py-3 text-xs font-medium uppercase tracking-wider text-zinc-400 text-right">
             Actions
           </TableHead>
         </TableRow>
@@ -103,9 +103,9 @@ export default function SimilarResultsTable({
           return (
             <TableRow
               key={row.id}
-              className={cn('table-row transition-colors', isSelected && 'bg-emerald-500/5')}
+              className={cn('table-row transition-colors align-top', isSelected && 'bg-emerald-500/5')}
             >
-              <TableCell className="px-4 py-4 w-12 align-middle">
+              <TableCell className="w-12 px-3 py-4 align-middle">
                 <div className="flex h-full items-center justify-center">
                   <Checkbox
                     checked={isSelected}
@@ -114,13 +114,43 @@ export default function SimilarResultsTable({
                   />
                 </div>
               </TableCell>
-              <TableCell className="px-6 py-4">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={row.avatarUrl} alt={row.username} />
-                  <AvatarFallback>{row.initials}</AvatarFallback>
-                </Avatar>
+              <TableCell className="px-3 py-4 align-top">
+                <div className="flex items-start gap-3">
+                  <Avatar className="h-10 w-10 flex-shrink-0">
+                    <AvatarImage src={row.avatarUrl} alt={row.username} />
+                    <AvatarFallback>{row.initials}</AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 space-y-1">
+                    <div className="font-medium text-zinc-100 leading-tight">
+                      {row.displayName || row.username}
+                    </div>
+                    <div className="text-xs text-zinc-400">{profileLabel}</div>
+                    <div className="space-y-1 text-xs text-zinc-400 sm:hidden">
+                      {row.bio && (
+                        <div className="line-clamp-3" title={row.bio}>
+                          {row.bio}
+                        </div>
+                      )}
+                      {row.emails?.length ? (
+                        <div className="break-words">
+                          <span className="font-medium text-zinc-300">Email:</span>{' '}
+                          {row.emails[0]}
+                        </div>
+                      ) : null}
+                      {shouldShowAccountColumns && (
+                        <div>
+                          <span className="font-medium text-zinc-300">Private:</span>{' '}
+                          {row.isPrivate ? 'Yes' : 'No'}
+                          {' • '}
+                          <span className="font-medium text-zinc-300">Verified:</span>{' '}
+                          {row.isVerified ? 'Yes' : 'No'}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </TableCell>
-              <TableCell className="px-6 py-4">
+              <TableCell className="hidden sm:table-cell px-3 py-4">
                 <a
                   href={row.profileUrl}
                   target="_blank"
@@ -131,11 +161,24 @@ export default function SimilarResultsTable({
                   {profileLabel}
                   <ExternalLink className="h-3 w-3 opacity-70" />
                 </a>
+                <div className="mt-2 space-y-1 text-xs text-zinc-400 lg:hidden">
+                  {row.emails?.length ? (
+                    <div className="break-words">
+                      <span className="font-medium text-zinc-300">Email:</span>{' '}
+                      {row.emails[0]}
+                    </div>
+                  ) : null}
+                  {row.bio && (
+                    <div className="line-clamp-2" title={row.bio}>
+                      {row.bio}
+                    </div>
+                  )}
+                </div>
               </TableCell>
-              <TableCell className="px-6 py-4">
-                <span className="text-sm text-zinc-300">{row.displayName || 'N/A'}</span>
+              <TableCell className="hidden lg:table-cell px-3 py-4 text-sm text-zinc-300">
+                {row.displayName || 'N/A'}
               </TableCell>
-              <TableCell className="px-6 py-4 max-w-0">
+              <TableCell className="hidden xl:table-cell px-3 py-4 max-w-0">
                 <div className="truncate" title={row.bio || 'No bio available'}>
                   {row.bio ? (
                     <span className="text-sm text-zinc-300">{row.bio}</span>
@@ -144,16 +187,16 @@ export default function SimilarResultsTable({
                   )}
                 </div>
               </TableCell>
-              <TableCell className="px-6 py-4 max-w-0">
+              <TableCell className="hidden lg:table-cell px-3 py-4 max-w-0">
                 {renderEmails(row.emails)}
               </TableCell>
               {shouldShowAccountColumns && (
                 <>
-                  <TableCell className="px-6 py-4">{row.isPrivate ? 'Yes' : 'No'}</TableCell>
-                  <TableCell className="px-6 py-4">{row.isVerified ? 'Yes' : 'No'}</TableCell>
+                  <TableCell className="hidden xl:table-cell px-3 py-4">{row.isPrivate ? 'Yes' : 'No'}</TableCell>
+                  <TableCell className="hidden xl:table-cell px-3 py-4">{row.isVerified ? 'Yes' : 'No'}</TableCell>
                 </>
               )}
-              <TableCell className="px-6 py-4 text-right">
+              <TableCell className="px-3 py-4 text-right">
                 <AddToListButton
                   creators={[row.snapshot]}
                   buttonLabel=""
