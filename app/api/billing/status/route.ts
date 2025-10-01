@@ -84,33 +84,34 @@ export async function GET(request: NextRequest) {
       billingState = result.state;
       cacheHit = result.cacheHit;
     } catch (serviceError) {
-      warn('Billing service cache lookup failed, attempting user bootstrap', {
+      // User profile doesn't exist yet - this means Clerk webhook hasn't processed
+      // or there's a timing issue. Don't create user here - let the webhook handle it.
+      error('Billing service lookup failed - user profile not ready', serviceError, {
         userId,
+        errorType: serviceError instanceof Error ? serviceError.constructor.name : typeof serviceError,
+        message: serviceError instanceof Error ? serviceError.message : String(serviceError)
       });
 
-      const clerkUser = await currentUser();
-      const emailFromClerk = clerkUser?.primaryEmailAddress?.emailAddress || null;
-      const fullNameFromClerk =
-        clerkUser?.fullName || [clerkUser?.firstName, clerkUser?.lastName].filter(Boolean).join(' ') || null;
-
-      const now = new Date();
-      const trialEndDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-
-      await createUser({
+      warn('User profile not found - likely Clerk webhook delay', {
         userId,
-        email: emailFromClerk,
-        fullName: fullNameFromClerk || 'New User',
-        onboardingStep: 'pending',
-        trialStartDate: now,
-        trialEndDate,
-        currentPlan: 'free',
+        recommendation: 'User should wait a moment and refresh, or complete onboarding if not done'
       });
 
-      const retry = await BillingService.getBillingStateWithCache(userId, { skipCache: true });
-      billingState = retry.state;
-      cacheHit = retry.cacheHit;
+      // Return a 503 Service Unavailable with retry-after header
+      // This tells the client that the resource will be available soon
+      const unavailable = NextResponse.json({
+        error: 'Profile is being set up. Please wait a moment and refresh the page.',
+        code: 'PROFILE_NOT_READY',
+        retry: true,
+        retryAfter: 3 // seconds
+      }, { status: 503 });
 
-      debug('Billing state recovered after bootstrap', { userId });
+      unavailable.headers.set('x-request-id', reqId);
+      unavailable.headers.set('x-started-at', timestamp);
+      unavailable.headers.set('x-duration-ms', String(Date.now() - startedAt));
+      unavailable.headers.set('Retry-After', '3'); // Standard HTTP retry header
+
+      return unavailable;
     }
 
     const responsePayload = {
