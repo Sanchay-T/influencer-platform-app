@@ -161,7 +161,7 @@ export async function POST(req: NextRequest) {
     console.log('✅ [INSTAGRAM-REELS-API] Target results validated successfully');
 
     try {
-      // Create job in database (exactly like TikTok/YouTube)
+      // Create job in database with search-engine marker
       const [job] = await db.insert(scrapingJobs)
         .values({
           userId: userId,
@@ -173,6 +173,7 @@ export async function POST(req: NextRequest) {
           platform: 'Instagram',
           region: 'GLOBAL',
           campaignId,
+          searchParams: { runner: 'search-engine', platform: 'instagram_reels' }, // NEW: Mark for search-engine
           createdAt: new Date(),
           updatedAt: new Date(),
           cursor: 0,
@@ -192,11 +193,11 @@ export async function POST(req: NextRequest) {
         })
         .where(eq(scrapingJobs.id, job.id));
 
-      // Schedule background processing with QStash
-      console.log('\n🔔 [INSTAGRAM-REELS-API] Scheduling QStash processing...');
+      // Schedule background processing with QStash using NEW search-engine route
+      console.log('\n🔔 [INSTAGRAM-REELS-API] Scheduling QStash processing with search-engine...');
       if (process.env.QSTASH_TOKEN) {
-        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL || 'https://influencerplatform.vercel.app';
-        const qstashCallbackUrl = `${siteUrl}/api/qstash/process-scraping`;
+        const { getWebhookUrl } = await import('@/lib/utils/url-utils');
+        const qstashCallbackUrl = `${getWebhookUrl()}/api/qstash/process-search`; // NEW: Use search-engine route
         
         // Enhanced URL debugging
         console.log('🌐 [INSTAGRAM-REELS-API] URL debugging:', {

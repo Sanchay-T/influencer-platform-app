@@ -6,6 +6,8 @@ import { runTikTokKeywordProvider } from './providers/tiktok-keyword';
 import { runYouTubeKeywordProvider } from './providers/youtube-keyword';
 import { runYouTubeSimilarProvider } from './providers/youtube-similar';
 import { runInstagramSimilarProvider } from './providers/instagram-similar';
+import { runInstagramReelsProvider } from './providers/instagram-reels';
+import { runInstagramEnhancedProvider } from './providers/instagram-enhanced';
 
 export interface SearchExecutionResult {
   service: SearchJobService;
@@ -63,6 +65,21 @@ function isInstagramSimilar(jobPlatform?: string, targetUsername?: unknown): boo
   return !!targetUsername && (platform === 'instagram' || platform === 'instagram_similar');
 }
 
+function isInstagramReels(jobPlatform?: string, keywords?: unknown, searchParams?: any): boolean {
+  if (!keywords || !Array.isArray(keywords)) return false;
+  const platform = (jobPlatform ?? '').toLowerCase();
+  // Instagram Reels: platform=Instagram AND has keywords AND NOT enhanced
+  return platform === 'instagram' && searchParams?.runner !== 'instagram_enhanced';
+}
+
+function isInstagramEnhanced(jobPlatform?: string, keywords?: unknown, searchParams?: any): boolean {
+  if (!keywords || !Array.isArray(keywords)) return false;
+  const platform = (jobPlatform ?? '').toLowerCase();
+  // Enhanced Instagram: explicitly marked in searchParams or metadata
+  return (platform === 'instagram' || platform === 'enhanced-instagram' || platform === 'instagram_enhanced') &&
+         (searchParams?.runner === 'instagram_enhanced' || searchParams?.searchType === 'instagram_enhanced');
+}
+
 export async function runSearchJob(jobId: string): Promise<SearchExecutionResult> {
   const service = await SearchJobService.load(jobId);
   if (!service) {
@@ -73,6 +90,8 @@ export async function runSearchJob(jobId: string): Promise<SearchExecutionResult
   const config = await resolveConfig((job.platform ?? '').toLowerCase());
 
   let providerResult: ProviderRunResult;
+  const searchParams = job.searchParams as any;
+
   if (isTikTokKeyword(job.platform, job.keywords)) {
     providerResult = await runTikTokKeywordProvider({ job, config }, service);
   } else if (isYouTubeKeyword(job.platform, job.keywords)) {
@@ -81,8 +100,12 @@ export async function runSearchJob(jobId: string): Promise<SearchExecutionResult
     providerResult = await runYouTubeSimilarProvider({ job, config }, service);
   } else if (isInstagramSimilar(job.platform, job.targetUsername)) {
     providerResult = await runInstagramSimilarProvider({ job, config }, service);
+  } else if (isInstagramEnhanced(job.platform, job.keywords, searchParams)) {
+    providerResult = await runInstagramEnhancedProvider({ job, config }, service);
+  } else if (isInstagramReels(job.platform, job.keywords, searchParams)) {
+    providerResult = await runInstagramReelsProvider({ job, config }, service);
   } else {
-    throw new Error(`Unsupported platform for new search runner: ${job.platform}`);
+    throw new Error(`Unsupported platform for new search runner: ${job.platform} (keywords: ${!!job.keywords}, targetUsername: ${!!job.targetUsername}, searchParams: ${JSON.stringify(searchParams)})`);
   }
 
   await service.recordBenchmark(providerResult.metrics);

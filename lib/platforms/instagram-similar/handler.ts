@@ -456,7 +456,7 @@ export async function processInstagramSimilarJob(job: any, jobId: string): Promi
       // Import QStash for scheduling next call
       const { qstash } = await import('@/lib/queue/qstash');
       const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-      const callbackUrl = `${baseUrl}/api/qstash/process-scraping`;
+      const callbackUrl = `${baseUrl}/api/qstash/process-search`;
       
       await qstash.publishJSON({
         url: callbackUrl,

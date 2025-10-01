@@ -62,9 +62,8 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
 
     try {
       // Determine API endpoint based on platform
-      const apiEndpoint = 
-        selectedPlatform === 'tiktok' ? '/api/scraping/tiktok-similar' : 
-        selectedPlatform === 'youtube' ? '/api/scraping/youtube-similar' : 
+      const apiEndpoint =
+        selectedPlatform === 'youtube' ? '/api/scraping/youtube-similar' :
         '/api/scraping/instagram';
       console.log(`🔄 [SIMILAR-SEARCH-FORM] Making API request to ${apiEndpoint}`);
       
@@ -96,7 +95,7 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
         });
       }
       
-      toast.success(`${selectedPlatform === 'tiktok' ? 'TikTok' : selectedPlatform === 'youtube' ? 'YouTube' : 'Instagram'} similar search started!`);
+      toast.success(`${selectedPlatform === 'youtube' ? 'YouTube' : 'Instagram'} similar search started!`);
       
     } catch (error) {
       console.error('💥 [SIMILAR-SEARCH-FORM] Error during submission:', error);
@@ -130,12 +129,10 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
             <label className="text-sm font-medium">Platform</label>
             <div className="flex flex-wrap gap-4">
               {[
-                { value: 'tiktok', label: 'TikTok', disabled: true },
                 { value: 'instagram', label: 'Instagram' },
                 { value: 'youtube', label: 'YouTube' },
               ].map((platform) => {
                 const isActive = selectedPlatform === platform.value;
-                const isDisabled = Boolean(platform.disabled);
 
                 return (
                   <div key={platform.value} className="flex items-center">
@@ -145,15 +142,8 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
                       aria-checked={isActive}
                       data-state={isActive ? 'checked' : 'unchecked'}
                       value="on"
-                      disabled={isDisabled}
-                      onClick={() => {
-                        if (!isDisabled) {
-                          setSelectedPlatform(platform.value);
-                        }
-                      }}
-                      className={`peer h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground ${
-                        isDisabled ? 'opacity-70' : ''
-                      }`}
+                      onClick={() => setSelectedPlatform(platform.value)}
+                      className="peer h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                     >
                       {isActive && (
                         <span data-state="checked" className="flex items-center justify-center text-current pointer-events-none">
@@ -171,11 +161,6 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
                     />
                     <span className="ml-2">
                       {platform.label}
-                      {platform.value === 'tiktok' && (
-                        <span className="ml-2 rounded-full border border-zinc-700 px-2 py-0.5 text-[10px] uppercase tracking-wide text-zinc-300">
-                          Coming Soon
-                        </span>
-                      )}
                     </span>
                   </div>
                 );
@@ -185,13 +170,12 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
 
           <div className="space-y-4">
             <label className="text-sm font-medium">
-              {selectedPlatform === 'tiktok' ? 'TikTok' : selectedPlatform === 'youtube' ? 'YouTube' : 'Instagram'} Username
+              {selectedPlatform === 'youtube' ? 'YouTube' : 'Instagram'} Username
             </label>
             <Input
               value={username}
               onChange={handleUsernameChange}
               placeholder={
-                selectedPlatform === 'tiktok' ? 'e.g. stoolpresidente' :
                 selectedPlatform === 'youtube' ? 'e.g. mkbhd' :
                 'e.g. gainsbybrains'
               }
