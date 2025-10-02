@@ -38,24 +38,16 @@ function renderEmails(emails = []) {
   );
 }
 
-const normalizePlatform = (value) => {
-  if (!value) return '';
-  return value.toString().toLowerCase();
-};
-
 export default function SimilarResultsTable({
   rows,
-  platformHint,
   selectedCreators,
   onToggleSelection,
   onSelectPage,
   allSelectedOnPage,
   someSelectedOnPage,
 }) {
-  const shouldShowAccountColumns = normalizePlatform(platformHint) !== 'youtube';
-
   return (
-    <Table className="w-full">
+    <Table className="w-full table-fixed">
       <TableHeader>
         <TableRow className="border-b border-zinc-800">
           <TableHead className="w-12 px-3 py-3">
@@ -69,27 +61,20 @@ export default function SimilarResultsTable({
             Profile
           </TableHead>
           <TableHead className="hidden sm:table-cell px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
-            {normalizePlatform(platformHint) === 'youtube' ? 'Channel Name' : 'Username'}
+            Username
           </TableHead>
-          <TableHead className="hidden lg:table-cell px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
+          <TableHead className="hidden lg:table-cell px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400 lg:w-28">
             Full Name
           </TableHead>
-          <TableHead className="hidden xl:table-cell px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
+          <TableHead className="hidden md:table-cell px-3 py-3 text-xs font-medium uppercase tracking-wider text-zinc-400 text-right">
+            Followers
+          </TableHead>
+          <TableHead className="hidden xl:table-cell px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400 xl:w-[220px]">
             Bio
           </TableHead>
-          <TableHead className="hidden lg:table-cell px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
+          <TableHead className="hidden lg:table-cell px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400 lg:w-[200px]">
             Email
           </TableHead>
-          {shouldShowAccountColumns && (
-            <>
-              <TableHead className="hidden xl:table-cell px-3 py-3 text-xs font-medium uppercase tracking-wider text-zinc-400">
-                Private
-              </TableHead>
-              <TableHead className="hidden xl:table-cell px-3 py-3 text-xs font-medium uppercase tracking-wider text-zinc-400">
-                Verified
-              </TableHead>
-            </>
-          )}
           <TableHead className="px-3 py-3 text-xs font-medium uppercase tracking-wider text-zinc-400 text-right">
             Actions
           </TableHead>
@@ -98,7 +83,9 @@ export default function SimilarResultsTable({
       <TableBody>
         {rows.map((row) => {
           const isSelected = Boolean(selectedCreators[row.id]);
-          const profileLabel = normalizePlatform(row.platform) === 'youtube' ? row.displayName : `@${row.username}`;
+          const usernameLabel = row.username
+            ? (row.username.startsWith('@') ? row.username : `@${row.username}`)
+            : '—';
 
           return (
             <TableRow
@@ -124,28 +111,25 @@ export default function SimilarResultsTable({
                     <div className="font-medium text-zinc-100 leading-tight">
                       {row.displayName || row.username}
                     </div>
-                    <div className="text-xs text-zinc-400">{profileLabel}</div>
+                    <div className="text-xs text-zinc-400">{usernameLabel}</div>
                     <div className="space-y-1 text-xs text-zinc-400 sm:hidden">
                       {row.bio && (
                         <div className="line-clamp-3" title={row.bio}>
                           {row.bio}
                         </div>
                       )}
+                      {row.followerLabel ? (
+                        <div className="break-words">
+                          <span className="font-medium text-zinc-300">Followers:</span>{' '}
+                          {row.followerLabel}
+                        </div>
+                      ) : null}
                       {row.emails?.length ? (
                         <div className="break-words">
                           <span className="font-medium text-zinc-300">Email:</span>{' '}
                           {row.emails[0]}
                         </div>
                       ) : null}
-                      {shouldShowAccountColumns && (
-                        <div>
-                          <span className="font-medium text-zinc-300">Private:</span>{' '}
-                          {row.isPrivate ? 'Yes' : 'No'}
-                          {' • '}
-                          <span className="font-medium text-zinc-300">Verified:</span>{' '}
-                          {row.isVerified ? 'Yes' : 'No'}
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -156,9 +140,9 @@ export default function SimilarResultsTable({
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 font-medium text-pink-400 transition-colors hover:text-pink-300 hover:underline"
-                  title={`View ${row.username} on ${row.platform}`}
+                  title={`View ${row.username || row.displayName} on ${row.platform}`}
                 >
-                  {profileLabel}
+                  {usernameLabel}
                   <ExternalLink className="h-3 w-3 opacity-70" />
                 </a>
                 <div className="mt-2 space-y-1 text-xs text-zinc-400 lg:hidden">
@@ -175,11 +159,14 @@ export default function SimilarResultsTable({
                   )}
                 </div>
               </TableCell>
-              <TableCell className="hidden lg:table-cell px-3 py-4 text-sm text-zinc-300">
+              <TableCell className="hidden lg:table-cell px-3 py-4 text-sm text-zinc-300 lg:w-28 lg:max-w-[7rem] truncate">
                 {row.displayName || 'N/A'}
               </TableCell>
-              <TableCell className="hidden xl:table-cell px-3 py-4 max-w-0">
-                <div className="truncate" title={row.bio || 'No bio available'}>
+              <TableCell className="hidden md:table-cell px-3 py-4 text-right text-sm text-zinc-300">
+                {row.followerLabel ?? '—'}
+              </TableCell>
+              <TableCell className="hidden xl:table-cell px-3 py-4 xl:w-[220px]">
+                <div className="line-clamp-3" title={row.bio || 'No bio available'}>
                   {row.bio ? (
                     <span className="text-sm text-zinc-300">{row.bio}</span>
                   ) : (
@@ -187,15 +174,11 @@ export default function SimilarResultsTable({
                   )}
                 </div>
               </TableCell>
-              <TableCell className="hidden lg:table-cell px-3 py-4 max-w-0">
-                {renderEmails(row.emails)}
+              <TableCell className="hidden lg:table-cell px-3 py-4 lg:w-[200px]">
+                <div className="space-y-1 text-sm text-zinc-300">
+                  {renderEmails(row.emails)}
+                </div>
               </TableCell>
-              {shouldShowAccountColumns && (
-                <>
-                  <TableCell className="hidden xl:table-cell px-3 py-4">{row.isPrivate ? 'Yes' : 'No'}</TableCell>
-                  <TableCell className="hidden xl:table-cell px-3 py-4">{row.isVerified ? 'Yes' : 'No'}</TableCell>
-                </>
-              )}
               <TableCell className="px-3 py-4 text-right">
                 <AddToListButton
                   creators={[row.snapshot]}

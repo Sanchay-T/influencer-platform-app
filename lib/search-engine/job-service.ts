@@ -1,12 +1,49 @@
 // search-engine/job-service.ts — centralized helpers for scraping_jobs state updates
 import { db } from '@/lib/db';
 import { scrapingJobs, scrapingResults } from '@/lib/db/schema';
+import { dedupeCreators as sharedDedupeCreators } from '@/lib/utils/dedupe-creators';
 import { eq } from 'drizzle-orm';
 import type { NormalizedCreator, ScrapingJobRecord, SearchMetricsSnapshot } from './types';
 
 const DEFAULT_PROGRESS_PRECISION = 2;
 
 type DedupeKeyFn = (creator: NormalizedCreator) => string | null;
+
+type MergeableCreator = NormalizedCreator & { mergeKey?: string };
+
+const attachMergeKeys = (creators: NormalizedCreator[], getKey?: DedupeKeyFn): MergeableCreator[] =>
+  creators.map((creator) => {
+    if (!getKey) {
+      return creator as MergeableCreator;
+    }
+    const key = getKey(creator);
+    if (typeof key === 'string' && key.trim().length > 0) {
+      const normalizedKey = key.trim().toLowerCase();
+      if ((creator as MergeableCreator).mergeKey === normalizedKey) {
+        return creator as MergeableCreator;
+      }
+      return {
+        ...(creator as Record<string, unknown>),
+        mergeKey: normalizedKey,
+      } as MergeableCreator;
+    }
+    return creator as MergeableCreator;
+  });
+
+const stripMergeKeys = (creators: MergeableCreator[]): NormalizedCreator[] =>
+  creators.map((creator) => {
+    if (creator && Object.prototype.hasOwnProperty.call(creator, 'mergeKey')) {
+      const { mergeKey: _mergeKey, ...rest } = creator as Record<string, unknown> & { mergeKey?: string };
+      return rest as NormalizedCreator;
+    }
+    return creator as NormalizedCreator;
+  });
+
+const dedupeWithHint = (
+  creators: MergeableCreator[],
+  platformHint: string | null,
+): MergeableCreator[] =>
+  sharedDedupeCreators(creators as Record<string, unknown>[], { platformHint }) as MergeableCreator[];
 
 export class SearchJobService {
   private job: ScrapingJobRecord;
@@ -76,47 +113,37 @@ export class SearchJobService {
       where: (results, { eq }) => eq(results.jobId, this.job.id),
     });
 
-    const merged = new Map<string, NormalizedCreator>();
-    const normalizeKey = (key: string | null, item: NormalizedCreator, index: number) => {
-      if (key && key.trim().length > 0) {
-        return key.toLowerCase();
-      }
-      return `fallback-${index}-${Buffer.from(JSON.stringify(item)).toString('base64').slice(0, 16)}`;
-    };
-    const register = (item: NormalizedCreator) => {
-      const dedupeKey = normalizeKey(getKey(item), item, merged.size);
-      if (!merged.has(dedupeKey)) {
-        merged.set(dedupeKey, item);
-      }
-    };
+    const platformHint = typeof this.job.platform === 'string' ? this.job.platform : null;
 
-    if (existing?.creators && Array.isArray(existing.creators)) {
-      for (const item of existing.creators as NormalizedCreator[]) {
-        register(item);
-      }
-    }
+    const existingRaw = existing && Array.isArray(existing.creators)
+      ? (existing.creators as NormalizedCreator[])
+      : [];
 
-    for (const item of creators) {
-      register(item);
-    }
+    const existingWithKeys = attachMergeKeys(existingRaw, getKey);
+    const normalizedExisting = dedupeWithHint(existingWithKeys, platformHint);
 
-    const mergedCreators = Array.from(merged.values());
-    const previousCount = existing?.creators && Array.isArray(existing.creators) ? existing.creators.length : 0;
+    const incomingWithKeys = attachMergeKeys(creators, getKey);
+    const combined = [...normalizedExisting, ...incomingWithKeys];
+    const dedupedWithKeys = dedupeWithHint(combined, platformHint);
+    const dedupedCreators = stripMergeKeys(dedupedWithKeys);
+
+    const previousCount = normalizedExisting.length;
+    const newCount = Math.max(dedupedCreators.length - previousCount, 0);
 
     if (existing) {
       await db
         .update(scrapingResults)
-        .set({ creators: mergedCreators })
+        .set({ creators: dedupedCreators })
         .where(eq(scrapingResults.id, existing.id));
     } else {
       await db.insert(scrapingResults).values({
         jobId: this.job.id,
-        creators: mergedCreators,
+        creators: dedupedCreators,
       });
     }
 
     await this.refresh();
-    return { total: mergedCreators.length, newCount: Math.max(mergedCreators.length - previousCount, 0) };
+    return { total: dedupedCreators.length, newCount };
   }
 
   async complete(finalStatus: 'completed' | 'error', data: { error?: string }) {
@@ -165,19 +192,22 @@ export class SearchJobService {
       where: (results, { eq }) => eq(results.jobId, this.job.id),
     });
 
+    const platformHint = typeof this.job.platform === 'string' ? this.job.platform : null;
+    const deduped = stripMergeKeys(dedupeWithHint(attachMergeKeys(creators), platformHint));
+
     if (existing) {
       await db
         .update(scrapingResults)
-        .set({ creators })
+        .set({ creators: deduped })
         .where(eq(scrapingResults.id, existing.id));
     } else {
       await db.insert(scrapingResults).values({
         jobId: this.job.id,
-        creators,
+        creators: deduped,
       });
     }
 
     await this.refresh();
-    return creators.length;
+    return deduped.length;
   }
 }

@@ -496,7 +496,7 @@ export const GET = withApiLogging(async (req: Request, { requestId, logPhase, lo
                     
                     const { getWebhookUrl } = await import('@/lib/utils/url-utils');
                     await qstash.publishJSON({
-                        url: `${getWebhookUrl()}/api/qstash/process-scraping`,
+                        url: `${getWebhookUrl()}/api/qstash/process-search`,
                         body: { jobId: job.id },
                         delay: '5s',
                         retries: 3,

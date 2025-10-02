@@ -236,15 +236,19 @@ export async function POST(req: NextRequest) {
 
 /**
  * Handle successful checkout completion
+ *
+ * ⚠️ RACE CONDITION PROTECTION:
+ * This webhook may fire AFTER /api/stripe/checkout-success has already updated the user.
+ * We must check the current state before overwriting to prevent downgrading paid users.
  */
 async function handleCheckoutCompleted(event: Stripe.Event, requestId: string) {
   const session = event.data.object as Stripe.Checkout.Session;
   const userId = session.metadata?.userId;
   const planId = session.metadata?.planId;
-  
+
   await BillingLogger.logStripe(
     'CHECKOUT_COMPLETED',
-    'Processing checkout completion',
+    'Processing checkout completion webhook',
     userId,
     {
       sessionId: session.id,
@@ -272,6 +276,69 @@ async function handleCheckoutCompleted(event: Stripe.Event, requestId: string) {
     return;
   }
 
+  // ⚠️ CRITICAL: Check if checkout-success already processed this payment
+  const currentProfile = await getUserProfile(userId);
+  if (!currentProfile) {
+    await BillingLogger.logError(
+      'PROFILE_NOT_FOUND',
+      'User profile not found during checkout webhook',
+      userId,
+      { sessionId: session.id },
+      requestId
+    );
+    return;
+  }
+
+  // ✅ IDEMPOTENCY CHECK: Has this exact checkout session already been processed?
+  // Check: same subscription ID AND recent webhook (within last 5 minutes)
+  const recentWebhookWindow = 5 * 60 * 1000; // 5 minutes
+  const isRecentWebhook = currentProfile.lastWebhookTimestamp &&
+    (Date.now() - new Date(currentProfile.lastWebhookTimestamp).getTime() < recentWebhookWindow);
+
+  const sameSubscription = currentProfile.stripeSubscriptionId === session.subscription;
+  const sameCheckoutEvent = currentProfile.lastWebhookEvent === 'checkout.session.completed';
+
+  const isDuplicateWebhook = isRecentWebhook && sameSubscription && sameCheckoutEvent;
+
+  if (isDuplicateWebhook) {
+    await BillingLogger.logStripe(
+      'DUPLICATE_WEBHOOK',
+      'Duplicate checkout.session.completed webhook detected, skipping (idempotency)',
+      userId,
+      {
+        sessionId: session.id,
+        subscriptionId: session.subscription,
+        lastProcessed: currentProfile.lastWebhookTimestamp,
+        minutesSinceLastWebhook: Math.round((Date.now() - new Date(currentProfile.lastWebhookTimestamp!).getTime()) / 60000),
+        reason: 'Idempotency protection - this webhook was already processed'
+      },
+      requestId
+    );
+    return; // ✅ Skip duplicate processing
+  }
+
+  // ✅ RACE CONDITION CHECK: Has checkout-success already upgraded the user to 'active'?
+  const alreadyActivated =
+    currentProfile.subscriptionStatus === 'active' &&
+    currentProfile.stripeSubscriptionId === session.subscription;
+
+  if (alreadyActivated) {
+    await BillingLogger.logStripe(
+      'CHECKOUT_ALREADY_PROCESSED',
+      'Checkout already processed by success page, skipping webhook update to prevent downgrade',
+      userId,
+      {
+        sessionId: session.id,
+        currentStatus: currentProfile.subscriptionStatus,
+        currentPlan: currentProfile.currentPlan,
+        stripeSubscriptionId: currentProfile.stripeSubscriptionId,
+        reason: 'Race condition protection - checkout-success was faster'
+      },
+      requestId
+    );
+    return; // ✅ Skip update to prevent downgrading active user
+  }
+
   // Update user profile with initial subscription data
   const planConfig = await resolvePlanConfig(planId);
   if (!planConfig) {
@@ -292,20 +359,22 @@ async function handleCheckoutCompleted(event: Stripe.Event, requestId: string) {
   try {
     await BillingLogger.logDatabase(
       'UPDATE',
-      'Updating user profile after checkout completion',
+      'Updating user profile after checkout completion webhook',
       userId,
       {
         table: 'userProfiles',
-        operation: 'checkout_completion',
-        recordId: userId
+        operation: 'checkout_completion_webhook',
+        recordId: userId,
+        note: 'Webhook arrived before checkout-success API'
       },
       requestId
     );
 
+    // Only update if not already activated by checkout-success
     await updateUserProfile(userId, {
       stripeCustomerId: session.customer as string,
       stripeSubscriptionId: session.subscription as string,
-      subscriptionStatus: 'trialing', // Will be updated when subscription is created
+      subscriptionStatus: 'trialing', // Will be 'active' when subscription.created fires
       trialStatus: 'active',
       currentPlan: planId as any,
       planCampaignsLimit: planConfig.campaignsLimit,
