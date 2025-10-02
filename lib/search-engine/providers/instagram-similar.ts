@@ -30,16 +30,41 @@ function resolveEnhancementCap(): number {
 }
 
 function normalizeCreatorPayload(creator: NormalizedCreator): NormalizedCreator {
+  const followerCount = resolveFollowerCount(creator);
+
   return {
     platform: 'Instagram',
     engine: 'search-engine',
     ...creator,
+    followers: followerCount ?? creator.followers ?? creator.followers_count ?? null,
+    followers_count: followerCount ?? creator.followers_count ?? null,
     creator: {
       ...(creator.creator || {}),
       platform: 'Instagram',
+      followers: followerCount ?? creator.creator?.followers ?? null,
     },
     metadata: creator.metadata || creator,
   };
+}
+
+// Breadcrumb: keeps Instagram search-engine payload aligned with YouTube so downstream tables/export stay uniform.
+function resolveFollowerCount(creator: NormalizedCreator): number | null {
+  const candidates: Array<unknown> = [
+    (creator as Record<string, unknown>).followers,
+    (creator as Record<string, unknown>).followers_count,
+    creator.creator?.followers,
+    (creator.creator as Record<string, unknown> | undefined)?.followers_count,
+    (creator.metadata as Record<string, unknown> | undefined)?.followers,
+    (creator.metadata as Record<string, unknown> | undefined)?.followers_count,
+  ];
+
+  for (const candidate of candidates) {
+    if (typeof candidate === 'number' && Number.isFinite(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
 }
 
 function dedupeInstagramCreators(creators: NormalizedCreator[]): NormalizedCreator[] {

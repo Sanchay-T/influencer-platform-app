@@ -45,6 +45,9 @@ export interface ApifyRelatedProfile {
   is_private: boolean;
   is_verified: boolean;
   profile_pic_url: string;
+  follower_count?: number;
+  followers?: number;
+  followers_count?: number;
 }
 
 // Unified Platform Format Types (matching TikTok/YouTube)

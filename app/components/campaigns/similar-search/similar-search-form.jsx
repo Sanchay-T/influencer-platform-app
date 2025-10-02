@@ -129,6 +129,7 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
             <label className="text-sm font-medium">Platform</label>
             <div className="flex flex-wrap gap-4">
               {[
+                { value: 'tiktok', label: 'TikTok', disabled: true, badge: 'Coming Soon' },
                 { value: 'instagram', label: 'Instagram' },
                 { value: 'youtube', label: 'YouTube' },
               ].map((platform) => {
@@ -142,7 +143,14 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
                       aria-checked={isActive}
                       data-state={isActive ? 'checked' : 'unchecked'}
                       value="on"
-                      onClick={() => setSelectedPlatform(platform.value)}
+                      disabled={platform.disabled}
+                      onClick={() => {
+                        if (platform.disabled) {
+                          toast.success('TikTok similar search is coming soon. Stay tuned!');
+                          return;
+                        }
+                        setSelectedPlatform(platform.value);
+                      }}
                       className="peer h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                     >
                       {isActive && (
@@ -161,6 +169,11 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
                     />
                     <span className="ml-2">
                       {platform.label}
+                      {platform.badge && (
+                        <span className="ml-2 rounded-full bg-zinc-700/60 px-2 py-0.5 text-[11px] uppercase tracking-wide text-zinc-200">
+                          {platform.badge}
+                        </span>
+                      )}
                     </span>
                   </div>
                 );
