@@ -147,7 +147,16 @@ export class PlanValidator {
           creatorsLimit = planRow.creatorsLimit ?? creatorsLimit;
         }
       } catch (e) {
-        // keep defaults if DB lookup fails
+        // Database lookup failed - log the error and fall back to hardcoded defaults
+        logger.error('Plan config database lookup failed, using fallback defaults', e instanceof Error ? e : new Error(String(e)), {
+          currentPlan,
+          fallbackLimits: {
+            campaignsLimit: planDefaults.campaignsLimit,
+            creatorsLimit: planDefaults.creatorsLimit
+          },
+          errorType: e instanceof Error ? e.constructor.name : typeof e,
+          message: e instanceof Error ? e.message : String(e)
+        }, LogCategory.BILLING);
       }
 
       const planConfig: PlanConfig = {

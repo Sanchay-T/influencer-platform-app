@@ -22,7 +22,8 @@ export function buildEndpoint(platformNormalized: string, hasTargetUsername: boo
   if (hasTargetUsername) {
     if (platformNormalized === 'instagram') return `/api/scraping/instagram?jobId=${jobId}`
     if (platformNormalized === 'youtube') return `/api/scraping/youtube-similar?jobId=${jobId}`
-    return `/api/scraping/tiktok-similar?jobId=${jobId}`
+    // TikTok Similar removed - not supported
+    return null
   }
   switch (platformNormalized) {
     case 'instagram':

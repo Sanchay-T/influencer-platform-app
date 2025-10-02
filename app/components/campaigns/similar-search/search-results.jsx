@@ -316,20 +316,6 @@ export default function SimilarSearchResults({ searchData }) {
         creator.engagement_rate ??
         base?.engagement_rate ??
         null;
-      const isPrivate = Boolean(
-        creator.is_private ??
-        creator.isPrivate ??
-        base?.is_private ??
-        base?.isPrivate
-      );
-      const isVerified = Boolean(
-        creator.is_verified ??
-        creator.isVerified ??
-        base?.is_verified ??
-        base?.isVerified ??
-        base?.verified
-      );
-
       const snapshot = {
         platform,
         externalId,
@@ -359,8 +345,6 @@ export default function SimilarSearchResults({ searchData }) {
         followerLabel,
         followerCount: followerRaw,
         engagementRate,
-        isPrivate,
-        isVerified,
         initials: resolveInitials(displayName, handle),
       };
     });
@@ -612,7 +596,6 @@ export default function SimilarSearchResults({ searchData }) {
             <div className={cn('w-full overflow-x-auto', viewMode === 'table' ? 'block' : 'hidden')}>
               <SimilarResultsTable
                 rows={pageRows}
-                platformHint={platformHint}
                 selectedCreators={selectedCreators}
                 onToggleSelection={toggleSelection}
                 onSelectPage={handleSelectPage}
