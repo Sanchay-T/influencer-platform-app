@@ -47,7 +47,7 @@ export default function SimilarResultsTable({
   someSelectedOnPage,
 }) {
   return (
-    <Table className="w-full table-fixed">
+    <Table className="w-full table-auto">
       <TableHeader>
         <TableRow className="border-b border-zinc-800">
           <TableHead className="w-12 px-3 py-3">
@@ -60,11 +60,8 @@ export default function SimilarResultsTable({
           <TableHead className="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
             Profile
           </TableHead>
-          <TableHead className="hidden sm:table-cell px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
+          <TableHead className="hidden sm:table-cell px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400 sm:w-44">
             Username
-          </TableHead>
-          <TableHead className="hidden lg:table-cell px-3 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400 lg:w-28">
-            Full Name
           </TableHead>
           <TableHead className="hidden md:table-cell px-3 py-3 text-xs font-medium uppercase tracking-wider text-zinc-400 text-right">
             Followers
@@ -134,15 +131,15 @@ export default function SimilarResultsTable({
                   </div>
                 </div>
               </TableCell>
-              <TableCell className="hidden sm:table-cell px-3 py-4">
+              <TableCell className="hidden sm:table-cell px-3 py-4 align-top sm:w-44 sm:max-w-xs">
                 <a
                   href={row.profileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 font-medium text-pink-400 transition-colors hover:text-pink-300 hover:underline"
+                  className="flex min-w-0 items-center gap-1 font-medium text-pink-400 transition-colors hover:text-pink-300 hover:underline"
                   title={`View ${row.username || row.displayName} on ${row.platform}`}
                 >
-                  {usernameLabel}
+                  <span className="truncate">{usernameLabel}</span>
                   <ExternalLink className="h-3 w-3 opacity-70" />
                 </a>
                 <div className="mt-2 space-y-1 text-xs text-zinc-400 lg:hidden">
@@ -158,9 +155,6 @@ export default function SimilarResultsTable({
                     </div>
                   )}
                 </div>
-              </TableCell>
-              <TableCell className="hidden lg:table-cell px-3 py-4 text-sm text-zinc-300 lg:w-28 lg:max-w-[7rem] truncate">
-                {row.displayName || 'N/A'}
               </TableCell>
               <TableCell className="hidden md:table-cell px-3 py-4 text-right text-sm text-zinc-300">
                 {row.followerLabel ?? '—'}
