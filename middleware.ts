@@ -2,7 +2,13 @@ import { clerkMiddleware } from '@clerk/nextjs/server'
 
 // Bring back default Clerk middleware so auth() works everywhere with real sessions.
 // No dev-only bypass; production parity.
-export default clerkMiddleware({
+const shouldLogMiddleware = process.env.NEXT_PUBLIC_ENABLE_MIDDLEWARE_LOGS === 'true';
+
+export default clerkMiddleware((auth, request) => {
+  if (shouldLogMiddleware) {
+    console.log('[MIDDLEWARE] path:', request.nextUrl.pathname);
+  }
+}, {
   publicRoutes: [
     '/',
     '/sign-in(.*)',
@@ -20,9 +26,5 @@ export default clerkMiddleware({
 })
 
 export const config = {
-  matcher: [
-    // Run on all pages and API routes except Next internals and static assets
-    '/((?!_next|.*\..*).*)',
-    '/(api|trpc)(.*)'
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon\.ico).*)'],
 }

@@ -125,6 +125,18 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
             campaignName: campaign.name
         }, LogCategory.INSTAGRAM);
 
+        if (campaign.searchType !== 'keyword') {
+            await logDbOperation(
+                'campaign_search_type_update',
+                async () =>
+                    db
+                        .update(campaigns)
+                        .set({ searchType: 'keyword', updatedAt: new Date() })
+                        .where(eq(campaigns.id, campaignId)),
+                { requestId }
+            );
+        }
+
         logPhase('business');
         
         // Enhanced plan validation for AI-powered search
@@ -244,7 +256,12 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
                         updatedAt: new Date(),
                         cursor: 0,
                         timeoutAt: new Date(Date.now() + TIMEOUT_MINUTES * 60 * 1000),
-                        // Enhanced metadata for AI processing
+                        // Enhanced metadata for AI processing + search-engine marker
+                        searchParams: {
+                            runner: 'search-engine',
+                            platform: 'instagram_enhanced',
+                            searchType: 'instagram_enhanced'
+                        },
                         metadata: JSON.stringify({
                             searchType: 'instagram_enhanced',
                             aiEnhanced: true,
@@ -268,9 +285,9 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
 
             logPhase('external');
             
-            // Queue AI-enhanced job processing with QStash
+            // Queue AI-enhanced job processing with QStash using NEW search-engine route
             const { getWebhookUrl } = await import('@/lib/utils/url-utils');
-            const qstashCallbackUrl = `${getWebhookUrl()}/api/qstash/process-scraping`;
+            const qstashCallbackUrl = `${getWebhookUrl()}/api/qstash/process-search`; // NEW: Use search-engine route
             
             let qstashMessageId: string | null = null;
             try {

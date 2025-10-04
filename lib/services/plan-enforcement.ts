@@ -19,6 +19,35 @@ export interface UsageInfo {
 }
 
 export class PlanEnforcementService {
+  private static resolveDefaultLimits(planKey: string): PlanLimits {
+    switch (planKey) {
+      case 'fame_flex':
+        return { campaignsLimit: -1, creatorsLimit: -1, isUnlimited: true };
+      case 'viral_surge':
+        return { campaignsLimit: 10, creatorsLimit: 10000, isUnlimited: false };
+      case 'glow_up':
+        return { campaignsLimit: 3, creatorsLimit: 1000, isUnlimited: false };
+      default:
+        return { campaignsLimit: 1, creatorsLimit: 50, isUnlimited: false };
+    }
+  }
+
+  private static normalizePlanLimits(planKey: string, campaignsLimit?: number | null, creatorsLimit?: number | null) {
+    const defaults = this.resolveDefaultLimits(planKey);
+    const normalizedCampaigns = campaignsLimit ?? defaults.campaignsLimit;
+    const normalizedCreators = creatorsLimit ?? defaults.creatorsLimit;
+
+    // Fame Flex should always be unlimited regardless of DB values
+    if (planKey === 'fame_flex') {
+      return { campaignsLimit: -1, creatorsLimit: -1 };
+    }
+
+    return {
+      campaignsLimit: normalizedCampaigns,
+      creatorsLimit: normalizedCreators,
+    };
+  }
+
   /**
    * Get user's current plan limits
    */
@@ -37,27 +66,23 @@ export class PlanEnforcementService {
       });
 
       if (!plan) {
-        // Default free tier limits (very restrictive)
-        console.log(`⚠️ [PLAN-ENFORCEMENT] No plan found for ${userProfile.currentPlan}, using free tier`);
-        return {
-          campaignsLimit: 1,
-          creatorsLimit: 50,
-          isUnlimited: false
-        };
+        console.log(`⚠️ [PLAN-ENFORCEMENT] No plan found for ${userProfile.currentPlan}, using defaults`);
+        return this.resolveDefaultLimits(userProfile.currentPlan || 'free');
       }
 
-      const isUnlimited = plan.campaignsLimit === -1 && plan.creatorsLimit === -1;
-      
+      const normalizedPlan = this.normalizePlanLimits(plan.planKey, plan.campaignsLimit, plan.creatorsLimit);
+      const isUnlimited = normalizedPlan.campaignsLimit === -1 && normalizedPlan.creatorsLimit === -1;
+
       console.log(`✅ [PLAN-ENFORCEMENT] Plan limits for ${userId}:`, {
         plan: plan.planKey,
-        campaignsLimit: plan.campaignsLimit,
-        creatorsLimit: plan.creatorsLimit,
+        campaignsLimit: normalizedPlan.campaignsLimit,
+        creatorsLimit: normalizedPlan.creatorsLimit,
         isUnlimited
       });
 
       return {
-        campaignsLimit: plan.campaignsLimit,
-        creatorsLimit: plan.creatorsLimit,
+        campaignsLimit: normalizedPlan.campaignsLimit,
+        creatorsLimit: normalizedPlan.creatorsLimit,
         isUnlimited
       };
     } catch (error) {

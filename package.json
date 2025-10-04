@@ -21,6 +21,7 @@
     "db:local:reset": "docker-compose down -v && docker-compose up -d",
     "db:local:setup": "./scripts/setup-local-db.sh",
     "db:local:test": "node scripts/test-local-db.js",
+    "db:reset:schema": "tsx scripts/reset-database-schema.ts",
     "db:seed:plans": "node scripts/seed-subscription-plans.js",
     "drop": "drizzle-kit drop",
     "test:tiktok-similar": "node run-tiktok-test.js",
@@ -48,7 +49,18 @@
     "test:logging:quick": "node scripts/test-logging-system.js --quick",
     "test:console-reduction": "node -e \"console.log('Testing console reduction...'); const { logger } = require('./lib/logging'); logger.info('New structured log'); logger.debug('Debug log (filtered in prod)'); console.log('Test complete');\"",
     "test:sentry-integration": "node -e \"const { logger } = require('./lib/logging'); logger.error('Test Sentry integration', new Error('Test error')); console.log('Sentry test sent');\"",
-    "test:performance": "node -e \"const { logger } = require('./lib/logging'); const start = Date.now(); for(let i=0; i<1000; i++) logger.debug('perf test', {i}); console.log('1000 filtered logs took:', Date.now()-start, 'ms');\""
+    "test:performance": "node -e \"const { logger } = require('./lib/logging'); const start = Date.now(); for(let i=0; i<1000; i++) logger.debug('perf test', {i}); console.log('1000 filtered logs took:', Date.now()-start, 'ms');\"",
+    "test:search:instagram:keyword": "tsx test-scripts/search/keyword/instagram-enhanced.test.ts",
+    "test:search:tiktok:keyword": "tsx test-scripts/search/keyword/tiktok-keyword.test.ts",
+    "test:search:youtube:keyword": "tsx test-scripts/search/keyword/youtube-keyword.test.ts",
+    "test:search:instagram:similar": "tsx test-scripts/search/similar/instagram-similar.test.ts",
+    "test:search:tiktok:similar": "tsx test-scripts/search/similar/tiktok-similar.test.ts",
+    "test:search:youtube:similar": "tsx test-scripts/search/similar/youtube-similar.test.ts",
+    "test:modash:instagram:search": "tsx test-scripts/modash/instagram-search.test.ts",
+    "test:modash:instagram:report": "tsx test-scripts/modash/instagram-report.test.ts",
+    "test:legacy:tiktok:keyword": "tsx test-scripts/legacy/tiktok-keyword-old.test.ts",
+    "test:legacy:instagram:similar": "tsx test-scripts/legacy/instagram-similar-old.test.ts",
+    "compare:search": "tsx test-scripts/compare-search-results.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.23.3",
@@ -95,7 +107,8 @@
     "svix": "^1.69.0",
     "swr": "^2.3.4",
     "tailwind-merge": "^3.0.1",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "typescript": "^5.7.3"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -110,6 +123,6 @@
     "node-fetch": "^3.3.2",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5.7.3"
+    "tsx": "^4.20.6"
   }
 }

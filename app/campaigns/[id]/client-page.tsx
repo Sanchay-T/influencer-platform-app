@@ -20,6 +20,25 @@ import ExportButton from '@/app/components/campaigns/export-button'
 import { Campaign, ScrapingJob } from '@/app/types/campaign'
 import { PlatformResult } from '@/lib/db/schema'
 import { cn } from '@/lib/utils'
+import { dedupeCreators } from '@/app/components/campaigns/utils/dedupe-creators'
+
+// Cache for expensive deduplication operations
+const dedupeCache = new Map<string, any[]>()
+
+const SHOW_DIAGNOSTICS = process.env.NEXT_PUBLIC_SHOW_SEARCH_DIAGNOSTICS === 'true'
+
+type SearchDiagnostics = {
+  engine: string
+  queueLatencyMs: number | null
+  processingMs: number | null
+  totalMs: number | null
+  apiCalls: number | null
+  processedCreators: number | null
+  batches: Array<{ index?: number; size?: number; durationMs?: number }>
+  startedAt?: string | null
+  finishedAt?: string | null
+  lastUpdated: string
+}
 
 interface ClientCampaignPageProps {
   campaign: Campaign | null
@@ -78,6 +97,16 @@ function formatDate(value: Date | string | null | undefined, withTime = false) {
   })
 }
 
+function formatDuration(ms: number | null | undefined) {
+  if (ms === null || ms === undefined || Number.isNaN(ms)) return '—'
+  if (ms < 1000) return `${ms.toFixed(0)} ms`
+  const seconds = ms / 1000
+  if (seconds < 60) return `${seconds.toFixed(1)} s`
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = seconds % 60
+  return `${minutes}m ${remainingSeconds.toFixed(1)}s`
+}
+
 function getCreatorsCount(job?: ScrapingJob | null) {
   if (!job?.results?.length) return 0
   return job.results.reduce((total, result) => {
@@ -125,9 +154,24 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
   const [jobs, setJobs] = useState<ScrapingJob[]>(() => campaign?.scrapingJobs ?? [])
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'creators' | 'activity'>('creators')
+  const [isTransitioning, setIsTransitioning] = useState(false)
+  const [renderKey, setRenderKey] = useState(0)
   const activeJobRef = useRef<ScrapingJob | null>(null)
   const prevRunLogRef = useRef<{ id: string | null; status?: string } | null>(null)
   const prevTabRef = useRef<'creators' | 'activity' | null>(null)
+  const transitionStartTimeRef = useRef<number | null>(null)
+  const [diagnostics, setDiagnostics] = useState<Record<string, SearchDiagnostics>>({})
+
+  const logEvent = useCallback((event: string, detail: Record<string, unknown>) => {
+    const timestamp = new Date().toISOString()
+    const perfNow = performance.now().toFixed(2)
+    console.log(`🏃 [RUN-SWITCH][${timestamp}][${perfNow}ms] ${event}`, {
+      ...detail,
+      transitionDuration: transitionStartTimeRef.current ?
+        (performance.now() - transitionStartTimeRef.current).toFixed(2) + 'ms' : null
+    })
+  }, [])
+
   const logUXEvent = useCallback((event: string, detail: Record<string, unknown>) => {
     console.log(`[RUN-UX][${new Date().toISOString()}] ${event}`, detail)
   }, [])
@@ -143,8 +187,18 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
   }, [jobs])
 
   const selectedJob = useMemo(() => {
-    if (!selectedJobId) return sortedJobs[0] ?? null
-    return sortedJobs.find((job) => job.id === selectedJobId) ?? sortedJobs[0] ?? null
+    let job: ScrapingJob | null = null
+    if (!selectedJobId) {
+      job = sortedJobs[0] ?? null
+      // Fallback to first job
+    } else {
+      job = sortedJobs.find((j) => j.id === selectedJobId) ?? sortedJobs[0] ?? null
+      // Found job by ID
+    }
+
+    // Job selection completed
+
+    return job
   }, [selectedJobId, sortedJobs])
 
   useEffect(() => {
@@ -159,6 +213,11 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
   }, [searchParams, sortedJobs, selectedJobId])
 
   const creatorsCount = useMemo(() => getCreatorsCount(selectedJob), [selectedJob])
+
+  const selectedDiagnostics = useMemo(() => {
+    if (!SHOW_DIAGNOSTICS || !selectedJob) return undefined
+    return diagnostics[selectedJob.id]
+  }, [diagnostics, selectedJob])
 
   const isCampaignActive = useMemo(() => {
     return sortedJobs.some((job) => isActiveJob(job))
@@ -217,8 +276,41 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
           return
         }
 
-        const response = await fetch(`/api/scraping/${current.platform.toLowerCase()}?jobId=${current.id}`)
+        const response = await fetch(`/api/scraping/${current.platform.toLowerCase()}?jobId=${current.id}`, { credentials: 'include' })
         const data = await response.json()
+
+        if (SHOW_DIAGNOSTICS && data) {
+          const timings = data?.benchmark?.timings ?? {}
+          const batches = Array.isArray(data?.benchmark?.batches) ? data.benchmark.batches : []
+          const startedAt = timings?.startedAt ? new Date(timings.startedAt) : null
+          const finishedAt = timings?.finishedAt ? new Date(timings.finishedAt) : null
+          const jobCreatedAt = current.createdAt ? new Date(current.createdAt) : null
+          const queueLatencyMs = jobCreatedAt && startedAt ? startedAt.getTime() - jobCreatedAt.getTime() : null
+          const processingMs = typeof timings?.totalDurationMs === 'number'
+            ? timings.totalDurationMs
+            : startedAt && finishedAt
+              ? finishedAt.getTime() - startedAt.getTime()
+              : null
+          const totalMs = queueLatencyMs !== null && processingMs !== null
+            ? queueLatencyMs + processingMs
+            : processingMs
+
+          setDiagnostics((prev) => ({
+            ...prev,
+            [current.id]: {
+              engine: data.engine ?? 'legacy',
+              queueLatencyMs,
+              processingMs,
+              totalMs,
+              apiCalls: data?.benchmark?.apiCalls ?? (Array.isArray(batches) ? batches.length : null),
+              processedCreators: data?.benchmark?.processedCreators ?? null,
+              batches,
+              startedAt: timings?.startedAt ?? null,
+              finishedAt: timings?.finishedAt ?? null,
+              lastUpdated: new Date().toISOString()
+            }
+          }))
+        }
 
         if (!response.ok || data.error) {
           clearInterval(interval)
@@ -259,23 +351,60 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
 
   const handleSelectJob = useCallback(
     (jobId: string) => {
+      const transitionStart = performance.now()
+      transitionStartTimeRef.current = transitionStart
+
       const job = sortedJobs.find((j) => j.id === jobId)
-      logUXEvent('run-click', {
-        jobId,
-        status: job?.status,
-        progress: job?.progress ?? null,
-        creators: job?.results?.[0]?.creators?.length ?? 0
+      const previousJob = selectedJob
+
+      logEvent('run-click:initiated', {
+        clickedJobId: jobId,
+        previousJobId: previousJob?.id || null,
+        clickedJobStatus: job?.status,
+        clickedJobCreators: job?.results?.[0]?.creators?.length ?? 0,
+        previousJobCreators: previousJob?.results?.[0]?.creators?.length ?? 0,
+        isSameJob: jobId === previousJob?.id
       })
+
+      // Set transition state immediately for visual feedback
+      setIsTransitioning(true)
+
+      // Transition started
+
+      // Update selected job ID and force fresh render
       setSelectedJobId(jobId)
+      setRenderKey(prev => prev + 1)
+
+      // Job ID updated
+
+      // Update URL
       const params = new URLSearchParams(searchParams?.toString())
       params.set('jobId', jobId)
       const query = params.toString()
       if (typeof window !== 'undefined') {
         const nextUrl = `${pathname}${query ? `?${query}` : ''}`
         window.history.replaceState(null, '', nextUrl)
+        // URL updated
       }
+
+      // Clear transition state immediately
+      setIsTransitioning(false)
+      const duration = (performance.now() - transitionStart).toFixed(2)
+      logEvent('run-click:transition-completed', {
+        jobId,
+        totalTransitionTime: duration + 'ms',
+        FIXED: 'INSTANT_TRANSITION_APPLIED'
+      })
+      transitionStartTimeRef.current = null
+
+      logUXEvent('run-click', {
+        jobId,
+        status: job?.status,
+        progress: job?.progress ?? null,
+        creators: job?.results?.[0]?.creators?.length ?? 0
+      })
     },
-    [logUXEvent, pathname, searchParams, sortedJobs]
+    [logEvent, logUXEvent, pathname, searchParams, sortedJobs, selectedJob]
   )
 
   const handleStartSearch = useCallback(
@@ -289,6 +418,40 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
     },
     [campaign, router]
   )
+
+  const rawCreators = useMemo(() => {
+    if (!selectedJob?.results || selectedJob.results.length === 0) {
+      return []
+    }
+
+    return selectedJob.results.flatMap(result =>
+      Array.isArray(result?.creators) ? result.creators : []
+    )
+  }, [selectedJob])
+
+  const processedCreators = useMemo(() => {
+    if (!selectedJob || rawCreators.length === 0) {
+      return []
+    }
+
+    const cacheKey = `${selectedJob.id}-${rawCreators.length}`
+
+    if (dedupeCache.has(cacheKey)) {
+      return dedupeCache.get(cacheKey)!
+    }
+
+    const platformHint = selectedJob.platform?.toLowerCase() || 'tiktok'
+    const result = dedupeCreators(rawCreators, { platformHint })
+
+    dedupeCache.set(cacheKey, result)
+
+    if (dedupeCache.size > 50) {
+      const firstKey = dedupeCache.keys().next().value
+      dedupeCache.delete(firstKey)
+    }
+
+    return result
+  }, [rawCreators, selectedJob])
 
   if (!campaign) {
     return (
@@ -450,6 +613,63 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
             {selectedJob?.keywords?.length ? buildKeywords(selectedJob) : selectedJob?.targetUsername ? `@${selectedJob.targetUsername}` : '—'}
           </div>
         </div>
+        {SHOW_DIAGNOSTICS && selectedDiagnostics && (
+          <div className="space-y-2">
+            <p className="text-xs uppercase tracking-wide text-indigo-300">Diagnostics (dev)</p>
+            <div className="space-y-1 rounded-md border border-indigo-500/30 bg-indigo-500/5 p-3 text-xs text-indigo-100">
+              <div className="flex justify-between">
+                <span>Engine</span>
+                <span className="font-mono text-indigo-200">{selectedDiagnostics.engine}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Queue wait</span>
+                <span>{formatDuration(selectedDiagnostics.queueLatencyMs)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Processing</span>
+                <span>{formatDuration(selectedDiagnostics.processingMs)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Total runtime</span>
+                <span>{formatDuration(selectedDiagnostics.totalMs)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>API calls</span>
+                <span>{selectedDiagnostics.apiCalls ?? '—'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Creators processed</span>
+                <span>{selectedDiagnostics.processedCreators ?? '—'}</span>
+              </div>
+              {selectedDiagnostics.startedAt && (
+                <div className="flex justify-between">
+                  <span>First fetch</span>
+                  <span>{formatDate(selectedDiagnostics.startedAt, true)}</span>
+                </div>
+              )}
+              {selectedDiagnostics.finishedAt && (
+                <div className="flex justify-between">
+                  <span>Last fetch</span>
+                  <span>{formatDate(selectedDiagnostics.finishedAt, true)}</span>
+                </div>
+              )}
+              <details className="mt-2">
+                <summary className="cursor-pointer text-indigo-300/80">Batch breakdown</summary>
+                <ul className="mt-1 space-y-1">
+                  {selectedDiagnostics.batches.map((batch, index) => (
+                    <li key={`${selectedJob?.id}-batch-${index}`} className="flex justify-between font-mono">
+                      <span>#{batch.index ?? index + 1} · {batch.size ?? '—'} creators</span>
+                      <span>{formatDuration(batch.durationMs ?? null)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+              <p className="text-end text-[10px] text-indigo-300/70">
+                updated {formatDate(selectedDiagnostics.lastUpdated, true)}
+              </p>
+            </div>
+          </div>
+        )}
         {creatorsCount > 0 && (
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-wide text-zinc-500">Sample creators</p>
@@ -532,7 +752,10 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
   )
 
   const renderResults = () => {
+    // Rendering results for selected job
+
     if (!selectedJob) {
+      // No selected job available
       return (
         <Card className="bg-zinc-900/80 border border-zinc-800/60">
           <CardContent className="py-16 text-center text-sm text-zinc-400">
@@ -578,10 +801,6 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
       )
     }
 
-    const jobCreators = selectedJob.results?.flatMap(result =>
-      Array.isArray(result?.creators) ? result.creators : []
-    ) ?? []
-
     if (campaign.searchType === 'keyword') {
       const searchData = {
         jobId: selectedJob.id,
@@ -590,19 +809,26 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
         platform: selectedJob.platform ?? 'tiktok',
         selectedPlatform: selectedJob.platform ?? 'tiktok',
         status: selectedJob.status,
-        initialCreators: jobCreators
+        initialCreators: processedCreators
       }
 
+      // Keyword search data prepared
+
       return (
-        <Suspense
-          fallback={
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-6 w-6 animate-spin text-zinc-300" />
-            </div>
-          }
-        >
-          <KeywordSearchResults searchData={searchData} />
-        </Suspense>
+        <div key={`keyword-${selectedJob.id}-${renderKey}`}>
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="h-6 w-6 animate-spin text-zinc-300" />
+              </div>
+            }
+          >
+            <KeywordSearchResults
+              key={`keyword-results-${selectedJob.id}-${renderKey}`}
+              searchData={searchData}
+            />
+          </Suspense>
+        </div>
       )
     }
 
@@ -611,21 +837,28 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
       platform: selectedJob.platform ?? 'instagram',
       selectedPlatform: selectedJob.platform ?? 'instagram',
       targetUsername: selectedJob.targetUsername,
-      creators: jobCreators,
+      creators: processedCreators,
       campaignId: campaign.id,
       status: selectedJob.status
     }
 
+    // Similar search data prepared
+
     return (
-      <Suspense
-        fallback={
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-6 w-6 animate-spin text-zinc-300" />
-          </div>
-        }
-      >
-        <SimilarSearchResults searchData={searchData} />
-      </Suspense>
+      <div key={`similar-${selectedJob.id}-${renderKey}`}>
+        <Suspense
+          fallback={
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="h-6 w-6 animate-spin text-zinc-300" />
+            </div>
+          }
+        >
+          <SimilarSearchResults
+            key={`similar-results-${selectedJob.id}-${renderKey}`}
+            searchData={searchData}
+          />
+        </Suspense>
+      </div>
     )
   }
 
@@ -719,7 +952,7 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
           </Tabs>
 
           {activeTab === 'creators' ? (
-            <div className="space-y-4 min-w-0">
+            <div className="space-y-4 min-w-0 relative">
               {renderResults()}
             </div>
           ) : (

@@ -1,3 +1,4 @@
+import '@/lib/config/load-env';
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 

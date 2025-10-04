@@ -1,3 +1,4 @@
+import '@/lib/config/load-env';
 import { NextRequest, NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
@@ -7,7 +8,14 @@ import { isAdminUser } from '@/lib/auth/admin-utils';
 
 export async function GET(req: NextRequest) {
   try {
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return NextResponse.json({ users: [], query: null, count: 0, searchMethod: 'skipped' });
+    }
     // Authentication check
+    if (!process.env.CLERK_SECRET_KEY) {
+      return NextResponse.json({ users: [], query: null, count: 0, searchMethod: 'skipped' });
+    }
+
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -11,8 +11,11 @@ interface PageProps {
 }
 
 async function getCampaign(id: string) {
-  console.log('Fetching campaign with id:', id)
   try {
+    const debugCampaign = process.env.CAMPAIGN_DEBUG_LOGS === 'true';
+    if (debugCampaign) {
+      console.log('Fetching campaign with id:', id);
+    }
     const campaign = await db.query.campaigns.findFirst({
       where: eq(campaigns.id, id),
       with: {
@@ -33,55 +36,59 @@ async function getCampaign(id: string) {
     })
     
     if (!campaign) {
-      console.log('No campaign found with id:', id)
+      if (debugCampaign) {
+        console.log('No campaign found with id:', id);
+      }
       return null
     }
 
-    console.log('📊 [CAMPAIGN-DEBUG] Campaign structure:', JSON.stringify({
-      id: campaign.id,
-      name: campaign.name,
-      status: campaign.status,
-      jobsCount: campaign.scrapingJobs?.length,
-      jobs: campaign.scrapingJobs?.map(job => ({
-        id: job.id,
-        status: job.status,
-        createdAt: job.createdAt,
-        campaignId: job.campaignId,
-        platform: job.platform,
-        keywords: job.keywords,
-        targetUsername: job.targetUsername,
-        resultCount: job.results?.length || 0,
-        results: job.results?.map(result => ({
-          id: result.id,
-          creatorsCount: Array.isArray(result.creators) ? result.creators.length : 0
+    if (debugCampaign) {
+      console.log('📊 [CAMPAIGN-DEBUG] Campaign structure:', JSON.stringify({
+        id: campaign.id,
+        name: campaign.name,
+        status: campaign.status,
+        jobsCount: campaign.scrapingJobs?.length,
+        jobs: campaign.scrapingJobs?.map(job => ({
+          id: job.id,
+          status: job.status,
+          createdAt: job.createdAt,
+          campaignId: job.campaignId,
+          platform: job.platform,
+          keywords: job.keywords,
+          targetUsername: job.targetUsername,
+          resultCount: job.results?.length || 0,
+          results: job.results?.map(result => ({
+            id: result.id,
+            creatorsCount: Array.isArray(result.creators) ? result.creators.length : 0
+          }))
         }))
-      }))
-    }, null, 2))
+      }, null, 2));
 
-    // 🔍 ADDITIONAL LOGGING: Check if multiple jobs exist for this campaign
-    console.log('🔍 [CAMPAIGN-RUNS-DEBUG] Total jobs found for campaign:', campaign.scrapingJobs?.length || 0);
-    campaign.scrapingJobs?.forEach((job, index) => {
-      console.log(`🏃 [RUN-${index + 1}] Job ${job.id}:`, {
-        status: job.status,
-        createdAt: job.createdAt,
-        platform: job.platform,
-        hasResults: (job.results?.length || 0) > 0,
-        resultsCount: job.results?.length || 0
+      // 🔍 ADDITIONAL LOGGING: Check if multiple jobs exist for this campaign
+      console.log('🔍 [CAMPAIGN-RUNS-DEBUG] Total jobs found for campaign:', campaign.scrapingJobs?.length || 0);
+      campaign.scrapingJobs?.forEach((job, index) => {
+        console.log(`🏃 [RUN-${index + 1}] Job ${job.id}:`, {
+          status: job.status,
+          createdAt: job.createdAt,
+          platform: job.platform,
+          hasResults: (job.results?.length || 0) > 0,
+          resultsCount: job.results?.length || 0
+        });
       });
-    });
 
-    // 🔍 COMPLETED JOBS DEBUG: Check how many completed jobs exist
-    const completedJobs = campaign.scrapingJobs?.filter(job => 
-      job.status === 'completed' && job.results?.length > 0
-    ) || [];
-    console.log('✅ [COMPLETED-JOBS-DEBUG] Found completed jobs:', completedJobs.length);
-    completedJobs.forEach((job, index) => {
-      console.log(`✅ [COMPLETED-${index + 1}] Job ${job.id}:`, {
-        platform: job.platform,
-        createdAt: job.createdAt,
-        resultsCount: job.results?.length || 0
+      // 🔍 COMPLETED JOBS DEBUG: Check how many completed jobs exist
+      const completedJobs = campaign.scrapingJobs?.filter(job => 
+        job.status === 'completed' && job.results?.length > 0
+      ) || [];
+      console.log('✅ [COMPLETED-JOBS-DEBUG] Found completed jobs:', completedJobs.length);
+      completedJobs.forEach((job, index) => {
+        console.log(`✅ [COMPLETED-${index + 1}] Job ${job.id}:`, {
+          platform: job.platform,
+          createdAt: job.createdAt,
+          resultsCount: job.results?.length || 0
+        });
       });
-    });
+    }
 
     return campaign
   } catch (error) {

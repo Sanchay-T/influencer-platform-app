@@ -228,6 +228,38 @@ duplicateList(clerkUserId, listId, name?)
 recordExport(clerkUserId, listId, format)
 ```
 
+### **🆕 Dashboard Query Layer (`/lib/db/queries/dashboard-queries.ts`)**
+
+**Specialized Dashboard Data Access:**
+
+Provides optimized queries for dashboard functionality with proper data transformations:
+
+```typescript
+// Main dashboard queries
+export async function getFavoriteInfluencersForDashboard(
+  clerkUserId: string,
+  limit = 10
+): Promise<DashboardFavoriteInfluencer[]>
+
+export async function getSearchTelemetryForDashboard(
+  clerkUserId: string,
+  lookbackDays = 30
+): Promise<SearchTelemetrySummary>
+
+// Internal utilities
+resolveInternalUserId(clerkUserId: string): Promise<string>
+nonArchivedFavoritesFilter(userId: string): SQLWrapper
+resolveProfileUrl(storedUrl, handle, platform, metadata): string | null
+```
+
+**Key Features:**
+- ✅ **Favorite Influencers**: Queries pinned/favorite creators from lists with proper filtering
+- ✅ **Search Telemetry**: Aggregates job performance metrics for dashboard insights
+- ✅ **Profile URL Resolution**: Smart fallback system for creator profile links
+- ✅ **Platform Normalization**: Consistent platform naming and URL generation
+- ✅ **User ID Translation**: Handles Clerk → internal user ID mapping
+- ✅ **Complex Filtering**: Supports archived/favorite status, collaborator access, and pinning
+
 **Highlights**
 - ♻️ **Profile Upserts** – `addCreatorsToList` reuses or refreshes `creator_profiles` records so lists share canonical creator metadata.
 - 📦 **Bulk Actions** – APIs accept arrays, enabling multi-select/multi-drag flows from the UI.
@@ -874,6 +906,73 @@ export class JobProcessor {
 
 ---
 
+## 🔧 Enhanced System Validation
+
+### **🆕 Startup Validation (`/lib/startup-validation.js`)**
+
+**Environment Validation on Application Startup:**
+
+Prevents environment mismatches and configuration errors during deployment:
+
+```javascript
+export function validateEnvironmentOnStartup() {
+  // Validate Stripe configuration
+  const stripeValidation = StripeEnvironmentValidator.validate();
+
+  // Prevent production deployment with invalid config
+  if (!stripeValidation.isValid && process.env.NODE_ENV === 'production') {
+    throw new Error('Invalid environment configuration - cannot start in production');
+  }
+
+  // Run database cleanup in production
+  if (process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production') {
+    cleanTestSubscriptionsInProduction();
+  }
+}
+
+// Auto-run validation on import (server-side only)
+if (typeof window === 'undefined') {
+  validateEnvironmentOnStartup();
+}
+```
+
+**Key Features:**
+- ✅ **Automatic Validation**: Runs on server startup to catch config issues early
+- ✅ **Production Safety**: Prevents deployment with invalid configurations
+- ✅ **Environment Detection**: Proper NODE_ENV and VERCEL_ENV handling
+- ✅ **Database Cleanup**: Automatic test data removal in production
+- ✅ **Configuration Logging**: Detailed environment status for debugging
+
+### **🔄 ENHANCED: Stripe Environment Validator (`/lib/stripe/stripe-env-validator.js`)**
+
+**Advanced Stripe Configuration Validation:**
+
+Enhanced validation system preventing test/live key mismatches with auto-cleanup capabilities:
+
+```javascript
+export class StripeEnvironmentValidator {
+  // Main validation with comprehensive error checking
+  static validate(): ValidationResult
+
+  // Prevent database operations with wrong environment
+  static async validateSubscriptionAccess(subscriptionId: string): Promise<boolean>
+
+  // Auto-clean test subscriptions when detected
+  static async autoCleanTestSubscription(subscriptionId: string): Promise<void>
+}
+```
+
+**🆕 Enhanced Features:**
+- ✅ **Environment Detection**: Distinguishes production vs preview vs development
+- ✅ **Key Mismatch Prevention**: Validates secret/publishable key consistency
+- ✅ **Production Safety**: Blocks production deployment with test keys
+- ✅ **Auto-Cleanup**: Automatically removes test subscriptions in live environment
+- ✅ **Subscription Validation**: Prevents operations on mismatched subscription IDs
+- ✅ **Comprehensive Logging**: Detailed validation results and fix instructions
+- ✅ **Exit Protection**: Prevents app startup with critical configuration errors
+
+---
+
 ## 📧 Email System
 
 ### Email Service (`/lib/email/email-service.ts`)
@@ -912,6 +1011,36 @@ export class EmailService {
 
 ## 🔧 Utility Functions
 
+### **🆕 Dashboard Formatters (`/lib/dashboard/formatters.ts`)**
+
+**Shared Dashboard Display Utilities:**
+
+Formatting utilities shared across dashboard components for consistent data presentation:
+
+```typescript
+// Follower count formatting for compact display
+export function formatFollowerCount(value: number | null | undefined): string {
+  // Formats numbers like 1.2M, 543K, 10.5B with intelligent rounding
+  // Handles null/undefined gracefully with '--' fallback
+}
+
+// Relative time formatting for recency indicators
+export function formatRelativeTime(
+  value: string | Date | null | undefined,
+  referenceDate: Date = new Date()
+): string {
+  // Returns "2 hours ago", "yesterday", "3 weeks ago" etc.
+  // Uses Intl.RelativeTimeFormat for proper internationalization
+}
+```
+
+**Key Features:**
+- ✅ **Follower Count Formatting**: Converts large numbers to readable format (1.2M, 543K)
+- ✅ **Intelligent Rounding**: Proper decimal handling based on magnitude
+- ✅ **Relative Time Display**: Human-readable time differences with i18n support
+- ✅ **Null Safety**: Graceful handling of missing/invalid data
+- ✅ **Consistent Branding**: Shared formatting across favorite grids and recent lists
+
 ### Performance Monitor (`/lib/utils/performance-monitor.ts`)
 
 **Real-time Performance Tracking:**
@@ -919,47 +1048,89 @@ export class EmailService {
 export const perfMonitor = {
   startTimer(operation: string, context?: any): string {
     const timerId = `${operation}_${Date.now()}_${Math.random()}`;
-    this.timers.set(timerId, { 
-      operation, 
-      startTime: performance.now(), 
-      context 
+    this.timers.set(timerId, {
+      operation,
+      startTime: performance.now(),
+      context
     });
     return timerId;
   },
-  
+
   endTimer(timerId: string, result?: any): void {
     const timer = this.timers.get(timerId);
     if (!timer) return;
-    
+
     const duration = performance.now() - timer.startTime;
     console.log(`⚡ [PERF] ${timer.operation}: ${duration.toFixed(2)}ms`, {
       context: timer.context,
       result
     });
-    
+
     this.timers.delete(timerId);
   }
 };
 ```
 
-### Frontend Logger (`/lib/utils/frontend-logger.ts`)
+### **🔄 ENHANCED: Frontend Logger (`/lib/utils/frontend-logger.ts`)**
 
-**Structured Logging:**
+**Comprehensive User Flow Tracking System:**
+
+Significantly enhanced logging utility providing "insane logging" for production debugging with 290+ lines of structured logging capabilities:
+
 ```typescript
-export const frontendLogger = {
-  info: (message: string, context?: any) => {
-    console.log(`ℹ️ [FRONTEND] ${message}`, context);
-  },
-  
-  error: (message: string, error?: any, context?: any) => {
-    console.error(`❌ [FRONTEND] ${message}`, { error, context });
-  },
-  
-  performance: (operation: string, duration: number, context?: any) => {
-    console.log(`⚡ [PERF] ${operation}: ${duration}ms`, context);
-  }
-};
+export class FrontendLogger {
+  // Session tracking
+  private static sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+  private static startTime = Date.now();
+
+  // Major step tracking with visual separators
+  static logStepHeader(step: string, description: string, context?: LogContext)
+
+  // User action tracking
+  static logUserAction(action: string, details: any, context?: LogContext)
+
+  // Form interaction logging
+  static logFormAction(formName: string, action: 'submit' | 'validation' | 'error', data: any)
+
+  // API call logging with comprehensive tracking
+  static async loggedApiCall(url: string, options: ApiCallOptions = {}, context?: LogContext): Promise<any>
+
+  // Navigation tracking
+  static logNavigation(from: string, to: string, reason: string, context?: LogContext)
+
+  // Authentication event logging
+  static logAuth(event: 'login' | 'logout' | 'session_check' | 'user_loaded', data: any)
+
+  // Success/error state logging
+  static logSuccess(operation: string, result: any, context?: LogContext)
+  static logError(operation: string, error: any, context?: LogContext)
+
+  // Email/notification tracking
+  static logEmailEvent(type: 'scheduled' | 'sent' | 'failed', emailType: string, details: any)
+
+  // Performance timing
+  static logTiming(operation: string, startTime: number, context?: LogContext)
+
+  // Session debugging info
+  static getSessionInfo(): SessionInfo
+}
+
+// Convenience exports for direct use
+export const logStepHeader, logUserAction, logFormAction, loggedApiCall,
+             logNavigation, logAuth, logSuccess, logError, logEmailEvent, logTiming;
 ```
+
+**🆕 Enhanced Features:**
+- ✅ **Session Tracking**: Unique session IDs and timing across user flows
+- ✅ **API Call Monitoring**: Full request/response logging with duration tracking
+- ✅ **Form Interaction Tracking**: Comprehensive form submission and validation logging
+- ✅ **Authentication Flow Logging**: Detailed auth state change tracking
+- ✅ **Navigation Monitoring**: Route change tracking with context
+- ✅ **Data Sanitization**: Automatic removal of sensitive information (passwords, tokens)
+- ✅ **Visual Separators**: Clear step headers for debugging complex flows
+- ✅ **Performance Integration**: Built-in timing and duration tracking
+- ✅ **Email Event Tracking**: Notification scheduling and delivery monitoring
+- ✅ **Error Context Preservation**: Rich error logging with stack traces and context
 
 ---
 
@@ -1012,7 +1183,71 @@ const timeout = await getJobTimeout('standard_job');
 
 ## 🧪 Testing & Quality Assurance
 
-### **🆕 Comprehensive Testing Framework**
+### **🆕 Enhanced Testing Framework**
+
+The library includes a **professional-grade testing infrastructure** with comprehensive test utilities:
+
+### **🧪 Subscription Testing Utils (`/lib/test-utils/subscription-test.ts`)**
+
+**Comprehensive Plan Validation Testing System:**
+
+**🆕 RECENTLY UPDATED** - Enhanced testing utilities for validating subscription plans and limits with **full normalized table integration**:
+
+```typescript
+export class SubscriptionTestUtils {
+  // Test user management
+  static async createTestUsers(): Promise<TestUser[]>
+  static async resetUserUsage(userId: string): Promise<void>
+  static async switchUserPlan(userId: string, newPlan: 'glow_up' | 'viral_surge' | 'fame_flex'): Promise<void>
+
+  // Plan validation testing
+  static async simulateCampaignCreation(userId: string, count: number = 1): Promise<SimulationResult>
+  static async simulateCreatorUsage(userId: string, creatorCount: number): Promise<SimulationResult>
+
+  // Status monitoring
+  static async getUserStatus(userId: string): Promise<UserStatusSummary | null>
+
+  // Comprehensive test suite
+  static async runTestSuite(): Promise<TestSuiteResults>
+
+  // Cleanup utilities
+  static async cleanupTestData(): Promise<void>
+}
+
+interface TestUser {
+  userId: string;
+  name: string;
+  plan: 'glow_up' | 'viral_surge' | 'fame_flex';
+  campaignsUsed: number;
+  creatorsUsed: number;
+}
+```
+
+**🔄 MIGRATION COMPLETED (September 2025):**
+
+The subscription testing utilities have been **successfully migrated** from the deprecated `userProfiles` table to the new normalized schema:
+
+```typescript
+// ✅ BEFORE (deprecated userProfiles table):
+const existingUser = await db.query.userProfiles.findFirst({
+  where: eq(userProfiles.userId, user.userId)
+});
+
+// ✅ AFTER (normalized tables with query layer):
+const existingUser = await getUserProfile(user.userId);
+```
+
+**🆕 Key Testing Features:**
+- ✅ **✨ Normalized Table Migration**: **COMPLETED** - Now uses `getUserProfile()`, `createUser()`, and `updateUserProfile()` functions
+- ✅ **Database Compatibility Fix**: Resolves "relation user_profiles does not exist" production errors
+- ✅ **Backward Compatibility**: Maintains all existing functionality while using new schema
+- ✅ **Plan Limit Validation**: Tests campaign and creator limits for all plans
+- ✅ **Edge Case Testing**: Users at limits, exceeded limits, plan transitions
+- ✅ **Automated Test Suite**: 4 comprehensive test scenarios with pass/fail tracking
+- ✅ **Usage Simulation**: Realistic campaign creation and creator usage testing
+- ✅ **Status Monitoring**: Complete user status including limits, usage, and upgrade suggestions
+- ✅ **Data Cleanup**: Safe test data removal without affecting real users
+- ✅ **Integration Testing**: Works with PlanEnforcementService for realistic validation
 
 The library includes a **professional-grade testing infrastructure** with 1000+ lines of test code across multiple test suites:
 

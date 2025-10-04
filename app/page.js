@@ -8,6 +8,7 @@ import CampaignList from "./components/campaigns/CampaignList";
 import { SignedIn, SignedOut, SignInButton, SignUpButton } from '@clerk/nextjs';
 import OnboardingModal from "./components/onboarding/onboarding-modal";
 import CampaignCounter from "./components/shared/campaign-counter";
+import { logError, logStepHeader, logSuccess } from '@/lib/utils/frontend-logger';
 
 export default function Home() {
   const { userId } = useAuth();
@@ -17,47 +18,47 @@ export default function Home() {
   const [onboardingStatusLoaded, setOnboardingStatusLoaded] = useState(false);
 
   useEffect(() => {
-    console.log(`🚨🚨🚨 [PAGE-LOAD] useEffect triggered. userId: ${userId}`);
     if (userId) {
-      console.log(`🚨🚨🚨 [PAGE-LOAD] User authenticated, calling checkOnboardingStatus`);
+      logStepHeader('page_load_authenticated', 'User authenticated, checking onboarding', {
+        metadata: { userId }
+      });
       checkOnboardingStatus();
     } else {
-      console.log(`🚨🚨🚨 [PAGE-LOAD] No userId yet, waiting for authentication`);
+      logStepHeader('page_load_wait', 'Awaiting authentication', {
+        metadata: { userId: userId ?? 'ANONYMOUS' }
+      });
     }
   }, [userId]);
 
   const checkOnboardingStatus = async () => {
     try {
       const onboardingTestId = `ONBOARDING_CHECK_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      console.log(`🚨🚨🚨 [ONBOARDING-CHECK] ${onboardingTestId} - STARTING ONBOARDING STATUS CHECK`);
-      console.log(`🚨🚨🚨 [ONBOARDING-CHECK] ${onboardingTestId} - This should determine if modal shows`);
-      
+      logStepHeader('onboarding_check_start', 'Starting onboarding status check', {
+        metadata: { onboardingTestId }
+      });
+
       const response = await fetch('/api/onboarding/status');
       const data = await response.json();
-      
-      console.log(`🚨🚨🚨 [ONBOARDING-CHECK] ${onboardingTestId} - API Response:`, {
+
+      logSuccess('onboarding_check_response', {
         ok: response.ok,
         status: response.status,
-        data: data
+        data,
+      }, {
+        metadata: { onboardingTestId }
       });
-      
+
       if (!response.ok) {
-        // User profile doesn't exist - this is a NEW USER
-        console.log(`🚨🚨🚨 [ONBOARDING-CHECK] ${onboardingTestId} - NEW USER DETECTED - SHOWING MODAL`);
         setShowOnboarding(true);
         setOnboardingStep(1);
         setOnboardingStatusLoaded(true); // ✅ Mark as loaded
         return;
       }
-      
+
       // Check onboarding completion status
       const step = data.onboardingStep;
-      
-      console.log(`🔍 [ONBOARDING-TEST] ${onboardingTestId} - User onboarding step: ${step}`);
-      
+
       if (step === 'pending') {
-        // User exists but hasn't started onboarding
-        console.log(`🚨🚨🚨 [ONBOARDING-CHECK] ${onboardingTestId} - PENDING ONBOARDING DETECTED - SHOWING MODAL`);
         setShowOnboarding(true);
         setOnboardingStep(1);
         setExistingData(data);
@@ -72,17 +73,16 @@ export default function Home() {
         setOnboardingStep(3);
         setExistingData(data);
       } else if (step === 'completed') {
-        // User completed full onboarding - show dashboard
-        console.log('✅ [ONBOARDING] User completed onboarding, showing dashboard');
         setShowOnboarding(false);
       }
-      
-      console.log('🔄 [ONBOARDING] Showing modal for step:', step);
+
+      logStepHeader('onboarding_check_complete', 'Resolved onboarding status', {
+        metadata: { onboardingTestId, step }
+      });
       setOnboardingStatusLoaded(true); // ✅ Mark as loaded after determining status
-      
+
     } catch (error) {
-      console.error('❌ [ONBOARDING] Error checking status:', error);
-      // On error, assume new user and show onboarding
+      logError('onboarding_status_check', error);
       setShowOnboarding(true);
       setOnboardingStep(1);
       setOnboardingStatusLoaded(true); // ✅ Mark as loaded even on error
@@ -90,13 +90,13 @@ export default function Home() {
   };
 
   const handleOnboardingComplete = () => {
-    console.log('✅ [ONBOARDING] Modal completed, showing dashboard');
+    logStepHeader('onboarding_complete', 'Modal completed');
     setShowOnboarding(false);
   };
   return (
     <>
       <SignedOut>
-        <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
           <div className="w-full max-w-md space-y-8 text-center">
             <div>
               <h1 className="text-4xl font-bold tracking-tight text-gray-900">

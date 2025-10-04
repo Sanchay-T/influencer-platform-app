@@ -4,9 +4,9 @@
 
 The influencer platform includes a comprehensive suite of development scripts, automation tools, and utilities designed to streamline database management, user administration, testing, monitoring, and deployment workflows. These scripts are organized across the root directory and `/scripts` folder, providing essential development and operational capabilities.
 
-**Total Scripts**: 70+ utility scripts and tools
-**Categories**: Database Management, User Administration, API Testing, Performance Monitoring, Development Tools, Production Deployment, **Database Normalization & Testing Framework**
-**NEW**: Professional-grade testing framework with 1500+ lines of specialized test code
+**Total Scripts**: 85+ utility scripts and tools
+**Categories**: Database Management, User Administration, API Testing, Performance Monitoring, Development Tools, Production Deployment, **Database Normalization & Testing Framework**, **Platform Testing Framework**
+**NEW**: Professional-grade testing framework with 1500+ lines of specialized test code + comprehensive platform-specific test suite
 
 ---
 
@@ -101,6 +101,35 @@ The influencer platform includes a comprehensive suite of development scripts, a
 - Automated schema updates
 - Backward compatibility checking
 - Migration conflict resolution
+
+#### **`lib/migrations/clean-test-subscriptions.js`** *(Enhanced)*
+**Purpose**: Production-ready test subscription cleanup with normalized table support
+**Usage**: Automatically runs in production environments or `node lib/migrations/clean-test-subscriptions.js`
+**Features**:
+- **🆕 Normalized Table Support**: Updated for new `user_subscriptions`, `user_billing` structure
+- **Environment Detection**: Only runs in production (`NODE_ENV=production` or `VERCEL_ENV=production`)
+- **Comprehensive Cleanup**: Removes test Stripe subscription IDs, customer IDs, and test data patterns
+- **Audit Logging**: Detailed logging of cleanup operations with user impact tracking
+- **Safety Measures**: Includes confirmation patterns and graceful error handling
+- **Auto-execution**: Runs automatically on import in production environments
+
+**Enhanced Security Features**:
+```javascript
+// Updated query patterns for normalized tables
+const cleanQuery = `
+  UPDATE user_profiles
+  SET
+    stripe_subscription_id = NULL,
+    stripe_customer_id = NULL,
+    subscription_status = NULL,
+    updated_at = NOW()
+  WHERE stripe_subscription_id LIKE 'sub_1Rm%'     // Remove test subscriptions
+     OR stripe_subscription_id LIKE '%test%'        // Remove test patterns
+     OR stripe_customer_id LIKE 'cus_test_%'        // Remove test customers
+`;
+```
+
+**🔒 Production Safety**: Includes extensive safety checks and will not execute in development environments
 
 ---
 
@@ -587,6 +616,229 @@ node scripts/test-db-performance.js      # Database performance verification
 
 ---
 
+## Platform Testing Framework
+
+### 🧪 **Comprehensive Platform Test Suite**
+
+The platform includes a **specialized testing framework** designed for smoke testing, platform integration verification, and search result comparison across TikTok, Instagram, and YouTube. This system provides **600+ lines of platform-specific test code** with comprehensive CSV logging and result analysis.
+
+#### **Search Result Comparison**
+
+##### **`test-scripts/compare-search-results.ts`** *(188 lines)*
+**Purpose**: Compare search results between current and legacy implementations
+**Usage**: `COMPARE_TYPE=keyword COMPARE_PLATFORM=tiktok tsx test-scripts/compare-search-results.ts`
+**Features**:
+- **Cross-Version Comparison**: Compares current vs legacy search implementations
+- **Intelligent Parsing**: Custom CSV parser with metadata handling
+- **Field-Level Analysis**: Identifies differences in specific creator fields
+- **Automated Reporting**: Generates detailed comparison reports with timestamps
+- **Multi-Platform Support**: Works with TikTok, Instagram, and YouTube results
+
+**Architecture**:
+```typescript
+// Comparison workflow
+Latest Results (search-matrix/) + Legacy Results (search-matrix-legacy/)
+→ Field-by-field comparison
+→ Detailed difference report (search-comparison/)
+```
+
+**Output Analysis**:
+- **Presence Differences**: Creators present in one version but not the other
+- **Field Value Differences**: Changes in bio, follower count, verification status
+- **Summary Statistics**: Total presence vs field value differences
+
+#### **Platform-Specific Test Suites**
+
+##### **TikTok Testing (`/test-scripts/search/keyword/` & `/test-scripts/search/similar/`)**
+- **`tiktok-keyword.test.ts`** *(192 lines): TikTok keyword search with enhanced bio extraction
+- **`tiktok-similar.test.ts`** *(180+ lines): TikTok similar user search testing
+
+**Features**:
+- **Enhanced Bio Fetching**: Secondary API calls for complete profile data
+- **Email Extraction**: Regex-based email detection from bios
+- **Performance Timing**: API response time measurement
+- **CSV Export**: Structured result logging with metadata
+- **Error Recovery**: Graceful handling of profile fetch failures
+
+##### **Instagram Testing (`/test-scripts/search/keyword/` & `/test-scripts/search/similar/`)**
+- **`instagram-enhanced.test.ts`**: Instagram keyword search with Apify integration
+- **`instagram-similar.test.ts`**: Instagram similar search testing
+
+**Features**:
+- **Dual API Integration**: ScrapeCreators + Apify for comprehensive data
+- **Profile Enhancement**: Secondary profile fetching for complete data
+- **Reels Search**: Instagram Reels-specific search functionality
+- **Bio Enhancement**: Extended bio fetching with email extraction
+
+##### **YouTube Testing (`/test-scripts/search/keyword/` & `/test-scripts/search/similar/`)**
+- **`youtube-keyword.test.ts`**: YouTube channel keyword search
+- **`youtube-similar.test.ts`**: YouTube channel similarity testing
+
+**Features**:
+- **Channel Analysis**: YouTube channel-specific data extraction
+- **Subscriber Metrics**: Accurate subscriber count and engagement data
+- **Social Links**: Extraction of external social media links
+- **Content Analysis**: Video content and channel description analysis
+
+#### **Specialized Testing Modules**
+
+##### **Dashboard Testing (`/test-scripts/dashboard/`)**
+- **`follower-format.test.ts`** *(34 lines): Dashboard formatter unit tests
+
+**Features**:
+```typescript
+describe('dashboard formatters', () => {
+  it('format millions with one decimal place and suffix', () => {
+    assert.equal(formatFollowerCount(2400000), '2.4M');
+  });
+
+  it('shows relative time for past dates', () => {
+    assert.equal(formatRelativeTime('2025-09-24T12:00:00Z', reference), '2 days ago');
+  });
+});
+```
+
+##### **Modash Integration Testing (`/test-scripts/modash/`)**
+- **`instagram-search.test.ts`**: Modash API Instagram search testing
+- **`instagram-report.test.ts`**: Modash detailed report generation
+
+**Features**:
+- **Third-Party Integration**: Modash API integration testing
+- **Report Generation**: Detailed influencer report validation
+- **Data Quality**: Enhanced data quality verification
+
+##### **Legacy Test Suite (`/test-scripts/legacy/`)**
+- **`tiktok-keyword-old.test.ts`**: Legacy TikTok keyword implementation
+- **`instagram-similar-old.test.ts`**: Legacy Instagram similar search
+
+**Features**:
+- **Backward Compatibility**: Maintains legacy test implementations
+- **Performance Comparison**: Compares legacy vs current performance
+- **Regression Testing**: Ensures new implementations don't break existing functionality
+
+#### **Testing Framework Architecture**
+
+##### **Common Testing Patterns**
+```typescript
+// Standard test structure across all platform tests
+loadEnv({ path: path.join(process.cwd(), '.env.development') });
+
+// Environment validation
+const REQUIRED_VARS = ['API_KEY', 'API_URL'];
+for (const key of REQUIRED_VARS) {
+  assert(process.env[key], `Missing required env var: ${key}`);
+}
+
+// CSV generation with metadata
+function writeCsv(searchType: string, platform: string, metadata: Record<string, unknown>, rows: Record<string, unknown>[]): string {
+  const outputDir = path.join(process.cwd(), 'logs', 'search-matrix', searchType, platform);
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const outputPath = path.join(outputDir, `${platform}-${searchType}-${timestamp}.csv`);
+  // ... CSV generation with metadata headers
+}
+```
+
+##### **Result Logging Structure**
+```
+logs/
+├── search-matrix/           # Current implementation results
+│   ├── keyword/
+│   │   ├── tiktok/         # TikTok keyword results
+│   │   ├── instagram/      # Instagram keyword results
+│   │   └── youtube/        # YouTube keyword results
+│   └── similar/
+│       ├── tiktok/         # TikTok similar search results
+│       ├── instagram/      # Instagram similar search results
+│       └── youtube/        # YouTube similar search results
+├── search-matrix-legacy/    # Legacy implementation results
+└── search-comparison/       # Comparison analysis results
+```
+
+#### **Testing Workflow & Usage**
+
+##### **Individual Platform Testing**
+```bash
+# TikTok testing
+TEST_TIKTOK_KEYWORD="beauty influencer" tsx test-scripts/search/keyword/tiktok-keyword.test.ts
+tsx test-scripts/search/similar/tiktok-similar.test.ts
+
+# Instagram testing
+tsx test-scripts/search/keyword/instagram-enhanced.test.ts
+tsx test-scripts/search/similar/instagram-similar.test.ts
+
+# YouTube testing
+tsx test-scripts/search/keyword/youtube-keyword.test.ts
+tsx test-scripts/search/similar/youtube-similar.test.ts
+
+# Dashboard unit tests
+npm test test-scripts/dashboard/follower-format.test.ts
+```
+
+##### **Comparison Testing Workflow**
+```bash
+# 1. Run current implementation tests (generates search-matrix results)
+tsx test-scripts/search/keyword/tiktok-keyword.test.ts
+
+# 2. Run legacy implementation tests (generates search-matrix-legacy results)
+tsx test-scripts/legacy/tiktok-keyword-old.test.ts
+
+# 3. Compare results
+COMPARE_TYPE=keyword COMPARE_PLATFORM=tiktok tsx test-scripts/compare-search-results.ts
+```
+
+##### **Bulk Testing Operations**
+```bash
+# Test all platforms for keyword search
+for platform in tiktok instagram youtube; do
+  tsx test-scripts/search/keyword/${platform}-keyword.test.ts
+done
+
+# Test all platforms for similar search
+for platform in tiktok instagram youtube; do
+  tsx test-scripts/search/similar/${platform}-similar.test.ts
+done
+```
+
+#### **Enhanced Features & Quality Assurance**
+
+##### **Platform-Specific Enhancements**
+- **TikTok**: Enhanced bio extraction, HEIC image handling, rate limiting
+- **Instagram**: Dual API integration (ScrapeCreators + Apify), Reels focus
+- **YouTube**: Channel analysis, subscriber metrics, social link extraction
+- **Universal**: Email extraction, performance timing, error recovery
+
+##### **Data Quality Features**
+- **Metadata Tracking**: Search parameters, timing, result counts
+- **Performance Monitoring**: API response times, processing duration
+- **Error Handling**: Graceful degradation, detailed error logging
+- **Result Validation**: Field completeness, data format verification
+
+##### **Testing Standards**
+- **Modular Design**: Separate test files for each platform and search type
+- **Comprehensive Coverage**: Keyword and similar search for all platforms
+- **Data Persistence**: CSV exports with timestamp and metadata
+- **Comparison Tools**: Automated difference detection and reporting
+
+#### **Framework Dependencies**
+
+**Required Technologies**:
+- **Node.js 18+**: TypeScript execution environment with tsx
+- **TypeScript**: Type-safe test implementation
+- **Platform APIs**: ScrapeCreators, Apify, Modash integrations
+- **Environment Variables**: API keys and configuration management
+
+**Testing Libraries**:
+```json
+{
+  "tsx": "TypeScript execution for test files",
+  "node:assert/strict": "Assertion library for validation",
+  "node:test": "Node.js native test runner",
+  "dotenv": "Environment variable loading"
+}
+```
+
+---
+
 ## Performance Monitoring & Benchmarking
 
 ### ⚡ Performance Analysis
@@ -995,7 +1247,8 @@ node scripts/test-db-performance.js    # Database performance
 
 ---
 
-*Last Updated: 2025-01-28*
-*Script Count: 70+ development and operational utilities*
-*NEW: Database Normalization & Testing Framework with 1500+ lines of test code*
+*Last Updated: 2025-09-27*
+*Script Count: 85+ development and operational utilities*
+*NEW: Database Normalization & Testing Framework with 1500+ lines of test code + Platform Testing Framework with 600+ lines of platform-specific tests*
+*ENHANCED: Migration scripts updated for normalized table support*
 *Maintained by: Development Team*

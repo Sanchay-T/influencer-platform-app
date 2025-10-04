@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { PlanValidator } from '@/lib/services/plan-validator';
+import { createCategoryLogger, LogCategory } from '@/lib/logging';
+
+const logger = createCategoryLogger(LogCategory.BILLING);
 
 export async function GET() {
   try {
@@ -17,6 +20,15 @@ export async function GET() {
 
     return NextResponse.json({ allowed: true });
   } catch (err) {
+    // Log the error with full context for debugging
+    logger.error('Campaign creation validation failed - failing open', err instanceof Error ? err : new Error(String(err)), {
+      errorType: err instanceof Error ? err.constructor.name : typeof err,
+      message: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+      failureMode: 'fail-open',
+      securityNote: 'Failing open allows campaign creation despite validation failure'
+    });
+
     console.error('[CAN-CREATE-CAMPAIGN] error', err);
     return NextResponse.json({ allowed: true }); // fail-open to avoid blocking
   }
