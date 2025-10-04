@@ -197,19 +197,20 @@ export async function POST(req: NextRequest) {
       console.log('\n🔔 [INSTAGRAM-REELS-API] Scheduling QStash processing with search-engine...');
       if (process.env.QSTASH_TOKEN) {
         const { getWebhookUrl } = await import('@/lib/utils/url-utils');
-        const qstashCallbackUrl = `${getWebhookUrl()}/api/qstash/process-search`; // NEW: Use search-engine route
+        const resolvedSiteUrl = getWebhookUrl();
+        const qstashCallbackUrl = `${resolvedSiteUrl}/api/qstash/process-search`; // NEW: Use search-engine route
         
         // Enhanced URL debugging
         console.log('🌐 [INSTAGRAM-REELS-API] URL debugging:', {
           NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
           VERCEL_URL: process.env.VERCEL_URL,
-          finalSiteUrl: siteUrl,
+          finalSiteUrl: resolvedSiteUrl,
           finalCallbackUrl: qstashCallbackUrl,
-          isLocal: siteUrl.includes('localhost') || siteUrl.includes('ngrok')
+          isLocal: resolvedSiteUrl.includes('localhost') || resolvedSiteUrl.includes('ngrok')
         });
         
         console.log('🌐 [INSTAGRAM-REELS-API] QStash configuration:', {
-          siteUrl: siteUrl,
+          siteUrl: resolvedSiteUrl,
           callbackUrl: qstashCallbackUrl,
           jobId: job.id,
           hasToken: !!process.env.QSTASH_TOKEN
