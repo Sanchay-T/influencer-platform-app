@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { Webhook } from 'svix';
-import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { getUserProfile, createUser, updateUserProfile } from '@/lib/db/queries/user-queries';
 import BillingLogger from '@/lib/loggers/billing-logger';
 
 // Clerk webhook event types
@@ -211,9 +209,7 @@ async function handleUserCreated(userData: any, requestId: string) {
 
   try {
     // Check if user profile already exists (safety check)
-    const existingProfile = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.userId, userId)
-    });
+    const existingProfile = await getUserProfile(userId);
 
     if (existingProfile) {
       await BillingLogger.logDatabase(
@@ -230,48 +226,23 @@ async function handleUserCreated(userData: any, requestId: string) {
       return;
     }
 
-    // Create new user profile with free plan
+    // Create new user profile with normalized tables
     const now = new Date();
     const trialEndDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
 
-    const newUserProfile = {
+    await createUser({
       userId: userId,
       email: email,
       fullName: fullName,
-      signupTimestamp: now,
       onboardingStep: 'pending', // Will trigger onboarding modal
       
       // Trial system - Start 7-day trial immediately
       trialStartDate: now,
       trialEndDate: trialEndDate,
-      trialStatus: 'active',
       
       // Subscription defaults
       currentPlan: 'free', // Start with free, upgrade during onboarding
-      subscriptionStatus: 'none',
-      
-      // Plan limits for free tier (will be updated during onboarding)
-      planCampaignsLimit: 0,
-      planCreatorsLimit: 0,
-      planFeatures: {},
-      
-      // Usage tracking
-      usageCampaignsCurrent: 0,
-      usageCreatorsCurrentMonth: 0,
-      usageResetDate: now,
-      
-      // Billing sync
-      billingSyncStatus: 'pending',
-      
-      // Admin system
-      isAdmin: false,
-      
-      // Timestamps
-      createdAt: now,
-      updatedAt: now
-    };
-
-    await db.insert(userProfiles).values(newUserProfile);
+    });
 
     await BillingLogger.logDatabase(
       'CREATE',
@@ -350,16 +321,12 @@ async function handleUserUpdated(userData: any, requestId: string) {
     );
 
     // Update user profile
-    const updateData: any = {
-      updatedAt: new Date()
-    };
+    const updateData: any = {};
 
     if (email) updateData.email = email;
     if (fullName) updateData.fullName = fullName;
 
-    await db.update(userProfiles)
-      .set(updateData)
-      .where(eq(userProfiles.userId, userId));
+    await updateUserProfile(userId, updateData);
 
     await BillingLogger.logDatabase(
       'UPDATE',
@@ -412,8 +379,14 @@ async function handleUserDeleted(userData: any, requestId: string) {
       requestId
     );
 
-    // Delete user profile (this will cascade to related data based on your schema)
-    await db.delete(userProfiles).where(eq(userProfiles.userId, userId));
+    // For user deletion, we need to use the raw database operations as we don't have a delete function
+    // This is intentionally limited since user deletion should be rare
+    const { db } = await import('@/lib/db');
+    const { users } = await import('@/lib/db/schema');
+    const { eq } = await import('drizzle-orm');
+    
+    // Delete user (cascade will handle related tables)
+    await db.delete(users).where(eq(users.userId, userId));
 
     await BillingLogger.logDatabase(
       'DELETE',

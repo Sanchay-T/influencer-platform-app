@@ -9,7 +9,7 @@ const runMigrations = async () => {
 
   console.log('Running migrations...');
   
-  await migrate(db, { migrationsFolder: 'drizzle' });
+  await migrate(db, { migrationsFolder: 'supabase/migrations' });
   
   console.log('Migrations completed!');
   await sql.end();

@@ -1,9 +1,12 @@
 import { pgTable, uuid, text, varchar, timestamp, integer, jsonb, numeric, unique, boolean } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 
 // Status types
 export type JobStatus = 'pending' | 'processing' | 'completed' | 'error' | 'timeout';
 export type CampaignStatus = 'draft' | 'active' | 'completed' | 'archived';
+export type CreatorListType = 'campaign' | 'favorites' | 'industry' | 'research' | 'contacted' | 'custom';
+export type CreatorListPrivacy = 'private' | 'public' | 'workspace';
+export type CreatorListRole = 'owner' | 'editor' | 'viewer';
 
 // Campaigns table
 export const campaigns = pgTable('campaigns', {
@@ -85,31 +88,49 @@ export const searchResults = pgTable('search_results', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
-// User Profiles table (updated for Clerk user IDs + onboarding fields + trial system)
-export const userProfiles = pgTable('user_profiles', {
+// =====================================================
+// NORMALIZED USER TABLES (Replaces monolithic user_profiles)
+// =====================================================
+
+// 1. USERS - Core identity and profile information
+export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
-  userId: text('user_id').notNull().unique(), // Changed from uuid to text for Clerk user IDs
-  name: text('name'),
-  companyName: text('company_name'),
-  industry: text('industry'),
+  userId: text('user_id').unique().notNull(), // External auth ID (Clerk)
   email: text('email'),
-  // Onboarding fields
-  signupTimestamp: timestamp('signup_timestamp').notNull().defaultNow(),
-  onboardingStep: varchar('onboarding_step', { length: 50 }).notNull().default('pending'), // 'pending', 'info_captured', 'intent_captured', 'completed'
   fullName: text('full_name'),
   businessName: text('business_name'),
   brandDescription: text('brand_description'),
-  emailScheduleStatus: jsonb('email_schedule_status').default('{}'),
-  // Trial system fields
+  industry: text('industry'),
+  onboardingStep: varchar('onboarding_step', { length: 50 }).default('pending').notNull(),
+  isAdmin: boolean('is_admin').default(false).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// 2. USER_SUBSCRIPTIONS - Trial and subscription management
+export const userSubscriptions = pgTable('user_subscriptions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  currentPlan: varchar('current_plan', { length: 50 }).default('free').notNull(),
+  intendedPlan: varchar('intended_plan', { length: 50 }), // Plan selected before checkout
+  subscriptionStatus: varchar('subscription_status', { length: 20 }).default('none').notNull(),
+  trialStatus: varchar('trial_status', { length: 20 }).default('pending').notNull(),
   trialStartDate: timestamp('trial_start_date'),
   trialEndDate: timestamp('trial_end_date'),
-  trialStatus: varchar('trial_status', { length: 20 }).default('pending'), // 'pending', 'active', 'expired', 'cancelled', 'converted'
-  stripeCustomerId: text('stripe_customer_id'), // Repurposed for Clerk billing customer ID
-  stripeSubscriptionId: text('stripe_subscription_id'), // Repurposed for Clerk billing subscription ID
-  subscriptionStatus: varchar('subscription_status', { length: 20 }).default('none'), // 'none', 'trialing', 'active', 'past_due', 'canceled'
-  // Removed Clerk billing fields - using Stripe only
-  currentPlan: varchar('current_plan', { length: 50 }).default('free'), // 'free', 'glow_up', 'viral_surge', 'fame_flex'
-  // Payment method fields
+  trialConversionDate: timestamp('trial_conversion_date'),
+  subscriptionCancelDate: timestamp('subscription_cancel_date'),
+  subscriptionRenewalDate: timestamp('subscription_renewal_date'),
+  billingSyncStatus: varchar('billing_sync_status', { length: 20 }).default('pending').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// 3. USER_BILLING - Stripe payment data (Clerk artifacts removed)
+export const userBilling = pgTable('user_billing', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  stripeCustomerId: text('stripe_customer_id').unique(),
+  stripeSubscriptionId: text('stripe_subscription_id'),
   paymentMethodId: text('payment_method_id'),
   cardLast4: varchar('card_last_4', { length: 4 }),
   cardBrand: varchar('card_brand', { length: 20 }),
@@ -118,24 +139,34 @@ export const userProfiles = pgTable('user_profiles', {
   billingAddressCity: text('billing_address_city'),
   billingAddressCountry: varchar('billing_address_country', { length: 2 }),
   billingAddressPostalCode: varchar('billing_address_postal_code', { length: 20 }),
-  // Plan feature tracking
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// 4. USER_USAGE - Usage tracking and plan limits
+export const userUsage = pgTable('user_usage', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   planCampaignsLimit: integer('plan_campaigns_limit'),
   planCreatorsLimit: integer('plan_creators_limit'),
-  planFeatures: jsonb('plan_features'),
-  usageCampaignsCurrent: integer('usage_campaigns_current').default(0),
-  usageCreatorsCurrentMonth: integer('usage_creators_current_month').default(0),
-  usageResetDate: timestamp('usage_reset_date').defaultNow(),
-  // Billing webhook tracking
+  planFeatures: jsonb('plan_features').default('{}').notNull(),
+  usageCampaignsCurrent: integer('usage_campaigns_current').default(0).notNull(),
+  usageCreatorsCurrentMonth: integer('usage_creators_current_month').default(0).notNull(),
+  usageResetDate: timestamp('usage_reset_date').defaultNow().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// 5. USER_SYSTEM_DATA - System metadata and webhook tracking
+export const userSystemData = pgTable('user_system_data', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  signupTimestamp: timestamp('signup_timestamp').defaultNow().notNull(),
+  emailScheduleStatus: jsonb('email_schedule_status').default('{}').notNull(),
   lastWebhookEvent: varchar('last_webhook_event', { length: 100 }),
   lastWebhookTimestamp: timestamp('last_webhook_timestamp'),
-  billingSyncStatus: varchar('billing_sync_status', { length: 20 }).default('pending'),
-  trialConversionDate: timestamp('trial_conversion_date'),
-  subscriptionCancelDate: timestamp('subscription_cancel_date'),
-  subscriptionRenewalDate: timestamp('subscription_renewal_date'),
-  // Admin system field
-  isAdmin: boolean('is_admin').default(false), // Database-based admin role
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
 // System Configurations table
@@ -171,6 +202,108 @@ export const events = pgTable('events', {
   sourceSystem: varchar('source_system', { length: 50 }).notNull(), // 'stripe_webhook', 'admin_action', 'user_action'
   correlationId: text('correlation_id'), // Track related events
   causationId: text('causation_id'), // What caused this event
+});
+
+// Creator directory tables -------------------------------------------------
+export const creatorProfiles = pgTable('creator_profiles', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  platform: varchar('platform', { length: 32 }).notNull(),
+  externalId: text('external_id').notNull(),
+  handle: text('handle').notNull(),
+  displayName: text('display_name'),
+  avatarUrl: text('avatar_url'),
+  url: text('url'),
+  followers: integer('followers'),
+  engagementRate: numeric('engagement_rate'),
+  category: text('category'),
+  metadata: jsonb('metadata').notNull().default(sql`'{}'::jsonb`),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  uniquePlatformExternal: unique('creator_profiles_platform_external_unique').on(table.platform, table.externalId),
+}));
+
+export const creatorLists = pgTable('creator_lists', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  ownerId: uuid('owner_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  description: text('description'),
+  type: varchar('type', { length: 24 }).notNull().default('custom'),
+  privacy: varchar('privacy', { length: 16 }).notNull().default('private'),
+  tags: jsonb('tags').notNull().default(sql`'[]'::jsonb`),
+  settings: jsonb('settings').notNull().default(sql`'{}'::jsonb`),
+  stats: jsonb('stats').notNull().default(sql`'{}'::jsonb`),
+  isArchived: boolean('is_archived').notNull().default(false),
+  slug: text('slug'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  lastSharedAt: timestamp('last_shared_at'),
+});
+
+export const creatorListItems = pgTable('creator_list_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  listId: uuid('list_id').notNull().references(() => creatorLists.id, { onDelete: 'cascade' }),
+  creatorId: uuid('creator_id').notNull().references(() => creatorProfiles.id, { onDelete: 'cascade' }),
+  position: integer('position').notNull().default(0),
+  bucket: varchar('bucket', { length: 32 }).notNull().default('backlog'),
+  addedBy: uuid('added_by').references(() => users.id, { onDelete: 'set null' }),
+  addedAt: timestamp('added_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  notes: text('notes'),
+  metricsSnapshot: jsonb('metrics_snapshot').notNull().default(sql`'{}'::jsonb`),
+  customFields: jsonb('custom_fields').notNull().default(sql`'{}'::jsonb`),
+  pinned: boolean('pinned').notNull().default(false),
+  lastContactedAt: timestamp('last_contacted_at'),
+}, (table) => ({
+  uniqueListCreator: unique('creator_list_items_list_creator_unique').on(table.listId, table.creatorId),
+}));
+
+export const creatorListCollaborators = pgTable('creator_list_collaborators', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  listId: uuid('list_id').notNull().references(() => creatorLists.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
+  inviteEmail: text('invite_email'),
+  role: varchar('role', { length: 16 }).notNull().default('viewer'),
+  status: varchar('status', { length: 16 }).notNull().default('pending'),
+  invitationToken: text('invitation_token'),
+  invitedBy: uuid('invited_by').references(() => users.id, { onDelete: 'set null' }),
+  lastSeenAt: timestamp('last_seen_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+}, (table) => ({
+  uniqueUserList: unique('creator_list_collaborators_user_list_unique').on(table.listId, table.userId),
+  uniqueInvite: unique('creator_list_collaborators_invite_unique').on(table.listId, table.inviteEmail),
+}));
+
+export const creatorListNotes = pgTable('creator_list_notes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  listId: uuid('list_id').notNull().references(() => creatorLists.id, { onDelete: 'cascade' }),
+  creatorId: uuid('creator_id').references(() => creatorProfiles.id, { onDelete: 'cascade' }),
+  authorId: uuid('author_id').references(() => users.id, { onDelete: 'set null' }),
+  body: text('body').notNull(),
+  isInternal: boolean('is_internal').notNull().default(false),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const creatorListActivities = pgTable('creator_list_activities', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  listId: uuid('list_id').notNull().references(() => creatorLists.id, { onDelete: 'cascade' }),
+  actorId: uuid('actor_id').references(() => users.id, { onDelete: 'set null' }),
+  action: varchar('action', { length: 64 }).notNull(),
+  payload: jsonb('payload').notNull().default(sql`'{}'::jsonb`),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const listExports = pgTable('list_exports', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  listId: uuid('list_id').notNull().references(() => creatorLists.id, { onDelete: 'cascade' }),
+  requestedBy: uuid('requested_by').references(() => users.id, { onDelete: 'set null' }),
+  format: varchar('format', { length: 16 }).notNull().default('csv'),
+  status: varchar('status', { length: 16 }).notNull().default('queued'),
+  fileUrl: text('file_url'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  completedAt: timestamp('completed_at'),
 });
 
 // Background Jobs table for QStash job tracking (Industry Standard)
@@ -254,6 +387,149 @@ export const searchResultsRelations = relations(searchResults, ({ one }) => ({
   }),
 }));
 
+// =====================================================
+// NORMALIZED USER TABLE RELATIONS
+// =====================================================
+
+// Users relations
+export const usersRelations = relations(users, ({ one, many }) => ({
+  subscription: one(userSubscriptions, {
+    fields: [users.id],
+    references: [userSubscriptions.userId],
+  }),
+  billing: one(userBilling, {
+    fields: [users.id], 
+    references: [userBilling.userId],
+  }),
+  usage: one(userUsage, {
+    fields: [users.id],
+    references: [userUsage.userId],
+  }),
+  systemData: one(userSystemData, {
+    fields: [users.id],
+    references: [userSystemData.userId],
+  }),
+  campaigns: many(campaigns), // Assuming campaigns will reference users eventually
+  lists: many(creatorLists),
+  collaborations: many(creatorListCollaborators),
+}));
+
+// User subscriptions relations
+export const userSubscriptionsRelations = relations(userSubscriptions, ({ one }) => ({
+  user: one(users, {
+    fields: [userSubscriptions.userId],
+    references: [users.id],
+  }),
+}));
+
+// User billing relations
+export const userBillingRelations = relations(userBilling, ({ one }) => ({
+  user: one(users, {
+    fields: [userBilling.userId],
+    references: [users.id],
+  }),
+}));
+
+// User usage relations
+export const userUsageRelations = relations(userUsage, ({ one }) => ({
+  user: one(users, {
+    fields: [userUsage.userId],
+    references: [users.id],
+  }),
+}));
+
+// User system data relations
+export const userSystemDataRelations = relations(userSystemData, ({ one }) => ({
+  user: one(users, {
+    fields: [userSystemData.userId],
+    references: [users.id],
+  }),
+}));
+
+export const creatorProfilesRelations = relations(creatorProfiles, ({ many }) => ({
+  items: many(creatorListItems),
+  notes: many(creatorListNotes),
+}));
+
+export const creatorListsRelations = relations(creatorLists, ({ one, many }) => ({
+  owner: one(users, {
+    fields: [creatorLists.ownerId],
+    references: [users.id],
+  }),
+  items: many(creatorListItems),
+  collaborators: many(creatorListCollaborators),
+  notes: many(creatorListNotes),
+  activities: many(creatorListActivities),
+  exports: many(listExports),
+}));
+
+export const creatorListItemsRelations = relations(creatorListItems, ({ one }) => ({
+  list: one(creatorLists, {
+    fields: [creatorListItems.listId],
+    references: [creatorLists.id],
+  }),
+  creator: one(creatorProfiles, {
+    fields: [creatorListItems.creatorId],
+    references: [creatorProfiles.id],
+  }),
+  addedByUser: one(users, {
+    fields: [creatorListItems.addedBy],
+    references: [users.id],
+  }),
+}));
+
+export const creatorListCollaboratorsRelations = relations(creatorListCollaborators, ({ one }) => ({
+  list: one(creatorLists, {
+    fields: [creatorListCollaborators.listId],
+    references: [creatorLists.id],
+  }),
+  user: one(users, {
+    fields: [creatorListCollaborators.userId],
+    references: [users.id],
+  }),
+  invitedByUser: one(users, {
+    fields: [creatorListCollaborators.invitedBy],
+    references: [users.id],
+  }),
+}));
+
+export const creatorListNotesRelations = relations(creatorListNotes, ({ one }) => ({
+  list: one(creatorLists, {
+    fields: [creatorListNotes.listId],
+    references: [creatorLists.id],
+  }),
+  creator: one(creatorProfiles, {
+    fields: [creatorListNotes.creatorId],
+    references: [creatorProfiles.id],
+  }),
+  author: one(users, {
+    fields: [creatorListNotes.authorId],
+    references: [users.id],
+  }),
+}));
+
+export const creatorListActivitiesRelations = relations(creatorListActivities, ({ one }) => ({
+  list: one(creatorLists, {
+    fields: [creatorListActivities.listId],
+    references: [creatorLists.id],
+  }),
+  actor: one(users, {
+    fields: [creatorListActivities.actorId],
+    references: [users.id],
+  }),
+}));
+
+export const listExportsRelations = relations(listExports, ({ one }) => ({
+  list: one(creatorLists, {
+    fields: [listExports.listId],
+    references: [creatorLists.id],
+  }),
+  requestedByUser: one(users, {
+    fields: [listExports.requestedBy],
+    references: [users.id],
+  }),
+}));
+
 // Export types for TypeScript
 export type Campaign = typeof campaigns.$inferSelect;
 export type NewCampaign = typeof campaigns.$inferInsert;
@@ -265,8 +541,8 @@ export type SearchJob = typeof searchJobs.$inferSelect;
 export type NewSearchJob = typeof searchJobs.$inferInsert;
 export type SearchResult = typeof searchResults.$inferSelect;
 export type NewSearchResult = typeof searchResults.$inferInsert;
-export type UserProfile = typeof userProfiles.$inferSelect;
-export type NewUserProfile = typeof userProfiles.$inferInsert;
+// Note: UserProfile types have been replaced by UserProfileComplete for backward compatibility
+// Individual normalized table types are available as User, UserSubscription, UserBilling, etc.
 export type SystemConfiguration = typeof systemConfigurations.$inferSelect;
 export type NewSystemConfiguration = typeof systemConfigurations.$inferInsert;
 export type Event = typeof events.$inferSelect;
@@ -275,3 +551,87 @@ export type BackgroundJob = typeof backgroundJobs.$inferSelect;
 export type NewBackgroundJob = typeof backgroundJobs.$inferInsert;
 export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
 export type NewSubscriptionPlan = typeof subscriptionPlans.$inferInsert;
+export type CreatorProfile = typeof creatorProfiles.$inferSelect;
+export type NewCreatorProfile = typeof creatorProfiles.$inferInsert;
+export type CreatorList = typeof creatorLists.$inferSelect;
+export type NewCreatorList = typeof creatorLists.$inferInsert;
+export type CreatorListItem = typeof creatorListItems.$inferSelect;
+export type NewCreatorListItem = typeof creatorListItems.$inferInsert;
+export type CreatorListCollaborator = typeof creatorListCollaborators.$inferSelect;
+export type NewCreatorListCollaborator = typeof creatorListCollaborators.$inferInsert;
+export type CreatorListNote = typeof creatorListNotes.$inferSelect;
+export type NewCreatorListNote = typeof creatorListNotes.$inferInsert;
+export type CreatorListActivity = typeof creatorListActivities.$inferSelect;
+export type NewCreatorListActivity = typeof creatorListActivities.$inferInsert;
+export type ListExport = typeof listExports.$inferSelect;
+export type NewListExport = typeof listExports.$inferInsert;
+
+// =====================================================
+// NORMALIZED USER TABLE TYPES
+// =====================================================
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
+export type UserSubscription = typeof userSubscriptions.$inferSelect;
+export type NewUserSubscription = typeof userSubscriptions.$inferInsert;
+export type UserBilling = typeof userBilling.$inferSelect;
+export type NewUserBilling = typeof userBilling.$inferInsert;
+export type UserUsage = typeof userUsage.$inferSelect;
+export type NewUserUsage = typeof userUsage.$inferInsert;
+export type UserSystemData = typeof userSystemData.$inferSelect;
+export type NewUserSystemData = typeof userSystemData.$inferInsert;
+
+// Combined user profile type for backward compatibility
+export type UserProfileComplete = {
+  // Core user data
+  id: string;
+  userId: string;
+  email?: string | null;
+  fullName?: string | null;
+  businessName?: string | null;
+  brandDescription?: string | null;
+  industry?: string | null;
+  onboardingStep: string;
+  isAdmin: boolean;
+  
+  // Subscription data
+  currentPlan: string;
+  intendedPlan?: string | null;
+  subscriptionStatus: string;
+  trialStatus: string;
+  trialStartDate?: Date | null;
+  trialEndDate?: Date | null;
+  trialConversionDate?: Date | null;
+  subscriptionCancelDate?: Date | null;
+  subscriptionRenewalDate?: Date | null;
+  billingSyncStatus: string;
+  
+  // Billing data
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
+  paymentMethodId?: string | null;
+  cardLast4?: string | null;
+  cardBrand?: string | null;
+  cardExpMonth?: number | null;
+  cardExpYear?: number | null;
+  billingAddressCity?: string | null;
+  billingAddressCountry?: string | null;
+  billingAddressPostalCode?: string | null;
+  
+  // Usage data
+  planCampaignsLimit?: number | null;
+  planCreatorsLimit?: number | null;
+  planFeatures: any;
+  usageCampaignsCurrent: number;
+  usageCreatorsCurrentMonth: number;
+  usageResetDate: Date;
+  
+  // System data
+  signupTimestamp: Date;
+  emailScheduleStatus: any;
+  lastWebhookEvent?: string | null;
+  lastWebhookTimestamp?: Date | null;
+  
+  // Timestamps
+  createdAt: Date;
+  updatedAt: Date;
+};

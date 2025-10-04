@@ -1,3 +1,4 @@
+import '@/lib/config/load-env';
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import postgres from 'postgres';
@@ -9,10 +10,17 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 export async function GET(req: NextRequest) {
   try {
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return NextResponse.json({ users: [], cached: false, query: null });
+    }
     const startTime = Date.now();
     
     // Authentication check
     const { userId } = await auth();
+    if (!process.env.CLERK_SECRET_KEY) {
+      return NextResponse.json({ users: [], cached: false, query: null });
+    }
+
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -55,21 +63,22 @@ export async function GET(req: NextRequest) {
     try {
       const dbStartTime = Date.now();
       
-      // Fast query with minimal data
+      // Fast query with minimal data using new normalized tables
       const users = await sql`
         SELECT 
-          user_id,
-          full_name,
-          business_name,
-          trial_status,
-          onboarding_step
-        FROM user_profiles 
+          u.user_id,
+          u.full_name,
+          u.business_name,
+          us.trial_status,
+          u.onboarding_step
+        FROM users u
+        LEFT JOIN user_subscriptions us ON u.id = us.user_id
         WHERE 
-          full_name ILIKE ${query + '%'} OR 
-          user_id ILIKE ${query + '%'}
+          u.full_name ILIKE ${query + '%'} OR 
+          u.user_id ILIKE ${query + '%'}
         ORDER BY 
-          CASE WHEN full_name ILIKE ${query + '%'} THEN 0 ELSE 1 END,
-          created_at DESC 
+          CASE WHEN u.full_name ILIKE ${query + '%'} THEN 0 ELSE 1 END,
+          u.created_at DESC 
         LIMIT 5
       `;
       

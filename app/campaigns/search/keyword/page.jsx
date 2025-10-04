@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import DashboardLayout from "../../../components/layout/dashboard-layout";
 import KeywordSearchForm from "../../../components/campaigns/keyword-search/keyword-search-form";
 import KeywordReview from "../../../components/campaigns/keyword-search/keyword-review";
-import SearchResults from "../../../components/campaigns/keyword-search/search-results";
+import Breadcrumbs from "@/app/components/breadcrumbs";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 
@@ -19,59 +19,66 @@ export default function KeywordSearch() {
     campaignId: null
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [campaignName, setCampaignName] = useState("");
 
   useEffect(() => {
     console.log('🔄 [KEYWORD-SEARCH-PAGE] Initializing keyword search page');
-    
-    const initializeFromUrl = () => {
-      try {
-        // Extraer el campaignId de la URL si existe
-        const urlParams = new URLSearchParams(window.location.search);
-        const campaignId = urlParams.get('campaignId');
-        
-        if (campaignId) {
-          console.log('📋 [KEYWORD-SEARCH-PAGE] Campaign ID found in URL:', campaignId);
-          setSearchData(prev => ({
-            ...prev,
-            campaignId
-          }));
-        } else {
-          console.log('❌ [KEYWORD-SEARCH-PAGE] No campaign ID found in URL');
-        }
-      } catch (error) {
-        console.error('💥 [KEYWORD-SEARCH-PAGE] Error parsing URL params:', error);
-      }
-    };
+    let campaignResolved = false;
 
-    const initializeFromSession = () => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const campaignIdFromUrl = urlParams.get('campaignId');
+
+      if (campaignIdFromUrl) {
+        console.log('📋 [KEYWORD-SEARCH-PAGE] Campaign ID found in URL:', campaignIdFromUrl);
+        campaignResolved = true;
+        setSearchData(prev => ({
+          ...prev,
+          campaignId: campaignIdFromUrl
+        }));
+      } else {
+        console.log('❌ [KEYWORD-SEARCH-PAGE] No campaign ID found in URL');
+      }
+    } catch (error) {
+      console.error('💥 [KEYWORD-SEARCH-PAGE] Error parsing URL params:', error);
+    }
+
+    if (!campaignResolved) {
       try {
-        // Intenta obtener datos de la campaña de sessionStorage
         const campaignData = sessionStorage.getItem('currentCampaign');
         if (campaignData) {
           const campaign = JSON.parse(campaignData);
           console.log('📋 [KEYWORD-SEARCH-PAGE] Campaign found in session storage:', campaign.id);
+          campaignResolved = true;
           setSearchData(prev => ({
             ...prev,
             campaignId: campaign.id
           }));
+          setCampaignName(campaign.name ?? "");
         } else {
           console.log('❌ [KEYWORD-SEARCH-PAGE] No campaign found in session storage');
         }
       } catch (error) {
         console.error('💥 [KEYWORD-SEARCH-PAGE] Error parsing session storage:', error);
       }
-    };
-
-    // Inicializar de URL o sessionStorage
-    initializeFromUrl();
-    if (!searchData.campaignId) {
-      initializeFromSession();
     }
 
-    // Finalizar carga
     setIsLoading(false);
     console.log('✅ [KEYWORD-SEARCH-PAGE] Initialization complete');
   }, []);
+
+  useEffect(() => {
+    if (searchData.campaignId && !campaignName) {
+      try {
+        const campaignData = JSON.parse(sessionStorage.getItem('currentCampaign') ?? 'null');
+        if (campaignData?.name) {
+          setCampaignName(campaignData.name);
+        }
+      } catch (error) {
+        console.error('💥 [KEYWORD-SEARCH-PAGE] Error reloading campaign info:', error);
+      }
+    }
+  }, [searchData.campaignId, campaignName]);
 
   // Manejar el paso 1: Selección de plataformas y número de creadores
   const handleFormSubmit = (data) => {
@@ -109,7 +116,9 @@ export default function KeywordSearch() {
       // Determine API endpoint based on selected platform
       // For now, we'll handle one platform at a time - prioritize the first selected platform
       let apiEndpoint = '/api/scraping/tiktok'; // Default to TikTok
-      if (searchData.platforms.includes('instagram')) {
+      if (searchData.platforms.includes('enhanced-instagram')) {
+        apiEndpoint = '/api/scraping/instagram-enhanced';
+      } else if (searchData.platforms.includes('instagram')) {
         apiEndpoint = '/api/scraping/instagram-reels';
       } else if (searchData.platforms.includes('youtube')) {
         apiEndpoint = '/api/scraping/youtube';
@@ -140,20 +149,20 @@ export default function KeywordSearch() {
       const data = await response.json();
       console.log('✅ [KEYWORD-SEARCH-PAGE] API response data:', data);
       
-      setSearchData(prev => ({ 
-        ...prev, 
-        keywords,
-        jobId: data.jobId,
-        selectedPlatform: searchData.platforms.includes('instagram') ? 'Instagram' : 
-                         searchData.platforms.includes('youtube') ? 'YouTube' : 'TikTok'
-      }));
-      setStep(3);
-      console.log('🔄 [KEYWORD-SEARCH-PAGE] Moving to step 3 (results)');
-      toast.success('Campaign started successfully');
-    } catch (error) {
-      console.error('💥 [KEYWORD-SEARCH-PAGE] Error:', error);
-      toast.error(error.message || "Failed to start campaign");
-    }
+    setSearchData(prev => ({ 
+      ...prev, 
+      keywords,
+      jobId: data.jobId,
+      selectedPlatform: searchData.platforms.includes('enhanced-instagram') ? 'enhanced-instagram' : 
+                       searchData.platforms.includes('instagram') ? 'Instagram' : 
+                       searchData.platforms.includes('youtube') ? 'YouTube' : 'TikTok'
+    }));
+    toast.success('Campaign started successfully');
+    router.push(`/campaigns/${campaignId}?jobId=${data.jobId}`);
+  } catch (error) {
+    console.error('💥 [KEYWORD-SEARCH-PAGE] Error:', error);
+    toast.error(error.message || "Failed to start campaign");
+  }
   };
 
   if (isLoading) {
@@ -174,6 +183,19 @@ export default function KeywordSearch() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        <Breadcrumbs
+          items={[
+            { label: 'Dashboard', href: '/dashboard' },
+            {
+              label: campaignName || 'Campaign',
+              href: searchData?.campaignId ? `/campaigns/${searchData.campaignId}` : '/dashboard',
+              type: 'campaign',
+            },
+            { label: 'Keyword Search' },
+          ]}
+          backHref={searchData?.campaignId ? `/campaigns/search?campaignId=${searchData.campaignId}` : '/campaigns/search'}
+          backLabel="Back to Search Options"
+        />
         <div className="flex items-center justify-between mt-2">
           <div>
             <h1 className="text-2xl font-bold">Keyword Search</h1>
@@ -186,11 +208,6 @@ export default function KeywordSearch() {
           <KeywordReview 
             onSubmit={handleKeywordsSubmit}
             isLoading={isLoading}
-          />
-        )}
-        {step === 3 && (
-          <SearchResults 
-            searchData={searchData}
           />
         )}
       </div>

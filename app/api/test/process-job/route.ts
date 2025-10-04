@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     
     // Call the QStash processing endpoint directly
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-    const response = await fetch(`${baseUrl}/api/qstash/process-scraping`, {
+    const response = await fetch(`${baseUrl}/api/qstash/process-search`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

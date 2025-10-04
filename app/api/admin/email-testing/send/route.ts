@@ -1,9 +1,13 @@
+import '@/lib/config/load-env';
 import { NextRequest, NextResponse } from 'next/server';
 import { Client } from '@upstash/qstash';
 import { isAdminUser, getCurrentUserAdminInfo } from '@/lib/auth/admin-utils';
 
 export async function POST(req: NextRequest) {
   try {
+    if (process.env.NEXT_PHASE === 'phase-production-build' || !process.env.CLERK_SECRET_KEY) {
+      return NextResponse.json({ error: 'Admin email endpoint disabled during build' }, { status: 503 });
+    }
     // Critical: Check if user is admin
     if (!(await isAdminUser())) {
       console.error('❌ [ADMIN-EMAIL] Unauthorized - Not an admin user');

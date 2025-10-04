@@ -3,7 +3,7 @@ import * as dotenv from 'dotenv';
 import path from 'path';
 
 // Environment-aware config loading
-const envFile = process.env.NODE_ENV === 'development' ? '.env.development' : '.env.local';
+const envFile = '.env.development';
 dotenv.config({ path: path.resolve(process.cwd(), envFile) });
 
 console.log(`🔧 [DRIZZLE CONFIG] Loading environment from: ${envFile}`);
@@ -15,6 +15,7 @@ export default defineConfig({
   dialect: 'postgresql',
   dbCredentials: {
     url: process.env.DATABASE_URL!,
+    ssl: process.env.NODE_ENV === 'development' ? false : true,
   },
   // Fix for CHECK constraint introspection bug
   introspect: {
@@ -25,10 +26,8 @@ export default defineConfig({
   verbose: true,
   // Skip problematic introspection during push
   breakpoints: false,
-});
-
-/* ssl: process.env.NODE_ENV === 'development' ? false : true, // Deshabilitar SSL en desarrollo
-  },
   migrations: {
     table: '__drizzle_migrations',
-    schema: 'public' */
+    schema: 'public'
+  }
+});

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -107,7 +107,7 @@ export default function TestPage() {
     setTestLoading(false);
   };
 
-  const refreshUserStatus = async () => {
+  const refreshUserStatus = useCallback(async () => {
     try {
       const res = await fetch(`/api/test/subscription?action=get-status&userId=${selectedUser}`);
       const data = await res.json();
@@ -117,7 +117,7 @@ export default function TestPage() {
     } catch (error) {
       console.error('Error refreshing user status:', error);
     }
-  };
+  }, [selectedUser]);
 
   const cleanupTestData = async () => {
     if (confirm('Are you sure you want to cleanup test data?')) {
@@ -138,7 +138,7 @@ export default function TestPage() {
     if (selectedUser) {
       refreshUserStatus();
     }
-  }, [selectedUser]);
+  }, [selectedUser, refreshUserStatus]);
 
   if (loading) {
     return (

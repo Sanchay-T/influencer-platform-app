@@ -1,13 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { getUserProfile } from '@/lib/db/queries/user-queries';
 import Stripe from 'stripe';
+
+const CACHE_TTL_MS = 30_000; // 30 seconds cache
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-06-20',
 });
+
+interface CachedSubscription {
+  data: Stripe.Subscription;
+  timestamp: number;
+}
+
+const cache = new Map<string, CachedSubscription>();
+
+function getCache(userId: string): Stripe.Subscription | null {
+  const entry = cache.get(userId);
+  if (!entry) return null;
+
+  if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
+    cache.delete(userId);
+    return null;
+  }
+  return entry.data;
+}
+
+function setCache(userId: string, subscription: Stripe.Subscription) {
+  cache.set(userId, {
+    data: subscription,
+    timestamp: Date.now()
+  });
+}
 
 /**
  * Modern subscription status endpoint
@@ -31,9 +57,7 @@ export async function GET(req: NextRequest) {
 
     // Get user's Stripe IDs from database
     const profileStart = Date.now();
-    const profile = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.userId, userId)
-    });
+    const profile = await getUserProfile(userId);
     console.log(`⏱️ [SUBSCRIPTION-STATUS:${reqId}] DB profile query: ${Date.now() - profileStart}ms`);
 
     if (!profile?.stripeSubscriptionId) {
@@ -47,15 +71,24 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Fetch real-time data from Stripe
-    const stripeStart = Date.now();
-    const subscription = await stripe.subscriptions.retrieve(
-      profile.stripeSubscriptionId,
-      {
-        expand: ['latest_invoice', 'default_payment_method']
-      }
-    );
-    console.log(`⏱️ [SUBSCRIPTION-STATUS:${reqId}] Stripe retrieve: ${Date.now() - stripeStart}ms`);
+    // Fetch real-time data from Stripe with caching
+    let subscription = getCache(userId);
+    let cacheHit = false;
+
+    if (!subscription) {
+      const stripeStart = Date.now();
+      subscription = await stripe.subscriptions.retrieve(
+        profile.stripeSubscriptionId,
+        {
+          expand: ['latest_invoice', 'default_payment_method']
+        }
+      );
+      console.log(`⏱️ [SUBSCRIPTION-STATUS:${reqId}] Stripe retrieve: ${Date.now() - stripeStart}ms`);
+      setCache(userId, subscription);
+    } else {
+      cacheHit = true;
+      console.log(`⏱️ [SUBSCRIPTION-STATUS:${reqId}] Stripe cache hit`);
+    }
 
     // Calculate derived states from Stripe data
     const now = Math.floor(Date.now() / 1000);
@@ -99,7 +132,9 @@ export async function GET(req: NextRequest) {
     res.headers.set('x-request-id', reqId);
     res.headers.set('x-started-at', ts);
     res.headers.set('x-duration-ms', String(duration));
-    console.log(`🟣 [SUBSCRIPTION-STATUS:${reqId}] END duration=${duration}ms`);
+    res.headers.set('x-cache-hit', cacheHit ? 'true' : 'false');
+    res.headers.set('x-cache-ttl-ms', String(CACHE_TTL_MS));
+    console.log(`🟣 [SUBSCRIPTION-STATUS:${reqId}] END duration=${duration}ms cacheHit=${cacheHit}`);
     return res;
 
   } catch (error) {

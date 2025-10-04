@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { getUserProfile } from '@/lib/db/queries/user-queries';
+import { getClientUrl } from '@/lib/utils/url-utils';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -30,9 +30,7 @@ export async function POST(request: NextRequest) {
     console.log('✅ [CUSTOMER-PORTAL] User authenticated:', userId);
 
     // Get user profile with Stripe customer ID
-    const userProfile = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.userId, userId)
-    });
+    const userProfile = await getUserProfile(userId);
 
     if (!userProfile) {
       console.error('❌ [CUSTOMER-PORTAL] User profile not found');
@@ -83,7 +81,7 @@ export async function POST(request: NextRequest) {
 
     // Get the return URL from the request body or use default
     const { returnUrl } = await request.json().catch(() => ({ returnUrl: null }));
-    const defaultReturnUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/billing`;
+    const defaultReturnUrl = `${getClientUrl()}/billing`;
     const portalReturnUrl = returnUrl || defaultReturnUrl;
 
     console.log('🔗 [CUSTOMER-PORTAL] Portal configuration:', {
@@ -154,9 +152,7 @@ export async function GET() {
     }
 
     // Get user profile to check if they have a Stripe customer ID
-    const userProfile = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.userId, userId)
-    });
+    const userProfile = await getUserProfile(userId);
 
     if (!userProfile) {
       return NextResponse.json({ error: 'User profile not found' }, { status: 404 });

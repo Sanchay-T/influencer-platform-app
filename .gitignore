@@ -10,7 +10,7 @@
 !.yarn/releases
 !.yarn/versions
 project
-
+logs
 # testing
 /coverage
 
@@ -46,3 +46,5 @@ next-env.d.ts
 # billing logs (sensitive information)
 /billing-check/*.log
 /billing-check/*.json
+.env*.local
+sorzproject-main/

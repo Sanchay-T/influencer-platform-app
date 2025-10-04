@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { getUserProfile, createUser } from '@/lib/db/queries/user-queries';
 import { getTrialStatus } from '@/lib/trial/trial-service';
 
 export async function GET() {
@@ -27,9 +25,7 @@ export async function GET() {
     // Buscar el perfil del usuario
     console.log('🔍 [PROFILE-API-GET] Fetching user profile');
     const profileStart = Date.now();
-    const userProfile = await db.query.userProfiles.findFirst({
-      where: (userProfiles, { eq }) => eq(userProfiles.userId, userId),
-    });
+    const userProfile = await getUserProfile(userId);
     console.log(`⏱️ [PROFILE-API-GET:${reqId}] DB profile query: ${Date.now() - profileStart}ms`);
 
     if (!userProfile) {
@@ -52,8 +48,8 @@ export async function GET() {
       // Basic profile info
       id: userProfile.id,
       userId: userProfile.userId,
-      name: userProfile.name,
-      companyName: userProfile.companyName,
+      name: userProfile.fullName, // Use fullName instead of name for normalized data
+      companyName: userProfile.businessName, // Use businessName instead of companyName
       industry: userProfile.industry,
       email: userProfile.email,
       
@@ -137,9 +133,7 @@ export async function POST(request: Request) {
     // Verificar si ya existe un perfil
     console.log('🔍 [PROFILE-API] Checking for existing profile');
     const checkStart = Date.now();
-    const existingUser = await db.query.userProfiles.findFirst({
-      where: (userProfiles, { eq }) => eq(userProfiles.userId, userId),
-    });
+    const existingUser = await getUserProfile(userId);
     console.log(`⏱️ [PROFILE-API:${reqId}] DB existence check: ${Date.now() - checkStart}ms`);
 
     if (existingUser) {
@@ -156,12 +150,12 @@ export async function POST(request: Request) {
     // Crear el perfil
     console.log('🔄 [PROFILE-API] Creating new profile');
     const insertStart = Date.now();
-    const [profile] = await db.insert(userProfiles).values({
+    const profile = await createUser({
       userId,
-      name,
-      companyName,
+      fullName: name, // Map name to fullName for normalized schema
+      businessName: companyName, // Map companyName to businessName 
       industry,
-    }).returning();
+    });
     console.log(`⏱️ [PROFILE-API:${reqId}] DB insert: ${Date.now() - insertStart}ms`);
 
     const duration = Date.now() - startedAt;

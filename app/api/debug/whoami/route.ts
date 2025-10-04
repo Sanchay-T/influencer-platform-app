@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { getUserProfile } from '@/lib/db/queries/user-queries';
 
 export async function GET() {
   try {
@@ -20,9 +19,7 @@ export async function GET() {
     console.log('⏰ [DEBUG-WHOAMI] Timestamp:', new Date().toISOString());
 
     // Get user profile
-    const userProfile = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.userId, userId)
-    });
+    const userProfile = await getUserProfile(userId);
 
     if (userProfile) {
       console.log('👤 [DEBUG-WHOAMI] User Profile Found:');

@@ -115,14 +115,10 @@ export async function updateEmailScheduleStatus(
   messageId?: string
 ) {
   try {
-    const { db } = await import('@/lib/db');
-    const { userProfiles } = await import('@/lib/db/schema');
-    const { eq } = await import('drizzle-orm');
+    const { getUserProfile, updateUserProfile } = await import('@/lib/db/queries/user-queries');
 
     // Get current email schedule status
-    const user = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.userId, userId)
-    });
+    const user = await getUserProfile(userId);
 
     if (!user) {
       throw new Error(`User not found: ${userId}`);
@@ -141,12 +137,9 @@ export async function updateEmailScheduleStatus(
     };
 
     // Update in database
-    await db.update(userProfiles)
-      .set({
-        emailScheduleStatus: updatedStatus,
-        updatedAt: new Date()
-      })
-      .where(eq(userProfiles.userId, userId));
+    await updateUserProfile(userId, {
+      emailScheduleStatus: updatedStatus,
+    });
 
     console.log('✅ [EMAIL-STATUS] Updated email schedule status:', {
       userId,
@@ -215,13 +208,9 @@ export async function getUserEmailFromClerk(userId: string): Promise<string | nu
  */
 export async function shouldSendEmail(userId: string, emailType: string): Promise<boolean> {
   try {
-    const { db } = await import('@/lib/db');
-    const { userProfiles } = await import('@/lib/db/schema');
-    const { eq } = await import('drizzle-orm');
+    const { getUserProfile } = await import('@/lib/db/queries/user-queries');
 
-    const user = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.userId, userId)
-    });
+    const user = await getUserProfile(userId);
 
     if (!user) {
       return false;

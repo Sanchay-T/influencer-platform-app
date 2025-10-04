@@ -52,7 +52,7 @@ export default function OnboardingModal({
     } else {
       OnboardingLogger.logModalEvent('CLOSE', step, user?.id, { finalStep: step }, sessionId);
     }
-  }, [isOpen]);
+  }, [isOpen, step, user?.id, initialStep, existingData, sessionId]);
 
   // Log step changes
   useEffect(() => {
@@ -63,7 +63,7 @@ export default function OnboardingModal({
         direction: 'forward'
       }, sessionId);
     }
-  }, [step, isOpen]);
+  }, [step, isOpen, user?.id, sessionId]);
 
   if (!isOpen) return null;
 
