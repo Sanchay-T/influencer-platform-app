@@ -163,8 +163,7 @@ export default function OnboardingModal({
   const handleStep2Submit = async () => {
     await OnboardingLogger.logStep2('FORM-VALIDATION', 'Starting step 2 form validation', user?.id, {
       brandDescriptionProvided: !!brandDescription.trim(),
-      brandDescriptionLength: brandDescription.length,
-      meetsMinLength: brandDescription.trim().length >= 50
+      brandDescriptionLength: brandDescription.length
     }, sessionId);
 
     if (!brandDescription.trim()) {
@@ -172,16 +171,6 @@ export default function OnboardingModal({
         error: 'MISSING_BRAND_DESCRIPTION'
       }, sessionId);
       setError('Please describe your brand and influencer preferences');
-      return;
-    }
-
-    if (brandDescription.trim().length < 50) {
-      await OnboardingLogger.logStep2('VALIDATION-ERROR', 'Step 2 validation failed - brand description too short', user?.id, {
-        error: 'DESCRIPTION_TOO_SHORT',
-        currentLength: brandDescription.trim().length,
-        requiredLength: 50
-      }, sessionId);
-      setError('Please provide more details (at least 50 characters)');
       return;
     }
 
@@ -509,9 +498,7 @@ export default function OnboardingModal({
                       className="min-h-[120px] text-base resize-none bg-zinc-800/50 border-zinc-700/50 focus:border-primary"
                       disabled={isLoading}
                     />
-                    <div className="absolute bottom-2 right-2 text-xs text-zinc-400">
-                      {brandDescription.length}/500
-                    </div>
+      
                   </div>
 
                   <div className="flex items-start gap-2 p-3 bg-zinc-800/30 border border-zinc-700/50 rounded-lg">
@@ -556,7 +543,7 @@ export default function OnboardingModal({
                 <Button
                   onClick={handleStep2Submit}
                   className="w-full h-12 text-base bg-primary hover:bg-primary/90 text-primary-foreground"
-                  disabled={isLoading || brandDescription.trim().length < 50}
+                  disabled={isLoading || !brandDescription.trim()}
                 >
                   {isLoading ? (
                     <div className="flex items-center gap-2">
@@ -571,11 +558,6 @@ export default function OnboardingModal({
                   )}
                 </Button>
 
-                {brandDescription.trim().length < 50 && brandDescription.trim().length > 0 && (
-                  <p className="text-sm text-amber-400 text-center">
-                    Please provide more details (at least 50 characters) for better AI recommendations
-                  </p>
-                )}
               </CardContent>
             </>
           )}
