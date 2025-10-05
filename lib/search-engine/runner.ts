@@ -8,6 +8,7 @@ import { runYouTubeSimilarProvider } from './providers/youtube-similar';
 import { runInstagramSimilarProvider } from './providers/instagram-similar';
 import { runInstagramReelsProvider } from './providers/instagram-reels';
 import { runInstagramEnhancedProvider } from './providers/instagram-enhanced';
+import { runGoogleSerpProvider } from './providers/google-serp';
 
 export interface SearchExecutionResult {
   service: SearchJobService;
@@ -80,6 +81,12 @@ function isInstagramEnhanced(jobPlatform?: string, keywords?: unknown, searchPar
          (searchParams?.runner === 'instagram_enhanced' || searchParams?.searchType === 'instagram_enhanced');
 }
 
+function isGoogleSerp(jobPlatform?: string, searchParams?: any): boolean {
+  const platform = (jobPlatform ?? '').toLowerCase();
+  const runner = (searchParams?.runner ?? '').toLowerCase();
+  return platform === 'google_serp' || runner === 'google_serp';
+}
+
 export async function runSearchJob(jobId: string): Promise<SearchExecutionResult> {
   const service = await SearchJobService.load(jobId);
   if (!service) {
@@ -104,6 +111,8 @@ export async function runSearchJob(jobId: string): Promise<SearchExecutionResult
     providerResult = await runInstagramEnhancedProvider({ job, config }, service);
   } else if (isInstagramReels(job.platform, job.keywords, searchParams)) {
     providerResult = await runInstagramReelsProvider({ job, config }, service);
+  } else if (isGoogleSerp(job.platform, searchParams)) {
+    providerResult = await runGoogleSerpProvider({ job, config }, service);
   } else {
     throw new Error(`Unsupported platform for new search runner: ${job.platform} (keywords: ${!!job.keywords}, targetUsername: ${!!job.targetUsername}, searchParams: ${JSON.stringify(searchParams)})`);
   }
