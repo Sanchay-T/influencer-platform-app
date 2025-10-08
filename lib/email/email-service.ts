@@ -11,8 +11,9 @@ export const EMAIL_CONFIG = {
   delays: {
     welcome: '10m',        // 10 minutes after signup
     abandonment: '2h',     // 2 hours if no trial started
-    trialDay2: '2d',       // 2 days after trial starts
-    trialDay5: '5d',       // 5 days after trial starts
+    trial_day2: '2d',       // 2 days after trial starts
+    trial_day5: '5d',       // 5 days after trial starts
+    subscription_welcome: '30s', // Quick confirmation after subscription activation
   }
 };
 
@@ -22,11 +23,15 @@ export interface EmailTemplateProps {
   businessName?: string;
   dashboardUrl: string;
   unsubscribeUrl?: string;
+  billingUrl?: string;
+  plan?: string;
+  planName?: string;
+  planFeatures?: string[];
 }
 
 export interface EmailScheduleParams {
   userId: string;
-  emailType: 'welcome' | 'abandonment' | 'trial_day2' | 'trial_day5';
+  emailType: 'welcome' | 'abandonment' | 'trial_day2' | 'trial_day5' | 'subscription_welcome';
   userEmail: string;
   templateProps: EmailTemplateProps;
   delay?: string;

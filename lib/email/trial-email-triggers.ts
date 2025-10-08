@@ -255,10 +255,13 @@ export async function scheduleSubscriptionWelcomeEmail(userId: string, subscript
     const dashboardUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/campaigns`;
     const billingUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/billing`;
     
+    const planDisplayName = getPlanDisplayName(subscriptionInfo.plan);
+
     const templateProps = {
       fullName: subscriptionInfo.fullName,
       businessName: subscriptionInfo.businessName,
       plan: subscriptionInfo.plan,
+      planName: planDisplayName,
       dashboardUrl,
       billingUrl,
       planFeatures: getPlanFeatures(subscriptionInfo.plan)
@@ -299,11 +302,42 @@ export async function scheduleSubscriptionWelcomeEmail(userId: string, subscript
   }
 }
 
+function getPlanDisplayName(plan: string): string {
+  const planNames: Record<string, string> = {
+    glow_up: 'Glow Up',
+    viral_surge: 'Viral Surge',
+    fame_flex: 'Fame Flex',
+    premium: 'Premium',
+    enterprise: 'Enterprise',
+    basic: 'Basic'
+  };
+
+  return planNames[plan] || plan.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
 /**
  * Get plan features for email template
  */
 function getPlanFeatures(plan: string): string[] {
   const planFeatures: Record<string, string[]> = {
+    glow_up: [
+      'Run up to 3 active campaigns simultaneously',
+      'Discover up to 1,000 creators each month',
+      'Unlimited influencer search with CSV export',
+      'Essential performance analytics for every campaign'
+    ],
+    viral_surge: [
+      'Unlock 10 concurrent campaigns to scale quickly',
+      'Review up to 10,000 new creators every month',
+      'Advanced analytics with engagement + audience insights',
+      'Priority support with faster response times'
+    ],
+    fame_flex: [
+      'Unlimited campaigns and creator discovery',
+      'Enterprise-grade analytics and reporting',
+      'API access plus custom integrations workflow',
+      'White-glove onboarding with dedicated success partner'
+    ],
     premium: [
       'Unlimited influencer searches across TikTok, Instagram, and YouTube',
       'Advanced bio and email extraction',

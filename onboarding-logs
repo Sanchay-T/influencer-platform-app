@@ -685,3 +685,146 @@
 [2025-10-02 19:55:34.877] [MODAL] [CLOSE] - Modal closeed
 [2025-10-03 03:34:00.119] [MODAL] [CLOSE] - Modal closeed
 [2025-10-03 03:34:00.453] [MODAL] [CLOSE] - Modal closeed
+[2025-10-05 09:48:39.509] [MODAL] [CLOSE] - Modal closeed
+[2025-10-05 09:48:39.509] [MODAL] [CLOSE] - Modal closeed
+[2025-10-05 09:49:13.505] [MODAL] [CLOSE] - Modal closeed
+[2025-10-05 09:49:13.760] [MODAL] [CLOSE] - Modal closeed
+[2025-10-05 09:49:13.810] [MODAL] [OPEN] - Modal opened
+[2025-10-05 09:49:13.810] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-10-05 09:50:55.538] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-10-05 09:50:55.570] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-10-05 09:50:55.605] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-10-05 09:50:55.773] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-10-05 09:50:56.166] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-10-05 09:50:56.269] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-10-05 09:50:56.423] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-10-05 09:50:56.431] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-10-05 09:50:56.431] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-10-05 09:50:57.246] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-10-05 09:50:57.274] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-10-05 09:50:57.274] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-10-05 09:51:00.862] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-10-05 09:51:00.881] [STEP-1] [FORM-SUCCESS] - Step 1 completed successfully
+[2025-10-05 09:51:00.881] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 1 to step 2
+[2025-10-05 09:51:00.896] [MODAL] [OPEN] - Modal opened
+[2025-10-05 09:51:00.906] [MODAL] [STEP_CHANGE] - Modal moved to step 2
+[2025-10-05 09:51:03.389] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-10-05 09:51:03.392] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-10-05 09:51:03.476] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-10-05 09:51:03.648] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-10-05 09:51:03.656] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-10-05 09:51:03.684] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-10-05 09:51:03.778] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-10-05 09:51:03.817] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-10-05 09:51:03.880] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-10-05 09:51:04.075] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-10-05 09:51:04.167] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-10-05 09:51:16.232] [STEP-2] [FORM-VALIDATION] - Starting step 2 form validation
+[2025-10-05 09:51:16.886] [STEP-2] [FORM-SUBMIT] - Step 2 form submission started
+[2025-10-05 09:51:16.886] [API] [API-CALL-START] - Making API call to /api/onboarding/step-2
+[2025-10-05 09:51:17.203] [API] [API-RESPONSE] - Received response from /api/onboarding/step-2
+[2025-10-05 09:51:17.211] [STEP-2] [FORM-SUCCESS] - Step 2 completed successfully
+[2025-10-05 09:51:17.211] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 2 to step 3
+[2025-10-05 09:51:17.229] [MODAL] [OPEN] - Modal opened
+[2025-10-05 09:51:17.233] [MODAL] [STEP_CHANGE] - Modal moved to step 3
+[2025-10-05 12:31:21.342] [MODAL] [CLOSE] - Modal closeed
+[2025-10-05 12:31:21.469] [MODAL] [CLOSE] - Modal closeed
+[2025-10-05 12:31:21.476] [MODAL] [OPEN] - Modal opened
+[2025-10-05 12:31:21.487] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-10-05 12:31:26.881] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-10-05 12:31:27.696] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-10-05 12:31:28.188] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-10-05 12:31:28.928] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-10-05 12:31:28.928] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-10-05 12:31:29.868] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-10-05 12:31:29.876] [STEP-1] [FORM-SUCCESS] - Step 1 completed successfully
+[2025-10-05 12:31:29.876] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 1 to step 2
+[2025-10-05 12:31:29.896] [MODAL] [OPEN] - Modal opened
+[2025-10-05 12:31:29.904] [MODAL] [STEP_CHANGE] - Modal moved to step 2
+[2025-10-05 12:31:31.312] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-10-05 12:31:31.502] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-10-05 12:31:32.715] [STEP-2] [FORM-VALIDATION] - Starting step 2 form validation
+[2025-10-05 12:31:32.722] [STEP-2] [FORM-SUBMIT] - Step 2 form submission started
+[2025-10-05 12:31:32.722] [API] [API-CALL-START] - Making API call to /api/onboarding/step-2
+[2025-10-05 12:31:33.212] [API] [API-RESPONSE] - Received response from /api/onboarding/step-2
+[2025-10-05 12:31:33.218] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 2 to step 3
+[2025-10-05 12:31:33.218] [STEP-2] [FORM-SUCCESS] - Step 2 completed successfully
+[2025-10-05 12:31:33.257] [MODAL] [OPEN] - Modal opened
+[2025-10-05 12:31:33.302] [MODAL] [STEP_CHANGE] - Modal moved to step 3
+[2025-10-05 12:31:34.071] [STEP-3] [PLAN-SELECT] - User selected a plan
+[2025-10-05 12:31:38.736] [STEP-3] [BILLING-CYCLE-CHANGE] - User changed billing cycle
+[2025-10-05 12:31:40.409] [STEP-3] [PLAN-SELECT] - User selected a plan
+[2025-10-05 12:31:41.579] [STEP-3] [TRIAL-START-ATTEMPT] - User clicked start trial button
+[2025-10-05 12:31:41.589] [API] [API-CALL-START] - Making API call to save selected plan
+[2025-10-05 12:31:42.356] [API] [API-RESPONSE] - Received response from save-plan API
+[2025-10-05 12:31:43.104] [API] [API-CALL-START] - Making API call to create Stripe checkout
+[2025-10-05 12:31:43.104] [PAYMENT] [PLAN-SAVED] - Plan selection saved successfully
+[2025-10-05 12:31:44.265] [API] [API-RESPONSE] - Received response from Stripe checkout API
+[2025-10-05 12:31:44.272] [PAYMENT] [STRIPE-REDIRECT] - Redirecting user to Stripe checkout
+[2025-10-05 12:32:30.012] [MODAL] [CLOSE] - Modal closeed
+[2025-10-05 12:32:30.039] [MODAL] [CLOSE] - Modal closeed
+[2025-10-08 11:23:50.447] [MODAL] [CLOSE] - Modal closeed
+[2025-10-08 11:23:51.152] [MODAL] [CLOSE] - Modal closeed
+[2025-10-08 11:26:00.084] [MODAL] [CLOSE] - Modal closeed
+[2025-10-08 11:26:00.286] [MODAL] [CLOSE] - Modal closeed
+[2025-10-08 19:58:39.784] [MODAL] [CLOSE] - Modal closeed
+[2025-10-08 19:58:41.837] [MODAL] [CLOSE] - Modal closeed
+[2025-10-08 19:58:41.874] [MODAL] [OPEN] - Modal opened
+[2025-10-08 19:58:41.931] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-10-08 19:59:13.724] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-10-08 19:59:13.807] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-10-08 19:59:13.906] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-10-08 19:59:14.017] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-10-08 19:59:14.103] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-10-08 19:59:14.149] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-10-08 19:59:14.220] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-10-08 19:59:14.669] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-10-08 19:59:14.718] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-10-08 19:59:14.887] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-10-08 19:59:15.133] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-10-08 19:59:15.217] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-10-08 19:59:15.301] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-10-08 19:59:15.372] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-10-08 19:59:16.578] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-10-08 19:59:16.591] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-10-08 19:59:16.591] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-10-08 19:59:22.019] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 1 to step 2
+[2025-10-08 19:59:22.019] [STEP-1] [FORM-SUCCESS] - Step 1 completed successfully
+[2025-10-08 19:59:22.019] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-10-08 19:59:22.042] [MODAL] [OPEN] - Modal opened
+[2025-10-08 19:59:22.042] [MODAL] [STEP_CHANGE] - Modal moved to step 2
+[2025-10-08 19:59:24.137] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-10-08 19:59:24.303] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-10-08 19:59:24.396] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-10-08 19:59:25.181] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-10-08 19:59:25.296] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-10-08 19:59:25.393] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-10-08 19:59:25.571] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-10-08 19:59:25.683] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-10-08 19:59:25.795] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-10-08 19:59:25.898] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-10-08 19:59:26.060] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-10-08 19:59:26.146] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-10-08 19:59:26.285] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-10-08 19:59:26.398] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-10-08 19:59:26.482] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-10-08 19:59:26.670] [STEP-2] [USER-INPUT] - User entered data in field: brandDescription
+[2025-10-08 19:59:28.095] [STEP-2] [FORM-VALIDATION] - Starting step 2 form validation
+[2025-10-08 19:59:28.106] [STEP-2] [FORM-SUBMIT] - Step 2 form submission started
+[2025-10-08 19:59:28.106] [API] [API-CALL-START] - Making API call to /api/onboarding/step-2
+[2025-10-08 19:59:29.087] [API] [API-RESPONSE] - Received response from /api/onboarding/step-2
+[2025-10-08 19:59:29.108] [STEP-2] [FORM-SUCCESS] - Step 2 completed successfully
+[2025-10-08 19:59:29.108] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 2 to step 3
+[2025-10-08 19:59:29.134] [MODAL] [OPEN] - Modal opened
+[2025-10-08 19:59:29.142] [MODAL] [STEP_CHANGE] - Modal moved to step 3
+[2025-10-08 19:59:32.378] [STEP-3] [BILLING-CYCLE-CHANGE] - User changed billing cycle
+[2025-10-08 19:59:33.554] [STEP-3] [PLAN-SELECT] - User selected a plan
+[2025-10-08 19:59:34.303] [STEP-3] [TRIAL-START-ATTEMPT] - User clicked start trial button
+[2025-10-08 19:59:34.318] [API] [API-CALL-START] - Making API call to save selected plan
+[2025-10-08 19:59:36.580] [API] [API-RESPONSE] - Received response from save-plan API
+[2025-10-08 19:59:38.627] [PAYMENT] [PLAN-SAVED] - Plan selection saved successfully
+[2025-10-08 19:59:38.627] [API] [API-CALL-START] - Making API call to create Stripe checkout
+[2025-10-08 19:59:39.864] [API] [API-RESPONSE] - Received response from Stripe checkout API
+[2025-10-08 19:59:39.878] [PAYMENT] [STRIPE-REDIRECT] - Redirecting user to Stripe checkout
+[2025-10-08 20:10:54.019] [MODAL] [CLOSE] - Modal closeed
+[2025-10-08 20:10:54.225] [MODAL] [CLOSE] - Modal closeed

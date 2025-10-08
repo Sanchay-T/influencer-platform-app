@@ -19,17 +19,21 @@ export function flattenCreators(results: any) {
 // [EndpointDerivation] Mirrors scraping API routing rules used throughout keyword search flows
 export function buildEndpoint(platformNormalized: string, hasTargetUsername: boolean, jobId: string | undefined | null) {
   if (!jobId) return null
+  const normalized = (platformNormalized || '').toLowerCase()
   if (hasTargetUsername) {
-    if (platformNormalized === 'instagram') return `/api/scraping/instagram?jobId=${jobId}`
-    if (platformNormalized === 'youtube') return `/api/scraping/youtube-similar?jobId=${jobId}`
+    if (normalized === 'instagram') return `/api/scraping/instagram?jobId=${jobId}`
+    if (normalized === 'youtube') return `/api/scraping/youtube-similar?jobId=${jobId}`
     // TikTok Similar removed - not supported
     return null
   }
-  switch (platformNormalized) {
+  switch (normalized) {
     case 'instagram':
       return `/api/scraping/instagram-reels?jobId=${jobId}`
     case 'enhanced-instagram':
       return `/api/scraping/instagram-enhanced?jobId=${jobId}`
+    case 'google-serp':
+    case 'google_serp':
+      return `/api/scraping/google-serp?jobId=${jobId}`
     case 'youtube':
       return `/api/scraping/youtube?jobId=${jobId}`
     default:
@@ -89,6 +93,11 @@ export function computeStage({
       if (percent < 55) return 'Processing Instagram reels and bios'
       if (percent < 85) return 'Extracting contact details'
       return 'Deduplicating Instagram creators'
+    case 'google-serp':
+    case 'google_serp':
+      if (percent < 25) return `Running Google SERP discovery for ${keyword}`
+      if (percent < 65) return 'Enriching Instagram profiles from ScrapeCreators'
+      return 'Packaging Google SERP creator list'
     case 'instagram':
       if (percent < 20) return `Searching Instagram reels for ${keyword}`
       if (percent < 60) return 'Enhancing creator profiles'

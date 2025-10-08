@@ -70,13 +70,41 @@ function normalizeQuery(options: GoogleSerpFetchOptions) {
   return { query: scoped, site, limit, location, googleDomain, gl, hl };
 }
 
-function extractInstagramHandle(url: string): string | null {
+const DISALLOWED_PATH_SEGMENTS = new Set([
+  'p',
+  'reel',
+  'reels',
+  'explore',
+  'tags',
+  'tag',
+  'directory',
+  'accounts',
+  'about',
+  'legal',
+  'privacy',
+  'developers',
+  'developer',
+  'business',
+  'web',
+  'api',
+  'topics',
+  'guide',
+  'stories',
+  's',
+  'maps',
+  'locations',
+]);
+
+export function extractInstagramHandle(url: string): string | null {
   try {
     const parsed = new URL(url);
     if (!parsed.hostname.includes('instagram.com')) return null;
     const segments = parsed.pathname.split('/').filter(Boolean);
     const handle = segments[0]?.replace('@', '').trim();
     if (!handle || handle.length > 50) return null;
+    const normalized = handle.toLowerCase();
+    if (DISALLOWED_PATH_SEGMENTS.has(normalized)) return null;
+    if (!/^[a-z0-9._]+$/i.test(handle)) return null;
     return handle;
   } catch {
     return null;
