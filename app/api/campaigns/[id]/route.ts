@@ -1,4 +1,4 @@
-import { auth } from '@clerk/nextjs/server'
+import { auth } from '@/lib/auth/backend-auth'
 import { db } from '@/lib/db'
 import { campaigns, scrapingJobs } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'

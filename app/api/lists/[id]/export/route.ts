@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@/lib/auth/backend-auth';
 import { recordExport } from '@/lib/db/queries/list-queries';
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {

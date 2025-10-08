@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@/lib/auth/backend-auth';
 import { deleteList, getListDetail, updateList } from '@/lib/db/queries/list-queries';
 
 function handleError(error: unknown) {

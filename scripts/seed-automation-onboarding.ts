@@ -35,6 +35,8 @@ async function seedAutomationProfile() {
     planCreatorsLimit: 1000,
     usageCampaignsCurrent: 0,
     usageCreatorsCurrentMonth: 0,
+    stripeCustomerId: 'cus_automation',
+    stripeSubscriptionId: 'sub_automation',
   });
 
   console.log('Automation user onboarding fields seeded successfully.');
