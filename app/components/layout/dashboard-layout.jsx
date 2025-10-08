@@ -18,11 +18,13 @@ export default function DashboardLayout({
   const [isLarge, setIsLarge] = useState(false);
   const [sidebarSheetOpen, setSidebarSheetOpen] = useState(false);
   // Initialize deterministically for SSR; hydrate from localStorage after mount
-  const [sidebarPinned, setSidebarPinned] = useState(false);
+  // Default to pinned so the navigation is visible on first load; localStorage overrides post-hydration.
+  const [sidebarPinned, setSidebarPinned] = useState(true);
   useEffect(() => {
     try {
       const stored = typeof window !== 'undefined' ? window.localStorage.getItem(SIDEBAR_PIN_STORAGE_KEY) : null;
       if (stored === 'true') setSidebarPinned(true);
+      if (stored === 'false') setSidebarPinned(false);
     } catch {
       // ignore
     }

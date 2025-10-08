@@ -10,7 +10,8 @@ import { useAdmin } from '@/lib/hooks/use-admin'
 import TrialSidebarCompact from '@/app/components/trial/trial-sidebar-compact'
 import { cn } from '@/lib/utils'
 
-export default function Sidebar({ onNavigate, onTogglePin, isPinned = false, showAutoHideHint = false }) {
+// Sidebar is shared across dashboard shells; default to pinned to keep navigation visible until the user explicitly unpins.
+export default function Sidebar({ onNavigate, onTogglePin, isPinned = true, showAutoHideHint = false }) {
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
   const router = useRouter()

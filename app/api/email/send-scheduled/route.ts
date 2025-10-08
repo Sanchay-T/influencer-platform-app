@@ -10,6 +10,7 @@ import WelcomeEmail from '@/components/email-templates/welcome-email';
 import TrialAbandonmentEmail from '@/components/email-templates/trial-abandonment-email';
 import TrialDay2Email from '@/components/email-templates/trial-day2-email';
 import TrialDay5Email from '@/components/email-templates/trial-day5-email';
+import SubscriptionWelcomeEmail from '@/components/email-templates/subscription-welcome-email';
 
 // Initialize QStash receiver
 const receiver = new Receiver({
@@ -87,6 +88,18 @@ export async function POST(request: Request) {
       case 'trial_day5':
         emailComponent = TrialDay5Email(templateProps);
         subject = subjectPrefix + 'Your trial ends in 2 days - here\'s what you\'ve accomplished! 🏆';
+        break;
+
+      case 'subscription_welcome':
+        emailComponent = SubscriptionWelcomeEmail({
+          fullName: templateProps.fullName,
+          businessName: templateProps.businessName,
+          planName: templateProps.planName || templateProps.plan || 'Gemz',
+          planFeatures: templateProps.planFeatures,
+          dashboardUrl: templateProps.dashboardUrl,
+          billingUrl: templateProps.billingUrl,
+        });
+        subject = subjectPrefix + `You're now live on the ${templateProps.planName || templateProps.plan || 'Gemz'} plan! 🎉`;
         break;
 
       case 'trial_expiry':

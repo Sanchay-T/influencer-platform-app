@@ -7,7 +7,7 @@ import { getClientUrl } from '@/lib/utils/url-utils';
 import OnboardingLogger from '@/lib/utils/onboarding-logger';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
+  apiVersion: '2025-06-30.basil',
 });
 
 export async function POST(req: NextRequest) {
@@ -211,6 +211,7 @@ export async function POST(req: NextRequest) {
       ],
       mode: 'subscription',
       customer_email: profile.email || `${userId}@clerk.user`,
+      allow_promotion_codes: true, // Enable promo code field in checkout
       subscription_data: {
         trial_period_days: 7, // 7-day trial
         metadata: {

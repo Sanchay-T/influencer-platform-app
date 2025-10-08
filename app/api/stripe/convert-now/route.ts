@@ -6,7 +6,7 @@ import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { getClientUrl } from '@/lib/utils/url-utils';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
+  apiVersion: '2025-06-30.basil',
 });
 
 // Ends the current trial immediately and charges the default payment method
@@ -28,6 +28,8 @@ export async function POST(req: NextRequest) {
     const customer = await stripe.customers.retrieve(profile.stripeCustomerId, { expand: ['invoice_settings.default_payment_method'] });
     const hasDefaultPM = !!(subscription.default_payment_method || (customer as any)?.invoice_settings?.default_payment_method);
     if (!hasDefaultPM) {
+      // Setup mode to collect payment method only (no promo codes)
+      // User already got 7-day trial, this is just to add payment method
       const setup = await stripe.checkout.sessions.create({
         mode: 'setup',
         customer: profile.stripeCustomerId,
