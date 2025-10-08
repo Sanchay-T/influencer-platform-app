@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import { qstash } from '@/lib/queue/qstash';
+import { clerkBackendClient } from '@/lib/auth/backend-auth';
 
 // Initialize Resend
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -166,26 +167,7 @@ export async function updateEmailScheduleStatus(
 export async function getUserEmailFromClerk(userId: string): Promise<string | null> {
   try {
     console.log('🔍 [CLERK-EMAIL] Starting Clerk email retrieval for userId:', userId);
-    
-    // Import Clerk server functions with the modern pattern
-    const { clerkClient } = await import('@clerk/nextjs/server');
-    
-    if (!clerkClient) {
-      console.error('❌ [CLERK-EMAIL] clerkClient is undefined');
-      return null;
-    }
-
-    // Modern Clerk pattern: clerkClient is now an async function that must be called
-    console.log('🔄 [CLERK-EMAIL] Initializing Clerk client...');
-    const client = await clerkClient();
-    
-    if (!client || !client.users) {
-      console.error('❌ [CLERK-EMAIL] Clerk client initialization failed or users API unavailable');
-      return null;
-    }
-
-    console.log('✅ [CLERK-EMAIL] Clerk client initialized successfully');
-    const user = await client.users.getUser(userId);
+    const user = await clerkBackendClient.users.getUser(userId);
     
     if (!user) {
       console.error('❌ [CLERK-EMAIL] User not found:', userId);

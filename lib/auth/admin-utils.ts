@@ -1,4 +1,4 @@
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { auth, clerkBackendClient } from '@/lib/auth/backend-auth';
 import { headers } from 'next/headers';
 import { verifyTestAuthHeaders } from '@/lib/auth/testable-auth';
 import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
@@ -40,8 +40,7 @@ export async function isAdminUser(): Promise<boolean> {
 
     // Get user from Clerk to access email
     console.log('🔍 [ADMIN-CHECK] Getting user from Clerk...');
-    const client = await clerkClient();
-    const user = await client.users.getUser(userId);
+    const user = await clerkBackendClient.users.getUser(userId);
     const userEmail = user.primaryEmailAddress?.emailAddress;
     
     console.log('🔍 [ADMIN-CHECK] User email retrieved:', userEmail);
@@ -96,8 +95,7 @@ export async function getCurrentUserAdminInfo() {
     const { userId } = await auth();
     if (!userId) return { isAdmin: false, user: null };
 
-    const client = await clerkClient();
-    const user = await client.users.getUser(userId);
+    const user = await clerkBackendClient.users.getUser(userId);
     const isAdmin = await isAdminUser();
 
     return {

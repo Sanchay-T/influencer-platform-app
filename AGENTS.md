@@ -181,3 +181,25 @@ app/
 - Never commit secrets. `.env.local` holds the baseline configuration; optional `.env.worktree` overrides are respected by `npm run dev:wt2` but apply universally.
 - Required environment keys include (non-exhaustive): `DATABASE_URL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_ADMIN_EMAILS`, `CLERK_SECRET_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_*`, `QSTASH_TOKEN`, `QSTASH_CURRENT_SIGNING_KEY`, `QSTASH_NEXT_SIGNING_KEY`, `SESSION_EXCHANGE_KEY`, `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_ENVIRONMENT`.
 - Run `npm run validate:deployment` (or `npm run config:validate:all`) after touching configuration to catch logging/monitoring drift before deploying.
+
+## Automated API Testing
+
+Headless backend tests (no UI login) are supported via the automation headers. See [`docs/automation-api-testing.md`](docs/automation-api-testing.md) for the required env vars, tunnel options, and sample scripts.
+
+
+DO THIS < THIS IS QUITE IMPORTANT :
+
+ If you need a public endpoint (QStash callbacks, teammates, browsers):
+      1. Launch a tunnel inside the container (LocalTunnel or cloudflared—no manual login needed).
+
+         npx localtunnel --port 3002 --subdomain youralias
+         # or
+         cloudflared tunnel --url http://localhost:3002 --no-autoupdate
+      2. Set both env vars to the generated HTTPS domain:
+
+         NEXT_PUBLIC_SITE_URL=https://youralias.loca.lt
+         AUTOMATION_BASE_URL=https://youralias.loca.lt
+         Every service—including automation scripts—will now hit that public URL.
+         (If you use Codex’s built-in port forwarding, grab the forwarded URL and set the env vars to that.)
+
+  That’s the only real “choice” you have to make in the Codex environment.

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@/lib/auth/backend-auth';
 import { getDashboardOverview } from '@/lib/dashboard/overview';
 
 function errorResponse(error: unknown, status = 500) {
