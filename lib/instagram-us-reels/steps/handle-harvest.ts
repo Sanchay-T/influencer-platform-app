@@ -4,6 +4,7 @@ import type {
   KeywordExpansionResult,
 } from '../types.ts';
 import { fetchInstagramHandles } from '../clients/serp';
+import { fetchSerperHandles } from '../clients/serper';
 
 const DEFAULT_SERP_LIMIT = Number(process.env.US_REELS_SERP_LIMIT ?? 10);
 
@@ -60,13 +61,7 @@ async function fetchSerp(
   const limit = options.limit ?? DEFAULT_SERP_LIMIT;
   const fetcher =
     options.serpFetcher ??
-    (async (query: string, limiter: number) =>
-      fetchInstagramHandles({
-        query,
-        limit: limiter,
-        gl: 'us',
-        hl: 'en',
-      }));
+    (await resolveFetcher(options.limit ?? DEFAULT_SERP_LIMIT));
 
   const queries = expansion.enrichedQueries.slice(0, 5);
   if (queries.length === 0) {
@@ -86,21 +81,53 @@ async function fetchSerp(
   const results = new Set<string>();
 
   for (const query of dedupedQueries) {
-    try {
-      const handles = await fetcher(query, limit);
-      for (const handle of handles) {
-        const normalized = handle.trim().toLowerCase();
-        if (normalized) {
-          results.add(normalized);
-        }
+    const handles = await fetcher(query, limit);
+    for (const handle of handles) {
+      const normalized = handle.trim().toLowerCase();
+      if (normalized) {
+        results.add(normalized);
       }
-    } catch (error) {
-      console.warn('[handle-harvest] SERP fetch failed', {
-        query,
-        error: error instanceof Error ? error.message : String(error),
-      });
     }
   }
 
   return Array.from(results);
+}
+
+async function resolveFetcher(limit: number) {
+  const serperKey = process.env.SERPER_DEV_API_KEY;
+  if (serperKey) {
+    return async (query: string, limiter: number) => {
+      try {
+        return await fetchSerperHandles({
+          query,
+          num: limiter,
+          gl: 'us',
+          hl: 'en',
+        });
+      } catch (error) {
+        console.warn('[handle-harvest] Serper fetch failed', {
+          query,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return [];
+      }
+    };
+  }
+
+  return async (query: string, limiter: number) => {
+    try {
+      return await fetchInstagramHandles({
+        query,
+        limit: limiter,
+        gl: 'us',
+        hl: 'en',
+      });
+    } catch (error) {
+      console.warn('[handle-harvest] SerpApi fetch failed', {
+        query,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [];
+    }
+  };
 }
