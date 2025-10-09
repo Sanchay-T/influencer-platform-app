@@ -3,6 +3,7 @@ import { campaigns, scrapingJobs, subscriptionPlans, users, userUsage } from '@/
 import { getUserProfile, incrementUsage } from '@/lib/db/queries/user-queries';
 import { eq, count, and, gte, sql } from 'drizzle-orm';
 import BillingLogger from '@/lib/loggers/billing-logger';
+import { logger, LogCategory } from '@/lib/logging';
 
 // Plan configuration with all limits and features
 export interface PlanConfig {

@@ -327,7 +327,8 @@ const SearchResults = ({ searchData }) => {
         setIsFetching(true);
         // Determine API endpoint based on platform
         let apiEndpoint = '/api/scraping/tiktok';
-        if (platformNormalized === 'instagram') apiEndpoint = '/api/scraping/instagram-reels';
+        if (platformNormalized === 'google-serp' || platformNormalized === 'google_serp') apiEndpoint = '/api/scraping/google-serp';
+        else if (platformNormalized === 'instagram') apiEndpoint = '/api/scraping/instagram-reels';
         else if (platformNormalized === 'enhanced-instagram') apiEndpoint = '/api/scraping/instagram-enhanced';
         else if (platformNormalized === 'youtube') apiEndpoint = '/api/scraping/youtube';
 
@@ -535,7 +536,8 @@ const SearchResults = ({ searchData }) => {
         } else {
           // As a fallback, re-fetch latest results from the corresponding endpoint
           let apiEndpoint = '/api/scraping/tiktok';
-          if (platformNormalized === 'instagram') apiEndpoint = '/api/scraping/instagram-reels';
+          if (platformNormalized === 'google-serp' || platformNormalized === 'google_serp') apiEndpoint = '/api/scraping/google-serp';
+          else if (platformNormalized === 'instagram') apiEndpoint = '/api/scraping/instagram-reels';
         else if (platformNormalized === 'enhanced-instagram') apiEndpoint = '/api/scraping/instagram-enhanced';
         else if (platformNormalized === 'youtube') apiEndpoint = '/api/scraping/youtube';
 

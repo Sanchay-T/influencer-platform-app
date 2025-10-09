@@ -22,6 +22,11 @@ export default clerkMiddleware((auth, request) => {
     '/api/proxy/(.*)',
     '/api/export/(.*)',
     '/api/email/send-scheduled',
+    // Automation/testing routes (bearer token validated inside handlers)
+    '/api/onboarding(.*)',
+    '/api/usage/summary(.*)',
+    '/api/billing(.*)',
+    '/api/debug/whoami',
   ],
 })
 

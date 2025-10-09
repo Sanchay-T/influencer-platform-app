@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import OpenAI from 'openai';
 import { logger, LogCategory } from '@/lib/logging';
 import { backgroundJobLogger } from '@/lib/logging/background-job-logger';
+import { PlanValidator } from '@/lib/services/plan-validator';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -864,6 +865,23 @@ export async function processEnhancedInstagramJob(jobId: string) {
         })
       })
       .where(eq(scrapingJobs.id, jobId));
+
+    const previousProcessed = job.processedResults ?? 0;
+    const newCreatorsDiscovered = Math.max(finalCreators.length - previousProcessed, 0);
+    
+    if (newCreatorsDiscovered > 0) {
+      try {
+        await PlanValidator.incrementUsage(job.userId, 'creators', newCreatorsDiscovered, {
+          jobId,
+          platform: 'instagram_enhanced',
+          source: 'instagram_enhanced_handler',
+          previousProcessed,
+          finalCreators: finalCreators.length,
+        });
+      } catch (usageError) {
+        console.error('⚠️ [ENHANCED-INSTAGRAM-HANDLER] Failed to increment creator usage', usageError);
+      }
+    }
     
     jobLogger.updateProgress(100, `AI-Enhanced search completed: ${finalCreators.length} unique creators found`);
     

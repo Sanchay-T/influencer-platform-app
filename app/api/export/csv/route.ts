@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { scrapingResults, scrapingJobs } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@/lib/auth/backend-auth';
 import { FeatureGateService } from '@/lib/services/feature-gates';
 import { dedupeCreators, formatEmailsForCsv } from '@/lib/export/csv-utils';
 

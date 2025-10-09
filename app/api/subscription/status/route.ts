@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@/lib/auth/backend-auth';
 import { db } from '@/lib/db';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
 import Stripe from 'stripe';

@@ -1,4 +1,4 @@
-import { auth as clerkAuth } from '@clerk/nextjs/server'
+import { auth as backendAuth } from '@/lib/auth/backend-auth'
 import { headers } from 'next/headers'
 import { verifyTestAuthHeaders } from '@/lib/auth/testable-auth'
 
@@ -14,5 +14,5 @@ export async function getAuthOrTest() {
       }
     }
   } catch {}
-  return await clerkAuth()
+  return await backendAuth()
 }

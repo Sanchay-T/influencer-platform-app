@@ -14,6 +14,8 @@ export default function KeywordSearchForm({ onSubmit }) {
   const [campaignId, setCampaignId] = useState(null);
   const { user, isLoaded } = useUser();
 
+  const isGoogleSerp = selectedPlatform === 'google-serp';
+
   useEffect(() => {
 
     // Obtener el campaignId de la URL si existe
@@ -40,6 +42,16 @@ export default function KeywordSearchForm({ onSubmit }) {
     );
   }
 
+  useEffect(() => {
+    if (isGoogleSerp) {
+      if (creatorsCount !== 20) {
+        setCreatorsCount(20);
+      }
+    } else if (creatorsCount < 100) {
+      setCreatorsCount(100);
+    }
+  }, [isGoogleSerp, creatorsCount]);
+
   const getActualScraperLimit = (uiValue) => {
     // Retornamos el valor real del slider (1000-5000)
     return uiValue;
@@ -56,7 +68,7 @@ export default function KeywordSearchForm({ onSubmit }) {
     }
 
     // Asegurarnos de que creatorsCount sea un número
-    const numericCreatorsCount = Number(creatorsCount);
+    const numericCreatorsCount = Number(isGoogleSerp ? 20 : creatorsCount);
 
     // Pasar el campaignId si existe
     onSubmit({
@@ -69,6 +81,9 @@ export default function KeywordSearchForm({ onSubmit }) {
   };
 
   const getCreditsUsed = (count) => {
+    if (isGoogleSerp) {
+      return Math.max(count / 100, 0.2).toFixed(2);
+    }
     return count / 100; // 1000 creators = 10 credits, 2000 = 20, etc.
   };
 
@@ -77,6 +92,7 @@ export default function KeywordSearchForm({ onSubmit }) {
     { value: "instagram", label: "Instagram" },
     { value: "enhanced-instagram", label: "Enhanced Instagram (AI-Powered)", badge: "New" },
     { value: "youtube", label: "YouTube" },
+    { value: "google-serp", label: "Google SERP ✕ Instagram", badge: "Beta" },
   ];
 
   return (
@@ -131,32 +147,40 @@ export default function KeywordSearchForm({ onSubmit }) {
             </div>
           </div>
 
-          <div className="space-y-4">
-            <label className="text-sm font-medium">
-              How many creators do you need?
-            </label>
-            <Slider
-              value={[creatorsCount]}
-              onValueChange={([value]) => setCreatorsCount(value)}
-              min={100}
-              max={1000}
-              step={100}
-              className="py-4"
-            />
-            <div className="flex justify-between text-md text-muted-foreground">
-              {[100, 500, 1000].map((value) => (
-                <span
-                  key={value}
-                  className={creatorsCount === value ? "font-black" : ""}
-                >
-                  {value.toLocaleString('en-US')}
-                </span>
-              ))}
+          {isGoogleSerp ? (
+            <div className="space-y-2 rounded-md border border-dashed border-amber-400/60 bg-amber-500/10 p-4 text-sm text-amber-100">
+              <p className="font-medium">Google SERP preview mode</p>
+              <p>We&apos;ll pull up to <strong>20 Instagram profiles</strong> per run to keep latency low while we validate the new search path.</p>
+              <p className="text-amber-200/80">This consumes about {getCreditsUsed(20)} credits.</p>
             </div>
-            <div className="text-sm text-muted-foreground">
-              This will use {getCreditsUsed(creatorsCount)} of your 50 credits
+          ) : (
+            <div className="space-y-4">
+              <label className="text-sm font-medium">
+                How many creators do you need?
+              </label>
+              <Slider
+                value={[creatorsCount]}
+                onValueChange={([value]) => setCreatorsCount(value)}
+                min={100}
+                max={1000}
+                step={100}
+                className="py-4"
+              />
+              <div className="flex justify-between text-md text-muted-foreground">
+                {[100, 500, 1000].map((value) => (
+                  <span
+                    key={value}
+                    className={creatorsCount === value ? "font-black" : ""}
+                  >
+                    {value.toLocaleString('en-US')}
+                  </span>
+                ))}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                This will use {getCreditsUsed(creatorsCount)} of your 50 credits
+              </div>
             </div>
-          </div>
+          )}
 
           <button
             type="submit"

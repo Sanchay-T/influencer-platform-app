@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth, currentUser } from '@clerk/nextjs/server';
+import { auth } from '@/lib/auth/backend-auth';
 import { createUser } from '@/lib/db/queries/user-queries';
 import { BillingService, type PlanKey } from '@/lib/services/billing-service';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';

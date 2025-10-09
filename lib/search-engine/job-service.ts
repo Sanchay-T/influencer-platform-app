@@ -4,6 +4,8 @@ import { scrapingJobs, scrapingResults } from '@/lib/db/schema';
 import { dedupeCreators as sharedDedupeCreators } from '@/lib/utils/dedupe-creators';
 import { eq } from 'drizzle-orm';
 import type { NormalizedCreator, ScrapingJobRecord, SearchMetricsSnapshot } from './types';
+import { PlanValidator } from '@/lib/services/plan-validator';
+import { logger, LogCategory } from '@/lib/logging';
 
 const DEFAULT_PROGRESS_PRECISION = 2;
 
@@ -143,6 +145,9 @@ export class SearchJobService {
     }
 
     await this.refresh();
+    if (newCount > 0) {
+      await this.incrementCreatorUsage(newCount, 'merge_creators');
+    }
     return { total: dedupedCreators.length, newCount };
   }
 
@@ -192,6 +197,10 @@ export class SearchJobService {
       where: (results, { eq }) => eq(results.jobId, this.job.id),
     });
 
+    const previousCount = existing && Array.isArray(existing.creators)
+      ? (existing.creators as unknown[]).length
+      : 0;
+
     const platformHint = typeof this.job.platform === 'string' ? this.job.platform : null;
     const deduped = stripMergeKeys(dedupeWithHint(attachMergeKeys(creators), platformHint));
 
@@ -208,6 +217,36 @@ export class SearchJobService {
     }
 
     await this.refresh();
+    const newCount = Math.max(deduped.length - previousCount, 0);
+    if (newCount > 0) {
+      await this.incrementCreatorUsage(newCount, 'replace_creators');
+    }
     return deduped.length;
+  }
+
+  private async incrementCreatorUsage(count: number, origin: 'merge_creators' | 'replace_creators') {
+    if (!count || count <= 0) {
+      return;
+    }
+
+    try {
+      await PlanValidator.incrementUsage(this.job.userId, 'creators', count, {
+        jobId: this.job.id,
+        platform: this.job.platform,
+        origin,
+      });
+    } catch (error) {
+      logger.error(
+        'Failed to increment creator usage after job update',
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          jobId: this.job.id,
+          userId: this.job.userId,
+          origin,
+          incrementAmount: count,
+        },
+        LogCategory.BILLING
+      );
+    }
   }
 }

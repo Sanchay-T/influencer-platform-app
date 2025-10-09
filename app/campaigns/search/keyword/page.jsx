@@ -116,7 +116,9 @@ export default function KeywordSearch() {
       // Determine API endpoint based on selected platform
       // For now, we'll handle one platform at a time - prioritize the first selected platform
       let apiEndpoint = '/api/scraping/tiktok'; // Default to TikTok
-      if (searchData.platforms.includes('enhanced-instagram')) {
+      if (searchData.platforms.includes('google-serp')) {
+        apiEndpoint = '/api/scraping/google-serp';
+      } else if (searchData.platforms.includes('enhanced-instagram')) {
         apiEndpoint = '/api/scraping/instagram-enhanced';
       } else if (searchData.platforms.includes('instagram')) {
         apiEndpoint = '/api/scraping/instagram-reels';
@@ -149,13 +151,21 @@ export default function KeywordSearch() {
       const data = await response.json();
       console.log('✅ [KEYWORD-SEARCH-PAGE] API response data:', data);
       
+    const nextPlatform = searchData.platforms.includes('google-serp')
+      ? 'google-serp'
+      : searchData.platforms.includes('enhanced-instagram')
+        ? 'enhanced-instagram'
+        : searchData.platforms.includes('instagram')
+          ? 'instagram'
+          : searchData.platforms.includes('youtube')
+            ? 'youtube'
+            : 'tiktok';
+
     setSearchData(prev => ({ 
       ...prev, 
       keywords,
       jobId: data.jobId,
-      selectedPlatform: searchData.platforms.includes('enhanced-instagram') ? 'enhanced-instagram' : 
-                       searchData.platforms.includes('instagram') ? 'Instagram' : 
-                       searchData.platforms.includes('youtube') ? 'YouTube' : 'TikTok'
+      selectedPlatform: nextPlatform
     }));
     toast.success('Campaign started successfully');
     router.push(`/campaigns/${campaignId}?jobId=${data.jobId}`);

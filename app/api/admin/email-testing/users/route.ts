@@ -1,6 +1,6 @@
 import '@/lib/config/load-env';
 import { NextRequest, NextResponse } from 'next/server';
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { auth, clerkBackendClient } from '@/lib/auth/backend-auth';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
 import { ilike, or, asc, desc } from 'drizzle-orm';
@@ -85,20 +85,19 @@ export async function GET(req: NextRequest) {
       if (usersWithStatus.length === 0) {
         console.log('🔍 [ADMIN-SEARCH] No database results, searching Clerk...');
         try {
-          const client = await clerkClient();
           console.log('🔍 [CLERK-SEARCH] Searching Clerk with query:', query);
           
           // Try different search approaches
           let clerkUsers;
           if (query.includes('@')) {
             // Email search
-            clerkUsers = await client.users.getUserList({
+            clerkUsers = await clerkBackendClient.users.getUserList({
               emailAddress: [query],
               limit: 10
             });
           } else {
             // Name search - get recent users and filter
-            clerkUsers = await client.users.getUserList({
+            clerkUsers = await clerkBackendClient.users.getUserList({
               limit: 50,
               orderBy: '-created_at'
             });
