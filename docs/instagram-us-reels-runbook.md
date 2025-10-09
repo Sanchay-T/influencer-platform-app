@@ -7,7 +7,7 @@ This guide describes the nutritionist pipeline run you asked for, along with ins
 ## 1. Latest Run (October 9 2025)
 
 - **Keyword:** `nutritionist`
-- **Transcripts:** disabled (command defaults)
+- **Transcripts:** enabled by default (filtering relies on caption + transcript keyword matches)
 - **SERP source:** [serper.dev](https://serper.dev) (`SERPER_DEV_API_KEY`)
 - **Models used:**  
   - Primary expansion: `sonar-reasoning-pro` (Perplexity)  
@@ -23,7 +23,7 @@ This guide describes the nutritionist pipeline run you asked for, along with ins
 | `nutritionbykylie`  | 12    | 0.88           | 0.80          | US nutrition coach, pragmatic tips |
 | `dietitiandeanna`   | 12    | 0.90           | 0.95          | US intuitive eating content, verified Sonar reasoning |
 
-Each reel entry in the output file contains the normalized metadata (caption, video URL, view/like counts, relevance score, US hints).
+Each reel entry in the output file includes matched keyword terms, transcript text, and relevance scoring used to filter the list.
 
 ### Interesting Reel Example
 
@@ -130,4 +130,3 @@ The orchestration lives at `lib/instagram-us-reels/index.ts`, which chains:
 ---
 
 By following these steps you can replicate the nutritionist run, swap in new keywords, or tweak the pipeline for broader searches. Ping me if you need transcripts re-enabled or a QStash integration once you’re ready to automate batches.
-

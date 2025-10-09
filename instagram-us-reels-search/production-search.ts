@@ -36,7 +36,10 @@ async function discoverURLs(keyword: string): Promise<string[]> {
   const queries = [
     `site:instagram.com/reel ${keyword}`,
     `site:instagram.com/reel ${keyword} tips`,
-    `site:instagram.com/reel ${keyword} how to`
+    `site:instagram.com/reel ${keyword} how to`,
+    `site:instagram.com/reel ${keyword} guide`,
+    `site:instagram.com/reel ${keyword} tutorial`,
+    `site:instagram.com/reel ${keyword} advice`
   ];
 
   for (const q of queries) {
@@ -119,19 +122,53 @@ async function fetchReelData(url: string) {
 
 async function fetchFromCreators(handles: string[], count: number = 10): Promise<string[]> {
   const urls = new Set<string>();
+  let successCount = 0;
+  let errorCount = 0;
 
   await Promise.all(handles.map(h => limit(async () => {
     try {
-      const { data } = await sc.get("/v1/instagram/user/reels/simple", {
-        params: { handle: h, amount: count, trim: true },
+      console.log(`      Fetching reels from @${h}...`);
+
+      // Try the full endpoint first (not /simple)
+      const { data } = await sc.get("/v1/instagram/user/reels", {
+        params: { handle: h, count: count },
         timeout: 20000
       });
-      (Array.isArray(data) ? data : []).forEach((item: any) => {
-        if (item?.media?.url) urls.add(item.media.url);
-      });
-    } catch {}
+
+      // The full endpoint might return data in different format
+      let reelUrls: string[] = [];
+
+      if (Array.isArray(data)) {
+        // Format 1: Array of items with media.url
+        reelUrls = data
+          .map((item: any) => item?.media?.url || item?.url)
+          .filter(Boolean);
+      } else if (data?.items || data?.data) {
+        // Format 2: Nested in 'items' or 'data'
+        const items = data.items || data.data;
+        if (Array.isArray(items)) {
+          reelUrls = items
+            .map((item: any) => item?.media?.url || item?.url || item?.link)
+            .filter(Boolean);
+        }
+      }
+
+      if (reelUrls.length > 0) {
+        console.log(`      ✓ @${h}: Got ${reelUrls.length} reels`);
+        reelUrls.forEach(url => urls.add(url));
+        successCount++;
+      } else {
+        console.log(`      ⚠️  @${h}: No reels found`);
+        console.log(`         Response type: ${typeof data}, isArray: ${Array.isArray(data)}`);
+        errorCount++;
+      }
+    } catch (error: any) {
+      console.log(`      ❌ @${h}: ${error.message || 'Unknown error'}`);
+      errorCount++;
+    }
   })));
 
+  console.log(`   Expansion summary: ${successCount} successful, ${errorCount} failed`);
   return Array.from(urls);
 }
 

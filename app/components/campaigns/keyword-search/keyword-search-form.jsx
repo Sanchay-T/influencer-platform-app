@@ -90,6 +90,7 @@ export default function KeywordSearchForm({ onSubmit }) {
   const platformOptions = [
     { value: "tiktok", label: "TikTok" },
     { value: "instagram", label: "Instagram" },
+    { value: "instagram-1.0", label: "Instagram 1.0 (US Reels)", badge: "US" },
     { value: "enhanced-instagram", label: "Enhanced Instagram (AI-Powered)", badge: "New" },
     { value: "youtube", label: "YouTube" },
     { value: "google-serp", label: "Google SERP ✕ Instagram", badge: "Beta" },
