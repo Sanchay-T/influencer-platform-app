@@ -9,6 +9,7 @@ import { config } from "dotenv";
 config();
 
 const SERPAPI_KEY = process.env.SERPAPI_KEY!;
+const SERPER_API_KEY = process.env.SERPER_DEV_API_KEY!;
 const SC_API_KEY = process.env.SC_API_KEY!;
 const PERPLEXITY_KEY = process.env.PERPLEXITY_API_KEY!;
 
@@ -28,9 +29,9 @@ interface Reel {
   relevance: number;
 }
 
-// -------- SERP: Multi-Query Discovery --------
+// -------- SERP: Multi-Query Discovery (Using Serper.dev) --------
 async function discoverURLs(keyword: string): Promise<string[]> {
-  console.log(`\n🔍 Step 1: SERP Discovery`);
+  console.log(`\n🔍 Step 1: SERP Discovery (Serper.dev)`);
   const urls = new Set<string>();
   const queries = [
     `site:instagram.com/reel ${keyword}`,
@@ -41,17 +42,34 @@ async function discoverURLs(keyword: string): Promise<string[]> {
   for (const q of queries) {
     try {
       console.log(`   Querying: "${q}"`);
-      const { data } = await axios.get("https://serpapi.com/search.json", {
-        params: { engine: "google", q, hl: "en", gl: "us", num: 20, api_key: SERPAPI_KEY },
-        timeout: 12000
-      });
-      const links = (data?.organic_results || []).filter((r: any) => r.link?.includes('/reel/'));
+      const { data } = await axios.post(
+        "https://google.serper.dev/search",
+        {
+          q,
+          gl: "us",
+          hl: "en",
+          num: 20
+        },
+        {
+          headers: {
+            'X-API-KEY': SERPER_API_KEY,
+            'Content-Type': 'application/json'
+          },
+          timeout: 12000
+        }
+      );
+
+      // Serper.dev returns organic results in data.organic
+      const links = (data?.organic || []).filter((r: any) => r.link?.includes('/reel/'));
       console.log(`   Found ${links.length} reels`);
       links.forEach((r: any) => urls.add(r.link.split('?')[0]));
       if (urls.size >= 50) break;
       await new Promise(r => setTimeout(r, 1000));
-    } catch (error) {
-      console.error(`   Error: ${error}`);
+    } catch (error: any) {
+      console.error(`   Error: ${error.message || error}`);
+      if (error.response?.data) {
+        console.error(`   Response:`, error.response.data);
+      }
     }
   }
 
@@ -297,7 +315,24 @@ export async function productionSearch(keyword: string) {
       return b.usConfidence - a.usConfidence;
     });
 
-  const final = shuffle(filtered).slice(0, 60);
+  // Limit reels per creator (minimize consecutive duplicates)
+  // Lower limit = better distribution, higher limit = more total reels
+  const perCreatorLimit = 3;
+  const limited: Reel[] = [];
+  const creatorCounts = new Map<string, number>();
+
+  for (const reel of filtered) {
+    const count = creatorCounts.get(reel.handle) || 0;
+    if (count < perCreatorLimit) {
+      limited.push(reel);
+      creatorCounts.set(reel.handle, count + 1);
+    }
+  }
+
+  console.log(`   Unique creators: ${creatorCounts.size}`);
+  console.log(`   Reels after limit (${perCreatorLimit}/creator): ${limited.length}`);
+
+  const final = shuffle(limited).slice(0, 60);
 
   console.log(`${"=".repeat(60)}`);
   console.log(`✨ FINAL: ${final.length} US-based reels`);

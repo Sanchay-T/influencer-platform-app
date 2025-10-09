@@ -76,7 +76,7 @@ export async function runInstagramUsReelsPipeline(
   });
   writeSnapshot('step-4-reels', reels);
 
-  if (options.transcripts ?? true) {
+  if (options.transcripts ?? false) {
     await attachTranscripts(reels, {
       concurrency: Number(process.env.US_REELS_TRANSCRIPT_CONCURRENCY ?? 2),
     });
