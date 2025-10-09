@@ -8,7 +8,8 @@
     "hybrid": "tsx hybrid-search.ts",
     "final": "tsx final-search.ts",
     "ai": "tsx ai-powered-search.ts",
-    "prod": "tsx production-search.ts"
+    "prod": "tsx production-search.ts",
+    "v2": "tsx production-search-v2.ts"
   },
   "dependencies": {
     "axios": "^1.6.0",

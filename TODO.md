@@ -65,3 +65,11 @@
 - Confirm Stripe test keys available.
 - Coordinate with “code-termina” agent before merging into `feat/small-fixes`.
 - Keep commits scoped per workstream to allow partial rollback if needed.
+
+## Workstream D – Instagram US Reels Integration
+- [x] Wire the Instagram 1.0 pipeline into the modular search runner (provider + runner detection).
+- [x] Expose the “Instagram 1.0 (US Reels)” option in keyword search and route submissions to `/api/scraping/instagram-us-reels`.
+- [x] Enforce caption/transcript keyword matching with matched-term metadata and UI chips/snippets.
+- [ ] Add automated coverage (integration test or smoke script) for the new pipeline path.
+- [ ] Add retention/pruning policy for `logs/instagram-us-reels` snapshots once finalised.
+- [ ] Run end-to-end QA in the campaign UI (pagination, CSV export, dedupe) after SERP quotas are verified.

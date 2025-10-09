@@ -2,7 +2,7 @@ import { runInstagramUsReelsPipeline } from '../../lib/instagram-us-reels/index'
 
 async function main() {
 const keyword = process.argv[2] ?? 'vegan snacks';
-const transcriptsEnabled = !process.argv.includes('--no-transcripts');
+const transcriptsEnabled = process.argv.includes('--with-transcripts');
 const serpEnabled = !process.argv.includes('--no-serp');
 console.log('Running pipeline for keyword:', keyword, '| transcripts:', transcriptsEnabled);
 const start = Date.now();

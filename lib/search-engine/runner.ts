@@ -9,6 +9,7 @@ import { runInstagramSimilarProvider } from './providers/instagram-similar';
 import { runInstagramReelsProvider } from './providers/instagram-reels';
 import { runInstagramEnhancedProvider } from './providers/instagram-enhanced';
 import { runGoogleSerpProvider } from './providers/google-serp';
+import { runInstagramUsReelsProvider } from './providers/instagram-us-reels';
 
 export interface SearchExecutionResult {
   service: SearchJobService;
@@ -70,7 +71,11 @@ function isInstagramReels(jobPlatform?: string, keywords?: unknown, searchParams
   if (!keywords || !Array.isArray(keywords)) return false;
   const platform = (jobPlatform ?? '').toLowerCase();
   // Instagram Reels: platform=Instagram AND has keywords AND NOT enhanced
-  return platform === 'instagram' && searchParams?.runner !== 'instagram_enhanced';
+  return (
+    platform === 'instagram' &&
+    searchParams?.runner !== 'instagram_enhanced' &&
+    searchParams?.runner !== 'instagram_us_reels'
+  );
 }
 
 function isInstagramEnhanced(jobPlatform?: string, keywords?: unknown, searchParams?: any): boolean {
@@ -85,6 +90,11 @@ function isGoogleSerp(jobPlatform?: string, searchParams?: any): boolean {
   const platform = (jobPlatform ?? '').toLowerCase();
   const runner = (searchParams?.runner ?? '').toLowerCase();
   return platform === 'google_serp' || runner === 'google_serp';
+}
+
+function isInstagramUsReels(searchParams?: any): boolean {
+  const runner = (searchParams?.runner ?? '').toLowerCase();
+  return runner === 'instagram_us_reels';
 }
 
 export async function runSearchJob(jobId: string): Promise<SearchExecutionResult> {
@@ -109,6 +119,8 @@ export async function runSearchJob(jobId: string): Promise<SearchExecutionResult
     providerResult = await runInstagramSimilarProvider({ job, config }, service);
   } else if (isInstagramEnhanced(job.platform, job.keywords, searchParams)) {
     providerResult = await runInstagramEnhancedProvider({ job, config }, service);
+  } else if (isInstagramUsReels(searchParams)) {
+    providerResult = await runInstagramUsReelsProvider({ job, config }, service);
   } else if (isInstagramReels(job.platform, job.keywords, searchParams)) {
     providerResult = await runInstagramReelsProvider({ job, config }, service);
   } else if (isGoogleSerp(job.platform, searchParams)) {

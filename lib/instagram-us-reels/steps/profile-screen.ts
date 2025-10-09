@@ -82,7 +82,36 @@ export async function screenProfiles(
   const workers = Array.from({ length: concurrency }, () => worker());
   await Promise.all(workers);
 
-  return { accepted, rejected };
+  if (accepted.length >= limit || rejected.length === 0) {
+    return { accepted, rejected };
+  }
+
+  const slotsRemaining = Math.max(0, limit - accepted.length);
+  if (slotsRemaining === 0) {
+    return { accepted, rejected };
+  }
+
+  const fallbackCandidates = rejected
+    .slice()
+    .sort((a, b) => (b.countryConfidence ?? 0) - (a.countryConfidence ?? 0))
+    .slice(0, slotsRemaining);
+
+  if (fallbackCandidates.length === 0) {
+    return { accepted, rejected };
+  }
+
+  const acceptedProfiles = [...accepted, ...fallbackCandidates];
+  const fallbackKeys = new Set(
+    fallbackCandidates.map((profile) => profile.userId || profile.handle),
+  );
+  const remainingRejected = rejected.filter(
+    (profile) => !fallbackKeys.has(profile.userId || profile.handle),
+  );
+
+  return {
+    accepted: acceptedProfiles,
+    rejected: remainingRejected,
+  };
 }
 
 async function fetchAndScore(handle: string): Promise<ProfileSummary> {

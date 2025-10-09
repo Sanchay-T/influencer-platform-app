@@ -224,6 +224,7 @@ const SearchResults = ({ searchData }) => {
 
   // Normalize platform from either selectedPlatform (wizard) or platform (reopen flow)
   const platformNormalized = (searchData?.selectedPlatform || searchData?.platform || 'tiktok').toString().toLowerCase();
+  const isInstagramUs = platformNormalized === 'instagram-1.0' || platformNormalized === 'instagram_1.0' || platformNormalized === 'instagram_us_reels';
 
   useEffect(() => {
     setSelectedCreators({});
@@ -327,10 +328,17 @@ const SearchResults = ({ searchData }) => {
         setIsFetching(true);
         // Determine API endpoint based on platform
         let apiEndpoint = '/api/scraping/tiktok';
-        if (platformNormalized === 'google-serp' || platformNormalized === 'google_serp') apiEndpoint = '/api/scraping/google-serp';
-        else if (platformNormalized === 'instagram') apiEndpoint = '/api/scraping/instagram-reels';
-        else if (platformNormalized === 'enhanced-instagram') apiEndpoint = '/api/scraping/instagram-enhanced';
-        else if (platformNormalized === 'youtube') apiEndpoint = '/api/scraping/youtube';
+        if (platformNormalized === 'google-serp' || platformNormalized === 'google_serp') {
+          apiEndpoint = '/api/scraping/google-serp';
+        } else if (platformNormalized === 'instagram-1.0' || platformNormalized === 'instagram_1.0' || platformNormalized === 'instagram_us_reels') {
+          apiEndpoint = '/api/scraping/instagram-us-reels';
+        } else if (platformNormalized === 'instagram') {
+          apiEndpoint = '/api/scraping/instagram-reels';
+        } else if (platformNormalized === 'enhanced-instagram') {
+          apiEndpoint = '/api/scraping/instagram-enhanced';
+        } else if (platformNormalized === 'youtube') {
+          apiEndpoint = '/api/scraping/youtube';
+        }
 
         // Making API call to fetch results
 
@@ -536,10 +544,17 @@ const SearchResults = ({ searchData }) => {
         } else {
           // As a fallback, re-fetch latest results from the corresponding endpoint
           let apiEndpoint = '/api/scraping/tiktok';
-          if (platformNormalized === 'google-serp' || platformNormalized === 'google_serp') apiEndpoint = '/api/scraping/google-serp';
-          else if (platformNormalized === 'instagram') apiEndpoint = '/api/scraping/instagram-reels';
-        else if (platformNormalized === 'enhanced-instagram') apiEndpoint = '/api/scraping/instagram-enhanced';
-        else if (platformNormalized === 'youtube') apiEndpoint = '/api/scraping/youtube';
+          if (platformNormalized === 'google-serp' || platformNormalized === 'google_serp') {
+            apiEndpoint = '/api/scraping/google-serp';
+          } else if (platformNormalized === 'instagram-1.0' || platformNormalized === 'instagram_1.0' || platformNormalized === 'instagram_us_reels') {
+            apiEndpoint = '/api/scraping/instagram-us-reels';
+          } else if (platformNormalized === 'instagram') {
+            apiEndpoint = '/api/scraping/instagram-reels';
+          } else if (platformNormalized === 'enhanced-instagram') {
+            apiEndpoint = '/api/scraping/instagram-enhanced';
+          } else if (platformNormalized === 'youtube') {
+            apiEndpoint = '/api/scraping/youtube';
+          }
 
         fetch(`${apiEndpoint}?jobId=${searchData.jobId}`, { credentials: 'include' })
           .then((response) => response.json())
@@ -743,6 +758,11 @@ const SearchResults = ({ searchData }) => {
           {platformNormalized === "enhanced-instagram" && (
             <Badge variant="secondary" className="bg-gradient-to-r from-violet-500/20 to-pink-500/20 text-violet-300 border-violet-500/30">
               AI-Enhanced
+            </Badge>
+          )}
+          {isInstagramUs && (
+            <Badge variant="secondary" className="bg-gradient-to-r from-emerald-500/15 to-sky-500/15 text-emerald-200 border-emerald-500/30">
+              US Reels
             </Badge>
           )}
         </div>
@@ -967,6 +987,24 @@ const SearchResults = ({ searchData }) => {
                   "";
                 const imageUrl = ensureImageUrl(avatarUrl);
                 const isSelected = !!selectedCreators[rowId];
+                const metadata = creator.metadata || {};
+                const matchedTermsDisplay = Array.isArray(metadata.matchedTerms)
+                  ? metadata.matchedTerms.slice(0, 4)
+                  : [];
+                const snippetText =
+                  typeof metadata.snippet === "string" && metadata.snippet.trim().length > 0
+                    ? metadata.snippet.trim()
+                    : null;
+                const usConfidenceValue =
+                  creator?.metadata?.usConfidence ??
+                  creator?.stats?.usConfidence ??
+                  creator?.reel?.usConfidence ??
+                  null;
+                const relevanceScoreValue =
+                  creator?.metadata?.relevanceScore ??
+                  creator?.stats?.relevanceScore ??
+                  creator?.reel?.relevanceScore ??
+                  null;
 
                 return (
                 <TableRow
@@ -1032,6 +1070,37 @@ const SearchResults = ({ searchData }) => {
                           <span className="text-sm text-zinc-500">{snapshot.handle}</span>
                         )}
                         <div className="text-xs text-zinc-400">@{snapshot.handle}</div>
+                        {isInstagramUs && matchedTermsDisplay.length > 0 && (
+                          <div className="flex flex-wrap gap-1 pt-1">
+                            {matchedTermsDisplay.map((term) => (
+                              <span
+                                key={term}
+                                className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-emerald-200"
+                              >
+                                {term}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {isInstagramUs && snippetText && (
+                          <p className="text-[11px] italic text-zinc-400 line-clamp-2">
+                            “{snippetText}”
+                          </p>
+                        )}
+                        {isInstagramUs && (usConfidenceValue != null || relevanceScoreValue != null) && (
+                          <div className="flex flex-wrap gap-1 text-[11px] text-emerald-200">
+                            {usConfidenceValue != null && (
+                              <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 uppercase tracking-wide">
+                                US {Math.round(usConfidenceValue * 100)}%
+                              </span>
+                            )}
+                            {relevanceScoreValue != null && (
+                              <span className="rounded-full border border-sky-500/40 bg-sky-500/10 px-2 py-0.5 uppercase tracking-wide text-sky-200">
+                                Relevance {Math.round(relevanceScoreValue * 100)}%
+                              </span>
+                            )}
+                          </div>
+                        )}
                         <div className="space-y-1 text-xs text-zinc-400">
                           <div>
                             <span className="font-medium text-zinc-300">Followers:</span>{' '}
@@ -1051,6 +1120,41 @@ const SearchResults = ({ searchData }) => {
                           )}
                         </div>
                       </div>
+                      {isInstagramUs && (matchedTermsDisplay.length > 0 || snippetText || usConfidenceValue != null || relevanceScoreValue != null) && (
+                        <div className="hidden sm:flex flex-col gap-1 pt-1">
+                          {matchedTermsDisplay.length > 0 && (
+                            <div className="flex flex-wrap gap-1 text-[10px] uppercase tracking-wide text-emerald-200">
+                              {matchedTermsDisplay.map((term) => (
+                                <span
+                                  key={term}
+                                  className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5"
+                                >
+                                  {term}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {snippetText && (
+                            <p className="text-[11px] italic text-zinc-400 line-clamp-2">
+                              “{snippetText}”
+                            </p>
+                          )}
+                          {(usConfidenceValue != null || relevanceScoreValue != null) && (
+                            <div className="flex flex-wrap gap-1 text-[11px] text-emerald-200">
+                              {usConfidenceValue != null && (
+                                <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 uppercase tracking-wide">
+                                  US {Math.round(usConfidenceValue * 100)}%
+                                </span>
+                              )}
+                              {relevanceScoreValue != null && (
+                                <span className="rounded-full border border-sky-500/40 bg-sky-500/10 px-2 py-0.5 uppercase tracking-wide text-sky-200">
+                                  Relevance {Math.round(relevanceScoreValue * 100)}%
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell className="hidden sm:table-cell px-4 py-4 align-top">
@@ -1198,6 +1302,24 @@ const SearchResults = ({ searchData }) => {
             const emails = extractEmails(raw);
             const profileUrl = renderProfileLink(raw);
             const followerLabel = snapshot.followers != null ? formatFollowers(snapshot.followers) : null;
+            const metadata = raw.metadata || {};
+            const matchedTermsDisplay = Array.isArray(metadata.matchedTerms)
+              ? metadata.matchedTerms.slice(0, 4)
+              : [];
+            const snippetText =
+              typeof metadata.snippet === "string" && metadata.snippet.trim().length > 0
+                ? metadata.snippet.trim()
+                : null;
+            const usConfidenceValue =
+              raw?.metadata?.usConfidence ??
+              raw?.stats?.usConfidence ??
+              raw?.reel?.usConfidence ??
+              null;
+            const relevanceScoreValue =
+              raw?.metadata?.relevanceScore ??
+              raw?.stats?.relevanceScore ??
+              raw?.reel?.relevanceScore ??
+              null;
               const rawViewCount =
                 raw?.video?.stats?.playCount ??
                 raw?.video?.stats?.viewCount ??
@@ -1271,11 +1393,11 @@ const SearchResults = ({ searchData }) => {
                   <div className="flex flex-1 flex-col gap-3 p-4 text-sm text-zinc-300">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="line-clamp-1 text-base font-semibold text-zinc-100">
-                          {snapshot.displayName || snapshot.handle}
-                        </p>
-                        {secondaryLine ? (
-                          <p className="text-xs text-zinc-500">{secondaryLine}</p>
+                    <p className="line-clamp-1 text-base font-semibold text-zinc-100">
+                      {snapshot.displayName || snapshot.handle}
+                    </p>
+                    {secondaryLine ? (
+                      <p className="text-xs text-zinc-500">{secondaryLine}</p>
                         ) : null}
                       </div>
                       <Badge
@@ -1288,6 +1410,21 @@ const SearchResults = ({ searchData }) => {
                     <p className="line-clamp-3 text-xs text-zinc-400">
                       {raw?.creator?.bio || raw?.bio || raw?.description || "No bio available"}
                     </p>
+                    {isInstagramUs && matchedTermsDisplay.length > 0 && (
+                      <div className="flex flex-wrap gap-1 text-[10px] uppercase tracking-wide text-emerald-200">
+                        {matchedTermsDisplay.map((term) => (
+                          <span
+                            key={term}
+                            className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5"
+                          >
+                            {term}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {isInstagramUs && snippetText && (
+                      <p className="text-[11px] italic text-zinc-400 line-clamp-2">“{snippetText}”</p>
+                    )}
                     <div className="flex flex-wrap gap-2 text-[11px] text-zinc-300">
                       {followerLabel && (
                         <span className="rounded-full border border-zinc-700/70 bg-zinc-900/60 px-2 py-1 font-medium text-zinc-200">
@@ -1302,6 +1439,16 @@ const SearchResults = ({ searchData }) => {
                       {viewCountLabel && (
                         <span className="rounded-full border border-zinc-700/70 bg-zinc-900/60 px-2 py-1 font-medium text-zinc-200">
                           {viewCountLabel} views
+                        </span>
+                      )}
+                      {isInstagramUs && usConfidenceValue != null && (
+                        <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 font-medium text-emerald-200">
+                          US {Math.round(usConfidenceValue * 100)}%
+                        </span>
+                      )}
+                      {isInstagramUs && relevanceScoreValue != null && (
+                        <span className="rounded-full border border-sky-500/40 bg-sky-500/10 px-2 py-1 font-medium text-sky-200">
+                          Relevance {Math.round(relevanceScoreValue * 100)}%
                         </span>
                       )}
                     </div>
