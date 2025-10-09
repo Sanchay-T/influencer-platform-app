@@ -57,12 +57,12 @@ npm install
 
 Check `.env` file:
 ```bash
-PERPLEXITY_API_KEY=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
-SC_API_KEY=Oy1ioE9pQTfUvuC1OvBmpIWHYZh1
-SERPAPI_KEY=b38ebb059692f5cdf1b02f709708a5cc4f7b0a782f58d781a066eed6d77e9d3b
+PERPLEXITY_API_KEY=your_perplexity_key_here
+SC_API_KEY=your_scrapecreators_key_here
+SERPAPI_KEY=your_serpapi_key_here
 ```
 
-All keys are already configured!
+Make sure your keys are properly configured in the `.env` file!
 
 ### 3. Run a Search
 
