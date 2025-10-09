@@ -1,0 +1,46 @@
+{
+  "reels": [
+    {
+      "url": "https://www.instagram.com/reel/C6QeGv9Jv7L/",
+      "handle": "coffeecrawlusa",
+      "fullName": "Coffee Crawl USA",
+      "caption": "Exploring the best coffee shops in Seattle ☕️✨",
+      "location": "Seattle, WA",
+      "followers": 18500,
+      "engagement": "2,100 likes, 120 comments",
+      "usEvidence": "Location tag: Seattle, WA; bio: 'Exploring coffee shops across the USA'"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C5z8Kj2Jt8A/",
+      "handle": "nyccoffee",
+      "fullName": "NYC Coffee",
+      "caption": "Hidden gem coffee shop in Brooklyn you need to try!",
+      "location": "Brooklyn, NY",
+      "followers": 32000,
+      "engagement": "3,400 likes, 210 comments",
+      "usEvidence": "Bio: 'NYC coffee shop reviews'; location tag: Brooklyn, NY"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C6A1bT1Jw3B/",
+      "handle": "lafoodiegirl",
+      "fullName": "LA Foodie Girl",
+      "caption": "My favorite coffee shop in Los Angeles ☕️",
+      "location": "Los Angeles, CA",
+      "followers": 54000,
+      "engagement": "5,600 likes, 340 comments",
+      "usEvidence": "Bio: 'LA-based foodie'; location tag: Los Angeles, CA"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C5w9Qm8Jv2L/",
+      "handle": "atlantacoffeeclub",
+      "fullName": "Atlanta Coffee Club",
+      "caption": "Best coffee shop for remote work in Atlanta!",
+      "location": "Atlanta, GA",
+      "followers": 12000,
+      "engagement": "1,800 likes, 95 comments",
+      "usEvidence": "Bio: 'Atlanta’s coffee scene'; location tag: Atlanta, GA"
+    }
+  ],
+  "totalFound": 4,
+  "keyword": "coffee shop"
+}

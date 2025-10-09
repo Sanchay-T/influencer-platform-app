@@ -2,13 +2,23 @@ import { Resend } from 'resend';
 import { qstash } from '@/lib/queue/qstash';
 import { clerkBackendClient } from '@/lib/auth/backend-auth';
 
+const resendApiKey = process.env.RESEND_API_KEY;
+if (!resendApiKey) {
+  throw new Error('RESEND_API_KEY must be set before sending emails. Add it to your environment configuration.');
+}
+
 // Initialize Resend
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(resendApiKey);
+
+const resolvedSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+if (!resolvedSiteUrl) {
+  throw new Error('NEXT_PUBLIC_SITE_URL must be configured for email scheduling so QStash can reach the application.');
+}
 
 // Email service configuration
 export const EMAIL_CONFIG = {
   fromAddress: process.env.EMAIL_FROM_ADDRESS || 'hello@gemz.io',
-  siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
+  siteUrl: resolvedSiteUrl,
   delays: {
     welcome: '10m',        // 10 minutes after signup
     abandonment: '2h',     // 2 hours if no trial started
