@@ -828,3 +828,60 @@
 [2025-10-08 19:59:39.878] [PAYMENT] [STRIPE-REDIRECT] - Redirecting user to Stripe checkout
 [2025-10-08 20:10:54.019] [MODAL] [CLOSE] - Modal closeed
 [2025-10-08 20:10:54.225] [MODAL] [CLOSE] - Modal closeed
+[2025-10-09 19:01:53.091] [MODAL] [CLOSE] - Modal closeed
+[2025-10-09 19:01:53.091] [MODAL] [CLOSE] - Modal closeed
+[2025-10-09 19:01:53.146] [MODAL] [OPEN] - Modal opened
+[2025-10-09 19:01:53.171] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-10-09 19:03:15.753] [MODAL] [CLOSE] - Modal closeed
+[2025-10-09 19:03:15.903] [MODAL] [CLOSE] - Modal closeed
+[2025-10-09 19:03:15.914] [MODAL] [OPEN] - Modal opened
+[2025-10-09 19:03:15.914] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-10-09 19:03:33.093] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-10-09 19:03:34.873] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-10-09 19:03:35.228] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-10-09 19:03:35.239] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-10-09 19:03:35.239] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-10-09 19:03:36.880] [ERROR] [API-ERROR] - Step 1 API call failed
+[2025-10-09 19:03:36.884] [ERROR] [FORM-ERROR] - Step 1 form submission failed
+[2025-10-09 19:03:36.884] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-10-09 19:05:11.277] [MODAL] [CLOSE] - Modal closeed
+[2025-10-09 19:05:11.410] [MODAL] [OPEN] - Modal opened
+[2025-10-09 19:05:11.413] [MODAL] [CLOSE] - Modal closeed
+[2025-10-09 19:05:11.413] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-10-09 19:05:34.578] [MODAL] [CLOSE] - Modal closeed
+[2025-10-09 19:05:34.737] [MODAL] [CLOSE] - Modal closeed
+[2025-10-09 19:05:34.737] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-10-09 19:05:34.737] [MODAL] [OPEN] - Modal opened
+[2025-10-09 19:08:54.827] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-10-09 19:08:54.901] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-10-09 19:08:55.019] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-10-09 19:08:56.139] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-10-09 19:08:56.163] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-10-09 19:08:56.268] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-10-09 19:08:56.318] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-10-09 19:08:57.121] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-10-09 19:08:57.130] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-10-09 19:08:57.131] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-10-09 19:08:57.455] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-10-09 19:08:57.459] [ERROR] [API-ERROR] - Step 1 API call failed
+[2025-10-09 19:08:57.459] [ERROR] [FORM-ERROR] - Step 1 form submission failed
+[2025-10-09 19:08:58.989] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-10-09 19:08:58.999] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-10-09 19:08:58.999] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-10-09 19:08:59.052] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-10-09 19:08:59.058] [ERROR] [API-ERROR] - Step 1 API call failed
+[2025-10-09 19:08:59.058] [ERROR] [FORM-ERROR] - Step 1 form submission failed
+[2025-10-09 19:08:59.573] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-10-09 19:08:59.583] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-10-09 19:08:59.583] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-10-09 19:08:59.622] [ERROR] [API-ERROR] - Step 1 API call failed
+[2025-10-09 19:08:59.626] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-10-09 19:08:59.626] [ERROR] [FORM-ERROR] - Step 1 form submission failed
+[2025-10-09 19:08:59.918] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-10-09 19:08:59.923] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-10-09 19:08:59.923] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-10-09 19:08:59.963] [ERROR] [API-ERROR] - Step 1 API call failed
+[2025-10-09 19:08:59.966] [ERROR] [FORM-ERROR] - Step 1 form submission failed
+[2025-10-09 19:08:59.966] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-10-09 19:19:26.929] [MODAL] [CLOSE] - Modal closeed
+[2025-10-09 19:19:27.932] [MODAL] [CLOSE] - Modal closeed

@@ -29,6 +29,10 @@ export function buildEndpoint(platformNormalized: string, hasTargetUsername: boo
   switch (normalized) {
     case 'instagram':
       return `/api/scraping/instagram-reels?jobId=${jobId}`
+    case 'instagram-1.0':
+    case 'instagram_1.0':
+    case 'instagram_us_reels':
+      return `/api/scraping/instagram-us-reels?jobId=${jobId}`
     case 'enhanced-instagram':
       return `/api/scraping/instagram-enhanced?jobId=${jobId}`
     case 'google-serp':
@@ -102,6 +106,13 @@ export function computeStage({
       if (percent < 20) return `Searching Instagram reels for ${keyword}`
       if (percent < 60) return 'Enhancing creator profiles'
       return 'Compiling Instagram results'
+    case 'instagram-1.0':
+    case 'instagram_1.0':
+    case 'instagram_us_reels':
+      if (percent < 20) return `Expanding US-focused Instagram keywords for ${keyword}`
+      if (percent < 50) return 'Harvesting and vetting US creator handles'
+      if (percent < 80) return 'Screening profiles for US indicators'
+      return 'Scoring Instagram reels for relevance'
     case 'youtube':
       if (percent < 30) return `Scanning YouTube for ${keyword}`
       if (percent < 70) return 'Collecting channel analytics'

@@ -76,7 +76,9 @@ export async function runInstagramUsReelsPipeline(
   });
   writeSnapshot('step-4-reels', reels);
 
-  if (options.transcripts ?? false) {
+  const shouldAttachTranscripts = options.transcripts !== false;
+
+  if (shouldAttachTranscripts) {
     await attachTranscripts(reels, {
       concurrency: Number(process.env.US_REELS_TRANSCRIPT_CONCURRENCY ?? 2),
     });
@@ -87,7 +89,19 @@ export async function runInstagramUsReelsPipeline(
     })));
   }
 
-  const scored = scoreReels(reels, expansion);
-  writeSnapshot('step-6-scored', scored);
-  return scored;
+  const scoredAll = scoreReels(reels, expansion, {
+    originalKeyword: context.keyword,
+  });
+  const relevant = scoredAll.filter((reel) => {
+    const matched = (reel as any).matchedTerms;
+    return Array.isArray(matched) && matched.length > 0;
+  });
+
+  writeSnapshot('step-6-scored', {
+    total: scoredAll.length,
+    relevant: relevant.length,
+    items: relevant,
+  });
+
+  return relevant;
 }
