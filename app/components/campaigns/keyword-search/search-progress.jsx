@@ -209,6 +209,9 @@ export default function SearchProgress({
             const buffered = Math.max(jobProgress, derived)
             const withMomentum = Math.max(buffered, displayProgress > 0 ? displayProgress + 5 : 10)
             effectiveProgress = Math.min(withMomentum, 95)
+          } else {
+            const baseline = displayProgress > 0 ? displayProgress : 10
+            effectiveProgress = Math.min(Math.max(jobProgress, baseline), 95)
           }
         }
 
