@@ -63,14 +63,16 @@ export async function PATCH(request: Request) {
 
     // Get user email from Clerk
     console.log('📧 [ONBOARDING-COMPLETE] Getting user email from Clerk');
-    const userEmail = await getUserEmailFromClerk(userId);
-    if (!userEmail) {
-      console.error('❌ [ONBOARDING-COMPLETE] Could not retrieve user email');
-      return NextResponse.json({ 
-        error: 'Could not retrieve user email' 
-      }, { status: 400 });
+    let userEmail = await getUserEmailFromClerk(userId);
+    if (!userEmail && userProfile.email) {
+      userEmail = userProfile.email;
+      console.log('✅ [ONBOARDING-COMPLETE] Fallback to profile email succeeded:', userEmail);
     }
-    console.log('✅ [ONBOARDING-COMPLETE] User email retrieved:', userEmail);
+    if (!userEmail) {
+      console.warn('⚠️ [ONBOARDING-COMPLETE] Proceeding without user email (emails will be skipped)');
+    } else {
+      console.log('✅ [ONBOARDING-COMPLETE] User email resolved:', userEmail);
+    }
 
     // ⚠️ SKIP STRIPE SETUP: User already has Stripe customer + subscription from checkout
     // This endpoint is called AFTER payment success, so Stripe resources already exist
@@ -129,14 +131,16 @@ export async function PATCH(request: Request) {
     };
     
     console.log('📧 [ONBOARDING-COMPLETE] Email user info:', userInfo);
-    console.log('📧 [ONBOARDING-COMPLETE] Target email:', userEmail);
+    console.log('📧 [ONBOARDING-COMPLETE] Target email:', userEmail ?? 'NONE');
     console.log('📧 [ONBOARDING-COMPLETE] Trial dates for scheduling:', {
       trialStartDate: trialData.trialStartDate?.toISOString(),
       trialEndDate: trialData.trialEndDate?.toISOString()
     });
     
     const emailStartTime = Date.now();
-    const emailResult = await scheduleTrialEmails(userId, userInfo);
+    const emailResult = userEmail 
+      ? await scheduleTrialEmails(userId, userInfo)
+      : { success: false, error: 'email_not_available' };
     console.log('⏱️ [ONBOARDING-COMPLETE] Email scheduling completed in:', Date.now() - emailStartTime, 'ms');
     
     if (emailResult.success) {

@@ -1,6 +1,7 @@
 import { Resend } from 'resend';
 import { qstash } from '@/lib/queue/qstash';
 import { clerkBackendClient } from '@/lib/auth/backend-auth';
+import { getUserProfile } from '@/lib/db/queries/user-queries';
 
 const resendApiKey = process.env.RESEND_API_KEY;
 if (!resendApiKey) {
@@ -196,6 +197,15 @@ export async function getUserEmailFromClerk(userId: string): Promise<string | nu
     return primaryEmail.emailAddress;
   } catch (error) {
     console.error('❌ [CLERK-EMAIL] Failed to get user email from Clerk:', error);
+    try {
+      const fallbackProfile = await getUserProfile(userId);
+      if (fallbackProfile?.email) {
+        console.log('✅ [CLERK-EMAIL] Fallback to database email succeeded:', fallbackProfile.email);
+        return fallbackProfile.email;
+      }
+    } catch (fallbackError) {
+      console.error('❌ [CLERK-EMAIL] Fallback lookup failed:', fallbackError);
+    }
     return null;
   }
 }

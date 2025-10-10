@@ -614,37 +614,30 @@ const SearchResults = ({ searchData }) => {
   if (!filteredCreators.length && !showFilteredEmpty) {
     if (waitingForResults) {
       return (
-        <>
-          {/* Keep polling even while showing the minimal loader */}
+        <div className="w-full max-w-md mx-auto">
           {shouldPoll && (
-            <div className="hidden" aria-hidden="true">
-              <SearchProgress 
-                jobId={searchData.jobId}
-                platform={searchData.selectedPlatform || searchData.platform}
-                searchData={searchData}
-                onMeta={setEnhancedMeta}
-                onProgress={setProgressInfo}
-                onIntermediateResults={(data) => {
-                  try {
-                    const incoming = Array.isArray(data?.creators) ? data.creators : [];
-                    if (incoming.length === 0) return;
-                    setStillProcessing(true);
-                    setIsLoading(false);
-                    setIsFetching(false);
-                    setCreators((prev) => dedupeCreators([...prev, ...incoming], { platformHint: platformNormalized }));
-                  } catch (e) {
-                    console.error('Error handling intermediate results (initial wait):', e);
-                  }
-                }}
-                onComplete={handleSearchComplete}
-              />
-            </div>
+            <SearchProgress
+              jobId={searchData.jobId}
+              platform={searchData.selectedPlatform || searchData.platform}
+              searchData={searchData}
+              onMeta={setEnhancedMeta}
+              onProgress={setProgressInfo}
+              onIntermediateResults={(data) => {
+                try {
+                  const incoming = Array.isArray(data?.creators) ? data.creators : [];
+                  if (incoming.length === 0) return;
+                  setStillProcessing(true);
+                  setIsLoading(false);
+                  setIsFetching(false);
+                  setCreators((prev) => dedupeCreators([...prev, ...incoming], { platformHint: platformNormalized }));
+                } catch (e) {
+                  console.error('Error handling intermediate results (initial wait):', e);
+                }
+              }}
+              onComplete={handleSearchComplete}
+            />
           )}
-          <div className="flex flex-col items-center justify-center min-h-[240px] text-sm text-zinc-400 gap-2">
-            <Loader2 className="h-4 w-4 animate-spin text-pink-400" />
-            Waiting for results...
-          </div>
-        </>
+        </div>
       );
     }
 
@@ -1100,19 +1093,10 @@ const SearchResults = ({ searchData }) => {
                             “{snippetText}”
                           </p>
                         )}
-                        {isInstagramUs && (usConfidenceValue != null || relevanceScoreValue != null) && (
-                          <div className="flex flex-wrap gap-1 text-[11px] text-emerald-200">
-                            {usConfidenceValue != null && (
-                              <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 uppercase tracking-wide">
-                                US {Math.round(usConfidenceValue * 100)}%
-                              </span>
-                            )}
-                            {relevanceScoreValue != null && (
-                              <span className="rounded-full border border-sky-500/40 bg-sky-500/10 px-2 py-0.5 uppercase tracking-wide text-sky-200">
-                                Relevance {Math.round(relevanceScoreValue * 100)}%
-                              </span>
-                            )}
-                          </div>
+                        {isInstagramUs && snippetText && (
+                          <p className="hidden sm:block text-[11px] italic text-zinc-400 line-clamp-2">
+                            “{snippetText}”
+                          </p>
                         )}
                         <div className="space-y-1 text-xs text-zinc-400">
                           <div>
@@ -1133,29 +1117,6 @@ const SearchResults = ({ searchData }) => {
                           )}
                         </div>
                       </div>
-                      {isInstagramUs && (snippetText || usConfidenceValue != null || relevanceScoreValue != null) && (
-                        <div className="hidden sm:flex flex-col gap-1 pt-1">
-                          {snippetText && (
-                            <p className="text-[11px] italic text-zinc-400 line-clamp-2">
-                              “{snippetText}”
-                            </p>
-                          )}
-                          {(usConfidenceValue != null || relevanceScoreValue != null) && (
-                            <div className="flex flex-wrap gap-1 text-[11px] text-emerald-200">
-                              {usConfidenceValue != null && (
-                                <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 uppercase tracking-wide">
-                                  US {Math.round(usConfidenceValue * 100)}%
-                                </span>
-                              )}
-                              {relevanceScoreValue != null && (
-                                <span className="rounded-full border border-sky-500/40 bg-sky-500/10 px-2 py-0.5 uppercase tracking-wide text-sky-200">
-                                  Relevance {Math.round(relevanceScoreValue * 100)}%
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )}
                     </div>
                   </TableCell>
                   <TableCell className="hidden sm:table-cell px-4 py-4 align-top">
@@ -1425,16 +1386,6 @@ const SearchResults = ({ searchData }) => {
                       {viewCountLabel && (
                         <span className="rounded-full border border-zinc-700/70 bg-zinc-900/60 px-2 py-1 font-medium text-zinc-200">
                           {viewCountLabel} views
-                        </span>
-                      )}
-                      {isInstagramUs && usConfidenceValue != null && (
-                        <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 font-medium text-emerald-200">
-                          US {Math.round(usConfidenceValue * 100)}%
-                        </span>
-                      )}
-                      {isInstagramUs && relevanceScoreValue != null && (
-                        <span className="rounded-full border border-sky-500/40 bg-sky-500/10 px-2 py-1 font-medium text-sky-200">
-                          Relevance {Math.round(relevanceScoreValue * 100)}%
                         </span>
                       )}
                     </div>
