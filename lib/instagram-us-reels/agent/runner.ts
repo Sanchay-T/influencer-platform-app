@@ -216,6 +216,7 @@ function buildScoredReels(
     const shortcode = post?.shortcode ?? extractShortcode(row.url);
     const takenAtIso = post?.taken_at_iso ?? row.updated_at ?? row.discovered_at;
     const takenAt = takenAtIso ? Date.parse(takenAtIso) : Date.now();
+    const thumbnail = row.thumbnail || post?.thumbnail || null;
 
     const matchedTerms = deriveMatchedTerms(row, keyword);
 
@@ -229,6 +230,7 @@ function buildScoredReels(
       likeCount: undefined,
       transcript: row.transcript ?? null,
       owner,
+      thumbnail: thumbnail ?? undefined,
       relevanceScore: scoreRelevance(row.relevance_decision),
       usConfidence: scoreCountryConfidence(row.us_decision),
     };

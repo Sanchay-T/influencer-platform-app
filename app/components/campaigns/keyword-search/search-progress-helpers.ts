@@ -28,7 +28,6 @@ export function buildEndpoint(platformNormalized: string, hasTargetUsername: boo
   }
   switch (normalized) {
     case 'instagram':
-      return `/api/scraping/instagram-reels?jobId=${jobId}`
     case 'instagram-1.0':
     case 'instagram_1.0':
     case 'instagram_us_reels':
@@ -108,9 +107,6 @@ export function computeStage({
       if (percent < 65) return 'Enriching Instagram profiles from ScrapeCreators'
       return 'Packaging Google SERP creator list'
     case 'instagram':
-      if (percent < 20) return `Searching Instagram reels for ${keyword}`
-      if (percent < 60) return 'Enhancing creator profiles'
-      return 'Compiling Instagram results'
     case 'instagram-1.0':
     case 'instagram_1.0':
     case 'instagram_us_reels':

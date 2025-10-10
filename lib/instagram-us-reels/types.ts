@@ -50,6 +50,7 @@ export interface ReelMedia {
   viewCount?: number;
   likeCount?: number;
   transcript?: string | null;
+  thumbnail?: string | null;
   owner: ProfileSummary;
 }
 
