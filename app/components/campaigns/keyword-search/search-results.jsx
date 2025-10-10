@@ -224,7 +224,14 @@ const SearchResults = ({ searchData }) => {
 
   // Normalize platform from either selectedPlatform (wizard) or platform (reopen flow)
   const platformNormalized = (searchData?.selectedPlatform || searchData?.platform || 'tiktok').toString().toLowerCase();
-  const isInstagramUs = platformNormalized === 'instagram-1.0' || platformNormalized === 'instagram_1.0' || platformNormalized === 'instagram_us_reels';
+  const isInstagramUs =
+    platformNormalized === 'instagram-1.0' ||
+    platformNormalized === 'instagram_1.0' ||
+    platformNormalized === 'instagram_us_reels' ||
+    platformNormalized === 'instagram-2.0' ||
+    platformNormalized === 'instagram_2.0' ||
+    platformNormalized === 'instagram-v2' ||
+    platformNormalized === 'instagram_v2';
 
   useEffect(() => {
     setSelectedCreators({});
@@ -330,6 +337,13 @@ const SearchResults = ({ searchData }) => {
         let apiEndpoint = '/api/scraping/tiktok';
         if (platformNormalized === 'google-serp' || platformNormalized === 'google_serp') {
           apiEndpoint = '/api/scraping/google-serp';
+        } else if (
+          platformNormalized === 'instagram-2.0' ||
+          platformNormalized === 'instagram_2.0' ||
+          platformNormalized === 'instagram-v2' ||
+          platformNormalized === 'instagram_v2'
+        ) {
+          apiEndpoint = '/api/scraping/instagram-v2';
         } else if (platformNormalized === 'instagram-1.0' || platformNormalized === 'instagram_1.0' || platformNormalized === 'instagram_us_reels') {
           apiEndpoint = '/api/scraping/instagram-us-reels';
         } else if (platformNormalized === 'instagram') {
@@ -546,6 +560,13 @@ const SearchResults = ({ searchData }) => {
           let apiEndpoint = '/api/scraping/tiktok';
           if (platformNormalized === 'google-serp' || platformNormalized === 'google_serp') {
             apiEndpoint = '/api/scraping/google-serp';
+          } else if (
+            platformNormalized === 'instagram-2.0' ||
+            platformNormalized === 'instagram_2.0' ||
+            platformNormalized === 'instagram-v2' ||
+            platformNormalized === 'instagram_v2'
+          ) {
+            apiEndpoint = '/api/scraping/instagram-v2';
           } else if (platformNormalized === 'instagram-1.0' || platformNormalized === 'instagram_1.0' || platformNormalized === 'instagram_us_reels') {
             apiEndpoint = '/api/scraping/instagram-us-reels';
           } else if (platformNormalized === 'instagram') {

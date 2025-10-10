@@ -1,3 +1,4 @@
+import { headers } from 'next/headers';
 import { db } from '@/lib/db';
 import { campaigns, scrapingJobs, subscriptionPlans, users, userUsage } from '@/lib/db/schema';
 import { getUserProfile, incrementUsage } from '@/lib/db/queries/user-queries';
@@ -257,6 +258,18 @@ export class PlanValidator {
    */
   static async validateCampaignCreation(userId: string, requestId?: string): Promise<ValidationResult> {
     const logRequestId = requestId || BillingLogger.generateRequestId();
+
+    const bypass = await this.getPlanBypassResult('campaigns');
+    if (bypass) {
+      await BillingLogger.logAccess(
+        'GRANTED',
+        'Campaign creation allowed via plan validation bypass (testing)',
+        userId,
+        { resource: 'campaign_creation', bypass: true },
+        logRequestId
+      );
+      return bypass;
+    }
     
     await BillingLogger.logUsage(
       'LIMIT_CHECK',
@@ -401,6 +414,23 @@ export class PlanValidator {
    */
   static async validateCreatorSearch(userId: string, estimatedResults: number = 100, searchType?: string, requestId?: string): Promise<ValidationResult> {
     const logRequestId = requestId || BillingLogger.generateRequestId();
+
+    const bypass = await this.getPlanBypassResult('creators');
+    if (bypass) {
+      await BillingLogger.logAccess(
+        'GRANTED',
+        'Creator search allowed via plan validation bypass (testing)',
+        userId,
+        {
+          resource: 'creator_search',
+          searchType,
+          estimatedResults,
+          bypass: true
+        },
+        logRequestId
+      );
+      return bypass;
+    }
     
     await BillingLogger.logUsage(
       'LIMIT_CHECK',
@@ -567,6 +597,45 @@ export class PlanValidator {
     }
 
     return { allowed: true };
+  }
+
+  private static async getPlanBypassResult(scope: 'campaigns' | 'creators'): Promise<ValidationResult | null> {
+    if (process.env.NODE_ENV === 'production') return null;
+
+    const normalize = (value?: string | null) =>
+      value
+        ?.split(',')
+        .map((entry) => entry.trim().toLowerCase())
+        .filter(Boolean) ?? [];
+
+    const envBypass = normalize(process.env.PLAN_VALIDATION_BYPASS);
+    if (envBypass.includes('all') || envBypass.includes(scope)) {
+      return {
+        allowed: true,
+        reason: 'Plan validation bypassed for testing',
+        currentUsage: 0,
+        limit: -1,
+        usagePercentage: 0,
+      };
+    }
+
+    try {
+      const headerStore = await headers();
+      const headerBypass = normalize(headerStore.get('x-plan-bypass'));
+      if (headerBypass.includes('all') || headerBypass.includes(scope)) {
+        return {
+          allowed: true,
+          reason: 'Plan validation bypassed for testing',
+          currentUsage: 0,
+          limit: -1,
+          usagePercentage: 0,
+        };
+      }
+    } catch {
+      // headers() unavailable outside request context; ignore.
+    }
+
+    return null;
   }
 
   /**

@@ -1,3 +1,4 @@
+import { headers } from 'next/headers';
 import { db } from '@/lib/db';
 import { subscriptionPlans, campaigns, scrapingResults, scrapingJobs } from '@/lib/db/schema';
 import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
@@ -162,6 +163,11 @@ export class PlanEnforcementService {
     reason?: string;
     usage?: UsageInfo;
   }> {
+    const bypass = await this.getPlanBypassResult('campaigns');
+    if (bypass) {
+      return bypass;
+    }
+
     try {
       const usage = await this.getCurrentUsage(userId);
       
@@ -202,6 +208,11 @@ export class PlanEnforcementService {
     usage?: UsageInfo;
     adjustedLimit?: number;
   }> {
+    const bypass = await this.getPlanBypassResult('creators');
+    if (bypass) {
+      return bypass;
+    }
+
     try {
       const usage = await this.getCurrentUsage(userId);
       
@@ -264,6 +275,57 @@ export class PlanEnforcementService {
     } catch (error) {
       console.error(`❌ [PLAN-ENFORCEMENT] Error tracking campaign creation:`, error);
     }
+  }
+
+  private static async getPlanBypassResult(scope: 'campaigns' | 'creators'): Promise<{
+    allowed: boolean;
+    reason?: string;
+    usage?: UsageInfo;
+    adjustedLimit?: number;
+  } | null> {
+    if (process.env.NODE_ENV === 'production') {
+      return null;
+    }
+
+    const normalize = (value?: string | null) =>
+      value
+        ?.split(',')
+        .map((entry) => entry.trim().toLowerCase())
+        .filter(Boolean) ?? [];
+
+    const usage: UsageInfo = {
+      campaignsUsed: 0,
+      creatorsUsed: 0,
+      campaignsRemaining: Infinity,
+      creatorsRemaining: Infinity,
+      canCreateCampaign: true,
+      canCreateJob: true,
+    };
+
+    const envBypass = normalize(process.env.PLAN_VALIDATION_BYPASS);
+    if (envBypass.includes('all') || envBypass.includes(scope)) {
+      return {
+        allowed: true,
+        reason: 'Plan validation bypassed for testing',
+        usage,
+      };
+    }
+
+    try {
+      const headerStore = await headers();
+      const headerBypass = normalize(headerStore.get('x-plan-bypass'));
+      if (headerBypass.includes('all') || headerBypass.includes(scope)) {
+        return {
+          allowed: true,
+          reason: 'Plan validation bypassed for testing',
+          usage,
+        };
+      }
+    } catch {
+      // headers() unavailable outside request context; ignore.
+    }
+
+    return null;
   }
 
   /**
