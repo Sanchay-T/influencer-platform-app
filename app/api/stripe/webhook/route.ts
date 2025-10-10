@@ -209,7 +209,7 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
 
     // Update subscription info immediately using normalized tables
     console.log(`🔄 [WEBHOOK-TEST] ${webhookTestId} - Updating user profile with plan: ${planId}`);
-    const updateData = {
+    const updateData: Record<string, any> = {
       stripeSubscriptionId: subscription.id,
       currentPlan: planId,
       subscriptionStatus: subscription.status,
@@ -220,7 +220,13 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
       billingSyncStatus: 'webhook_subscription_created',
       lastWebhookEvent: 'customer.subscription.created',
       lastWebhookTimestamp: new Date(),
+      // 🔒 Ensure paid users are not forced back through onboarding UI post-checkout
+      onboardingStep: 'completed',
     };
+
+    if (subscription.status === 'active') {
+      updateData.trialStatus = 'converted';
+    }
     
     console.log(`🔍 [WEBHOOK-TEST] ${webhookTestId} - Update data being applied:`, updateData);
     await updateUserProfile(user.userId, updateData);
