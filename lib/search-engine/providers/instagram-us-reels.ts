@@ -3,6 +3,7 @@ import { runInstagramUsReelsAgent } from '@/lib/instagram-us-reels/agent/runner'
 import type { NormalizedCreator, ProviderContext, ProviderRunResult, SearchMetricsSnapshot } from '../types';
 import { SearchJobService } from '../job-service';
 import { computeProgress, sleep } from '../utils';
+import { logger, LogCategory } from '@/lib/logging';
 
 const DEFAULT_STREAM_CHUNK = Math.max(
   1,
@@ -66,6 +67,15 @@ export async function runInstagramUsReelsProvider(
     progress: 5,
   });
 
+  logger.info('Instagram US Reels job started', {
+    jobId: job.id,
+    campaignId: job.campaignId,
+    keyword,
+    userId: job.userId,
+    targetResults: job.targetResults,
+    chunkSize: DEFAULT_STREAM_CHUNK,
+  }, LogCategory.SCRAPING);
+
   try {
     const agentResult = await runInstagramUsReelsAgent({
       keyword,
@@ -99,11 +109,19 @@ export async function runInstagramUsReelsProvider(
 
     if (normalized.length > 0) {
       const chunkSize = Math.min(DEFAULT_STREAM_CHUNK, normalized.length);
-      const firstChunk = normalized.slice(0, chunkSize);
-      total = await service.replaceCreators(firstChunk);
-      processedResults = total;
-      cursor = total;
-      metrics.processedCreators = processedResults;
+    const firstChunk = normalized.slice(0, chunkSize);
+    total = await service.replaceCreators(firstChunk);
+    processedResults = total;
+    cursor = total;
+    metrics.processedCreators = processedResults;
+
+    logger.info('Instagram US Reels first chunk persisted', {
+      jobId: job.id,
+      chunkSize,
+      normalizedCount: normalized.length,
+      persistedCreators: processedResults,
+      sessionId: agentResult.sessionId,
+    }, LogCategory.SCRAPING);
 
       const now = Date.now();
       metrics.batches.push({
@@ -144,26 +162,41 @@ export async function runInstagramUsReelsProvider(
             size: mergeResult.newCount,
             durationMs: mergeTimestamp - lastBatchTimestamp,
           });
-          lastBatchTimestamp = mergeTimestamp;
+        lastBatchTimestamp = mergeTimestamp;
 
-          const chunkProgress = computeProgress(processedResults, targetResults);
-          const progressValue = Math.max(progressCheckpoint + 5, chunkProgress);
-          await service.recordProgress({
-            processedRuns,
-            processedResults,
-            cursor,
-            progress: progressValue,
-          });
-          progressCheckpoint = progressValue;
+        const chunkProgress = computeProgress(processedResults, targetResults);
+        const progressValue = Math.max(progressCheckpoint + 5, chunkProgress);
+        await service.recordProgress({
+          processedRuns,
+          processedResults,
+          cursor,
+          progress: progressValue,
+        });
+        progressCheckpoint = progressValue;
 
-          if (STREAM_DELAY_MS > 0) {
-            await sleep(STREAM_DELAY_MS);
-          }
+        logger.info('Instagram US Reels chunk merged', {
+          jobId: job.id,
+          batchIndex,
+          batchSize: chunk.length,
+          newCreators: mergeResult.newCount,
+          totalCreators: processedResults,
+          progress: progressValue,
+        }, LogCategory.SCRAPING);
+
+        if (STREAM_DELAY_MS > 0) {
+          await sleep(STREAM_DELAY_MS);
         }
       }
+    }
     } else {
       metrics.processedCreators = 0;
       total = 0;
+
+      logger.warn('Instagram US Reels agent returned no creators', {
+        jobId: job.id,
+        keyword,
+        sessionId: agentResult.sessionId,
+      }, LogCategory.SCRAPING);
     }
 
     total = processedResults;
@@ -189,6 +222,14 @@ export async function runInstagramUsReelsProvider(
       });
     }
 
+    logger.info('Instagram US Reels job completed', {
+      jobId: job.id,
+      totalCreators: processedResults,
+      batches: metrics.batches.length,
+      durationMs: metrics.timings.totalDurationMs,
+      finalProgress,
+    }, LogCategory.SCRAPING);
+
     await service.complete('completed', {});
 
     return {
@@ -199,6 +240,12 @@ export async function runInstagramUsReelsProvider(
       metrics,
     };
   } catch (error) {
+    logger.error('Instagram US Reels job failed', error instanceof Error ? error : new Error(String(error)), {
+      jobId: job.id,
+      keyword,
+      userId: job.userId,
+    }, LogCategory.SCRAPING);
+
     const finishedAt = Date.now();
     metrics.timings.finishedAt = new Date(finishedAt).toISOString();
     metrics.timings.totalDurationMs = finishedAt - startedAt;
