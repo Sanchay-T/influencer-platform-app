@@ -34,6 +34,12 @@ Each CSV filename is timestamped (UTC ISO string with colons replaced) so you ca
 
 Adjust inputs by exporting `TEST_*` environment variables before running (e.g. `TEST_TIKTOK_KEYWORD="music marketing" npm run test:search:tiktok:keyword`).
 
+## Google SERP Assisted Instagram Discovery
+
+- `/test/google-serp` now scopes Google results to Instagram and enriches each handle with ScrapeCreators. Use the nutrition presets to quickly pivot into wellness cohorts, then press **Open in Reels feed** to deep-link into `/test/instagram-reels` with the keyword and limit prefilled.
+- The Instagram Reels test page auto-runs when it receives `?q=<keyword>&run=1&limit=<n>` from the SERP tool and surfaces a copyable list of the first twelve handles so you can feed them into downstream outreach experiments.
+- Both test pages expose clipboard helpers, letting you seed CRM or export flows without retyping usernames.
+
 ## Environment Requirements
 
 Each script explicitly checks for the API keys used in production:

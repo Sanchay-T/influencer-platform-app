@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -10,6 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { Loader2, ExternalLink, Play, Heart, MessageCircle, User, CheckCircle, Info, Clock, Copy, TrendingUp, Eye, Search } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useSearchParams } from 'next/navigation';
 
 interface ReelResult {
   id: string;
@@ -70,7 +71,17 @@ interface ApiResponse {
   details?: string;
 }
 
+const KEYWORD_PRESETS: Array<{ label: string; query: string }> = [
+  { label: 'Nutritionists', query: 'nutritionist reels' },
+  { label: 'Registered Dietitians', query: 'registered dietitian reels' },
+  { label: 'Meal Prep Coaches', query: 'meal prep coach reels' },
+  { label: 'Gut Health Experts', query: 'gut health tips reels' },
+];
+
 export default function InstagramReelsTestPage() {
+  const searchParams = useSearchParams();
+  const autoRunExecutedRef = useRef(false);
+  const [prefilledKeyword, setPrefilledKeyword] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [maxResults, setMaxResults] = useState(12);
   const [results, setResults] = useState<ReelResult[]>([]);
@@ -83,49 +94,105 @@ export default function InstagramReelsTestPage() {
   const [searchTime, setSearchTime] = useState<number | null>(null);
   const [aiEnhancements, setAiEnhancements] = useState<any>(null);
 
+  const performSearch = useCallback(
+    async (keyword: string, limit: number) => {
+      const trimmedKeyword = keyword.trim();
+      if (!trimmedKeyword) {
+        setError('Please enter a search query');
+        return;
+      }
+
+      const startTime = Date.now();
+      setLoading(true);
+      setError('');
+      setResults([]);
+      setSearchTime(null);
+      setDuplicatesRemoved(0);
+      setAiEnhancements(null);
+
+      try {
+        const response = await fetch('/api/test/instagram-reels', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ query: trimmedKeyword, maxResults: limit }),
+        });
+
+        const data: ApiResponse = await response.json();
+
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to fetch data');
+        }
+
+        // The API now handles deduplication, so use the data directly
+        setResults(data.results);
+        setSearchQuery(data.query);
+        setTotalResults(data.totalResults);
+        setDuplicatesRemoved(data.duplicatesRemoved || 0);
+        setPaginationInfo(data.pagination);
+        setSearchTime(data.searchTime || Date.now() - startTime);
+        setAiEnhancements(data.aiEnhancements);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Something went wrong');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
+
+  const handlePresetSelect = (value: string) => {
+    setPrefilledKeyword(value);
+    setQuery(value);
+  };
+
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!query.trim()) {
-      setError('Please enter a search query');
+    await performSearch(query, maxResults);
+  };
+
+  // breadcrumb ledger: /test/google-serp -> link to /test/instagram-reels?q=...&run=1 seeds keyword + auto fires fetch
+  useEffect(() => {
+    const presetQuery = searchParams?.get('q');
+    if (!presetQuery) {
       return;
     }
 
-    const startTime = Date.now();
-    setLoading(true);
-    setError('');
-    setResults([]);
-    setSearchTime(null);
-    setDuplicatesRemoved(0);
-    setAiEnhancements(null);
+    setPrefilledKeyword(presetQuery);
+    setQuery(presetQuery);
+
+    const limitParam = searchParams?.get('limit');
+    const parsedLimit = limitParam ? Number.parseInt(limitParam, 10) : NaN;
+    const hasValidLimit = Number.isFinite(parsedLimit) && parsedLimit > 0;
+    if (hasValidLimit) {
+      setMaxResults(parsedLimit);
+    }
+
+    const shouldAutoRun = searchParams?.get('run') === '1';
+    if (shouldAutoRun && !autoRunExecutedRef.current) {
+      autoRunExecutedRef.current = true;
+      void performSearch(presetQuery, hasValidLimit ? parsedLimit : maxResults);
+    }
+  }, [maxResults, performSearch, searchParams]);
+
+  const discoveredHandles = useMemo(() => {
+    return results
+      .map((item) => item.username)
+      .filter((username): username is string => Boolean(username))
+      .slice(0, 12);
+  }, [results]);
+
+  // breadcrumb ledger: discovered reel creators -> clipboard for outreach lists
+  const handleCopyDiscovered = async () => {
+    if (!navigator?.clipboard || discoveredHandles.length === 0) {
+      return;
+    }
 
     try {
-      const response = await fetch('/api/test/instagram-reels', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ query: query.trim(), maxResults }),
-      });
-
-      const data: ApiResponse = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to fetch data');
-      }
-
-      // The API now handles deduplication, so use the data directly
-      setResults(data.results);
-      setSearchQuery(data.query);
-      setTotalResults(data.totalResults);
-      setDuplicatesRemoved(data.duplicatesRemoved || 0);
-      setPaginationInfo(data.pagination);
-      setSearchTime(data.searchTime || Date.now() - startTime);
-      setAiEnhancements(data.aiEnhancements);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
-    } finally {
-      setLoading(false);
+      await navigator.clipboard.writeText(discoveredHandles.join(', '));
+    } catch (copyError: any) {
+      setError(copyError?.message ?? 'Failed to copy reel handles');
     }
   };
 
@@ -165,6 +232,24 @@ export default function InstagramReelsTestPage() {
           <p className="text-muted-foreground">
             AI-enhanced search using strategic keyword expansion and parallel processing for maximum discovery
           </p>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <Badge variant="outline" className="text-xs uppercase tracking-wide">
+              Nutrition vertical presets ready
+            </Badge>
+            {prefilledKeyword && (
+              <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                <CheckCircle className="w-3 h-3" />
+                Prefilled from Google SERP
+              </Badge>
+            )}
+            <Link
+              href="/test/google-serp"
+              className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+            >
+              Explore Google SERP test
+              <ExternalLink className="w-3 h-3" />
+            </Link>
+          </div>
         </div>
 
         {/* Search Form */}
@@ -177,12 +262,33 @@ export default function InstagramReelsTestPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSearch} className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                {KEYWORD_PRESETS.map((preset) => (
+                  <Button
+                    key={preset.label}
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="bg-muted/60 text-muted-foreground hover:text-foreground"
+                    onClick={() => handlePresetSelect(preset.query)}
+                    disabled={loading}
+                  >
+                    {preset.label}
+                  </Button>
+                ))}
+              </div>
               <div className="flex gap-4">
                 <Input
                   type="text"
                   placeholder="Enter search query (e.g., nike sneakers, fashion, travel)"
                   value={query}
-                  onChange={(e) => setQuery(e.target.value)}
+                  onChange={(e) => {
+                    const nextValue = e.target.value;
+                    setQuery(nextValue);
+                    if (prefilledKeyword && nextValue !== prefilledKeyword) {
+                      setPrefilledKeyword(null);
+                    }
+                  }}
                   className="flex-1 bg-input border-border text-foreground placeholder:text-muted-foreground"
                   disabled={loading}
                 />
@@ -232,6 +338,12 @@ export default function InstagramReelsTestPage() {
                   )}
                 </span>
               </div>
+              {prefilledKeyword && (
+                <div className="flex items-center gap-2 text-xs text-primary">
+                  <CheckCircle className="w-3 h-3" />
+                  Auto-run seeded with '{prefilledKeyword}'
+                </div>
+              )}
             </form>
             {error && (
               <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
@@ -440,11 +552,30 @@ export default function InstagramReelsTestPage() {
                 )}
               </div>
 
+              {discoveredHandles.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs uppercase text-muted-foreground">Nutrition-focused handles</p>
+                    <Button type="button" variant="outline" size="sm" onClick={handleCopyDiscovered}>
+                      <Copy className="w-3 h-3 mr-1" />
+                      Copy list
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {discoveredHandles.map((handle) => (
+                      <Badge key={handle} variant="outline" className="text-xs">
+                        @{handle}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {paginationInfo && paginationInfo.requested !== paginationInfo.delivered && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/20 p-3 rounded-lg border border-border">
                   <Info className="w-4 h-4 text-primary" />
                   <span>
-                    Requested {paginationInfo.requested} results, but got {paginationInfo.delivered} 
+                    Requested {paginationInfo.requested} results, but got {paginationInfo.delivered}
                     {duplicatesRemoved > 0 && ` (${duplicatesRemoved} duplicates removed)`}
                   </span>
                 </div>
