@@ -198,9 +198,23 @@ export default function SearchProgress({
         const jobProcessed = data?.processedResults ?? data?.job?.processedResults ?? 0
         const jobTarget = data?.targetResults ?? data?.job?.targetResults ?? 0
 
+        const creators = flattenCreators(data?.results ?? data?.job?.results)
+
+        let effectiveProgress = jobProgress
+        if (platformNormalized.startsWith('instagram') && jobStatus === 'processing') {
+          const denominator = jobTarget && jobTarget > 0 ? jobTarget : Math.max(1, jobProcessed || creators.length || 1)
+          const numerator = Math.max(jobProcessed, creators.length)
+          if (numerator > 0) {
+            const derived = clampProgress((numerator / denominator) * 100)
+            const buffered = Math.max(jobProgress, derived)
+            const withMomentum = Math.max(buffered, displayProgress > 0 ? displayProgress + 5 : 10)
+            effectiveProgress = Math.min(withMomentum, 95)
+          }
+        }
+
         setStatus(jobStatus)
-        setProgress(jobProgress)
-        setDisplayProgress((prev) => Math.max(prev, jobProgress))
+        setProgress(effectiveProgress)
+        setDisplayProgress((prev) => Math.max(prev, effectiveProgress))
         setProcessedResults(jobProcessed)
         setTargetResults(jobTarget)
         setRecovery(data?.recovery ?? null)
@@ -242,7 +256,6 @@ export default function SearchProgress({
           }
         }
 
-        const creators = flattenCreators(data?.results ?? data?.job?.results)
         if (creators.length) {
           if (creators.length !== lastCreatorCountRef.current) {
             setShowIntermediateResults(true)
