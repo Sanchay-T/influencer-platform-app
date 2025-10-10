@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@/lib/auth/backend-auth';
 import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
 
 export async function PATCH(request: Request) {
@@ -21,12 +21,11 @@ export async function PATCH(request: Request) {
     }
 
     const { brandDescription } = await request.json();
-    console.log('📥 [ONBOARDING-STEP2] Data received:', { 
+    console.log('📥 [ONBOARDING-STEP2] Data received:', {
       brandDescription: brandDescription || 'NOT_PROVIDED',
       brandDescriptionLength: brandDescription?.length || 0,
       userId,
-      requestId,
-      meetsMinLength: (brandDescription?.length || 0) >= 50
+      requestId
     });
     
     console.log('📝 [ONBOARDING-STEP2] Brand description preview:', 
@@ -35,12 +34,6 @@ export async function PATCH(request: Request) {
     if (!brandDescription?.trim()) {
       return NextResponse.json({ 
         error: 'Brand description is required' 
-      }, { status: 400 });
-    }
-
-    if (brandDescription.trim().length < 50) {
-      return NextResponse.json({ 
-        error: 'Please provide more details (at least 50 characters)' 
       }, { status: 400 });
     }
 

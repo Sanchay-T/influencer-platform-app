@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import DashboardLayout from "../../../components/layout/dashboard-layout";
 import KeywordSearchForm from "../../../components/campaigns/keyword-search/keyword-search-form";
 import KeywordReview from "../../../components/campaigns/keyword-search/keyword-review";
+import Breadcrumbs from "@/app/components/breadcrumbs";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 
@@ -18,6 +19,7 @@ export default function KeywordSearch() {
     campaignId: null
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [campaignName, setCampaignName] = useState("");
 
   useEffect(() => {
     console.log('🔄 [KEYWORD-SEARCH-PAGE] Initializing keyword search page');
@@ -52,6 +54,7 @@ export default function KeywordSearch() {
             ...prev,
             campaignId: campaign.id
           }));
+          setCampaignName(campaign.name ?? "");
         } else {
           console.log('❌ [KEYWORD-SEARCH-PAGE] No campaign found in session storage');
         }
@@ -63,6 +66,19 @@ export default function KeywordSearch() {
     setIsLoading(false);
     console.log('✅ [KEYWORD-SEARCH-PAGE] Initialization complete');
   }, []);
+
+  useEffect(() => {
+    if (searchData.campaignId && !campaignName) {
+      try {
+        const campaignData = JSON.parse(sessionStorage.getItem('currentCampaign') ?? 'null');
+        if (campaignData?.name) {
+          setCampaignName(campaignData.name);
+        }
+      } catch (error) {
+        console.error('💥 [KEYWORD-SEARCH-PAGE] Error reloading campaign info:', error);
+      }
+    }
+  }, [searchData.campaignId, campaignName]);
 
   // Manejar el paso 1: Selección de plataformas y número de creadores
   const handleFormSubmit = (data) => {
@@ -100,10 +116,8 @@ export default function KeywordSearch() {
       // Determine API endpoint based on selected platform
       // For now, we'll handle one platform at a time - prioritize the first selected platform
       let apiEndpoint = '/api/scraping/tiktok'; // Default to TikTok
-      if (searchData.platforms.includes('enhanced-instagram')) {
-        apiEndpoint = '/api/scraping/instagram-enhanced';
-      } else if (searchData.platforms.includes('instagram')) {
-        apiEndpoint = '/api/scraping/instagram-reels';
+      if (searchData.platforms.includes('instagram')) {
+        apiEndpoint = '/api/scraping/instagram-us-reels';
       } else if (searchData.platforms.includes('youtube')) {
         apiEndpoint = '/api/scraping/youtube';
       }
@@ -133,13 +147,17 @@ export default function KeywordSearch() {
       const data = await response.json();
       console.log('✅ [KEYWORD-SEARCH-PAGE] API response data:', data);
       
+    const nextPlatform = searchData.platforms.includes('instagram')
+      ? 'instagram'
+      : searchData.platforms.includes('youtube')
+        ? 'youtube'
+        : 'tiktok';
+
     setSearchData(prev => ({ 
       ...prev, 
       keywords,
       jobId: data.jobId,
-      selectedPlatform: searchData.platforms.includes('enhanced-instagram') ? 'enhanced-instagram' : 
-                       searchData.platforms.includes('instagram') ? 'Instagram' : 
-                       searchData.platforms.includes('youtube') ? 'YouTube' : 'TikTok'
+      selectedPlatform: nextPlatform
     }));
     toast.success('Campaign started successfully');
     router.push(`/campaigns/${campaignId}?jobId=${data.jobId}`);
@@ -167,6 +185,19 @@ export default function KeywordSearch() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        <Breadcrumbs
+          items={[
+            { label: 'Dashboard', href: '/dashboard' },
+            {
+              label: campaignName || 'Campaign',
+              href: searchData?.campaignId ? `/campaigns/${searchData.campaignId}` : '/dashboard',
+              type: 'campaign',
+            },
+            { label: 'Keyword Search' },
+          ]}
+          backHref={searchData?.campaignId ? `/campaigns/search?campaignId=${searchData.campaignId}` : '/campaigns/search'}
+          backLabel="Back to Search Options"
+        />
         <div className="flex items-center justify-between mt-2">
           <div>
             <h1 className="text-2xl font-bold">Keyword Search</h1>

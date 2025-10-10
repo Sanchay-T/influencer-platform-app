@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { FeatureGate } from "@/app/components/billing/protect";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AddToListButton } from "@/components/lists/add-to-list-button";
+import { dedupeCreators } from "../utils/dedupe-creators";
 import {
   Table,
   TableBody,
@@ -30,6 +31,7 @@ import {
 } from "@/components/ui/pagination";
 import SearchProgress from "./search-progress";
 import Breadcrumbs from "../../breadcrumbs";
+import { buildProfileLink } from "./utils/profile-link";
 
 const VIEW_MODES = ["table", "gallery"];
 const VIEW_MODE_META = {
@@ -114,37 +116,6 @@ const formatFollowers = (value) => {
   return Math.round(numeric).toLocaleString();
 };
 
-const dedupeCreators = (creators = []) => {
-  const seen = new Set();
-  const unique = [];
-
-  for (const creator of creators) {
-    if (!creator) continue;
-
-    const keyParts = [
-      creator?.creator?.channelId,
-      creator?.creator?.id,
-      creator?.creator?.uniqueId,
-      creator?.creator?.username,
-      creator?.channelId,
-      creator?.id,
-      creator?.uniqueId,
-      creator?.username,
-      creator?.video?.url,
-    ];
-
-    const key = keyParts.find((part) => typeof part === "string" && part.trim().length > 0);
-    const normalizedKey = key ? key.trim().toLowerCase() : JSON.stringify(keyParts);
-
-    if (seen.has(normalizedKey)) continue;
-
-    seen.add(normalizedKey);
-    unique.push(creator);
-  }
-
-  return unique;
-};
-
 const resolveMediaPreview = (creator, snapshot, platformHint) => {
   if (!creator) return snapshot?.avatarUrl ?? null;
 
@@ -178,7 +149,9 @@ const resolveMediaPreview = (creator, snapshot, platformHint) => {
     snapshot?.avatarUrl,
   ];
 
-  const sources = platform === 'youtube' ? videoFirstSources : defaultSources;
+  const sources = (platform === 'youtube' || platform === 'instagram' || platform === 'instagram_us_reels')
+    ? videoFirstSources
+    : defaultSources;
 
   for (const source of sources) {
     if (typeof source === "string" && source.trim().length > 0) {
@@ -213,6 +186,14 @@ const ensureImageUrl = (value) => {
 };
 
 const SearchResults = ({ searchData }) => {
+  const componentMountTime = useRef(performance.now());
+  const componentId = useMemo(() =>
+    `keyword-search-${searchData?.jobId}-${componentMountTime.current}`,
+    [searchData?.jobId]
+  );
+
+  // Component mounted
+
   const [currentPage, setCurrentPage] = useState(1);
   const [isPageLoading, setIsPageLoading] = useState(false);
   const initialCreators = useMemo(() => {
@@ -222,6 +203,11 @@ const SearchResults = ({ searchData }) => {
   }, [searchData?.initialCreators, searchData?.creators]);
 
   const [creators, setCreators] = useState(initialCreators);
+
+  // Log whenever creators data changes
+  useEffect(() => {
+    // Creators data updated
+  }, [creators, componentId, searchData?.jobId]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [campaignName, setCampaignName] = useState("Campaign");
@@ -240,11 +226,19 @@ const SearchResults = ({ searchData }) => {
 
   // Normalize platform from either selectedPlatform (wizard) or platform (reopen flow)
   const platformNormalized = (searchData?.selectedPlatform || searchData?.platform || 'tiktok').toString().toLowerCase();
+  const isInstagramUs = [
+    'instagram',
+    'instagram_us_reels',
+    'instagram-us-reels',
+    'instagram-1.0',
+    'instagram_1.0',
+  ].includes(platformNormalized);
 
   useEffect(() => {
     setSelectedCreators({});
-  }, [searchData?.jobId]);
+  }, [searchData?.jobId, initialCreators, platformNormalized]);
 
+  // Reset only when switching to a different run (jobId changes)
   useEffect(() => {
     const cacheKey = searchData?.jobId;
     if (!cacheKey) {
@@ -266,17 +260,20 @@ const SearchResults = ({ searchData }) => {
       setIsLoading(false);
       setIsFetching(true);
     } else if (initialCreators.length) {
-      setCreators(dedupeCreators(initialCreators));
+      setCreators(dedupeCreators(initialCreators, { platformHint: platformNormalized }));
       setIsLoading(false);
-      setIsFetching(true);
+      setIsFetching(false); // Don't fetch when we already have data
     } else {
       setCreators([]);
       setIsLoading(true);
       setIsFetching(true);
     }
+  }, [searchData?.jobId, initialCreators, platformNormalized]);
 
+  // Track processing flag separately so we don't reset pagination on progress updates
+  useEffect(() => {
     setStillProcessing(jobIsActive);
-  }, [searchData?.jobId, jobIsActive, initialCreators]);
+  }, [jobIsActive]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -299,6 +296,7 @@ const SearchResults = ({ searchData }) => {
   }, [creators, showEmailOnly]);
 
   const waitingForResults = (jobIsActive || stillProcessing || isFetching || isLoading) && creators.length === 0;
+  const shouldPoll = Boolean(searchData?.jobId) && (jobIsActive || stillProcessing || isFetching || isLoading);
 
   const showFilteredEmpty = useMemo(
     () => showEmailOnly && creators.length > 0 && filteredCreators.length === 0,
@@ -328,14 +326,41 @@ const SearchResults = ({ searchData }) => {
           setIsFetching(false);
           return;
         }
+
+        // Skip API call if we already have data and job is completed
+        if (creators.length > 0 && !jobIsActive && !stillProcessing) {
+          // Skipping API call - data already available
+          setIsFetching(false);
+          return;
+        }
         setIsFetching(true);
         // Determine API endpoint based on platform
         let apiEndpoint = '/api/scraping/tiktok';
-        if (platformNormalized === 'instagram') apiEndpoint = '/api/scraping/instagram-reels';
-        else if (platformNormalized === 'enhanced-instagram') apiEndpoint = '/api/scraping/instagram-enhanced';
-        else if (platformNormalized === 'youtube') apiEndpoint = '/api/scraping/youtube';
+        if (
+          platformNormalized === 'instagram' ||
+          platformNormalized === 'instagram_us_reels' ||
+          platformNormalized === 'instagram-1.0' ||
+          platformNormalized === 'instagram_1.0'
+        ) {
+          apiEndpoint = '/api/scraping/instagram-us-reels';
+        } else if (platformNormalized === 'youtube') {
+          apiEndpoint = '/api/scraping/youtube';
+        } else if (
+          platformNormalized === 'instagram-2.0' ||
+          platformNormalized === 'instagram_2.0' ||
+          platformNormalized === 'instagram-v2' ||
+          platformNormalized === 'instagram_v2'
+        ) {
+          apiEndpoint = '/api/scraping/instagram-v2';
+        } else if (platformNormalized === 'enhanced-instagram') {
+          apiEndpoint = '/api/scraping/instagram-enhanced';
+        } else if (platformNormalized === 'google-serp' || platformNormalized === 'google_serp') {
+          apiEndpoint = '/api/scraping/google-serp';
+        }
 
-        const response = await fetch(`${apiEndpoint}?jobId=${searchData.jobId}`);
+        // Making API call to fetch results
+
+        const response = await fetch(`${apiEndpoint}?jobId=${searchData.jobId}` , { credentials: 'include' });
         const data = await response.json();
 
         if (data.error) {
@@ -351,7 +376,7 @@ const SearchResults = ({ searchData }) => {
 
         // Debug logs removed - data flow working correctly
 
-        const dedupedCreators = dedupeCreators(allCreators);
+        const dedupedCreators = dedupeCreators(allCreators, { platformHint: platformNormalized });
         setCreators(dedupedCreators);
         if (searchData?.jobId && dedupedCreators.length) {
           resultsCacheRef.current.set(searchData.jobId, dedupedCreators);
@@ -370,7 +395,7 @@ const SearchResults = ({ searchData }) => {
     };
 
     fetchResults();
-  }, [searchData, searchData?.jobId, searchData?.selectedPlatform, searchData?.platform, searchData?.platforms, platformNormalized, jobIsActive]);
+  }, [searchData, searchData?.jobId, searchData?.selectedPlatform, searchData?.platform, searchData?.platforms, platformNormalized, jobIsActive, creators.length, stillProcessing]);
 
   // Fetch campaign name for breadcrumbs
   useEffect(() => {
@@ -396,68 +421,10 @@ const SearchResults = ({ searchData }) => {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
 
-  const renderProfileLink = useCallback((creator) => {
-    const platform = platformNormalized;
-
-    if (platform === "tiktok") {
-      const ttUsername = creator?.creator?.uniqueId || creator?.creator?.username;
-      if (ttUsername) {
-        return `https://www.tiktok.com/@${ttUsername}`;
-      }
-
-      if (creator.video?.url) {
-        const match = creator.video.url.match(/@([^\/]+)/);
-        if (match) {
-          return `https://www.tiktok.com/@${match[1]}`;
-        }
-      }
-
-      const creatorName = creator.creator?.name;
-      if (creatorName && !creatorName.includes(" ")) {
-        return `https://www.tiktok.com/@${creatorName}`;
-      }
-
-      if (creatorName) {
-        const cleanUsername = creatorName.replace(/\s+/g, "").toLowerCase();
-        return `https://www.tiktok.com/@${cleanUsername}`;
-      }
-    } else if (
-      platform === "Instagram" ||
-      platform === "instagram" ||
-      platform === "enhanced-instagram"
-    ) {
-      const igUsername =
-        creator?.creator?.uniqueId || creator?.creator?.username || creator?.ownerUsername;
-      if (igUsername) {
-        return `https://www.instagram.com/${igUsername}`;
-      }
-      const creatorName = creator?.creator?.name;
-      if (creatorName) {
-        const cleanUsername = creatorName
-          .replace(/\s+/g, "")
-          .toLowerCase()
-          .replace(/[^a-z0-9._]/g, "");
-        return `https://www.instagram.com/${cleanUsername}`;
-      }
-    } else if (platform === "YouTube" || platform === "youtube") {
-      if (creator.video?.url) {
-        if (
-          creator.video.url.includes("/channel/") ||
-          creator.video.url.includes("/c/") ||
-          creator.video.url.includes("/@")
-        ) {
-          const channelMatch = creator.video.url.match(/\/(channel\/[^\/]+|c\/[^\/]+|@[^\/]+)/);
-          if (channelMatch) {
-            return `https://www.youtube.com/${channelMatch[1]}`;
-          }
-        }
-
-        return creator.video.url;
-      }
-    }
-
-    return "#";
-  }, [platformNormalized]);
+  const renderProfileLink = useCallback(
+    (creator) => buildProfileLink(creator, platformNormalized),
+    [platformNormalized]
+  );
 
   const currentCreators = useMemo(
     () => filteredCreators.slice(startIndex, endIndex),
@@ -465,6 +432,7 @@ const SearchResults = ({ searchData }) => {
   );
 
   const currentRows = useMemo(() => {
+    const seenRowKeys = new Set();
     return currentCreators.map((creator, index) => {
       const base = creator?.creator || creator;
       const platformValue = base?.platform || creator.platform || platformNormalized || 'tiktok';
@@ -491,6 +459,17 @@ const SearchResults = ({ searchData }) => {
         handle ??
         `creator-${startIndex + index}`;
       const externalId = typeof externalRaw === 'string' ? externalRaw : String(externalRaw ?? `creator-${startIndex + index}`);
+
+      // Normalize for stable keys
+      const idPlatform = (platform || platformNormalized || 'tiktok').toString().toLowerCase();
+      const idExternal = (externalId || handle).toString().toLowerCase();
+      let keyId = `${idPlatform}-${idExternal}`;
+      if (seenRowKeys.has(keyId)) {
+        let i = 1;
+        while (seenRowKeys.has(`${keyId}-${i}`)) i++;
+        keyId = `${keyId}-${i}`;
+      }
+      seenRowKeys.add(keyId);
 
       const snapshot = {
         platform,
@@ -523,7 +502,7 @@ const SearchResults = ({ searchData }) => {
       };
 
       return {
-        id: `${platform}-${externalId}`,
+        id: keyId,
         snapshot,
         raw: creator,
       };
@@ -571,7 +550,7 @@ const SearchResults = ({ searchData }) => {
   const handleSearchComplete = (data) => {
     if (data && data.status === "completed") {
       // Use creators directly from data.creators (already processed with bio/email)
-        const allCreators = dedupeCreators(data.creators || []);
+        const allCreators = dedupeCreators(data.creators || [], { platformHint: platformNormalized });
         if (allCreators.length > 0) {
           setCreators(allCreators);
           setIsLoading(false);
@@ -583,18 +562,36 @@ const SearchResults = ({ searchData }) => {
         } else {
           // As a fallback, re-fetch latest results from the corresponding endpoint
           let apiEndpoint = '/api/scraping/tiktok';
-          if (platformNormalized === 'instagram') apiEndpoint = '/api/scraping/instagram-reels';
-        else if (platformNormalized === 'enhanced-instagram') apiEndpoint = '/api/scraping/instagram-enhanced';
-        else if (platformNormalized === 'youtube') apiEndpoint = '/api/scraping/youtube';
+          if (
+            platformNormalized === 'instagram' ||
+            platformNormalized === 'instagram_us_reels' ||
+            platformNormalized === 'instagram-1.0' ||
+            platformNormalized === 'instagram_1.0'
+          ) {
+            apiEndpoint = '/api/scraping/instagram-us-reels';
+          } else if (platformNormalized === 'youtube') {
+            apiEndpoint = '/api/scraping/youtube';
+          } else if (
+            platformNormalized === 'instagram-2.0' ||
+            platformNormalized === 'instagram_2.0' ||
+            platformNormalized === 'instagram-v2' ||
+            platformNormalized === 'instagram_v2'
+          ) {
+            apiEndpoint = '/api/scraping/instagram-v2';
+          } else if (platformNormalized === 'enhanced-instagram') {
+            apiEndpoint = '/api/scraping/instagram-enhanced';
+          } else if (platformNormalized === 'google-serp' || platformNormalized === 'google_serp') {
+            apiEndpoint = '/api/scraping/google-serp';
+          }
 
-        fetch(`${apiEndpoint}?jobId=${searchData.jobId}`)
+        fetch(`${apiEndpoint}?jobId=${searchData.jobId}`, { credentials: 'include' })
           .then((response) => response.json())
           .then((result) => {
             const foundCreators =
               result.results?.reduce((acc, res) => {
                 return [...acc, ...(res.creators || [])];
               }, []) || [];
-            const deduped = dedupeCreators(foundCreators);
+            const deduped = dedupeCreators(foundCreators, { platformHint: platformNormalized });
             setCreators(deduped);
             if (deduped.length) {
               setIsLoading(false);
@@ -617,10 +614,37 @@ const SearchResults = ({ searchData }) => {
   if (!filteredCreators.length && !showFilteredEmpty) {
     if (waitingForResults) {
       return (
-        <div className="flex flex-col items-center justify-center min-h-[240px] text-sm text-zinc-400 gap-2">
-          <Loader2 className="h-4 w-4 animate-spin text-pink-400" />
-          Waiting for results...
-        </div>
+        <>
+          {/* Keep polling even while showing the minimal loader */}
+          {shouldPoll && (
+            <div className="hidden" aria-hidden="true">
+              <SearchProgress 
+                jobId={searchData.jobId}
+                platform={searchData.selectedPlatform || searchData.platform}
+                searchData={searchData}
+                onMeta={setEnhancedMeta}
+                onProgress={setProgressInfo}
+                onIntermediateResults={(data) => {
+                  try {
+                    const incoming = Array.isArray(data?.creators) ? data.creators : [];
+                    if (incoming.length === 0) return;
+                    setStillProcessing(true);
+                    setIsLoading(false);
+                    setIsFetching(false);
+                    setCreators((prev) => dedupeCreators([...prev, ...incoming], { platformHint: platformNormalized }));
+                  } catch (e) {
+                    console.error('Error handling intermediate results (initial wait):', e);
+                  }
+                }}
+                onComplete={handleSearchComplete}
+              />
+            </div>
+          )}
+          <div className="flex flex-col items-center justify-center min-h-[240px] text-sm text-zinc-400 gap-2">
+            <Loader2 className="h-4 w-4 animate-spin text-pink-400" />
+            Waiting for results...
+          </div>
+        </>
       );
     }
 
@@ -750,21 +774,28 @@ const SearchResults = ({ searchData }) => {
           },
           { label: "Search Results" },
         ]}
+        backHref={searchData?.campaignId ? `/campaigns/search?campaignId=${searchData.campaignId}` : '/campaigns/search'}
+        backLabel="Back to Search Options"
       />
 
       {/* Removed AI Strategy box for a cleaner presentation */}
 
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 md:gap-4">
+        <div className="flex items-center gap-3 min-w-0">
           <h2 className="text-2xl font-bold text-zinc-100">Results Found</h2>
           {platformNormalized === "enhanced-instagram" && (
             <Badge variant="secondary" className="bg-gradient-to-r from-violet-500/20 to-pink-500/20 text-violet-300 border-violet-500/30">
               AI-Enhanced
             </Badge>
           )}
+          {isInstagramUs && (
+            <Badge variant="secondary" className="bg-gradient-to-r from-emerald-500/15 to-sky-500/15 text-emerald-200 border-emerald-500/30">
+              US Reels
+            </Badge>
+          )}
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3 md:gap-4 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
             <div className="inline-flex items-center gap-1 rounded-md border border-zinc-800 bg-zinc-900/60 p-1">
               {VIEW_MODES.map((mode) => {
                 const meta = VIEW_MODE_META[mode];
@@ -802,7 +833,7 @@ const SearchResults = ({ searchData }) => {
               Email only
             </Button>
           </div>
-        <div className="text-sm text-zinc-400">
+        <div className="text-sm text-zinc-400 order-3 md:order-none">
           Page {currentPage} of {totalPages} •
           Showing {(currentPage - 1) * itemsPerPage + 1}-
           {Math.min(currentPage * itemsPerPage, totalResults)} of{" "}
@@ -871,7 +902,7 @@ const SearchResults = ({ searchData }) => {
       )}
 
       {/* Silent poller to keep progress flowing while table renders */}
-      {(jobIsActive || stillProcessing) && (
+      {shouldPoll && (
         <div className="hidden" aria-hidden="true">
           <SearchProgress 
             jobId={searchData.jobId}
@@ -884,8 +915,11 @@ const SearchResults = ({ searchData }) => {
                 const incoming = Array.isArray(data?.creators) ? data.creators : [];
                 if (incoming.length === 0) return;
 
+                setStillProcessing(true);
+                setIsLoading(false);
+                setIsFetching(false);
                 setCreators((prev) => {
-                  const merged = dedupeCreators([...prev, ...incoming]);
+                  const merged = dedupeCreators([...prev, ...incoming], { platformHint: platformNormalized });
                   if (searchData?.jobId && merged.length) {
                     resultsCacheRef.current.set(searchData.jobId, merged);
                   }
@@ -929,46 +963,47 @@ const SearchResults = ({ searchData }) => {
           </div>
         )}
 
-        <div className={cn("w-full", viewMode === "table" ? "overflow-x-auto" : "hidden")}>
-          <Table className="w-full">
-            <TableHeader>
-              <TableRow className="border-b border-zinc-800">
-                <TableHead className="px-4 py-3 w-12">
-                  <Checkbox
-                    aria-label="Select page"
-                    checked={allSelectedOnPage ? true : someSelectedOnPage ? 'indeterminate' : false}
-                    onCheckedChange={() => handleSelectPage(!allSelectedOnPage)}
-                  />
-                </TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[50px]">
-                  Profile
-                </TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[15%] min-w-[120px]">
-                  Username
-                </TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[10%] min-w-[120px]">
-                  Followers
-                </TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[20%] min-w-[150px]">
-                  Bio
-                </TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[20%] min-w-[150px]">
-                  Email
-                </TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider w-[25%] min-w-[200px]">
-                  Video Title
-                </TableHead>
-                <TableHead className="px-6 py-3 text-right text-xs font-medium text-zinc-400 uppercase tracking-wider w-[10%] min-w-[80px]">
-                  Views
-                </TableHead>
-                <TableHead className="px-6 py-3 text-center text-xs font-medium text-zinc-400 uppercase tracking-wider w-[60px]">
-                  Link
-                </TableHead>
-                <TableHead className="px-6 py-3 text-right text-xs font-medium text-zinc-400 uppercase tracking-wider w-[80px]">
-                  Save
-                </TableHead>
-              </TableRow>
-            </TableHeader>
+        <div className={cn("w-full", viewMode === "table" ? "block" : "hidden")}>
+          <div className="overflow-hidden lg:overflow-visible">
+            <Table className="w-full">
+              <TableHeader>
+                <TableRow className="border-b border-zinc-800">
+                  <TableHead className="w-12 px-4 py-3">
+                    <Checkbox
+                      aria-label="Select page"
+                      checked={allSelectedOnPage ? true : someSelectedOnPage ? 'indeterminate' : false}
+                      onCheckedChange={() => handleSelectPage(!allSelectedOnPage)}
+                    />
+                  </TableHead>
+                  <TableHead className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
+                    Profile
+                  </TableHead>
+                  <TableHead className="hidden sm:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
+                    Username
+                  </TableHead>
+                  <TableHead className="hidden md:table-cell px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-zinc-400">
+                    Followers
+                  </TableHead>
+                  <TableHead className="hidden xl:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
+                    Bio
+                  </TableHead>
+                  <TableHead className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
+                    Email
+                  </TableHead>
+                  <TableHead className="hidden xl:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
+                    Video Title
+                  </TableHead>
+                  <TableHead className="hidden lg:table-cell px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-zinc-400">
+                    Views
+                  </TableHead>
+                  <TableHead className="hidden lg:table-cell px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-zinc-400">
+                    Link
+                  </TableHead>
+                  <TableHead className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-zinc-400">
+                    Save
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
             <TableBody className="divide-y divide-zinc-800">
                 {currentRows.map(({ raw: creator, id: rowId, snapshot }, index) => {
                 const avatarUrl =
@@ -980,184 +1015,271 @@ const SearchResults = ({ searchData }) => {
                   "";
                 const imageUrl = ensureImageUrl(avatarUrl);
                 const isSelected = !!selectedCreators[rowId];
+                const metadata = creator.metadata || {};
+                const matchedTermsDisplay = Array.isArray(metadata.matchedTerms)
+                  ? metadata.matchedTerms.slice(0, 4)
+                  : [];
+                const snippetText =
+                  typeof metadata.snippet === "string" && metadata.snippet.trim().length > 0
+                    ? metadata.snippet.trim()
+                    : null;
 
                 return (
-                  <TableRow
-                    key={rowId}
-                    className={cn(
-                      "table-row transition-colors",
-                      isSelected ? "bg-emerald-500/5" : undefined
-                    )}
-                  >
-                    <TableCell className="px-4 py-4 w-12 align-middle">
-                      <div className="flex h-full items-center justify-center">
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={() => toggleSelection(rowId, snapshot)}
-                          aria-label={`Select ${snapshot.handle}`}
-                        />
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-6 py-4">
-                      <Avatar className="w-10 h-10">
+                <TableRow
+                  key={rowId}
+                  className={cn(
+                    "table-row transition-colors align-top",
+                    isSelected ? "bg-emerald-500/5" : undefined
+                  )}
+                >
+                  <TableCell className="w-12 px-4 py-4 align-middle">
+                    <div className="flex h-full items-center justify-center">
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleSelection(rowId, snapshot)}
+                        aria-label={`Select ${snapshot.handle}`}
+                      />
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-4 py-4 align-top">
+                    <div className="flex items-start gap-3">
+                      <Avatar className="h-10 w-10 flex-shrink-0">
                         <AvatarImage
                           src={imageUrl}
-                          alt={creator.creator?.name}
-                          onLoad={(e) =>
-                            handleImageLoad(e, creator.creator?.name)
-                          }
+                          alt={creator.creator?.name || snapshot.handle}
+                          onLoad={(e) => handleImageLoad(e, creator.creator?.name)}
                           onError={(e) =>
                             handleImageError(
                               e,
                               creator.creator?.name,
-                              creator.creator?.profilePicUrl ||
-                                creator.creator?.avatarUrl,
+                              creator.creator?.profilePicUrl || creator.creator?.avatarUrl
                             )
                           }
-                          onLoadStart={(e) =>
-                            handleImageStart(e, creator.creator?.name)
-                          }
+                          onLoadStart={(e) => handleImageStart(e, creator.creator?.name)}
                           style={{
-                            maxWidth: "100%",
-                            height: "auto",
-                            backgroundColor: "#f3f4f6", // Light gray background while loading
+                            maxWidth: '100%',
+                            height: 'auto',
+                            backgroundColor: '#f3f4f6'
                           }}
                         />
                         <AvatarFallback>
                           <User className="h-4 w-4" />
                         </AvatarFallback>
                       </Avatar>
-                    </TableCell>
-                    <TableCell className="px-6 py-4">
-                      {creator.creator?.name &&
-                      creator.creator.name !== "N/A" ? (
-                        <a
-                          href={renderProfileLink(creator)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-pink-400 hover:text-pink-300 hover:underline font-medium transition-colors duration-200 flex items-center gap-1"
-                          title={`View ${creator.creator.name}'s profile on ${
-                            platformNormalized === 'enhanced-instagram' ? 'Instagram' :
-                            platformNormalized === 'instagram' ? 'Instagram' :
-                            platformNormalized === 'youtube' ? 'YouTube' : 'TikTok'
-                          }`}
-                        >
-                          {creator.creator.name}
-                          <svg
-                            className="w-3 h-3 opacity-70"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
+                      <div className="space-y-1 sm:hidden">
+                        {creator.creator?.name && creator.creator.name !== 'N/A' ? (
+                          <a
+                            href={renderProfileLink(creator)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-sm font-medium text-pink-400 transition-colors hover:text-pink-300 hover:underline"
                           >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                            />
-                          </svg>
-                        </a>
-                      ) : (
-                        <span className="text-zinc-500">N/A</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="px-6 py-4">
-                      {snapshot.followers != null ? (
-                        <span className="text-sm text-zinc-200">
-                          {formatFollowers(snapshot.followers)}
-                        </span>
-                      ) : (
-                        <span className="text-zinc-500 text-sm">N/A</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="px-6 py-4 max-w-0">
-                      <div
-                        className="truncate"
-                        title={creator.creator?.bio || "No bio available"}
-                      >
-                        {creator.creator?.bio ? (
-                          <span className="text-sm text-zinc-300">
-                            {creator.creator.bio}
-                          </span>
+                            {creator.creator.name}
+                            <svg className="h-3 w-3 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                              />
+                            </svg>
+                          </a>
                         ) : (
-                          <span className="text-zinc-500 text-sm">No bio</span>
+                          <span className="text-sm text-zinc-500">{snapshot.handle}</span>
                         )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-6 py-4 max-w-0">
-                      {creator.creator?.emails &&
-                      creator.creator.emails.length > 0 ? (
-                        <div className="space-y-1">
-                          {creator.creator.emails.map((email, emailIndex) => (
-                            <div
-                              key={emailIndex}
-                              className="flex items-center gap-1"
-                            >
-                              <a
-                                href={`mailto:${email}`}
-                              className="text-pink-400 hover:underline text-sm truncate block"
-                                title={`Send email to ${email}`}
+                        <div className="text-xs text-zinc-400">@{snapshot.handle}</div>
+                        {isInstagramUs && matchedTermsDisplay.length > 0 && (
+                          <div className="flex flex-wrap gap-1 pt-1">
+                            {matchedTermsDisplay.map((term) => (
+                              <span
+                                key={term}
+                                className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-emerald-200"
                               >
-                                {email}
-                              </a>
-                              <svg
-                                className="w-3 h-3 opacity-60 text-pink-400"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                                />
-                              </svg>
+                                {term}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {isInstagramUs && snippetText && (
+                          <p className="text-[11px] italic text-zinc-400 line-clamp-2">
+                            “{snippetText}”
+                          </p>
+                        )}
+                        <div className="space-y-1 text-xs text-zinc-400">
+                          <div>
+                            <span className="font-medium text-zinc-300">Followers:</span>{' '}
+                            {snapshot.followers != null ? formatFollowers(snapshot.followers) : 'N/A'}
+                          </div>
+                          {creator.creator?.emails?.[0] && (
+                            <div className="break-words">
+                              <span className="font-medium text-zinc-300">Email:</span>{' '}
+                              {creator.creator.emails[0]}
                             </div>
-                          ))}
+                          )}
+                          {creator.video?.statistics?.views && (
+                            <div>
+                              <span className="font-medium text-zinc-300">Views:</span>{' '}
+                              {(creator.video.statistics.views || 0).toLocaleString()}
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <span className="text-zinc-500 text-sm">No email</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="px-6 py-4 max-w-0">
-                      <div
-                        className="truncate"
-                        title={creator.video?.description || "No title"}
-                      >
-                        {creator.video?.description || "No title"}
                       </div>
-                    </TableCell>
-                    <TableCell className="px-6 py-4 text-right tabular-nums">
-                      {(creator.video?.statistics?.views || 0).toLocaleString()}
-                    </TableCell>
-                    <TableCell className="px-6 py-4 text-center">
-                      {creator.video?.url && (
-                        <a
-                          href={creator.video.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-pink-400 hover:underline"
-                        >
-                          View
-                        </a>
+                      {isInstagramUs && (matchedTermsDisplay.length > 0 || snippetText) && (
+                        <div className="hidden sm:flex flex-col gap-1 pt-1">
+                          {matchedTermsDisplay.length > 0 && (
+                            <div className="flex flex-wrap gap-1 text-[10px] uppercase tracking-wide text-emerald-200">
+                              {matchedTermsDisplay.map((term) => (
+                                <span
+                                  key={term}
+                                  className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5"
+                                >
+                                  {term}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {snippetText && (
+                            <p className="text-[11px] italic text-zinc-400 line-clamp-2">
+                              “{snippetText}”
+                            </p>
+                          )}
+                        </div>
                       )}
-                    </TableCell>
-                    <TableCell className="px-6 py-4 text-right">
-                      <AddToListButton
-                        creator={snapshot}
-                        buttonLabel="Save"
-                        variant="ghost"
-                        size="sm"
-                        className="text-zinc-400 hover:text-emerald-300"
-                      />
-                    </TableCell>
-                  </TableRow>
+                    </div>
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell px-4 py-4 align-top">
+                    {creator.creator?.name && creator.creator.name !== 'N/A' ? (
+                      <a
+                        href={renderProfileLink(creator)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-pink-400 transition-colors hover:text-pink-300 hover:underline"
+                        title={`View ${creator.creator.name}'s profile`}
+                      >
+                        {creator.creator.name}
+                        <svg className="h-3 w-3 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                          />
+                        </svg>
+                      </a>
+                    ) : (
+                      <span className="text-zinc-500">{snapshot.handle}</span>
+                    )}
+                    <div className="mt-2 space-y-1 text-xs text-zinc-400 lg:hidden">
+                      <div>
+                        <span className="font-medium text-zinc-300">Followers:</span>{' '}
+                        {snapshot.followers != null ? formatFollowers(snapshot.followers) : 'N/A'}
+                      </div>
+                      {creator.creator?.emails?.length ? (
+                        <div className="break-words">
+                          <span className="font-medium text-zinc-300">Email:</span>{' '}
+                          {creator.creator.emails[0]}
+                        </div>
+                      ) : null}
+                      {creator.video?.statistics?.views ? (
+                        <div>
+                          <span className="font-medium text-zinc-300">Views:</span>{' '}
+                          {(creator.video.statistics.views || 0).toLocaleString()}
+                        </div>
+                      ) : null}
+                      {creator.video?.url && (
+                        <div>
+                          <a
+                            href={creator.video.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-pink-400 hover:underline"
+                          >
+                            View content
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell px-4 py-4 text-right text-sm text-zinc-200">
+                    {snapshot.followers != null ? formatFollowers(snapshot.followers) : 'N/A'}
+                  </TableCell>
+                  <TableCell className="hidden xl:table-cell max-w-0 px-4 py-4">
+                    <div className="truncate" title={creator.creator?.bio || 'No bio available'}>
+                      {creator.creator?.bio ? (
+                        <span className="text-sm text-zinc-300">{creator.creator.bio}</span>
+                      ) : (
+                        <span className="text-sm text-zinc-500">No bio</span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell max-w-0 px-4 py-4">
+                    {creator.creator?.emails && creator.creator.emails.length > 0 ? (
+                      <div className="space-y-1 text-sm">
+                        {creator.creator.emails.map((email, emailIndex) => (
+                          <div key={emailIndex} className="flex items-center gap-1">
+                            <a
+                              href={`mailto:${email}`}
+                              className="block truncate text-pink-400 hover:underline"
+                              title={`Send email to ${email}`}
+                            >
+                              {email}
+                            </a>
+                            <svg
+                              className="h-3 w-3 text-pink-400 opacity-60"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                              />
+                            </svg>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-sm text-zinc-500">No email</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="hidden xl:table-cell max-w-0 px-4 py-4">
+                    <div className="truncate" title={creator.video?.description || 'No title'}>
+                      {creator.video?.description || 'No title'}
+                    </div>
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell px-4 py-4 text-right text-sm tabular-nums">
+                    {(creator.video?.statistics?.views || 0).toLocaleString()}
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell px-4 py-4 text-center">
+                    {creator.video?.url && (
+                      <a
+                        href={creator.video.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-pink-400 hover:underline"
+                      >
+                        View
+                      </a>
+                    )}
+                  </TableCell>
+                  <TableCell className="px-4 py-4 text-right">
+                    <AddToListButton
+                      creator={snapshot}
+                      buttonLabel="Save"
+                      variant="ghost"
+                      size="sm"
+                      className="text-zinc-400 hover:text-emerald-300"
+                    />
+                  </TableCell>
+                </TableRow>
                 );
               })}
             </TableBody>
           </Table>
         </div>
+      </div>
         <div className={cn(
           "w-full p-4 md:p-6",
           viewMode === "gallery" ? "block" : "hidden"
@@ -1170,6 +1292,14 @@ const SearchResults = ({ searchData }) => {
             const emails = extractEmails(raw);
             const profileUrl = renderProfileLink(raw);
             const followerLabel = snapshot.followers != null ? formatFollowers(snapshot.followers) : null;
+            const metadata = raw.metadata || {};
+            const matchedTermsDisplay = Array.isArray(metadata.matchedTerms)
+              ? metadata.matchedTerms.slice(0, 4)
+              : [];
+            const snippetText =
+              typeof metadata.snippet === "string" && metadata.snippet.trim().length > 0
+                ? metadata.snippet.trim()
+                : null;
               const rawViewCount =
                 raw?.video?.stats?.playCount ??
                 raw?.video?.stats?.viewCount ??
@@ -1243,11 +1373,11 @@ const SearchResults = ({ searchData }) => {
                   <div className="flex flex-1 flex-col gap-3 p-4 text-sm text-zinc-300">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="line-clamp-1 text-base font-semibold text-zinc-100">
-                          {snapshot.displayName || snapshot.handle}
-                        </p>
-                        {secondaryLine ? (
-                          <p className="text-xs text-zinc-500">{secondaryLine}</p>
+                    <p className="line-clamp-1 text-base font-semibold text-zinc-100">
+                      {snapshot.displayName || snapshot.handle}
+                    </p>
+                    {secondaryLine ? (
+                      <p className="text-xs text-zinc-500">{secondaryLine}</p>
                         ) : null}
                       </div>
                       <Badge
@@ -1260,6 +1390,21 @@ const SearchResults = ({ searchData }) => {
                     <p className="line-clamp-3 text-xs text-zinc-400">
                       {raw?.creator?.bio || raw?.bio || raw?.description || "No bio available"}
                     </p>
+                    {isInstagramUs && matchedTermsDisplay.length > 0 && (
+                      <div className="flex flex-wrap gap-1 text-[10px] uppercase tracking-wide text-emerald-200">
+                        {matchedTermsDisplay.map((term) => (
+                          <span
+                            key={term}
+                            className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5"
+                          >
+                            {term}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {isInstagramUs && snippetText && (
+                      <p className="text-[11px] italic text-zinc-400 line-clamp-2">“{snippetText}”</p>
+                    )}
                     <div className="flex flex-wrap gap-2 text-[11px] text-zinc-300">
                       {followerLabel && (
                         <span className="rounded-full border border-zinc-700/70 bg-zinc-900/60 px-2 py-1 font-medium text-zinc-200">
@@ -1318,7 +1463,7 @@ const SearchResults = ({ searchData }) => {
         </div>
       </div>
 
-      <div className="flex items-center justify-center gap-2">
+      <div className="flex w-full flex-wrap items-center justify-center gap-2">
         <Button
           variant="outline"
           onClick={() => handlePageChange(1)}
@@ -1336,7 +1481,7 @@ const SearchResults = ({ searchData }) => {
           Previous
         </Button>
 
-        <div className="flex items-center gap-1">
+        <div className="flex w-full flex-wrap items-center justify-center gap-1 sm:w-auto">
           {getPageNumbers().map((pageNum, index) => (
             <React.Fragment key={index}>
               {pageNum === "..." ? (

@@ -37,18 +37,20 @@ export async function POST(req: NextRequest) {
       'Content-Type': 'application/json',
     }
 
+    const clerkApiBase = clerkKey.startsWith('sk_live') ? 'https://api.clerk.com' : 'https://api.clerk.dev'
+
     // Resolve or create user
     let resolvedUserId: string | undefined = userId
     if (!resolvedUserId) {
       if (!targetEmail) return json(400, { error: 'Provide userId or email' })
       const listRes = await fetch(
-        'https://api.clerk.com/v1/users?email_address=' + encodeURIComponent(targetEmail),
+        `${clerkApiBase}/v1/users?email_address=` + encodeURIComponent(targetEmail),
         { headers: adminHeaders }
       )
       const list = await listRes.json()
       resolvedUserId = list?.[0]?.id
       if (!resolvedUserId && createIfMissing) {
-        const createRes = await fetch('https://api.clerk.com/v1/users', {
+        const createRes = await fetch(`${clerkApiBase}/v1/users`, {
           method: 'POST',
           headers: adminHeaders,
           body: JSON.stringify({ email_address: [targetEmail] }),
@@ -60,7 +62,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Create a session for this user
-    const sessRes = await fetch('https://api.clerk.com/v1/sessions', {
+    const sessRes = await fetch(`${clerkApiBase}/v1/sessions`, {
       method: 'POST',
       headers: adminHeaders,
       body: JSON.stringify({ user_id: resolvedUserId }),
@@ -69,7 +71,7 @@ export async function POST(req: NextRequest) {
     if (!sessRes.ok) return json(sessRes.status, { error: 'Failed to create session', detail: session })
 
     // Mint a session token (JWT)
-    const tokRes = await fetch(`https://api.clerk.com/v1/sessions/${session.id}/tokens`, {
+    const tokRes = await fetch(`${clerkApiBase}/v1/sessions/${session.id}/tokens`, {
       method: 'POST',
       headers: adminHeaders,
       body: JSON.stringify({}),
@@ -91,18 +93,48 @@ export async function POST(req: NextRequest) {
       'Max-Age=3600',
     ].filter(Boolean)
 
+    const devBrowserRes = await fetch(`${clerkApiBase}/v1/dev_browser`, {
+      method: 'POST',
+      headers: adminHeaders,
+      body: JSON.stringify({}),
+    })
+    const devBrowser = await devBrowserRes.json()
+    if (!devBrowserRes.ok || !devBrowser?.token) {
+      return json(500, { error: 'Failed to mint dev browser token', detail: devBrowser })
+    }
+
+    const devBrowserCookie = [
+      `__clerk_db_jwt=${devBrowser.token}`,
+      'Path=/',
+      'SameSite=None',
+      secure ? 'Secure' : '',
+    ].filter(Boolean)
+
+    const clientUatValue = Math.floor(Date.now() / 1000)
+    const clientUatCookie = [
+      `__client_uat=${clientUatValue}`,
+      'Path=/',
+      'SameSite=None',
+      secure ? 'Secure' : '',
+    ].filter(Boolean)
+
     const headers = new Headers()
-    headers.set('Set-Cookie', cookieParts.join('; '))
+    headers.append('Set-Cookie', cookieParts.join('; '))
+    headers.append('Set-Cookie', devBrowserCookie.join('; '))
+    headers.append('Set-Cookie', clientUatCookie.join('; '))
 
     return json(200, {
       success: true,
       userId: resolvedUserId,
       sessionId: session.id,
-      cookie: `__session=${jwt}`,
-      note: 'Include this as your Cookie header to authenticate subsequent requests.',
+      cookies: {
+        session: `__session=${jwt}`,
+        devBrowser: `__clerk_db_jwt=${devBrowser.token}`,
+        clientUat: `__client_uat=${clientUatValue}`,
+      },
+      note: 'Include these cookies on subsequent requests to authenticate.',
     }, headers)
   } catch (err: any) {
     return json(500, { error: 'Session exchange failed', detail: String(err?.message || err) })
   }
 }
-

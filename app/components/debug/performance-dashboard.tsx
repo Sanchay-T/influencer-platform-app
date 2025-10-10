@@ -386,7 +386,7 @@ export function PerformanceDashboard({ className = '' }: PerformanceDashboardPro
                       <li>• Keep this dashboard open while testing to see real-time performance</li>
                       <li>• Export data before and after changes to measure improvements</li>
                       <li>• Focus on operations with the highest call counts first</li>
-                      <li>• Aim for sub-100ms response times and >80% cache hit rates</li>
+                      <li>• Aim for sub-100ms response times and &gt;80% cache hit rates</li>
                     </ul>
                   </div>
                 </div>

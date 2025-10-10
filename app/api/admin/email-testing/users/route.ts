@@ -1,5 +1,6 @@
+import '@/lib/config/load-env';
 import { NextRequest, NextResponse } from 'next/server';
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { auth, clerkBackendClient } from '@/lib/auth/backend-auth';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
 import { ilike, or, asc, desc } from 'drizzle-orm';
@@ -7,7 +8,14 @@ import { isAdminUser } from '@/lib/auth/admin-utils';
 
 export async function GET(req: NextRequest) {
   try {
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return NextResponse.json({ users: [], query: null, count: 0, searchMethod: 'skipped' });
+    }
     // Authentication check
+    if (!process.env.CLERK_SECRET_KEY) {
+      return NextResponse.json({ users: [], query: null, count: 0, searchMethod: 'skipped' });
+    }
+
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -77,20 +85,19 @@ export async function GET(req: NextRequest) {
       if (usersWithStatus.length === 0) {
         console.log('🔍 [ADMIN-SEARCH] No database results, searching Clerk...');
         try {
-          const client = await clerkClient();
           console.log('🔍 [CLERK-SEARCH] Searching Clerk with query:', query);
           
           // Try different search approaches
           let clerkUsers;
           if (query.includes('@')) {
             // Email search
-            clerkUsers = await client.users.getUserList({
+            clerkUsers = await clerkBackendClient.users.getUserList({
               emailAddress: [query],
               limit: 10
             });
           } else {
             // Name search - get recent users and filter
-            clerkUsers = await client.users.getUserList({
+            clerkUsers = await clerkBackendClient.users.getUserList({
               limit: 50,
               orderBy: '-created_at'
             });

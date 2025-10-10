@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@/lib/auth/backend-auth';
 import { getUserProfile, createUser } from '@/lib/db/queries/user-queries';
 import { getTrialStatus } from '@/lib/trial/trial-service';
 

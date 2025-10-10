@@ -1,5 +1,6 @@
+import '@/lib/config/load-env';
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@/lib/auth/backend-auth';
 import postgres from 'postgres';
 import { isAdminUser } from '@/lib/auth/admin-utils';
 
@@ -9,10 +10,17 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 export async function GET(req: NextRequest) {
   try {
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return NextResponse.json({ users: [], cached: false, query: null });
+    }
     const startTime = Date.now();
     
     // Authentication check
     const { userId } = await auth();
+    if (!process.env.CLERK_SECRET_KEY) {
+      return NextResponse.json({ users: [], cached: false, query: null });
+    }
+
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

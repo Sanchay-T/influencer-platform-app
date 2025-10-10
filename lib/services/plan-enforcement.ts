@@ -1,3 +1,4 @@
+import { headers } from 'next/headers';
 import { db } from '@/lib/db';
 import { subscriptionPlans, campaigns, scrapingResults, scrapingJobs } from '@/lib/db/schema';
 import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
@@ -19,6 +20,35 @@ export interface UsageInfo {
 }
 
 export class PlanEnforcementService {
+  private static resolveDefaultLimits(planKey: string): PlanLimits {
+    switch (planKey) {
+      case 'fame_flex':
+        return { campaignsLimit: -1, creatorsLimit: -1, isUnlimited: true };
+      case 'viral_surge':
+        return { campaignsLimit: 10, creatorsLimit: 10000, isUnlimited: false };
+      case 'glow_up':
+        return { campaignsLimit: 3, creatorsLimit: 1000, isUnlimited: false };
+      default:
+        return { campaignsLimit: 1, creatorsLimit: 50, isUnlimited: false };
+    }
+  }
+
+  private static normalizePlanLimits(planKey: string, campaignsLimit?: number | null, creatorsLimit?: number | null) {
+    const defaults = this.resolveDefaultLimits(planKey);
+    const normalizedCampaigns = campaignsLimit ?? defaults.campaignsLimit;
+    const normalizedCreators = creatorsLimit ?? defaults.creatorsLimit;
+
+    // Fame Flex should always be unlimited regardless of DB values
+    if (planKey === 'fame_flex') {
+      return { campaignsLimit: -1, creatorsLimit: -1 };
+    }
+
+    return {
+      campaignsLimit: normalizedCampaigns,
+      creatorsLimit: normalizedCreators,
+    };
+  }
+
   /**
    * Get user's current plan limits
    */
@@ -37,27 +67,23 @@ export class PlanEnforcementService {
       });
 
       if (!plan) {
-        // Default free tier limits (very restrictive)
-        console.log(`⚠️ [PLAN-ENFORCEMENT] No plan found for ${userProfile.currentPlan}, using free tier`);
-        return {
-          campaignsLimit: 1,
-          creatorsLimit: 50,
-          isUnlimited: false
-        };
+        console.log(`⚠️ [PLAN-ENFORCEMENT] No plan found for ${userProfile.currentPlan}, using defaults`);
+        return this.resolveDefaultLimits(userProfile.currentPlan || 'free');
       }
 
-      const isUnlimited = plan.campaignsLimit === -1 && plan.creatorsLimit === -1;
-      
+      const normalizedPlan = this.normalizePlanLimits(plan.planKey, plan.campaignsLimit, plan.creatorsLimit);
+      const isUnlimited = normalizedPlan.campaignsLimit === -1 && normalizedPlan.creatorsLimit === -1;
+
       console.log(`✅ [PLAN-ENFORCEMENT] Plan limits for ${userId}:`, {
         plan: plan.planKey,
-        campaignsLimit: plan.campaignsLimit,
-        creatorsLimit: plan.creatorsLimit,
+        campaignsLimit: normalizedPlan.campaignsLimit,
+        creatorsLimit: normalizedPlan.creatorsLimit,
         isUnlimited
       });
 
       return {
-        campaignsLimit: plan.campaignsLimit,
-        creatorsLimit: plan.creatorsLimit,
+        campaignsLimit: normalizedPlan.campaignsLimit,
+        creatorsLimit: normalizedPlan.creatorsLimit,
         isUnlimited
       };
     } catch (error) {
@@ -137,6 +163,11 @@ export class PlanEnforcementService {
     reason?: string;
     usage?: UsageInfo;
   }> {
+    const bypass = await this.getPlanBypassResult('campaigns');
+    if (bypass) {
+      return bypass;
+    }
+
     try {
       const usage = await this.getCurrentUsage(userId);
       
@@ -177,6 +208,11 @@ export class PlanEnforcementService {
     usage?: UsageInfo;
     adjustedLimit?: number;
   }> {
+    const bypass = await this.getPlanBypassResult('creators');
+    if (bypass) {
+      return bypass;
+    }
+
     try {
       const usage = await this.getCurrentUsage(userId);
       
@@ -239,6 +275,57 @@ export class PlanEnforcementService {
     } catch (error) {
       console.error(`❌ [PLAN-ENFORCEMENT] Error tracking campaign creation:`, error);
     }
+  }
+
+  private static async getPlanBypassResult(scope: 'campaigns' | 'creators'): Promise<{
+    allowed: boolean;
+    reason?: string;
+    usage?: UsageInfo;
+    adjustedLimit?: number;
+  } | null> {
+    if (process.env.NODE_ENV === 'production') {
+      return null;
+    }
+
+    const normalize = (value?: string | null) =>
+      value
+        ?.split(',')
+        .map((entry) => entry.trim().toLowerCase())
+        .filter(Boolean) ?? [];
+
+    const usage: UsageInfo = {
+      campaignsUsed: 0,
+      creatorsUsed: 0,
+      campaignsRemaining: Infinity,
+      creatorsRemaining: Infinity,
+      canCreateCampaign: true,
+      canCreateJob: true,
+    };
+
+    const envBypass = normalize(process.env.PLAN_VALIDATION_BYPASS);
+    if (envBypass.includes('all') || envBypass.includes(scope)) {
+      return {
+        allowed: true,
+        reason: 'Plan validation bypassed for testing',
+        usage,
+      };
+    }
+
+    try {
+      const headerStore = await headers();
+      const headerBypass = normalize(headerStore.get('x-plan-bypass'));
+      if (headerBypass.includes('all') || headerBypass.includes(scope)) {
+        return {
+          allowed: true,
+          reason: 'Plan validation bypassed for testing',
+          usage,
+        };
+      }
+    } catch {
+      // headers() unavailable outside request context; ignore.
+    }
+
+    return null;
   }
 
   /**

@@ -10,17 +10,42 @@ import { LogLevel, LogCategory, LoggerConfig } from './types';
  * Determines minimum log level for each environment to control verbosity
  */
 export const LOG_LEVEL_CONFIG = {
-  development: LogLevel.DEBUG,  // Show all logs in development
+  development: LogLevel.WARN,   // Default to WARN in dev to avoid noisy consoles
   test: LogLevel.WARN,          // Only warnings and errors in tests
   production: LogLevel.INFO,    // Info and above in production
 } as const;
+
+const LOG_LEVEL_MAP: Record<string, LogLevel> = {
+  TRACE: LogLevel.DEBUG,
+  DEBUG: LogLevel.DEBUG,
+  INFO: LogLevel.INFO,
+  WARN: LogLevel.WARN,
+  WARNING: LogLevel.WARN,
+  ERROR: LogLevel.ERROR,
+  CRITICAL: LogLevel.CRITICAL,
+  FATAL: LogLevel.CRITICAL,
+};
+
+function parseLogLevel(rawLevel: string | undefined): LogLevel | undefined {
+  if (!rawLevel) return undefined;
+  return LOG_LEVEL_MAP[rawLevel.trim().toUpperCase()];
+}
+
+function resolveLogLevel(defaultLevel: LogLevel): LogLevel {
+  const override =
+    parseLogLevel(process.env.SERVER_LOG_LEVEL) ||
+    parseLogLevel(process.env.LOG_LEVEL) ||
+    parseLogLevel(process.env.NEXT_PUBLIC_SERVER_LOG_LEVEL);
+
+  return override ?? defaultLevel;
+}
 
 /**
  * Default logger configuration based on environment
  */
 export const DEFAULT_LOGGER_CONFIG: Record<string, Partial<LoggerConfig>> = {
   development: {
-    minLevel: LogLevel.DEBUG,
+    minLevel: resolveLogLevel(LogLevel.WARN),
     enableConsole: true,
     enableSentry: true,
     enableFile: false,
@@ -31,7 +56,7 @@ export const DEFAULT_LOGGER_CONFIG: Record<string, Partial<LoggerConfig>> = {
   },
   
   test: {
-    minLevel: LogLevel.WARN,
+    minLevel: resolveLogLevel(LogLevel.WARN),
     enableConsole: false,
     enableSentry: false,
     enableFile: false,
@@ -41,7 +66,7 @@ export const DEFAULT_LOGGER_CONFIG: Record<string, Partial<LoggerConfig>> = {
   },
   
   production: {
-    minLevel: LogLevel.INFO,
+    minLevel: resolveLogLevel(LogLevel.INFO),
     enableConsole: false,
     enableSentry: true,
     enableFile: true,
@@ -299,7 +324,8 @@ export function getLoggerConfig(): Partial<LoggerConfig> {
  */
 export function getMinLogLevel(): LogLevel {
   const env = (process.env.NODE_ENV || 'development') as keyof typeof LOG_LEVEL_CONFIG;
-  return LOG_LEVEL_CONFIG[env] || LOG_LEVEL_CONFIG.development;
+  const defaultLevel = LOG_LEVEL_CONFIG[env] || LOG_LEVEL_CONFIG.development;
+  return resolveLogLevel(defaultLevel);
 }
 
 /**

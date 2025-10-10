@@ -46,12 +46,14 @@ export function transformInstagramProfile(profileData: ApifyInstagramProfileResp
  * Transform a single Apify related profile to unified frontend format (matches TikTok/YouTube structure)
  */
 export function transformRelatedProfile(profile: ApifyRelatedProfile, order: number = 0): any {
+  const followerCount = resolveFollowerCount(profile);
+
   // Transform to the UNIFIED format expected by SearchProgress component (same as TikTok/YouTube)
   return {
     creator: {
       name: profile.full_name || profile.username || 'Unknown Creator',
       uniqueId: profile.username || '',
-      followers: 0, // Will be enhanced later
+      followers: followerCount ?? null,
       avatarUrl: profile.profile_pic_url || '',
       profilePicUrl: profile.profile_pic_url || '',
       verified: profile.is_verified || false,
@@ -77,8 +79,27 @@ export function transformRelatedProfile(profile: ApifyRelatedProfile, order: num
     is_private: profile.is_private || false,
     is_verified: profile.is_verified || false,
     profile_pic_url: profile.profile_pic_url || '',
-    profileUrl: `https://instagram.com/${profile.username}`
+    profileUrl: `https://instagram.com/${profile.username}`,
+    followers: followerCount ?? null,
+    followers_count: followerCount ?? null,
   };
+}
+
+// Breadcrumb: aligns Apify related profile payload with unified follower stats consumed by the new search-engine pipeline.
+function resolveFollowerCount(profile: ApifyRelatedProfile): number | null {
+  const candidateValues = [
+    profile.followers,
+    profile.followers_count,
+    profile.follower_count,
+  ];
+
+  for (const value of candidateValues) {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return value;
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -87,6 +108,9 @@ export function transformRelatedProfile(profile: ApifyRelatedProfile, order: num
 export function transformEnhancedProfile(baseProfile: any, enhancedData: ApifyInstagramProfileResponse): any {
   const bio = enhancedData.biography || '';
   const emails = extractEmailsFromBio(bio);
+  const followerCount = typeof enhancedData.followersCount === 'number' && Number.isFinite(enhancedData.followersCount)
+    ? enhancedData.followersCount
+    : null;
   
   return {
     ...baseProfile,
@@ -94,12 +118,13 @@ export function transformEnhancedProfile(baseProfile: any, enhancedData: ApifyIn
       ...baseProfile.creator,
       bio: bio,
       emails: emails,
-      followers: enhancedData.followersCount || 0
+      followers: followerCount ?? baseProfile.creator?.followers ?? null,
     },
     // Keep Instagram-specific fields for compatibility
     bio: bio,
     emails: emails,
-    followers_count: enhancedData.followersCount || 0
+    followers: followerCount ?? baseProfile.followers ?? null,
+    followers_count: followerCount ?? baseProfile.followers_count ?? null,
   };
 }
 

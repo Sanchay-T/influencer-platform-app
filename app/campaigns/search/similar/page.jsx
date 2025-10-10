@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/app/components/layout/dashboard-layout";
+import Breadcrumbs from "@/app/components/breadcrumbs";
 import { SimilarSearchForm } from '@/app/components/campaigns/similar-search/similar-search-form';
 import { useRouter } from 'next/navigation';
 
 export default function SimilarCreatorSearch() {
   const router = useRouter();
-  const [step, setStep] = useState(1);
   const [searchData, setSearchData] = useState({
     jobId: null,
     campaignId: null,
@@ -15,6 +15,7 @@ export default function SimilarCreatorSearch() {
     targetUsername: ''
   });
   const [isLoading, setIsLoading] = useState(false); // Start with false - no need to wait
+  const [campaignName, setCampaignName] = useState("");
 
   useEffect(() => {
     console.log('🔄 [SIMILAR-SEARCH-PAGE] Initializing similar creator search page');
@@ -26,6 +27,7 @@ export default function SimilarCreatorSearch() {
         ...prev,
         campaignId: campaign.id
       }));
+      setCampaignName(campaign.name ?? "");
     } else {
       console.log('❌ [SIMILAR-SEARCH-PAGE] No campaign found in session storage');
       // Try to get from URL
@@ -45,6 +47,19 @@ export default function SimilarCreatorSearch() {
     }
     console.log('✅ [SIMILAR-SEARCH-PAGE] Initialization complete');
   }, []);
+
+  useEffect(() => {
+    if (searchData.campaignId && !campaignName) {
+      try {
+        const campaign = JSON.parse(sessionStorage.getItem('currentCampaign') ?? 'null');
+        if (campaign?.name) {
+          setCampaignName(campaign.name);
+        }
+      } catch (error) {
+        console.error('💥 [SIMILAR-SEARCH-PAGE] Error reloading campaign info:', error);
+      }
+    }
+  }, [searchData.campaignId, campaignName]);
 
   const handleSearchSubmit = async (data) => {
     console.log('✅ [SIMILAR-SEARCH-PAGE] Search started:', data);
@@ -78,6 +93,19 @@ export default function SimilarCreatorSearch() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        <Breadcrumbs
+          items={[
+            { label: 'Dashboard', href: '/dashboard' },
+            {
+              label: campaignName || 'Campaign',
+              href: searchData?.campaignId ? `/campaigns/${searchData.campaignId}` : '/dashboard',
+              type: 'campaign',
+            },
+            { label: 'Similar Creator Search' },
+          ]}
+          backHref={searchData?.campaignId ? `/campaigns/search?campaignId=${searchData.campaignId}` : '/campaigns/search'}
+          backLabel="Back to Search Options"
+        />
         <div className="flex items-center justify-between mt-2">
           <div>
             <h1 className="text-2xl font-bold">Find Influencers</h1>
@@ -85,12 +113,10 @@ export default function SimilarCreatorSearch() {
           </div>
         </div>
 
-        {step === 1 && (
-          <SimilarSearchForm 
-            campaignId={searchData.campaignId}
-            onSuccess={handleSearchSubmit}
-          />
-        )}
+        <SimilarSearchForm
+          campaignId={searchData.campaignId}
+          onSuccess={handleSearchSubmit}
+        />
       </div>
     </DashboardLayout>
   );

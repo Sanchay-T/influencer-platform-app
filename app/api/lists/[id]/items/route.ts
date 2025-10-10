@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@/lib/auth/backend-auth';
 import { addCreatorsToList, removeListItems, updateListItems } from '@/lib/db/queries/list-queries';
 
 function errorToResponse(error: unknown) {

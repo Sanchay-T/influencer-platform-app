@@ -8,10 +8,12 @@ const DEFAULT_CONFIGS = {
   'api_limits.max_api_calls_for_testing': { value: '5', type: 'number' },
   'api_limits.max_api_calls_tiktok': { value: '1', type: 'number' },
   'api_limits.max_api_calls_tiktok_similar': { value: '1', type: 'number' },
+  'api_limits.max_api_calls_instagram_similar': { value: '5', type: 'number' },
   
   // QStash Delays
   'qstash_delays.tiktok_continuation_delay': { value: '2s', type: 'duration' },
   'qstash_delays.instagram_reels_delay': { value: '30s', type: 'duration' },
+  'qstash_delays.instagram_similar_delay': { value: '5s', type: 'duration' },
   
   // Job Timeouts
   'timeouts.standard_job_timeout': { value: '60m', type: 'duration' },

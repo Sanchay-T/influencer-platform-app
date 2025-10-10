@@ -3,6 +3,9 @@ import { headers } from 'next/headers';
 import Stripe from 'stripe';
 import { getUserProfile, updateUserProfile, getUserByStripeCustomerId } from '@/lib/db/queries/user-queries';
 import BillingLogger from '@/lib/loggers/billing-logger';
+import { db } from '@/lib/db';
+import { subscriptionPlans } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-06-20',
@@ -10,24 +13,63 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
-// Plan configuration mapping
-const PLAN_CONFIGS = {
-  'glow_up': {
-    campaignsLimit: 3,
-    creatorsLimit: 1000,
-    features: { analytics: 'basic', support: 'email', api: false }
-  },
-  'viral_surge': {
-    campaignsLimit: 10,
-    creatorsLimit: 10000,
-    features: { analytics: 'advanced', support: 'priority', api: false }
-  },
-  'fame_flex': {
-    campaignsLimit: -1, // Unlimited
-    creatorsLimit: -1, // Unlimited
-    features: { analytics: 'advanced', support: 'priority', api: true }
-  }
+type PlanConfig = {
+  campaignsLimit: number;
+  creatorsLimit: number;
+  features: Record<string, unknown>;
 };
+
+const planConfigCache = new Map<string, PlanConfig>();
+let cachedPlanKeys: string[] | null = null;
+
+async function fetchAvailablePlanKeys(): Promise<string[]> {
+  if (cachedPlanKeys) return cachedPlanKeys;
+  try {
+    const rows = await db
+      .select({ planKey: subscriptionPlans.planKey })
+      .from(subscriptionPlans);
+    cachedPlanKeys = rows.map((row) => row.planKey);
+    return cachedPlanKeys;
+  } catch (error) {
+    console.error('[STRIPE-WEBHOOK] Failed to fetch plan keys:', error);
+    return cachedPlanKeys ?? [];
+  }
+}
+
+async function resolvePlanConfig(planKey: string | undefined | null): Promise<PlanConfig | null> {
+  if (!planKey) return null;
+  if (planConfigCache.has(planKey)) {
+    return planConfigCache.get(planKey)!;
+  }
+
+  try {
+    const plan = await db.query.subscriptionPlans.findFirst({
+      where: eq(subscriptionPlans.planKey, planKey),
+    });
+
+    if (!plan) {
+      // Refresh known plan keys so logging stays accurate
+      cachedPlanKeys = null;
+      await fetchAvailablePlanKeys();
+      return null;
+    }
+
+    const config: PlanConfig = {
+      campaignsLimit: plan.campaignsLimit ?? 0,
+      creatorsLimit: plan.creatorsLimit ?? 0,
+      features:
+        (plan.features && typeof plan.features === 'object'
+          ? (plan.features as Record<string, unknown>)
+          : {}) || {},
+    };
+
+    planConfigCache.set(planKey, config);
+    return config;
+  } catch (error) {
+    console.error('[STRIPE-WEBHOOK] Failed to resolve plan config:', error);
+    return null;
+  }
+}
 
 export async function POST(req: NextRequest) {
   const requestId = BillingLogger.generateRequestId();
@@ -194,15 +236,19 @@ export async function POST(req: NextRequest) {
 
 /**
  * Handle successful checkout completion
+ *
+ * ⚠️ RACE CONDITION PROTECTION:
+ * This webhook may fire AFTER /api/stripe/checkout-success has already updated the user.
+ * We must check the current state before overwriting to prevent downgrading paid users.
  */
 async function handleCheckoutCompleted(event: Stripe.Event, requestId: string) {
   const session = event.data.object as Stripe.Checkout.Session;
   const userId = session.metadata?.userId;
   const planId = session.metadata?.planId;
-  
+
   await BillingLogger.logStripe(
     'CHECKOUT_COMPLETED',
-    'Processing checkout completion',
+    'Processing checkout completion webhook',
     userId,
     {
       sessionId: session.id,
@@ -230,8 +276,71 @@ async function handleCheckoutCompleted(event: Stripe.Event, requestId: string) {
     return;
   }
 
+  // ⚠️ CRITICAL: Check if checkout-success already processed this payment
+  const currentProfile = await getUserProfile(userId);
+  if (!currentProfile) {
+    await BillingLogger.logError(
+      'PROFILE_NOT_FOUND',
+      'User profile not found during checkout webhook',
+      userId,
+      { sessionId: session.id },
+      requestId
+    );
+    return;
+  }
+
+  // ✅ IDEMPOTENCY CHECK: Has this exact checkout session already been processed?
+  // Check: same subscription ID AND recent webhook (within last 5 minutes)
+  const recentWebhookWindow = 5 * 60 * 1000; // 5 minutes
+  const isRecentWebhook = currentProfile.lastWebhookTimestamp &&
+    (Date.now() - new Date(currentProfile.lastWebhookTimestamp).getTime() < recentWebhookWindow);
+
+  const sameSubscription = currentProfile.stripeSubscriptionId === session.subscription;
+  const sameCheckoutEvent = currentProfile.lastWebhookEvent === 'checkout.session.completed';
+
+  const isDuplicateWebhook = isRecentWebhook && sameSubscription && sameCheckoutEvent;
+
+  if (isDuplicateWebhook) {
+    await BillingLogger.logStripe(
+      'DUPLICATE_WEBHOOK',
+      'Duplicate checkout.session.completed webhook detected, skipping (idempotency)',
+      userId,
+      {
+        sessionId: session.id,
+        subscriptionId: session.subscription,
+        lastProcessed: currentProfile.lastWebhookTimestamp,
+        minutesSinceLastWebhook: Math.round((Date.now() - new Date(currentProfile.lastWebhookTimestamp!).getTime()) / 60000),
+        reason: 'Idempotency protection - this webhook was already processed'
+      },
+      requestId
+    );
+    return; // ✅ Skip duplicate processing
+  }
+
+  // ✅ RACE CONDITION CHECK: Has checkout-success already upgraded the user to 'active'?
+  const alreadyActivated =
+    currentProfile.subscriptionStatus === 'active' &&
+    currentProfile.stripeSubscriptionId === session.subscription;
+
+  if (alreadyActivated) {
+    await BillingLogger.logStripe(
+      'CHECKOUT_ALREADY_PROCESSED',
+      'Checkout already processed by success page, skipping webhook update to prevent downgrade',
+      userId,
+      {
+        sessionId: session.id,
+        currentStatus: currentProfile.subscriptionStatus,
+        currentPlan: currentProfile.currentPlan,
+        stripeSubscriptionId: currentProfile.stripeSubscriptionId,
+        reason: 'Race condition protection - checkout-success was faster'
+      },
+      requestId
+    );
+    return; // ✅ Skip update to prevent downgrading active user
+  }
+
   // Update user profile with initial subscription data
-  const planConfig = PLAN_CONFIGS[planId as keyof typeof PLAN_CONFIGS];
+  const planConfig = await resolvePlanConfig(planId);
   if (!planConfig) {
     await BillingLogger.logError(
       'PLAN_CONFIG_ERROR',
@@ -239,7 +348,7 @@ async function handleCheckoutCompleted(event: Stripe.Event, requestId: string) {
       userId,
       {
         planId,
-        availablePlans: Object.keys(PLAN_CONFIGS),
+        availablePlans: await fetchAvailablePlanKeys(),
         recoverable: false
       },
       requestId
@@ -250,20 +359,22 @@ async function handleCheckoutCompleted(event: Stripe.Event, requestId: string) {
   try {
     await BillingLogger.logDatabase(
       'UPDATE',
-      'Updating user profile after checkout completion',
+      'Updating user profile after checkout completion webhook',
       userId,
       {
         table: 'userProfiles',
-        operation: 'checkout_completion',
-        recordId: userId
+        operation: 'checkout_completion_webhook',
+        recordId: userId,
+        note: 'Webhook arrived before checkout-success API'
       },
       requestId
     );
 
+    // Only update if not already activated by checkout-success
     await updateUserProfile(userId, {
       stripeCustomerId: session.customer as string,
       stripeSubscriptionId: session.subscription as string,
-      subscriptionStatus: 'trialing', // Will be updated when subscription is created
+      subscriptionStatus: 'trialing', // Will be 'active' when subscription.created fires
       trialStatus: 'active',
       currentPlan: planId as any,
       planCampaignsLimit: planConfig.campaignsLimit,
@@ -468,7 +579,7 @@ async function handleSubscriptionUpdated(event: Stripe.Event, requestId: string)
 
   // Handle plan changes
   if (newPlanId && newPlanId !== userProfile.currentPlan) {
-    const planConfig = PLAN_CONFIGS[newPlanId as keyof typeof PLAN_CONFIGS];
+    const planConfig = await resolvePlanConfig(newPlanId);
     if (planConfig) {
       updateData.currentPlan = newPlanId;
       updateData.planCampaignsLimit = planConfig.campaignsLimit;
@@ -484,6 +595,18 @@ async function handleSubscriptionUpdated(event: Stripe.Event, requestId: string)
           toPlan: newPlanId,
           reason: 'subscription_updated',
           effective: new Date().toISOString()
+        },
+        requestId
+      );
+    } else {
+      await BillingLogger.logError(
+        'PLAN_CONFIG_ERROR',
+        'Unable to resolve plan configuration during subscription update',
+        userProfile.userId,
+        {
+          requestedPlan: newPlanId,
+          availablePlans: await fetchAvailablePlanKeys(),
+          recoverable: true
         },
         requestId
       );
