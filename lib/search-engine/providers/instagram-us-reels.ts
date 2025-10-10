@@ -67,7 +67,7 @@ export async function runInstagramUsReelsProvider(
     progress: 5,
   });
 
-  logger.info('Instagram US Reels job started', {
+  logger.info('🚀 INSTAGRAM_US_REELS_PROVIDER_ENTRY_v2', {
     jobId: job.id,
     campaignId: job.campaignId,
     keyword,
@@ -222,7 +222,7 @@ export async function runInstagramUsReelsProvider(
       });
     }
 
-    logger.info('Instagram US Reels job completed', {
+    logger.info('✅ INSTAGRAM_US_REELS_PROVIDER_COMPLETE_v2', {
       jobId: job.id,
       totalCreators: processedResults,
       batches: metrics.batches.length,
