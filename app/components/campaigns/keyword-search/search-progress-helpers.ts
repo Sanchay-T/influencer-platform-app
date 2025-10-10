@@ -110,10 +110,10 @@ export function computeStage({
     case 'instagram-1.0':
     case 'instagram_1.0':
     case 'instagram_us_reels':
-      if (percent < 20) return `Expanding US-focused Instagram keywords for ${keyword}`
-      if (percent < 50) return 'Harvesting and vetting US creator handles'
-      if (percent < 80) return 'Screening profiles for US indicators'
-      return 'Scoring Instagram reels for relevance'
+      if (percent < 20) return `Turbo-searching Instagram for high-signal reels about ${keyword}`
+      if (percent < 50) return 'Harvesting reels, captions, and profiles for US indicators'
+      if (percent < 80) return 'Cross-checking ScrapeCreators data, transcripts, and location hints'
+      return 'Scoring and streaming the top US-focused creators to your table'
     case 'instagram-2.0':
     case 'instagram_2.0':
     case 'instagram-v2':

@@ -208,7 +208,15 @@ export async function runAgent(keyword: string) {
     log.session.end(sessionContext.sessionId, filtered.length);
 
     // Merge to master CSV
-    await mergeMaster(sessionContext.sessionCsv);
+    const shouldMerge =
+        process.env.US_REELS_DISABLE_MASTER_MERGE !== '1' &&
+        process.env.NODE_ENV !== 'production';
+
+    if (shouldMerge) {
+        await mergeMaster(sessionContext.sessionCsv);
+    } else {
+        log.warn('Skipping master merge (serverless environment detected)');
+    }
 
     if (filtered.length > 0) {
         log.result.success(filtered.length);
