@@ -116,16 +116,8 @@ export default function KeywordSearch() {
       // Determine API endpoint based on selected platform
       // For now, we'll handle one platform at a time - prioritize the first selected platform
       let apiEndpoint = '/api/scraping/tiktok'; // Default to TikTok
-      if (searchData.platforms.includes('google-serp')) {
-        apiEndpoint = '/api/scraping/google-serp';
-      } else if (searchData.platforms.includes('instagram-2.0')) {
-        apiEndpoint = '/api/scraping/instagram-v2';
-      } else if (searchData.platforms.includes('instagram-1.0')) {
+      if (searchData.platforms.includes('instagram')) {
         apiEndpoint = '/api/scraping/instagram-us-reels';
-      } else if (searchData.platforms.includes('enhanced-instagram')) {
-        apiEndpoint = '/api/scraping/instagram-enhanced';
-      } else if (searchData.platforms.includes('instagram')) {
-        apiEndpoint = '/api/scraping/instagram-reels';
       } else if (searchData.platforms.includes('youtube')) {
         apiEndpoint = '/api/scraping/youtube';
       }
@@ -155,19 +147,11 @@ export default function KeywordSearch() {
       const data = await response.json();
       console.log('✅ [KEYWORD-SEARCH-PAGE] API response data:', data);
       
-    const nextPlatform = searchData.platforms.includes('google-serp')
-      ? 'google-serp'
-      : searchData.platforms.includes('instagram-2.0')
-        ? 'instagram-2.0'
-        : searchData.platforms.includes('instagram-1.0')
-          ? 'instagram-1.0'
-          : searchData.platforms.includes('enhanced-instagram')
-            ? 'enhanced-instagram'
-            : searchData.platforms.includes('instagram')
-              ? 'instagram'
-              : searchData.platforms.includes('youtube')
-                ? 'youtube'
-                : 'tiktok';
+    const nextPlatform = searchData.platforms.includes('instagram')
+      ? 'instagram'
+      : searchData.platforms.includes('youtube')
+        ? 'youtube'
+        : 'tiktok';
 
     setSearchData(prev => ({ 
       ...prev, 

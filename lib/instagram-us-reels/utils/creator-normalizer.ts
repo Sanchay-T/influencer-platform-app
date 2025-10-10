@@ -151,6 +151,7 @@ export function normalizeAggregate(entry: CreatorAggregate, keyword: string): No
     takenAt: reel.takenAt,
     matchedTerms: Array.isArray((reel as any).matchedTerms) ? (reel as any).matchedTerms : [],
     transcript: reel.transcript ?? null,
+    thumbnail: reel.thumbnail ?? null,
     snippet: collectSnippet(reel),
   }));
 
@@ -199,6 +200,7 @@ export function normalizeAggregate(entry: CreatorAggregate, keyword: string): No
         likes: topReel.likeCount ?? null,
       },
       transcript: topReel.transcript ?? null,
+      thumbnail: topReel.thumbnail ?? null,
       matchedTerms,
     },
     metadata: {
@@ -220,6 +222,7 @@ export function normalizeAggregate(entry: CreatorAggregate, keyword: string): No
           caption: topReel.caption,
           viewCount: topReel.viewCount,
           takenAt: topReel.takenAt,
+          thumbnail: topReel.thumbnail ?? null,
           matchedTerms,
         },
         ...additionalReels,
