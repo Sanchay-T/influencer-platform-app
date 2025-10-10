@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { auth } from '@/lib/auth/backend-auth';
+import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
 import { startTrial } from '@/lib/trial/trial-service';
 import { MockStripeService } from '@/lib/stripe/mock-stripe';
 import { scheduleTrialEmails } from '@/lib/email/trial-email-triggers';
@@ -43,9 +41,7 @@ export async function PATCH(request: Request) {
 
     // Get current user profile
     console.log('🔍 [ONBOARDING-COMPLETE] Fetching user profile');
-    const userProfile = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.userId, userId)
-    });
+    const userProfile = await getUserProfile(userId);
 
     if (!userProfile) {
       console.error('❌ [ONBOARDING-COMPLETE] User profile not found');
@@ -76,82 +72,15 @@ export async function PATCH(request: Request) {
     }
     console.log('✅ [ONBOARDING-COMPLETE] User email retrieved:', userEmail);
 
-    // Step 1: Create Stripe customer and subscription (Real or Mock based on environment)
-    console.log('💳💳💳 [ONBOARDING-COMPLETE] ===============================');
-    console.log('💳💳💳 [ONBOARDING-COMPLETE] SETTING UP STRIPE TRIAL');
-    console.log('💳💳💳 [ONBOARDING-COMPLETE] ===============================');
-    console.log('💳 [ONBOARDING-COMPLETE] User Email:', userEmail);
-    console.log('💳 [ONBOARDING-COMPLETE] User ID:', userId);
-    console.log('💳 [ONBOARDING-COMPLETE] User Selected Plan:', userProfile.currentPlan || 'glow_up');
-    console.log('💳 [ONBOARDING-COMPLETE] Environment:', process.env.NODE_ENV);
-    console.log('💳 [ONBOARDING-COMPLETE] Use Real Stripe:', process.env.USE_REAL_STRIPE);
-    
-    const stripeStartTime = Date.now();
-    
-    // 🔧 ALWAYS USE REAL STRIPE (test mode) - no more mock fallbacks
-    console.log('🏭 [ONBOARDING-COMPLETE] Using REAL Stripe integration (test mode)');
-    
-    let stripeSetup;
-    try {
-      const StripeService = (await import('@/lib/stripe/stripe-service')).default;
-      
-      // Create real Stripe customer
-      console.log('👤 [ONBOARDING-COMPLETE] Creating real Stripe customer...');
-      const customer = await StripeService.createCustomer(
-        userEmail, 
-        userProfile.fullName || userProfile.businessName || 'User', 
-        userId
-      );
-      
-      console.log('✅ [ONBOARDING-COMPLETE] Stripe customer created:', customer.id);
-      
-      // Create trial subscription
-      console.log('📋 [ONBOARDING-COMPLETE] Creating trial subscription...');
-      const subscription = await StripeService.createTrialSubscription(
-        customer.id, 
-        userProfile.currentPlan || 'glow_up'
-      );
-      
-      console.log('✅ [ONBOARDING-COMPLETE] Trial subscription created:', subscription.id);
-      
-      stripeSetup = {
-        customer: { id: customer.id },
-        subscription: { id: subscription.id },
-        checkoutSession: { id: `cs_real_${Date.now()}` }
-      };
-      
-      console.log('🎉 [ONBOARDING-COMPLETE] Real Stripe setup completed successfully');
-      
-    } catch (stripeError: any) {
-      console.error('❌ [ONBOARDING-COMPLETE] Real Stripe setup failed:', stripeError);
-      await OnboardingLogger.logError('STRIPE-SETUP-ERROR', 'Failed to set up Stripe during onboarding completion', userId, {
-        requestId,
-        errorMessage: stripeError?.message || 'Unknown error'
-      });
-      
-      // Log detailed error for debugging
-      console.error('📋 [ONBOARDING-COMPLETE] Stripe Error Details:', {
-        message: stripeError.message,
-        type: stripeError.type,
-        code: stripeError.code,
-        plan: userProfile.currentPlan || 'glow_up',
-        userEmail,
-        userId
-      });
-      
-      // 🚨 NO MORE MOCK FALLBACK - Real Stripe required
-      return NextResponse.json({ 
-        error: 'Failed to set up Stripe subscription. Please try again or contact support.',
-        details: stripeError.message
-      }, { status: 500 });
-    }
-    
-    console.log('⏱️ [ONBOARDING-COMPLETE] Stripe setup completed in:', Date.now() - stripeStartTime, 'ms');
-    
-    console.log('✅ [ONBOARDING-COMPLETE] Real Stripe setup complete:', {
-      customerId: stripeSetup.customer.id,
-      subscriptionId: stripeSetup.subscription.id,
-      checkoutSessionId: stripeSetup.checkoutSession.id
+    // ⚠️ SKIP STRIPE SETUP: User already has Stripe customer + subscription from checkout
+    // This endpoint is called AFTER payment success, so Stripe resources already exist
+    console.log('💳 [ONBOARDING-COMPLETE] Skipping Stripe setup - already completed during checkout');
+    console.log('✅ [ONBOARDING-COMPLETE] User already has:', {
+      stripeCustomerId: userProfile.stripeCustomerId,
+      stripeSubscriptionId: userProfile.stripeSubscriptionId,
+      subscriptionStatus: userProfile.subscriptionStatus,
+      currentPlan: userProfile.currentPlan,
+      note: 'These were created during the checkout flow, no need to recreate'
     });
 
     // Step 2: Start trial system (background job will set plan asynchronously)
@@ -162,13 +91,14 @@ export async function PATCH(request: Request) {
     
     console.log('🎯 [ONBOARDING-COMPLETE] Input data:', {
       userId,
-      customerId: stripeSetup.customer.id,
-      subscriptionId: stripeSetup.subscription.id
+      customerId: userProfile.stripeCustomerId,
+      subscriptionId: userProfile.stripeSubscriptionId,
+      note: 'Using Stripe data from checkout, not creating new resources'
     });
     const trialStartTime = Date.now();
     const trialData = await startTrial(userId, {
-      customerId: stripeSetup.customer.id,
-      subscriptionId: stripeSetup.subscription.id
+      customerId: userProfile.stripeCustomerId || '',
+      subscriptionId: userProfile.stripeSubscriptionId || ''
     });
     console.log('⏱️ [ONBOARDING-COMPLETE] Trial setup completed in:', Date.now() - trialStartTime, 'ms');
 
@@ -182,12 +112,9 @@ export async function PATCH(request: Request) {
 
     // Step 3: Mark onboarding as completed
     console.log('📝 [ONBOARDING-COMPLETE] Marking onboarding as completed');
-    await db.update(userProfiles)
-      .set({
-        onboardingStep: 'completed',
-        updatedAt: new Date()
-      })
-      .where(eq(userProfiles.userId, userId));
+    await updateUserProfile(userId, {
+      onboardingStep: 'completed'
+    });
 
     console.log('✅ [ONBOARDING-COMPLETE] Onboarding marked as completed');
 
@@ -248,10 +175,9 @@ export async function PATCH(request: Request) {
         timeUntilExpiry: trialData.timeUntilExpiry
       },
       stripe: {
-        customerId: stripeSetup.customer.id,
-        subscriptionId: stripeSetup.subscription.id,
-        checkoutSessionId: stripeSetup.checkoutSession.id,
-        isMock: true
+        customerId: userProfile.stripeCustomerId || 'not-set',
+        subscriptionId: userProfile.stripeSubscriptionId || 'not-set',
+        note: 'Stripe resources created during checkout, not onboarding'
       },
       emails: {
         scheduled: emailResult.success,
@@ -315,9 +241,7 @@ export async function GET(request: Request) {
     }
 
     // Get user profile with trial data
-    const userProfile = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.userId, userId)
-    });
+    const userProfile = await getUserProfile(userId);
 
     if (!userProfile) {
       return NextResponse.json({ 

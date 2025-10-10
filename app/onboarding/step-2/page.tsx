@@ -68,7 +68,7 @@ export default function OnboardingStep2() {
       descriptionLength: brandDescription.length,
       userId,
       userEmail: user?.primaryEmailAddress?.emailAddress,
-      meetsMinLength: brandDescription.trim().length >= 50
+      hasDescription: !!brandDescription.trim()
     });
     
     // Form validation - empty description
@@ -87,29 +87,6 @@ export default function OnboardingStep2() {
         userId,
         userEmail: user?.primaryEmailAddress?.emailAddress,
         validationType: 'empty_description'
-      });
-      
-      setError(validationError);
-      return;
-    }
-
-    // Form validation - too short
-    if (brandDescription.trim().length < 50) {
-      const validationError = 'Please provide more details (at least 50 characters)';
-      
-      logFormAction('step-2-form', 'validation', {
-        error: validationError,
-        descriptionLength: brandDescription.trim().length,
-        requiredLength: 50,
-        formComplete: false
-      });
-      
-      logError('form_validation', new Error(validationError), {
-        step: 'step-2',
-        userId,
-        userEmail: user?.primaryEmailAddress?.emailAddress,
-        validationType: 'description_too_short',
-        actualLength: brandDescription.trim().length
       });
       
       setError(validationError);
@@ -232,20 +209,20 @@ export default function OnboardingStep2() {
   ];
 
   return (
-    <div className="min-h-screen bg-zinc-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-zinc-900 flex items-center justify-center px-4 py-10 sm:py-12">
       <div className="w-full max-w-2xl">
         {/* Progress indicator */}
         <div className="mb-8">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-          <div className="w-8 h-8 bg-pink-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+          <div className="mb-4 flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+            <div className="h-8 w-8 rounded-full bg-pink-600 text-white flex items-center justify-center text-sm font-semibold">
               ✓
             </div>
-            <div className="w-16 h-1 bg-pink-600 rounded"></div>
-            <div className="w-8 h-8 bg-pink-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+            <div className="h-1 w-10 rounded bg-pink-600 sm:w-16"></div>
+            <div className="h-8 w-8 rounded-full bg-pink-600 text-white flex items-center justify-center text-sm font-semibold">
               2
             </div>
-            <div className="w-16 h-1 bg-gray-300 rounded"></div>
-            <div className="w-8 h-8 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-sm font-semibold">
+            <div className="h-1 w-10 rounded bg-gray-300 sm:w-16"></div>
+            <div className="h-8 w-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center text-sm font-semibold">
               3
             </div>
           </div>
@@ -290,9 +267,7 @@ export default function OnboardingStep2() {
                       logUserAction('form_input_change', {
                         field: 'brandDescription',
                         valueLength: newValue.length,
-                        hasValue: !!newValue.trim(),
-                        meetsMinLength: newValue.trim().length >= 50,
-                        charactersRemaining: Math.max(0, 50 - newValue.trim().length)
+                        hasValue: !!newValue.trim()
                       }, {
                         userId,
                         userEmail: user?.primaryEmailAddress?.emailAddress,
@@ -313,7 +288,7 @@ export default function OnboardingStep2() {
                       logUserAction('form_field_blur', {
                         field: 'brandDescription',
                         finalLength: brandDescription.length,
-                        isValid: brandDescription.trim().length >= 50,
+                        hasContent: !!brandDescription.trim(),
                         descriptionPreview: brandDescription.trim().substring(0, 100) + (brandDescription.length > 100 ? '...' : '')
                       }, {
                         userId,
@@ -325,9 +300,6 @@ export default function OnboardingStep2() {
                     disabled={isLoading}
                     required
                   />
-                  <div className="absolute bottom-2 right-2 text-xs text-gray-400">
-                    {brandDescription.length}/500
-                  </div>
                 </div>
 
                 <div className="flex items-start gap-2 p-3 bg-zinc-800/60 border border-zinc-700/50 rounded-lg">
@@ -381,7 +353,7 @@ export default function OnboardingStep2() {
               <Button
                 type="submit"
                 className="w-full h-12 text-base font-semibold bg-pink-600 hover:bg-pink-500 text-white"
-                disabled={isLoading || brandDescription.trim().length < 50}
+                disabled={isLoading || !brandDescription.trim()}
               >
                 {isLoading ? (
                   <div className="flex items-center gap-2">
@@ -395,12 +367,6 @@ export default function OnboardingStep2() {
                   </div>
                 )}
               </Button>
-
-              {brandDescription.trim().length < 50 && brandDescription.trim().length > 0 && (
-                <p className="text-sm text-pink-400 text-center">
-                  Please provide more details (at least 50 characters) for better AI recommendations
-                </p>
-              )}
             </form>
 
             <div className="mt-6 p-4 bg-zinc-800/60 border border-zinc-700/50 rounded-lg">

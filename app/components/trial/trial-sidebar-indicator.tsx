@@ -1,6 +1,5 @@
 'use client';
 
-import { useMemo } from 'react';
 import { Clock, Zap, AlertTriangle, Crown, Star, CheckCircle, Settings } from 'lucide-react';
 import { useBilling } from '@/lib/hooks/use-billing';
 import { Button } from '@/components/ui/button';
@@ -114,13 +113,13 @@ export function TrialSidebarIndicator() {
   if (!isTrialing) return null;
 
   const isExpired = trialStatus === 'expired';
-  const countdownDisplay = useMemo(() => {
+  const countdownDisplay = (() => {
     if (typeof daysRemaining === 'number') {
       if (isExpired) return 'Expired';
       return `${daysRemaining}d left`;
     }
     return '';
-  }, [daysRemaining, isExpired]);
+  })();
 
   return (
     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3 space-y-3">
@@ -130,7 +129,7 @@ export function TrialSidebarIndicator() {
           <Clock className="h-3 w-3 text-blue-600" />
         </div>
         <span className="text-sm font-medium text-blue-900">Free Trial</span>
-        {countdown.isExpired && (
+        {isExpired && (
           <AlertTriangle className="h-3 w-3 text-red-500" />
         )}
       </div>
@@ -179,7 +178,7 @@ export function TrialSidebarIndicator() {
           className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs"
         >
           <Zap className="h-3 w-3 mr-1" />
-          {countdown.isExpired ? 'Upgrade Now' : 'Upgrade Early'}
+          {isExpired ? 'Upgrade Now' : 'Upgrade Early'}
         </Button>
       </Link>
 

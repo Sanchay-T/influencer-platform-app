@@ -1,0 +1,46 @@
+{
+  "reels": [
+    {
+      "url": "https://www.instagram.com/reel/C7J8Qw2r9gT/",
+      "handle": "chrisheria",
+      "fullName": "Chris Heria",
+      "caption": "Full body workout you can do anywhere! #fitness #workout",
+      "location": "Miami, FL",
+      "followers": 1500000,
+      "engagement": "120K likes, 1.2K comments",
+      "usEvidence": "Bio states 'Miami, FL'; frequent Miami location tags in posts"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C8b4dB3L2xZ/",
+      "handle": "whitneyysimmons",
+      "fullName": "Whitney Simmons",
+      "caption": "Quick dumbbell workout for busy days! #fitnessworkout",
+      "location": "Dallas, TX",
+      "followers": 3700000,
+      "engagement": "210K likes, 2.8K comments",
+      "usEvidence": "Bio: 'Dallas, TX'; content references Texas gyms"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C9G6fR1s8yQ/",
+      "handle": "fitgurlmel",
+      "fullName": "Melissa Alcantara",
+      "caption": "Leg day at Gold’s Gym Venice! #fitness #workout",
+      "location": "Los Angeles, CA",
+      "followers": 1100000,
+      "engagement": "95K likes, 900 comments",
+      "usEvidence": "Reel location tag: 'Gold’s Gym Venice, CA'; bio: 'LA-based trainer'"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C7zK8n4J3wA/",
+      "handle": "jujubee_fit",
+      "fullName": "Julia Bower",
+      "caption": "5-minute HIIT workout for beginners! #fitnessworkout",
+      "location": "New York, NY",
+      "followers": 220000,
+      "engagement": "30K likes, 400 comments",
+      "usEvidence": "Bio: 'NYC fitness coach'; content references New York parks"
+    }
+  ],
+  "totalFound": 4,
+  "keyword": "fitness workout"
+}

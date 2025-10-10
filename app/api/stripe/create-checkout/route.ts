@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@/lib/auth/backend-auth';
 import Stripe from 'stripe';
 import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { getClientUrl } from '@/lib/utils/url-utils';
 import OnboardingLogger from '@/lib/utils/onboarding-logger';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
+  apiVersion: '2025-06-30.basil',
 });
 
 export async function POST(req: NextRequest) {
@@ -58,9 +57,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Get user profile
-    const profile = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.userId, userId)
-    });
+    const profile = await getUserProfile(userId);
 
     if (!profile) {
       await OnboardingLogger.logPayment('DB-ERROR', 'User profile not found for checkout', userId, {
@@ -214,6 +211,7 @@ export async function POST(req: NextRequest) {
       ],
       mode: 'subscription',
       customer_email: profile.email || `${userId}@clerk.user`,
+      allow_promotion_codes: true, // Enable promo code field in checkout
       subscription_data: {
         trial_period_days: 7, // 7-day trial
         metadata: {

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@/lib/auth/backend-auth';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -34,11 +34,15 @@ export async function GET(req: NextRequest) {
     // Get plan details
     const planId = session.metadata?.planId;
     const billing = session.metadata?.billing;
+    const sessionType = session.metadata?.type;
+    const isUpgrade = sessionType === 'upgrade_subscription';
 
     console.log('🔍 [STRIPE-SESSION] Session details:', {
       sessionId,
       planId,
       billing,
+      sessionType,
+      isUpgrade,
       hasSubscription: !!session.subscription,
       metadata: session.metadata
     });
@@ -103,6 +107,7 @@ export async function GET(req: NextRequest) {
       planId,
       billing,
       plan,
+      isUpgrade, // ★ ADD: Flag to indicate if this is an upgrade vs initial onboarding
       subscription: {
         id: session.subscription?.id,
         status: session.subscription?.status,

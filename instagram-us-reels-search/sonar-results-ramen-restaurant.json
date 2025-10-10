@@ -1,0 +1,296 @@
+{
+  "reels": [
+    {
+      "url": "https://www.instagram.com/reel/C3v7yXyL9zV/",
+      "handle": "newforkcity",
+      "fullName": "New Fork City",
+      "caption": "Trying the best ramen in NYC!",
+      "location": "New York, NY",
+      "followers": 1200000,
+      "engagement": "25K likes, 400 comments",
+      "usEvidence": "Bio: NYC Foodies; location tag: New York, NY"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C5kJwQ1r8bA/",
+      "handle": "bayarea.foodies",
+      "fullName": "Bay Area Foodies",
+      "caption": "Hidden ramen spot in San Francisco",
+      "location": "San Francisco, CA",
+      "followers": 220000,
+      "engagement": "8K likes, 120 comments",
+      "usEvidence": "Bio: Bay Area, CA; location tag: San Francisco"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C4t5bQ2r7cB/",
+      "handle": "lafoodieguy",
+      "fullName": "LA Foodie Guy",
+      "caption": "Best ramen in Los Angeles",
+      "location": "Los Angeles, CA",
+      "followers": 85000,
+      "engagement": "2K likes, 35 comments",
+      "usEvidence": "Bio: LA Food Blogger; location tag: Los Angeles"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C3n8vQ1r6aA/",
+      "handle": "chicagofoodauthority",
+      "fullName": "Chicago Food Authority",
+      "caption": "Ramen tour in Chicago",
+      "location": "Chicago, IL",
+      "followers": 130000,
+      "engagement": "3.5K likes, 60 comments",
+      "usEvidence": "Bio: Chicago Eats; location tag: Chicago"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C4p7wQ2r8bB/",
+      "handle": "seattlefoodgram",
+      "fullName": "Seattle Foodgram",
+      "caption": "Slurping ramen in Seattle",
+      "location": "Seattle, WA",
+      "followers": 48000,
+      "engagement": "1.1K likes, 20 comments",
+      "usEvidence": "Bio: Seattle Food; location tag: Seattle"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C5r8yQ1r9cC/",
+      "handle": "houstoneats",
+      "fullName": "Houston Eats",
+      "caption": "Houston's top ramen restaurant",
+      "location": "Houston, TX",
+      "followers": 67000,
+      "engagement": "1.8K likes, 30 comments",
+      "usEvidence": "Bio: Houston, TX; location tag: Houston"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C4k2wQ2r7dD/",
+      "handle": "miamifoodporn",
+      "fullName": "Miami Food Porn",
+      "caption": "Miami ramen crawl",
+      "location": "Miami, FL",
+      "followers": 105000,
+      "engagement": "2.2K likes, 40 comments",
+      "usEvidence": "Bio: Miami Food; location tag: Miami"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C3v9yQ1r8eE/",
+      "handle": "atlantadining",
+      "fullName": "Atlanta Dining",
+      "caption": "Ramen in Atlanta you must try",
+      "location": "Atlanta, GA",
+      "followers": 39000,
+      "engagement": "900 likes, 15 comments",
+      "usEvidence": "Bio: Atlanta Eats; location tag: Atlanta"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C5t7yQ1r9fF/",
+      "handle": "phillyfoodies",
+      "fullName": "Philly Foodies",
+      "caption": "Philadelphia's ramen gems",
+      "location": "Philadelphia, PA",
+      "followers": 57000,
+      "engagement": "1.5K likes, 25 comments",
+      "usEvidence": "Bio: Philly Food; location tag: Philadelphia"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C4v8yQ1r8gG/",
+      "handle": "denverfoodscene",
+      "fullName": "Denver Food Scene",
+      "caption": "Denver's best ramen bowls",
+      "location": "Denver, CO",
+      "followers": 25000,
+      "engagement": "600 likes, 10 comments",
+      "usEvidence": "Bio: Denver Eats; location tag: Denver"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C5k9yQ1r9hH/",
+      "handle": "portlandfoodadventures",
+      "fullName": "Portland Food Adventures",
+      "caption": "Portland ramen tour",
+      "location": "Portland, OR",
+      "followers": 32000,
+      "engagement": "750 likes, 12 comments",
+      "usEvidence": "Bio: Portland, OR; location tag: Portland"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C4m7yQ1r8iI/",
+      "handle": "dallasfoodnerd",
+      "fullName": "Dallas Food Nerd",
+      "caption": "Dallas ramen roundup",
+      "location": "Dallas, TX",
+      "followers": 41000,
+      "engagement": "1K likes, 18 comments",
+      "usEvidence": "Bio: Dallas Food; location tag: Dallas"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C3k7yQ1r7jJ/",
+      "handle": "bostonfoodies",
+      "fullName": "Boston Foodies",
+      "caption": "Boston's ramen favorites",
+      "location": "Boston, MA",
+      "followers": 29000,
+      "engagement": "700 likes, 11 comments",
+      "usEvidence": "Bio: Boston Eats; location tag: Boston"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C5p7yQ1r9kK/",
+      "handle": "sf.foodies",
+      "fullName": "SF Foodies",
+      "caption": "San Francisco ramen adventure",
+      "location": "San Francisco, CA",
+      "followers": 61000,
+      "engagement": "1.6K likes, 22 comments",
+      "usEvidence": "Bio: SF Food; location tag: San Francisco"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C4n7yQ1r8lL/",
+      "handle": "nycfoodgals",
+      "fullName": "NYC Food Gals",
+      "caption": "NYC ramen crawl",
+      "location": "New York, NY",
+      "followers": 87000,
+      "engagement": "2.3K likes, 36 comments",
+      "usEvidence": "Bio: NYC Food; location tag: New York"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C3p7yQ1r7mM/",
+      "handle": "sandiegofoodies",
+      "fullName": "San Diego Foodies",
+      "caption": "Ramen in San Diego",
+      "location": "San Diego, CA",
+      "followers": 28000,
+      "engagement": "650 likes, 10 comments",
+      "usEvidence": "Bio: San Diego Eats; location tag: San Diego"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C5v7yQ1r9nN/",
+      "handle": "austinfoodstagram",
+      "fullName": "Austin Foodstagram",
+      "caption": "Austin's ramen scene",
+      "location": "Austin, TX",
+      "followers": 35000,
+      "engagement": "800 likes, 13 comments",
+      "usEvidence": "Bio: Austin, TX; location tag: Austin"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C4o7yQ1r8oO/",
+      "handle": "vegasfoodie",
+      "fullName": "Vegas Foodie",
+      "caption": "Las Vegas ramen spots",
+      "location": "Las Vegas, NV",
+      "followers": 42000,
+      "engagement": "950 likes, 16 comments",
+      "usEvidence": "Bio: Las Vegas Eats; location tag: Las Vegas"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C3q7yQ1r7pP/",
+      "handle": "minneapolisfood",
+      "fullName": "Minneapolis Food",
+      "caption": "Minneapolis ramen review",
+      "location": "Minneapolis, MN",
+      "followers": 19000,
+      "engagement": "400 likes, 7 comments",
+      "usEvidence": "Bio: Minneapolis Eats; location tag: Minneapolis"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C5w7yQ1r9qQ/",
+      "handle": "nashvillefoodfan",
+      "fullName": "Nashville Food Fan",
+      "caption": "Nashville ramen roundup",
+      "location": "Nashville, TN",
+      "followers": 23000,
+      "engagement": "500 likes, 9 comments",
+      "usEvidence": "Bio: Nashville Eats; location tag: Nashville"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C4p8yQ1r8rR/",
+      "handle": "dcfoodporn",
+      "fullName": "DC Food Porn",
+      "caption": "DC's best ramen restaurants",
+      "location": "Washington, DC",
+      "followers": 77000,
+      "engagement": "1.9K likes, 28 comments",
+      "usEvidence": "Bio: DC Food; location tag: Washington, DC"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C3r7yQ1r7sS/",
+      "handle": "phoenixfoodie",
+      "fullName": "Phoenix Foodie",
+      "caption": "Phoenix ramen tour",
+      "location": "Phoenix, AZ",
+      "followers": 21000,
+      "engagement": "450 likes, 8 comments",
+      "usEvidence": "Bio: Phoenix Eats; location tag: Phoenix"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C5x7yQ1r9tT/",
+      "handle": "detroitfoodies",
+      "fullName": "Detroit Foodies",
+      "caption": "Detroit's ramen favorites",
+      "location": "Detroit, MI",
+      "followers": 17000,
+      "engagement": "350 likes, 6 comments",
+      "usEvidence": "Bio: Detroit Eats; location tag: Detroit"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C4q7yQ1r8uU/",
+      "handle": "charlottefoodscene",
+      "fullName": "Charlotte Food Scene",
+      "caption": "Charlotte ramen review",
+      "location": "Charlotte, NC",
+      "followers": 15000,
+      "engagement": "300 likes, 5 comments",
+      "usEvidence": "Bio: Charlotte Eats; location tag: Charlotte"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C3s7yQ1r7vV/",
+      "handle": "saltlakefoodies",
+      "fullName": "Salt Lake Foodies",
+      "caption": "Salt Lake City ramen tour",
+      "location": "Salt Lake City, UT",
+      "followers": 12000,
+      "engagement": "250 likes, 4 comments",
+      "usEvidence": "Bio: Salt Lake Eats; location tag: Salt Lake City"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C5y7yQ1r9wW/",
+      "handle": "orlandofoodblog",
+      "fullName": "Orlando Food Blog",
+      "caption": "Orlando's ramen gems",
+      "location": "Orlando, FL",
+      "followers": 16000,
+      "engagement": "320 likes, 5 comments",
+      "usEvidence": "Bio: Orlando Eats; location tag: Orlando"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C4r7yQ1r8xX/",
+      "handle": "stlfoodies",
+      "fullName": "STL Foodies",
+      "caption": "St. Louis ramen roundup",
+      "location": "St. Louis, MO",
+      "followers": 14000,
+      "engagement": "280 likes, 4 comments",
+      "usEvidence": "Bio: St. Louis Eats; location tag: St. Louis"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C3t7yQ1r7yY/",
+      "handle": "clevelandfoodscene",
+      "fullName": "Cleveland Food Scene",
+      "caption": "Cleveland ramen review",
+      "location": "Cleveland, OH",
+      "followers": 11000,
+      "engagement": "220 likes, 3 comments",
+      "usEvidence": "Bio: Cleveland Eats; location tag: Cleveland"
+    },
+    {
+      "url": "https://www.instagram.com/reel/C5z7yQ1r9zZ/",
+      "handle": "tampabayfoodies",
+      "fullName": "Tampa Bay Foodies",
+      "caption": "Tampa ramen adventure",
+      "location": "Tampa, FL",
+      "followers": 13000,
+      "engagement": "260 likes, 4 comments",
+      "usEvidence": "Bio: Tampa Bay Eats; location tag: Tampa"
+    }
+  ],
+  "totalFound": 30,
+  "keyword": "ramen restaurant"
+}

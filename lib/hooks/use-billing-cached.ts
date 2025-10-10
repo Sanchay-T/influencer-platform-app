@@ -224,7 +224,7 @@ export function useBillingCached(): BillingStatus & { isLoading: boolean } {
     }
 
     fetchBillingStatus()
-  }, [isLoaded, userId])
+  }, [isLoaded, userId, billingStatus.isLoaded])
 
   return {
     ...billingStatus,

@@ -4,6 +4,14 @@ import { useAuth } from '@clerk/nextjs'
 import { loggedApiCall, logTiming } from '@/lib/utils/frontend-logger'
 import { useState, useEffect } from 'react'
 
+const BILLING_DEBUG = false
+const debugLog = (...args: unknown[]) => {
+  if (BILLING_DEBUG) debugLog(...args)
+}
+const debugWarn = (...args: unknown[]) => {
+  if (BILLING_DEBUG) debugWarn(...args)
+}
+
 export interface BillingStatus {
   isLoaded: boolean
   currentPlan: 'free' | 'glow_up' | 'viral_surge' | 'fame_flex'
@@ -89,14 +97,14 @@ export function useBilling(): BillingStatus {
           return
         }
         const opStart = Date.now()
-        console.log('💳 [STRIPE-BILLING] Fetching billing status for user:', userId)
+        debugLog('💳 [STRIPE-BILLING] Fetching billing status for user:', userId)
 
         cacheRef.inflight = loggedApiCall('/api/billing/status', {}, { action: 'fetch_billing_status', userId: userId || 'unknown' }).then(async (res: any) => {
           if (!res.ok) throw new Error(`Failed to fetch billing status (status ${res.status})`)
           const reqId = (res.headers && res.headers.get && res.headers.get('x-request-id')) || 'none'
           const serverDuration = (res.headers && res.headers.get && res.headers.get('x-duration-ms')) || 'n/a'
           const data = res.data ?? (await res.json())
-          console.log('💳 [STRIPE-BILLING] Correlation IDs:', { requestId: reqId, serverDurationMs: serverDuration })
+          debugLog('💳 [STRIPE-BILLING] Correlation IDs:', { requestId: reqId, serverDurationMs: serverDuration })
           logTiming('fetch_billing_status_total', opStart, { userId: userId || 'unknown', requestId: reqId || undefined })
           cacheRef.data = data
           cacheRef.ts = Date.now()
@@ -112,7 +120,7 @@ export function useBilling(): BillingStatus {
         })
 
         const data = await cacheRef.inflight
-        console.log('💳 [STRIPE-BILLING] Received billing data:', data)
+        debugLog('💳 [STRIPE-BILLING] Received billing data:', data)
         
         setFromData(data)
 
@@ -144,7 +152,7 @@ export function useBilling(): BillingStatus {
           }
           
           const hasAccess = currentPlanIndex >= requiredPlanIndex
-          console.log(`💳 [STRIPE-BILLING] Plan check "${plan}": ${hasAccess}`)
+          debugLog(`💳 [STRIPE-BILLING] Plan check "${plan}": ${hasAccess}`)
           return hasAccess
         }
 
@@ -165,12 +173,12 @@ export function useBilling(): BillingStatus {
           const requiredPlanIndex = featureMinimumPlans[feature as keyof typeof featureMinimumPlans]
           if (requiredPlanIndex !== undefined) {
             const hasAccess = currentPlanIndex >= requiredPlanIndex
-            console.log(`💳 [STRIPE-BILLING] Feature "${feature}" requires plan index ${requiredPlanIndex}, user has ${currentPlanIndex}:`, hasAccess)
+            debugLog(`💳 [STRIPE-BILLING] Feature "${feature}" requires plan index ${requiredPlanIndex}, user has ${currentPlanIndex}:`, hasAccess)
             return hasAccess
           }
           
           // Default: allow access for unknown features
-          console.log(`💳 [STRIPE-BILLING] Unknown feature "${feature}", allowing access`)
+          debugLog(`💳 [STRIPE-BILLING] Unknown feature "${feature}", allowing access`)
           return true
         }
 
@@ -272,17 +280,17 @@ export function useBilling(): BillingStatus {
     
     // Listen for focus events to refresh billing status
     const handleFocus = () => {
-      console.log('💳 [BILLING-REFRESH] Window focused, refreshing billing status');
+      debugLog('💳 [BILLING-REFRESH] Window focused, refreshing billing status');
       fetchBillingStatus(true); // Skip cache on focus
     };
     
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, [isLoaded, userId])
+  }, [isLoaded, userId, cacheRef])
 
   // Add function to force refresh billing data (useful after upgrades)
   const refreshBillingData = () => {
-    console.log('🔄 [BILLING-REFRESH] Force refreshing billing data');
+    debugLog('🔄 [BILLING-REFRESH] Force refreshing billing data');
     
     // Clear caches
     try {
@@ -307,9 +315,17 @@ export function useBilling(): BillingStatus {
 /**
  * Hook for checking specific plan access
  */
-export function usePlanAccess(requiredPlan: string) {
+export function usePlanAccess(requiredPlan?: string) {
   const { hasPlan, isLoaded } = useBilling()
   
+  if (!requiredPlan) {
+    return {
+      hasAccess: true,
+      isLoaded,
+      needsUpgrade: false
+    }
+  }
+
   return {
     hasAccess: hasPlan(requiredPlan),
     isLoaded,
@@ -320,9 +336,18 @@ export function usePlanAccess(requiredPlan: string) {
 /**
  * Hook for checking specific feature access
  */
-export function useFeatureAccess(requiredFeature: string) {
+export function useFeatureAccess(requiredFeature?: string) {
   const { canAccessFeature, isLoaded, currentPlan } = useBilling()
   
+  if (!requiredFeature) {
+    return {
+      hasAccess: true,
+      isLoaded,
+      currentPlan,
+      needsUpgrade: false
+    }
+  }
+
   return {
     hasAccess: canAccessFeature(requiredFeature),
     isLoaded,

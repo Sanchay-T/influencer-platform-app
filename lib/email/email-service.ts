@@ -1,18 +1,30 @@
 import { Resend } from 'resend';
 import { qstash } from '@/lib/queue/qstash';
+import { clerkBackendClient } from '@/lib/auth/backend-auth';
+
+const resendApiKey = process.env.RESEND_API_KEY;
+if (!resendApiKey) {
+  throw new Error('RESEND_API_KEY must be set before sending emails. Add it to your environment configuration.');
+}
 
 // Initialize Resend
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(resendApiKey);
+
+const resolvedSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+if (!resolvedSiteUrl) {
+  throw new Error('NEXT_PUBLIC_SITE_URL must be configured for email scheduling so QStash can reach the application.');
+}
 
 // Email service configuration
 export const EMAIL_CONFIG = {
   fromAddress: process.env.EMAIL_FROM_ADDRESS || 'hello@gemz.io',
-  siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
+  siteUrl: resolvedSiteUrl,
   delays: {
     welcome: '10m',        // 10 minutes after signup
     abandonment: '2h',     // 2 hours if no trial started
-    trialDay2: '2d',       // 2 days after trial starts
-    trialDay5: '5d',       // 5 days after trial starts
+    trial_day2: '2d',       // 2 days after trial starts
+    trial_day5: '5d',       // 5 days after trial starts
+    subscription_welcome: '30s', // Quick confirmation after subscription activation
   }
 };
 
@@ -22,11 +34,15 @@ export interface EmailTemplateProps {
   businessName?: string;
   dashboardUrl: string;
   unsubscribeUrl?: string;
+  billingUrl?: string;
+  plan?: string;
+  planName?: string;
+  planFeatures?: string[];
 }
 
 export interface EmailScheduleParams {
   userId: string;
-  emailType: 'welcome' | 'abandonment' | 'trial_day2' | 'trial_day5';
+  emailType: 'welcome' | 'abandonment' | 'trial_day2' | 'trial_day5' | 'subscription_welcome';
   userEmail: string;
   templateProps: EmailTemplateProps;
   delay?: string;
@@ -115,14 +131,10 @@ export async function updateEmailScheduleStatus(
   messageId?: string
 ) {
   try {
-    const { db } = await import('@/lib/db');
-    const { userProfiles } = await import('@/lib/db/schema');
-    const { eq } = await import('drizzle-orm');
+    const { getUserProfile, updateUserProfile } = await import('@/lib/db/queries/user-queries');
 
     // Get current email schedule status
-    const user = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.userId, userId)
-    });
+    const user = await getUserProfile(userId);
 
     if (!user) {
       throw new Error(`User not found: ${userId}`);
@@ -141,12 +153,9 @@ export async function updateEmailScheduleStatus(
     };
 
     // Update in database
-    await db.update(userProfiles)
-      .set({
-        emailScheduleStatus: updatedStatus,
-        updatedAt: new Date()
-      })
-      .where(eq(userProfiles.userId, userId));
+    await updateUserProfile(userId, {
+      emailScheduleStatus: updatedStatus,
+    });
 
     console.log('✅ [EMAIL-STATUS] Updated email schedule status:', {
       userId,
@@ -168,26 +177,7 @@ export async function updateEmailScheduleStatus(
 export async function getUserEmailFromClerk(userId: string): Promise<string | null> {
   try {
     console.log('🔍 [CLERK-EMAIL] Starting Clerk email retrieval for userId:', userId);
-    
-    // Import Clerk server functions with the modern pattern
-    const { clerkClient } = await import('@clerk/nextjs/server');
-    
-    if (!clerkClient) {
-      console.error('❌ [CLERK-EMAIL] clerkClient is undefined');
-      return null;
-    }
-
-    // Modern Clerk pattern: clerkClient is now an async function that must be called
-    console.log('🔄 [CLERK-EMAIL] Initializing Clerk client...');
-    const client = await clerkClient();
-    
-    if (!client || !client.users) {
-      console.error('❌ [CLERK-EMAIL] Clerk client initialization failed or users API unavailable');
-      return null;
-    }
-
-    console.log('✅ [CLERK-EMAIL] Clerk client initialized successfully');
-    const user = await client.users.getUser(userId);
+    const user = await clerkBackendClient.users.getUser(userId);
     
     if (!user) {
       console.error('❌ [CLERK-EMAIL] User not found:', userId);
@@ -215,13 +205,9 @@ export async function getUserEmailFromClerk(userId: string): Promise<string | nu
  */
 export async function shouldSendEmail(userId: string, emailType: string): Promise<boolean> {
   try {
-    const { db } = await import('@/lib/db');
-    const { userProfiles } = await import('@/lib/db/schema');
-    const { eq } = await import('drizzle-orm');
+    const { getUserProfile } = await import('@/lib/db/queries/user-queries');
 
-    const user = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.userId, userId)
-    });
+    const user = await getUserProfile(userId);
 
     if (!user) {
       return false;

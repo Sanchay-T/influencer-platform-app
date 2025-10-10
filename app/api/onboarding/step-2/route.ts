@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { auth } from '@/lib/auth/backend-auth';
+import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
 
 export async function PATCH(request: Request) {
   try {
@@ -23,12 +21,11 @@ export async function PATCH(request: Request) {
     }
 
     const { brandDescription } = await request.json();
-    console.log('📥 [ONBOARDING-STEP2] Data received:', { 
+    console.log('📥 [ONBOARDING-STEP2] Data received:', {
       brandDescription: brandDescription || 'NOT_PROVIDED',
       brandDescriptionLength: brandDescription?.length || 0,
       userId,
-      requestId,
-      meetsMinLength: (brandDescription?.length || 0) >= 50
+      requestId
     });
     
     console.log('📝 [ONBOARDING-STEP2] Brand description preview:', 
@@ -40,17 +37,9 @@ export async function PATCH(request: Request) {
       }, { status: 400 });
     }
 
-    if (brandDescription.trim().length < 50) {
-      return NextResponse.json({ 
-        error: 'Please provide more details (at least 50 characters)' 
-      }, { status: 400 });
-    }
-
     // Check if user profile exists
     console.log('🔍 [ONBOARDING-STEP2] Looking up existing user profile...');
-    const existingProfile = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.userId, userId)
-    });
+    const existingProfile = await getUserProfile(userId);
     
     console.log('📊 [ONBOARDING-STEP2] Profile lookup result:', {
       profileExists: !!existingProfile,
@@ -71,13 +60,10 @@ export async function PATCH(request: Request) {
     console.log('📝 [ONBOARDING-STEP2] Previous description:', existingProfile.brandDescription || 'None');
     console.log('📝 [ONBOARDING-STEP2] New description length:', brandDescription.trim().length);
     
-    await db.update(userProfiles)
-      .set({
-        brandDescription: brandDescription.trim(),
-        onboardingStep: 'intent_captured',
-        updatedAt: new Date()
-      })
-      .where(eq(userProfiles.userId, userId));
+    await updateUserProfile(userId, {
+      brandDescription: brandDescription.trim(),
+      onboardingStep: 'intent_captured',
+    });
 
     console.log('✅✅✅ [ONBOARDING-STEP2] PROFILE UPDATED SUCCESSFULLY');
     console.log('💾 [ONBOARDING-STEP2] Update completed in:', Date.now() - startTime, 'ms');

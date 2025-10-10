@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { auth } from '@/lib/auth/backend-auth';
 import { db } from '@/lib/db';
-import { userProfiles, campaigns } from '@/lib/db/schema';
+import { campaigns } from '@/lib/db/schema';
+import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
 import { eq, count } from 'drizzle-orm';
 
 export async function GET() {
@@ -41,13 +42,7 @@ export async function POST() {
         console.log(`🔍 [ADMIN-BACKFILL] Processing user: ${userCampaignData.userId} with ${userCampaignData.campaignCount} campaigns`);
         
         // Get current usage count from database
-        const userProfile = await db.query.userProfiles.findFirst({
-          where: eq(userProfiles.userId, userCampaignData.userId),
-          columns: { 
-            userId: true, 
-            usageCampaignsCurrent: true 
-          }
-        });
+        const userProfile = await getUserProfile(userCampaignData.userId);
 
         if (!userProfile) {
           const result = `⚠️ No user profile found for ${userCampaignData.userId}`;
@@ -61,12 +56,9 @@ export async function POST() {
 
         if (currentUsage !== actualCount) {
           // Update the usage count to match actual campaign count
-          await db.update(userProfiles)
-            .set({ 
-              usageCampaignsCurrent: actualCount,
-              updatedAt: new Date() 
-            })
-            .where(eq(userProfiles.userId, userCampaignData.userId));
+          await updateUserProfile(userCampaignData.userId, {
+            usageCampaignsCurrent: actualCount,
+          });
           
           updatedCount++;
           const result = `✅ Updated ${userCampaignData.userId}: ${currentUsage} → ${actualCount} campaigns`;
