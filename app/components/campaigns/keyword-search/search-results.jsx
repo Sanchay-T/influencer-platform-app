@@ -1023,16 +1023,6 @@ const SearchResults = ({ searchData }) => {
                   typeof metadata.snippet === "string" && metadata.snippet.trim().length > 0
                     ? metadata.snippet.trim()
                     : null;
-                const usConfidenceValue =
-                  creator?.metadata?.usConfidence ??
-                  creator?.stats?.usConfidence ??
-                  creator?.reel?.usConfidence ??
-                  null;
-                const relevanceScoreValue =
-                  creator?.metadata?.relevanceScore ??
-                  creator?.stats?.relevanceScore ??
-                  creator?.reel?.relevanceScore ??
-                  null;
 
                 return (
                 <TableRow
@@ -1115,20 +1105,6 @@ const SearchResults = ({ searchData }) => {
                             “{snippetText}”
                           </p>
                         )}
-                        {isInstagramUs && (usConfidenceValue != null || relevanceScoreValue != null) && (
-                          <div className="flex flex-wrap gap-1 text-[11px] text-emerald-200">
-                            {usConfidenceValue != null && (
-                              <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 uppercase tracking-wide">
-                                US {Math.round(usConfidenceValue * 100)}%
-                              </span>
-                            )}
-                            {relevanceScoreValue != null && (
-                              <span className="rounded-full border border-sky-500/40 bg-sky-500/10 px-2 py-0.5 uppercase tracking-wide text-sky-200">
-                                Relevance {Math.round(relevanceScoreValue * 100)}%
-                              </span>
-                            )}
-                          </div>
-                        )}
                         <div className="space-y-1 text-xs text-zinc-400">
                           <div>
                             <span className="font-medium text-zinc-300">Followers:</span>{' '}
@@ -1148,7 +1124,7 @@ const SearchResults = ({ searchData }) => {
                           )}
                         </div>
                       </div>
-                      {isInstagramUs && (matchedTermsDisplay.length > 0 || snippetText || usConfidenceValue != null || relevanceScoreValue != null) && (
+                      {isInstagramUs && (matchedTermsDisplay.length > 0 || snippetText) && (
                         <div className="hidden sm:flex flex-col gap-1 pt-1">
                           {matchedTermsDisplay.length > 0 && (
                             <div className="flex flex-wrap gap-1 text-[10px] uppercase tracking-wide text-emerald-200">
@@ -1166,20 +1142,6 @@ const SearchResults = ({ searchData }) => {
                             <p className="text-[11px] italic text-zinc-400 line-clamp-2">
                               “{snippetText}”
                             </p>
-                          )}
-                          {(usConfidenceValue != null || relevanceScoreValue != null) && (
-                            <div className="flex flex-wrap gap-1 text-[11px] text-emerald-200">
-                              {usConfidenceValue != null && (
-                                <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 uppercase tracking-wide">
-                                  US {Math.round(usConfidenceValue * 100)}%
-                                </span>
-                              )}
-                              {relevanceScoreValue != null && (
-                                <span className="rounded-full border border-sky-500/40 bg-sky-500/10 px-2 py-0.5 uppercase tracking-wide text-sky-200">
-                                  Relevance {Math.round(relevanceScoreValue * 100)}%
-                                </span>
-                              )}
-                            </div>
                           )}
                         </div>
                       )}
@@ -1338,16 +1300,6 @@ const SearchResults = ({ searchData }) => {
               typeof metadata.snippet === "string" && metadata.snippet.trim().length > 0
                 ? metadata.snippet.trim()
                 : null;
-            const usConfidenceValue =
-              raw?.metadata?.usConfidence ??
-              raw?.stats?.usConfidence ??
-              raw?.reel?.usConfidence ??
-              null;
-            const relevanceScoreValue =
-              raw?.metadata?.relevanceScore ??
-              raw?.stats?.relevanceScore ??
-              raw?.reel?.relevanceScore ??
-              null;
               const rawViewCount =
                 raw?.video?.stats?.playCount ??
                 raw?.video?.stats?.viewCount ??
@@ -1467,16 +1419,6 @@ const SearchResults = ({ searchData }) => {
                       {viewCountLabel && (
                         <span className="rounded-full border border-zinc-700/70 bg-zinc-900/60 px-2 py-1 font-medium text-zinc-200">
                           {viewCountLabel} views
-                        </span>
-                      )}
-                      {isInstagramUs && usConfidenceValue != null && (
-                        <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 font-medium text-emerald-200">
-                          US {Math.round(usConfidenceValue * 100)}%
-                        </span>
-                      )}
-                      {isInstagramUs && relevanceScoreValue != null && (
-                        <span className="rounded-full border border-sky-500/40 bg-sky-500/10 px-2 py-1 font-medium text-sky-200">
-                          Relevance {Math.round(relevanceScoreValue * 100)}%
                         </span>
                       )}
                     </div>
