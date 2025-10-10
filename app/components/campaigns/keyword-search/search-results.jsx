@@ -1016,9 +1016,6 @@ const SearchResults = ({ searchData }) => {
                 const imageUrl = ensureImageUrl(avatarUrl);
                 const isSelected = !!selectedCreators[rowId];
                 const metadata = creator.metadata || {};
-                const matchedTermsDisplay = Array.isArray(metadata.matchedTerms)
-                  ? metadata.matchedTerms.slice(0, 4)
-                  : [];
                 const snippetText =
                   typeof metadata.snippet === "string" && metadata.snippet.trim().length > 0
                     ? metadata.snippet.trim()
@@ -1098,20 +1095,8 @@ const SearchResults = ({ searchData }) => {
                           <span className="text-sm text-zinc-500">{snapshot.handle}</span>
                         )}
                         <div className="text-xs text-zinc-400">@{snapshot.handle}</div>
-                        {isInstagramUs && matchedTermsDisplay.length > 0 && (
-                          <div className="flex flex-wrap gap-1 pt-1">
-                            {matchedTermsDisplay.map((term) => (
-                              <span
-                                key={term}
-                                className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-emerald-200"
-                              >
-                                {term}
-                              </span>
-                            ))}
-                          </div>
-                        )}
                         {isInstagramUs && snippetText && (
-                          <p className="text-[11px] italic text-zinc-400 line-clamp-2">
+                          <p className="text-[11px] italic text-zinc-400 line-clamp-2 sm:hidden">
                             “{snippetText}”
                           </p>
                         )}
@@ -1148,20 +1133,8 @@ const SearchResults = ({ searchData }) => {
                           )}
                         </div>
                       </div>
-                      {isInstagramUs && (matchedTermsDisplay.length > 0 || snippetText || usConfidenceValue != null || relevanceScoreValue != null) && (
+                      {isInstagramUs && (snippetText || usConfidenceValue != null || relevanceScoreValue != null) && (
                         <div className="hidden sm:flex flex-col gap-1 pt-1">
-                          {matchedTermsDisplay.length > 0 && (
-                            <div className="flex flex-wrap gap-1 text-[10px] uppercase tracking-wide text-emerald-200">
-                              {matchedTermsDisplay.map((term) => (
-                                <span
-                                  key={term}
-                                  className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5"
-                                >
-                                  {term}
-                                </span>
-                              ))}
-                            </div>
-                          )}
                           {snippetText && (
                             <p className="text-[11px] italic text-zinc-400 line-clamp-2">
                               “{snippetText}”
@@ -1331,9 +1304,6 @@ const SearchResults = ({ searchData }) => {
             const profileUrl = renderProfileLink(raw);
             const followerLabel = snapshot.followers != null ? formatFollowers(snapshot.followers) : null;
             const metadata = raw.metadata || {};
-            const matchedTermsDisplay = Array.isArray(metadata.matchedTerms)
-              ? metadata.matchedTerms.slice(0, 4)
-              : [];
             const snippetText =
               typeof metadata.snippet === "string" && metadata.snippet.trim().length > 0
                 ? metadata.snippet.trim()
@@ -1438,18 +1408,6 @@ const SearchResults = ({ searchData }) => {
                     <p className="line-clamp-3 text-xs text-zinc-400">
                       {raw?.creator?.bio || raw?.bio || raw?.description || "No bio available"}
                     </p>
-                    {isInstagramUs && matchedTermsDisplay.length > 0 && (
-                      <div className="flex flex-wrap gap-1 text-[10px] uppercase tracking-wide text-emerald-200">
-                        {matchedTermsDisplay.map((term) => (
-                          <span
-                            key={term}
-                            className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5"
-                          >
-                            {term}
-                          </span>
-                        ))}
-                      </div>
-                    )}
                     {isInstagramUs && snippetText && (
                       <p className="text-[11px] italic text-zinc-400 line-clamp-2">“{snippetText}”</p>
                     )}
