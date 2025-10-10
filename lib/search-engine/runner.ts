@@ -10,6 +10,7 @@ import { runInstagramReelsProvider } from './providers/instagram-reels';
 import { runInstagramEnhancedProvider } from './providers/instagram-enhanced';
 import { runGoogleSerpProvider } from './providers/google-serp';
 import { runInstagramUsReelsProvider } from './providers/instagram-us-reels';
+import { runInstagramV2Provider } from './providers/instagram-v2';
 
 export interface SearchExecutionResult {
   service: SearchJobService;
@@ -97,6 +98,11 @@ function isInstagramUsReels(searchParams?: any): boolean {
   return runner === 'instagram_us_reels';
 }
 
+function isInstagramV2(searchParams?: any): boolean {
+  const runner = (searchParams?.runner ?? '').toLowerCase();
+  return runner === 'instagram_v2' || runner === 'instagram-2.0';
+}
+
 export async function runSearchJob(jobId: string): Promise<SearchExecutionResult> {
   const service = await SearchJobService.load(jobId);
   if (!service) {
@@ -119,6 +125,8 @@ export async function runSearchJob(jobId: string): Promise<SearchExecutionResult
     providerResult = await runInstagramSimilarProvider({ job, config }, service);
   } else if (isInstagramEnhanced(job.platform, job.keywords, searchParams)) {
     providerResult = await runInstagramEnhancedProvider({ job, config }, service);
+  } else if (isInstagramV2(searchParams)) {
+    providerResult = await runInstagramV2Provider({ job, config }, service);
   } else if (isInstagramUsReels(searchParams)) {
     providerResult = await runInstagramUsReelsProvider({ job, config }, service);
   } else if (isInstagramReels(job.platform, job.keywords, searchParams)) {

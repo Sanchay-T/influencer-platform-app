@@ -149,7 +149,9 @@ const resolveMediaPreview = (creator, snapshot, platformHint) => {
     snapshot?.avatarUrl,
   ];
 
-  const sources = platform === 'youtube' ? videoFirstSources : defaultSources;
+  const sources = (platform === 'youtube' || platform === 'instagram' || platform === 'instagram_us_reels')
+    ? videoFirstSources
+    : defaultSources;
 
   for (const source of sources) {
     if (typeof source === "string" && source.trim().length > 0) {
@@ -224,7 +226,13 @@ const SearchResults = ({ searchData }) => {
 
   // Normalize platform from either selectedPlatform (wizard) or platform (reopen flow)
   const platformNormalized = (searchData?.selectedPlatform || searchData?.platform || 'tiktok').toString().toLowerCase();
-  const isInstagramUs = platformNormalized === 'instagram-1.0' || platformNormalized === 'instagram_1.0' || platformNormalized === 'instagram_us_reels';
+  const isInstagramUs = [
+    'instagram',
+    'instagram_us_reels',
+    'instagram-us-reels',
+    'instagram-1.0',
+    'instagram_1.0',
+  ].includes(platformNormalized);
 
   useEffect(() => {
     setSelectedCreators({});
@@ -328,16 +336,26 @@ const SearchResults = ({ searchData }) => {
         setIsFetching(true);
         // Determine API endpoint based on platform
         let apiEndpoint = '/api/scraping/tiktok';
-        if (platformNormalized === 'google-serp' || platformNormalized === 'google_serp') {
-          apiEndpoint = '/api/scraping/google-serp';
-        } else if (platformNormalized === 'instagram-1.0' || platformNormalized === 'instagram_1.0' || platformNormalized === 'instagram_us_reels') {
+        if (
+          platformNormalized === 'instagram' ||
+          platformNormalized === 'instagram_us_reels' ||
+          platformNormalized === 'instagram-1.0' ||
+          platformNormalized === 'instagram_1.0'
+        ) {
           apiEndpoint = '/api/scraping/instagram-us-reels';
-        } else if (platformNormalized === 'instagram') {
-          apiEndpoint = '/api/scraping/instagram-reels';
-        } else if (platformNormalized === 'enhanced-instagram') {
-          apiEndpoint = '/api/scraping/instagram-enhanced';
         } else if (platformNormalized === 'youtube') {
           apiEndpoint = '/api/scraping/youtube';
+        } else if (
+          platformNormalized === 'instagram-2.0' ||
+          platformNormalized === 'instagram_2.0' ||
+          platformNormalized === 'instagram-v2' ||
+          platformNormalized === 'instagram_v2'
+        ) {
+          apiEndpoint = '/api/scraping/instagram-v2';
+        } else if (platformNormalized === 'enhanced-instagram') {
+          apiEndpoint = '/api/scraping/instagram-enhanced';
+        } else if (platformNormalized === 'google-serp' || platformNormalized === 'google_serp') {
+          apiEndpoint = '/api/scraping/google-serp';
         }
 
         // Making API call to fetch results
@@ -544,16 +562,26 @@ const SearchResults = ({ searchData }) => {
         } else {
           // As a fallback, re-fetch latest results from the corresponding endpoint
           let apiEndpoint = '/api/scraping/tiktok';
-          if (platformNormalized === 'google-serp' || platformNormalized === 'google_serp') {
-            apiEndpoint = '/api/scraping/google-serp';
-          } else if (platformNormalized === 'instagram-1.0' || platformNormalized === 'instagram_1.0' || platformNormalized === 'instagram_us_reels') {
+          if (
+            platformNormalized === 'instagram' ||
+            platformNormalized === 'instagram_us_reels' ||
+            platformNormalized === 'instagram-1.0' ||
+            platformNormalized === 'instagram_1.0'
+          ) {
             apiEndpoint = '/api/scraping/instagram-us-reels';
-          } else if (platformNormalized === 'instagram') {
-            apiEndpoint = '/api/scraping/instagram-reels';
-          } else if (platformNormalized === 'enhanced-instagram') {
-            apiEndpoint = '/api/scraping/instagram-enhanced';
           } else if (platformNormalized === 'youtube') {
             apiEndpoint = '/api/scraping/youtube';
+          } else if (
+            platformNormalized === 'instagram-2.0' ||
+            platformNormalized === 'instagram_2.0' ||
+            platformNormalized === 'instagram-v2' ||
+            platformNormalized === 'instagram_v2'
+          ) {
+            apiEndpoint = '/api/scraping/instagram-v2';
+          } else if (platformNormalized === 'enhanced-instagram') {
+            apiEndpoint = '/api/scraping/instagram-enhanced';
+          } else if (platformNormalized === 'google-serp' || platformNormalized === 'google_serp') {
+            apiEndpoint = '/api/scraping/google-serp';
           }
 
         fetch(`${apiEndpoint}?jobId=${searchData.jobId}`, { credentials: 'include' })

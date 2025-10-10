@@ -73,3 +73,13 @@
 - [ ] Add automated coverage (integration test or smoke script) for the new pipeline path.
 - [ ] Add retention/pruning policy for `logs/instagram-us-reels` snapshots once finalised.
 - [ ] Run end-to-end QA in the campaign UI (pagination, CSV export, dedupe) after SERP quotas are verified.
+
+## Workstream E – US Reels Agent Integration
+- [ ] Catalogue required modules from `us-reels-agent` (router, storage, providers, utils) and design import strategy that avoids code duplication while fitting Next.js bundling constraints.
+- [ ] Add project-level TypeScript path aliases / build config so Next.js server code can import the agent modules with minimal friction; document any env var overlaps (`OPENAI_API_KEY`, `SERPER_API_KEY`, `SC_API_KEY`, etc.).
+- [ ] Build a server-side runner in `lib/instagram-us-reels` that invokes `runAgent` with job metadata instead of CLI args, captures structured logs, and suppresses CSV emission to the UI while allowing on-disk session logging for debugging.
+- [ ] Implement a transformer that maps agent session output (and/or session CSV rows) into `NormalizedCreator` objects compatible with `SearchJobService.replaceCreators`, including US flags, matched terms, and contact data.
+- [ ] Wire the new runner into `runInstagramUsReelsProvider` so QStash jobs execute the agent flow end-to-end and persist results directly to Postgres.
+- [ ] Ensure Clerk-authenticated API routes (`/api/scraping/instagram-us-reels`, polling endpoints) surface agent-driven job status without leaking raw CSV artefacts.
+- [ ] Extend existing smoke/integration tests (or add a new script under `test-scripts/`) to execute a sample keyword through the agent-backed pipeline and assert creators are stored.
+- [ ] Document the new architecture (docs/ or AGENTS.md) covering env requirements, troubleshooting, and how to trigger manual agent runs during QA.

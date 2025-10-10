@@ -37,6 +37,14 @@ const nextConfig = {
     config.resolve.alias = {
       ...(config.resolve.alias ?? {}),
       '@': path.resolve(process.cwd()),
+      '#async_hooks': 'async_hooks',
+      'p-limit$': path.resolve(process.cwd(), 'node_modules/p-limit/index.js'),
+    };
+    config.resolve.extensionAlias = {
+      ...(config.resolve.extensionAlias ?? {}),
+      '.js': ['.ts', '.tsx', '.js'],
+      '.mjs': ['.mts', '.mjs'],
+      '.cjs': ['.cts', '.cjs'],
     };
 
     return config;

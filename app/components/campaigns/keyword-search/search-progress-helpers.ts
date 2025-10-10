@@ -28,11 +28,15 @@ export function buildEndpoint(platformNormalized: string, hasTargetUsername: boo
   }
   switch (normalized) {
     case 'instagram':
-      return `/api/scraping/instagram-reels?jobId=${jobId}`
     case 'instagram-1.0':
     case 'instagram_1.0':
     case 'instagram_us_reels':
       return `/api/scraping/instagram-us-reels?jobId=${jobId}`
+    case 'instagram-2.0':
+    case 'instagram_2.0':
+    case 'instagram-v2':
+    case 'instagram_v2':
+      return `/api/scraping/instagram-v2?jobId=${jobId}`
     case 'enhanced-instagram':
       return `/api/scraping/instagram-enhanced?jobId=${jobId}`
     case 'google-serp':
@@ -103,9 +107,6 @@ export function computeStage({
       if (percent < 65) return 'Enriching Instagram profiles from ScrapeCreators'
       return 'Packaging Google SERP creator list'
     case 'instagram':
-      if (percent < 20) return `Searching Instagram reels for ${keyword}`
-      if (percent < 60) return 'Enhancing creator profiles'
-      return 'Compiling Instagram results'
     case 'instagram-1.0':
     case 'instagram_1.0':
     case 'instagram_us_reels':
@@ -113,6 +114,14 @@ export function computeStage({
       if (percent < 50) return 'Harvesting and vetting US creator handles'
       if (percent < 80) return 'Screening profiles for US indicators'
       return 'Scoring Instagram reels for relevance'
+    case 'instagram-2.0':
+    case 'instagram_2.0':
+    case 'instagram-v2':
+    case 'instagram_v2':
+      if (percent < 20) return `Running Influencers Club discovery for ${keyword}`
+      if (percent < 55) return 'Scoring reels with transcript and caption matches'
+      if (percent < 85) return 'Expanding to US creator reels'
+      return 'Finalising Instagram 2.0 feed'
     case 'youtube':
       if (percent < 30) return `Scanning YouTube for ${keyword}`
       if (percent < 70) return 'Collecting channel analytics'
