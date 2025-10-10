@@ -75,11 +75,34 @@ export async function runInstagramUsReelsProvider(
     targetResults: job.targetResults,
     chunkSize: DEFAULT_STREAM_CHUNK,
   }, LogCategory.SCRAPING);
+  console.warn('[US_REELS][ENTRY]', {
+    jobId: job.id,
+    campaignId: job.campaignId,
+    keyword,
+    userId: job.userId,
+    targetResults: job.targetResults,
+    chunkSize: DEFAULT_STREAM_CHUNK,
+    timestamp: new Date().toISOString(),
+  });
+  console.warn('[US_REELS][ENV]', {
+    nodeEnv: process.env.NODE_ENV,
+    hasOpenAI: Boolean(process.env.OPENAI_API_KEY),
+    hasSerper: Boolean(process.env.SERPER_API_KEY),
+    hasScrapeCreatorsKey: Boolean(process.env.SC_API_KEY),
+    usReelsStreamChunk: process.env.US_REELS_STREAM_CHUNK ?? null,
+    usReelsStreamDelayMs: process.env.US_REELS_STREAM_DELAY_MS ?? null,
+  });
 
   try {
     const agentResult = await runInstagramUsReelsAgent({
       keyword,
       jobId: job.id,
+    });
+    console.warn('[US_REELS][AGENT_RESULT]', {
+      jobId: job.id,
+      sessionId: agentResult.sessionId,
+      rawResults: agentResult.results?.length ?? 0,
+      normalizedCreators: agentResult.creators?.length ?? 0,
     });
 
     const normalized = agentResult.creators;
@@ -122,6 +145,13 @@ export async function runInstagramUsReelsProvider(
       persistedCreators: processedResults,
       sessionId: agentResult.sessionId,
     }, LogCategory.SCRAPING);
+    console.warn('[US_REELS][FIRST_CHUNK]', {
+      jobId: job.id,
+      chunkSize,
+      normalizedCount: normalized.length,
+      persistedCreators: processedResults,
+      timestamp: new Date().toISOString(),
+    });
 
       const now = Date.now();
       metrics.batches.push({
@@ -182,6 +212,15 @@ export async function runInstagramUsReelsProvider(
           totalCreators: processedResults,
           progress: progressValue,
         }, LogCategory.SCRAPING);
+        console.warn('[US_REELS][CHUNK_MERGED]', {
+          jobId: job.id,
+          batchIndex,
+          batchSize: chunk.length,
+          newCreators: mergeResult.newCount,
+          totalCreators: processedResults,
+          progress: progressValue,
+          timestamp: new Date().toISOString(),
+        });
 
         if (STREAM_DELAY_MS > 0) {
           await sleep(STREAM_DELAY_MS);
@@ -197,6 +236,12 @@ export async function runInstagramUsReelsProvider(
         keyword,
         sessionId: agentResult.sessionId,
       }, LogCategory.SCRAPING);
+      console.warn('[US_REELS][NO_CREATORS]', {
+        jobId: job.id,
+        keyword,
+        sessionId: agentResult.sessionId,
+        timestamp: new Date().toISOString(),
+      });
     }
 
     total = processedResults;
@@ -229,6 +274,14 @@ export async function runInstagramUsReelsProvider(
       durationMs: metrics.timings.totalDurationMs,
       finalProgress,
     }, LogCategory.SCRAPING);
+    console.warn('[US_REELS][COMPLETE]', {
+      jobId: job.id,
+      totalCreators: processedResults,
+      batches: metrics.batches.length,
+      durationMs: metrics.timings.totalDurationMs,
+      finalProgress,
+      timestamp: new Date().toISOString(),
+    });
 
     await service.complete('completed', {});
 
@@ -245,6 +298,13 @@ export async function runInstagramUsReelsProvider(
       keyword,
       userId: job.userId,
     }, LogCategory.SCRAPING);
+    console.error('[US_REELS][ERROR]', {
+      jobId: job.id,
+      keyword,
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString(),
+    });
 
     const finishedAt = Date.now();
     metrics.timings.finishedAt = new Date(finishedAt).toISOString();
