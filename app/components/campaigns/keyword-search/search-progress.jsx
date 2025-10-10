@@ -55,6 +55,11 @@ export default function SearchProgress({
   const lastCreatorCountRef = useRef(0)
   const authRetryRef = useRef(0)
   const generalRetryRef = useRef(0)
+  const lastLogRef = useRef({
+    status: '',
+    progress: 0,
+    creatorCount: 0,
+  })
 
   const clearPollTimeout = useCallback(() => {
     if (pollTimeoutRef.current) {
@@ -101,6 +106,15 @@ export default function SearchProgress({
     const endpoint = buildEndpoint(platformNormalized, hasTargetUsername, jobId)
     if (!endpoint) return
 
+    if (platformNormalized.startsWith('instagram')) {
+      console.log('[INSTAGRAM-US][POLL] init', {
+        jobId,
+        endpoint,
+        platform: platformNormalized,
+        timestamp: new Date().toISOString(),
+      })
+    }
+
     const schedule = (delayMs) => {
       clearPollTimeout()
       pollTimeoutRef.current = setTimeout(() => {
@@ -131,6 +145,13 @@ export default function SearchProgress({
             return
           }
           await loadCampaignSnapshot()
+          if (platformNormalized.startsWith('instagram')) {
+            console.warn('[INSTAGRAM-US][POLL] auth retry', {
+              jobId,
+              attempt: authRetryRef.current,
+              timestamp: new Date().toISOString(),
+            })
+          }
           schedule(authReady ? 2000 : 750)
           return
         }
@@ -139,6 +160,9 @@ export default function SearchProgress({
           setError('This run is no longer available.')
           clearPollTimeout()
           setStatus('error')
+          if (platformNormalized.startsWith('instagram')) {
+            console.error('[INSTAGRAM-US][POLL] job not found', { jobId })
+          }
           return
         }
 
@@ -148,6 +172,13 @@ export default function SearchProgress({
           if (generalRetryRef.current >= MAX_GENERAL_RETRIES) {
             clearPollTimeout()
             return
+          }
+          if (platformNormalized.startsWith('instagram')) {
+            console.warn('[INSTAGRAM-US][POLL] temporary error', {
+              jobId,
+              status: response.status,
+              attempt: generalRetryRef.current,
+            })
           }
           schedule(2500)
           return
@@ -188,12 +219,43 @@ export default function SearchProgress({
           })
         }
 
+        if (platformNormalized.startsWith('instagram')) {
+          const roundedProgress = Math.round(jobProgress)
+          if (
+            jobStatus !== lastLogRef.current.status ||
+            roundedProgress !== Math.round(lastLogRef.current.progress) ||
+            lastLogRef.current.creatorCount === 0
+          ) {
+            console.log('[INSTAGRAM-US][POLL] update', {
+              jobId,
+              status: jobStatus,
+              progress: roundedProgress,
+              processedResults: jobProcessed,
+              targetResults: jobTarget,
+              timestamp: new Date().toISOString(),
+            })
+            lastLogRef.current = {
+              status: jobStatus,
+              progress: jobProgress,
+              creatorCount: lastCreatorCountRef.current,
+            }
+          }
+        }
+
         const creators = flattenCreators(data?.results ?? data?.job?.results)
         if (creators.length) {
           if (creators.length !== lastCreatorCountRef.current) {
             setShowIntermediateResults(true)
             setIntermediateCreators(creators)
             lastCreatorCountRef.current = creators.length
+            lastLogRef.current.creatorCount = creators.length
+            if (platformNormalized.startsWith('instagram')) {
+              console.log('[INSTAGRAM-US][POLL] creators received', {
+                jobId,
+                creatorCount: creators.length,
+                processedResults: jobProcessed,
+              })
+            }
           }
           if (typeof onIntermediateResults === 'function') {
             onIntermediateResults({
@@ -206,6 +268,13 @@ export default function SearchProgress({
         }
 
         if (jobStatus === 'completed') {
+          if (platformNormalized.startsWith('instagram')) {
+            console.log('[INSTAGRAM-US][POLL] completed', {
+              jobId,
+              finalCount: jobProcessed || creators.length,
+              timestamp: new Date().toISOString(),
+            })
+          }
           clearPollTimeout()
           setDisplayProgress(100)
           setProgress(100)
@@ -260,6 +329,11 @@ export default function SearchProgress({
     lastCreatorCountRef.current = 0
     authRetryRef.current = 0
     generalRetryRef.current = 0
+    lastLogRef.current = {
+      status: '',
+      progress: 0,
+      creatorCount: 0,
+    }
 
     setStatus('processing')
     setProgress(0)
