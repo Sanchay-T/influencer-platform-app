@@ -26,6 +26,16 @@ export default function KeywordSearchForm({ onSubmit }) {
     }
   }, []);
 
+  useEffect(() => {
+    if (isGoogleSerp) {
+      if (creatorsCount !== 20) {
+        setCreatorsCount(20);
+      }
+    } else if (creatorsCount < 100) {
+      setCreatorsCount(100);
+    }
+  }, [isGoogleSerp, creatorsCount]);
+
   if (!isLoaded || !user) {
     return (
       <div className="rounded-lg text-card-foreground shadow-sm bg-zinc-900/80 border border-zinc-700/50">
@@ -41,16 +51,6 @@ export default function KeywordSearchForm({ onSubmit }) {
       </div>
     );
   }
-
-  useEffect(() => {
-    if (isGoogleSerp) {
-      if (creatorsCount !== 20) {
-        setCreatorsCount(20);
-      }
-    } else if (creatorsCount < 100) {
-      setCreatorsCount(100);
-    }
-  }, [isGoogleSerp, creatorsCount]);
 
   const getActualScraperLimit = (uiValue) => {
     // Retornamos el valor real del slider (1000-5000)
@@ -91,6 +91,7 @@ export default function KeywordSearchForm({ onSubmit }) {
     { value: "tiktok", label: "TikTok" },
     { value: "instagram", label: "Instagram" },
     { value: "instagram-1.0", label: "Instagram 1.0 (US Reels)", badge: "US" },
+    { value: "instagram-2.0", label: "Instagram 2.0 (US Pro)", badge: "New" },
     { value: "enhanced-instagram", label: "Enhanced Instagram (AI-Powered)", badge: "New" },
     { value: "youtube", label: "YouTube" },
     { value: "google-serp", label: "Google SERP ✕ Instagram", badge: "Beta" },

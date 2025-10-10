@@ -27,7 +27,8 @@
       "@/*": ["./*"],
       "@/components/*": ["./components/*"],
       "@/app/*": ["./app/*"],
-      "@/lib/*": ["./lib/*"]
+      "@/lib/*": ["./lib/*"],
+      "@us-reels-agent/*": ["./us-reels-agent/src/*"]
     },
     "baseUrl": "."
   },
