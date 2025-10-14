@@ -132,7 +132,7 @@ export default function SimilarSearchResults({ searchData }) {
         status: searchData?.status,
         creators: searchData?.creators,
       }),
-    [searchData?.status, searchData?.creators, searchData?.jobId]
+    [searchData?.status, searchData?.creators]
   );
 
   const [creators, setCreators] = useState(initialSeed.creators);

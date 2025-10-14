@@ -1,0 +1,24 @@
+{
+  "openai": {
+    "calls": 11,
+    "inputTokens": 143674,
+    "outputTokens": 1097,
+    "costUsd": 0.734825,
+    "model": "gpt-4o-mini"
+  },
+  "serper": {
+    "queries": 6,
+    "costPerQueryUsd": 0.001,
+    "costUsd": 0.006
+  },
+  "scrapeCreators": {
+    "posts": 37,
+    "transcripts": 5,
+    "profiles": 11,
+    "totalCalls": 53,
+    "costPerCallUsd": 0.00188,
+    "costUsd": 0.09964,
+    "creditsRemaining": 13601
+  },
+  "totalUsd": 0.840465
+}

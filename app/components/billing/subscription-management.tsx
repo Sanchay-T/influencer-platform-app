@@ -71,7 +71,10 @@ function SubscriptionManagementContent() {
         fetchTestId
       });
       
-      const billingResponse = await fetch('/api/billing/status');
+      const [billingResponse, portalResponse] = await Promise.all([
+        fetch('/api/billing/status'),
+        fetch('/api/stripe/customer-portal', { method: 'GET' }).catch(() => null),
+      ]);
       if (!billingResponse.ok) {
         throw new Error('Failed to fetch billing status');
       }
@@ -89,10 +92,9 @@ function SubscriptionManagementContent() {
       });
 
       // Check portal access
-      const portalResponse = await fetch('/api/stripe/customer-portal', {
-        method: 'GET',
-      });
-      const portalData = portalResponse.ok ? await portalResponse.json() : { canAccessPortal: false };
+      const portalData = portalResponse && portalResponse.ok
+        ? await portalResponse.json()
+        : { canAccessPortal: false };
 
       // Combine data
       const combinedData: SubscriptionData = {
@@ -122,7 +124,7 @@ function SubscriptionManagementContent() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [componentLogger]);
 
   // Removed manual sync - should be automatic via checkout success
 

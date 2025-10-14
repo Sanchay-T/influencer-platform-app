@@ -516,7 +516,9 @@ export async function addCreatorsToList(
   listId: string,
   creators: CreatorInput[]
 ) {
-  if (!creators.length) return { added: 0 };
+  if (!creators.length) {
+    return { added: 0, skipped: [], attempted: 0 };
+  }
   const user = await findInternalUser(clerkUserId);
   const access = await fetchAccessibleList(listId, user.id);
   if (!access) {
@@ -524,7 +526,7 @@ export async function addCreatorsToList(
   }
   assertListRole(access.role, ['owner', 'editor']);
 
-  const added = await db.transaction(async (tx) => {
+  const summary = await db.transaction(async (tx) => {
     const [{ maxPosition }] = await tx
       .select({ maxPosition: sql<number>`COALESCE(MAX(${creatorListItems.position}), 0)` })
       .from(creatorListItems)
@@ -532,6 +534,7 @@ export async function addCreatorsToList(
     let cursor = Number(maxPosition ?? 0) + 1;
 
     let inserted = 0;
+    const skipped: Array<{ externalId: string; handle: string; platform: string }> = [];
     for (const creator of creators) {
       const profile = await upsertCreatorProfile(tx, creator);
       const result = await tx
@@ -552,6 +555,12 @@ export async function addCreatorsToList(
 
       if (result.length) {
         inserted += 1;
+      } else {
+        skipped.push({
+          externalId: creator.externalId,
+          handle: creator.handle,
+          platform: creator.platform,
+        });
       }
     }
 
@@ -560,13 +569,21 @@ export async function addCreatorsToList(
       listId,
       actorId: user.id,
       action: 'creators_added',
-      payload: { count: creators.length },
+      payload: {
+        attempted: creators.length,
+        added: inserted,
+        skipped: skipped.length,
+      },
     });
 
-    return inserted;
+    return { inserted, skipped };
   });
 
-  return { added };
+  return {
+    added: summary.inserted,
+    skipped: summary.skipped,
+    attempted: creators.length,
+  };
 }
 
 export async function updateListItems(

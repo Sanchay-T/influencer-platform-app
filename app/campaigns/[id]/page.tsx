@@ -2,9 +2,10 @@ import { Suspense } from 'react'
 import DashboardLayout from '@/app/components/layout/dashboard-layout'
 import { db } from '@/lib/db'
 import { campaigns } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import ClientCampaignPage from '@/app/campaigns/[id]/client-page'
 import { Campaign } from '@/app/types/campaign'
+import { auth } from '@clerk/nextjs/server'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -12,12 +13,18 @@ interface PageProps {
 
 async function getCampaign(id: string) {
   try {
+    const { userId } = await auth()
+
+    if (!userId) {
+      return null
+    }
+
     const debugCampaign = process.env.CAMPAIGN_DEBUG_LOGS === 'true';
     if (debugCampaign) {
       console.log('Fetching campaign with id:', id);
     }
     const campaign = await db.query.campaigns.findFirst({
-      where: eq(campaigns.id, id),
+      where: and(eq(campaigns.id, id), eq(campaigns.userId, userId)),
       with: {
         scrapingJobs: {
           orderBy: (jobs, { desc }) => [desc(jobs.createdAt)]

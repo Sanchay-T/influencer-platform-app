@@ -13,6 +13,18 @@ import { cn } from '@/lib/utils';
 import { Loader2, RefreshCcw, LayoutGrid, Table2, MailCheck, ExternalLink } from 'lucide-react';
 import { resolveCreatorPreview } from '@/lib/utils/media-preview';
 
+const isDev = process.env.NODE_ENV !== 'production';
+const debugLog = (...args) => {
+  if (isDev) {
+    console.log(...args);
+  }
+};
+const debugError = (...args) => {
+  if (isDev) {
+    console.error(...args);
+  }
+};
+
 const VIEW_MODES = ['table', 'gallery'];
 const GALLERY_ITEMS_PER_PAGE = 9;
 
@@ -101,13 +113,13 @@ const SearchResults = () => {
 
   const pollResults = useCallback(async () => {
     try {
-      console.log('=== POLLING API ===');
-      console.log('Consultando jobId:', searchData.jobId);
+      debugLog('=== POLLING API ===');
+      debugLog('Consultando jobId:', searchData.jobId);
       
       const response = await fetch(`/api/scraping/tiktok?jobId=${searchData.jobId}`);
       const data = await response.json();
       
-      console.log('Respuesta de API:', {
+      debugLog('Respuesta de API:', {
         status: data.status,
         totalRequested: data.totalRequested,
         totalReceived: data.totalReceived,
@@ -115,7 +127,7 @@ const SearchResults = () => {
       });
 
       if (data.status === 'completed') {
-        console.log('Búsqueda completada:', {
+        debugLog('Búsqueda completada:', {
           totalRequested: data.totalRequested,
           totalReceived: data.totalReceived,
           resultsLength: data.results?.length
@@ -126,17 +138,17 @@ const SearchResults = () => {
         setResults(allCreators);
         setLoading(false);
       } else if (data.status === 'error') {
-        console.error('Error en la búsqueda:', data.error);
+        debugError('Error en la búsqueda:', data.error);
         setError(data.error);
         setLoading(false);
       } else {
-        console.log('Búsqueda en progreso:', data.status);
+        debugLog('Búsqueda en progreso:', data.status);
         setTimeout(() => {
           pollResults();
         }, 30000);
       }
     } catch (error) {
-      console.error('Error en polling:', error);
+      debugError('Error en polling:', error);
       setError('Error al obtener resultados');
       setLoading(false);
     }
@@ -164,29 +176,29 @@ const SearchResults = () => {
         setLoading(false);
       }
     } catch (err) {
-      console.error('Error starting search', err);
+      debugError('Error starting search', err);
       setError('Unable to start search');
       setLoading(false);
     }
   }, [searchData.keywords, searchData.scraperLimit]);
 
   useEffect(() => {
-    console.log('=== INICIO DE BÚSQUEDA ===');
-    console.log('Datos iniciales:', {
+    debugLog('=== INICIO DE BÚSQUEDA ===');
+    debugLog('Datos iniciales:', {
       jobId: searchData.jobId,
       scraperLimit: searchData.scraperLimit,
       keywords: searchData.keywords
     });
 
     if (!searchData.jobId) {
-      console.log('No hay jobId, iniciando búsqueda...');
+      debugLog('No hay jobId, iniciando búsqueda...');
       startSearch();
       return;
     }
 
-    console.log('Iniciando polling con jobId:', searchData.jobId);
+    debugLog('Iniciando polling con jobId:', searchData.jobId);
     pollResults();
-  }, [searchData.jobId, startSearch, pollResults]);
+  }, [searchData.jobId, searchData.scraperLimit, searchData.keywords, startSearch, pollResults]);
 
   const creators = useMemo(() => {
     const deduped = dedupeCreators(results);
