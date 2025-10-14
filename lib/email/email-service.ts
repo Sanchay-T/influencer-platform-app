@@ -185,15 +185,25 @@ export async function getUserEmailFromClerk(userId: string): Promise<string | nu
     }
     
     const primaryEmail = user.emailAddresses.find(email => email.id === user.primaryEmailAddressId);
-    
-    if (!primaryEmail) {
-      console.error('❌ [CLERK-EMAIL] No primary email found for user:', userId);
-      console.log('🔍 [CLERK-EMAIL] Available emails:', user.emailAddresses?.map(e => ({ id: e.id, email: e.emailAddress })));
+
+    // Fallback: pick the first verified address, or the first address if none are verified.
+    const fallbackEmail = user.emailAddresses.find(email => email.verification?.status === 'verified')
+      || user.emailAddresses[0];
+
+    const resolvedEmail = primaryEmail?.emailAddress || fallbackEmail?.emailAddress || null;
+
+    if (!resolvedEmail) {
+      console.error('❌ [CLERK-EMAIL] No email found for user:', userId);
+      console.log('🔍 [CLERK-EMAIL] Available emails:', user.emailAddresses?.map(e => ({ id: e.id, email: e.emailAddress, verified: e.verification?.status })));
       return null;
     }
 
-    console.log('✅ [CLERK-EMAIL] Retrieved user email:', primaryEmail.emailAddress);
-    return primaryEmail.emailAddress;
+    if (!primaryEmail) {
+      console.warn('⚠️ [CLERK-EMAIL] No primary email set; using fallback email:', resolvedEmail);
+    }
+
+    console.log('✅ [CLERK-EMAIL] Retrieved user email:', resolvedEmail);
+    return resolvedEmail;
   } catch (error) {
     console.error('❌ [CLERK-EMAIL] Failed to get user email from Clerk:', error);
     return null;
