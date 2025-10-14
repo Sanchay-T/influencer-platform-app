@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { scrapingJobs, scrapingResults, campaigns, type JobStatus } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { PlanEnforcementService } from '@/lib/services/plan-enforcement';
+import { normalizePageParams, paginateCreators } from '@/lib/search-engine/utils/pagination';
 
 // Add simple API logging
 let simpleLogApiCall: any = null;
@@ -337,6 +338,17 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    const { limit, offset } = normalizePageParams(
+      searchParams.get('limit'),
+      searchParams.get('offset') ?? searchParams.get('cursor')
+    );
+
+    const {
+      results: paginatedResults,
+      totalCreators,
+      pagination,
+    } = paginateCreators(job.results, limit, offset);
+
     // Enhanced response logging to debug frontend issue
     const responseData = {
       job: {
@@ -352,7 +364,9 @@ export async function GET(req: NextRequest) {
         completedAt: job.completedAt
       },
       apiStatus,
-      results: job.results || []
+      results: paginatedResults ?? [],
+      totalCreators,
+      pagination,
     };
     
     console.log('📤 [INSTAGRAM-REELS-API] Sending response to frontend:', {
@@ -361,10 +375,10 @@ export async function GET(req: NextRequest) {
       jobProgress: job.progress,
       jobProcessedResults: job.processedResults,
       responseStructure: Object.keys(responseData),
-      hasResults: !!(job.results && job.results.length > 0),
-      resultsCount: job.results?.length || 0,
-      creatorsInResults: job.results?.[0]?.creators?.length || 0,
-      allResultsEntries: job.results?.map(r => ({
+      hasResults: !!(paginatedResults && paginatedResults.length > 0),
+      resultsCount: paginatedResults?.length || 0,
+      creatorsInResults: paginatedResults?.[0]?.creators?.length || 0,
+      allResultsEntries: paginatedResults?.map(r => ({
         id: r.id,
         createdAt: r.createdAt,
         creatorCount: r.creators?.length || 0

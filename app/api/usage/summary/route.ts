@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth/backend-auth';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { PlanValidator } from '@/lib/services/plan-validator';
 
 export async function GET() {
   try {
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const planStatus = await PlanValidator.getUserPlanStatus(userId);

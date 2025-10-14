@@ -8,6 +8,7 @@ import { PlanEnforcementService } from '@/lib/services/plan-enforcement';
 import { qstash } from '@/lib/queue/qstash';
 import { getWebhookUrl } from '@/lib/utils/url-utils';
 import { extractUsername } from '@/lib/platforms/instagram-similar/api';
+import { normalizePageParams, paginateCreators } from '@/lib/search-engine/utils/pagination';
 
 const TIMEOUT_MINUTES = 60;
 const DEFAULT_TARGET_RESULTS = 100;
@@ -165,15 +166,28 @@ export async function GET(req: Request) {
       }
     }
 
+    const { limit, offset } = normalizePageParams(
+      searchParams.get('limit'),
+      searchParams.get('offset') ?? searchParams.get('cursor')
+    );
+
+    const {
+      results: paginatedResults,
+      totalCreators,
+      pagination,
+    } = paginateCreators(job.results, limit, offset);
+
     const payload = {
       status: job.status,
       processedResults: job.processedResults,
       targetResults: job.targetResults,
       error: job.error,
-      results: job.results,
+      results: paginatedResults,
       progress: parseFloat(job.progress || '0'),
       engine: (job.searchParams as any)?.runner ?? 'search-engine',
       benchmark: (job.searchParams as any)?.searchEngineBenchmark ?? null,
+      totalCreators,
+      pagination,
     };
 
     return NextResponse.json(payload);

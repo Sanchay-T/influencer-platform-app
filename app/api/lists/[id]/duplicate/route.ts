@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth/backend-auth';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { duplicateList } from '@/lib/db/queries/list-queries';
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  const { userId } = await auth();
+  const { userId } = await getAuthOrTest();
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

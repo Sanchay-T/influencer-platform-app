@@ -1,6 +1,7 @@
 import '@/lib/config/load-env';
 import { NextRequest, NextResponse } from 'next/server';
-import { auth, clerkBackendClient } from '@/lib/auth/backend-auth';
+import { clerkBackendClient } from '@/lib/auth/backend-auth';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
 import { ilike, or, asc, desc } from 'drizzle-orm';
@@ -16,7 +17,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ users: [], query: null, count: 0, searchMethod: 'skipped' });
     }
 
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

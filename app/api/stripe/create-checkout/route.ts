@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth/backend-auth';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import Stripe from 'stripe';
 import { db } from '@/lib/db';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
       requestId
     });
 
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
     
     if (!userId) {
       await OnboardingLogger.logAPI('AUTH-ERROR', 'Stripe checkout request unauthorized - no user ID', undefined, {

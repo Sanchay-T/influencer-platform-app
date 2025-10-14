@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth/backend-auth';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { db } from '@/lib/db';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { getClientUrl } from '@/lib/utils/url-utils';
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     console.log('⏰ [CUSTOMER-PORTAL] Timestamp:', new Date().toISOString());
 
     // Get current user
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
     if (!userId) {
       console.error('❌ [CUSTOMER-PORTAL] Unauthorized - No valid user session');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -146,7 +146,7 @@ export async function GET() {
   try {
     console.log('🔍 [CUSTOMER-PORTAL-GET] Checking customer portal access');
     
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

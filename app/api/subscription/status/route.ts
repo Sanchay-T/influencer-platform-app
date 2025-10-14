@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth/backend-auth';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { db } from '@/lib/db';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
 import Stripe from 'stripe';
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
     const reqId = `sub_${startedAt}_${Math.random().toString(36).slice(2, 8)}`;
     const ts = new Date().toISOString();
     console.log(`🟢 [SUBSCRIPTION-STATUS:${reqId}] START ${ts}`);
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
     
     if (!userId) {
       const res = NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

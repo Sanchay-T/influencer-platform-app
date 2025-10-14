@@ -1,4 +1,4 @@
-import { auth } from '@/lib/auth/backend-auth'
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test'
 import { db } from '@/lib/db'
 import { campaigns, scrapingJobs } from '@/lib/db/schema'
 import { eq, desc } from 'drizzle-orm'
@@ -13,7 +13,7 @@ export async function GET(
     console.log('🔍 [CAMPAIGN-DETAIL-API] GET request received for campaign:', id);
     
     console.log('🔐 [CAMPAIGN-DETAIL-API] Getting authenticated user from Clerk');
-    const { userId } = await auth()
+    const { userId } = await getAuthOrTest()
     
     if (!userId) {
       console.error('❌ [CAMPAIGN-DETAIL-API] Unauthorized - No valid user session');

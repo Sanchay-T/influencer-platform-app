@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth/backend-auth';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { getUserProfile, createUser } from '@/lib/db/queries/user-queries';
 import { getTrialStatus } from '@/lib/trial/trial-service';
 
@@ -10,7 +10,7 @@ export async function GET() {
     const ts = new Date().toISOString();
     console.log(`🟢 [PROFILE-API-GET:${reqId}] START ${ts}`);
     console.log('🔐 [PROFILE-API-GET] Getting authenticated user from Clerk');
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
 
     if (!userId) {
       console.error('❌ [PROFILE-API-GET] Unauthorized - No valid user session');
@@ -115,7 +115,7 @@ export async function POST(request: Request) {
     const ts = new Date().toISOString();
     console.log(`🟢 [PROFILE-API:${reqId}] START ${ts}`);
     console.log('🔐 [PROFILE-API] Getting authenticated user from Clerk');
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
 
     if (!userId) {
       console.error('❌ [PROFILE-API] Unauthorized - No valid user session');

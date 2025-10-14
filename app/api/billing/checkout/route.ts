@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth/backend-auth';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 
 export async function GET(request: NextRequest) {
   console.log('🚀 [CHECKOUT-API] Request received!');
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   
   try {
     // Get the user from Clerk
-    const { userId } = auth();
+    const { userId } = await getAuthOrTest();
     console.log('🚀 [CHECKOUT-API] Auth result:', { userId });
     
     if (!userId) {

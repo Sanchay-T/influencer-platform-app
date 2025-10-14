@@ -9,6 +9,7 @@ import { campaigns, scrapingJobs, type JobStatus } from '@/lib/db/schema';
 import { qstash } from '@/lib/queue/qstash';
 import { PlanEnforcementService } from '@/lib/services/plan-enforcement';
 import { getWebhookUrl } from '@/lib/utils/url-utils';
+import { normalizePageParams, paginateCreators } from '@/lib/search-engine/utils/pagination';
 
 const TIMEOUT_MINUTES = 30;
 const MAX_RESULTS = 20;
@@ -216,16 +217,29 @@ export async function GET(req: Request) {
       }
     }
 
+    const { limit, offset } = normalizePageParams(
+      searchParams.get('limit'),
+      searchParams.get('offset') ?? searchParams.get('cursor')
+    );
+
+    const {
+      results: paginatedResults,
+      totalCreators,
+      pagination,
+    } = paginateCreators(job.results, limit, offset);
+
     const payload = {
       status: job.status,
       processedResults: job.processedResults,
       targetResults: job.targetResults,
       error: job.error,
-      results: job.results,
+      results: paginatedResults,
       progress: parseFloat(job.progress || '0'),
       engine: (job.searchParams as any)?.runner ?? 'search-engine',
       benchmark: (job.searchParams as any)?.searchEngineBenchmark ?? null,
       lastRun: (job.searchParams as any)?.lastGoogleSerpRun ?? null,
+      totalCreators,
+      pagination,
     };
 
     return NextResponse.json(payload);

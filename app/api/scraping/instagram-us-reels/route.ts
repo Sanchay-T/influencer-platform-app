@@ -5,6 +5,7 @@ import { campaigns, scrapingJobs, scrapingResults, type JobStatus } from '@/lib/
 import { eq, and } from 'drizzle-orm';
 import { PlanEnforcementService } from '@/lib/services/plan-enforcement';
 import { getWebhookUrl } from '@/lib/utils/url-utils';
+import { normalizePageParams, paginateCreators } from '@/lib/search-engine/utils/pagination';
 
 const TIMEOUT_MINUTES = 60;
 
@@ -225,6 +226,17 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    const { limit, offset } = normalizePageParams(
+      searchParams.get('limit'),
+      searchParams.get('offset') ?? searchParams.get('cursor')
+    );
+
+    const {
+      results: paginatedResults,
+      totalCreators,
+      pagination,
+    } = paginateCreators(job.results, limit, offset);
+
     return NextResponse.json({
       job: {
         id: job.id,
@@ -238,7 +250,9 @@ export async function GET(req: NextRequest) {
         createdAt: job.createdAt,
         completedAt: job.completedAt,
       },
-      results: job.results ?? [],
+      results: paginatedResults ?? [],
+      totalCreators,
+      pagination,
     });
   } catch (error: any) {
     console.error('[instagram-us-reels] GET failed', error);

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth/backend-auth';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { BillingService } from '@/lib/services/billing-service';
 
 /**
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     console.log(`🔄 [BILLING-SYNC:${reqId}] Using central billing service for reconciliation`);
 
     // Get current user
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

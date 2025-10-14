@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth/backend-auth';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
 
@@ -28,7 +28,7 @@ export async function GET() {
 
   try {
     info('Onboarding status request received', { timestamp });
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
 
     if (!userId) {
       warn('Unauthorized onboarding status request');

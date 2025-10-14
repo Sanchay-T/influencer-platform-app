@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth/backend-auth';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { db } from '@/lib/db';
 import { campaigns, scrapingJobs, scrapingResults } from '@/lib/db/schema';
 import { updateUserProfile } from '@/lib/db/queries/user-queries';
@@ -11,7 +11,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { userId: adminUserId } = await auth();
+    const { userId: adminUserId } = await getAuthOrTest();
     
     if (!adminUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -10,6 +10,7 @@ import { PlanValidator } from '@/lib/services/plan-validator'
 import BillingLogger from '@/lib/loggers/billing-logger'
 import { logger, LogCategory } from '@/lib/logging';
 import { withApiLogging, logDbOperation, createApiResponse, createErrorResponse } from '@/lib/middleware/api-logger';
+import { normalizePageParams, paginateCreators } from '@/lib/search-engine/utils/pagination';
 const fs = require('fs');
 const path = require('path');
 
@@ -550,20 +551,31 @@ export const GET = withApiLogging(async (req: Request, { requestId, logPhase, lo
             targetResults: job.targetResults
         }, LogCategory.TIKTOK);
 
+        const { limit, offset } = normalizePageParams(
+          searchParams.get('limit'),
+          searchParams.get('offset') ?? searchParams.get('cursor')
+        );
+
+        const {
+          results: paginatedResults,
+          totalCreators,
+          pagination,
+        } = paginateCreators(job.results, limit, offset);
+
         const payload = {
             status: job.status,
             processedResults: job.processedResults,
             targetResults: job.targetResults,
             error: job.error,
-            results: job.results,
+            results: paginatedResults,
             progress: parseFloat(job.progress || '0'),
             engine: (job.searchParams as any)?.runner ?? 'search-engine',
-            benchmark: (job.searchParams as any)?.searchEngineBenchmark ?? null
+            benchmark: (job.searchParams as any)?.searchEngineBenchmark ?? null,
+            totalCreators,
+            pagination,
         };
         try {
-          const resultsArray = Array.isArray(job.results) ? job.results : (job.results ? [job.results] : []);
-          const first = resultsArray[0];
-          const currentCount = first && Array.isArray((first as any).creators) ? (first as any).creators.length : 0;
+          const currentCount = totalCreators;
           appendRunLog(job.id, { type: 'poll_return', status: payload.status, progress: payload.progress, currentSavedCreators: currentCount });
         } catch {}
         return createApiResponse(payload, 200, requestId);

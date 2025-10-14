@@ -9,9 +9,9 @@ async function main() {
   const result = await runOnboardingFlow(ctx)
 
   console.log('🎉 Onboarding flow completed')
-  console.log('   Current plan:', result.plan.currentPlan)
-  console.log('   Subscription status:', result.plan.subscriptionStatus)
-  console.log('   Trial status:', result.plan.trialStatus)
+  console.log('   Current plan:', result.subscription?.planKey ?? result.plan.currentPlan)
+  console.log('   Subscription status:', result.subscription?.status ?? result.plan.subscriptionStatus)
+  console.log('   Trial status:', result.subscription?.trialStatus ?? result.plan.trialStatus)
 }
 
 main().catch((err) => {

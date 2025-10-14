@@ -1,10 +1,10 @@
 import { Suspense } from 'react'
 import DashboardLayout from '@/app/components/layout/dashboard-layout'
 import { db } from '@/lib/db'
-import { campaigns, PlatformResult } from '@/lib/db/schema'
+import { campaigns } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
 import ClientCampaignPage from '@/app/campaigns/[id]/client-page'
-import { Campaign, ScrapingJob, ScrapingResult } from '@/app/types/campaign'
+import { Campaign } from '@/app/types/campaign'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -20,16 +20,6 @@ async function getCampaign(id: string) {
       where: eq(campaigns.id, id),
       with: {
         scrapingJobs: {
-          with: {
-            results: {
-              columns: {
-                id: true,
-                jobId: true,
-                creators: true,
-                createdAt: true
-              }
-            }
-          },
           orderBy: (jobs, { desc }) => [desc(jobs.createdAt)]
         }
       }
@@ -56,11 +46,8 @@ async function getCampaign(id: string) {
           platform: job.platform,
           keywords: job.keywords,
           targetUsername: job.targetUsername,
-          resultCount: job.results?.length || 0,
-          results: job.results?.map(result => ({
-            id: result.id,
-            creatorsCount: Array.isArray(result.creators) ? result.creators.length : 0
-          }))
+          // Results intentionally omitted during server render to prevent large payloads.
+          resultsLoaded: false
         }))
       }, null, 2));
 
@@ -71,26 +58,31 @@ async function getCampaign(id: string) {
           status: job.status,
           createdAt: job.createdAt,
           platform: job.platform,
-          hasResults: (job.results?.length || 0) > 0,
-          resultsCount: job.results?.length || 0
+          resultsLoadedServer: false
         });
       });
 
       // 🔍 COMPLETED JOBS DEBUG: Check how many completed jobs exist
       const completedJobs = campaign.scrapingJobs?.filter(job => 
-        job.status === 'completed' && job.results?.length > 0
+        job.status === 'completed'
       ) || [];
       console.log('✅ [COMPLETED-JOBS-DEBUG] Found completed jobs:', completedJobs.length);
       completedJobs.forEach((job, index) => {
         console.log(`✅ [COMPLETED-${index + 1}] Job ${job.id}:`, {
           platform: job.platform,
           createdAt: job.createdAt,
-          resultsCount: job.results?.length || 0
+          resultsHydration: 'client-fetch'
         });
       });
     }
 
-    return campaign
+    return {
+      ...campaign,
+      scrapingJobs: campaign.scrapingJobs?.map((job) => ({
+        ...job,
+        results: [],
+      })) ?? []
+    }
   } catch (error) {
     console.error('Error fetching campaign:', error)
     throw error

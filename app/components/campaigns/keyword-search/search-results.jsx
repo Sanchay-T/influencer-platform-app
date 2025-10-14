@@ -1396,7 +1396,7 @@ const SearchResults = ({ searchData }) => {
                         <span className="text-zinc-500">No email</span>
                       )}
                     </div>
-                    <div className="mt-auto flex items-center justify-between pt-2">
+                    <div className="mt-auto pt-2">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -1407,12 +1407,6 @@ const SearchResults = ({ searchData }) => {
                           Profile <ExternalLink className="h-3 w-3" />
                         </a>
                       </Button>
-                      <AddToListButton
-                        creator={snapshot}
-                        buttonLabel="Save"
-                        variant="secondary"
-                        size="sm"
-                      />
                     </div>
                   </div>
                 </Card>

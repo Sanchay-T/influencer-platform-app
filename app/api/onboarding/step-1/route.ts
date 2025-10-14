@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth/backend-auth';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { getUserProfile, updateUserProfile, createUser } from '@/lib/db/queries/user-queries';
 import { scheduleEmail, getUserEmailFromClerk, updateEmailScheduleStatus, shouldSendEmail } from '@/lib/email/email-service';
 
@@ -14,7 +14,7 @@ export async function PATCH(request: Request) {
     console.log('🆔 [ONBOARDING-STEP1] Request ID:', requestId);
     console.log('⏰ [ONBOARDING-STEP1] Timestamp:', new Date().toISOString());
     console.log('🔐 [ONBOARDING-STEP1] Getting authenticated user from Clerk');
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
 
     if (!userId) {
       console.error('❌ [ONBOARDING-STEP1] Unauthorized - No valid user session');
@@ -37,8 +37,33 @@ export async function PATCH(request: Request) {
       }, { status: 400 });
     }
 
+    // Resolve email from Clerk before proceeding
+    console.log('📧 [ONBOARDING-STEP1] Resolving primary email from Clerk');
+    const clerkEmail = await getUserEmailFromClerk(userId);
+
     // Check if user profile exists
     const existingProfile = await getUserProfile(userId);
+    let normalizedEmail: string | null = clerkEmail?.trim().toLowerCase() || null;
+
+    if (!normalizedEmail && existingProfile?.email) {
+      normalizedEmail = existingProfile.email.trim().toLowerCase();
+      console.warn('⚠️ [ONBOARDING-STEP1] Clerk email missing; falling back to stored profile email.', {
+        userId,
+        fallbackEmail: normalizedEmail,
+      });
+    }
+
+    if (!normalizedEmail) {
+      console.error('❌ [ONBOARDING-STEP1] No email available from Clerk or profile. Blocking onboarding progress.');
+      return NextResponse.json(
+        {
+          error: 'Email required to continue onboarding. Add an email address to your account and try again.',
+        },
+        { status: 409 }
+      );
+    }
+
+    console.log('✅ [ONBOARDING-STEP1] Email confirmed for onboarding:', normalizedEmail);
 
     if (existingProfile) {
       // Update existing profile
@@ -52,12 +77,10 @@ export async function PATCH(request: Request) {
       });
       
       // Get user email from Clerk for database storage
-      const userEmail = await getUserEmailFromClerk(userId);
-      
       await updateUserProfile(userId, {
         fullName: fullName.trim(),
         businessName: businessName.trim(),
-        email: userEmail, // ✅ Store email in database
+        email: normalizedEmail,
         onboardingStep: 'info_captured',
       });
 
@@ -66,10 +89,10 @@ export async function PATCH(request: Request) {
 
       // Schedule welcome email for existing users too (if not already sent)
       
-      if (userEmail && await shouldSendEmail(userId, 'welcome')) {
+      if (await shouldSendEmail(userId, 'welcome')) {
         console.log('📧📧📧 [ONBOARDING-STEP1] SCHEDULING WELCOME EMAIL FOR EXISTING USER');
         console.log('📧 [ONBOARDING-STEP1] Email details:', {
-          targetEmail: userEmail,
+          targetEmail: normalizedEmail,
           emailType: 'welcome',
           fullName: fullName.trim(),
           businessName: businessName.trim(),
@@ -79,7 +102,7 @@ export async function PATCH(request: Request) {
         const emailResult = await scheduleEmail({
           userId,
           emailType: 'welcome',
-          userEmail,
+          userEmail: normalizedEmail,
           templateProps: {
             fullName: fullName.trim(),
             businessName: businessName.trim(),
@@ -101,10 +124,10 @@ export async function PATCH(request: Request) {
       }
 
       // Schedule abandonment email for existing users too (if not already sent)
-      if (userEmail && await shouldSendEmail(userId, 'abandonment')) {
+      if (await shouldSendEmail(userId, 'abandonment')) {
         console.log('📧📧📧 [ONBOARDING-STEP1] SCHEDULING ABANDONMENT EMAIL FOR EXISTING USER');
         console.log('📧 [ONBOARDING-STEP1] Abandonment email details:', {
-          targetEmail: userEmail,
+          targetEmail: normalizedEmail,
           emailType: 'abandonment',
           scheduledFor: '2 hours after signup',
           fullName: fullName.trim(),
@@ -114,7 +137,7 @@ export async function PATCH(request: Request) {
         const abandonmentResult = await scheduleEmail({
           userId,
           emailType: 'abandonment',
-          userEmail,
+          userEmail: normalizedEmail,
           templateProps: {
             fullName: fullName.trim(),
             businessName: businessName.trim(),
@@ -140,13 +163,11 @@ export async function PATCH(request: Request) {
       console.log('🆕 [ONBOARDING-STEP1] This is a first-time user signup');
       
       // Get user email from Clerk for database storage
-      const userEmail = await getUserEmailFromClerk(userId);
-      
       await createUser({
         userId,
+        email: normalizedEmail,
         fullName: fullName.trim(),
         businessName: businessName.trim(),
-        email: userEmail, // ✅ Store email in database
         onboardingStep: 'info_captured',
       });
 
@@ -155,10 +176,10 @@ export async function PATCH(request: Request) {
 
       // Schedule welcome email (10 minutes after signup)
       
-      if (userEmail && await shouldSendEmail(userId, 'welcome')) {
+      if (await shouldSendEmail(userId, 'welcome')) {
         console.log('📧📧📧 [ONBOARDING-STEP1] SCHEDULING WELCOME EMAIL');
         console.log('📧 [ONBOARDING-STEP1] Email details:', {
-          targetEmail: userEmail,
+          targetEmail: normalizedEmail,
           emailType: 'welcome',
           fullName: fullName.trim(),
           businessName: businessName.trim(),
@@ -168,7 +189,7 @@ export async function PATCH(request: Request) {
         const emailResult = await scheduleEmail({
           userId,
           emailType: 'welcome',
-          userEmail,
+          userEmail: normalizedEmail,
           templateProps: {
             fullName: fullName.trim(),
             businessName: businessName.trim(),
@@ -190,10 +211,10 @@ export async function PATCH(request: Request) {
       }
 
       // Schedule abandonment email (2 hours after signup)
-      if (userEmail && await shouldSendEmail(userId, 'abandonment')) {
+      if (await shouldSendEmail(userId, 'abandonment')) {
         console.log('📧📧📧 [ONBOARDING-STEP1] SCHEDULING ABANDONMENT EMAIL');
         console.log('📧 [ONBOARDING-STEP1] Abandonment email details:', {
-          targetEmail: userEmail,
+          targetEmail: normalizedEmail,
           emailType: 'abandonment',
           scheduledFor: '2 hours after signup',
           fullName: fullName.trim(),
@@ -203,7 +224,7 @@ export async function PATCH(request: Request) {
         const abandonmentResult = await scheduleEmail({
           userId,
           emailType: 'abandonment',
-          userEmail,
+          userEmail: normalizedEmail,
           templateProps: {
             fullName: fullName.trim(),
             businessName: businessName.trim(),

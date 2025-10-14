@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth/backend-auth';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
 import { startTrial } from '@/lib/trial/trial-service';
 import { MockStripeService } from '@/lib/stripe/mock-stripe';
@@ -24,7 +24,7 @@ export async function PATCH(request: Request) {
     console.log('⏰ [ONBOARDING-COMPLETE] Timestamp:', new Date().toISOString());
     console.log('🔐 [ONBOARDING-COMPLETE] Getting authenticated user from Clerk');
     
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
 
     if (!userId) {
       console.error('❌ [ONBOARDING-COMPLETE] Unauthorized - No valid user session');
@@ -61,16 +61,19 @@ export async function PATCH(request: Request) {
     });
     console.log('⏱️ [ONBOARDING-COMPLETE] Profile fetch completed in:', Date.now() - startTime, 'ms');
 
-    // Get user email from Clerk
-    console.log('📧 [ONBOARDING-COMPLETE] Getting user email from Clerk');
-    const userEmail = await getUserEmailFromClerk(userId);
-    if (!userEmail) {
-      console.error('❌ [ONBOARDING-COMPLETE] Could not retrieve user email');
-      return NextResponse.json({ 
-        error: 'Could not retrieve user email' 
-      }, { status: 400 });
+    // Resolve usable email. Prefer database profile, then Clerk lookup.
+    let userEmail = userProfile.email || null;
+    if (userEmail) {
+      console.log('📧 [ONBOARDING-COMPLETE] Using email from profile:', userEmail);
+    } else {
+      console.log('📧 [ONBOARDING-COMPLETE] No email on profile, querying Clerk');
+      userEmail = await getUserEmailFromClerk(userId);
+      if (userEmail) {
+        console.log('✅ [ONBOARDING-COMPLETE] User email retrieved from Clerk:', userEmail);
+      } else {
+        console.warn('⚠️ [ONBOARDING-COMPLETE] Could not resolve user email; onboarding will continue without scheduling outbound emails.');
+      }
     }
-    console.log('✅ [ONBOARDING-COMPLETE] User email retrieved:', userEmail);
 
     // ⚠️ SKIP STRIPE SETUP: User already has Stripe customer + subscription from checkout
     // This endpoint is called AFTER payment success, so Stripe resources already exist
@@ -136,24 +139,29 @@ export async function PATCH(request: Request) {
     });
     
     const emailStartTime = Date.now();
-    const emailResult = await scheduleTrialEmails(userId, userInfo);
-    console.log('⏱️ [ONBOARDING-COMPLETE] Email scheduling completed in:', Date.now() - emailStartTime, 'ms');
-    
-    if (emailResult.success) {
-      console.log('✅✅✅ [ONBOARDING-COMPLETE] TRIAL EMAILS SCHEDULED SUCCESSFULLY');
-      console.log('📧 [ONBOARDING-COMPLETE] Email results breakdown:');
-      emailResult.results?.forEach((result, index) => {
-        console.log(`📧 [ONBOARDING-COMPLETE] Email ${index + 1}:`, {
-          type: result.emailType,
-          messageId: result.messageId,
-          scheduled: result.success,
-          deliveryTime: result.deliveryTime,
-          error: result.error || 'None'
+    let emailResult: Awaited<ReturnType<typeof scheduleTrialEmails>> | null = null;
+    if (userEmail) {
+      emailResult = await scheduleTrialEmails(userId, userInfo);
+      console.log('⏱️ [ONBOARDING-COMPLETE] Email scheduling completed in:', Date.now() - emailStartTime, 'ms');
+      
+      if (emailResult.success) {
+        console.log('✅✅✅ [ONBOARDING-COMPLETE] TRIAL EMAILS SCHEDULED SUCCESSFULLY');
+        console.log('📧 [ONBOARDING-COMPLETE] Email results breakdown:');
+        emailResult.results?.forEach((result, index) => {
+          console.log(`📧 [ONBOARDING-COMPLETE] Email ${index + 1}:`, {
+            type: result.emailType,
+            messageId: result.messageId,
+            scheduled: result.success,
+            deliveryTime: result.deliveryTime,
+            error: result.error || 'None'
+          });
         });
-      });
+      } else {
+        console.error('❌❌❌ [ONBOARDING-COMPLETE] FAILED TO SCHEDULE TRIAL EMAILS');
+        console.error('📧 [ONBOARDING-COMPLETE] Email error details:', emailResult.error);
+      }
     } else {
-      console.error('❌❌❌ [ONBOARDING-COMPLETE] FAILED TO SCHEDULE TRIAL EMAILS');
-      console.error('📧 [ONBOARDING-COMPLETE] Email error details:', emailResult.error);
+      console.log('📧 [ONBOARDING-COMPLETE] Email scheduling skipped because no email was available.');
     }
 
     // Step 5: Return complete response with trial data
@@ -179,10 +187,16 @@ export async function PATCH(request: Request) {
         subscriptionId: userProfile.stripeSubscriptionId || 'not-set',
         note: 'Stripe resources created during checkout, not onboarding'
       },
-      emails: {
-        scheduled: emailResult.success,
-        results: emailResult.results || []
-      }
+      emails: userEmail
+        ? {
+            scheduled: emailResult?.success ?? false,
+            results: emailResult?.results || []
+          }
+        : {
+            scheduled: false,
+            skipped: true,
+            reason: 'email_unavailable'
+          }
     };
 
     const totalTime = Date.now() - startTime;
@@ -234,7 +248,7 @@ export async function GET(request: Request) {
   try {
     console.log('🔍 [ONBOARDING-COMPLETE-GET] Checking onboarding completion status');
     
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

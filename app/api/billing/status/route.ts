@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth/backend-auth';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { createUser } from '@/lib/db/queries/user-queries';
 import { BillingService, type PlanKey } from '@/lib/services/billing-service';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
   try {
     info('Billing status request received', { timestamp });
 
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
     currentUserId = userId ?? undefined;
 
     if (!userId) {

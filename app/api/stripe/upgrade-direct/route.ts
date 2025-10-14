@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth/backend-auth';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import Stripe from 'stripe';
 import { db } from '@/lib/db';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   const startedAt = Date.now();
   const reqId = `upgrade_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   try {
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { planId, billing = 'monthly' } = await req.json();
@@ -175,7 +175,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     // If payment method is missing or Stripe rejects, fallback to portal
     try {
-      const { userId } = await auth();
+      const { userId } = await getAuthOrTest();
       if (userId) {
         const profile = await getUserProfile(userId);
         if (profile?.stripeCustomerId) {

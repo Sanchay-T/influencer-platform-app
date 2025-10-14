@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth/backend-auth';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { addCreatorsToList, removeListItems, updateListItems } from '@/lib/db/queries/list-queries';
 
 function errorToResponse(error: unknown) {
@@ -15,7 +15,7 @@ function errorToResponse(error: unknown) {
 }
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  const { userId } = await auth();
+  const { userId } = await getAuthOrTest();
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -29,7 +29,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 }
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
-  const { userId } = await auth();
+  const { userId } = await getAuthOrTest();
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -43,7 +43,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 }
 
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
-  const { userId } = await auth();
+  const { userId } = await getAuthOrTest();
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

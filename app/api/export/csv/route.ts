@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { scrapingResults, scrapingJobs } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import { auth } from '@/lib/auth/backend-auth';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { FeatureGateService } from '@/lib/services/feature-gates';
 import { dedupeCreators, formatEmailsForCsv } from '@/lib/export/csv-utils';
 
@@ -21,7 +21,7 @@ export async function GET(req: Request) {
     console.log(`CSV Export: Processing job ID ${jobId} and campaign ID ${campaignId}`);
 
     // Verify authentication
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
     
     if (!userId) {
       console.log('CSV Export: Authentication failed');

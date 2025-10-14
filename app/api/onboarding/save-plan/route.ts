@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth/backend-auth';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { updateUserProfile } from '@/lib/db/queries/user-queries';
 import OnboardingLogger from '@/lib/utils/onboarding-logger';
 
@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
       requestId
     });
 
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
     
     if (!userId) {
       await OnboardingLogger.logAPI('AUTH-ERROR', 'Save plan request unauthorized - no user ID', undefined, {

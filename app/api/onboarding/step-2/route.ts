@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth/backend-auth';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
 
 export async function PATCH(request: Request) {
@@ -13,7 +13,7 @@ export async function PATCH(request: Request) {
     console.log('🆔 [ONBOARDING-STEP2] Request ID:', requestId);
     console.log('⏰ [ONBOARDING-STEP2] Timestamp:', new Date().toISOString());
     console.log('🔐 [ONBOARDING-STEP2] Getting authenticated user from Clerk');
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
 
     if (!userId) {
       console.error('❌ [ONBOARDING-STEP2] Unauthorized - No valid user session');

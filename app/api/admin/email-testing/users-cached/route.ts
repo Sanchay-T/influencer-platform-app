@@ -1,6 +1,6 @@
 import '@/lib/config/load-env';
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth/backend-auth';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import postgres from 'postgres';
 import { isAdminUser } from '@/lib/auth/admin-utils';
 
@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     const startTime = Date.now();
     
     // Authentication check
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
     if (!process.env.CLERK_SECRET_KEY) {
       return NextResponse.json({ users: [], cached: false, query: null });
     }

@@ -26,6 +26,20 @@ import { dedupeCreators } from '@/app/components/campaigns/utils/dedupe-creators
 const dedupeCache = new Map<string, any[]>()
 
 const SHOW_DIAGNOSTICS = process.env.NEXT_PUBLIC_SHOW_SEARCH_DIAGNOSTICS === 'true'
+const DEFAULT_PAGE_LIMIT = 200
+
+type UiScrapingJob = ScrapingJob & {
+  resultsLoaded?: boolean
+  totalCreators?: number
+  resultsError?: string | null
+  pagination?: {
+    total?: number
+    limit?: number
+    nextOffset?: number | null
+  }
+  creatorBuffer?: unknown[]
+  pageLimit?: number
+}
 
 type SearchDiagnostics = {
   engine: string
@@ -85,6 +99,137 @@ const STATUS_VARIANTS: Record<string, StatusVariant> = {
   }
 }
 
+const extractCreatorsArray = (result: { creators?: PlatformResult } | undefined): unknown[] => {
+  if (!result) return []
+  const creators = result.creators
+  return Array.isArray(creators) ? (creators as unknown[]) : []
+}
+
+const countCreatorsFromResults = (results: Array<{ creators?: PlatformResult }> | undefined): number => {
+  if (!Array.isArray(results)) return 0
+  return results.reduce((total, result) => total + extractCreatorsArray(result).length, 0)
+}
+
+const flattenCreatorsFromResults = (results: Array<{ creators?: PlatformResult }> | undefined): unknown[] => {
+  if (!Array.isArray(results)) return []
+  return results.flatMap((result) => extractCreatorsArray(result))
+}
+
+const buildAggregatedResults = (
+  job: Pick<UiScrapingJob, 'id' | 'createdAt'>,
+  baseResults: Array<{ id?: string; createdAt?: Date | string } & Record<string, unknown>> | undefined,
+  creators: unknown[]
+) => {
+  const fallbackCreatedAt = job.createdAt ?? new Date()
+  const primary = Array.isArray(baseResults) && baseResults.length > 0 ? baseResults[0] : null
+  const createdAt = primary?.createdAt ? new Date(primary.createdAt) : fallbackCreatedAt
+
+  return [
+    {
+      id: (primary as { id?: string })?.id ?? `${job.id}-aggregate`,
+      jobId: job.id,
+      createdAt,
+      creators,
+    },
+  ]
+}
+
+const resolveScrapingEndpoint = (platform?: string) => {
+  const normalized = (platform || '').toLowerCase()
+
+  switch (normalized) {
+    case 'instagram_us_reels':
+    case 'instagram-us-reels':
+    case 'instagram us reels':
+    case 'instagram-1.0':
+    case 'instagram_1.0':
+      return '/api/scraping/instagram-us-reels'
+    case 'instagram_reels':
+    case 'instagram-reels':
+      return '/api/scraping/instagram-reels'
+    case 'instagram-2.0':
+    case 'instagram_2.0':
+    case 'instagram-v2':
+    case 'instagram_v2':
+      return '/api/scraping/instagram-v2'
+    case 'instagram-enhanced':
+    case 'enhanced-instagram':
+      return '/api/scraping/instagram-enhanced'
+    case 'instagram-similar':
+    case 'instagram_similar':
+      return '/api/scraping/instagram'
+    case 'instagram':
+      return '/api/scraping/instagram'
+    case 'google-serp':
+    case 'google_serp':
+      return '/api/scraping/google-serp'
+    case 'youtube-similar':
+    case 'youtube_similar':
+      return '/api/scraping/youtube-similar'
+    case 'youtube':
+      return '/api/scraping/youtube'
+    default:
+      return '/api/scraping/tiktok'
+  }
+}
+
+const createJobUpdateFromPayload = (
+  job: UiScrapingJob,
+  data: any,
+  append = false
+): Partial<UiScrapingJob> => {
+  const platformHint = job.platform?.toLowerCase?.() ?? 'tiktok'
+  const incomingResults = Array.isArray(data?.results) ? data.results : []
+  const incomingCreators = flattenCreatorsFromResults(incomingResults)
+
+  const existingCreators = Array.isArray(job.creatorBuffer)
+    ? job.creatorBuffer
+    : flattenCreatorsFromResults(job.results as Array<{ creators?: PlatformResult }>)
+
+  const combinedCreators = append
+    ? [...existingCreators, ...incomingCreators]
+    : (incomingCreators.length > 0 ? incomingCreators : existingCreators)
+
+  const dedupedCreators = dedupeCreators(combinedCreators, { platformHint })
+
+  const aggregatedResults = buildAggregatedResults(job, incomingResults, dedupedCreators)
+
+  const totalCreators = typeof data?.totalCreators === 'number'
+    ? data.totalCreators
+    : dedupedCreators.length
+
+  return {
+    status: data?.status ?? job.status,
+    progress: data?.progress ?? job.progress,
+    results: aggregatedResults,
+    resultsLoaded: true,
+    creatorBuffer: dedupedCreators,
+    totalCreators,
+    pagination: data?.pagination ?? job.pagination,
+    pageLimit: data?.pagination?.limit ?? job.pageLimit ?? DEFAULT_PAGE_LIMIT,
+    resultsError: null,
+  }
+}
+
+const toUiJob = (job: ScrapingJob): UiScrapingJob => {
+  const hydratedResults = Array.isArray(job.results) ? job.results : []
+  const totalCreators = countCreatorsFromResults(hydratedResults as Array<{ creators?: PlatformResult }>)
+  const platformHint = job.platform?.toLowerCase?.() ?? 'tiktok'
+  const creatorCandidates = flattenCreatorsFromResults(hydratedResults as Array<{ creators?: PlatformResult }>)
+  const creatorBuffer = creatorCandidates.length > 0
+    ? dedupeCreators(creatorCandidates, { platformHint })
+    : []
+
+  return {
+    ...job,
+    results: hydratedResults,
+    resultsLoaded: hydratedResults.length > 0,
+    totalCreators: totalCreators > 0 ? totalCreators : undefined,
+    creatorBuffer,
+    pageLimit: DEFAULT_PAGE_LIMIT,
+  }
+}
+
 function formatDate(value: Date | string | null | undefined, withTime = false) {
   if (!value) return '—'
   const date = typeof value === 'string' ? new Date(value) : value
@@ -107,14 +252,14 @@ function formatDuration(ms: number | null | undefined) {
   return `${minutes}m ${remainingSeconds.toFixed(1)}s`
 }
 
-function getCreatorsCount(job?: ScrapingJob | null) {
-  if (!job?.results?.length) return 0
-  return job.results.reduce((total, result) => {
-    const creators = Array.isArray((result as { creators?: PlatformResult }).creators)
-      ? ((result as { creators?: PlatformResult }).creators as unknown[]).length
-      : 0
-    return total + creators
-  }, 0)
+function getCreatorsCount(job?: UiScrapingJob | null) {
+  if (typeof job?.totalCreators === 'number') {
+    return job.totalCreators
+  }
+  if (Array.isArray(job?.creatorBuffer)) {
+    return job.creatorBuffer.length
+  }
+  return countCreatorsFromResults(job?.results as Array<{ creators?: PlatformResult }>)
 }
 
 function getRunDisplayLabel(index: number) {
@@ -126,21 +271,21 @@ function getStatusVariant(status?: string): StatusVariant {
   return STATUS_VARIANTS[status] ?? STATUS_VARIANTS.default
 }
 
-function isActiveJob(job?: ScrapingJob | null) {
+function isActiveJob(job?: UiScrapingJob | null) {
   if (!job) return false
   return job.status === 'pending' || job.status === 'processing'
 }
 
-function buildKeywords(job?: ScrapingJob | null) {
+function buildKeywords(job?: UiScrapingJob | null) {
   if (!job) return '—'
   return job.keywords?.length ? job.keywords.join(', ') : '—'
 }
 
-function getCreatorsSample(job?: ScrapingJob | null) {
-  if (!job?.results?.length) return []
-  const [firstResult] = job.results
-  if (!firstResult?.creators) return []
-  const creators = firstResult.creators as unknown[]
+function getCreatorsSample(job?: UiScrapingJob | null) {
+  const source = Array.isArray(job?.creatorBuffer) && job.creatorBuffer.length
+    ? job.creatorBuffer
+    : (job?.results?.length ? extractCreatorsArray(job.results[0] as { creators?: PlatformResult }) : [])
+  const creators = Array.isArray(source) ? source : []
   return creators
     .slice(0, 3)
     .map((creator: any) => creator?.creator?.username || creator?.username)
@@ -151,16 +296,129 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [jobs, setJobs] = useState<ScrapingJob[]>(() => campaign?.scrapingJobs ?? [])
+  const [jobs, setJobs] = useState<UiScrapingJob[]>(() =>
+    (campaign?.scrapingJobs ?? []).map(toUiJob)
+  )
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'creators' | 'activity'>('creators')
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [renderKey, setRenderKey] = useState(0)
-  const activeJobRef = useRef<ScrapingJob | null>(null)
+  const activeJobRef = useRef<UiScrapingJob | null>(null)
   const prevRunLogRef = useRef<{ id: string | null; status?: string } | null>(null)
   const prevTabRef = useRef<'creators' | 'activity' | null>(null)
   const transitionStartTimeRef = useRef<number | null>(null)
   const [diagnostics, setDiagnostics] = useState<Record<string, SearchDiagnostics>>({})
+  const [loadingJobIds, setLoadingJobIds] = useState<string[]>([])
+  const [loadingMoreJobId, setLoadingMoreJobId] = useState<string | null>(null)
+
+  const markJobLoading = useCallback((jobId: string) => {
+    setLoadingJobIds((prev) => (prev.includes(jobId) ? prev : [...prev, jobId]))
+  }, [])
+
+  const unmarkJobLoading = useCallback((jobId: string) => {
+    setLoadingJobIds((prev) => prev.filter((id) => id !== jobId))
+  }, [])
+
+  const updateJobState = useCallback((jobId: string, payload: Partial<UiScrapingJob>) => {
+    setJobs((prev) =>
+      prev.map((job) =>
+        job.id === jobId
+          ? {
+              ...job,
+              ...payload,
+              results: payload.results ?? job.results,
+            }
+          : job
+      )
+    )
+  }, [])
+
+  const fetchJobSnapshot = useCallback(async (job: UiScrapingJob) => {
+    const endpoint = resolveScrapingEndpoint(job.platform)
+
+    markJobLoading(job.id)
+    try {
+      const params = new URLSearchParams({
+        jobId: job.id,
+        limit: String(job.pageLimit ?? DEFAULT_PAGE_LIMIT),
+        offset: '0',
+      })
+
+      const response = await fetch(`${endpoint}?${params.toString()}`, {
+        credentials: 'include'
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || data?.error) {
+        updateJobState(job.id, {
+          resultsError: data?.error ?? 'Failed to load results',
+          resultsLoaded: true,
+          status: data?.status ?? job.status,
+          progress: data?.progress ?? job.progress,
+          pagination: data?.pagination ?? job.pagination,
+          totalCreators: typeof data?.totalCreators === 'number' ? data.totalCreators : job.totalCreators,
+        })
+        return
+      }
+
+      const jobUpdate = createJobUpdateFromPayload(job, data, false)
+      updateJobState(job.id, jobUpdate)
+    } catch (error) {
+      console.error('Error fetching job snapshot:', error)
+      updateJobState(job.id, {
+        resultsError: error instanceof Error ? error.message : 'Unknown error',
+        resultsLoaded: true
+      })
+    } finally {
+      unmarkJobLoading(job.id)
+    }
+  }, [markJobLoading, unmarkJobLoading, updateJobState])
+
+  const loadMoreResults = useCallback(async (job: UiScrapingJob) => {
+    if (!job.pagination || job.pagination.nextOffset == null) {
+      return
+    }
+
+    const endpoint = resolveScrapingEndpoint(job.platform)
+    const limit = job.pageLimit ?? job.pagination.limit ?? DEFAULT_PAGE_LIMIT
+
+    markJobLoading(job.id)
+    setLoadingMoreJobId(job.id)
+
+    try {
+      const params = new URLSearchParams({
+        jobId: job.id,
+        offset: String(job.pagination.nextOffset),
+        limit: String(limit),
+      })
+
+      const response = await fetch(`${endpoint}?${params.toString()}`, {
+        credentials: 'include'
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || data?.error) {
+        updateJobState(job.id, {
+          resultsError: data?.error ?? 'Failed to load more results',
+          pagination: data?.pagination ?? job.pagination,
+        })
+        return
+      }
+
+      const jobUpdate = createJobUpdateFromPayload(job, data, true)
+      updateJobState(job.id, jobUpdate)
+    } catch (error) {
+      console.error('Error loading additional results:', error)
+      updateJobState(job.id, {
+        resultsError: error instanceof Error ? error.message : 'Failed to load more results'
+      })
+    } finally {
+      setLoadingMoreJobId((current) => (current === job.id ? null : current))
+      unmarkJobLoading(job.id)
+    }
+  }, [markJobLoading, unmarkJobLoading, updateJobState])
 
   const logEvent = useCallback((event: string, detail: Record<string, unknown>) => {
     const timestamp = new Date().toISOString()
@@ -177,7 +435,29 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
   }, [])
 
   useEffect(() => {
-    setJobs(campaign?.scrapingJobs ?? [])
+    setJobs((prev) => {
+      const nextJobs = campaign?.scrapingJobs ?? []
+      if (!nextJobs.length) {
+        return prev.length ? [] : prev
+      }
+
+      return nextJobs.map((job) => {
+        const existing = prev.find((item) => item.id === job.id)
+        if (existing) {
+          return {
+            ...existing,
+            ...job,
+            results: existing.results,
+            resultsLoaded: existing.resultsLoaded,
+            totalCreators: existing.totalCreators,
+            resultsError: existing.resultsError,
+            pagination: existing.pagination
+          }
+        }
+
+        return toUiJob(job)
+      })
+    })
   }, [campaign?.scrapingJobs])
 
   const sortedJobs = useMemo(() => {
@@ -187,7 +467,7 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
   }, [jobs])
 
   const selectedJob = useMemo(() => {
-    let job: ScrapingJob | null = null
+    let job: UiScrapingJob | null = null
     if (!selectedJobId) {
       job = sortedJobs[0] ?? null
       // Fallback to first job
@@ -259,6 +539,12 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
 
   useEffect(() => {
     if (!selectedJob) return
+    if (selectedJob.resultsLoaded) return
+    fetchJobSnapshot(selectedJob)
+  }, [fetchJobSnapshot, selectedJob])
+
+  useEffect(() => {
+    if (!selectedJob) return
     if (prevTabRef.current !== activeTab || (prevRunLogRef.current?.id && prevRunLogRef.current.id !== selectedJob.id)) {
       logUXEvent('tab-changed', { tab: activeTab, jobId: selectedJob.id })
       prevTabRef.current = activeTab
@@ -314,28 +600,17 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
 
         if (!response.ok || data.error) {
           clearInterval(interval)
-          setJobs((prev) =>
-            prev.map((job) =>
-              job.id === current.id
-                ? { ...job, status: data.status ?? job.status ?? 'error', progress: data.progress ?? job.progress }
-                : job
-            )
-          )
+          updateJobState(current.id, {
+            status: data?.status ?? current.status ?? 'error',
+            progress: data?.progress ?? current.progress,
+            resultsError: data?.error ?? 'Failed to load results',
+            resultsLoaded: true
+          })
           return
         }
 
-        setJobs((prev) =>
-          prev.map((job) =>
-            job.id === current.id
-              ? {
-                  ...job,
-                  status: data.status ?? job.status,
-                  progress: data.progress ?? job.progress,
-                  results: Array.isArray(data.results) && data.results.length > 0 ? data.results : job.results
-                }
-              : job
-          )
-        )
+        const jobUpdate = createJobUpdateFromPayload(current, data, false)
+        updateJobState(current.id, jobUpdate)
 
         if (['completed', 'error', 'timeout'].includes(data.status)) {
           clearInterval(interval)
@@ -343,11 +618,18 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
       } catch (error) {
         console.error('Error polling job status:', error)
         clearInterval(interval)
+        const currentJobSnapshot = activeJobRef.current
+        if (currentJobSnapshot) {
+          updateJobState(currentJobSnapshot.id, {
+            resultsError: error instanceof Error ? error.message : 'Polling error',
+            resultsLoaded: true
+          })
+        }
       }
     }, 3000)
 
     return () => clearInterval(interval)
-  }, [activeJob])
+  }, [activeJob, updateJobState])
 
   const handleSelectJob = useCallback(
     (jobId: string) => {
@@ -420,7 +702,15 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
   )
 
   const rawCreators = useMemo(() => {
-    if (!selectedJob?.results || selectedJob.results.length === 0) {
+    if (!selectedJob) {
+      return []
+    }
+
+    if (Array.isArray(selectedJob.creatorBuffer) && selectedJob.creatorBuffer.length > 0) {
+      return selectedJob.creatorBuffer as unknown[]
+    }
+
+    if (!selectedJob.results || selectedJob.results.length === 0) {
       return []
     }
 
@@ -509,6 +799,7 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
           const isSelected = selectedJob?.id === job.id
           const creatorsFound = getCreatorsCount(job)
           const runLabel = getRunDisplayLabel(sortedJobs.length - index)
+          const isLoadingJob = loadingJobIds.includes(job.id) || loadingMoreJobId === job.id
           return (
             <button
               key={job.id}
@@ -527,11 +818,15 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
                     <p className="text-sm font-medium text-zinc-100 truncate">{runLabel}</p>
                     <p className="text-xs text-zinc-500 truncate">
                       {formatDate(job.createdAt, true)} · {job.platform}
+                      {isLoadingJob && ' · loading results'}
                     </p>
                   </div>
                 </div>
                 <Badge variant="outline" className={variant.badge}>
-                  {variant.label}
+                  <span className="flex items-center gap-1">
+                    {isLoadingJob && <Loader2 className="h-3 w-3 animate-spin" />}
+                    {variant.label}
+                  </span>
                 </Badge>
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-zinc-400">
@@ -765,6 +1060,10 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
       )
     }
 
+    const hasCreatorsLoaded = processedCreators.length > 0
+    const isInitialLoading = (loadingJobIds.includes(selectedJob.id) || !selectedJob.resultsLoaded) && !hasCreatorsLoaded
+    const isLoadingMore = loadingMoreJobId === selectedJob.id
+
     if (['failed', 'error', 'timeout'].includes(selectedJob.status ?? '')) {
       return (
         <Card className="bg-zinc-900/80 border border-rose-500/40">
@@ -801,6 +1100,20 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
       )
     }
 
+    if (isInitialLoading) {
+      return (
+        <Card className="bg-zinc-900/80 border border-zinc-800/60">
+          <CardContent className="py-16 text-center space-y-3 text-sm text-zinc-400">
+            <Loader2 className="mx-auto h-6 w-6 animate-spin text-zinc-300" />
+            <p>Loading run results…</p>
+            <p className="text-xs text-zinc-500">We load large result sets after the page renders to keep things snappy.</p>
+          </CardContent>
+        </Card>
+      )
+    }
+
+    let resultsView: JSX.Element
+
     if (campaign.searchType === 'keyword') {
       const searchData = {
         jobId: selectedJob.id,
@@ -812,9 +1125,7 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
         initialCreators: processedCreators
       }
 
-      // Keyword search data prepared
-
-      return (
+      resultsView = (
         <div key={`keyword-${selectedJob.id}-${renderKey}`}>
           <Suspense
             fallback={
@@ -830,34 +1141,61 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
           </Suspense>
         </div>
       )
+    } else {
+      const searchData = {
+        jobId: selectedJob.id,
+        platform: selectedJob.platform ?? 'instagram',
+        selectedPlatform: selectedJob.platform ?? 'instagram',
+        targetUsername: selectedJob.targetUsername,
+        creators: processedCreators,
+        campaignId: campaign.id,
+        status: selectedJob.status
+      }
+
+      resultsView = (
+        <div key={`similar-${selectedJob.id}-${renderKey}`}>
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="h-6 w-6 animate-spin text-zinc-300" />
+              </div>
+            }
+          >
+            <SimilarSearchResults
+              key={`similar-results-${selectedJob.id}-${renderKey}`}
+              searchData={searchData}
+            />
+          </Suspense>
+        </div>
+      )
     }
 
-    const searchData = {
-      jobId: selectedJob.id,
-      platform: selectedJob.platform ?? 'instagram',
-      selectedPlatform: selectedJob.platform ?? 'instagram',
-      targetUsername: selectedJob.targetUsername,
-      creators: processedCreators,
-      campaignId: campaign.id,
-      status: selectedJob.status
-    }
-
-    // Similar search data prepared
+    const remainingCreators = Math.max(0, (selectedJob.totalCreators ?? 0) - processedCreators.length)
 
     return (
-      <div key={`similar-${selectedJob.id}-${renderKey}`}>
-        <Suspense
-          fallback={
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-6 w-6 animate-spin text-zinc-300" />
-            </div>
-          }
-        >
-          <SimilarSearchResults
-            key={`similar-results-${selectedJob.id}-${renderKey}`}
-            searchData={searchData}
-          />
-        </Suspense>
+      <div className="space-y-4">
+        {resultsView}
+        {selectedJob.resultsError && (
+          <p className="text-xs text-rose-300 text-center">
+            {selectedJob.resultsError}
+          </p>
+        )}
+        {selectedJob.pagination?.nextOffset != null && (
+          <div className="flex justify-center">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="border-zinc-700/60 text-zinc-100"
+              disabled={isLoadingMore}
+              onClick={() => loadMoreResults(selectedJob)}
+            >
+              {isLoadingMore ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Load more results
+              {remainingCreators > 0 && ` (${remainingCreators.toLocaleString()} remaining)`}
+            </Button>
+          </div>
+        )}
       </div>
     )
   }

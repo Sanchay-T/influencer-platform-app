@@ -65,6 +65,8 @@ npx tsx testing/api-suite/youtube-e2e.ts
 npx tsx testing/api-suite/tiktok-e2e.ts
 npx tsx testing/api-suite/instagram-similar-e2e.ts
 npx tsx testing/api-suite/onboarding-e2e.ts
+npx tsx testing/api-suite/campaigns-e2e.ts
+npx tsx testing/api-suite/lists-e2e.ts
 ```
 
 Modify the `tests` array in `run-api-suite.ts` to cover more endpoints. Each entry can inspect the JSON response and push additional follow-up checks into the queue.

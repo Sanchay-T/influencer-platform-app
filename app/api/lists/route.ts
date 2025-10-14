@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth/backend-auth';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { createList, getListsForUser } from '@/lib/db/queries/list-queries';
 
 function errorResponse(error: unknown, status = 500) {
@@ -16,7 +16,7 @@ function errorResponse(error: unknown, status = 500) {
 export async function GET() {
   const requestId = `lists_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   console.log(`[LISTS-API:${requestId}] incoming GET`);
-  const { userId } = await auth();
+  const { userId } = await getAuthOrTest();
   console.log(`[LISTS-API:${requestId}] auth resolved`, { userId });
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -35,7 +35,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const { userId } = await auth();
+  const { userId } = await getAuthOrTest();
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

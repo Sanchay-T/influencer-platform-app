@@ -5,6 +5,7 @@ import { db } from '@/lib/db';
 import { campaigns, scrapingJobs, type JobStatus } from '@/lib/db/schema';
 import { PlanEnforcementService } from '@/lib/services/plan-enforcement';
 import { getWebhookUrl } from '@/lib/utils/url-utils';
+import { normalizePageParams, paginateCreators } from '@/lib/search-engine/utils/pagination';
 
 // [InstagramV2Route] Breadcrumb: keyword search POST/GET entrypoint for instagram_v2 runner.
 // Wires campaign jobs into QStash and exposes polling for app/components/campaigns/keyword-search/search-results.jsx.
@@ -214,6 +215,17 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    const { limit, offset } = normalizePageParams(
+      searchParams.get('limit'),
+      searchParams.get('offset') ?? searchParams.get('cursor')
+    );
+
+    const {
+      results: paginatedResults,
+      totalCreators,
+      pagination,
+    } = paginateCreators(job.results, limit, offset);
+
     return NextResponse.json({
       job: {
         id: job.id,
@@ -227,7 +239,9 @@ export async function GET(req: NextRequest) {
         createdAt: job.createdAt,
         completedAt: job.completedAt,
       },
-      results: job.results ?? [],
+      results: paginatedResults ?? [],
+      totalCreators,
+      pagination,
     });
   } catch (error) {
     console.error('[instagram-v2] GET failed', error);
