@@ -54,13 +54,25 @@ export async function PATCH(request: Request) {
     }
 
     if (!normalizedEmail) {
-      console.error('❌ [ONBOARDING-STEP1] No email available from Clerk or profile. Blocking onboarding progress.');
-      return NextResponse.json(
-        {
-          error: 'Email required to continue onboarding. Add an email address to your account and try again.',
-        },
-        { status: 409 }
-      );
+      // In non-production environments, allow onboarding to continue even if Clerk didn't return an email.
+      const isProd = process.env.NODE_ENV === 'production';
+      if (!isProd) {
+        normalizedEmail = `dev-user-${userId}@example.dev`;
+        console.warn('⚠️ [ONBOARDING-STEP1] No Clerk email found; using fallback for non-production environment.', {
+          userId,
+          fallbackEmail: normalizedEmail,
+          clerkEmails: clerkEmail,
+          env: process.env.NODE_ENV,
+        });
+      } else {
+        console.error('❌ [ONBOARDING-STEP1] No email available from Clerk or profile. Blocking onboarding progress.');
+        return NextResponse.json(
+          {
+            error: 'Email required to continue onboarding. Add an email address to your account and try again.',
+          },
+          { status: 409 }
+        );
+      }
     }
 
     console.log('✅ [ONBOARDING-STEP1] Email confirmed for onboarding:', normalizedEmail);
