@@ -28,6 +28,7 @@ export interface AgentRunnerResult {
   sessionCsv: string;
   results: ReelRow[];
   creators: NormalizedCreator[];
+  cost?: any;
 }
 
 export async function runInstagramUsReelsAgent(options: AgentRunnerOptions): Promise<AgentRunnerResult> {
@@ -48,6 +49,7 @@ export async function runInstagramUsReelsAgent(options: AgentRunnerOptions): Pro
       sessionCsv: inferSessionCsv(output.sessionId),
       results: [],
       creators: [],
+      cost: output.cost,
     };
   }
 
@@ -69,6 +71,7 @@ export async function runInstagramUsReelsAgent(options: AgentRunnerOptions): Pro
     sessionCsv: inferSessionCsv(output.sessionId),
     results: reels,
     creators: normalized,
+    cost: output.cost,
   };
 }
 

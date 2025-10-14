@@ -16,6 +16,8 @@ import {
   transformEnhancedProfile,
   transformInstagramProfile,
 } from '@/lib/platforms/instagram-similar/transformer';
+import { addCost } from '../utils/cost';
+import { APIFY_COST_PER_CU_USD } from '@/lib/cost/constants';
 
 const DEFAULT_ENHANCEMENTS = parseInt(process.env.IG_SIMILAR_ENHANCEMENTS || process.env.INSTAGRAM_SIMILAR_ENHANCEMENTS || '12', 10);
 
@@ -113,6 +115,15 @@ export async function runInstagramSimilarProvider(
   const profileStarted = Date.now();
   const profileResult = await getInstagramProfile(username);
   metrics.apiCalls += 1;
+  let totalApifyComputeUnits = 0;
+  let totalApifyResultCount = 0;
+  let totalApifyResultCostUsd = 0;
+
+  if (profileResult.cost) {
+    totalApifyComputeUnits += profileResult.cost.computeUnits;
+    totalApifyResultCount += profileResult.cost.results;
+    totalApifyResultCostUsd += profileResult.cost.results * profileResult.cost.pricePerResultUsd;
+  }
   metrics.batches.push({
     index: metrics.apiCalls,
     size: profileResult?.data?.relatedProfiles?.length || 0,
@@ -158,6 +169,11 @@ export async function runInstagramSimilarProvider(
     const enhancementStarted = Date.now();
     const enhanced = await getEnhancedInstagramProfile(candidate.username);
     metrics.apiCalls += 1;
+    if (enhanced.cost) {
+      totalApifyComputeUnits += enhanced.cost.computeUnits;
+      totalApifyResultCount += enhanced.cost.results;
+      totalApifyResultCostUsd += enhanced.cost.results * enhanced.cost.pricePerResultUsd;
+    }
     metrics.batches.push({
       index: metrics.apiCalls,
       size: 1,
@@ -211,6 +227,28 @@ export async function runInstagramSimilarProvider(
   const startedAt = metrics.timings.startedAt ? new Date(metrics.timings.startedAt) : null;
   metrics.timings.totalDurationMs = startedAt ? finishedAt.getTime() - startedAt.getTime() : undefined;
   metrics.processedCreators = finalCount;
+
+  if (totalApifyComputeUnits > 0) {
+    addCost(metrics, {
+      provider: 'Apify',
+      unit: 'compute_unit',
+      quantity: totalApifyComputeUnits,
+      unitCostUsd: APIFY_COST_PER_CU_USD,
+      totalCostUsd: totalApifyComputeUnits * APIFY_COST_PER_CU_USD,
+      note: 'Instagram Similar actor compute',
+    });
+  }
+
+  if (totalApifyResultCount > 0 && totalApifyResultCostUsd > 0) {
+    addCost(metrics, {
+      provider: 'Apify',
+      unit: 'result',
+      quantity: totalApifyResultCount,
+      unitCostUsd: totalApifyResultCostUsd / totalApifyResultCount,
+      totalCostUsd: totalApifyResultCostUsd,
+      note: 'Instagram Similar dataset results',
+    });
+  }
 
   return {
     status: 'completed',

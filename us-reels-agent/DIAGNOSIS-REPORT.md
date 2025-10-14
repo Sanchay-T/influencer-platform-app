@@ -175,7 +175,7 @@ owner_handle: EMPTY for all 37 rows
 
 ### Immediate (To Resume Testing)
 1. **Add credits to ScrapeCreators API key**
-   - Key: `Oy1ioE9pQTfUvuC1OvBmpIWHYZh1`
+   - Key: `SPPv8ILr6ydcwat6NCr9gpp3pZA3`
    - Without credits, cannot diagnose further
 
 ### Once Credits Added

@@ -3,6 +3,7 @@ import { ImageCache } from '@/lib/services/image-cache';
 import { SearchJobService } from '../job-service';
 import { computeProgress } from '../utils';
 import type { NormalizedCreator, ProviderRunResult, ProviderContext, SearchMetricsSnapshot } from '../types';
+import { addCost } from '../utils/cost';
 
 const emailRegex = /[\w.-]+@[\w.-]+\.[\w-]+/gi;
 const imageCache = new ImageCache();
@@ -198,6 +199,15 @@ export async function runInstagramReelsProvider(
 
     metrics.timings.finishedAt = new Date().toISOString();
     metrics.timings.totalDurationMs = Date.now() - new Date(metrics.timings.startedAt).getTime();
+
+    addCost(metrics, {
+      provider: 'RapidAPI Instagram',
+      unit: 'api_call',
+      quantity: metrics.apiCalls,
+      unitCostUsd: Number(process.env.RAPIDAPI_INSTAGRAM_COST_PER_CALL || '0.0'),
+      totalCostUsd: Number((metrics.apiCalls * Number(process.env.RAPIDAPI_INSTAGRAM_COST_PER_CALL || '0')).toFixed(6)),
+      note: `Keyword rotation for ${originalKeyword}`,
+    });
 
     if (targetReached || apiLimitReached || !hasMore) {
       return {

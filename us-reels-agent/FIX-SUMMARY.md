@@ -36,7 +36,7 @@ const { data } = await SC.get('/v1/instagram/post', { params: { url } });
 
 **Before:**
 ```
-SC_API_KEY=Oy1ioE9pQTfUvuC1OvBmpIWHYZh1  # Out of credits
+SC_API_KEY=SPPv8ILr6ydcwat6NCr9gpp3pZA3  # Out of credits
 ```
 
 **After:**

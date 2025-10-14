@@ -32,6 +32,7 @@ import {
 import SearchProgress from "./search-progress";
 import Breadcrumbs from "../../breadcrumbs";
 import { buildProfileLink } from "./utils/profile-link";
+import { resolveCreatorPreview } from "@/lib/utils/media-preview";
 
 const VIEW_MODES = ["table", "gallery"];
 const VIEW_MODE_META = {
@@ -116,51 +117,9 @@ const formatFollowers = (value) => {
   return Math.round(numeric).toLocaleString();
 };
 
-const resolveMediaPreview = (creator, snapshot, platformHint) => {
-  if (!creator) return snapshot?.avatarUrl ?? null;
-
-  const video = creator.video || creator.latestVideo || creator.content;
-  const platform = (platformHint || snapshot?.platform || '').toString().toLowerCase();
-
-  const videoFirstSources = [
-    video?.thumbnail,
-    video?.thumbnailUrl,
-    video?.thumbnail_url,
-    video?.cover,
-    video?.coverUrl,
-    video?.image,
-    video?.previewImage,
-    creator?.thumbnailUrl,
-    creator?.thumbnail,
-    creator?.previewImage,
-    snapshot?.avatarUrl
-  ];
-
-  const defaultSources = [
-    video?.cover,
-    video?.coverUrl,
-    video?.thumbnail,
-    video?.thumbnailUrl,
-    video?.thumbnail_url,
-    video?.image,
-    creator?.thumbnailUrl,
-    creator?.thumbnail,
-    creator?.previewImage,
-    snapshot?.avatarUrl,
-  ];
-
-  const sources = (platform === 'youtube' || platform === 'instagram' || platform === 'instagram_us_reels')
-    ? videoFirstSources
-    : defaultSources;
-
-  for (const source of sources) {
-    if (typeof source === "string" && source.trim().length > 0) {
-      return source;
-    }
-  }
-
-  return snapshot?.avatarUrl ?? null;
-};
+// Breadcrumb: keyword search gallery defers to shared preview resolver to keep TikTok/IG covers consistent.
+const resolveMediaPreview = (creator, snapshot, _platformHint) =>
+  resolveCreatorPreview(creator, snapshot?.avatarUrl ?? null);
 
 const ensureImageUrl = (value) => {
   if (typeof value !== "string") return "";
@@ -997,7 +956,7 @@ const SearchResults = ({ searchData }) => {
                     Views
                   </TableHead>
                   <TableHead className="hidden lg:table-cell px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-zinc-400">
-                    Link
+                    Post
                   </TableHead>
                   <TableHead className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-zinc-400">
                     Save

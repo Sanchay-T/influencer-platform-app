@@ -104,3 +104,8 @@ export function finalizeSession(metadataPath: string, success: boolean = true): 
         status: success ? 'completed' : 'failed'
     });
 }
+
+export function writeCostSummary(sessionPath: string, summary: unknown): void {
+    const filePath = join(sessionPath, 'cost-summary.json');
+    writeFileSync(filePath, JSON.stringify(summary, null, 2));
+}

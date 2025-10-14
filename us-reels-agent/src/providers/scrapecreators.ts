@@ -3,6 +3,16 @@ import pLimit from 'p-limit';
 import { CFG } from '../config.js';
 import { log } from '../utils/logger.js';
 
+type ScrapeEventType = 'post' | 'transcript' | 'profile';
+
+type ScrapeCostObserver = (event: { type: ScrapeEventType; count: number; creditsRemaining?: number | null }) => void;
+
+let costObserver: ScrapeCostObserver | null = null;
+
+export function setScrapeCreatorsCostObserver(observer: ScrapeCostObserver | null) {
+    costObserver = observer;
+}
+
 const SC = axios.create({
     baseURL: 'https://api.scrapecreators.com',
     headers: { 'x-api-key': CFG.SC_API_KEY },
@@ -34,6 +44,9 @@ function toISO(ts?: number | string | null): string | null {
 export async function scPost(url: string): Promise<PostBrief | null> {
     // Remove trim=true to get full response with owner data
     const { data } = await SC.get('/v1/instagram/post', { params: { url } });
+    if (costObserver) {
+        costObserver({ type: 'post', count: 1, creditsRemaining: data?.credits_remaining ?? null });
+    }
     const m = data?.data?.xdt_shortcode_media ?? {};
     const owner = m?.owner ?? {};
     const caption = m?.edge_media_to_caption?.edges?.[0]?.node?.text ?? '';
@@ -63,6 +76,9 @@ export async function scPost(url: string): Promise<PostBrief | null> {
 
 export async function scTranscript(url: string): Promise<{ url: string; transcript: string | null }> {
     const { data } = await SC.get('/v2/instagram/media/transcript', { params: { url } });
+    if (costObserver) {
+        costObserver({ type: 'transcript', count: 1, creditsRemaining: data?.credits_remaining ?? null });
+    }
     // API returns 'text' field, not 'transcript'
     const t = data?.transcripts?.[0]?.text ?? null;
     return { url, transcript: t };
@@ -82,6 +98,9 @@ export type ProfileBrief = {
 export async function scProfile(handle: string): Promise<ProfileBrief> {
     // Remove trim=true to get full response with all profile data
     const { data } = await SC.get('/v1/instagram/profile', { params: { handle } });
+    if (costObserver) {
+        costObserver({ type: 'profile', count: 1, creditsRemaining: data?.credits_remaining ?? null });
+    }
     const u = data?.data?.user ?? {};
     return {
         handle: u?.username ?? handle,

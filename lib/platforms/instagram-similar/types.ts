@@ -81,6 +81,13 @@ export interface InstagramSimilarSearchResult {
   success: boolean;
   data?: ApifyInstagramProfileResponse;
   error?: string;
+  cost?: {
+    computeUnits: number;
+    results: number;
+    totalCostUsd: number;
+    pricePerResultUsd: number;
+    pricePerComputeUnitUsd: number;
+  };
 }
 
 // Job Processing Types

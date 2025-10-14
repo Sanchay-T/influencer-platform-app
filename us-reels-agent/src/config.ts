@@ -5,7 +5,7 @@ export const CFG = {
     SERPER_API_KEY: process.env.SERPER_API_KEY || '',
     SC_API_KEY: process.env.SC_API_KEY || '',
 
-    MODEL: process.env.MODEL || 'gpt-4o-mini', // tool-capable & fast
+    MODEL: process.env.MODEL || 'gpt-4o-mini', // restore mini as default
     MAX_RESULTS: Number(process.env.MAX_RESULTS || 60),
     PARALLEL: Number(process.env.PARALLEL || 16),
     RETRY: Number(process.env.RETRY || 3),

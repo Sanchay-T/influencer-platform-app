@@ -6,6 +6,7 @@ import type {
   ProviderRunResult,
   SearchMetricsSnapshot,
 } from '../types';
+import { addCost, SCRAPECREATORS_COST_PER_CALL_USD } from '../utils/cost';
 
 const YOUTUBE_SEARCH_API_URL = 'https://api.scrapecreators.com/v1/youtube/search';
 const YOUTUBE_CHANNEL_API_URL = 'https://api.scrapecreators.com/v1/youtube/channel';
@@ -228,6 +229,17 @@ export async function runYouTubeKeywordProvider(
     platform: 'youtube_keyword',
     continuationToken: continuationToken ?? null,
   });
+
+  if (metrics.apiCalls > 0) {
+    addCost(metrics, {
+      provider: 'ScrapeCreators',
+      unit: 'api_call',
+      quantity: metrics.apiCalls,
+      unitCostUsd: SCRAPECREATORS_COST_PER_CALL_USD,
+      totalCostUsd: metrics.apiCalls * SCRAPECREATORS_COST_PER_CALL_USD,
+      note: 'YouTube keyword search fetch',
+    });
+  }
 
   return {
     status: processedResults >= targetResults || !hasMore ? 'completed' : 'partial',

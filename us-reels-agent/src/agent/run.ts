@@ -9,6 +9,13 @@ import * as SessionManager from '../storage/session-manager.js';
 import * as CsvReader from '../storage/csv-reader.js';
 import * as CsvWriter from '../storage/csv-writer.js';
 import { mergeMaster } from '../storage/master-merger.js';
+import { setScrapeCreatorsCostObserver } from '../providers/scrapecreators.js';
+import { setSerperCostObserver } from '../providers/serper.js';
+
+const SCRAPECREATORS_COST_PER_CALL_USD = 47 / 25_000;
+const SERPER_COST_PER_CALL_USD = 50 / 50_000;
+const OPENAI_GPT4O_INPUT_PER_MTOK_USD = 5;
+const OPENAI_GPT4O_OUTPUT_PER_MTOK_USD = 15;
 
 const client = new OpenAI({ apiKey: CFG.OPENAI_API_KEY });
 
@@ -28,14 +35,42 @@ export async function runAgent(keyword: string) {
     // Keep track of the conversation input messages
     let currentInput = buildMessages(keyword, sessionContext);
 
-    log.subsection('Initial API Request');
-    const requestStart = Date.now();
-    let resp = await client.responses.create({
-        model: CFG.MODEL,
-        input: currentInput,
-        tools: toolSchemas,
-        tool_choice: 'auto',
-        parallel_tool_calls: true,
+    const costTracker = {
+        openai: { calls: 0, inputTokens: 0, outputTokens: 0 },
+        serperQueries: 0,
+        scrapeCreators: { post: 0, transcript: 0, profile: 0 },
+        latestCreditsRemaining: null as number | null,
+    };
+
+    const recordOpenAiUsage = (response: any) => {
+        const usage = response?.usage || response?.output?.[0]?.usage;
+        if (!usage) return;
+        const input = usage.input_tokens ?? usage.inputTokens ?? 0;
+        const output = usage.output_tokens ?? usage.outputTokens ?? 0;
+        costTracker.openai.calls += 1;
+        costTracker.openai.inputTokens += typeof input === 'number' ? input : 0;
+        costTracker.openai.outputTokens += typeof output === 'number' ? output : 0;
+    };
+
+    setScrapeCreatorsCostObserver((event) => {
+        costTracker.scrapeCreators[event.type] += event.count;
+        if (typeof event.creditsRemaining === 'number') {
+            costTracker.latestCreditsRemaining = event.creditsRemaining;
+        }
+    });
+    setSerperCostObserver((event) => {
+        costTracker.serperQueries += event.queries;
+    });
+
+    try {
+        log.subsection('Initial API Request');
+        const requestStart = Date.now();
+        let resp = await client.responses.create({
+            model: CFG.MODEL,
+            input: currentInput,
+            tools: toolSchemas,
+            tool_choice: 'auto',
+            parallel_tool_calls: true,
         text: {
             format: {
                 type: 'json_schema',
@@ -46,10 +81,11 @@ export async function runAgent(keyword: string) {
         temperature: 0
     });
 
-    log.success(`Response received in ${Date.now() - requestStart}ms (ID: ${resp.id})`);
+        log.success(`Response received in ${Date.now() - requestStart}ms (ID: ${resp.id})`);
+        recordOpenAiUsage(resp);
 
-    let iterationCount = 0;
-    const MAX_ITERATIONS = 10;
+        let iterationCount = 0;
+        const MAX_ITERATIONS = 10;
 
     // In Responses API, function calls appear in output with type="function_call"
     while (iterationCount < MAX_ITERATIONS) {
@@ -120,6 +156,7 @@ export async function runAgent(keyword: string) {
         });
 
         log.success(`Continuation response received in ${Date.now() - contStart}ms`);
+        recordOpenAiUsage(resp);
     }
 
     log.section(`Agent Loop Complete - ${iterationCount} iteration(s)`);
@@ -175,13 +212,18 @@ export async function runAgent(keyword: string) {
     const cap = CFG.PER_CREATOR_CAP;
     const seen: Record<string, number> = {};
     const beforeCapFilter = afterUSFilter.length;
-    const filtered = afterUSFilter
+    let filtered = afterUSFilter
         .filter(r => {
             const h = r.owner_handle || '_';
             seen[h] = (seen[h] || 0) + 1;
             return seen[h] <= cap;
         })
         .slice(0, CFG.MAX_RESULTS);
+
+    if (filtered.length === 0 && afterUSFilter.length > 0) {
+        log.warn('Fallback to raw results because AI returned empty set');
+        filtered = afterUSFilter.slice(0, CFG.MAX_RESULTS);
+    }
 
     log.data.filter(beforeCapFilter, filtered.length, `Per-creator cap (max ${cap} per handle)`);
 
@@ -207,6 +249,42 @@ export async function runAgent(keyword: string) {
     SessionManager.finalizeSession(sessionContext.metadataPath, true);
     log.session.end(sessionContext.sessionId, filtered.length);
 
+    const openAiCostUsd =
+        (costTracker.openai.inputTokens / 1_000_000) * OPENAI_GPT4O_INPUT_PER_MTOK_USD +
+        (costTracker.openai.outputTokens / 1_000_000) * OPENAI_GPT4O_OUTPUT_PER_MTOK_USD;
+    const scrapeCreatorsCalls = costTracker.scrapeCreators.post + costTracker.scrapeCreators.transcript + costTracker.scrapeCreators.profile;
+    const scrapeCreatorsCostUsd = scrapeCreatorsCalls * SCRAPECREATORS_COST_PER_CALL_USD;
+    const serperCostUsd = costTracker.serperQueries * SERPER_COST_PER_CALL_USD;
+    const totalCostUsd = Number((openAiCostUsd + scrapeCreatorsCostUsd + serperCostUsd).toFixed(6));
+
+    const costSummary = {
+        openai: {
+            calls: costTracker.openai.calls,
+            inputTokens: costTracker.openai.inputTokens,
+            outputTokens: costTracker.openai.outputTokens,
+            costUsd: Number(openAiCostUsd.toFixed(6)),
+            model: CFG.MODEL,
+        },
+        serper: {
+            queries: costTracker.serperQueries,
+            costPerQueryUsd: SERPER_COST_PER_CALL_USD,
+            costUsd: Number(serperCostUsd.toFixed(6)),
+        },
+        scrapeCreators: {
+            posts: costTracker.scrapeCreators.post,
+            transcripts: costTracker.scrapeCreators.transcript,
+            profiles: costTracker.scrapeCreators.profile,
+            totalCalls: scrapeCreatorsCalls,
+            costPerCallUsd: SCRAPECREATORS_COST_PER_CALL_USD,
+            costUsd: Number(scrapeCreatorsCostUsd.toFixed(6)),
+            creditsRemaining: costTracker.latestCreditsRemaining,
+        },
+        totalUsd: totalCostUsd,
+    } as const;
+
+    log.info(`💰 Cost summary: ${JSON.stringify(costSummary)}`);
+    SessionManager.writeCostSummary(sessionContext.sessionPath, costSummary);
+
     // Merge to master CSV
     await mergeMaster(sessionContext.sessionCsv);
 
@@ -216,5 +294,9 @@ export async function runAgent(keyword: string) {
         log.result.empty('All results filtered out (check US detection logic)');
     }
 
-    return { keyword, sessionId: sessionContext.sessionId, results: filtered };
+    return { keyword, sessionId: sessionContext.sessionId, results: filtered, cost: costSummary };
+    } finally {
+        setScrapeCreatorsCostObserver(null);
+        setSerperCostObserver(null);
+    }
 }

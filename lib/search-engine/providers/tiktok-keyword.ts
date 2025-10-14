@@ -3,6 +3,7 @@ import { ImageCache } from '@/lib/services/image-cache';
 import { SearchJobService } from '../job-service';
 import { computeProgress, sleep } from '../utils';
 import type { NormalizedCreator, ProviderRunResult, ProviderContext, SearchMetricsSnapshot } from '../types';
+import { addCost, SCRAPECREATORS_COST_PER_CALL_USD } from '../utils/cost';
 
 const emailRegex = /[\w.-]+@[\w.-]+\.[\w-]+/gi;
 const profileEndpoint = 'https://api.scrapecreators.com/v1/tiktok/profile';
@@ -190,6 +191,17 @@ export async function runTikTokKeywordProvider(
   const finishedAt = new Date();
   metrics.timings.finishedAt = finishedAt.toISOString();
   metrics.timings.totalDurationMs = finishedAt.getTime() - startTimestamp;
+
+  if (metrics.apiCalls > 0) {
+    addCost(metrics, {
+      provider: 'ScrapeCreators',
+      unit: 'api_call',
+      quantity: metrics.apiCalls,
+      unitCostUsd: SCRAPECREATORS_COST_PER_CALL_USD,
+      totalCostUsd: metrics.apiCalls * SCRAPECREATORS_COST_PER_CALL_USD,
+      note: 'TikTok keyword search fetch',
+    });
+  }
 
   return {
     status: processedResults >= targetResults || !hasMore ? 'completed' : 'partial',

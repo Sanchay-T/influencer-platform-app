@@ -733,7 +733,7 @@ SERPER_DEV_API_KEY=fcc19247ebe8ed6993e84246255002b9d176ed29
 #   - /v1/instagram/profile
 #   - /v2/instagram/media/transcript (not working)
 #   - /v1/instagram/user/reels
-SC_API_KEY=Oy1ioE9pQTfUvuC1OvBmpIWHYZh1
+SC_API_KEY=SPPv8ILr6ydcwat6NCr9gpp3pZA3
 
 # Perplexity - AI Analysis API
 # Purpose: Determine US location + relevance

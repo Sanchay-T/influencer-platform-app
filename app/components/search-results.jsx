@@ -11,6 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { AddToListButton } from '@/components/lists/add-to-list-button';
 import { cn } from '@/lib/utils';
 import { Loader2, RefreshCcw, LayoutGrid, Table2, MailCheck, ExternalLink } from 'lucide-react';
+import { resolveCreatorPreview } from '@/lib/utils/media-preview';
 
 const VIEW_MODES = ['table', 'gallery'];
 const GALLERY_ITEMS_PER_PAGE = 9;
@@ -79,31 +80,6 @@ const extractEmails = (creator) => {
   }
 
   return Array.from(collected);
-};
-
-const resolveMediaPreview = (creator) => {
-  if (!creator) return null;
-
-  const video = creator.video || creator.latestVideo || creator.content;
-  const sources = [
-    video?.cover,
-    video?.coverUrl,
-    video?.thumbnail,
-    video?.thumbnailUrl,
-    video?.thumbnail_url,
-    video?.image,
-    creator?.thumbnailUrl,
-    creator?.thumbnail,
-    creator?.avatarUrl,
-  ];
-
-  for (const source of sources) {
-    if (typeof source === 'string' && source.trim().length > 0) {
-      return source;
-    }
-  }
-
-  return null;
 };
 
 const hasContactEmail = (creator) => Array.isArray(creator?.emails) && creator.emails.length > 0;
@@ -221,7 +197,8 @@ const SearchResults = () => {
       const externalId = creator.id || creator.externalId || creator.uniqueId || `creator-${index}`;
       const handle = creator.username || creator.uniqueId || creator.handle || `creator-${index}`;
       const emails = extractEmails(creator);
-      const mediaPreview = resolveMediaPreview(creator);
+      // Breadcrumb: raw TikTok result hydrates shared resolver for gallery card imagery.
+      const mediaPreview = resolveCreatorPreview(creator, creator.avatarUrl || null);
 
       return {
         id: `${platform}-${externalId}`,
@@ -489,7 +466,7 @@ const SearchResults = () => {
                       Bio
                     </TableHead>
                     <TableHead className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-400">
-                      Link
+                      Post
                     </TableHead>
                     <TableHead className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-400">
                       Save

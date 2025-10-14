@@ -13,6 +13,7 @@ import {
   extractSearchKeywords,
   transformToSimilarChannels,
 } from '@/lib/platforms/youtube-similar/transformer';
+import { addCost, SCRAPECREATORS_COST_PER_CALL_USD } from '../utils/cost';
 
 const PROFILE_CONCURRENCY = parseInt(process.env.YT_PROFILE_CONCURRENCY || '5', 10);
 const MAX_CHANNEL_ENHANCEMENTS = parseInt(process.env.YT_SIMILAR_PROFILE_ENHANCEMENTS || '10', 10);
@@ -82,7 +83,9 @@ export async function runYouTubeSimilarProvider(
     throw new Error('YouTube similar job is missing target username');
   }
 
+  let channelProfileCalls = 0;
   const targetProfile = await getYouTubeChannelProfile(job.targetUsername);
+  channelProfileCalls += 1;
   const searchKeywords = extractSearchKeywords(targetProfile);
 
   const keywordsToUse = searchKeywords;
@@ -154,6 +157,7 @@ export async function runYouTubeSimilarProvider(
         let profile: any = null;
         if (enhancedChannels.length + i < MAX_CHANNEL_ENHANCEMENTS && channel?.handle) {
           try {
+            channelProfileCalls += 1;
             profile = await getYouTubeChannelProfile(channel.handle);
           } catch {
             profile = null;
@@ -189,6 +193,18 @@ export async function runYouTubeSimilarProvider(
   const started = metrics.timings.startedAt ? new Date(metrics.timings.startedAt) : null;
   metrics.timings.totalDurationMs = started ? finishedAt.getTime() - started.getTime() : undefined;
   metrics.processedCreators = processedResults;
+
+  const totalScrapeCreatorsCalls = metrics.apiCalls + channelProfileCalls;
+  if (totalScrapeCreatorsCalls > 0) {
+    addCost(metrics, {
+      provider: 'ScrapeCreators',
+      unit: 'api_call',
+      quantity: totalScrapeCreatorsCalls,
+      unitCostUsd: SCRAPECREATORS_COST_PER_CALL_USD,
+      totalCostUsd: totalScrapeCreatorsCalls * SCRAPECREATORS_COST_PER_CALL_USD,
+      note: `YouTube similar search (${metrics.apiCalls} searches + ${channelProfileCalls} profile fetches)`,
+    });
+  }
 
   return {
     status: 'completed',

@@ -6,6 +6,14 @@ import { log } from '../utils/logger.js';
 
 const SERPER_URL = 'https://google.serper.dev/search';
 
+type SerperCostObserver = (event: { queries: number }) => void;
+
+let serperObserver: SerperCostObserver | null = null;
+
+export function setSerperCostObserver(observer: SerperCostObserver | null) {
+    serperObserver = observer;
+}
+
 type SingleSearchOpts = {
     q: string;
     gl?: string;
@@ -98,6 +106,9 @@ export async function searchReelsBatch(queries: string[]): Promise<string[]> {
     ));
 
     log.api.response('Serper', results.length, chunks.length);
+    if (serperObserver && queries.length > 0) {
+        serperObserver({ queries: queries.length });
+    }
 
     const all = ([] as string[]).concat(
         ...results.flat().map((res) => extractReelUrlsFromSerper(res))

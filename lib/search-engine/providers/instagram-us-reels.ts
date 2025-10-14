@@ -3,6 +3,14 @@ import { runInstagramUsReelsAgent } from '@/lib/instagram-us-reels/agent/runner'
 import type { NormalizedCreator, ProviderContext, ProviderRunResult, SearchMetricsSnapshot } from '../types';
 import { SearchJobService } from '../job-service';
 import { computeProgress, sleep } from '../utils';
+import { logger, LogCategory } from '@/lib/logging';
+import { addCost } from '../utils/cost';
+import {
+  SCRAPECREATORS_COST_PER_CALL_USD,
+  SERPER_COST_PER_CALL_USD,
+  OPENAI_GPT4O_INPUT_PER_MTOK_USD,
+  OPENAI_GPT4O_OUTPUT_PER_MTOK_USD,
+} from '@/lib/cost/constants';
 
 const DEFAULT_STREAM_CHUNK = Math.max(
   1,
@@ -66,10 +74,42 @@ export async function runInstagramUsReelsProvider(
     progress: 5,
   });
 
+  logger.info('🚀 INSTAGRAM_US_REELS_PROVIDER_ENTRY_v2', {
+    jobId: job.id,
+    campaignId: job.campaignId,
+    keyword,
+    userId: job.userId,
+    targetResults: job.targetResults,
+    chunkSize: DEFAULT_STREAM_CHUNK,
+  }, LogCategory.SCRAPING);
+  console.warn('[US_REELS][ENTRY]', {
+    jobId: job.id,
+    campaignId: job.campaignId,
+    keyword,
+    userId: job.userId,
+    targetResults: job.targetResults,
+    chunkSize: DEFAULT_STREAM_CHUNK,
+    timestamp: new Date().toISOString(),
+  });
+  console.warn('[US_REELS][ENV]', {
+    nodeEnv: process.env.NODE_ENV,
+    hasOpenAI: Boolean(process.env.OPENAI_API_KEY),
+    hasSerper: Boolean(process.env.SERPER_API_KEY),
+    hasScrapeCreatorsKey: Boolean(process.env.SC_API_KEY),
+    usReelsStreamChunk: process.env.US_REELS_STREAM_CHUNK ?? null,
+    usReelsStreamDelayMs: process.env.US_REELS_STREAM_DELAY_MS ?? null,
+  });
+
   try {
     const agentResult = await runInstagramUsReelsAgent({
       keyword,
       jobId: job.id,
+    });
+    console.warn('[US_REELS][AGENT_RESULT]', {
+      jobId: job.id,
+      sessionId: agentResult.sessionId,
+      rawResults: agentResult.results?.length ?? 0,
+      normalizedCreators: agentResult.creators?.length ?? 0,
     });
 
     const normalized = agentResult.creators;
@@ -81,6 +121,7 @@ export async function runInstagramUsReelsProvider(
         sessionPath: agentResult.sessionPath,
         sessionCsv: agentResult.sessionCsv,
         resultCount: agentResult.results.length,
+        costSummary: agentResult.cost,
       },
     });
 
@@ -99,11 +140,26 @@ export async function runInstagramUsReelsProvider(
 
     if (normalized.length > 0) {
       const chunkSize = Math.min(DEFAULT_STREAM_CHUNK, normalized.length);
-      const firstChunk = normalized.slice(0, chunkSize);
-      total = await service.replaceCreators(firstChunk);
-      processedResults = total;
-      cursor = total;
-      metrics.processedCreators = processedResults;
+    const firstChunk = normalized.slice(0, chunkSize);
+    total = await service.replaceCreators(firstChunk);
+    processedResults = total;
+    cursor = total;
+    metrics.processedCreators = processedResults;
+
+    logger.info('Instagram US Reels first chunk persisted', {
+      jobId: job.id,
+      chunkSize,
+      normalizedCount: normalized.length,
+      persistedCreators: processedResults,
+      sessionId: agentResult.sessionId,
+    }, LogCategory.SCRAPING);
+    console.warn('[US_REELS][FIRST_CHUNK]', {
+      jobId: job.id,
+      chunkSize,
+      normalizedCount: normalized.length,
+      persistedCreators: processedResults,
+      timestamp: new Date().toISOString(),
+    });
 
       const now = Date.now();
       metrics.batches.push({
@@ -144,26 +200,56 @@ export async function runInstagramUsReelsProvider(
             size: mergeResult.newCount,
             durationMs: mergeTimestamp - lastBatchTimestamp,
           });
-          lastBatchTimestamp = mergeTimestamp;
+        lastBatchTimestamp = mergeTimestamp;
 
-          const chunkProgress = computeProgress(processedResults, targetResults);
-          const progressValue = Math.max(progressCheckpoint + 5, chunkProgress);
-          await service.recordProgress({
-            processedRuns,
-            processedResults,
-            cursor,
-            progress: progressValue,
-          });
-          progressCheckpoint = progressValue;
+        const chunkProgress = computeProgress(processedResults, targetResults);
+        const progressValue = Math.max(progressCheckpoint + 5, chunkProgress);
+        await service.recordProgress({
+          processedRuns,
+          processedResults,
+          cursor,
+          progress: progressValue,
+        });
+        progressCheckpoint = progressValue;
 
-          if (STREAM_DELAY_MS > 0) {
-            await sleep(STREAM_DELAY_MS);
-          }
+        logger.info('Instagram US Reels chunk merged', {
+          jobId: job.id,
+          batchIndex,
+          batchSize: chunk.length,
+          newCreators: mergeResult.newCount,
+          totalCreators: processedResults,
+          progress: progressValue,
+        }, LogCategory.SCRAPING);
+        console.warn('[US_REELS][CHUNK_MERGED]', {
+          jobId: job.id,
+          batchIndex,
+          batchSize: chunk.length,
+          newCreators: mergeResult.newCount,
+          totalCreators: processedResults,
+          progress: progressValue,
+          timestamp: new Date().toISOString(),
+        });
+
+        if (STREAM_DELAY_MS > 0) {
+          await sleep(STREAM_DELAY_MS);
         }
       }
+    }
     } else {
       metrics.processedCreators = 0;
       total = 0;
+
+      logger.warn('Instagram US Reels agent returned no creators', {
+        jobId: job.id,
+        keyword,
+        sessionId: agentResult.sessionId,
+      }, LogCategory.SCRAPING);
+      console.warn('[US_REELS][NO_CREATORS]', {
+        jobId: job.id,
+        keyword,
+        sessionId: agentResult.sessionId,
+        timestamp: new Date().toISOString(),
+      });
     }
 
     total = processedResults;
@@ -189,6 +275,79 @@ export async function runInstagramUsReelsProvider(
       });
     }
 
+    logger.info('✅ INSTAGRAM_US_REELS_PROVIDER_COMPLETE_v2', {
+      jobId: job.id,
+      totalCreators: processedResults,
+      batches: metrics.batches.length,
+      durationMs: metrics.timings.totalDurationMs,
+      finalProgress,
+    }, LogCategory.SCRAPING);
+    console.warn('[US_REELS][COMPLETE]', {
+      jobId: job.id,
+      totalCreators: processedResults,
+      batches: metrics.batches.length,
+      durationMs: metrics.timings.totalDurationMs,
+      finalProgress,
+      timestamp: new Date().toISOString(),
+    });
+
+    if (agentResult.cost) {
+      const { openai, serper, scrapeCreators, totalUsd } = agentResult.cost;
+      if (openai?.inputTokens) {
+        addCost(metrics, {
+          provider: 'OpenAI',
+          unit: 'input_token',
+          quantity: openai.inputTokens,
+          unitCostUsd: OPENAI_GPT4O_INPUT_PER_MTOK_USD / 1_000_000,
+          totalCostUsd: (openai.inputTokens / 1_000_000) * OPENAI_GPT4O_INPUT_PER_MTOK_USD,
+          note: 'US Reels agent OpenAI input tokens',
+        });
+      }
+      if (openai?.outputTokens) {
+        addCost(metrics, {
+          provider: 'OpenAI',
+          unit: 'output_token',
+          quantity: openai.outputTokens,
+          unitCostUsd: OPENAI_GPT4O_OUTPUT_PER_MTOK_USD / 1_000_000,
+          totalCostUsd: (openai.outputTokens / 1_000_000) * OPENAI_GPT4O_OUTPUT_PER_MTOK_USD,
+          note: 'US Reels agent OpenAI output tokens',
+        });
+      }
+      if (scrapeCreators?.totalCalls) {
+        addCost(metrics, {
+          provider: 'ScrapeCreators',
+          unit: 'api_call',
+          quantity: scrapeCreators.totalCalls,
+          unitCostUsd: SCRAPECREATORS_COST_PER_CALL_USD,
+          totalCostUsd: scrapeCreators.totalCalls * SCRAPECREATORS_COST_PER_CALL_USD,
+          note: `US Reels agent ScrapeCreators calls (posts=${scrapeCreators.posts}, transcripts=${scrapeCreators.transcripts}, profiles=${scrapeCreators.profiles})`,
+        });
+      }
+      if (serper?.queries) {
+        addCost(metrics, {
+          provider: 'Serper',
+          unit: 'query',
+          quantity: serper.queries,
+          unitCostUsd: SERPER_COST_PER_CALL_USD,
+          totalCostUsd: serper.queries * SERPER_COST_PER_CALL_USD,
+          note: 'US Reels agent Serper queries',
+        });
+      }
+      if (typeof totalUsd === 'number' && (metrics.totalCostUsd ?? 0) < totalUsd) {
+        const delta = Number((totalUsd - (metrics.totalCostUsd ?? 0)).toFixed(6));
+        if (delta > 0) {
+          addCost(metrics, {
+            provider: 'US Reels Agent (adjustment)',
+            unit: 'run_delta',
+            quantity: 1,
+            unitCostUsd: delta,
+            totalCostUsd: delta,
+            note: 'Adjustment to match agent-reported total cost',
+          });
+        }
+      }
+    }
+
     await service.complete('completed', {});
 
     return {
@@ -199,6 +358,19 @@ export async function runInstagramUsReelsProvider(
       metrics,
     };
   } catch (error) {
+    logger.error('Instagram US Reels job failed', error instanceof Error ? error : new Error(String(error)), {
+      jobId: job.id,
+      keyword,
+      userId: job.userId,
+    }, LogCategory.SCRAPING);
+    console.error('[US_REELS][ERROR]', {
+      jobId: job.id,
+      keyword,
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString(),
+    });
+
     const finishedAt = Date.now();
     metrics.timings.finishedAt = new Date(finishedAt).toISOString();
     metrics.timings.totalDurationMs = finishedAt - startedAt;

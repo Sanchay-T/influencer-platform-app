@@ -3,6 +3,7 @@
  */
 
 import { ApifyClient } from 'apify-client';
+import { APIFY_COST_PER_CU_USD, APIFY_COST_PER_RESULT_USD } from '@/lib/cost/constants';
 import { ApifyInstagramProfileResponse, InstagramSimilarSearchResult } from './types';
 
 // Initialize Apify client
@@ -66,7 +67,13 @@ export async function getInstagramProfile(username: string): Promise<InstagramSi
     console.log('✅ [INSTAGRAM-API] Run completed successfully');
     
     // Get the results from the dataset
-    const { items } = await client.dataset(finalRun.defaultDatasetId).listItems();
+    const dataset = await client.dataset(finalRun.defaultDatasetId).listItems();
+    const items = dataset.items || [];
+    const computeUnits = typeof finalRun?.stats?.computeUnits === 'number' ? finalRun.stats.computeUnits : 0;
+    const pricePerResult = typeof finalRun?.pricingInfo?.pricePerUnitUsd === 'number'
+      ? finalRun.pricingInfo.pricePerUnitUsd
+      : APIFY_COST_PER_RESULT_USD;
+    const totalCostUsd = computeUnits * APIFY_COST_PER_CU_USD + items.length * pricePerResult;
     
     if (!items || items.length === 0) {
       throw new Error('No data returned from Apify');
@@ -85,7 +92,14 @@ export async function getInstagramProfile(username: string): Promise<InstagramSi
     
     return {
       success: true,
-      data: profileData
+      data: profileData,
+      cost: {
+        computeUnits,
+        results: items.length,
+        totalCostUsd,
+        pricePerResultUsd: pricePerResult,
+        pricePerComputeUnitUsd: APIFY_COST_PER_CU_USD,
+      },
     };
     
   } catch (error: any) {
@@ -138,7 +152,13 @@ export async function getEnhancedInstagramProfile(username: string): Promise<Ins
       throw new Error(`Enhanced profile fetch failed: ${finalRun.statusMessage}`);
     }
     
-    const { items } = await client.dataset(finalRun.defaultDatasetId).listItems();
+    const dataset = await client.dataset(finalRun.defaultDatasetId).listItems();
+    const items = dataset.items || [];
+    const computeUnits = typeof finalRun?.stats?.computeUnits === 'number' ? finalRun.stats.computeUnits : 0;
+    const pricePerResult = typeof finalRun?.pricingInfo?.pricePerUnitUsd === 'number'
+      ? finalRun.pricingInfo.pricePerUnitUsd
+      : APIFY_COST_PER_RESULT_USD;
+    const totalCostUsd = computeUnits * APIFY_COST_PER_CU_USD + items.length * pricePerResult;
     
     if (!items || items.length === 0) {
       throw new Error('No enhanced profile data returned');
@@ -154,7 +174,14 @@ export async function getEnhancedInstagramProfile(username: string): Promise<Ins
     
     return {
       success: true,
-      data: profileData
+      data: profileData,
+      cost: {
+        computeUnits,
+        results: items.length,
+        totalCostUsd,
+        pricePerResultUsd: pricePerResult,
+        pricePerComputeUnitUsd: APIFY_COST_PER_CU_USD,
+      },
     };
     
   } catch (error: any) {

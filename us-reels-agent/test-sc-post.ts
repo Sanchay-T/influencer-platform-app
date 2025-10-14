@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const SC_API_KEY = 'Oy1ioE9pQTfUvuC1OvBmpIWHYZh1';
+const SC_API_KEY = 'SPPv8ILr6ydcwat6NCr9gpp3pZA3';
 const SC = axios.create({
     baseURL: 'https://api.scrapecreators.com',
     headers: { 'x-api-key': SC_API_KEY },

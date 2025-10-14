@@ -10,6 +10,15 @@ export interface SearchRuntimeConfig {
   continuationDelayMs: number;
 }
 
+export interface CostEntry {
+  provider: string;
+  unit: string;
+  quantity: number;
+  unitCostUsd: number;
+  totalCostUsd: number;
+  note?: string;
+}
+
 export interface SearchMetricsSnapshot {
   apiCalls: number;
   processedCreators: number;
@@ -23,6 +32,8 @@ export interface SearchMetricsSnapshot {
     finishedAt?: string;
     totalDurationMs?: number;
   };
+  costs?: CostEntry[];
+  totalCostUsd?: number;
 }
 
 export interface ProviderRunResult {

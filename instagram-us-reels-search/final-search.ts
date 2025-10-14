@@ -10,7 +10,7 @@ config();
 
 // API Keys
 const SERPAPI_KEY = process.env.SERPAPI_KEY || "b38ebb059692f5cdf1b02f709708a5cc4f7b0a782f58d781a066eed6d77e9d3b";
-const SC_API_KEY = process.env.SC_API_KEY || "Oy1ioE9pQTfUvuC1OvBmpIWHYZh1";
+const SC_API_KEY = process.env.SC_API_KEY || "SPPv8ILr6ydcwat6NCr9gpp3pZA3";
 
 const SERP_BASE = "https://serpapi.com/search.json";
 const SC_BASE = "https://api.scrapecreators.com";
