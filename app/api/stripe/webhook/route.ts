@@ -7,6 +7,7 @@ import { eq } from 'drizzle-orm';
 import Stripe from 'stripe';
 import { EventService, EVENT_TYPES, AGGREGATE_TYPES, SOURCE_SYSTEMS } from '@/lib/events/event-service';
 import { JobProcessor } from '@/lib/jobs/job-processor';
+import { finalizeOnboarding } from '@/lib/onboarding/finalize-onboarding';
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,6 +24,10 @@ export async function POST(req: NextRequest) {
     console.log('📥 [STRIPE-WEBHOOK] Received event:', event.type);
 
     switch (event.type) {
+      case 'checkout.session.completed':
+        await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
+        break;
+
       case 'customer.subscription.created':
         await handleSubscriptionCreated(event.data.object as Stripe.Subscription);
         break;
@@ -94,6 +99,74 @@ function getPlanFromPriceId(priceId: string): string {
   }
   
   return plan || 'unknown';
+}
+
+async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
+  const requestId = `webhook_checkout_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const userId = session.metadata?.userId;
+
+  console.log('🧾 [STRIPE-WEBHOOK] checkout.session.completed received', {
+    requestId,
+    sessionId: session.id,
+    userId,
+    paymentStatus: session.payment_status,
+    mode: session.mode,
+    customer: session.customer,
+  });
+
+  if (!userId) {
+    console.warn('⚠️ [STRIPE-WEBHOOK] Checkout session missing userId metadata; skipping onboarding finalization.', {
+      requestId,
+      sessionId: session.id,
+    });
+    return;
+  }
+
+  const userProfile = await getUserProfile(userId);
+
+  if (!userProfile) {
+    console.warn('⚠️ [STRIPE-WEBHOOK] User profile not found while finalizing onboarding from checkout session', {
+      requestId,
+      userId,
+      sessionId: session.id,
+    });
+    return;
+  }
+
+  if (userProfile.onboardingStep === 'completed') {
+    console.log('✅ [STRIPE-WEBHOOK] Onboarding already completed, skipping finalizeOnboarding', {
+      requestId,
+      userId,
+    });
+    return;
+  }
+
+  try {
+    const emailHint = session.customer_details?.email || session.metadata?.email || null;
+    const result = await finalizeOnboarding(userId, {
+      requestId,
+      clerkEmailHint: emailHint,
+      triggerEmails: true,
+      skipIfCompleted: true,
+    });
+
+    console.log('✅ [STRIPE-WEBHOOK] finalizeOnboarding executed from checkout session', {
+      requestId,
+      userId,
+      sessionId: session.id,
+      alreadyCompleted: result.alreadyCompleted,
+      trialStatus: result.trial?.trialStatus,
+      emailScheduled: result.emails?.success ?? false,
+    });
+  } catch (error) {
+    console.error('❌ [STRIPE-WEBHOOK] finalizeOnboarding failed during checkout session handling', {
+      requestId,
+      userId,
+      sessionId: session.id,
+      error,
+    });
+    throw error;
+  }
 }
 
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {

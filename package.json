@@ -48,6 +48,7 @@
     "test:logging": "node scripts/test-logging-system.js",
     "test:logging:quick": "node scripts/test-logging-system.js --quick",
     "test:console-reduction": "node -e \"console.log('Testing console reduction...'); const { logger } = require('./lib/logging'); logger.info('New structured log'); logger.debug('Debug log (filtered in prod)'); console.log('Test complete');\"",
+    "test:plans": "ENABLE_TEST_AUTH=true npx tsx test-scripts/plan-gating.test.ts",
     "test:sentry-integration": "node -e \"const { logger } = require('./lib/logging'); logger.error('Test Sentry integration', new Error('Test error')); console.log('Sentry test sent');\"",
     "test:performance": "node -e \"const { logger } = require('./lib/logging'); const start = Date.now(); for(let i=0; i<1000; i++) logger.debug('perf test', {i}); console.log('1000 filtered logs took:', Date.now()-start, 'ms');\"",
     "test:search:instagram:keyword": "tsx test-scripts/search/keyword/instagram-enhanced.test.ts",

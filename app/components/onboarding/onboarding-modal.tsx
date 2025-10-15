@@ -321,10 +321,10 @@ export default function OnboardingModal({
         stack: error instanceof Error ? error.stack : undefined
       }, sessionId);
       
-      toast.error('Something went wrong, but you can continue using the platform');
-      onComplete();
+      setError(errorMessage);
+      toast.error('We hit a snag finishing onboarding. Please try again.');
       
-      await OnboardingLogger.logModalEvent('CLOSE', 4, user?.id, {
+      await OnboardingLogger.logModalEvent('ERROR', 4, user?.id, {
         reason: 'COMPLETION_ERROR',
         error: errorMessage
       }, sessionId);
