@@ -76,15 +76,29 @@ export async function runInstagramUsReelsAgent(options: AgentRunnerOptions): Pro
 }
 
 function prepareAgentDataDir(overridden?: string) {
-  if (process.env.US_REELS_AGENT_DATA_DIR && !overridden) {
-    return;
+  const candidates = [
+    overridden,
+    process.env.US_REELS_AGENT_DATA_DIR,
+    join(process.cwd(), 'logs', 'us-reels-agent'),
+    join('/tmp', 'us-reels-agent'),
+  ].filter(Boolean) as string[];
+
+  const tried = new Set<string>();
+  for (const candidate of candidates) {
+    const resolved = resolve(candidate);
+    if (tried.has(resolved)) continue;
+    tried.add(resolved);
+    try {
+      mkdirSync(resolved, { recursive: true });
+      mkdirSync(join(resolved, 'sessions'), { recursive: true });
+      process.env.US_REELS_AGENT_DATA_DIR = resolved;
+      return;
+    } catch (error) {
+      console.warn('[US_REELS][DATA_DIR] Failed to prepare directory', resolved, error instanceof Error ? error.message : error);
+    }
   }
 
-  const candidate = overridden ?? join(process.cwd(), 'logs', 'us-reels-agent');
-  const resolved = resolve(candidate);
-  mkdirSync(resolved, { recursive: true });
-  mkdirSync(join(resolved, 'sessions'), { recursive: true });
-  process.env.US_REELS_AGENT_DATA_DIR = resolved;
+  throw new Error('US Reels agent could not establish a writable data directory');
 }
 
 function inferSessionPath(sessionId: string): string {

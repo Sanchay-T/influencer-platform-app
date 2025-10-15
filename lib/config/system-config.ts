@@ -14,6 +14,7 @@ const DEFAULT_CONFIGS = {
   'qstash_delays.tiktok_continuation_delay': { value: '2s', type: 'duration' },
   'qstash_delays.instagram_reels_delay': { value: '30s', type: 'duration' },
   'qstash_delays.instagram_similar_delay': { value: '5s', type: 'duration' },
+  'qstash_delays.youtube_continuation_delay': { value: '5s', type: 'duration' },
   
   // Job Timeouts
   'timeouts.standard_job_timeout': { value: '60m', type: 'duration' },
