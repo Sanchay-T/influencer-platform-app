@@ -57,6 +57,7 @@ function writeMasterCsv(rows: ReelRow[]): void {
         header: true,
         columns: CSV_HEADERS
     });
+    log.info('[US_REELS][MASTER_MERGER] Writing master CSV to', MASTER_CSV);
     writeFileSync(MASTER_CSV, content);
 }
 

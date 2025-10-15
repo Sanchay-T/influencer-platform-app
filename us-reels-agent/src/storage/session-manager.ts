@@ -1,5 +1,6 @@
 import { mkdirSync, existsSync, writeFileSync, readFileSync } from 'fs';
 import { join, resolve, isAbsolute } from 'path';
+import { log } from '../utils/logger.js';
 
 export interface SessionContext {
     sessionId: string;
@@ -43,6 +44,9 @@ export function createSession(keyword: string): SessionContext {
     if (!existsSync(SESSIONS_DIR)) {
         mkdirSync(SESSIONS_DIR, { recursive: true });
     }
+
+    log.info('[US_REELS][SESSION_MANAGER] DATA_DIR', DATA_DIR);
+    log.info('[US_REELS][SESSION_MANAGER] SESSIONS_DIR', SESSIONS_DIR);
 
     // Create session ID: keyword_timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);

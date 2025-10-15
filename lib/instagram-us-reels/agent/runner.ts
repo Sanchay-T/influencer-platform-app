@@ -94,6 +94,7 @@ function prepareAgentDataDir(overridden?: string) {
       mkdirSync(resolved, { recursive: true });
       mkdirSync(join(resolved, 'sessions'), { recursive: true });
       process.env.US_REELS_AGENT_DATA_DIR = resolved;
+      console.info('[US_REELS][DATA_DIR] Using data directory', resolved);
       return;
     } catch (error) {
       console.warn('[US_REELS][DATA_DIR] Failed to prepare directory', resolved, error instanceof Error ? error.message : error);
