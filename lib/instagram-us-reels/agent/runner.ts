@@ -1,7 +1,7 @@
 import { mkdirSync } from 'fs';
 import { join, resolve } from 'path';
 
-import { runAgent } from '@us-reels-agent/agent/run';
+import type { runAgent as RunAgentFn } from '@us-reels-agent/agent/run';
 import type { ReelRow } from '@us-reels-agent/storage/csv-writer';
 import {
   scBatchPosts,
@@ -14,7 +14,7 @@ import type { ProfileSummary, ScoredReel } from '@/lib/instagram-us-reels/types'
 import { aggregateReels, normalizeAggregate } from '@/lib/instagram-us-reels/utils/creator-normalizer';
 import type { NormalizedCreator } from '@/lib/search-engine/types';
 
-type AgentRunOutput = Awaited<ReturnType<typeof runAgent>>;
+type AgentRunOutput = Awaited<ReturnType<RunAgentFn>>;
 
 export interface AgentRunnerOptions {
   keyword: string;
@@ -38,6 +38,8 @@ export async function runInstagramUsReelsAgent(options: AgentRunnerOptions): Pro
   }
 
   prepareAgentDataDir(options.dataDirOverride);
+
+  const { runAgent } = await import('@us-reels-agent/agent/run');
 
   const output: AgentRunOutput = await runAgent(keyword);
   const reels = output.results ?? [];
