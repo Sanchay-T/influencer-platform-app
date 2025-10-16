@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from 'react'
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { LayoutDashboard, LogOut, UserRoundCog, Settings, Mail, CreditCard, TrendingUp, ListTree, Pin, PinOff, Megaphone } from "lucide-react";
+import Image from "next/image";
+import { LayoutDashboard, LogOut, UserRoundCog, Settings, Mail, CreditCard, ListTree, Pin, PinOff, Megaphone } from "lucide-react";
 import { useRouter, usePathname } from 'next/navigation'
 import { useClerk, useUser } from '@clerk/nextjs'
 import { useAdmin } from '@/lib/hooks/use-admin'
@@ -46,9 +47,14 @@ export default function Sidebar({ onNavigate, onTogglePin, isPinned = true, show
       <div className="flex h-16 items-center px-6 border-b border-zinc-800/50">
         <div className="flex w-full items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-lg flex items-center justify-center">
-              <TrendingUp className="h-5 w-5 text-white" />
-            </div>
+            <Image
+              src="/logo.png"
+              alt="Gemz Logo"
+              width={40}
+              height={40}
+              className="object-contain"
+              priority
+            />
             <span className="text-xl font-bold text-zinc-100">Gemz</span>
           </div>
           {onTogglePin && (

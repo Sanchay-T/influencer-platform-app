@@ -1,6 +1,13 @@
-import { mkdirSync, existsSync, writeFileSync, readFileSync } from 'fs';
-import { join, resolve, isAbsolute } from 'path';
 import { log } from '../utils/logger.js';
+import {
+    initializeSession,
+    resetSessionRows,
+    getSessionMetadata as storeGetSessionMetadata,
+    patchSessionMetadata,
+    finalizeSession as storeFinalizeSession,
+    setCostSummary,
+} from './session-store.js';
+import type { SessionMetadata } from './types.js';
 
 export interface SessionContext {
     sessionId: string;
@@ -10,57 +17,17 @@ export interface SessionContext {
     keyword: string;
 }
 
-export interface SessionMetadata {
-    sessionId: string;
-    keyword: string;
-    startTime: string;
-    endTime?: string;
-    totalUrls: number;
-    totalProcessed: number;
-    totalRelevant: number;
-    totalUS: number;
-    status: 'running' | 'completed' | 'failed';
+function generateSessionId(keyword: string): string {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
+    const safeKeyword = keyword.toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 20);
+    return `${safeKeyword}_${timestamp}`;
 }
-
-function resolveDataRoot(): string {
-    const override = process.env.US_REELS_AGENT_DATA_DIR;
-    if (override && typeof override === 'string') {
-        return isAbsolute(override) ? override : resolve(process.cwd(), override);
-    }
-    return resolve(process.cwd(), 'data');
-}
-
-const DATA_DIR = resolveDataRoot();
-const SESSIONS_DIR = join(DATA_DIR, 'sessions');
 
 /**
  * Create a new session for the given keyword
  */
 export function createSession(keyword: string): SessionContext {
-    // Ensure data directories exist
-    if (!existsSync(DATA_DIR)) {
-        mkdirSync(DATA_DIR, { recursive: true });
-    }
-    if (!existsSync(SESSIONS_DIR)) {
-        mkdirSync(SESSIONS_DIR, { recursive: true });
-    }
-
-    log.info('[US_REELS][SESSION_MANAGER] DATA_DIR', DATA_DIR);
-    log.info('[US_REELS][SESSION_MANAGER] SESSIONS_DIR', SESSIONS_DIR);
-
-    // Create session ID: keyword_timestamp
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').substring(0, 19);
-    const safekeyword = keyword.toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 20);
-    const sessionId = `${safekeyword}_${timestamp}`;
-
-    // Create session directory
-    const sessionPath = join(SESSIONS_DIR, sessionId);
-    mkdirSync(sessionPath, { recursive: true });
-
-    const sessionCsv = join(sessionPath, 'session.csv');
-    const metadataPath = join(sessionPath, 'metadata.json');
-
-    // Initialize metadata
+    const sessionId = generateSessionId(keyword);
     const metadata: SessionMetadata = {
         sessionId,
         keyword,
@@ -71,13 +38,17 @@ export function createSession(keyword: string): SessionContext {
         totalUS: 0,
         status: 'running'
     };
-    writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
+
+    initializeSession(sessionId, metadata);
+    resetSessionRows(sessionId);
+
+    log.info('[US_REELS][SESSION_MANAGER] Initialized in-memory session store', sessionId);
 
     return {
         sessionId,
-        sessionPath,
-        sessionCsv,
-        metadataPath,
+        sessionPath: sessionId,
+        sessionCsv: sessionId,
+        metadataPath: sessionId,
         keyword
     };
 }
@@ -86,30 +57,23 @@ export function createSession(keyword: string): SessionContext {
  * Get session metadata
  */
 export function getSessionMetadata(metadataPath: string): SessionMetadata {
-    const content = readFileSync(metadataPath, 'utf-8');
-    return JSON.parse(content);
+    return storeGetSessionMetadata(metadataPath);
 }
 
 /**
  * Update session metadata
  */
 export function updateSessionMetadata(metadataPath: string, updates: Partial<SessionMetadata>): void {
-    const metadata = getSessionMetadata(metadataPath);
-    const updated = { ...metadata, ...updates };
-    writeFileSync(metadataPath, JSON.stringify(updated, null, 2));
+    patchSessionMetadata(metadataPath, updates);
 }
 
 /**
  * Finalize session (mark as complete)
  */
 export function finalizeSession(metadataPath: string, success: boolean = true): void {
-    updateSessionMetadata(metadataPath, {
-        endTime: new Date().toISOString(),
-        status: success ? 'completed' : 'failed'
-    });
+    storeFinalizeSession(metadataPath, success);
 }
 
 export function writeCostSummary(sessionPath: string, summary: unknown): void {
-    const filePath = join(sessionPath, 'cost-summary.json');
-    writeFileSync(filePath, JSON.stringify(summary, null, 2));
+    setCostSummary(sessionPath, summary);
 }

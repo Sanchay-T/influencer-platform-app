@@ -1396,7 +1396,7 @@ const SearchResults = ({ searchData }) => {
                         <span className="text-zinc-500">No email</span>
                       )}
                     </div>
-                    <div className="mt-auto pt-2">
+                    <div className="mt-auto pt-2 flex gap-2">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -1407,6 +1407,18 @@ const SearchResults = ({ searchData }) => {
                           Profile <ExternalLink className="h-3 w-3" />
                         </a>
                       </Button>
+                      {raw?.video?.url && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="gap-1 bg-pink-500 hover:bg-pink-600 text-white"
+                          asChild
+                        >
+                          <a href={raw.video.url} target="_blank" rel="noopener noreferrer">
+                            View Post <ExternalLink className="h-3 w-3" />
+                          </a>
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </Card>

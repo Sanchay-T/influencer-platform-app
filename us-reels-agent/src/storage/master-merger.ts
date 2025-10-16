@@ -1,64 +1,19 @@
-import { existsSync, writeFileSync } from 'fs';
 import { readSessionCsv } from './csv-reader.js';
-import { ReelRow } from './csv-writer.js';
-import { stringify } from 'csv-stringify/sync';
-import { parse } from 'csv-parse/sync';
-import { readFileSync } from 'fs';
+import type { ReelRow } from './types.js';
 import { log } from '../utils/logger.js';
 
-const MASTER_CSV = 'data/master.csv';
+const masterRowsMap = new Map<string, ReelRow>();
 
-const CSV_HEADERS = [
-    'url',
-    'keyword',
-    'owner_handle',
-    'owner_name',
-    'caption',
-    'transcript',
-    'views',
-    'thumbnail',
-    'location_name',
-    'us_decision',
-    'relevance_decision',
-    'discovered_at',
-    'updated_at',
-    'status'
-];
-
-/**
- * Read master CSV
- */
 function readMasterCsv(): ReelRow[] {
-    if (!existsSync(MASTER_CSV)) {
-        return [];
-    }
-    const content = readFileSync(MASTER_CSV, 'utf-8');
-    if (content.trim() === '') {
-        return [];
-    }
-    const records = parse(content, {
-        columns: true,
-        skip_empty_lines: true,
-        cast: (value, context) => {
-            if (context.column === 'views' && value) {
-                return Number(value);
-            }
-            return value;
-        }
-    });
-    return records;
+    return Array.from(masterRowsMap.values()).map(row => ({ ...row }));
 }
 
-/**
- * Write master CSV
- */
 function writeMasterCsv(rows: ReelRow[]): void {
-    const content = stringify(rows, {
-        header: true,
-        columns: CSV_HEADERS
-    });
-    log.info('[US_REELS][MASTER_MERGER] Writing master CSV to', MASTER_CSV);
-    writeFileSync(MASTER_CSV, content);
+    masterRowsMap.clear();
+    for (const row of rows) {
+        masterRowsMap.set(row.url, { ...row });
+    }
+    log.info(`[US_REELS][MASTER_MERGER] Master dataset updated in memory (${rows.length} rows)`);
 }
 
 /**

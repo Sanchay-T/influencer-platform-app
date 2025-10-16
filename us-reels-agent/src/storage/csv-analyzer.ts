@@ -1,5 +1,5 @@
 import { readSessionCsv } from './csv-reader.js';
-import { ReelRow } from './csv-writer.js';
+import type { ReelRow } from './types.js';
 
 /**
  * JavaScript-based CSV analysis tool (replaces pandas)

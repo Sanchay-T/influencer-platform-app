@@ -122,6 +122,7 @@ export async function runInstagramUsReelsProvider(
         sessionCsv: agentResult.sessionCsv,
         resultCount: agentResult.results.length,
         costSummary: agentResult.cost,
+        rawRows: agentResult.results,
       },
     });
 

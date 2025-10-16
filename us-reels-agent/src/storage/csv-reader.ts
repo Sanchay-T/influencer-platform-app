@@ -1,30 +1,11 @@
-import { existsSync, readFileSync } from 'fs';
-import { parse } from 'csv-parse/sync';
-import { ReelRow } from './csv-writer.js';
+import { getSessionRows } from './session-store.js';
+import type { ReelRow } from './types.js';
 
 /**
  * Read session CSV and return all rows
  */
 export function readSessionCsv(csvPath: string): ReelRow[] {
-    if (!existsSync(csvPath)) {
-        return [];
-    }
-    const content = readFileSync(csvPath, 'utf-8');
-    if (content.trim() === '') {
-        return [];
-    }
-    const records = parse(content, {
-        columns: true,
-        skip_empty_lines: true,
-        cast: (value, context) => {
-            // Cast views to number
-            if (context.column === 'views' && value) {
-                return Number(value);
-            }
-            return value;
-        }
-    });
-    return records;
+    return getSessionRows(csvPath);
 }
 
 /**
