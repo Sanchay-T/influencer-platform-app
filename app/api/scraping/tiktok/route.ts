@@ -125,12 +125,21 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
             const sanitized = keyword.replace(/[\u0000-\u001F\u007F-\u009F\uD800-\uDFFF]/g, '');
             return sanitized.replace(/\s+/g, ' ').trim();
         });
+        const normalizedKeywords = Array.from(new Set(sanitizedKeywords.filter(Boolean))).slice(0, 5);
         
         log.debug('TikTok API keywords sanitized', {
             requestId,
             originalCount: keywords.length,
-            sanitizedCount: sanitizedKeywords.length
+            sanitizedCount: normalizedKeywords.length
         }, LogCategory.TIKTOK);
+
+        if (!normalizedKeywords.length) {
+            log.warn('TikTok API validation failed', {
+                requestId,
+                reason: 'no_valid_keywords'
+            }, LogCategory.TIKTOK);
+            return createErrorResponse('No valid keywords provided', 400, requestId);
+        }
 
         if (!campaignId) {
             log.warn('TikTok API validation failed', { 
@@ -178,6 +187,19 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
             );
         }
 
+        const baseTargetResults = Number(targetResults);
+
+        if (![100, 500, 1000].includes(baseTargetResults)) {
+            log.warn('TikTok API validation failed', {
+                requestId,
+                reason: 'invalid_target_results',
+                targetResults: baseTargetResults
+            }, LogCategory.TIKTOK);
+            return createErrorResponse('Target results must be 100, 500, or 1000', 400, requestId);
+        }
+
+        const desiredTotalResults = Math.min(baseTargetResults * normalizedKeywords.length, 1000);
+
         logPhase('business');
         
         // Enhanced plan validation
@@ -191,13 +213,13 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
             usageType: 'creators',
             searchType: 'tiktok_keyword',
             platform: 'TikTok',
-            estimatedResults: targetResults,
+            estimatedResults: desiredTotalResults,
             campaignId
           },
           billingRequestId
         );
         
-        const validation = await PlanValidator.validateCreatorSearch(userId, targetResults, 'tiktok_keyword', billingRequestId);
+        const validation = await PlanValidator.validateCreatorSearch(userId, desiredTotalResults, 'tiktok_keyword', billingRequestId);
         
         if (!validation.allowed) {
           await BillingLogger.logAccess(
@@ -208,7 +230,7 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
               resource: 'creator_search',
               searchType: 'tiktok_keyword',
               reason: validation.reason,
-              estimatedResults: targetResults,
+              estimatedResults: desiredTotalResults,
               currentUsage: validation.currentUsage,
               limit: validation.limit,
               upgradeRequired: validation.upgradeRequired
@@ -223,7 +245,7 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
             currentUsage: validation.currentUsage,
             limit: validation.limit
           }, LogCategory.BILLING);
-          
+
           return createErrorResponse('Plan limit exceeded', 403, requestId, {
             message: validation.reason,
             upgrade: validation.upgradeRequired,
@@ -244,7 +266,7 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
             resource: 'creator_search',
             searchType: 'tiktok_keyword',
             platform: 'TikTok',
-            estimatedResults: targetResults,
+            estimatedResults: desiredTotalResults,
             currentUsage: validation.currentUsage,
             limit: validation.limit,
             usagePercentage: validation.usagePercentage,
@@ -256,22 +278,15 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
         log.info('TikTok API plan validation passed', {
             requestId,
             userId,
-            targetResults,
+            targetResults: desiredTotalResults,
             currentUsage: validation.currentUsage,
             limit: validation.limit
         }, LogCategory.BILLING);
         
-        let adjustedTargetResults = targetResults;
-
-        // Validate target results
-        if (![100, 500, 1000].includes(adjustedTargetResults)) {
-            log.warn('TikTok API validation failed', {
-                requestId,
-                reason: 'invalid_target_results',
-                targetResults: adjustedTargetResults
-            }, LogCategory.TIKTOK);
-            return createErrorResponse('Target results must be 100, 500, or 1000', 400, requestId);
-        }
+        const effectiveTargetResults =
+          validation.adjustedLimit && validation.adjustedLimit < desiredTotalResults
+            ? validation.adjustedLimit
+            : desiredTotalResults;
 
         try {
             logPhase('database');
@@ -281,8 +296,8 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
                 return await db.insert(scrapingJobs)
                     .values({
                         userId: userId,
-                        keywords: sanitizedKeywords,
-                        targetResults: adjustedTargetResults,
+                        keywords: normalizedKeywords,
+                        targetResults: effectiveTargetResults,
                         status: 'pending',
                         processedRuns: 0,
                         processedResults: 0,
@@ -293,7 +308,13 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
                         updatedAt: new Date(),
                         cursor: 0,
                         timeoutAt: new Date(Date.now() + TIMEOUT_MINUTES * 60 * 1000),
-                        searchParams: { runner: 'search-engine', platform: 'tiktok_keyword' },
+                        searchParams: {
+                            runner: 'search-engine',
+                            platform: 'tiktok_keyword',
+                            allKeywords: normalizedKeywords,
+                            baseTargetPerKeyword: baseTargetResults,
+                            effectiveTarget: effectiveTargetResults,
+                        },
                     })
                     .returning();
             }, { requestId });
@@ -303,8 +324,8 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
                 jobId: job.id,
                 userId,
                 campaignId,
-                keywordCount: sanitizedKeywords.length,
-                targetResults: adjustedTargetResults
+                keywordCount: normalizedKeywords.length,
+                targetResults: effectiveTargetResults
             }, LogCategory.TIKTOK);
 
             logPhase('external');

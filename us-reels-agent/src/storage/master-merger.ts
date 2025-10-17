@@ -2,14 +2,6 @@ import { readSessionCsv } from './csv-reader.js';
 import type { ReelRow } from './types.js';
 import { log } from '../utils/logger.js';
 
-// 🔍 DIAGNOSTIC: Check if MASTER_CSV was supposed to be defined
-console.log('[US_REELS][DIAGNOSTIC] master-merger.ts loaded');
-console.log('[US_REELS][DIAGNOSTIC] typeof MASTER_CSV:', typeof (globalThis as any).MASTER_CSV);
-console.log('[US_REELS][DIAGNOSTIC] process.env check:', {
-  US_REELS_AGENT_DATA_DIR: process.env.US_REELS_AGENT_DATA_DIR,
-  hasMasterCsvEnv: !!process.env.MASTER_CSV
-});
-
 const masterRowsMap = new Map<string, ReelRow>();
 
 function readMasterCsv(): ReelRow[] {
@@ -89,12 +81,5 @@ export async function mergeMaster(sessionCsvPath: string): Promise<void> {
         'Skipped (duplicates)': skipped
     });
 
-    // 🔍 DIAGNOSTIC: This is where the error occurs - MASTER_CSV is not defined
-    console.log('[US_REELS][DIAGNOSTIC] About to log success with MASTER_CSV');
-    console.log('[US_REELS][DIAGNOSTIC] Current scope has MASTER_CSV?', typeof MASTER_CSV);
-    console.log('[US_REELS][DIAGNOSTIC] sessionCsvPath was:', sessionCsvPath);
-
-    // TEMPORARY: Comment out the problematic line to see if this is the only issue
-    // log.success(`Master CSV updated: ${MASTER_CSV}`);
-    log.success(`Master CSV updated in memory (${finalRows.length} rows) - session: ${sessionCsvPath}`);
+    log.success(`Master dataset updated in memory (${finalRows.length} rows)`);
 }

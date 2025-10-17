@@ -71,8 +71,8 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const keywords = sanitizeKeywords(body?.keywords);
-    const targetResults = Number(body?.targetResults ?? 100);
+    const keywords = Array.from(new Set(sanitizeKeywords(body?.keywords)));
+    const requestedTarget = Number(body?.targetResults ?? 100);
     const campaignId = body?.campaignId as string | undefined;
     const options = buildPipelineOptions(body?.options);
 
@@ -100,7 +100,20 @@ export async function POST(req: NextRequest) {
         .where(eq(campaigns.id, campaignId));
     }
 
-    const planValidation = await PlanEnforcementService.validateJobCreation(userId, targetResults);
+    if (![100, 500, 1000].includes(requestedTarget)) {
+      return NextResponse.json(
+        { error: 'targetResults must be 100, 500, or 1000' },
+        { status: 400 },
+      );
+    }
+
+    const normalizedKeywords = keywords.slice(0, 5);
+    const desiredTotalResults = Math.min(
+      Math.max(requestedTarget, 1) * Math.max(normalizedKeywords.length, 1),
+      1000,
+    );
+
+    const planValidation = await PlanEnforcementService.validateJobCreation(userId, desiredTotalResults);
     if (!planValidation.allowed) {
       return NextResponse.json(
         {
@@ -114,18 +127,16 @@ export async function POST(req: NextRequest) {
     }
 
     const adjustedTarget =
-      planValidation.adjustedLimit && planValidation.adjustedLimit < targetResults
+      planValidation.adjustedLimit && planValidation.adjustedLimit < desiredTotalResults
         ? planValidation.adjustedLimit
-        : targetResults;
+        : desiredTotalResults;
 
-    if (![100, 500, 1000].includes(adjustedTarget)) {
-      return NextResponse.json(
-        { error: 'targetResults must be 100, 500, or 1000' },
-        { status: 400 },
-      );
-    }
-
-    const normalizedKeywords = keywords.slice(0, 5);
+    const searchKeywordMeta = {
+      allKeywords: keywords,
+      seedKeyword: keywords[0] ?? null,
+      baseTargetPerKeyword: requestedTarget,
+      effectiveTarget: adjustedTarget,
+    };
     const newJobValues = {
       userId,
       keywords: normalizedKeywords,
@@ -137,7 +148,10 @@ export async function POST(req: NextRequest) {
       region: 'US',
       campaignId,
       searchType: 'keyword' as const,
-      searchParams: buildSearchParams(options),
+      searchParams: {
+        ...buildSearchParams(options),
+        ...searchKeywordMeta,
+      },
       createdAt: new Date(),
       updatedAt: new Date(),
       cursor: 0,

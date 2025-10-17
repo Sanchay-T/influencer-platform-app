@@ -10,7 +10,6 @@ export default function KeywordSearchForm({ onSubmit }) {
   const [selectedPlatform, setSelectedPlatform] = useState("tiktok");
   const [creatorsCount, setCreatorsCount] = useState(100);
   const [isLoading, setIsLoading] = useState(false);
-  const [keywords] = useState(["test"]); // Esto debería ser un input del usuario
   const [campaignId, setCampaignId] = useState(null);
   const { user, isLoaded } = useUser();
 

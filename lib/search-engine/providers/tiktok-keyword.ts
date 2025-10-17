@@ -15,15 +15,14 @@ interface ScrapeCreatorsResponse {
   has_more?: boolean;
 }
 
-async function fetchKeywordPage(keywords: string[], cursor: number, region: string) {
+async function fetchKeywordPage(keyword: string, cursor: number, region: string) {
   const apiKey = process.env.SCRAPECREATORS_API_KEY;
   const apiUrl = process.env.SCRAPECREATORS_API_URL;
   if (!apiKey || !apiUrl) {
     throw new Error('SCRAPECREATORS API configuration is missing');
   }
 
-  const query = keywords.join(' ');
-  const url = `${apiUrl}?query=${encodeURIComponent(query)}&cursor=${cursor}&region=${region}`;
+  const url = `${apiUrl}?query=${encodeURIComponent(keyword)}&cursor=${cursor}&region=${region}`;
   const requestStarted = Date.now();
   const response = await fetch(url, {
     headers: { 'x-api-key': apiKey },
@@ -67,7 +66,19 @@ async function enrichCreator(author: any, awemeInfo: any): Promise<NormalizedCre
 
   const avatarUrl = author?.avatar_medium?.url_list?.[0] || '';
   const cachedImageUrl = await imageCache.getCachedImageUrl(avatarUrl, 'TikTok', author.unique_id ?? 'unknown');
+  const videoAsset = awemeInfo?.video ?? {};
+  const coverCandidates: Array<string | undefined> = [
+    videoAsset?.cover?.url_list?.[0],
+    videoAsset?.dynamic_cover?.url_list?.[0],
+    videoAsset?.origin_cover?.url_list?.[0],
+    videoAsset?.animated_cover?.url_list?.[0],
+    videoAsset?.share_cover?.url_list?.[0],
+    videoAsset?.play_addr?.url_list?.[0],
+    videoAsset?.download_addr?.url_list?.[0],
+  ];
+  const coverUrl = coverCandidates.find((value) => typeof value === 'string' && value.trim().length > 0) ?? '';
 
+  const previewUrl = coverUrl || videoAsset?.thumbnail?.url_list?.[0] || videoAsset?.thumbnail_url || '';
   return {
     platform: 'TikTok',
     creator: {
@@ -81,9 +92,17 @@ async function enrichCreator(author: any, awemeInfo: any): Promise<NormalizedCre
       username: author.unique_id || '',
       verified: Boolean(author.is_verified || author.verified),
     },
+    preview: previewUrl || undefined,
+    previewUrl: previewUrl || undefined,
     video: {
       description: awemeInfo?.desc || 'No description',
       url: awemeInfo?.share_url || '',
+      preview: previewUrl || undefined,
+      previewUrl: previewUrl || undefined,
+      cover: coverUrl || undefined,
+      coverUrl: coverUrl || undefined,
+      thumbnail: previewUrl || undefined,
+      thumbnailUrl: previewUrl || undefined,
       statistics: {
         likes: awemeInfo?.statistics?.digg_count || 0,
         comments: awemeInfo?.statistics?.comment_count || 0,
@@ -126,65 +145,100 @@ export async function runTikTokKeywordProvider(
     timings: { startedAt: new Date(startTimestamp).toISOString() },
   };
 
-  const keywords = Array.isArray(job.keywords) ? (job.keywords as string[]).map((k) => String(k)) : [];
+  const jobKeywordsRaw = Array.isArray(job.keywords) ? (job.keywords as string[]).map((k) => String(k)) : [];
+  const searchParams = (job.searchParams ?? {}) as Record<string, unknown>;
+  const paramKeywords = Array.isArray(searchParams?.allKeywords) ? (searchParams.allKeywords as string[]) : [];
+
+  const keywords = Array.from(
+    new Set(
+      [...jobKeywordsRaw, ...paramKeywords]
+        .map((value) => value?.toString?.() ?? '')
+        .map((value) => value.trim())
+        .filter((value) => value.length > 0),
+    ),
+  );
+
   if (!keywords.length) {
     throw new Error('TikTok keyword job is missing keywords');
   }
 
   const maxApiCalls = Math.max(config.maxApiCalls, 1);
-  const targetResults = job.targetResults || 0;
+  const targetResults = job.targetResults && job.targetResults > 0 ? job.targetResults : Math.max(100, keywords.length * 100);
   const region = job.region || 'US';
-  let cursor = job.cursor ?? 0;
-  let processedRuns = job.processedRuns ?? 0;
-  let processedResults = job.processedResults ?? 0;
-  let hasMore = true;
 
   await service.markProcessing();
 
-  for (let callIndex = 0; callIndex < maxApiCalls && hasMore && processedResults < targetResults; callIndex++) {
-    const batchStarted = Date.now();
-    const { items, hasMore: batchHasMore } = await fetchKeywordPage(keywords, cursor, region);
-    metrics.apiCalls += 1;
+  let processedRuns = job.processedRuns ?? 0;
+  let processedResults = job.processedResults ?? 0;
+  metrics.processedCreators = processedResults;
 
-    const enrichedCreators: NormalizedCreator[] = [];
-    const batches = chunk(items, Math.max(Math.floor(DEFAULT_CONCURRENCY), 1));
-    for (const slice of batches) {
-      const chunkCreators = await Promise.all(
-        slice.map(async (entry) => {
-          const awemeInfo = entry?.aweme_info ?? {};
-          const author = awemeInfo?.author ?? {};
-          const creator = await enrichCreator(author, awemeInfo);
-          return creator;
-        }),
-      );
-      for (const creator of chunkCreators) {
-        if (creator) enrichedCreators.push(creator);
-      }
+  const maxStreamChunk = Math.max(Math.floor(DEFAULT_CONCURRENCY), 1);
+
+  outer: for (const keyword of keywords) {
+    if (processedResults >= targetResults) {
+      break;
     }
 
-    const { total } = await service.mergeCreators(enrichedCreators, creatorKey);
-    processedRuns += 1;
-    processedResults = total;
-    cursor += items.length;
+    let cursor = 0;
+    let localHasMore = true;
 
-    const progress = computeProgress(processedResults, targetResults);
-    await service.recordProgress({
-      processedRuns,
-      processedResults,
-      cursor,
-      progress,
-    });
+    while (localHasMore && processedResults < targetResults && metrics.apiCalls < maxApiCalls) {
+      const batchStarted = Date.now();
+      const { items, hasMore: batchHasMore } = await fetchKeywordPage(keyword, cursor, region);
+      metrics.apiCalls += 1;
 
-    metrics.processedCreators = processedResults;
-    metrics.batches.push({
-      index: metrics.apiCalls,
-      size: items.length,
-      durationMs: Date.now() - batchStarted,
-    });
+      const enrichedCreators: NormalizedCreator[] = [];
+      const batches = chunk(items, maxStreamChunk);
+      for (const slice of batches) {
+        const chunkCreators = await Promise.all(
+          slice.map(async (entry) => {
+            const awemeInfo = entry?.aweme_info ?? {};
+            const author = awemeInfo?.author ?? {};
+            const creator = await enrichCreator(author, awemeInfo);
+            return creator;
+          }),
+        );
+        for (const creator of chunkCreators) {
+          if (creator) enrichedCreators.push(creator);
+        }
+      }
 
-    hasMore = batchHasMore && items.length > 0;
-    if (hasMore && processedResults < targetResults) {
-      await sleep(config.continuationDelayMs);
+      const { total } = await service.mergeCreators(enrichedCreators, creatorKey);
+      processedRuns += 1;
+      processedResults = total;
+      cursor += items.length;
+
+      const progress = computeProgress(processedResults, targetResults);
+      await service.recordProgress({
+        processedRuns,
+        processedResults,
+        cursor: total,
+        progress,
+      });
+
+      metrics.processedCreators = processedResults;
+      metrics.batches.push({
+        index: metrics.apiCalls,
+        size: items.length,
+        durationMs: Date.now() - batchStarted,
+      });
+
+      if (processedResults >= targetResults) {
+        break outer;
+      }
+
+      localHasMore = batchHasMore && items.length > 0;
+      if (!localHasMore) {
+        break;
+      }
+
+      if (metrics.apiCalls >= maxApiCalls) {
+        break;
+      }
+
+      if (config.continuationDelayMs > 0) {
+        await sleep(config.continuationDelayMs);
+      }
     }
   }
 
@@ -203,10 +257,17 @@ export async function runTikTokKeywordProvider(
     });
   }
 
+  const status = processedResults >= targetResults ? 'completed' : 'partial';
+  const hasMore = processedResults < targetResults;
+
+  if (status === 'completed' && !hasMore) {
+    await service.complete('completed', {});
+  }
+
   return {
-    status: processedResults >= targetResults || !hasMore ? 'completed' : 'partial',
+    status,
     processedResults,
-    cursor,
+    cursor: processedResults,
     hasMore,
     metrics,
   };

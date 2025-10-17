@@ -7,6 +7,11 @@ import KeywordReview from "../../../components/campaigns/keyword-search/keyword-
 import Breadcrumbs from "@/app/components/breadcrumbs";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
+import {
+  keywordDebugLog,
+  keywordDebugWarn,
+  setKeywordDebugEnabled,
+} from "@/lib/logging/keyword-debug";
 
 export default function KeywordSearch() {
   const router = useRouter();
@@ -22,7 +27,20 @@ export default function KeywordSearch() {
   const [campaignName, setCampaignName] = useState("");
 
   useEffect(() => {
-    console.log('🔄 [KEYWORD-SEARCH-PAGE] Initializing keyword search page');
+    if (typeof window !== 'undefined') {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('keywordDebug') === 'true' || params.get('debug') === 'keyword') {
+          setKeywordDebugEnabled(true);
+        }
+      } catch {
+        // ignore parsing errors
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    keywordDebugLog('page', 'Initializing keyword search page');
     let campaignResolved = false;
 
     try {
@@ -30,17 +48,17 @@ export default function KeywordSearch() {
       const campaignIdFromUrl = urlParams.get('campaignId');
 
       if (campaignIdFromUrl) {
-        console.log('📋 [KEYWORD-SEARCH-PAGE] Campaign ID found in URL:', campaignIdFromUrl);
+        keywordDebugLog('page', 'Campaign ID found in URL', campaignIdFromUrl);
         campaignResolved = true;
         setSearchData(prev => ({
           ...prev,
           campaignId: campaignIdFromUrl
         }));
       } else {
-        console.log('❌ [KEYWORD-SEARCH-PAGE] No campaign ID found in URL');
+        keywordDebugLog('page', 'No campaign ID found in URL');
       }
     } catch (error) {
-      console.error('💥 [KEYWORD-SEARCH-PAGE] Error parsing URL params:', error);
+      keywordDebugWarn('page', 'Error parsing URL params', error);
     }
 
     if (!campaignResolved) {
@@ -48,7 +66,7 @@ export default function KeywordSearch() {
         const campaignData = sessionStorage.getItem('currentCampaign');
         if (campaignData) {
           const campaign = JSON.parse(campaignData);
-          console.log('📋 [KEYWORD-SEARCH-PAGE] Campaign found in session storage:', campaign.id);
+          keywordDebugLog('page', 'Campaign found in session storage', campaign.id);
           campaignResolved = true;
           setSearchData(prev => ({
             ...prev,
@@ -56,15 +74,15 @@ export default function KeywordSearch() {
           }));
           setCampaignName(campaign.name ?? "");
         } else {
-          console.log('❌ [KEYWORD-SEARCH-PAGE] No campaign found in session storage');
+          keywordDebugLog('page', 'No campaign found in session storage');
         }
       } catch (error) {
-        console.error('💥 [KEYWORD-SEARCH-PAGE] Error parsing session storage:', error);
+        keywordDebugWarn('page', 'Error parsing session storage', error);
       }
     }
 
     setIsLoading(false);
-    console.log('✅ [KEYWORD-SEARCH-PAGE] Initialization complete');
+    keywordDebugLog('page', 'Initialization complete');
   }, []);
 
   useEffect(() => {
@@ -75,14 +93,14 @@ export default function KeywordSearch() {
           setCampaignName(campaignData.name);
         }
       } catch (error) {
-        console.error('💥 [KEYWORD-SEARCH-PAGE] Error reloading campaign info:', error);
+        keywordDebugWarn('page', 'Error reloading campaign info', error);
       }
     }
   }, [searchData.campaignId, campaignName]);
 
   // Manejar el paso 1: Selección de plataformas y número de creadores
   const handleFormSubmit = (data) => {
-    console.log('📝 [KEYWORD-SEARCH-PAGE] Form submitted with:', data);
+    keywordDebugLog('page', 'Form submitted', data);
     setSearchData(prev => ({
       ...prev,
       platforms: data.platforms,
@@ -91,22 +109,22 @@ export default function KeywordSearch() {
       campaignId: data.campaignId || prev.campaignId
     }));
     setStep(2);
-    console.log('🔄 [KEYWORD-SEARCH-PAGE] Moving to step 2 (keyword review)');
+    keywordDebugLog('page', 'Moving to step 2');
   };
 
   // Manejar el paso 2: Revisión y envío de keywords
   const handleKeywordsSubmit = async (keywords) => {
-    console.log('🔍 [KEYWORD-SEARCH-PAGE] Starting keyword submission process');
+    keywordDebugLog('page', 'Submitting keywords', keywords);
     try {
       // Obtener el campaignId de searchData o del sessionStorage
       const campaignId = searchData.campaignId || JSON.parse(sessionStorage.getItem('currentCampaign'))?.id;
       
       if (!campaignId) {
-        console.error('❌ [KEYWORD-SEARCH-PAGE] No campaign ID found');
+        keywordDebugWarn('page', 'No campaign ID found');
         throw new Error('Campaign not found');
       }
 
-      console.log('📤 [KEYWORD-SEARCH-PAGE] Submitting search with:', {
+      keywordDebugLog('page', 'Submitting search payload', {
         campaignId,
         keywords,
         targetResults: searchData.creatorsCount,
@@ -122,7 +140,7 @@ export default function KeywordSearch() {
         apiEndpoint = '/api/scraping/youtube';
       }
 
-      console.log('🌐 [KEYWORD-SEARCH-PAGE] Using API endpoint:', apiEndpoint);
+      keywordDebugLog('page', 'Selected API endpoint', apiEndpoint);
 
       const response = await fetch(apiEndpoint, {
         method: 'POST',
@@ -136,16 +154,16 @@ export default function KeywordSearch() {
         }),
       });
 
-      console.log('📥 [KEYWORD-SEARCH-PAGE] API response status:', response.status);
+      keywordDebugLog('page', 'API response status', response.status);
       
       if (!response.ok) {
         const error = await response.json();
-        console.error('❌ [KEYWORD-SEARCH-PAGE] API error:', error);
+        keywordDebugWarn('page', 'API error response', error);
         throw new Error(error.error || 'Error starting the scraping process');
       }
 
       const data = await response.json();
-      console.log('✅ [KEYWORD-SEARCH-PAGE] API response data:', data);
+      keywordDebugLog('page', 'API success response', data);
       
     const nextPlatform = searchData.platforms.includes('instagram')
       ? 'instagram'
@@ -162,7 +180,7 @@ export default function KeywordSearch() {
     toast.success('Campaign started successfully');
     router.push(`/campaigns/${campaignId}?jobId=${data.jobId}`);
   } catch (error) {
-    console.error('💥 [KEYWORD-SEARCH-PAGE] Error:', error);
+    keywordDebugWarn('page', 'Keyword submission error', error);
     toast.error(error.message || "Failed to start campaign");
   }
   };
