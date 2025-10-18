@@ -8,14 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "react-hot-toast";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import {
-  keywordDebugLog,
-  keywordDebugWarn,
-  isKeywordDebugEnabled,
-  setKeywordDebugEnabled,
-} from "@/lib/logging/keyword-debug";
 
 const MAX_KEYWORDS = 10;
 const MIN_SUGGEST_LENGTH = 3;
@@ -25,7 +17,6 @@ export default function KeywordReview({ onSubmit, isLoading }) {
   const [keywords, setKeywords] = useState([]);
   const [newKeyword, setNewKeyword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [debugEnabled, setDebugEnabled] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [streamingPreview, setStreamingPreview] = useState("");
   const [isSuggesting, setIsSuggesting] = useState(false);
@@ -38,10 +29,6 @@ export default function KeywordReview({ onSubmit, isLoading }) {
     () => keywords.map((keyword) => keyword.toLowerCase()),
     [keywords]
   );
-
-  useEffect(() => {
-    setDebugEnabled(isKeywordDebugEnabled());
-  }, []);
 
   useEffect(() => {
     keywordsRef.current = keywords;
@@ -95,7 +82,7 @@ export default function KeywordReview({ onSubmit, isLoading }) {
 
     if (event.type === 'error') {
       const message = typeof event.message === 'string' ? event.message : 'Suggestion stream error';
-      keywordDebugWarn('suggestions', 'Suggestion stream error', message);
+      console.warn('[KeywordSuggestions] stream error', message);
       toast.error(message);
       return;
     }
@@ -166,7 +153,7 @@ export default function KeywordReview({ onSubmit, isLoading }) {
                   const event = JSON.parse(payload);
                   handleSuggestionEvent(event);
                 } catch (error) {
-                  keywordDebugWarn('suggestions', 'Failed to parse suggestion event', error);
+                  console.warn('[KeywordSuggestions] failed to parse event', error);
                 }
               }
             }
@@ -176,7 +163,7 @@ export default function KeywordReview({ onSubmit, isLoading }) {
         }
       } catch (error) {
         if (!controller.signal.aborted) {
-          keywordDebugWarn('suggestions', 'Suggestion stream failed', error);
+          console.warn('[KeywordSuggestions] stream failed', error);
           toast.error(error instanceof Error ? error.message : 'Suggestion stream error');
         }
       } finally {
@@ -201,7 +188,6 @@ export default function KeywordReview({ onSubmit, isLoading }) {
 
     const seed = newKeyword.trim();
     debounceRef.current = window.setTimeout(() => {
-      keywordDebugLog('suggestions', 'Starting suggestion stream', { seed, existing: keywords });
       startSuggestionStream(seed);
     }, SUGGESTION_FETCH_DELAY);
 
@@ -218,12 +204,6 @@ export default function KeywordReview({ onSubmit, isLoading }) {
     }
     abortSuggestionStream();
   }, []);
-
-  const onToggleDebug = (value) => {
-    setKeywordDebugEnabled(value);
-    setDebugEnabled(value);
-    keywordDebugLog('review', 'Debug logging toggled', value);
-  };
 
   const handleAddKeyword = (e) => {
     e.preventDefault();
@@ -248,7 +228,6 @@ export default function KeywordReview({ onSubmit, isLoading }) {
       return;
     }
 
-    keywordDebugLog('review', 'Adding keyword from input', trimmedKeyword);
     setKeywords([...keywords, trimmedKeyword]);
     setNewKeyword("");
     setSuggestions((current) =>
@@ -257,7 +236,6 @@ export default function KeywordReview({ onSubmit, isLoading }) {
   };
 
   const handleRemoveKeyword = (keywordToRemove) => {
-    keywordDebugLog('review', 'Removing keyword', keywordToRemove);
     setKeywords(keywords.filter(k => k !== keywordToRemove));
   };
 
@@ -269,10 +247,9 @@ export default function KeywordReview({ onSubmit, isLoading }) {
 
     setIsSubmitting(true);
     try {
-      keywordDebugLog('review', 'Submitting keywords', keywords);
       await onSubmit(keywords);
     } catch (error) {
-      keywordDebugWarn('review', 'Keyword submission failed', error);
+      console.warn('[KeywordReview] submission failed', error);
       toast.error(error.message || "Failed to submit campaign. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -295,7 +272,6 @@ export default function KeywordReview({ onSubmit, isLoading }) {
       return;
     }
 
-    keywordDebugLog('review', 'Adding keyword from suggestion', normalized);
     setKeywords([...keywords, normalized]);
     setSuggestions((current) =>
       current.filter((item) => item.keyword.toLowerCase() !== normalized.toLowerCase())
@@ -307,26 +283,13 @@ export default function KeywordReview({ onSubmit, isLoading }) {
       toast.error("Type at least three characters to get suggestions");
       return;
     }
-    keywordDebugLog('suggestions', 'Manual refresh requested', newKeyword.trim());
     startSuggestionStream(newKeyword.trim());
   };
 
   return (
     <Card className="bg-zinc-900/80 border border-zinc-700/50">
       <CardHeader>
-        <div className="flex items-center justify-between gap-3">
-          <CardTitle>Review Your Keywords</CardTitle>
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="keyword-debug-toggle"
-              checked={debugEnabled}
-              onCheckedChange={(value) => onToggleDebug(Boolean(value))}
-            />
-            <Label htmlFor="keyword-debug-toggle" className="text-xs text-muted-foreground">
-              Debug logs
-            </Label>
-          </div>
-        </div>
+        <CardTitle>Review Your Keywords</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
