@@ -29,7 +29,13 @@ export async function GET(req: NextRequest) {
     console.log('🚀 [FAST-SEARCH] Starting search for:', query);
     
     // Use raw SQL for maximum speed
-    const sql = postgres(process.env.DATABASE_URL!);
+    const sql = postgres(process.env.DATABASE_URL!, {
+      max: 1, // serverless: one pooled connection per invocation
+      idle_timeout: 20,
+      max_lifetime: 60 * 5,
+      connect_timeout: 5,
+      prepare: false,
+    });
     
     try {
       const dbStartTime = Date.now();
