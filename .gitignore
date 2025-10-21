@@ -51,3 +51,7 @@ next-env.d.ts
 /billing-check/*.json
 .env*.local
 sorzproject-main/
+
+# database dumps (large files)
+*.sql
+data/*.sql
