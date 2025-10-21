@@ -83,10 +83,10 @@ const queryClient =
   global.__queryClient ??
   postgres(connectionString, {
     // Local development settings vs production
-    idle_timeout: isLocal ? 120 : 30, // Keep local connections alive longer
-    max_lifetime: isLocal ? 60 * 60 * 2 : 60 * 60, // 2h local vs 1h remote
-    max: isLocal ? 10 : 5, // More connections locally for development
-    connect_timeout: isLocal ? 30 : 10, // Longer timeout for local Docker
+    idle_timeout: isLocal ? 120 : 20, // Shorter timeout for serverless (release connections faster)
+    max_lifetime: isLocal ? 60 * 60 * 2 : 60 * 5, // 5min max lifetime in serverless (prevents stale connections)
+    max: isLocal ? 10 : 1, // CRITICAL: 1 connection per serverless instance (many instances = many connections)
+    connect_timeout: 30, // Always 30s - handles cross-region latency (Vercel → US East Supabase)
   });
 
 if (!global.__queryClient) global.__queryClient = queryClient;
