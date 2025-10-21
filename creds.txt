@@ -1,0 +1,44 @@
+ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwbmdmeHB6a29pdHBtY29rZWhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwNTE4ODAsImV4cCI6MjA3NjYyNzg4MH0.EhzrP4SZ3rK-Nx8ZASrI-7e6rzHaxD52ESQspdl2IDU
+SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwbmdmeHB6a29pdHBtY29rZWhwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTA1MTg4MCwiZXhwIjoyMDc2NjI3ODgwfQ.dzIJTDvvXz0Gk8EAmrUweLm2prza6_TTNE4bObZLS-8
+
+
+Connect to your project
+Get the connection strings and environment variables for your app
+
+Connection String
+App Frameworks
+Mobile Frameworks
+ORMs
+MCP
+Type
+
+URI
+Source
+
+Primary database
+Method
+
+Direct connection
+Direct connection
+Ideal for applications with persistent and long-lived connections, such as those running on virtual machines or long-standing containers.
+
+postgresql://postgres:[YOUR_PASSWORD]@db.rpngfxpzkoitpmcokehp.supabase.co:5432/postgres
+
+
+View parameters
+host:
+db.rpngfxpzkoitpmcokehp.supabase.co
+
+port:
+5432
+
+database:
+postgres
+
+user:
+postgres
+
+----
+
+
+PASSWORD=pMmXORMrClLWwX8T

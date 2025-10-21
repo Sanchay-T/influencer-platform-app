@@ -23,7 +23,7 @@ export default function Sidebar({ onNavigate, onTogglePin, isPinned = true, show
 
   const nav = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Campaigns', href: '/', icon: Megaphone },
+    { name: 'Campaigns', href: '/campaigns', icon: Megaphone },
     { name: 'Lists', href: '/lists', icon: ListTree },
     { name: 'Account Settings', href: '/profile', icon: UserRoundCog },
     { name: 'Billing & Plans', href: '/billing', icon: CreditCard },

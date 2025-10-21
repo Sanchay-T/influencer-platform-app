@@ -17,9 +17,9 @@ import * as schema from './schema';
  */
 
 declare global {
-   
+
   var __queryClient: ReturnType<typeof postgres> | undefined;
-   
+
   var __db: ReturnType<typeof drizzle> | undefined;
 }
 
@@ -113,9 +113,9 @@ if (createdNewClient && process.env.NODE_ENV !== 'production') {
     host: summary.host,
     database: summary.database,
     pool: {
-      idleTimeout: isLocal ? 120 : 30,
-      maxLifetime: isLocal ? 60 * 60 * 2 : 60 * 60,
-      maxConnections: isLocal ? 10 : 5,
+      idleTimeout: isLocal ? 120 : 20,
+      maxLifetime: isLocal ? 60 * 60 * 2 : 60 * 5,
+      maxConnections: isLocal ? 10 : 1,
     },
   });
 }
