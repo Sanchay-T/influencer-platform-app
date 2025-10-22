@@ -96,6 +96,12 @@ export async function POST(req: Request) {
     });
   } catch (error: any) {
     logger.error('Search runner failed', error, { jobId }, LogCategory.JOB);
+    console.error('[search-runner] provider failure', {
+      jobId,
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name,
+    });
     return NextResponse.json({ error: error?.message ?? 'Search runner failure' }, { status: 500 });
   }
 }
