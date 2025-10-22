@@ -29,6 +29,10 @@ async function fetchKeywordPage(keyword: string, cursor: number, region: string)
       },
       LogCategory.TIKTOK,
     );
+    console.error('[tiktok-provider] missing ScrapeCreators config', {
+      hasApiKey: Boolean(apiKey),
+      hasApiUrl: Boolean(apiUrl),
+    });
     throw new Error('SCRAPECREATORS API configuration is missing');
   }
 
@@ -192,6 +196,17 @@ export async function runTikTokKeywordProvider(
     },
     LogCategory.TIKTOK,
   );
+  console.warn('[tiktok-provider] started', JSON.stringify({
+    jobId: job.id,
+    status: job.status,
+    keywordsCount: keywords.length,
+    targetResults,
+    processedRuns: job.processedRuns,
+    processedResults: job.processedResults,
+    maxApiCalls,
+    continuationDelayMs: config.continuationDelayMs,
+    region,
+  }));
 
   let processedRuns = job.processedRuns ?? 0;
   let processedResults = job.processedResults ?? 0;
