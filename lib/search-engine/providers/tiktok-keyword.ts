@@ -4,6 +4,7 @@ import { SearchJobService } from '../job-service';
 import { computeProgress, sleep } from '../utils';
 import type { NormalizedCreator, ProviderRunResult, ProviderContext, SearchMetricsSnapshot } from '../types';
 import { addCost, SCRAPECREATORS_COST_PER_CALL_USD } from '../utils/cost';
+import { logger, LogCategory } from '@/lib/logging';
 
 const emailRegex = /[\w.-]+@[\w.-]+\.[\w-]+/gi;
 const profileEndpoint = 'https://api.scrapecreators.com/v1/tiktok/profile';
@@ -19,6 +20,15 @@ async function fetchKeywordPage(keyword: string, cursor: number, region: string)
   const apiKey = process.env.SCRAPECREATORS_API_KEY;
   const apiUrl = process.env.SCRAPECREATORS_API_URL;
   if (!apiKey || !apiUrl) {
+    logger.error(
+      'ScrapeCreators configuration missing for TikTok keyword provider',
+      new Error('SCRAPECREATORS API configuration is missing'),
+      {
+        hasApiKey: Boolean(apiKey),
+        hasApiUrl: Boolean(apiUrl),
+      },
+      LogCategory.TIKTOK,
+    );
     throw new Error('SCRAPECREATORS API configuration is missing');
   }
 
@@ -167,6 +177,21 @@ export async function runTikTokKeywordProvider(
   const region = job.region || 'US';
 
   await service.markProcessing();
+  logger.info(
+    'TikTok keyword provider started',
+    {
+      jobId: job.id,
+      status: job.status,
+      keywordsCount: keywords.length,
+      targetResults,
+      processedRuns: job.processedRuns,
+      processedResults: job.processedResults,
+      maxApiCalls,
+      continuationDelayMs: config.continuationDelayMs,
+      region,
+    },
+    LogCategory.TIKTOK,
+  );
 
   let processedRuns = job.processedRuns ?? 0;
   let processedResults = job.processedResults ?? 0;

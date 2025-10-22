@@ -11,6 +11,7 @@ import { runInstagramEnhancedProvider } from './providers/instagram-enhanced';
 import { runGoogleSerpProvider } from './providers/google-serp';
 import { runInstagramUsReelsProvider } from './providers/instagram-us-reels';
 import { runInstagramV2Provider } from './providers/instagram-v2';
+import { logger, LogCategory } from '@/lib/logging';
 
 export interface SearchExecutionResult {
   service: SearchJobService;
@@ -106,11 +107,41 @@ function isInstagramV2(searchParams?: any): boolean {
 export async function runSearchJob(jobId: string): Promise<SearchExecutionResult> {
   const service = await SearchJobService.load(jobId);
   if (!service) {
+    logger.error(
+      'Search runner could not load job from database',
+      new Error(`Job ${jobId} not found`),
+      { jobId },
+      LogCategory.JOB,
+    );
     throw new Error(`Job ${jobId} not found`);
   }
 
   const job = service.snapshot();
+  logger.info(
+    'Search runner loaded job snapshot',
+    {
+      jobId,
+      status: job.status,
+      platform: job.platform,
+      processedResults: job.processedResults,
+      targetResults: job.targetResults,
+      keywordsCount: Array.isArray(job.keywords) ? job.keywords.length : null,
+      hasSearchParams: Boolean(job.searchParams),
+    },
+    LogCategory.JOB,
+  );
+
   const config = await resolveConfig((job.platform ?? '').toLowerCase());
+  logger.info(
+    'Search runner resolved runtime config',
+    {
+      jobId,
+      platform: job.platform,
+      maxApiCalls: config.maxApiCalls,
+      continuationDelayMs: config.continuationDelayMs,
+    },
+    LogCategory.CONFIG,
+  );
 
   let providerResult: ProviderRunResult;
   const searchParams = job.searchParams as any;
