@@ -12,7 +12,7 @@ export default function Page() {
             Access your Gemz dashboard
           </p>
         </div>
-        <SignIn 
+        <SignIn
           appearance={{
             elements: {
               rootBox: "mx-auto",

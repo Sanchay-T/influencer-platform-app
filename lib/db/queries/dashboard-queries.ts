@@ -29,13 +29,15 @@ type SearchTelemetrySummary = {
 };
 
 // Shared with dashboard overview API to translate Clerk user -> internal id
-async function resolveInternalUserId(clerkUserId: string) {
+async function resolveInternalUserId(clerkUserId: string): Promise<string | null> {
   const user = await db.query.users.findFirst({
     where: eq(users.userId, clerkUserId),
   });
 
   if (!user) {
-    throw new Error('USER_NOT_FOUND');
+    // Return null instead of throwing - let caller handle gracefully
+    console.log(`⚠️ [DASHBOARD-QUERIES] User not found (likely new user): ${clerkUserId}`);
+    return null;
   }
 
   return user.id;
@@ -73,6 +75,11 @@ export async function getFavoriteInfluencersForDashboard(
   limit = 10
 ): Promise<DashboardFavoriteInfluencer[]> {
   const internalUserId = await resolveInternalUserId(clerkUserId);
+
+  // If user not found (new user, webhook pending), return empty array
+  if (!internalUserId) {
+    return [];
+  }
 
   const rows = await db
     .select({

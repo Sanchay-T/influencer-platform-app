@@ -29,8 +29,8 @@ export async function POST(req: NextRequest) {
       requestId
     );
 
-    // Get the headers
-    const headerPayload = headers();
+    // Get the headers (await for Next.js 15 compatibility)
+    const headerPayload = await headers();
     const svixId = headerPayload.get('svix-id');
     const svixTimestamp = headerPayload.get('svix-timestamp');
     const svixSignature = headerPayload.get('svix-signature');
@@ -227,19 +227,17 @@ async function handleUserCreated(userData: any, requestId: string) {
     }
 
     // Create new user profile with normalized tables
-    const now = new Date();
-    const trialEndDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
-
+    // DO NOT activate trial here - trial activates AFTER payment in onboarding Step 4
     await createUser({
       userId: userId,
       email: email,
       fullName: fullName,
       onboardingStep: 'pending', // Will trigger onboarding modal
-      
-      // Trial system - Start 7-day trial immediately
-      trialStartDate: now,
-      trialEndDate: trialEndDate,
-      
+
+      // NO TRIAL DATA - trial will be activated after payment
+      // trialStartDate: undefined,
+      // trialEndDate: undefined,
+
       // Subscription defaults
       currentPlan: 'free', // Start with free, upgrade during onboarding
     });
@@ -252,28 +250,28 @@ async function handleUserCreated(userData: any, requestId: string) {
         table: 'userProfiles',
         recordId: userId,
         currentPlan: 'free',
-        trialStatus: 'active',
-        trialEndDate: trialEndDate.toISOString(),
-        onboardingStep: 'pending'
+        trialStatus: 'pending', // Trial NOT activated yet
+        onboardingStep: 'pending',
+        note: 'Trial will activate after payment in onboarding Step 4'
       },
       requestId
     );
 
     await BillingLogger.logPlanChange(
       'UPGRADE',
-      'New user created with trial period activated',
+      'New user created - trial will activate after payment',
       userId,
       {
         fromPlan: undefined,
         toPlan: 'free',
         reason: 'user_created',
-        billingCycle: 'trial',
-        effective: now.toISOString()
+        billingCycle: 'none', // No trial yet
+        effective: new Date().toISOString()
       },
       requestId
     );
 
-    console.log(`✅ [CLERK-WEBHOOK] User profile created for ${userId} with 7-day trial`);
+    console.log(`✅ [CLERK-WEBHOOK] User profile created for ${userId} (trial pending payment)`);
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Database error';

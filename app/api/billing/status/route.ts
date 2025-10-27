@@ -3,6 +3,7 @@ import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { createUser } from '@/lib/db/queries/user-queries';
 import { BillingService, type PlanKey } from '@/lib/services/billing-service';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
+import { clerkClient } from '@clerk/nextjs/server';
 
 const CACHE_TTL_MS = 30_000; // mirror BillingService cache window
 
@@ -84,34 +85,96 @@ export async function GET(request: NextRequest) {
       billingState = result.state;
       cacheHit = result.cacheHit;
     } catch (serviceError) {
-      // User profile doesn't exist yet - this means Clerk webhook hasn't processed
-      // or there's a timing issue. Don't create user here - let the webhook handle it.
-      error('Billing service lookup failed - user profile not ready', serviceError, {
-        userId,
-        errorType: serviceError instanceof Error ? serviceError.constructor.name : typeof serviceError,
-        message: serviceError instanceof Error ? serviceError.message : String(serviceError)
-      });
+      // User profile doesn't exist - AUTO-CREATE it (webhook may have failed/delayed)
+      const errorMessage = serviceError instanceof Error ? serviceError.message : String(serviceError);
 
-      warn('User profile not found - likely Clerk webhook delay', {
-        userId,
-        recommendation: 'User should wait a moment and refresh, or complete onboarding if not done'
-      });
+      if (errorMessage.includes('USER_NOT_FOUND') || errorMessage.includes('not found')) {
+        info('🆕 New user detected - auto-creating database record', { userId });
 
-      // Return a 503 Service Unavailable with retry-after header
-      // This tells the client that the resource will be available soon
-      const unavailable = NextResponse.json({
-        error: 'Profile is being set up. Please wait a moment and refresh the page.',
-        code: 'PROFILE_NOT_READY',
-        retry: true,
-        retryAfter: 3 // seconds
-      }, { status: 503 });
+        try {
+          // Get user details from Clerk
+          const client = await clerkClient();
+          const clerkUser = await client.users.getUser(userId);
+          const email = clerkUser.emailAddresses?.[0]?.emailAddress;
+          const firstName = clerkUser.firstName || '';
+          const lastName = clerkUser.lastName || '';
+          const fullName = `${firstName} ${lastName}`.trim() || 'User';
 
-      unavailable.headers.set('x-request-id', reqId);
-      unavailable.headers.set('x-started-at', timestamp);
-      unavailable.headers.set('x-duration-ms', String(Date.now() - startedAt));
-      unavailable.headers.set('Retry-After', '3'); // Standard HTTP retry header
+          info('Creating user with Clerk data', {
+            userId,
+            email,
+            fullName,
+            hasEmail: !!email
+          });
 
-      return unavailable;
+          try {
+            // Create user in database
+            await createUser({
+              userId,
+              email: email || `user-${userId}@example.com`, // Fallback email
+              fullName,
+              onboardingStep: 'pending', // Triggers onboarding modal
+            });
+
+            info('✅ User record created successfully', { userId });
+          } catch (createError: any) {
+            // Check if user was created by webhook in the meantime (race condition)
+            if (createError.message?.includes('unique') || createError.message?.includes('duplicate')) {
+              info('User already created (likely by webhook) - continuing', { userId });
+            } else {
+              throw createError; // Re-throw if it's a different error
+            }
+          }
+
+          // NOW fetch billing state with the newly created user (or webhook-created user)
+          const result = await BillingService.getBillingStateWithCache(userId);
+          billingState = result.state;
+          cacheHit = false; // Fresh data, not from cache
+
+        } catch (createError) {
+          // If auto-creation fails, return safe defaults so user can proceed
+          error('Failed to auto-create user - returning safe defaults', createError, { userId });
+
+          const safeDefaults = NextResponse.json({
+            currentPlan: 'free',
+            isTrialing: false,
+            hasActiveSubscription: false,
+            trialStatus: 'pending',
+            subscriptionStatus: 'none',
+            daysRemaining: 0,
+            hoursRemaining: 0,
+            minutesRemaining: 0,
+            trialProgressPercentage: 0,
+            trialTimeRemaining: 'N/A',
+            trialTimeRemainingShort: 'N/A',
+            trialUrgencyLevel: 'low',
+            usageInfo: {
+              campaignsUsed: 0,
+              creatorsUsed: 0,
+              campaignsLimit: 0,
+              creatorsLimit: 0,
+              progressPercentage: 0,
+            },
+            canManageSubscription: false,
+            billingAmount: 0,
+            billingCycle: 'monthly' as const,
+          });
+
+          safeDefaults.headers.set('x-request-id', reqId);
+          safeDefaults.headers.set('x-started-at', timestamp);
+          safeDefaults.headers.set('x-duration-ms', String(Date.now() - startedAt));
+          safeDefaults.headers.set('x-fallback-mode', 'true');
+
+          return safeDefaults;
+        }
+      } else {
+        // Some other error - log and re-throw
+        error('Billing service error (not USER_NOT_FOUND)', serviceError, {
+          userId,
+          errorType: serviceError instanceof Error ? serviceError.constructor.name : typeof serviceError
+        });
+        throw serviceError;
+      }
     }
 
     const responsePayload = {
