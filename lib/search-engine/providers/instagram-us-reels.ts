@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 // search-engine/providers/instagram-us-reels.ts — US Reels agent-backed pipeline integration
 import { runInstagramUsReelsAgent } from '@/lib/instagram-us-reels/agent/runner';
 import type {
@@ -204,7 +205,7 @@ export async function runInstagramUsReelsProvider(
     userId: job.userId,
     targetResults: job.targetResults,
   }, LogCategory.SCRAPING);
-  console.warn('[US_REELS][ENTRY]', {
+  structuredConsole.warn('[US_REELS][ENTRY]', {
     jobId: job.id,
     campaignId: job.campaignId,
     keywords,
@@ -212,7 +213,7 @@ export async function runInstagramUsReelsProvider(
     targetResults: job.targetResults,
     timestamp: new Date().toISOString(),
   });
-  console.warn('[US_REELS][ENV]', {
+  structuredConsole.warn('[US_REELS][ENV]', {
     nodeEnv: process.env.NODE_ENV,
     hasOpenAI: Boolean(process.env.OPENAI_API_KEY),
     hasSerper: Boolean(process.env.SERPER_API_KEY),
@@ -245,7 +246,7 @@ export async function runInstagramUsReelsProvider(
         keyword,
         processedResults,
       }, LogCategory.SCRAPING);
-      console.warn('[US_REELS][KEYWORD_START]', {
+      structuredConsole.warn('[US_REELS][KEYWORD_START]', {
         jobId: job.id,
         keyword,
         processedResults,
@@ -265,7 +266,7 @@ export async function runInstagramUsReelsProvider(
           jobId: job.id,
           keyword,
         }, LogCategory.SCRAPING);
-        console.error('[US_REELS][AGENT_ERROR]', {
+        structuredConsole.error('[US_REELS][AGENT_ERROR]', {
           jobId: job.id,
           keyword,
           message: lastError.message,
@@ -279,7 +280,7 @@ export async function runInstagramUsReelsProvider(
         continue;
       }
 
-      console.warn('[US_REELS][AGENT_RESULT]', {
+      structuredConsole.warn('[US_REELS][AGENT_RESULT]', {
         jobId: job.id,
         keyword,
         sessionId: agentResult.sessionId,
@@ -462,7 +463,7 @@ export async function runInstagramUsReelsProvider(
           durationMs: handleDuration,
         }, LogCategory.SCRAPING);
 
-        console.warn('[US_REELS][HANDLE_COMPLETE]', {
+        structuredConsole.warn('[US_REELS][HANDLE_COMPLETE]', {
           jobId: job.id,
           keyword,
           handle: group.handle,
@@ -485,7 +486,7 @@ export async function runInstagramUsReelsProvider(
         processedResults,
         durationMs: Date.now() - keywordStartedAt,
       }, LogCategory.SCRAPING);
-      console.warn('[US_REELS][KEYWORD_COMPLETE]', {
+      structuredConsole.warn('[US_REELS][KEYWORD_COMPLETE]', {
         jobId: job.id,
         keyword,
         processedResults,
@@ -534,7 +535,7 @@ export async function runInstagramUsReelsProvider(
       handlesProcessed: metrics.handles?.completedHandles?.length ?? 0,
       handlesRemaining: metrics.handles?.remainingHandles?.length ?? 0,
     }, LogCategory.SCRAPING);
-    console.warn('[US_REELS][COMPLETE]', {
+    structuredConsole.warn('[US_REELS][COMPLETE]', {
       jobId: job.id,
       keywords,
       totalCreators: processedResults,
@@ -558,7 +559,7 @@ export async function runInstagramUsReelsProvider(
       keywords,
       userId: job.userId,
     }, LogCategory.SCRAPING);
-    console.error('[US_REELS][ERROR]', {
+    structuredConsole.error('[US_REELS][ERROR]', {
       jobId: job.id,
       keywords,
       message: err.message,

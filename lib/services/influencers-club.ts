@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import "server-only";
 
 const API_BASE = "https://api-dashboard.influencers.club/public/v1";
@@ -65,7 +66,7 @@ export async function searchCreators(params: {
     try {
       details = await res.text();
     } catch (readError) {
-      console.warn('[influencers-club] failed to read discovery error body', readError);
+      structuredConsole.warn('[influencers-club] failed to read discovery error body', readError);
     }
     const hint = extractErrorHint(details);
     throw new Error(`Discovery request failed (${res.status})${hint ? ` – ${hint}` : ''}`);

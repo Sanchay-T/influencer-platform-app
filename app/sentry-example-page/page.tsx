@@ -1,5 +1,7 @@
 "use client";
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
 import * as Sentry from "@sentry/nextjs";
 
 export default function SentryExamplePage() {
@@ -39,7 +41,7 @@ export default function SentryExamplePage() {
                 span.setAttribute("test", "manual-test");
                 span.setAttribute("timestamp", new Date().toISOString());
                 
-                console.log("Performance span test completed");
+                structuredConsole.log("Performance span test completed");
                 alert("Performance span tracked!");
               }
             );

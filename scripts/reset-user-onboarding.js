@@ -51,6 +51,7 @@ const userProfiles = pgTable('user_profiles', {
   cardExpYear: integer('card_exp_year'),
   usageCampaignsCurrent: integer('usage_campaigns_current').default(0),
   usageCreatorsCurrentMonth: integer('usage_creators_current_month').default(0),
+  enrichmentsCurrentMonth: integer('enrichments_current_month').default(0),
   planCampaignsLimit: integer('plan_campaigns_limit'),
   planCreatorsLimit: integer('plan_creators_limit'),
   billingSyncStatus: varchar('billing_sync_status', { length: 20 }).default('pending')
@@ -148,6 +149,7 @@ async function resetUserOnboarding(email) {
         cardExpYear: null,
         usageCampaignsCurrent: 0,
         usageCreatorsCurrentMonth: 0,
+        enrichmentsCurrentMonth: 0,
         planCampaignsLimit: 0,
         planCreatorsLimit: 0,
         billingSyncStatus: 'reset_by_script'

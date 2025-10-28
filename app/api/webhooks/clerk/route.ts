@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { Webhook } from 'svix';
@@ -139,7 +140,7 @@ export async function POST(req: NextRequest) {
           },
           requestId
         );
-        console.log(`🔔 [CLERK-WEBHOOK] Unhandled event type: ${type}`);
+        structuredConsole.log(`🔔 [CLERK-WEBHOOK] Unhandled event type: ${type}`);
         break;
     }
 
@@ -271,7 +272,7 @@ async function handleUserCreated(userData: any, requestId: string) {
       requestId
     );
 
-    console.log(`✅ [CLERK-WEBHOOK] User profile created for ${userId} (trial pending payment)`);
+    structuredConsole.log(`✅ [CLERK-WEBHOOK] User profile created for ${userId} (trial pending payment)`);
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Database error';
@@ -289,7 +290,7 @@ async function handleUserCreated(userData: any, requestId: string) {
       requestId
     );
 
-    console.error(`❌ [CLERK-WEBHOOK] Error creating user profile for ${userId}:`, error);
+    structuredConsole.error(`❌ [CLERK-WEBHOOK] Error creating user profile for ${userId}:`, error);
     throw error;
   }
 }
@@ -339,7 +340,7 @@ async function handleUserUpdated(userData: any, requestId: string) {
       requestId
     );
 
-    console.log(`✅ [CLERK-WEBHOOK] User profile updated for ${userId}`);
+    structuredConsole.log(`✅ [CLERK-WEBHOOK] User profile updated for ${userId}`);
 
   } catch (error) {
     await BillingLogger.logError(
@@ -354,7 +355,7 @@ async function handleUserUpdated(userData: any, requestId: string) {
       requestId
     );
 
-    console.error(`❌ [CLERK-WEBHOOK] Error updating user profile for ${userId}:`, error);
+    structuredConsole.error(`❌ [CLERK-WEBHOOK] Error updating user profile for ${userId}:`, error);
     throw error;
   }
 }
@@ -407,7 +408,7 @@ async function handleUserDeleted(userData: any, requestId: string) {
       requestId
     );
 
-    console.log(`✅ [CLERK-WEBHOOK] User profile deleted for ${userId}`);
+    structuredConsole.log(`✅ [CLERK-WEBHOOK] User profile deleted for ${userId}`);
 
   } catch (error) {
     await BillingLogger.logError(
@@ -420,7 +421,7 @@ async function handleUserDeleted(userData: any, requestId: string) {
       requestId
     );
 
-    console.error(`❌ [CLERK-WEBHOOK] Error deleting user profile for ${userId}:`, error);
+    structuredConsole.error(`❌ [CLERK-WEBHOOK] Error deleting user profile for ${userId}:`, error);
     throw error;
   }
 }

@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { db } from '@/lib/db';
@@ -13,17 +14,17 @@ export async function POST() {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    console.log('🔄🔄🔄 [COMPLETE-RESET] ===================================');
-    console.log('🔄🔄🔄 [COMPLETE-RESET] STARTING COMPLETE USER RESET');
-    console.log('🔄🔄🔄 [COMPLETE-RESET] ===================================');
-    console.log('🔑 [COMPLETE-RESET] User ID:', userId);
+    structuredConsole.log('🔄🔄🔄 [COMPLETE-RESET] ===================================');
+    structuredConsole.log('🔄🔄🔄 [COMPLETE-RESET] STARTING COMPLETE USER RESET');
+    structuredConsole.log('🔄🔄🔄 [COMPLETE-RESET] ===================================');
+    structuredConsole.log('🔑 [COMPLETE-RESET] User ID:', userId);
 
     // Step 1: Delete existing user from normalized tables
     // Find the user first
     const existingUser = await getUserProfile(userId);
     if (existingUser) {
       await db.delete(users).where(eq(users.userId, userId));
-      console.log('🗑️ [COMPLETE-RESET] Deleted existing user profile');
+      structuredConsole.log('🗑️ [COMPLETE-RESET] Deleted existing user profile');
     }
 
     // Step 2: Create fresh profile with pending onboarding
@@ -55,6 +56,7 @@ export async function POST() {
       // Reset usage
       usageCampaignsCurrent: 0,
       usageCreatorsCurrentMonth: 0,
+      enrichmentsCurrentMonth: 0,
       usageResetDate: now,
       
       // Reset billing
@@ -78,14 +80,14 @@ export async function POST() {
       trialEndDate: trialEndDate,
       currentPlan: 'free'
     });
-    console.log('✅ [COMPLETE-RESET] Created fresh user profile with pending onboarding');
+    structuredConsole.log('✅ [COMPLETE-RESET] Created fresh user profile with pending onboarding');
 
-    console.log('🔄🔄🔄 [COMPLETE-RESET] ===================================');
-    console.log('🔄🔄🔄 [COMPLETE-RESET] RESET COMPLETE - NEXT STEPS:');
-    console.log('🔄🔄🔄 [COMPLETE-RESET] 1. Clear browser cache/localStorage');
-    console.log('🔄🔄🔄 [COMPLETE-RESET] 2. Refresh the page');
-    console.log('🔄🔄🔄 [COMPLETE-RESET] 3. Onboarding should appear');
-    console.log('🔄🔄🔄 [COMPLETE-RESET] ===================================');
+    structuredConsole.log('🔄🔄🔄 [COMPLETE-RESET] ===================================');
+    structuredConsole.log('🔄🔄🔄 [COMPLETE-RESET] RESET COMPLETE - NEXT STEPS:');
+    structuredConsole.log('🔄🔄🔄 [COMPLETE-RESET] 1. Clear browser cache/localStorage');
+    structuredConsole.log('🔄🔄🔄 [COMPLETE-RESET] 2. Refresh the page');
+    structuredConsole.log('🔄🔄🔄 [COMPLETE-RESET] 3. Onboarding should appear');
+    structuredConsole.log('🔄🔄🔄 [COMPLETE-RESET] ===================================');
 
     return NextResponse.json({
       success: true,
@@ -104,7 +106,7 @@ export async function POST() {
     });
 
   } catch (error) {
-    console.error('💥 [COMPLETE-RESET] Error:', error);
+    structuredConsole.error('💥 [COMPLETE-RESET] Error:', error);
     return NextResponse.json({ 
       error: 'Reset failed', 
       details: error instanceof Error ? error.message : 'Unknown error'

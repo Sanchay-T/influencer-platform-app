@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { db } from '@/lib/db';
 import { campaigns, scrapingJobs, scrapingResults, subscriptionPlans, users, userSubscriptions, userUsage } from '@/lib/db/schema';
 import { createUser, getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
@@ -62,15 +63,16 @@ export class SubscriptionTestUtils {
         const existingUser = await getUserProfile(user.userId);
 
         if (existingUser) {
-          console.log(`✅ [TEST-UTILS] User ${user.userId} already exists, updating...`);
+          structuredConsole.log(`✅ [TEST-UTILS] User ${user.userId} already exists, updating...`);
           await updateUserProfile(user.userId, {
             fullName: user.name,
             currentPlan: user.plan,
             usageCampaignsCurrent: user.campaignsUsed,
-            usageCreatorsCurrentMonth: user.creatorsUsed
+            usageCreatorsCurrentMonth: user.creatorsUsed,
+            enrichmentsCurrentMonth: user.enrichmentsUsed ?? 0
           });
         } else {
-          console.log(`➕ [TEST-UTILS] Creating new user ${user.userId}...`);
+          structuredConsole.log(`➕ [TEST-UTILS] Creating new user ${user.userId}...`);
           await createUser({
             userId: user.userId,
             fullName: user.name,
@@ -86,11 +88,11 @@ export class SubscriptionTestUtils {
           });
         }
       } catch (error) {
-        console.error(`❌ [TEST-UTILS] Error creating user ${user.userId}:`, error);
+        structuredConsole.error(`❌ [TEST-UTILS] Error creating user ${user.userId}:`, error);
       }
     }
 
-    console.log(`✅ [TEST-UTILS] Created/updated ${testUsers.length} test users`);
+    structuredConsole.log(`✅ [TEST-UTILS] Created/updated ${testUsers.length} test users`);
     return testUsers;
   }
 
@@ -100,10 +102,11 @@ export class SubscriptionTestUtils {
   static async resetUserUsage(userId: string): Promise<void> {
     await updateUserProfile(userId, {
       usageCampaignsCurrent: 0,
-      usageCreatorsCurrentMonth: 0
+      usageCreatorsCurrentMonth: 0,
+      enrichmentsCurrentMonth: 0
     });
     
-    console.log(`✅ [TEST-UTILS] Reset usage for user ${userId}`);
+    structuredConsole.log(`✅ [TEST-UTILS] Reset usage for user ${userId}`);
   }
 
   /**
@@ -120,7 +123,7 @@ export class SubscriptionTestUtils {
       currentPlan: newPlan
     });
 
-    console.log(`✅ [TEST-UTILS] Switched user ${userId} to ${newPlan} plan`);
+    structuredConsole.log(`✅ [TEST-UTILS] Switched user ${userId} to ${newPlan} plan`);
   }
 
   /**
@@ -155,7 +158,7 @@ export class SubscriptionTestUtils {
         await PlanEnforcementService.trackCampaignCreated(userId);
         
         success++;
-        console.log(`✅ [TEST-UTILS] Created campaign ${i + 1}/${count} for user ${userId}`);
+        structuredConsole.log(`✅ [TEST-UTILS] Created campaign ${i + 1}/${count} for user ${userId}`);
       } catch (error) {
         failed++;
         errors.push(`Campaign ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -180,7 +183,7 @@ export class SubscriptionTestUtils {
       // Track the creator usage
       await PlanEnforcementService.trackCreatorsFound(userId, validation.adjustedLimit || creatorCount);
       
-      console.log(`✅ [TEST-UTILS] Tracked ${validation.adjustedLimit || creatorCount} creators for user ${userId}`);
+      structuredConsole.log(`✅ [TEST-UTILS] Tracked ${validation.adjustedLimit || creatorCount} creators for user ${userId}`);
       return { success: true };
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
@@ -214,7 +217,7 @@ export class SubscriptionTestUtils {
         upgradeSuggestion
       };
     } catch (error) {
-      console.error(`❌ [TEST-UTILS] Error getting user status:`, error);
+      structuredConsole.error(`❌ [TEST-UTILS] Error getting user status:`, error);
       return null;
     }
   }
@@ -236,13 +239,13 @@ export class SubscriptionTestUtils {
         for (const campaign of testCampaigns) {
           await db.delete(campaigns).where(eq(campaigns.id, campaign.id));
         }
-        console.log(`🗑️ [TEST-UTILS] Deleted ${testCampaigns.length} test campaigns`);
+        structuredConsole.log(`🗑️ [TEST-UTILS] Deleted ${testCampaigns.length} test campaigns`);
       }
 
       // Don't delete test users as they might be useful to keep around
-      console.log(`✅ [TEST-UTILS] Cleanup completed`);
+      structuredConsole.log(`✅ [TEST-UTILS] Cleanup completed`);
     } catch (error) {
-      console.error(`❌ [TEST-UTILS] Error during cleanup:`, error);
+      structuredConsole.error(`❌ [TEST-UTILS] Error during cleanup:`, error);
     }
   }
 
@@ -264,7 +267,7 @@ export class SubscriptionTestUtils {
     const results: Array<{ test: string; passed: boolean; details: string }> = [];
 
     try {
-      console.log('🧪 [TEST-UTILS] Starting comprehensive test suite...');
+      structuredConsole.log('🧪 [TEST-UTILS] Starting comprehensive test suite...');
 
       // Test 1: Glow Up Plan Campaign Limits
       await this.resetUserUsage('test_glow_up_user');
@@ -307,7 +310,7 @@ export class SubscriptionTestUtils {
       const passed = results.filter(r => r.passed).length;
       const failed = results.length - passed;
 
-      console.log(`✅ [TEST-UTILS] Test suite completed: ${passed}/${results.length} passed`);
+      structuredConsole.log(`✅ [TEST-UTILS] Test suite completed: ${passed}/${results.length} passed`);
 
       return {
         results,
@@ -318,7 +321,7 @@ export class SubscriptionTestUtils {
         }
       };
     } catch (error) {
-      console.error('❌ [TEST-UTILS] Test suite failed:', error);
+      structuredConsole.error('❌ [TEST-UTILS] Test suite failed:', error);
       return {
         results: [{
           test: 'Test Suite Execution',

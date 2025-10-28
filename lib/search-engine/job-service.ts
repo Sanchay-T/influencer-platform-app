@@ -244,15 +244,50 @@ export class SearchJobService {
   }
 
   async updateSearchParams(patch: Record<string, any>) {
+    // 🔍 DIAGNOSTIC: Log before sanitization
+    console.log('[DIAGNOSTIC] updateSearchParams called', {
+      jobId: this.job.id,
+      patchKeys: Object.keys(patch),
+      patchSize: JSON.stringify(patch).length,
+    });
+
+    // Ensure current searchParams is a valid object
+    const currentParams = this.job.searchParams
+      ? (typeof this.job.searchParams === 'object' ? this.job.searchParams : {})
+      : {};
+
     const nextParams = {
-      ...(this.job.searchParams ?? {}),
+      ...currentParams,
       ...patch,
     };
 
+    // 🔍 DIAGNOSTIC: Check for undefined values before sanitization
+    const hasUndefined = JSON.stringify(nextParams).includes('undefined');
+    console.log('[DIAGNOSTIC] Before sanitization', {
+      jobId: this.job.id,
+      hasUndefined,
+      nextParamsSize: JSON.stringify(nextParams).length,
+    });
+
+    // Sanitize: Remove undefined values, circular refs, and non-JSON-serializable data
+    // This prevents PostgreSQL "invalid input syntax for type json" errors
+    const sanitized = JSON.parse(JSON.stringify(nextParams));
+
+    // 🔍 DIAGNOSTIC: Verify sanitization worked
+    console.log('[DIAGNOSTIC] After sanitization', {
+      jobId: this.job.id,
+      sanitizedSize: JSON.stringify(sanitized).length,
+      diffSize: JSON.stringify(nextParams).length - JSON.stringify(sanitized).length,
+    });
+
     await db
       .update(scrapingJobs)
-      .set({ searchParams: nextParams, updatedAt: new Date() })
+      .set({ searchParams: sanitized, updatedAt: new Date() })
       .where(eq(scrapingJobs.id, this.job.id));
+
+    console.log('[DIAGNOSTIC] Database update succeeded', {
+      jobId: this.job.id,
+    });
 
     await this.refresh();
   }
@@ -297,9 +332,9 @@ export class SearchJobService {
         const normalizedKey = normalizeHandleKey(handleValue);
         metrics[normalizedKey] = {
           handle: handleValue,
-          keyword: typeof metricRecord.keyword === 'string'
+          keyword: typeof metricRecord.keyword === 'string' && metricRecord.keyword.trim()
             ? metricRecord.keyword
-            : (metricRecord.keyword as string | null | undefined) ?? undefined,
+            : null,
           totalCreators: Number(metricRecord.totalCreators) || 0,
           newCreators: Number(metricRecord.newCreators) || 0,
           duplicateCreators: Number(metricRecord.duplicateCreators) || 0,

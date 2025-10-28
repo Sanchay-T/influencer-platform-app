@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { subscriptionPlans, users, userSubscriptions, userUsage } from '@/lib/db/schema';
@@ -7,7 +8,7 @@ export async function GET() {
   try {
     // Simple test comment to verify pre-commit hook functionality
     // 🔍 DIAGNOSTIC LOGS - Environment Detection
-    console.log('🔍 [STATUS-DEBUG] Environment Diagnostics:', {
+    structuredConsole.log('🔍 [STATUS-DEBUG] Environment Diagnostics:', {
       NODE_ENV: process.env.NODE_ENV,
       DATABASE_URL_PREVIEW: process.env.DATABASE_URL?.replace(/\/\/.*@/, '//***@'),
       HAS_PASSWORD: process.env.DATABASE_URL?.includes(':') && process.env.DATABASE_URL?.includes('@'),
@@ -15,11 +16,11 @@ export async function GET() {
       ENV_FILE_LOADED: process.env.DATABASE_URL?.includes('influencer_platform_dev') ? 'YES' : 'NO'
     });
     
-    console.log('🔍 [STATUS] Checking database connection...');
+    structuredConsole.log('🔍 [STATUS] Checking database connection...');
     
     // Test database connection
     const plans = await db.select().from(subscriptionPlans);
-    console.log('✅ [STATUS] Found plans:', plans.length);
+    structuredConsole.log('✅ [STATUS] Found plans:', plans.length);
 
     const [{ totalUsers }] = await db
       .select({ totalUsers: sql<number>`COUNT(*)` })
@@ -43,7 +44,7 @@ export async function GET() {
       .orderBy(desc(users.createdAt))
       .limit(25);
 
-    console.log('✅ [STATUS] Sample users loaded:', userSummaries.length);
+    structuredConsole.log('✅ [STATUS] Sample users loaded:', userSummaries.length);
 
     const connectionString = process.env.DATABASE_URL;
     const isLocal = connectionString?.includes('localhost') || connectionString?.includes('127.0.0.1');
@@ -76,7 +77,7 @@ export async function GET() {
       }))
     });
   } catch (error) {
-    console.error('❌ [STATUS] Database error:', error);
+    structuredConsole.error('❌ [STATUS] Database error:', error);
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'

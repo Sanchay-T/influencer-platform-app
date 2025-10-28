@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { and, desc, eq, inArray, or, sql } from 'drizzle-orm';
 import { db } from '../index';
 import {
@@ -359,12 +360,12 @@ export async function deleteList(clerkUserId: string, listId: string) {
   }
   assertListRole(access.role, 'owner');
 
-  console.debug('[LIST-DELETE] Starting removal', { listId, userId: user.id });
+  structuredConsole.debug('[LIST-DELETE] Starting removal', { listId, userId: user.id });
   try {
     await db.delete(creatorLists).where(eq(creatorLists.id, listId));
-    console.debug('[LIST-DELETE] Base row removed', { listId });
+    structuredConsole.debug('[LIST-DELETE] Base row removed', { listId });
   } catch (error) {
-    console.error('[LIST-DELETE] Error during delete sequence', {
+    structuredConsole.error('[LIST-DELETE] Error during delete sequence', {
       listId,
       userId: user.id,
       message: (error as Error).message,

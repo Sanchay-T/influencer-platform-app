@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { and, desc, eq, gte, inArray, or, sql } from 'drizzle-orm';
 import { db } from '../index';
 import {
@@ -36,7 +37,7 @@ async function resolveInternalUserId(clerkUserId: string): Promise<string | null
 
   if (!user) {
     // Return null instead of throwing - let caller handle gracefully
-    console.log(`⚠️ [DASHBOARD-QUERIES] User not found (likely new user): ${clerkUserId}`);
+    structuredConsole.log(`⚠️ [DASHBOARD-QUERIES] User not found (likely new user): ${clerkUserId}`);
     return null;
   }
 

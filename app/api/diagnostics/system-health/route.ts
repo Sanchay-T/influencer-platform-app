@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { db } from '@/lib/db';
@@ -12,7 +13,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('🔍 [SYSTEM-HEALTH] Running comprehensive system diagnostics for user:', userId);
+    structuredConsole.log('🔍 [SYSTEM-HEALTH] Running comprehensive system diagnostics for user:', userId);
 
     const diagnostics: any = {
       timestamp: new Date().toISOString(),
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest) {
     };
 
     // 1. Check if new tables exist
-    console.log('🔍 [SYSTEM-HEALTH] Checking database schema...');
+    structuredConsole.log('🔍 [SYSTEM-HEALTH] Checking database schema...');
     try {
       // Test events table
       const eventCount = await db.select({ count: count() }).from(events);
@@ -29,13 +30,13 @@ export async function GET(request: NextRequest) {
         exists: true,
         totalEvents: eventCount[0]?.count || 0
       };
-      console.log('✅ [SYSTEM-HEALTH] Events table exists with', eventCount[0]?.count, 'events');
+      structuredConsole.log('✅ [SYSTEM-HEALTH] Events table exists with', eventCount[0]?.count, 'events');
     } catch (error) {
       diagnostics.checks.eventsTable = {
         exists: false,
         error: error instanceof Error ? error.message : 'Unknown error'
       };
-      console.error('❌ [SYSTEM-HEALTH] Events table check failed:', error);
+      structuredConsole.error('❌ [SYSTEM-HEALTH] Events table check failed:', error);
     }
 
     try {
@@ -45,17 +46,17 @@ export async function GET(request: NextRequest) {
         exists: true,
         totalJobs: jobCount[0]?.count || 0
       };
-      console.log('✅ [SYSTEM-HEALTH] Background jobs table exists with', jobCount[0]?.count, 'jobs');
+      structuredConsole.log('✅ [SYSTEM-HEALTH] Background jobs table exists with', jobCount[0]?.count, 'jobs');
     } catch (error) {
       diagnostics.checks.backgroundJobsTable = {
         exists: false,
         error: error instanceof Error ? error.message : 'Unknown error'
       };
-      console.error('❌ [SYSTEM-HEALTH] Background jobs table check failed:', error);
+      structuredConsole.error('❌ [SYSTEM-HEALTH] Background jobs table check failed:', error);
     }
 
     // 2. Check user profile state
-    console.log('🔍 [SYSTEM-HEALTH] Checking user profile state...');
+    structuredConsole.log('🔍 [SYSTEM-HEALTH] Checking user profile state...');
     const userProfile = await getUserProfile(userId);
 
     if (userProfile) {
@@ -82,7 +83,7 @@ export async function GET(request: NextRequest) {
 
     // 3. Check user events
     if (diagnostics.checks.eventsTable.exists) {
-      console.log('🔍 [SYSTEM-HEALTH] Checking user events...');
+      structuredConsole.log('🔍 [SYSTEM-HEALTH] Checking user events...');
       try {
         const userEvents = await db.query.events.findMany({
           where: eq(events.aggregateId, userId),
@@ -109,7 +110,7 @@ export async function GET(request: NextRequest) {
 
     // 4. Check user background jobs
     if (diagnostics.checks.backgroundJobsTable.exists && userProfile) {
-      console.log('🔍 [SYSTEM-HEALTH] Checking user background jobs...');
+      structuredConsole.log('🔍 [SYSTEM-HEALTH] Checking user background jobs...');
       try {
         const userJobs = await db.query.backgroundJobs.findMany({
           where: eq(backgroundJobs.payload, userProfile.userId),
@@ -139,7 +140,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 5. Check service imports
-    console.log('🔍 [SYSTEM-HEALTH] Checking service imports...');
+    structuredConsole.log('🔍 [SYSTEM-HEALTH] Checking service imports...');
     try {
       const { EventService } = await import('@/lib/events/event-service');
       diagnostics.checks.eventService = {
@@ -192,7 +193,7 @@ export async function GET(request: NextRequest) {
       ] : ['System appears healthy']
     };
 
-    console.log('📊 [SYSTEM-HEALTH] Diagnostics complete:', {
+    structuredConsole.log('📊 [SYSTEM-HEALTH] Diagnostics complete:', {
       status: diagnostics.overallHealth.status,
       criticalIssues: criticalIssues.length,
       userState: diagnostics.checks.userProfile?.onboardingStep || 'unknown'
@@ -201,7 +202,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(diagnostics);
 
   } catch (error) {
-    console.error('❌ [SYSTEM-HEALTH] Diagnostics failed:', error);
+    structuredConsole.error('❌ [SYSTEM-HEALTH] Diagnostics failed:', error);
     return NextResponse.json({
       error: 'Diagnostics failed',
       details: error instanceof Error ? error.message : 'Unknown error'

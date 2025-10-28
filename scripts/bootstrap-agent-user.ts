@@ -85,6 +85,7 @@ async function main() {
     planFeatures: features,
     usageCampaignsCurrent: 0,
     usageCreatorsCurrentMonth: 0,
+    enrichmentsCurrentMonth: 0,
     billingSyncStatus: 'admin_upgraded',
   })
 
@@ -96,4 +97,3 @@ main().catch((err) => {
   console.error('bootstrap-agent-user failed:', err)
   process.exit(1)
 })
-

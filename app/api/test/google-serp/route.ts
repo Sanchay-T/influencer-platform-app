@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import '@/lib/config/load-env';
 import { NextResponse } from 'next/server';
 
@@ -104,7 +105,7 @@ export async function POST(req: Request) {
       creators,
     });
   } catch (error: any) {
-    console.error('[test/google-serp] failed', error);
+    structuredConsole.error('[test/google-serp] failed', error);
     return NextResponse.json({ error: error?.message ?? 'Internal server error' }, { status: 500 });
   }
 }

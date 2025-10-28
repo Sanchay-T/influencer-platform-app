@@ -1,4 +1,6 @@
-'use client'
+'use client';
+
+import { structuredConsole } from '@/lib/logging/console-proxy';
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -19,23 +21,23 @@ export default function CampaignForm() {
 
   useEffect(() => {
     // Move initial render log here to prevent hydration errors
-    console.log('🖥️ [CLIENT] Campaign form component rendered');
-    console.log('🖥️ [CLIENT] Campaign form component mounted');
+    structuredConsole.log('🖥️ [CLIENT] Campaign form component rendered');
+    structuredConsole.log('🖥️ [CLIENT] Campaign form component mounted');
     
     return () => {
-      console.log('🖥️ [CLIENT] Campaign form component unmounted');
+      structuredConsole.log('🖥️ [CLIENT] Campaign form component unmounted');
     };
   }, []);
   
   const handleSubmitBasicInfo = async (e) => {
     e.preventDefault();
-    console.log('📝 [CLIENT] Campaign basic info submitted', {
+    structuredConsole.log('📝 [CLIENT] Campaign basic info submitted', {
       name: formData.name,
       description: formData.description?.substring(0, 20) + (formData.description?.length > 20 ? '...' : '')
     });
     setIsSubmitting(true);
     try {
-      console.log('🔄 [CLIENT] Creating campaign via API...');
+      structuredConsole.log('🔄 [CLIENT] Creating campaign via API...');
       const response = await fetch('/api/campaigns', {
         method: 'POST',
         headers: {
@@ -48,27 +50,27 @@ export default function CampaignForm() {
       });
 
       const campaign = await response.json();
-      console.log('📥 [CLIENT] API response received:', campaign);
+      structuredConsole.log('📥 [CLIENT] API response received:', campaign);
 
       if (!response.ok) {
-        console.error('❌ [CLIENT] Campaign creation API error:', campaign.error || 'Unknown error');
+        structuredConsole.error('❌ [CLIENT] Campaign creation API error:', campaign.error || 'Unknown error');
         throw new Error(campaign.error || 'Error al crear la campaña');
       }
 
-      console.log('✅ [CLIENT] Campaign created successfully', { id: campaign.id, name: campaign.name });
+      structuredConsole.log('✅ [CLIENT] Campaign created successfully', { id: campaign.id, name: campaign.name });
 
       // Asegurarnos de que guardamos el ID correctamente
-      console.log('🔄 [CLIENT] Saving campaign data to sessionStorage');
+      structuredConsole.log('🔄 [CLIENT] Saving campaign data to sessionStorage');
       sessionStorage.setItem('currentCampaign', JSON.stringify({
         id: campaign.id,
         name: campaign.name
       }));
 
       const searchRoute = `/campaigns/search?campaignId=${campaign.id}`;
-      console.log('🔄 [CLIENT] Redirecting to search chooser:', searchRoute);
+      structuredConsole.log('🔄 [CLIENT] Redirecting to search chooser:', searchRoute);
       router.push(searchRoute);
     } catch (error) {
-      console.error('❌ [CLIENT] Error creating campaign:', error);
+      structuredConsole.error('❌ [CLIENT] Error creating campaign:', error);
       toast.error(error.message);
       setIsSubmitting(false);
     } finally {
@@ -89,7 +91,7 @@ export default function CampaignForm() {
               required
               value={formData.name}
               onChange={(e) => {
-                console.log('✏️ [CLIENT] Campaign name changed:', e.target.value);
+                structuredConsole.log('✏️ [CLIENT] Campaign name changed:', e.target.value);
                 setFormData({ ...formData, name: e.target.value });
               }}
               placeholder="E.g.: Summer Campaign 2025"
@@ -102,7 +104,7 @@ export default function CampaignForm() {
               required
               value={formData.description}
               onChange={(e) => {
-                console.log('✏️ [CLIENT] Campaign description changed');
+                structuredConsole.log('✏️ [CLIENT] Campaign description changed');
                 setFormData({ ...formData, description: e.target.value });
               }}
               placeholder="Describe your campaign goals and target audience..."

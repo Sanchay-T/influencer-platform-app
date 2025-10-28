@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
 import { and, eq } from 'drizzle-orm';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
@@ -35,7 +36,7 @@ function buildSearchParams(options: InstagramV2Options) {
 
 async function scheduleSearchJob(jobId: string) {
   if (!process.env.QSTASH_TOKEN) {
-    console.warn('[instagram-v2] QStash token missing; background processing disabled');
+    structuredConsole.warn('[instagram-v2] QStash token missing; background processing disabled');
     return;
   }
 
@@ -155,7 +156,7 @@ export async function POST(req: NextRequest) {
       message: 'Instagram 2.0 search started successfully',
     });
   } catch (error) {
-    console.error('[instagram-v2] POST failed', error);
+    structuredConsole.error('[instagram-v2] POST failed', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });
   }
@@ -244,7 +245,7 @@ export async function GET(req: NextRequest) {
       pagination,
     });
   } catch (error) {
-    console.error('[instagram-v2] GET failed', error);
+    structuredConsole.error('[instagram-v2] GET failed', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });
   }

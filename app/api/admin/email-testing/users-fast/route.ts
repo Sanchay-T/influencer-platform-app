@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import postgres from 'postgres';
@@ -26,7 +27,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ users: [] });
     }
 
-    console.log('🚀 [FAST-SEARCH] Starting search for:', query);
+    structuredConsole.log('🚀 [FAST-SEARCH] Starting search for:', query);
     
     // Use raw SQL for maximum speed
     const sql = postgres(process.env.DATABASE_URL!, {
@@ -63,7 +64,7 @@ export async function GET(req: NextRequest) {
       `;
       
       const dbTime = Date.now() - dbStartTime;
-      console.log(`⚡ [FAST-SEARCH] Raw SQL query: ${dbTime}ms`);
+      structuredConsole.log(`⚡ [FAST-SEARCH] Raw SQL query: ${dbTime}ms`);
       
       // Minimal processing
       const processStartTime = Date.now();
@@ -80,11 +81,11 @@ export async function GET(req: NextRequest) {
       const processTime = Date.now() - processStartTime;
       const totalTime = Date.now() - startTime;
       
-      console.log(`⏱️ [FAST-SEARCH] Performance breakdown:`);
-      console.log(`   • DB Query: ${dbTime}ms`);
-      console.log(`   • Processing: ${processTime}ms`);
-      console.log(`   • Total: ${totalTime}ms`);
-      console.log(`   • Found: ${results.length} users`);
+      structuredConsole.log(`⏱️ [FAST-SEARCH] Performance breakdown:`);
+      structuredConsole.log(`   • DB Query: ${dbTime}ms`);
+      structuredConsole.log(`   • Processing: ${processTime}ms`);
+      structuredConsole.log(`   • Total: ${totalTime}ms`);
+      structuredConsole.log(`   • Found: ${results.length} users`);
       
       return NextResponse.json({
         users: results,
@@ -102,7 +103,7 @@ export async function GET(req: NextRequest) {
     }
 
   } catch (error) {
-    console.error('❌ [FAST-SEARCH] Error:', error);
+    structuredConsole.error('❌ [FAST-SEARCH] Error:', error);
     return NextResponse.json(
       { error: 'Search failed', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

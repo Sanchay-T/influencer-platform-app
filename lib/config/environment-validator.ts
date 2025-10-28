@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { getLoggingConfig, validateLoggingConfig } from './logging-config';
 import { validateMonitoringConfig } from './monitoring-config';
 import SystemConfig from './system-config';
@@ -41,7 +42,7 @@ export class EnvironmentValidator {
   }
   
   async validate(): Promise<ValidationResult> {
-    console.log(`🔍 [ENV-VALIDATOR] Starting validation for environment: ${this.environment}`);
+    structuredConsole.log(`🔍 [ENV-VALIDATOR] Starting validation for environment: ${this.environment}`);
     
     // Reset state
     this.checks = [];
@@ -61,7 +62,7 @@ export class EnvironmentValidator {
       checks: this.checks
     };
     
-    console.log(`✅ [ENV-VALIDATOR] Validation complete. Status: ${result.valid ? 'PASS' : 'FAIL'}`);
+    structuredConsole.log(`✅ [ENV-VALIDATOR] Validation complete. Status: ${result.valid ? 'PASS' : 'FAIL'}`);
     
     return result;
   }

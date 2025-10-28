@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import "server-only";
 import {
   DiscoveryAccount,
@@ -76,7 +77,7 @@ async function runBatches<T, R>(items: T[], fn: (item: T) => Promise<R | null>):
         try {
           return await fn(item);
         } catch (error) {
-          console.warn('[instagram-feed] batch item failed', error);
+          structuredConsole.warn('[instagram-feed] batch item failed', error);
           return null;
         }
       }),

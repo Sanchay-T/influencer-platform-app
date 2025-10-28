@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { useEffect, useState } from 'react';
 
 const STORAGE_KEY = 'similarSearch.viewPreferences';
@@ -28,7 +29,7 @@ export function useViewPreferences(jobId?: string) {
         emailOnly: Boolean(parsed.emailOnly),
       });
     } catch (error) {
-      console.warn('[SIMILAR-VIEW] Failed to load preferences', error);
+      structuredConsole.warn('[SIMILAR-VIEW] Failed to load preferences', error);
     }
   }, [stableKey]);
 
@@ -37,7 +38,7 @@ export function useViewPreferences(jobId?: string) {
     try {
       window.localStorage.setItem(stableKey, JSON.stringify(preferences));
     } catch (error) {
-      console.warn('[SIMILAR-VIEW] Failed to persist preferences', error);
+      structuredConsole.warn('[SIMILAR-VIEW] Failed to persist preferences', error);
     }
   }, [preferences, stableKey]);
 

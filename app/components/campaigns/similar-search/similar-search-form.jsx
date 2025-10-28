@@ -1,4 +1,6 @@
-'use client'
+'use client';
+
+import { structuredConsole } from '@/lib/logging/console-proxy';
 
 import { useState } from 'react';
 import { Input } from "@/components/ui/input";
@@ -17,7 +19,7 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
   const [error, setError] = useState("");
 
   const validateUsername = (value) => {
-    console.log('🔍 [SIMILAR-SEARCH-FORM] Validating username:', value);
+    structuredConsole.log('🔍 [SIMILAR-SEARCH-FORM] Validating username:', value);
     if (!value.trim()) {
       setError("Username is required");
       return false;
@@ -34,7 +36,7 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
     }
 
     setError("");
-    console.log('✅ [SIMILAR-SEARCH-FORM] Username validation passed');
+    structuredConsole.log('✅ [SIMILAR-SEARCH-FORM] Username validation passed');
     return true;
   };
 
@@ -46,14 +48,14 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('🔄 [SIMILAR-SEARCH-FORM] Form submission started');
+    structuredConsole.log('🔄 [SIMILAR-SEARCH-FORM] Form submission started');
     
     if (!validateUsername(username)) {
-      console.log('❌ [SIMILAR-SEARCH-FORM] Username validation failed');
+      structuredConsole.log('❌ [SIMILAR-SEARCH-FORM] Username validation failed');
       return;
     }
 
-    console.log('📋 [SIMILAR-SEARCH-FORM] Submitting search with:', { 
+    structuredConsole.log('📋 [SIMILAR-SEARCH-FORM] Submitting search with:', { 
       username, 
       campaignId 
     });
@@ -65,7 +67,7 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
       const apiEndpoint =
         selectedPlatform === 'youtube' ? '/api/scraping/youtube-similar' :
         '/api/scraping/instagram';
-      console.log(`🔄 [SIMILAR-SEARCH-FORM] Making API request to ${apiEndpoint}`);
+      structuredConsole.log(`🔄 [SIMILAR-SEARCH-FORM] Making API request to ${apiEndpoint}`);
       
       const response = await fetch(apiEndpoint, {
         method: 'POST',
@@ -73,17 +75,17 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
         body: JSON.stringify({ username, campaignId })
       });
 
-      console.log('📥 [SIMILAR-SEARCH-FORM] API response status:', response.status);
+      structuredConsole.log('📥 [SIMILAR-SEARCH-FORM] API response status:', response.status);
       const data = await response.json();
       
       if (!response.ok) {
-        console.error('❌ [SIMILAR-SEARCH-FORM] API error:', data.error);
+        structuredConsole.error('❌ [SIMILAR-SEARCH-FORM] API error:', data.error);
         setSearchState({ status: 'idle', message: '' });
         toast.error(data.error || 'Error starting search. Please try again.');
         return;
       }
       
-      console.log('✅ [SIMILAR-SEARCH-FORM] Search started successfully:', data);
+      structuredConsole.log('✅ [SIMILAR-SEARCH-FORM] Search started successfully:', data);
       
       // Call onSuccess to move to results step (like keyword search)
       if (onSuccess) {
@@ -98,7 +100,7 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
       toast.success(`${selectedPlatform === 'youtube' ? 'YouTube' : 'Instagram'} similar search started!`);
       
     } catch (error) {
-      console.error('💥 [SIMILAR-SEARCH-FORM] Error during submission:', error);
+      structuredConsole.error('💥 [SIMILAR-SEARCH-FORM] Error during submission:', error);
       setSearchState({ status: 'idle', message: '' });
       toast.error('Error starting search. Please try again.');
     }

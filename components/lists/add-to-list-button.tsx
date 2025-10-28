@@ -1,5 +1,7 @@
 'use client';
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -141,7 +143,7 @@ export function AddToListButton({
         const data = await res.json();
         setLists(data.lists ?? []);
       } catch (error) {
-        console.error(error);
+        structuredConsole.error(error);
         toast.error('Unable to load lists');
       } finally {
         setLoadingLists(false);
@@ -205,7 +207,7 @@ export function AddToListButton({
       setNewListName('');
       toast.success(`Created “${data.list.name}”`);
     } catch (error) {
-      console.error(error);
+      structuredConsole.error(error);
       toast.error((error as Error).message);
     } finally {
       setCreating(false);
@@ -299,7 +301,7 @@ export function AddToListButton({
         );
       }
 
-      console.debug('[AddToList] added creators', {
+      structuredConsole.debug('[AddToList] added creators', {
         listId: selectedList,
         added: addedCount,
         attempted: attemptedCount,
@@ -309,7 +311,7 @@ export function AddToListButton({
       setOpen(false);
       resetPanel();
     } catch (error) {
-      console.error('[AddToList] error adding creators', error);
+      structuredConsole.error('[AddToList] error adding creators', error);
       toast.error((error as Error).message);
     } finally {
       setAdding(false);

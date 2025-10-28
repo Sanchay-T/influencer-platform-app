@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import Stripe from 'stripe';
 
 // Initialize Stripe with your secret key
@@ -42,10 +43,10 @@ export class StripeService {
         }
       });
       
-      console.log('✅ [STRIPE] Created customer:', customer.id);
+      structuredConsole.log('✅ [STRIPE] Created customer:', customer.id);
       return customer;
     } catch (error) {
-      console.error('❌ [STRIPE] Error creating customer:', error);
+      structuredConsole.error('❌ [STRIPE] Error creating customer:', error);
       throw error;
     }
   }
@@ -64,10 +65,10 @@ export class StripeService {
         }
       });
 
-      console.log('✅ [STRIPE] Created setup intent:', setupIntent.id);
+      structuredConsole.log('✅ [STRIPE] Created setup intent:', setupIntent.id);
       return setupIntent;
     } catch (error) {
-      console.error('❌ [STRIPE] Error creating setup intent:', error);
+      structuredConsole.error('❌ [STRIPE] Error creating setup intent:', error);
       throw error;
     }
   }
@@ -82,10 +83,10 @@ export class StripeService {
         type: 'card'
       });
 
-      console.log(`✅ [STRIPE] Retrieved ${paymentMethods.data.length} payment methods for customer ${customerId}`);
+      structuredConsole.log(`✅ [STRIPE] Retrieved ${paymentMethods.data.length} payment methods for customer ${customerId}`);
       return paymentMethods.data;
     } catch (error) {
-      console.error('❌ [STRIPE] Error retrieving payment methods:', error);
+      structuredConsole.error('❌ [STRIPE] Error retrieving payment methods:', error);
       throw error;
     }
   }
@@ -101,10 +102,10 @@ export class StripeService {
         }
       });
 
-      console.log('✅ [STRIPE] Set default payment method:', paymentMethodId);
+      structuredConsole.log('✅ [STRIPE] Set default payment method:', paymentMethodId);
       return customer;
     } catch (error) {
-      console.error('❌ [STRIPE] Error setting default payment method:', error);
+      structuredConsole.error('❌ [STRIPE] Error setting default payment method:', error);
       throw error;
     }
   }
@@ -144,10 +145,10 @@ export class StripeService {
       }
 
       const subscription = await stripe.subscriptions.create(subscriptionData);
-      console.log('✅ [STRIPE] Created trial subscription:', subscription.id);
+      structuredConsole.log('✅ [STRIPE] Created trial subscription:', subscription.id);
       return subscription;
     } catch (error) {
-      console.error('❌ [STRIPE] Error creating trial subscription:', error);
+      structuredConsole.error('❌ [STRIPE] Error creating trial subscription:', error);
       throw error;
     }
   }
@@ -186,10 +187,10 @@ export class StripeService {
       }
 
       const subscription = await stripe.subscriptions.create(subscriptionData);
-      console.log('✅ [STRIPE] Created immediate subscription:', subscription.id);
+      structuredConsole.log('✅ [STRIPE] Created immediate subscription:', subscription.id);
       return subscription;
     } catch (error) {
-      console.error('❌ [STRIPE] Error creating immediate subscription:', error);
+      structuredConsole.error('❌ [STRIPE] Error creating immediate subscription:', error);
       throw error;
     }
   }
@@ -226,10 +227,10 @@ export class StripeService {
         }
       });
 
-      console.log('✅ [STRIPE] Updated subscription:', subscriptionId);
+      structuredConsole.log('✅ [STRIPE] Updated subscription:', subscriptionId);
       return updatedSubscription;
     } catch (error) {
-      console.error('❌ [STRIPE] Error updating subscription:', error);
+      structuredConsole.error('❌ [STRIPE] Error updating subscription:', error);
       throw error;
     }
   }
@@ -246,10 +247,10 @@ export class StripeService {
         }
       });
 
-      console.log('✅ [STRIPE] Cancelled subscription:', subscriptionId);
+      structuredConsole.log('✅ [STRIPE] Cancelled subscription:', subscriptionId);
       return subscription;
     } catch (error) {
-      console.error('❌ [STRIPE] Error cancelling subscription:', error);
+      structuredConsole.error('❌ [STRIPE] Error cancelling subscription:', error);
       throw error;
     }
   }
@@ -265,7 +266,7 @@ export class StripeService {
 
       return subscription;
     } catch (error) {
-      console.error('❌ [STRIPE] Error retrieving subscription:', error);
+      structuredConsole.error('❌ [STRIPE] Error retrieving subscription:', error);
       throw error;
     }
   }
@@ -297,10 +298,10 @@ export class StripeService {
       }
 
       const paymentIntent = await stripe.paymentIntents.create(paymentIntentData);
-      console.log('✅ [STRIPE] Created payment intent:', paymentIntent.id);
+      structuredConsole.log('✅ [STRIPE] Created payment intent:', paymentIntent.id);
       return paymentIntent;
     } catch (error) {
-      console.error('❌ [STRIPE] Error creating payment intent:', error);
+      structuredConsole.error('❌ [STRIPE] Error creating payment intent:', error);
       throw error;
     }
   }
@@ -317,7 +318,7 @@ export class StripeService {
       );
       return event;
     } catch (error) {
-      console.error('❌ [STRIPE] Webhook signature validation failed:', error);
+      structuredConsole.error('❌ [STRIPE] Webhook signature validation failed:', error);
       throw error;
     }
   }
@@ -373,10 +374,10 @@ export class StripeService {
         },
       });
 
-      console.log('✅ [STRIPE] Created customer portal session:', session.id);
+      structuredConsole.log('✅ [STRIPE] Created customer portal session:', session.id);
       return session;
     } catch (error) {
-      console.error('❌ [STRIPE] Error creating customer portal session:', error);
+      structuredConsole.error('❌ [STRIPE] Error creating customer portal session:', error);
       throw error;
     }
   }
@@ -396,7 +397,7 @@ export class StripeService {
         stripe.subscriptions.list({ customer: customerId, limit: 10 })
       ]);
 
-      console.log('✅ [STRIPE] Retrieved customer details:', {
+      structuredConsole.log('✅ [STRIPE] Retrieved customer details:', {
         customerId,
         paymentMethodCount: paymentMethods.data.length,
         subscriptionCount: subscriptions.data.length
@@ -408,7 +409,7 @@ export class StripeService {
         subscriptions: subscriptions.data
       };
     } catch (error) {
-      console.error('❌ [STRIPE] Error retrieving customer details:', error);
+      structuredConsole.error('❌ [STRIPE] Error retrieving customer details:', error);
       throw error;
     }
   }
@@ -422,14 +423,14 @@ export class StripeService {
         customer: customerId,
       });
 
-      console.log('✅ [STRIPE] Retrieved upcoming invoice:', invoice.id);
+      structuredConsole.log('✅ [STRIPE] Retrieved upcoming invoice:', invoice.id);
       return invoice;
     } catch (error) {
       if (error instanceof Error && error.message.includes('No upcoming invoice')) {
-        console.log('ℹ️ [STRIPE] No upcoming invoice found for customer:', customerId);
+        structuredConsole.log('ℹ️ [STRIPE] No upcoming invoice found for customer:', customerId);
         return null;
       }
-      console.error('❌ [STRIPE] Error retrieving upcoming invoice:', error);
+      structuredConsole.error('❌ [STRIPE] Error retrieving upcoming invoice:', error);
       throw error;
     }
   }

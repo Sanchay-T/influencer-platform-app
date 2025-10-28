@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ExternalLink, User, Loader2, LayoutGrid, Table2, MailCheck, Youtube } from "lucide-react";
+import { ExternalLink, User, LayoutGrid, Table2, MailCheck, Youtube, Sparkles, RefreshCw } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import { FeatureGate } from "@/app/components/billing/protect";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AddToListButton } from "@/components/lists/add-to-list-button";
 import { dedupeCreators } from "../utils/dedupe-creators";
+import { useCreatorEnrichment } from "./useCreatorEnrichment";
 import {
   Table,
   TableBody,
@@ -39,30 +40,24 @@ const VIEW_MODE_META = {
   table: { label: "Table", Icon: Table2 },
   gallery: { label: "Gallery", Icon: LayoutGrid },
 };
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const hasContactEmail = (creator) => {
-  if (!creator) return false;
-
-  const emailArrays = [
-    creator?.creator?.emails,
-    creator?.emails,
-    creator?.contact?.emails,
-  ].filter((value) => Array.isArray(value));
-
-  for (const list of emailArrays) {
-    if (list.some((email) => typeof email === "string" && email.trim().length > 0)) {
-      return true;
-    }
-  }
-
-  const emailCandidates = [
-    creator?.creator?.email,
-    creator?.email,
-    creator?.contact?.email,
-  ];
-
-  return emailCandidates.some((email) => typeof email === "string" && email.trim().length > 0);
-};
+// Breadcrumb: PinkSpinner -> shared pink-accent loader to align with enrichment brand styling.
+const PinkSpinner = ({ size = "h-4 w-4", className = "", label } = {}) => (
+  <span
+    className={cn("relative inline-flex items-center justify-center", size, className)}
+    role="status"
+    aria-label={label ?? "Loading"}
+  >
+    <span className={cn("absolute inline-flex h-full w-full animate-ping rounded-full bg-pink-400/20")} />
+    <span
+      className={cn(
+        "relative inline-flex animate-spin rounded-full border-2 border-pink-500/30 border-t-pink-400",
+        size,
+      )}
+    />
+  </span>
+);
 
 const extractEmails = (creator) => {
   if (!creator) return [];
@@ -97,7 +92,78 @@ const extractEmails = (creator) => {
     }
   }
 
+  const metadata = typeof creator?.metadata === 'object' && creator?.metadata !== null ? creator.metadata : null;
+  if (metadata) {
+    if (Array.isArray(metadata.contactEmails)) {
+      metadata.contactEmails.forEach((candidate) => {
+        const normalized = normalizeEmailCandidate(candidate);
+        if (normalized) {
+          collected.add(normalized);
+        }
+      });
+    }
+    const enrichmentEmails = metadata?.enrichment?.summary?.allEmails;
+    if (Array.isArray(enrichmentEmails)) {
+      enrichmentEmails.forEach((candidate) => {
+        const normalized = normalizeEmailCandidate(candidate);
+        if (normalized) {
+          collected.add(normalized);
+        }
+      });
+    }
+  }
+
   return Array.from(collected);
+};
+
+const hasContactEmail = (creator) => extractEmails(creator).length > 0;
+
+const normalizeEmailCandidate = (value) => {
+  if (!value) return null;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length ? trimmed : null;
+  }
+  if (typeof value === 'object') {
+    const candidateFields = ['email', 'value', 'address'];
+    for (const field of candidateFields) {
+      const fieldValue = value[field];
+      if (typeof fieldValue === 'string') {
+        const trimmed = fieldValue.trim();
+        if (trimmed.length) {
+          return trimmed;
+        }
+      }
+    }
+  }
+  return null;
+};
+
+const mergeEmailLists = (existing, incoming) => {
+  const combined = [];
+  if (Array.isArray(existing)) {
+    combined.push(
+      ...existing.map((value) => (typeof value === 'string' ? value.trim() : value)).filter((value) => typeof value === 'string' && value.length),
+    );
+  }
+  if (Array.isArray(incoming)) {
+    combined.push(
+      ...incoming.map((value) => (typeof value === 'string' ? value.trim() : value)).filter((value) => typeof value === 'string' && value.length),
+    );
+  }
+  return Array.from(new Set(combined));
+};
+
+const normalizeHandleValue = (value) => {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed.length) return null;
+  return trimmed.replace(/^@/, '').toLowerCase();
+};
+
+const normalizePlatformValue = (value) => {
+  if (!value) return null;
+  return value.toString().toLowerCase();
 };
 
 const formatFollowers = (value) => {
@@ -115,6 +181,86 @@ const formatFollowers = (value) => {
   }
 
   return Math.round(numeric).toLocaleString();
+};
+
+const resolveCreatorIdFromSnapshot = (snapshot) => {
+  if (!snapshot) return null;
+  const sources = [
+    snapshot,
+    snapshot?.metadata,
+    snapshot?.metadata?.creator,
+    snapshot?.metadata?.profile,
+    snapshot?.metadata?.account,
+    snapshot?.metadata?.owner,
+  ];
+
+  const fields = ['creatorProfileId', 'creator_profile_id', 'creatorId', 'creator_id', 'profileId', 'profile_id', 'id', 'uuid'];
+
+  for (const source of sources) {
+    if (!source || typeof source !== 'object') continue;
+    for (const field of fields) {
+      const value = source[field];
+      if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (UUID_PATTERN.test(trimmed)) {
+          return trimmed;
+        }
+      }
+    }
+  }
+
+  return null;
+};
+
+const resolveExternalIdFromSnapshot = (snapshot) => {
+  if (!snapshot) return null;
+  const sources = [
+    snapshot,
+    snapshot?.metadata,
+    snapshot?.metadata?.creator,
+    snapshot?.metadata?.profile,
+  ];
+
+  const fields = ['externalId', 'external_id', 'profileId', 'profile_id', 'id', 'uuid'];
+
+  for (const source of sources) {
+    if (!source || typeof source !== 'object') continue;
+    for (const field of fields) {
+      const value = source[field];
+      if (typeof value === 'string' && value.trim().length > 0) {
+        return value.trim();
+      }
+    }
+  }
+
+  return null;
+};
+
+const buildEnrichmentTarget = (snapshot, fallbackPlatform) => {
+  const platform = (snapshot?.platform || fallbackPlatform || 'tiktok').toString().toLowerCase();
+  const handle = typeof snapshot?.handle === 'string' ? snapshot.handle.replace(/^@/, '').trim() : '';
+
+  return {
+    handle,
+    platform,
+    creatorId: resolveCreatorIdFromSnapshot(snapshot),
+    externalId: resolveExternalIdFromSnapshot(snapshot),
+    displayName: snapshot?.displayName || snapshot?.handle || null,
+    profileUrl: typeof snapshot?.url === 'string' ? snapshot.url : null,
+    metadata: snapshot?.metadata ?? null,
+  };
+};
+
+const formatEnrichedAtLabel = (timestamp) => {
+  if (!timestamp) return null;
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 };
 
 // Breadcrumb: keyword search gallery defers to shared preview resolver to keep TikTok/IG covers consistent.
@@ -178,6 +324,144 @@ const SearchResults = ({ searchData }) => {
   const itemsPerPage = viewMode === "gallery" ? 9 : 10;
   const resultsCacheRef = useRef(new Map());
 
+  const applyEnrichmentToCreators = useCallback(
+    (record, targetData, rawReference) => {
+      if (!record) return;
+
+      const incomingEmails = Array.isArray(record.summary?.allEmails)
+        ? record.summary.allEmails
+            .map((value) => (typeof value === 'string' ? value.trim() : null))
+            .filter(Boolean)
+        : [];
+      const primaryEmail =
+        typeof record.summary?.primaryEmail === 'string' && record.summary.primaryEmail.trim().length
+          ? record.summary.primaryEmail.trim()
+          : null;
+      const normalizedHandle = normalizeHandleValue(targetData?.handle ?? record.handle);
+      const normalizedPlatform = normalizePlatformValue(targetData?.platform ?? record.platform);
+      const recordCreatorId = record.creatorId;
+
+      const patchEntry = (entry) => {
+        const metadata =
+          entry && typeof entry.metadata === 'object' && entry.metadata !== null ? { ...entry.metadata } : {};
+        const contactEmails = mergeEmailLists(metadata.contactEmails, incomingEmails);
+        const nextMetadata = {
+          ...metadata,
+          enrichment: record,
+          contactEmails,
+          primaryEmail: primaryEmail ?? metadata.primaryEmail ?? null,
+          lastEnrichedAt: record.enrichedAt,
+        };
+
+        const nextEntry = {
+          ...entry,
+          metadata: nextMetadata,
+        };
+
+        if (Array.isArray(entry.emails) || incomingEmails.length) {
+          nextEntry.emails = mergeEmailLists(entry.emails, incomingEmails);
+        }
+        if (!entry.email && primaryEmail) {
+          nextEntry.email = primaryEmail;
+        }
+
+        const creatorField =
+          entry && typeof entry.creator === 'object' && entry.creator !== null ? { ...entry.creator } : null;
+        if (creatorField) {
+          creatorField.emails = mergeEmailLists(creatorField.emails, incomingEmails);
+          if (!creatorField.email && primaryEmail) {
+            creatorField.email = primaryEmail;
+          }
+          nextEntry.creator = creatorField;
+        }
+
+        const contactField =
+          entry && typeof entry.contact === 'object' && entry.contact !== null ? { ...entry.contact } : null;
+        if (contactField) {
+          contactField.emails = mergeEmailLists(contactField.emails, incomingEmails);
+          if (!contactField.email && primaryEmail) {
+            contactField.email = primaryEmail;
+          }
+          nextEntry.contact = contactField;
+        }
+
+        return nextEntry;
+      };
+
+      const doesEntryMatchTarget = (entry) => {
+        if (!entry) return false;
+        if (rawReference && (entry === rawReference || entry?.creator === rawReference)) {
+          return true;
+        }
+
+        const metadata =
+          entry && typeof entry.metadata === 'object' && entry.metadata !== null ? entry.metadata : undefined;
+        const metadataCreatorId =
+          metadata?.enrichment?.creatorId ??
+          metadata?.creatorId ??
+          entry?.creatorId ??
+          entry?.id ??
+          (metadata?.profile ?? {}).creatorId;
+        if (recordCreatorId && metadataCreatorId && recordCreatorId === metadataCreatorId) {
+          return true;
+        }
+
+        const entryBase = entry && typeof entry.creator === 'object' && entry.creator !== null ? entry.creator : entry;
+        const entryPlatform = normalizePlatformValue(
+          entryBase?.platform ?? entry?.platform ?? metadata?.platform ?? metadata?.creator?.platform,
+        );
+        if (normalizedPlatform && entryPlatform && normalizedPlatform !== entryPlatform) {
+          return false;
+        }
+
+        if (!normalizedHandle) {
+          return false;
+        }
+
+        const handleCandidates = [
+          entryBase?.uniqueId,
+          entryBase?.username,
+          entryBase?.handle,
+          entryBase?.name,
+          entry?.handle,
+          entry?.username,
+          metadata?.handle,
+          metadata?.creator?.handle,
+        ];
+        const normalizedHandles = handleCandidates
+          .map((candidate) => normalizeHandleValue(candidate))
+          .filter(Boolean);
+
+        return normalizedHandles.includes(normalizedHandle);
+      };
+
+      setCreators((prev) =>
+        prev.map((entry) => {
+          if (!entry) return entry;
+          if (doesEntryMatchTarget(entry)) {
+            return patchEntry(entry);
+          }
+          if (typeof entry === 'object' && entry !== null && entry.creator && doesEntryMatchTarget(entry.creator)) {
+            return patchEntry(entry);
+          }
+          return entry;
+        }),
+      );
+    },
+    [setCreators],
+  );
+
+  const {
+    getEnrichment,
+    isLoading: isEnrichmentLoading,
+    enrichCreator,
+    enrichMany,
+    prefetchEnrichment,
+    seedEnrichment,
+    usage: enrichmentUsage,
+    bulkState: enrichmentBulkState,
+  } = useCreatorEnrichment();
+
   const jobStatusRaw = searchData?.status;
   const jobStatus = typeof jobStatusRaw === 'string' ? jobStatusRaw.toLowerCase() : '';
   const jobIsActive = jobStatus === 'processing' || jobStatus === 'pending';
@@ -238,6 +522,22 @@ const SearchResults = ({ searchData }) => {
 
   const selectedSnapshots = useMemo(() => Object.values(selectedCreators), [selectedCreators]);
   const selectionCount = selectedSnapshots.length;
+  const selectedEnrichmentTargets = useMemo(
+    () => selectedSnapshots.map((snapshot) => buildEnrichmentTarget(snapshot, platformNormalized)),
+    [selectedSnapshots, platformNormalized]
+  );
+
+  const handleBulkEnrich = useCallback(async () => {
+    if (!selectedEnrichmentTargets.length) return;
+    const result = await enrichMany(selectedEnrichmentTargets);
+    if (result?.records?.length) {
+      result.records.forEach(({ target, record }) => {
+        if (record) {
+          applyEnrichmentToCreators(record, target);
+        }
+      });
+    }
+  }, [applyEnrichmentToCreators, enrichMany, selectedEnrichmentTargets]);
 
   const [emailOverlayDismissed, setEmailOverlayDismissed] = useState(false);
 
@@ -468,6 +768,18 @@ const SearchResults = ({ searchData }) => {
   const allSelectedOnPage = currentRowIds.length > 0 && currentRowIds.every((id) => selectedCreators[id]);
   const someSelectedOnPage = currentRowIds.some((id) => selectedCreators[id]);
 
+  useEffect(() => {
+    currentRows.forEach(({ snapshot, raw }) => {
+      const platformValue = (snapshot.platform || platformNormalized || 'tiktok').toString().toLowerCase();
+      const existing = raw?.metadata?.enrichment || snapshot?.metadata?.enrichment || raw?.enrichment;
+      if (existing) {
+        seedEnrichment(platformValue, snapshot.handle, existing);
+      } else {
+        prefetchEnrichment(platformValue, snapshot.handle);
+      }
+    });
+  }, [currentRows, platformNormalized, prefetchEnrichment, seedEnrichment]);
+
   const toggleSelection = (rowId, snapshot) => {
     setSelectedCreators((prev) => {
       const next = { ...prev };
@@ -593,7 +905,7 @@ const SearchResults = ({ searchData }) => {
             </div>
           )}
           <div className="flex flex-col items-center justify-center min-h-[240px] text-sm text-zinc-400 gap-2">
-            <Loader2 className="h-4 w-4 animate-spin text-pink-400" />
+            <PinkSpinner size="h-4 w-4" label="Loading results" />
             Waiting for results...
           </div>
         </>
@@ -603,7 +915,7 @@ const SearchResults = ({ searchData }) => {
     if (isFetching) {
       return (
         <div className="flex flex-col items-center justify-center min-h-[240px] text-sm text-zinc-400 gap-2">
-          <Loader2 className="h-4 w-4 animate-spin text-zinc-300" />
+          <PinkSpinner size="h-4 w-4" className="opacity-80" label="Fetching creators" />
           Fetching results...
         </div>
       );
@@ -788,7 +1100,26 @@ const SearchResults = ({ searchData }) => {
         </div>
         {selectionCount > 0 && (
           <div className="flex items-center gap-2">
-            <span className="text-sm text-emerald-300">{selectionCount} selected</span>
+            <span className="text-sm text-pink-200">{selectionCount} selected</span>
+            <Button
+              variant="default"
+              size="sm"
+              className="gap-2 bg-pink-500 text-pink-950 hover:bg-pink-500/90"
+              disabled={enrichmentBulkState.inProgress}
+              onClick={handleBulkEnrich}
+            >
+              {enrichmentBulkState.inProgress ? (
+                <>
+                  <PinkSpinner size="h-3.5 w-3.5" label="Enriching creators" />
+                  {enrichmentBulkState.processed}/{enrichmentBulkState.total}
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Enrich {selectionCount}
+                </>
+              )}
+            </Button>
             <AddToListButton
               creators={selectedSnapshots}
               buttonLabel={`Save ${selectionCount} to list`}
@@ -799,6 +1130,13 @@ const SearchResults = ({ searchData }) => {
             <Button variant="ghost" size="sm" onClick={clearSelection}>
               Clear
             </Button>
+          </div>
+        )}
+        {enrichmentUsage && (
+          <div className="flex items-center gap-2 text-xs text-pink-200">
+            <Badge className="border border-pink-500/40 bg-pink-500/10 px-2 py-1 text-pink-100">
+              Enrichments {enrichmentUsage.limit < 0 ? `${enrichmentUsage.count} / ∞` : `${enrichmentUsage.count}/${enrichmentUsage.limit}`}
+            </Badge>
           </div>
         )}
         {stillProcessing && (
@@ -891,7 +1229,7 @@ const SearchResults = ({ searchData }) => {
         {stillProcessing && (
           <div className="px-4 py-2 border-b border-zinc-800 bg-zinc-900/50 flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs text-zinc-400" aria-live="polite">
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-pink-400" />
+              <PinkSpinner size="h-3.5 w-3.5" label="Processing search" />
               <span>
                 Processing{progressInfo?.processedResults != null && progressInfo?.targetResults != null
                   ? ` ${progressInfo.processedResults}/${progressInfo.targetResults}`
@@ -943,38 +1281,68 @@ const SearchResults = ({ searchData }) => {
                     Post
                   </TableHead>
                   <TableHead className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-zinc-400">
+                    Enrich
+                  </TableHead>
+                  <TableHead className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-zinc-400">
                     Save
                   </TableHead>
                 </TableRow>
               </TableHeader>
             <TableBody className="divide-y divide-zinc-800">
-                {currentRows.map(({ raw: creator, id: rowId, snapshot }, index) => {
-                const avatarUrl =
-                  creator.creator?.avatarUrl ||
-                  creator.creator?.profile_pic_url ||
-                  creator.creator?.profilePicUrl ||
-                  creator.profile_pic_url ||
-                  creator.profilePicUrl ||
-                  "";
-                const imageUrl = ensureImageUrl(avatarUrl);
-                const isSelected = !!selectedCreators[rowId];
-                const metadata = creator.metadata || {};
-                const matchedTermsDisplay = Array.isArray(metadata.matchedTerms)
-                  ? metadata.matchedTerms.slice(0, 4)
-                  : [];
-                const snippetText =
-                  typeof metadata.snippet === "string" && metadata.snippet.trim().length > 0
-                    ? metadata.snippet.trim()
-                    : null;
+                {currentRows.map((row) => {
+                  const { id: rowId, snapshot } = row;
+                  const creator = row.raw;
+                  const avatarUrl =
+                    creator.creator?.avatarUrl ||
+                    creator.creator?.profile_pic_url ||
+                    creator.creator?.profilePicUrl ||
+                    creator.profile_pic_url ||
+                    creator.profilePicUrl ||
+                    "";
+                  const imageUrl = ensureImageUrl(avatarUrl);
+                  const isSelected = !!selectedCreators[rowId];
+                  const metadata = creator.metadata || {};
+                  const matchedTermsDisplay = Array.isArray(metadata.matchedTerms)
+                    ? metadata.matchedTerms.slice(0, 4)
+                    : [];
+                  const snippetText =
+                    typeof metadata.snippet === "string" && metadata.snippet.trim().length > 0
+                      ? metadata.snippet.trim()
+                      : null;
+                  const enrichmentTarget = buildEnrichmentTarget(snapshot, platformNormalized);
+                  const enrichment = getEnrichment(enrichmentTarget.platform, enrichmentTarget.handle);
+                  const enrichmentLoading = isEnrichmentLoading(enrichmentTarget.platform, enrichmentTarget.handle);
+                  const enrichmentSummary = enrichment?.summary;
+                  const enrichedAtLabel = enrichment ? formatEnrichedAtLabel(enrichment.enrichedAt) : null;
+                  const enrichmentEmailsRaw = Array.isArray(enrichmentSummary?.allEmails)
+                    ? enrichmentSummary.allEmails
+                    : [];
+                  const enrichmentEmailsNormalized = enrichmentEmailsRaw
+                    .map((candidate) => normalizeEmailCandidate(candidate))
+                    .filter(Boolean);
+                  const primaryEmailNormalized = normalizeEmailCandidate(enrichmentSummary?.primaryEmail);
+                  const enrichmentEmails = primaryEmailNormalized
+                    ? Array.from(new Set([primaryEmailNormalized, ...enrichmentEmailsNormalized]))
+                    : enrichmentEmailsNormalized;
+                  const existingEmails = extractEmails(creator);
+                  const displayEmails = enrichmentEmails.length ? enrichmentEmails : existingEmails;
+                  const existingEmailSet = new Set(existingEmails.map((value) => value.toLowerCase()));
+                  const enrichmentEmailSet = new Set(enrichmentEmails.map((value) => value.toLowerCase()));
+                  const displayEmailEntries = displayEmails.map((email) => {
+                    const lower = email.toLowerCase();
+                    const isNew = enrichmentEmailSet.has(lower) && !existingEmailSet.has(lower);
+                    return { value: email, isNew };
+                  });
+                  const highlightNewEmail = displayEmailEntries.some((entry) => entry.isNew);
 
-                return (
-                <TableRow
-                  key={rowId}
-                  className={cn(
-                    "table-row transition-colors align-top",
-                    isSelected ? "bg-emerald-500/5" : undefined
-                  )}
-                >
+                  return (
+                    <TableRow
+                      key={rowId}
+                      className={cn(
+                        "table-row transition-colors align-top",
+                        isSelected ? "bg-pink-500/10" : undefined
+                      )}
+                    >
                   <TableCell className="w-12 px-4 py-4 align-middle">
                     <div className="flex h-full items-center justify-center">
                       <Checkbox
@@ -1117,12 +1485,30 @@ const SearchResults = ({ searchData }) => {
                         <span className="font-medium text-zinc-300">Followers:</span>{' '}
                         {snapshot.followers != null ? formatFollowers(snapshot.followers) : 'N/A'}
                       </div>
-                      {creator.creator?.emails?.length ? (
-                        <div className="break-words">
-                          <span className="font-medium text-zinc-300">Email:</span>{' '}
-                          {creator.creator.emails[0]}
+                    {displayEmailEntries.length ? (
+                        <div className="space-y-1">
+                          {displayEmailEntries.map(({ value: email, isNew }) => (
+                            <div
+                              key={email}
+                              className={cn(
+                                "flex items-center gap-1 break-words",
+                                isNew ? "text-pink-300" : undefined
+                              )}
+                            >
+                              <a href={`mailto:${email}`} className="hover:underline">
+                                {email}
+                              </a>
+                              {isNew && (
+                                <Badge className="bg-pink-500/15 text-pink-100 border border-pink-500/40">
+                                  new
+                                </Badge>
+                              )}
+                            </div>
+                          ))}
                         </div>
-                      ) : null}
+                      ) : (
+                        <span className="text-zinc-500">No email</span>
+                      )}
                       {creator.video?.statistics?.views ? (
                         <div>
                           <span className="font-medium text-zinc-300">Views:</span>{' '}
@@ -1156,10 +1542,16 @@ const SearchResults = ({ searchData }) => {
                     </div>
                   </TableCell>
                   <TableCell className="hidden lg:table-cell max-w-0 px-4 py-4">
-                    {creator.creator?.emails && creator.creator.emails.length > 0 ? (
-                      <div className="space-y-1 text-sm">
-                        {creator.creator.emails.map((email, emailIndex) => (
-                          <div key={emailIndex} className="flex items-center gap-1">
+                      {displayEmailEntries.length > 0 ? (
+                        <div className="space-y-1 text-sm">
+                        {displayEmailEntries.map(({ value: email, isNew }) => (
+                          <div
+                            key={email}
+                            className={cn(
+                              "flex items-center gap-1",
+                              isNew ? "text-pink-300" : undefined
+                            )}
+                          >
                             <a
                               href={`mailto:${email}`}
                               className="block truncate text-pink-400 hover:underline"
@@ -1167,6 +1559,11 @@ const SearchResults = ({ searchData }) => {
                             >
                               {email}
                             </a>
+                            {isNew && (
+                              <Badge className="bg-pink-500/15 text-pink-100 border border-pink-500/40">
+                                new
+                              </Badge>
+                            )}
                             <svg
                               className="h-3 w-3 text-pink-400 opacity-60"
                               fill="none"
@@ -1208,6 +1605,41 @@ const SearchResults = ({ searchData }) => {
                     )}
                   </TableCell>
                   <TableCell className="px-4 py-4 text-right">
+                    <Button
+                      variant={enrichment ? "outline" : "secondary"}
+                      size="sm"
+                      className={cn(
+                        "gap-1",
+                        enrichment
+                          ? "border-pink-500/40 text-pink-200 hover:text-pink-100"
+                          : "bg-pink-500 text-pink-950 hover:bg-pink-500/90"
+                      )}
+                      disabled={enrichmentLoading}
+                      onClick={() => {
+                        void (async () => {
+                          const record = await enrichCreator({ ...enrichmentTarget, forceRefresh: Boolean(enrichment) });
+                          if (record) {
+                            applyEnrichmentToCreators(record, enrichmentTarget, creator);
+                          }
+                        })();
+                      }}
+                    >
+                      {enrichmentLoading ? (
+                        <PinkSpinner size="h-3.5 w-3.5" label="Enriching creator" />
+                      ) : enrichment ? (
+                        <RefreshCw className="h-3.5 w-3.5" />
+                      ) : (
+                        <Sparkles className="h-3.5 w-3.5" />
+                      )}
+                      {enrichment ? 'Refresh' : 'Enrich'}
+                    </Button>
+                    {enrichedAtLabel && (
+                      <div className="mt-1 text-[10px] uppercase tracking-wide text-pink-200/70">
+                        Refreshed {enrichedAtLabel}
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell className="px-4 py-4 text-right">
                     <AddToListButton
                       creator={snapshot}
                       buttonLabel="Save"
@@ -1216,9 +1648,9 @@ const SearchResults = ({ searchData }) => {
                       className="text-zinc-400 hover:text-emerald-300"
                     />
                   </TableCell>
-                </TableRow>
-                );
-              })}
+                    </TableRow>
+                  );
+                })}
             </TableBody>
           </Table>
         </div>

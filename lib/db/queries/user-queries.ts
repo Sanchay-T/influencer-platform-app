@@ -105,6 +105,7 @@ export async function getUserProfile(userId: string): Promise<UserProfileComplet
       planFeatures: userUsage.planFeatures,
       usageCampaignsCurrent: userUsage.usageCampaignsCurrent,
       usageCreatorsCurrentMonth: userUsage.usageCreatorsCurrentMonth,
+      enrichmentsCurrentMonth: userUsage.enrichmentsCurrentMonth,
       usageResetDate: userUsage.usageResetDate,
       
       // System data
@@ -154,6 +155,7 @@ export async function getUserProfile(userId: string): Promise<UserProfileComplet
     planFeatures: userRecord.planFeatures || {},
     usageCampaignsCurrent: userRecord.usageCampaignsCurrent || 0,
     usageCreatorsCurrentMonth: userRecord.usageCreatorsCurrentMonth || 0,
+    enrichmentsCurrentMonth: userRecord.enrichmentsCurrentMonth || 0,
     usageResetDate: userRecord.usageResetDate || new Date(),
     signupTimestamp: userRecord.signupTimestamp || userRecord.createdAt,
     emailScheduleStatus: userRecord.emailScheduleStatus || {},
@@ -218,6 +220,7 @@ export async function createUser(userData: {
       planFeatures: {},
       usageCampaignsCurrent: 0,
       usageCreatorsCurrentMonth: 0,
+      enrichmentsCurrentMonth: 0,
     }).returning();
 
     // 4. Insert system data
@@ -271,6 +274,7 @@ export async function createUser(userData: {
       planFeatures: newUsage.planFeatures,
       usageCampaignsCurrent: newUsage.usageCampaignsCurrent,
       usageCreatorsCurrentMonth: newUsage.usageCreatorsCurrentMonth,
+      enrichmentsCurrentMonth: newUsage.enrichmentsCurrentMonth,
       usageResetDate: newUsage.usageResetDate,
       
       // System data
@@ -342,6 +346,7 @@ export async function updateUserProfile(
     planFeatures?: any;
     usageCampaignsCurrent?: number;
     usageCreatorsCurrentMonth?: number;
+    enrichmentsCurrentMonth?: number;
     usageResetDate?: Date;
     
     // System updates
@@ -405,6 +410,7 @@ export async function updateUserProfile(
       planFeatures: updates.planFeatures,
       usageCampaignsCurrent: updates.usageCampaignsCurrent,
       usageCreatorsCurrentMonth: updates.usageCreatorsCurrentMonth,
+      enrichmentsCurrentMonth: updates.enrichmentsCurrentMonth,
       usageResetDate: updates.usageResetDate,
     };
     
@@ -548,7 +554,7 @@ export async function getUserUsage(userId: string): Promise<UserUsage | null> {
  */
 export async function incrementUsage(
   userId: string, 
-  type: 'campaigns' | 'creators', 
+  type: 'campaigns' | 'creators' | 'enrichments', 
   amount: number = 1
 ): Promise<void> {
   await db
@@ -556,7 +562,9 @@ export async function incrementUsage(
     .set({
       ...(type === 'campaigns' 
         ? { usageCampaignsCurrent: sql`usage_campaigns_current + ${amount}` }
-        : { usageCreatorsCurrentMonth: sql`usage_creators_current_month + ${amount}` }
+        : type === 'creators'
+          ? { usageCreatorsCurrentMonth: sql`usage_creators_current_month + ${amount}` }
+          : { enrichmentsCurrentMonth: sql`enrichments_current_month + ${amount}` }
       ),
       updatedAt: new Date(),
     })
@@ -617,6 +625,7 @@ export async function getUserByStripeCustomerId(stripeCustomerId: string): Promi
       planFeatures: userUsage.planFeatures,
       usageCampaignsCurrent: userUsage.usageCampaignsCurrent,
       usageCreatorsCurrentMonth: userUsage.usageCreatorsCurrentMonth,
+      enrichmentsCurrentMonth: userUsage.enrichmentsCurrentMonth,
       usageResetDate: userUsage.usageResetDate,
       
       // System data
@@ -649,6 +658,7 @@ export async function getUserByStripeCustomerId(stripeCustomerId: string): Promi
     planFeatures: userRecord.planFeatures || {},
     usageCampaignsCurrent: userRecord.usageCampaignsCurrent || 0,
     usageCreatorsCurrentMonth: userRecord.usageCreatorsCurrentMonth || 0,
+    enrichmentsCurrentMonth: userRecord.enrichmentsCurrentMonth || 0,
     usageResetDate: userRecord.usageResetDate || new Date(),
     signupTimestamp: userRecord.signupTimestamp || userRecord.createdAt,
     emailScheduleStatus: userRecord.emailScheduleStatus || {},

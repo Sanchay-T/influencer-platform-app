@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import '@/lib/config/load-env';
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
@@ -20,8 +21,8 @@ async function generateAdvancedKeywords(originalQuery: string): Promise<{
   combined: string[];
 }> {
   try {
-    console.log(`\n🧠 Advanced AI: Multi-layered keyword generation for "${originalQuery}"`);
-    console.log(`📝 Using structured keyword strategy...`);
+    structuredConsole.log(`\n🧠 Advanced AI: Multi-layered keyword generation for "${originalQuery}"`);
+    structuredConsole.log(`📝 Using structured keyword strategy...`);
     
     const completion = await openai.chat.completions.create({
       model: "deepseek/deepseek-chat",
@@ -93,11 +94,11 @@ async function generateAdvancedKeywords(originalQuery: string): Promise<{
 
     const strategy = JSON.parse(toolCall.function.arguments);
     
-    console.log(`\n🎯 AI Strategy Generated:`);
-    console.log(`   PRIMARY (core variations): ${strategy.primary.join(', ')}`);
-    console.log(`   SEMANTIC (related concepts): ${strategy.semantic.join(', ')}`);
-    console.log(`   TRENDING (current hot terms): ${strategy.trending.join(', ')}`);
-    console.log(`   NICHE (specialized): ${strategy.niche.join(', ')}`);
+    structuredConsole.log(`\n🎯 AI Strategy Generated:`);
+    structuredConsole.log(`   PRIMARY (core variations): ${strategy.primary.join(', ')}`);
+    structuredConsole.log(`   SEMANTIC (related concepts): ${strategy.semantic.join(', ')}`);
+    structuredConsole.log(`   TRENDING (current hot terms): ${strategy.trending.join(', ')}`);
+    structuredConsole.log(`   NICHE (specialized): ${strategy.niche.join(', ')}`);
 
     // Combine all strategies into final keyword list
     const combined = [
@@ -112,7 +113,7 @@ async function generateAdvancedKeywords(originalQuery: string): Promise<{
       keyword.length < 50
     ).slice(0, 8); // Cap at 8 for performance
 
-    console.log(`\n✨ Final Combined Strategy (${combined.length} keywords):`, combined);
+    structuredConsole.log(`\n✨ Final Combined Strategy (${combined.length} keywords):`, combined);
 
     return {
       ...strategy,
@@ -120,8 +121,8 @@ async function generateAdvancedKeywords(originalQuery: string): Promise<{
     };
 
   } catch (error) {
-    console.error(`❌ Advanced keyword generation failed:`, error);
-    console.log(`🔄 Falling back to basic strategy...`);
+    structuredConsole.error(`❌ Advanced keyword generation failed:`, error);
+    structuredConsole.log(`🔄 Falling back to basic strategy...`);
     
     // Fallback to basic strategy
     const basic = await generateOptimalKeywords(originalQuery);
@@ -138,8 +139,8 @@ async function generateAdvancedKeywords(originalQuery: string): Promise<{
 // Original AI Keyword Expansion Function (kept as fallback)
 async function generateOptimalKeywords(originalQuery: string): Promise<string[]> {
   try {
-    console.log(`\n🧠 AI: Generating optimal keywords for "${originalQuery}"`);
-    console.log(`📝 AI Prompt being sent:`);
+    structuredConsole.log(`\n🧠 AI: Generating optimal keywords for "${originalQuery}"`);
+    structuredConsole.log(`📝 AI Prompt being sent:`);
     
     const systemPrompt = `You are an Instagram content strategist. Generate 5-6 strategically chosen keywords that will maximize unique reel discovery while maintaining relevance. Focus on:
           1. The original keyword (always include)
@@ -161,9 +162,9 @@ async function generateOptimalKeywords(originalQuery: string): Promise<string[]>
           
           Format: ["${originalQuery}", "variation1", "broader_term", "niche_term", "trending_related", "brand_variation"]`;
     
-    console.log(`   System: ${systemPrompt.substring(0, 100)}...`);
-    console.log(`   User: ${userPrompt.substring(0, 100)}...`);
-    console.log(`⏳ Sending request to DeepSeek AI...`);
+    structuredConsole.log(`   System: ${systemPrompt.substring(0, 100)}...`);
+    structuredConsole.log(`   User: ${userPrompt.substring(0, 100)}...`);
+    structuredConsole.log(`⏳ Sending request to DeepSeek AI...`);
     
     const completion = await openai.chat.completions.create({
       model: "deepseek/deepseek-chat",
@@ -182,9 +183,9 @@ async function generateOptimalKeywords(originalQuery: string): Promise<string[]>
 
     const responseText = completion.choices[0].message.content || '[]';
     
-    console.log(`\n🤖 AI Raw Response:`);
-    console.log(`   "${responseText}"`);
-    console.log(`📊 AI Usage:`, {
+    structuredConsole.log(`\n🤖 AI Raw Response:`);
+    structuredConsole.log(`   "${responseText}"`);
+    structuredConsole.log(`📊 AI Usage:`, {
       promptTokens: completion.usage?.prompt_tokens,
       completionTokens: completion.usage?.completion_tokens,
       totalTokens: completion.usage?.total_tokens
@@ -193,13 +194,13 @@ async function generateOptimalKeywords(originalQuery: string): Promise<string[]>
     let keywords: string[] = [];
     try {
       keywords = JSON.parse(responseText);
-      console.log(`✅ Successfully parsed JSON array:`, keywords);
+      structuredConsole.log(`✅ Successfully parsed JSON array:`, keywords);
     } catch (parseError) {
-      console.log(`⚠️ JSON parse failed, trying fallback extraction...`);
+      structuredConsole.log(`⚠️ JSON parse failed, trying fallback extraction...`);
       // Fallback: extract keywords from text
       const matches = responseText.match(/"([^"]+)"/g);
       keywords = matches ? matches.map(m => m.replace(/"/g, '')) : [];
-      console.log(`🔧 Extracted keywords via regex:`, keywords);
+      structuredConsole.log(`🔧 Extracted keywords via regex:`, keywords);
     }
 
     // Ensure we have the original and filter for quality
@@ -211,17 +212,17 @@ async function generateOptimalKeywords(originalQuery: string): Promise<string[]>
       )
       .slice(0, 6);
 
-    console.log(`\n🎯 Final Strategic Keywords (${finalKeywords.length}):`, finalKeywords);
-    console.log(`   Original: "${originalQuery}"`);
+    structuredConsole.log(`\n🎯 Final Strategic Keywords (${finalKeywords.length}):`, finalKeywords);
+    structuredConsole.log(`   Original: "${originalQuery}"`);
     finalKeywords.slice(1).forEach((kw, i) => {
-      console.log(`   ${i + 1}. "${kw}"`);
+      structuredConsole.log(`   ${i + 1}. "${kw}"`);
     });
     
     return finalKeywords;
     
   } catch (error) {
-    console.error(`❌ AI keyword generation failed:`, error);
-    console.log(`🔄 Falling back to original keyword only: "${originalQuery}"`);
+    structuredConsole.error(`❌ AI keyword generation failed:`, error);
+    structuredConsole.log(`🔄 Falling back to original keyword only: "${originalQuery}"`);
     return [originalQuery]; // Fallback to original
   }
 }
@@ -241,14 +242,14 @@ async function searchKeywordWithRetry(
   if (searchCache.has(cacheKey)) {
     const cached = searchCache.get(cacheKey);
     if (Date.now() - cached.timestamp < 300000) { // 5 minutes
-      console.log(`📦 Using cached results for "${keyword}"`);
+      structuredConsole.log(`📦 Using cached results for "${keyword}"`);
       return cached.data;
     }
   }
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`🔍 Attempt ${attempt}/${maxRetries} for "${keyword}"`);
+      structuredConsole.log(`🔍 Attempt ${attempt}/${maxRetries} for "${keyword}"`);
       const result = await searchKeyword(keyword, resultsPerKeyword);
       
       // Cache successful results
@@ -259,10 +260,10 @@ async function searchKeywordWithRetry(
       
       return result;
     } catch (error) {
-      console.error(`❌ Attempt ${attempt} failed for "${keyword}":`, error instanceof Error ? error.message : 'Unknown error');
+      structuredConsole.error(`❌ Attempt ${attempt} failed for "${keyword}":`, error instanceof Error ? error.message : 'Unknown error');
       
       if (attempt === maxRetries) {
-        console.error(`💀 "${keyword}" failed after ${maxRetries} attempts`);
+        structuredConsole.error(`💀 "${keyword}" failed after ${maxRetries} attempts`);
         return { 
           keyword, 
           results: [], 
@@ -276,7 +277,7 @@ async function searchKeywordWithRetry(
       const jitter = Math.random() * 500; // Add randomness to prevent thundering herd
       const backoffDelay = Math.min(baseDelay + jitter, 8000);
       
-      console.log(`⏳ Retrying "${keyword}" in ${Math.round(backoffDelay)}ms...`);
+      structuredConsole.log(`⏳ Retrying "${keyword}" in ${Math.round(backoffDelay)}ms...`);
       await new Promise(resolve => setTimeout(resolve, backoffDelay));
     }
   }
@@ -298,7 +299,7 @@ async function searchKeyword(keyword: string, resultsPerKeyword: number): Promis
   let nextMaxId: string | undefined = undefined;
   let currentPage = 0;
 
-  console.log(`🔍 Searching "${keyword}" - targeting ${resultsPerKeyword} results (${pagesNeeded} pages)`);
+  structuredConsole.log(`🔍 Searching "${keyword}" - targeting ${resultsPerKeyword} results (${pagesNeeded} pages)`);
 
   // Fetch multiple pages for this keyword
   for (let page = 0; page < pagesNeeded; page++) {
@@ -363,7 +364,7 @@ async function searchKeyword(keyword: string, resultsPerKeyword: number): Promis
     };
   });
 
-  console.log(`✅ "${keyword}": Found ${processedResults.length} reels (${currentPage + 1} API calls)`);
+  structuredConsole.log(`✅ "${keyword}": Found ${processedResults.length} reels (${currentPage + 1} API calls)`);
   return {
     keyword,
     results: processedResults,
@@ -378,8 +379,8 @@ async function batchedParallelSearch(keywords: string[], maxResults: number) {
   const BASE_BATCH_DELAY = 1500; // Base delay between batches
   const resultsPerKeyword = Math.ceil(maxResults / keywords.length);
   
-  console.log(`\n🎯 Batching Strategy: ${keywords.length} keywords in batches of ${BATCH_SIZE}`);
-  console.log(`📊 Target: ${resultsPerKeyword} results per keyword`);
+  structuredConsole.log(`\n🎯 Batching Strategy: ${keywords.length} keywords in batches of ${BATCH_SIZE}`);
+  structuredConsole.log(`📊 Target: ${resultsPerKeyword} results per keyword`);
   
   // Split keywords into batches
   const batches = [];
@@ -395,7 +396,7 @@ async function batchedParallelSearch(keywords: string[], maxResults: number) {
     const currentBatch = batches[batchIndex];
     const batchStartTime = Date.now();
     
-    console.log(`\n🚀 Processing batch ${batchIndex + 1}/${batches.length}: [${currentBatch.join(', ')}]`);
+    structuredConsole.log(`\n🚀 Processing batch ${batchIndex + 1}/${batches.length}: [${currentBatch.join(', ')}]`);
     
     // Process current batch in parallel with staggered starts
     const batchPromises = currentBatch.map((keyword, index) => 
@@ -406,7 +407,7 @@ async function batchedParallelSearch(keywords: string[], maxResults: number) {
             const result = await searchKeywordWithRetry(keyword, resultsPerKeyword);
             resolve(result);
           } catch (error) {
-            console.error(`🔥 Batch processing error for "${keyword}":`, error);
+            structuredConsole.error(`🔥 Batch processing error for "${keyword}":`, error);
             resolve({ keyword, results: [], apiCalls: 0, error: error.message });
           }
         }, staggerDelay);
@@ -423,8 +424,8 @@ async function batchedParallelSearch(keywords: string[], maxResults: number) {
     totalErrors += batchErrors;
     
     const batchTime = Date.now() - batchStartTime;
-    console.log(`✅ Batch ${batchIndex + 1} completed in ${(batchTime / 1000).toFixed(1)}s`);
-    console.log(`   📞 API calls: ${batchApiCalls}, ❌ Errors: ${batchErrors}`);
+    structuredConsole.log(`✅ Batch ${batchIndex + 1} completed in ${(batchTime / 1000).toFixed(1)}s`);
+    structuredConsole.log(`   📞 API calls: ${batchApiCalls}, ❌ Errors: ${batchErrors}`);
     
     // Adaptive delay between batches based on performance
     if (batchIndex < batches.length - 1) {
@@ -433,21 +434,21 @@ async function batchedParallelSearch(keywords: string[], maxResults: number) {
       // Increase delay if we had errors (rate limiting likely)
       if (batchErrors > 0) {
         adaptiveDelay *= (1 + batchErrors * 0.5); // 50% more delay per error
-        console.log(`⚠️ Detected ${batchErrors} errors, increasing delay to ${Math.round(adaptiveDelay)}ms`);
+        structuredConsole.log(`⚠️ Detected ${batchErrors} errors, increasing delay to ${Math.round(adaptiveDelay)}ms`);
       }
       
       // Decrease delay if batch was very fast (API is responsive)
       if (batchTime < 2000 && batchErrors === 0) {
         adaptiveDelay *= 0.8; // 20% less delay if fast and successful
-        console.log(`⚡ Fast batch detected, reducing delay to ${Math.round(adaptiveDelay)}ms`);
+        structuredConsole.log(`⚡ Fast batch detected, reducing delay to ${Math.round(adaptiveDelay)}ms`);
       }
       
-      console.log(`⏸️ Waiting ${Math.round(adaptiveDelay)}ms before next batch...`);
+      structuredConsole.log(`⏸️ Waiting ${Math.round(adaptiveDelay)}ms before next batch...`);
       await new Promise(resolve => setTimeout(resolve, adaptiveDelay));
     }
   }
   
-  console.log(`\n🏁 All batches completed! Total API calls: ${totalApiCalls}, Total errors: ${totalErrors}`);
+  structuredConsole.log(`\n🏁 All batches completed! Total API calls: ${totalApiCalls}, Total errors: ${totalErrors}`);
   return allResults;
 }
 
@@ -460,7 +461,7 @@ export async function POST(request: NextRequest) {
     }
 
     const startTime = Date.now();
-    console.log(`🚀 Starting ADVANCED AI-enhanced search for "${query}" targeting ${maxResults} results`);
+    structuredConsole.log(`🚀 Starting ADVANCED AI-enhanced search for "${query}" targeting ${maxResults} results`);
 
     // Step 1: AI generates advanced multi-layered keywords
     const keywordStrategy = await generateAdvancedKeywords(query);
@@ -469,13 +470,13 @@ export async function POST(request: NextRequest) {
     // Step 2: Calculate results per keyword for balanced coverage
     const resultsPerKeyword = Math.ceil(maxResults / expandedKeywords.length);
     
-    console.log(`📊 Strategy: ${expandedKeywords.length} keywords × ${resultsPerKeyword} results each = ${expandedKeywords.length * resultsPerKeyword} target results`);
+    structuredConsole.log(`📊 Strategy: ${expandedKeywords.length} keywords × ${resultsPerKeyword} results each = ${expandedKeywords.length * resultsPerKeyword} target results`);
 
     // Step 3: Execute intelligent batched searches (handles high-volume requests)
     const keywordResults = await batchedParallelSearch(expandedKeywords, maxResults);
     
     // Step 4: Combine and deduplicate results
-    console.log(`\n🔄 Processing and deduplicating results...`);
+    structuredConsole.log(`\n🔄 Processing and deduplicating results...`);
     const allResults: any[] = [];
     const seenIds = new Set<string>();
     const keywordStats: Record<string, number> = {};
@@ -488,27 +489,27 @@ export async function POST(request: NextRequest) {
       totalApiCalls += result.apiCalls;
       
       if (result.error) {
-        console.log(`\n   ❌ "${result.keyword}": FAILED - ${result.error}`);
+        structuredConsole.log(`\n   ❌ "${result.keyword}": FAILED - ${result.error}`);
         keywordStats[result.keyword] = 0;
         continue;
       }
       
-      console.log(`\n   Processing "${result.keyword}": ${result.results.length} results`);
+      structuredConsole.log(`\n   Processing "${result.keyword}": ${result.results.length} results`);
       
       for (const reel of result.results) {
         if (!seenIds.has(reel.id)) {
           seenIds.add(reel.id);
           allResults.push(reel);
           uniqueFromKeyword++;
-          console.log(`     ✅ New: ${reel.username} - "${reel.caption.substring(0, 50)}..."`);
+          structuredConsole.log(`     ✅ New: ${reel.username} - "${reel.caption.substring(0, 50)}..."`);
         } else {
           duplicatesFromKeyword++;
           totalDuplicates++;
-          console.log(`     🔄 Duplicate: ${reel.username} (ID: ${reel.id})`);
+          structuredConsole.log(`     🔄 Duplicate: ${reel.username} (ID: ${reel.id})`);
         }
       }
       keywordStats[result.keyword] = uniqueFromKeyword;
-      console.log(`   Summary: ${uniqueFromKeyword} unique, ${duplicatesFromKeyword} duplicates`);
+      structuredConsole.log(`   Summary: ${uniqueFromKeyword} unique, ${duplicatesFromKeyword} duplicates`);
     }
 
     // Step 5: Limit to requested amount and calculate final stats
@@ -517,21 +518,21 @@ export async function POST(request: NextRequest) {
     const duplicatesRemoved = totalFetched - allResults.length;
     const searchTime = Date.now() - startTime;
 
-    console.log(`\n🎯 FINAL RESULTS SUMMARY:`);
-    console.log(`   📊 Total fetched: ${totalFetched} reels`);
-    console.log(`   🔄 Duplicates removed: ${duplicatesRemoved}`);
-    console.log(`   ✨ Unique results: ${allResults.length}`);
-    console.log(`   📤 Delivered: ${finalResults.length} (limited to maxResults)`);
-    console.log(`   ⚡ Search time: ${(searchTime / 1000).toFixed(1)}s`);
-    console.log(`   📞 API calls made: ${totalApiCalls}`);
-    console.log(`   📈 Efficiency: ${(finalResults.length / totalApiCalls).toFixed(1)} unique reels per API call`);
+    structuredConsole.log(`\n🎯 FINAL RESULTS SUMMARY:`);
+    structuredConsole.log(`   📊 Total fetched: ${totalFetched} reels`);
+    structuredConsole.log(`   🔄 Duplicates removed: ${duplicatesRemoved}`);
+    structuredConsole.log(`   ✨ Unique results: ${allResults.length}`);
+    structuredConsole.log(`   📤 Delivered: ${finalResults.length} (limited to maxResults)`);
+    structuredConsole.log(`   ⚡ Search time: ${(searchTime / 1000).toFixed(1)}s`);
+    structuredConsole.log(`   📞 API calls made: ${totalApiCalls}`);
+    structuredConsole.log(`   📈 Efficiency: ${(finalResults.length / totalApiCalls).toFixed(1)} unique reels per API call`);
     
-    console.log(`\n🎯 KEYWORD PERFORMANCE:`);
+    structuredConsole.log(`\n🎯 KEYWORD PERFORMANCE:`);
     Object.entries(keywordStats).forEach(([keyword, uniqueCount]) => {
-      console.log(`   "${keyword}": ${uniqueCount} unique reels`);
+      structuredConsole.log(`   "${keyword}": ${uniqueCount} unique reels`);
     });
     
-    console.log(`\n✅ Response sent to frontend!`);
+    structuredConsole.log(`\n✅ Response sent to frontend!`);
 
     return NextResponse.json({
       success: true,
@@ -566,7 +567,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Instagram Reels API Error:', error);
+    structuredConsole.error('Instagram Reels API Error:', error);
     return NextResponse.json(
       { 
         success: false, 

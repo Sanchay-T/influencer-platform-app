@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 /**
  * Instagram Similar Creator Data Transformation
  */
@@ -8,11 +9,11 @@ import { ApifyInstagramProfileResponse, ApifyRelatedProfile, InstagramSimilarCre
  * Transform Apify Instagram profile response to Instagram frontend format
  */
 export function transformInstagramProfile(profileData: ApifyInstagramProfileResponse): any[] {
-  console.log('🔄 [INSTAGRAM-TRANSFORM] Starting transformation for profile:', profileData.username);
-  console.log('📊 [INSTAGRAM-TRANSFORM] Related profiles count:', profileData.relatedProfiles?.length || 0);
+  structuredConsole.log('🔄 [INSTAGRAM-TRANSFORM] Starting transformation for profile:', profileData.username);
+  structuredConsole.log('📊 [INSTAGRAM-TRANSFORM] Related profiles count:', profileData.relatedProfiles?.length || 0);
   
   if (!profileData.relatedProfiles || profileData.relatedProfiles.length === 0) {
-    console.log('⚠️ [INSTAGRAM-TRANSFORM] No related profiles found (empty array)');
+    structuredConsole.log('⚠️ [INSTAGRAM-TRANSFORM] No related profiles found (empty array)');
     return [];
   }
   
@@ -22,7 +23,7 @@ export function transformInstagramProfile(profileData: ApifyInstagramProfileResp
     
     // Log first few transformations for debugging
     if (index < 3) {
-      console.log(`👤 [INSTAGRAM-TRANSFORM] Profile ${index + 1}:`, {
+      structuredConsole.log(`👤 [INSTAGRAM-TRANSFORM] Profile ${index + 1}:`, {
         username: creator.username,
         name: creator.full_name,
         verified: creator.is_verified,
@@ -33,7 +34,7 @@ export function transformInstagramProfile(profileData: ApifyInstagramProfileResp
     return creator;
   });
   
-  console.log('✅ [INSTAGRAM-TRANSFORM] Transformation complete:', {
+  structuredConsole.log('✅ [INSTAGRAM-TRANSFORM] Transformation complete:', {
     totalProfiles: transformedCreators.length,
     verifiedCount: transformedCreators.filter(c => c.is_verified).length,
     privateCount: transformedCreators.filter(c => c.is_private).length

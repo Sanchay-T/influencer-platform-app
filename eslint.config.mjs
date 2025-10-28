@@ -23,5 +23,15 @@ export default [
       "react/no-unescaped-entities": "off",
       "@next/next/no-img-element": "off"
     }
+  },
+  {
+    files: [
+      "app/**/*.{js,jsx,ts,tsx}",
+      "lib/**/*.{js,jsx,ts,tsx}",
+      "components/**/*.{js,jsx,ts,tsx}"
+    ],
+    rules: {
+      "no-console": "error"
+    }
   }
 ];

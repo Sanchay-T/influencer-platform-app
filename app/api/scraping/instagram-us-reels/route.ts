@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { db } from '@/lib/db';
@@ -46,7 +47,7 @@ function buildSearchParams(options: InstagramUsReelsOptions) {
 
 async function scheduleSearchJob(jobId: string) {
   if (!process.env.QSTASH_TOKEN) {
-    console.warn('[instagram-us-reels] QStash token missing; background processing disabled');
+    structuredConsole.warn('[instagram-us-reels] QStash token missing; background processing disabled');
     return;
   }
 
@@ -178,7 +179,7 @@ export async function POST(req: NextRequest) {
       message: 'Instagram US reels search started successfully',
     });
   } catch (error: any) {
-    console.error('[instagram-us-reels] POST failed', error);
+    structuredConsole.error('[instagram-us-reels] POST failed', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 },
@@ -296,7 +297,7 @@ export async function GET(req: NextRequest) {
       queue: queuePayload,
     });
   } catch (error: any) {
-    console.error('[instagram-us-reels] GET failed', error);
+    structuredConsole.error('[instagram-us-reels] GET failed', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 },

@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import type {
   CandidateHandle,
   ProfileScreenResult,
@@ -71,7 +72,7 @@ export async function screenProfiles(
           rejected.push(summary);
         }
       } catch (error) {
-        console.warn('[profile-screen] failed', {
+        structuredConsole.warn('[profile-screen] failed', {
           handle: handle.handle,
           error: error instanceof Error ? error.message : String(error),
         });
@@ -187,7 +188,7 @@ async function fetchAndScore(handle: string): Promise<ProfileSummary> {
         );
       }
     } catch (error) {
-      console.warn('[profile-screen] sonar assessment failed', {
+      structuredConsole.warn('[profile-screen] sonar assessment failed', {
         handle: user.username,
         error: error instanceof Error ? error.message : String(error),
       });

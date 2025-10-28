@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import Stripe from 'stripe';
@@ -37,7 +38,7 @@ export async function GET(req: NextRequest) {
     const sessionType = session.metadata?.type;
     const isUpgrade = sessionType === 'upgrade_subscription';
 
-    console.log('🔍 [STRIPE-SESSION] Session details:', {
+    structuredConsole.log('🔍 [STRIPE-SESSION] Session details:', {
       sessionId,
       planId,
       billing,
@@ -119,7 +120,7 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ [STRIPE-SESSION] Error:', error);
+    structuredConsole.error('❌ [STRIPE-SESSION] Error:', error);
     return NextResponse.json(
       { error: 'Failed to retrieve session' },
       { status: 500 }

@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { PlanValidator } from '@/lib/services/plan-validator';
@@ -29,7 +30,7 @@ export async function GET() {
       securityNote: 'Failing open allows campaign creation despite validation failure'
     });
 
-    console.error('[CAN-CREATE-CAMPAIGN] error', err);
+    structuredConsole.error('[CAN-CREATE-CAMPAIGN] error', err);
     return NextResponse.json({ allowed: true }); // fail-open to avoid blocking
   }
 }

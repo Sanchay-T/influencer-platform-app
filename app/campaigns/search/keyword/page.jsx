@@ -1,4 +1,6 @@
-'use client'
+'use client';
+
+import { structuredConsole } from '@/lib/logging/console-proxy';
 
 import { useState, useEffect } from "react";
 import DashboardLayout from "../../../components/layout/dashboard-layout";
@@ -41,7 +43,7 @@ export default function KeywordSearch() {
       } else {
       }
     } catch (error) {
-      console.warn('[KeywordSearch] failed to parse URL params', error);
+      structuredConsole.warn('[KeywordSearch] failed to parse URL params', error);
     }
 
     if (!campaignResolved) {
@@ -58,7 +60,7 @@ export default function KeywordSearch() {
         } else {
         }
       } catch (error) {
-        console.warn('[KeywordSearch] failed to parse campaign session storage', error);
+        structuredConsole.warn('[KeywordSearch] failed to parse campaign session storage', error);
       }
     }
 
@@ -73,7 +75,7 @@ export default function KeywordSearch() {
           setCampaignName(campaignData.name);
         }
       } catch (error) {
-        console.warn('[KeywordSearch] failed to reload campaign info', error);
+        structuredConsole.warn('[KeywordSearch] failed to reload campaign info', error);
       }
     }
   }, [searchData.campaignId, campaignName]);
@@ -98,7 +100,7 @@ export default function KeywordSearch() {
       const campaignId = searchData.campaignId || JSON.parse(sessionStorage.getItem('currentCampaign'))?.id;
 
       if (!campaignId) {
-        console.warn('[KeywordSearch] no campaign ID found');
+        structuredConsole.warn('[KeywordSearch] no campaign ID found');
         throw new Error('Campaign not found');
       }
 
@@ -190,7 +192,7 @@ export default function KeywordSearch() {
       toast.success('Campaign started successfully');
       router.push(`/campaigns/${campaignId}?jobId=${data.jobId}`);
   } catch (error) {
-    console.warn('[KeywordSearch] keyword submission failed', error);
+    structuredConsole.warn('[KeywordSearch] keyword submission failed', error);
     toast.error(error.message || "Failed to start campaign");
   }
   };

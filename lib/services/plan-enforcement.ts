@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { headers } from 'next/headers';
 import { db } from '@/lib/db';
 import { subscriptionPlans, campaigns, scrapingResults, scrapingJobs } from '@/lib/db/schema';
@@ -57,7 +58,7 @@ export class PlanEnforcementService {
       const userProfile = await getUserProfile(userId);
 
       if (!userProfile) {
-        console.log(`⚠️ [PLAN-ENFORCEMENT] No user profile found for ${userId}`);
+        structuredConsole.log(`⚠️ [PLAN-ENFORCEMENT] No user profile found for ${userId}`);
         return null;
       }
 
@@ -67,14 +68,14 @@ export class PlanEnforcementService {
       });
 
       if (!plan) {
-        console.log(`⚠️ [PLAN-ENFORCEMENT] No plan found for ${userProfile.currentPlan}, using defaults`);
+        structuredConsole.log(`⚠️ [PLAN-ENFORCEMENT] No plan found for ${userProfile.currentPlan}, using defaults`);
         return this.resolveDefaultLimits(userProfile.currentPlan || 'free');
       }
 
       const normalizedPlan = this.normalizePlanLimits(plan.planKey, plan.campaignsLimit, plan.creatorsLimit);
       const isUnlimited = normalizedPlan.campaignsLimit === -1 && normalizedPlan.creatorsLimit === -1;
 
-      console.log(`✅ [PLAN-ENFORCEMENT] Plan limits for ${userId}:`, {
+      structuredConsole.log(`✅ [PLAN-ENFORCEMENT] Plan limits for ${userId}:`, {
         plan: plan.planKey,
         campaignsLimit: normalizedPlan.campaignsLimit,
         creatorsLimit: normalizedPlan.creatorsLimit,
@@ -87,7 +88,7 @@ export class PlanEnforcementService {
         isUnlimited
       };
     } catch (error) {
-      console.error(`❌ [PLAN-ENFORCEMENT] Error getting plan limits:`, error);
+      structuredConsole.error(`❌ [PLAN-ENFORCEMENT] Error getting plan limits:`, error);
       return null;
     }
   }
@@ -146,11 +147,11 @@ export class PlanEnforcementService {
         canCreateJob: limits.isUnlimited || creatorsUsed < limits.creatorsLimit
       };
 
-      console.log(`📊 [PLAN-ENFORCEMENT] Usage for ${userId}:`, usageInfo);
+      structuredConsole.log(`📊 [PLAN-ENFORCEMENT] Usage for ${userId}:`, usageInfo);
 
       return usageInfo;
     } catch (error) {
-      console.error(`❌ [PLAN-ENFORCEMENT] Error getting current usage:`, error);
+      structuredConsole.error(`❌ [PLAN-ENFORCEMENT] Error getting current usage:`, error);
       return null;
     }
   }
@@ -191,7 +192,7 @@ export class PlanEnforcementService {
         usage
       };
     } catch (error) {
-      console.error(`❌ [PLAN-ENFORCEMENT] Error validating campaign creation:`, error);
+      structuredConsole.error(`❌ [PLAN-ENFORCEMENT] Error validating campaign creation:`, error);
       return {
         allowed: false,
         reason: 'Validation error occurred'
@@ -250,7 +251,7 @@ export class PlanEnforcementService {
         usage
       };
     } catch (error) {
-      console.error(`❌ [PLAN-ENFORCEMENT] Error validating job creation:`, error);
+      structuredConsole.error(`❌ [PLAN-ENFORCEMENT] Error validating job creation:`, error);
       return {
         allowed: false,
         reason: 'Validation error occurred'
@@ -270,10 +271,10 @@ export class PlanEnforcementService {
           usageCampaignsCurrent: (userProfile.usageCampaignsCurrent || 0) + 1
         });
 
-        console.log(`📈 [PLAN-ENFORCEMENT] Campaign created tracked for ${userId}`);
+        structuredConsole.log(`📈 [PLAN-ENFORCEMENT] Campaign created tracked for ${userId}`);
       }
     } catch (error) {
-      console.error(`❌ [PLAN-ENFORCEMENT] Error tracking campaign creation:`, error);
+      structuredConsole.error(`❌ [PLAN-ENFORCEMENT] Error tracking campaign creation:`, error);
     }
   }
 
@@ -340,10 +341,10 @@ export class PlanEnforcementService {
           usageCreatorsCurrentMonth: (userProfile.usageCreatorsCurrentMonth || 0) + creatorCount
         });
 
-        console.log(`📈 [PLAN-ENFORCEMENT] ${creatorCount} creators tracked for ${userId}`);
+        structuredConsole.log(`📈 [PLAN-ENFORCEMENT] ${creatorCount} creators tracked for ${userId}`);
       }
     } catch (error) {
-      console.error(`❌ [PLAN-ENFORCEMENT] Error tracking creator count:`, error);
+      structuredConsole.error(`❌ [PLAN-ENFORCEMENT] Error tracking creator count:`, error);
     }
   }
 
@@ -354,11 +355,11 @@ export class PlanEnforcementService {
     try {
       // Reset monthly usage - this would need custom implementation for normalized schema
       // For now, skip bulk update as it's complex with the new normalized structure
-      console.log('🚧 [PLAN-ENFORCEMENT] Monthly usage reset needs custom implementation for normalized schema');
+      structuredConsole.log('🚧 [PLAN-ENFORCEMENT] Monthly usage reset needs custom implementation for normalized schema');
 
-      console.log(`🔄 [PLAN-ENFORCEMENT] Monthly usage reset for all users`);
+      structuredConsole.log(`🔄 [PLAN-ENFORCEMENT] Monthly usage reset for all users`);
     } catch (error) {
-      console.error(`❌ [PLAN-ENFORCEMENT] Error resetting monthly usage:`, error);
+      structuredConsole.error(`❌ [PLAN-ENFORCEMENT] Error resetting monthly usage:`, error);
     }
   }
 
@@ -419,7 +420,7 @@ export class PlanEnforcementService {
         reasons
       };
     } catch (error) {
-      console.error(`❌ [PLAN-ENFORCEMENT] Error getting upgrade suggestions:`, error);
+      structuredConsole.error(`❌ [PLAN-ENFORCEMENT] Error getting upgrade suggestions:`, error);
       return {
         shouldUpgrade: false,
         currentPlan: 'unknown',

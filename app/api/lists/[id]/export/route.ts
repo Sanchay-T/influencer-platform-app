@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { recordExport } from '@/lib/db/queries/list-queries';
@@ -19,7 +20,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     if (message === 'LIST_PERMISSION_DENIED') {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
-    console.error('[LIST_EXPORT_API]', error);
+    structuredConsole.error('[LIST_EXPORT_API]', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import Stripe from 'stripe';
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
     const priceId = planPrices?.[billing as keyof typeof planPrices];
     if (!priceId) return NextResponse.json({ error: 'Price ID not configured' }, { status: 400 });
 
-    console.log(`🎯 [UPGRADE-DIRECT-AUDIT] ${reqId}:`, { 
+    structuredConsole.log(`🎯 [UPGRADE-DIRECT-AUDIT] ${reqId}:`, { 
       planId, 
       billing, 
       priceId,
@@ -112,7 +113,7 @@ export async function POST(req: NextRequest) {
     // If payment method is missing, create a subscription checkout with the new plan
     let setupUrl: string | null = null;
     if (!paymentIntent || paymentIntent.status === 'requires_payment_method') {
-      console.log(`💳 [UPGRADE-DIRECT] No payment method found, creating subscription checkout with plan details`);
+      structuredConsole.log(`💳 [UPGRADE-DIRECT] No payment method found, creating subscription checkout with plan details`);
       
       // Cancel the existing subscription first
       await stripe.subscriptions.cancel(subscription.id);
@@ -140,7 +141,7 @@ export async function POST(req: NextRequest) {
       });
       setupUrl = subscriptionCheckout.url || null;
       
-      console.log(`🔄 [UPGRADE-DIRECT] Created subscription checkout:`, { 
+      structuredConsole.log(`🔄 [UPGRADE-DIRECT] Created subscription checkout:`, { 
         sessionId: subscriptionCheckout.id,
         planId, 
         priceId,

@@ -152,6 +152,7 @@ export const userUsage = pgTable('user_usage', {
   planFeatures: jsonb('plan_features').default('{}').notNull(),
   usageCampaignsCurrent: integer('usage_campaigns_current').default(0).notNull(),
   usageCreatorsCurrentMonth: integer('usage_creators_current_month').default(0).notNull(),
+  enrichmentsCurrentMonth: integer('enrichments_current_month').default(0).notNull(),
   usageResetDate: timestamp('usage_reset_date').defaultNow().notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -623,6 +624,7 @@ export type UserProfileComplete = {
   planFeatures: any;
   usageCampaignsCurrent: number;
   usageCreatorsCurrentMonth: number;
+  enrichmentsCurrentMonth: number;
   usageResetDate: Date;
   
   // System data

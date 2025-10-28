@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { db } from '@/lib/db';
@@ -14,9 +15,9 @@ if (process.env.NODE_ENV === 'development') {
         const loggerPath = path.join(process.cwd(), 'scripts', 'simple-api-logger.js');
         const simpleLogger = require(loggerPath);
         simpleLogApiCall = simpleLogger.logApiCall;
-        console.log('✅ [INSTAGRAM-REELS-API] Simple API logging enabled');
+        structuredConsole.log('✅ [INSTAGRAM-REELS-API] Simple API logging enabled');
     } catch (error: any) {
-        console.log('⚠️ [INSTAGRAM-REELS-API] Simple API logging not available');
+        structuredConsole.log('⚠️ [INSTAGRAM-REELS-API] Simple API logging not available');
     }
 }
 
@@ -28,52 +29,52 @@ const RAPIDAPI_BASE_URL = `https://${RAPIDAPI_HOST}`;
 const TIMEOUT_MINUTES = 60;
 
 export async function POST(req: NextRequest) {
-  console.log('\n\n====== INSTAGRAM REELS API CALLED ======');
-  console.log('🚀 [INSTAGRAM-REELS-API] POST request received at:', new Date().toISOString());
+  structuredConsole.log('\n\n====== INSTAGRAM REELS API CALLED ======');
+  structuredConsole.log('🚀 [INSTAGRAM-REELS-API] POST request received at:', new Date().toISOString());
   
   try {
-    console.log('🔍 [INSTAGRAM-REELS-API] Step 1: Verifying user authentication');
+    structuredConsole.log('🔍 [INSTAGRAM-REELS-API] Step 1: Verifying user authentication');
     
     // Verify user authentication with Clerk
     const { userId } = await getAuthOrTest();
     
     if (!userId) {
-      console.error('❌ [INSTAGRAM-REELS-API] Authentication error: No user found');
+      structuredConsole.error('❌ [INSTAGRAM-REELS-API] Authentication error: No user found');
       return NextResponse.json({ 
         error: 'Unauthorized',
         details: 'No user found'
       }, { status: 401 });
     }
-    console.log('✅ [INSTAGRAM-REELS-API] User authenticated successfully:', userId);
+    structuredConsole.log('✅ [INSTAGRAM-REELS-API] User authenticated successfully:', userId);
 
-    console.log('🔍 [INSTAGRAM-REELS-API] Step 2: Reading request body');
+    structuredConsole.log('🔍 [INSTAGRAM-REELS-API] Step 2: Reading request body');
     
     // Read and parse request body
     const bodyText = await req.text();
-    console.log('📝 [INSTAGRAM-REELS-API] Request body length:', bodyText.length);
+    structuredConsole.log('📝 [INSTAGRAM-REELS-API] Request body length:', bodyText.length);
     
     let body;
     try {
       body = JSON.parse(bodyText);
-      console.log('✅ [INSTAGRAM-REELS-API] JSON parsed successfully');
-      console.log('📦 [INSTAGRAM-REELS-API] Body structure:', JSON.stringify(body, null, 2).substring(0, 200) + '...');
+      structuredConsole.log('✅ [INSTAGRAM-REELS-API] JSON parsed successfully');
+      structuredConsole.log('📦 [INSTAGRAM-REELS-API] Body structure:', JSON.stringify(body, null, 2).substring(0, 200) + '...');
     } catch (parseError: any) {
-      console.error('❌ [INSTAGRAM-REELS-API] JSON parse error:', parseError);
+      structuredConsole.error('❌ [INSTAGRAM-REELS-API] JSON parse error:', parseError);
       return NextResponse.json(
         { error: `Invalid JSON in request body: ${parseError.message || 'Unknown error'}` },
         { status: 400 }
       );
     }
 
-    console.log('🔍 [INSTAGRAM-REELS-API] Step 3: Extracting request data');
+    structuredConsole.log('🔍 [INSTAGRAM-REELS-API] Step 3: Extracting request data');
     const { keywords, targetResults = 50, campaignId } = body;
-    console.log('🔑 [INSTAGRAM-REELS-API] Keywords received:', keywords);
-    console.log('🎯 [INSTAGRAM-REELS-API] Target results:', targetResults);
-    console.log('📋 [INSTAGRAM-REELS-API] Campaign ID:', campaignId);
+    structuredConsole.log('🔑 [INSTAGRAM-REELS-API] Keywords received:', keywords);
+    structuredConsole.log('🎯 [INSTAGRAM-REELS-API] Target results:', targetResults);
+    structuredConsole.log('📋 [INSTAGRAM-REELS-API] Campaign ID:', campaignId);
 
     // Validate keywords
     if (!keywords || !Array.isArray(keywords) || keywords.length === 0) {
-      console.error('❌ [INSTAGRAM-REELS-API] Invalid keywords:', keywords);
+      structuredConsole.error('❌ [INSTAGRAM-REELS-API] Invalid keywords:', keywords);
       return NextResponse.json(
         { error: 'Keywords are required and must be an array' },
         { status: 400 }
@@ -86,10 +87,10 @@ export async function POST(req: NextRequest) {
       let cleaned = keyword.replace(/^#/, '').trim();
       return cleaned;
     }).filter(k => k.length > 0); // Remove empty keywords
-    console.log('✅ [INSTAGRAM-REELS-API] Keywords sanitized:', sanitizedKeywords);
+    structuredConsole.log('✅ [INSTAGRAM-REELS-API] Keywords sanitized:', sanitizedKeywords);
 
     if (sanitizedKeywords.length === 0) {
-      console.error('❌ [INSTAGRAM-REELS-API] No valid keywords after sanitization');
+      structuredConsole.error('❌ [INSTAGRAM-REELS-API] No valid keywords after sanitization');
       return NextResponse.json(
         { error: 'No valid keywords found' },
         { status: 400 }
@@ -97,14 +98,14 @@ export async function POST(req: NextRequest) {
     }
 
     if (!campaignId) {
-      console.error('❌ [INSTAGRAM-REELS-API] Campaign ID not provided');
+      structuredConsole.error('❌ [INSTAGRAM-REELS-API] Campaign ID not provided');
       return NextResponse.json(
         { error: 'Campaign ID is required' },
         { status: 400 }
       );
     }
 
-    console.log('🔍 [INSTAGRAM-REELS-API] Step 4: Verifying campaign exists and belongs to user');
+    structuredConsole.log('🔍 [INSTAGRAM-REELS-API] Step 4: Verifying campaign exists and belongs to user');
     
     // Verify campaign exists and belongs to user
     const campaign = await db.query.campaigns.findFirst({
@@ -113,16 +114,16 @@ export async function POST(req: NextRequest) {
         eq(campaigns.userId, userId)
       )
     });
-    console.log('📋 [INSTAGRAM-REELS-API] Campaign search result:', campaign ? 'Campaign found' : 'Campaign not found');
+    structuredConsole.log('📋 [INSTAGRAM-REELS-API] Campaign search result:', campaign ? 'Campaign found' : 'Campaign not found');
 
     if (!campaign) {
-      console.error('❌ [INSTAGRAM-REELS-API] Campaign not found or unauthorized');
+      structuredConsole.error('❌ [INSTAGRAM-REELS-API] Campaign not found or unauthorized');
       return NextResponse.json(
         { error: 'Campaign not found or unauthorized' },
         { status: 404 }
       );
     }
-    console.log('✅ [INSTAGRAM-REELS-API] Campaign verified successfully');
+    structuredConsole.log('✅ [INSTAGRAM-REELS-API] Campaign verified successfully');
 
     if (campaign.searchType !== 'keyword') {
       await db.update(campaigns)
@@ -131,10 +132,10 @@ export async function POST(req: NextRequest) {
     }
 
     // 🛡️ PLAN VALIDATION - Check plan limits and adjust if needed
-    console.log('🛡️ [INSTAGRAM-REELS-API] Step 5: Validating user plan limits for job creation');
+    structuredConsole.log('🛡️ [INSTAGRAM-REELS-API] Step 5: Validating user plan limits for job creation');
     const jobValidation = await PlanEnforcementService.validateJobCreation(userId, targetResults);
     if (!jobValidation.allowed) {
-      console.log('❌ [INSTAGRAM-REELS-API] Job creation blocked:', jobValidation.reason);
+      structuredConsole.log('❌ [INSTAGRAM-REELS-API] Job creation blocked:', jobValidation.reason);
       return NextResponse.json({ 
         error: 'Plan limit exceeded',
         message: jobValidation.reason,
@@ -146,20 +147,20 @@ export async function POST(req: NextRequest) {
     let adjustedTargetResults = targetResults;
     if (jobValidation.adjustedLimit && jobValidation.adjustedLimit < targetResults) {
       adjustedTargetResults = jobValidation.adjustedLimit;
-      console.log(`🔧 [INSTAGRAM-REELS-API] Target results adjusted from ${targetResults} to ${adjustedTargetResults} to fit plan limits`);
+      structuredConsole.log(`🔧 [INSTAGRAM-REELS-API] Target results adjusted from ${targetResults} to ${adjustedTargetResults} to fit plan limits`);
     }
 
-    console.log('🔍 [INSTAGRAM-REELS-API] Step 5: Validating target results');
+    structuredConsole.log('🔍 [INSTAGRAM-REELS-API] Step 5: Validating target results');
     
     // Validate targetResults (same as TikTok/YouTube)
     if (![100, 500, 1000].includes(adjustedTargetResults)) {
-      console.error('❌ [INSTAGRAM-REELS-API] Invalid target results:', targetResults);
+      structuredConsole.error('❌ [INSTAGRAM-REELS-API] Invalid target results:', targetResults);
       return NextResponse.json(
         { error: 'targetResults must be 100, 500, or 1000' },
         { status: 400 }
       );
     }
-    console.log('✅ [INSTAGRAM-REELS-API] Target results validated successfully');
+    structuredConsole.log('✅ [INSTAGRAM-REELS-API] Target results validated successfully');
 
     try {
       // Create job in database with search-engine marker
@@ -183,7 +184,7 @@ export async function POST(req: NextRequest) {
         })
         .returning();
 
-      console.log('✅ [INSTAGRAM-REELS-API] Job created successfully:', job.id);
+      structuredConsole.log('✅ [INSTAGRAM-REELS-API] Job created successfully:', job.id);
       
       // Update job status to processing (no external actor needed)
       await db.update(scrapingJobs)
@@ -195,14 +196,14 @@ export async function POST(req: NextRequest) {
         .where(eq(scrapingJobs.id, job.id));
 
       // Schedule background processing with QStash using NEW search-engine route
-      console.log('\n🔔 [INSTAGRAM-REELS-API] Scheduling QStash processing with search-engine...');
+      structuredConsole.log('\n🔔 [INSTAGRAM-REELS-API] Scheduling QStash processing with search-engine...');
       if (process.env.QSTASH_TOKEN) {
         const { getWebhookUrl } = await import('@/lib/utils/url-utils');
         const resolvedSiteUrl = getWebhookUrl();
         const qstashCallbackUrl = `${resolvedSiteUrl}/api/qstash/process-search`; // NEW: Use search-engine route
         
         // Enhanced URL debugging
-        console.log('🌐 [INSTAGRAM-REELS-API] URL debugging:', {
+        structuredConsole.log('🌐 [INSTAGRAM-REELS-API] URL debugging:', {
           NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
           VERCEL_URL: process.env.VERCEL_URL,
           finalSiteUrl: resolvedSiteUrl,
@@ -210,7 +211,7 @@ export async function POST(req: NextRequest) {
           isLocal: resolvedSiteUrl.includes('localhost') || resolvedSiteUrl.includes('ngrok')
         });
         
-        console.log('🌐 [INSTAGRAM-REELS-API] QStash configuration:', {
+        structuredConsole.log('🌐 [INSTAGRAM-REELS-API] QStash configuration:', {
           siteUrl: resolvedSiteUrl,
           callbackUrl: qstashCallbackUrl,
           jobId: job.id,
@@ -228,12 +229,12 @@ export async function POST(req: NextRequest) {
             retries: 3,
             notifyOnFailure: true
           });
-          console.log('✅ [INSTAGRAM-REELS-API] QStash message published:', publishResult);
+          structuredConsole.log('✅ [INSTAGRAM-REELS-API] QStash message published:', publishResult);
         } catch (qstashError) {
-          console.error('❌ [INSTAGRAM-REELS-API] Failed to publish QStash message:', qstashError);
+          structuredConsole.error('❌ [INSTAGRAM-REELS-API] Failed to publish QStash message:', qstashError);
         }
       } else {
-        console.warn('⚠️ [INSTAGRAM-REELS-API] No QSTASH_TOKEN found, background processing will not work!');
+        structuredConsole.warn('⚠️ [INSTAGRAM-REELS-API] No QSTASH_TOKEN found, background processing will not work!');
       }
       return NextResponse.json({
         success: true,
@@ -242,14 +243,14 @@ export async function POST(req: NextRequest) {
       });
 
     } catch (dbError: any) {
-      console.error('❌ [INSTAGRAM-REELS-API] Database error:', dbError);
+      structuredConsole.error('❌ [INSTAGRAM-REELS-API] Database error:', dbError);
       return NextResponse.json(
         { error: `Database error: ${dbError.message || 'Unknown error'}` },
         { status: 500 }
       );
     }
   } catch (error: any) {
-    console.error('❌ [INSTAGRAM-REELS-API] General error:', error);
+    structuredConsole.error('❌ [INSTAGRAM-REELS-API] General error:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
@@ -264,7 +265,7 @@ export async function GET(req: NextRequest) {
     const { userId } = await getAuthOrTest();
     
     if (!userId) {
-      console.error('❌ [INSTAGRAM-REELS-API-GET] Authentication error: No user found');
+      structuredConsole.error('❌ [INSTAGRAM-REELS-API-GET] Authentication error: No user found');
       return NextResponse.json({ 
         error: 'Unauthorized',
         details: 'No user found'
@@ -273,9 +274,9 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const jobId = searchParams.get('jobId');
-    console.log('\n=== INSTAGRAM REELS GET REQUEST START ===');
-    console.log('Job ID:', jobId);
-    console.log('User ID:', userId);
+    structuredConsole.log('\n=== INSTAGRAM REELS GET REQUEST START ===');
+    structuredConsole.log('Job ID:', jobId);
+    structuredConsole.log('User ID:', userId);
 
     if (!jobId) {
       return NextResponse.json({ error: 'jobId is required' }, { status: 400 });
@@ -309,7 +310,7 @@ export async function GET(req: NextRequest) {
     // Processing is handled directly in QStash handler
     let apiStatus = null;
     
-    console.log('📊 [INSTAGRAM-REELS-API] Job status check:', {
+    structuredConsole.log('📊 [INSTAGRAM-REELS-API] Job status check:', {
       jobId: job.id,
       status: job.status,
       progress: job.progress,
@@ -321,7 +322,7 @@ export async function GET(req: NextRequest) {
 
     // Check for timeout
     if (job.timeoutAt && new Date(job.timeoutAt) < new Date()) {
-      console.log('\n=== INSTAGRAM REELS JOB TIMEOUT DETECTED ===');
+      structuredConsole.log('\n=== INSTAGRAM REELS JOB TIMEOUT DETECTED ===');
       if (job.status === 'processing' || job.status === 'pending') {
         await db.update(scrapingJobs)
           .set({ 
@@ -369,7 +370,7 @@ export async function GET(req: NextRequest) {
       pagination,
     };
     
-    console.log('📤 [INSTAGRAM-REELS-API] Sending response to frontend:', {
+    structuredConsole.log('📤 [INSTAGRAM-REELS-API] Sending response to frontend:', {
       jobId: jobId,
       jobStatus: job.status,
       jobProgress: job.progress,
@@ -388,7 +389,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(responseData);
 
   } catch (error) {
-    console.error('❌ [INSTAGRAM-REELS-API] Status check error:', error);
+    structuredConsole.error('❌ [INSTAGRAM-REELS-API] Status check error:', error);
     
     return NextResponse.json(
       { error: 'Failed to get job status' },

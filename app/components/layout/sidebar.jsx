@@ -1,5 +1,6 @@
-'use client'
+'use client';
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import React, { useEffect, useState } from 'react'
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -38,7 +39,7 @@ export default function Sidebar({ onNavigate, onTogglePin, isPinned = true, show
       await signOut()
       router.push('/sign-in')
     } catch (err) {
-      console.error('Error signing out:', err)
+      structuredConsole.error('Error signing out:', err)
     }
   }
 

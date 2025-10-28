@@ -1,4 +1,6 @@
-'use client'
+'use client';
+
+import { structuredConsole } from '@/lib/logging/console-proxy';
 
 import { useCallback, useEffect, useMemo, useRef, useState, Suspense } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
@@ -453,7 +455,7 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
       const jobUpdate = createJobUpdateFromPayload(job, data, false)
       updateJobState(job.id, jobUpdate)
     } catch (error) {
-      console.error('Error fetching job snapshot:', error)
+      structuredConsole.error('Error fetching job snapshot:', error)
       updateJobState(job.id, {
         resultsError: error instanceof Error ? error.message : 'Unknown error',
         resultsLoaded: true
@@ -498,7 +500,7 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
       const jobUpdate = createJobUpdateFromPayload(job, data, true)
       updateJobState(job.id, jobUpdate)
     } catch (error) {
-      console.error('Error loading additional results:', error)
+      structuredConsole.error('Error loading additional results:', error)
       updateJobState(job.id, {
         resultsError: error instanceof Error ? error.message : 'Failed to load more results'
       })
@@ -511,7 +513,7 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
   const logEvent = useCallback((event: string, detail: Record<string, unknown>) => {
     const timestamp = new Date().toISOString()
     const perfNow = performance.now().toFixed(2)
-    console.log(`🏃 [RUN-SWITCH][${timestamp}][${perfNow}ms] ${event}`, {
+    structuredConsole.log(`🏃 [RUN-SWITCH][${timestamp}][${perfNow}ms] ${event}`, {
       ...detail,
       transitionDuration: transitionStartTimeRef.current ?
         (performance.now() - transitionStartTimeRef.current).toFixed(2) + 'ms' : null
@@ -519,7 +521,7 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
   }, [])
 
   const logUXEvent = useCallback((event: string, detail: Record<string, unknown>) => {
-    console.log(`[RUN-UX][${new Date().toISOString()}] ${event}`, detail)
+    structuredConsole.log(`[RUN-UX][${new Date().toISOString()}] ${event}`, detail)
   }, [])
 
   useEffect(() => {
@@ -713,7 +715,7 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
           clearInterval(interval)
         }
       } catch (error) {
-        console.error('Error polling job status:', error)
+        structuredConsole.error('Error polling job status:', error)
         clearInterval(interval)
         const currentJobSnapshot = activeJobRef.current
         if (currentJobSnapshot) {

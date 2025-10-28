@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { Client } from '@upstash/qstash';
 import { db } from '@/lib/db';
 import { backgroundJobs, events } from '@/lib/db/schema';
@@ -49,7 +50,7 @@ export class JobProcessor {
     priority?: number;
   }): Promise<string> {
 
-    console.log('📤 [JOB-PROCESSOR] Queueing job:', { jobType, delay, priority });
+    structuredConsole.log('📤 [JOB-PROCESSOR] Queueing job:', { jobType, delay, priority });
 
     try {
       // Create job record in database first
@@ -80,7 +81,7 @@ export class JobProcessor {
         .set({ qstashMessageId: qstashResponse.messageId })
         .where(eq(backgroundJobs.id, job.id));
 
-      console.log('✅ [JOB-PROCESSOR] Job queued successfully:', {
+      structuredConsole.log('✅ [JOB-PROCESSOR] Job queued successfully:', {
         jobId: job.id,
         qstashMessageId: qstashResponse.messageId,
         jobType
@@ -89,7 +90,7 @@ export class JobProcessor {
       return job.id;
 
     } catch (error) {
-      console.error('❌ [JOB-PROCESSOR] Error queueing job:', error);
+      structuredConsole.error('❌ [JOB-PROCESSOR] Error queueing job:', error);
       throw error;
     }
   }
@@ -102,7 +103,7 @@ export class JobProcessor {
     attempt: number = 1
   ): Promise<JobResult> {
 
-    console.log('🔄 [JOB-PROCESSOR] Processing job:', { jobId, attempt });
+    structuredConsole.log('🔄 [JOB-PROCESSOR] Processing job:', { jobId, attempt });
 
     try {
       // Get job from database
@@ -111,13 +112,13 @@ export class JobProcessor {
       });
 
       if (!job) {
-        console.error('❌ [JOB-PROCESSOR] Job not found:', jobId);
+        structuredConsole.error('❌ [JOB-PROCESSOR] Job not found:', jobId);
         return { success: false, error: 'Job not found', retryable: false };
       }
 
       // Check if job already completed (idempotency)
       if (job.status === 'completed') {
-        console.log('✅ [JOB-PROCESSOR] Job already completed (idempotent):', jobId);
+        structuredConsole.log('✅ [JOB-PROCESSOR] Job already completed (idempotent):', jobId);
         return { success: true, data: job.result };
       }
 
@@ -164,7 +165,7 @@ export class JobProcessor {
           })
           .where(eq(backgroundJobs.id, jobId));
 
-        console.log('✅ [JOB-PROCESSOR] Job completed successfully:', jobId);
+        structuredConsole.log('✅ [JOB-PROCESSOR] Job completed successfully:', jobId);
       } else {
         await db.update(backgroundJobs)
           .set({
@@ -174,13 +175,13 @@ export class JobProcessor {
           })
           .where(eq(backgroundJobs.id, jobId));
 
-        console.error('❌ [JOB-PROCESSOR] Job failed:', { jobId, error: result.error });
+        structuredConsole.error('❌ [JOB-PROCESSOR] Job failed:', { jobId, error: result.error });
       }
 
       return result;
 
     } catch (error) {
-      console.error('❌ [JOB-PROCESSOR] Error processing job:', error);
+      structuredConsole.error('❌ [JOB-PROCESSOR] Error processing job:', error);
       
       // Mark job as failed
       await db.update(backgroundJobs)
@@ -203,7 +204,7 @@ export class JobProcessor {
    * Complete Onboarding Job Processor
    */
   private static async processCompleteOnboarding(payload: any): Promise<JobResult> {
-    console.log('🎯 [JOB-PROCESSOR] Processing complete onboarding:', payload);
+    structuredConsole.log('🎯 [JOB-PROCESSOR] Processing complete onboarding:', payload);
 
     try {
       const { userId, stripeSubscriptionId, stripeCustomerId, planId = 'glow_up' } = payload;
@@ -221,7 +222,7 @@ export class JobProcessor {
 
       // Check if already completed (idempotency)
       if (userProfile.onboardingStep === 'completed' && userProfile.trialStatus === 'active') {
-        console.log('✅ [JOB-PROCESSOR] Onboarding already completed (idempotent)');
+        structuredConsole.log('✅ [JOB-PROCESSOR] Onboarding already completed (idempotent)');
         return { success: true, data: { message: 'Already completed' } };
       }
 
@@ -233,7 +234,7 @@ export class JobProcessor {
         // Preserve existing trial dates to avoid resetting progress
         trialStartDate = userProfile.trialStartDate;
         trialEndDate = userProfile.trialEndDate;
-        console.log('📅 [JOB-PROCESSOR] Preserving existing trial dates:', {
+        structuredConsole.log('📅 [JOB-PROCESSOR] Preserving existing trial dates:', {
           trialStartDate: trialStartDate.toISOString(),
           trialEndDate: trialEndDate.toISOString(),
           daysRemaining: Math.ceil((trialEndDate.getTime() - Date.now()) / (24 * 60 * 60 * 1000))
@@ -242,7 +243,7 @@ export class JobProcessor {
         // Create new trial dates if none exist
         trialStartDate = new Date();
         trialEndDate = new Date(trialStartDate.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
-        console.log('📅 [JOB-PROCESSOR] Creating new trial dates:', {
+        structuredConsole.log('📅 [JOB-PROCESSOR] Creating new trial dates:', {
           trialStartDate: trialStartDate.toISOString(),
           trialEndDate: trialEndDate.toISOString()
         });
@@ -285,7 +286,7 @@ export class JobProcessor {
 
       await updateUserProfile(userId, updateData);
 
-      console.log('✅ [JOB-PROCESSOR] Onboarding completed successfully:', {
+      structuredConsole.log('✅ [JOB-PROCESSOR] Onboarding completed successfully:', {
         userId,
         planId,
         trialStartDate: trialStartDate.toISOString(),
@@ -304,7 +305,7 @@ export class JobProcessor {
       };
 
     } catch (error) {
-      console.error('❌ [JOB-PROCESSOR] Error completing onboarding:', error);
+      structuredConsole.error('❌ [JOB-PROCESSOR] Error completing onboarding:', error);
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -317,7 +318,7 @@ export class JobProcessor {
    * Send Trial Email Job Processor
    */
   private static async processSendTrialEmail(payload: any): Promise<JobResult> {
-    console.log('📧 [JOB-PROCESSOR] Processing send trial email:', payload);
+    structuredConsole.log('📧 [JOB-PROCESSOR] Processing send trial email:', payload);
     
     // TODO: Implement email sending logic
     // This would integrate with your existing email service
@@ -329,7 +330,7 @@ export class JobProcessor {
    * Expire Trial Job Processor
    */
   private static async processExpireTrial(payload: any): Promise<JobResult> {
-    console.log('⏰ [JOB-PROCESSOR] Processing expire trial:', payload);
+    structuredConsole.log('⏰ [JOB-PROCESSOR] Processing expire trial:', payload);
     
     // TODO: Implement trial expiration logic
     

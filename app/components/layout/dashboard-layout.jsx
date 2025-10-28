@@ -1,5 +1,7 @@
 "use client";
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Sidebar from "./sidebar";
@@ -31,7 +33,7 @@ export default function DashboardLayout({
 
   // Handler for when onboarding is completed
   const handleOnboardingComplete = useCallback(() => {
-    console.log('✅ [ONBOARDING] User completed onboarding flow');
+    structuredConsole.log('✅ [ONBOARDING] User completed onboarding flow');
     setIsOnboardingOpen(false);
     // Refresh the page to update trial status and dashboard data
     router.refresh();

@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { db } from '@/lib/db';
@@ -14,30 +15,30 @@ export async function POST(request: NextRequest) {
     const startTime = Date.now();
     const requestId = `portal_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     
-    console.log('🔗 [CUSTOMER-PORTAL] ===============================');
-    console.log('🔗 [CUSTOMER-PORTAL] CREATING CUSTOMER PORTAL SESSION');
-    console.log('🔗 [CUSTOMER-PORTAL] ===============================');
-    console.log('🆔 [CUSTOMER-PORTAL] Request ID:', requestId);
-    console.log('⏰ [CUSTOMER-PORTAL] Timestamp:', new Date().toISOString());
+    structuredConsole.log('🔗 [CUSTOMER-PORTAL] ===============================');
+    structuredConsole.log('🔗 [CUSTOMER-PORTAL] CREATING CUSTOMER PORTAL SESSION');
+    structuredConsole.log('🔗 [CUSTOMER-PORTAL] ===============================');
+    structuredConsole.log('🆔 [CUSTOMER-PORTAL] Request ID:', requestId);
+    structuredConsole.log('⏰ [CUSTOMER-PORTAL] Timestamp:', new Date().toISOString());
 
     // Get current user
     const { userId } = await getAuthOrTest();
     if (!userId) {
-      console.error('❌ [CUSTOMER-PORTAL] Unauthorized - No valid user session');
+      structuredConsole.error('❌ [CUSTOMER-PORTAL] Unauthorized - No valid user session');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('✅ [CUSTOMER-PORTAL] User authenticated:', userId);
+    structuredConsole.log('✅ [CUSTOMER-PORTAL] User authenticated:', userId);
 
     // Get user profile with Stripe customer ID
     const userProfile = await getUserProfile(userId);
 
     if (!userProfile) {
-      console.error('❌ [CUSTOMER-PORTAL] User profile not found');
+      structuredConsole.error('❌ [CUSTOMER-PORTAL] User profile not found');
       return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
     }
 
-    console.log('✅ [CUSTOMER-PORTAL] User profile found:', {
+    structuredConsole.log('✅ [CUSTOMER-PORTAL] User profile found:', {
       userId,
       hasStripeCustomerId: !!userProfile.stripeCustomerId,
       currentPlan: userProfile.currentPlan,
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
 
     // Check if user has a Stripe customer ID
     if (!userProfile.stripeCustomerId) {
-      console.error('❌ [CUSTOMER-PORTAL] No Stripe customer ID found');
+      structuredConsole.error('❌ [CUSTOMER-PORTAL] No Stripe customer ID found');
       return NextResponse.json({ 
         error: 'No Stripe customer found. Please complete your subscription setup first.' 
       }, { status: 400 });
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
     // Check if this is a mock customer (needs migration to real Stripe)
     const isMockCustomer = userProfile.stripeCustomerId.startsWith('cus_mock_');
     
-    console.log('🔍 [CUSTOMER-PORTAL] Customer analysis:', {
+    structuredConsole.log('🔍 [CUSTOMER-PORTAL] Customer analysis:', {
       customerId: userProfile.stripeCustomerId,
       isMockCustomer,
       needsRealStripeCustomer: isMockCustomer
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
     
     // 🔧 REAL STRIPE ONLY: If user has mock customer, they need a real Stripe customer
     if (isMockCustomer) {
-      console.log('🚨 [CUSTOMER-PORTAL] Mock customer detected - need to create real Stripe customer');
+      structuredConsole.log('🚨 [CUSTOMER-PORTAL] Mock customer detected - need to create real Stripe customer');
       return NextResponse.json({ 
         success: false,
         error: 'Please complete your subscription setup to access billing management.',
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
     }
     
     // If we're using real Stripe, proceed with real customer portal
-    console.log('🏭 [CUSTOMER-PORTAL] Processing real Stripe customer:', {
+    structuredConsole.log('🏭 [CUSTOMER-PORTAL] Processing real Stripe customer:', {
       customerId: userProfile.stripeCustomerId,
       subscriptionStatus: userProfile.subscriptionStatus,
       currentPlan: userProfile.currentPlan
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
     const defaultReturnUrl = `${getClientUrl()}/billing`;
     const portalReturnUrl = returnUrl || defaultReturnUrl;
 
-    console.log('🔗 [CUSTOMER-PORTAL] Portal configuration:', {
+    structuredConsole.log('🔗 [CUSTOMER-PORTAL] Portal configuration:', {
       customerId: userProfile.stripeCustomerId,
       returnUrl: portalReturnUrl,
       requestId
@@ -99,7 +100,7 @@ export async function POST(request: NextRequest) {
       // Configure portal features in Stripe Dashboard → Settings → Customer Portal
     });
 
-    console.log('✅ [CUSTOMER-PORTAL] Portal session created successfully:', {
+    structuredConsole.log('✅ [CUSTOMER-PORTAL] Portal session created successfully:', {
       sessionId: portalSession.id,
       customerId: portalSession.customer,
       url: portalSession.url,
@@ -107,8 +108,8 @@ export async function POST(request: NextRequest) {
     });
 
     const totalTime = Date.now() - startTime;
-    console.log('⏱️ [CUSTOMER-PORTAL] Total execution time:', totalTime, 'ms');
-    console.log('🎉 [CUSTOMER-PORTAL] Portal session creation completed successfully');
+    structuredConsole.log('⏱️ [CUSTOMER-PORTAL] Total execution time:', totalTime, 'ms');
+    structuredConsole.log('🎉 [CUSTOMER-PORTAL] Portal session creation completed successfully');
 
     return NextResponse.json({
       success: true,
@@ -119,18 +120,18 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('💥 [CUSTOMER-PORTAL] Error creating portal session:', error);
+    structuredConsole.error('💥 [CUSTOMER-PORTAL] Error creating portal session:', error);
     
     // Handle specific Stripe errors
     if (error.type === 'StripeInvalidRequestError') {
-      console.error('❌ [CUSTOMER-PORTAL] Invalid Stripe request:', error.message);
+      structuredConsole.error('❌ [CUSTOMER-PORTAL] Invalid Stripe request:', error.message);
       return NextResponse.json({ 
         error: 'Invalid customer information. Please contact support.' 
       }, { status: 400 });
     }
 
     if (error.type === 'StripeConnectionError') {
-      console.error('❌ [CUSTOMER-PORTAL] Stripe connection error:', error.message);
+      structuredConsole.error('❌ [CUSTOMER-PORTAL] Stripe connection error:', error.message);
       return NextResponse.json({ 
         error: 'Service temporarily unavailable. Please try again.' 
       }, { status: 503 });
@@ -144,7 +145,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
-    console.log('🔍 [CUSTOMER-PORTAL-GET] Checking customer portal access');
+    structuredConsole.log('🔍 [CUSTOMER-PORTAL-GET] Checking customer portal access');
     
     const { userId } = await getAuthOrTest();
     if (!userId) {
@@ -164,7 +165,7 @@ export async function GET() {
     // 🔧 REAL STRIPE ONLY: Only real Stripe customers can access portal
     const canAccessPortal = hasStripeCustomer && !isMockCustomer && userProfile.subscriptionStatus !== 'none';
 
-    console.log('📊 [CUSTOMER-PORTAL-GET] Portal access check:', {
+    structuredConsole.log('📊 [CUSTOMER-PORTAL-GET] Portal access check:', {
       userId,
       hasStripeCustomer,
       isMockCustomer,
@@ -182,7 +183,7 @@ export async function GET() {
     });
 
   } catch (error: any) {
-    console.error('❌ [CUSTOMER-PORTAL-GET] Error checking portal access:', error);
+    structuredConsole.error('❌ [CUSTOMER-PORTAL-GET] Error checking portal access:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

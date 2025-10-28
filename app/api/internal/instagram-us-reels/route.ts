@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server';
 
 import { runInstagramUsReelsPipeline } from '@/lib/instagram-us-reels';
@@ -23,7 +24,7 @@ export async function POST(request: Request) {
     const results = await runInstagramUsReelsPipeline({ keyword }, options);
     return NextResponse.json({ keyword, results });
   } catch (error: any) {
-    console.error('[instagram-us-reels] pipeline failed', error);
+    structuredConsole.error('[instagram-us-reels] pipeline failed', error);
     return NextResponse.json(
       {
         error: 'Pipeline error',

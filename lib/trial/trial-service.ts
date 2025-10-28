@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
 // Removed Clerk billing dependency - using Stripe only
 
@@ -110,7 +111,7 @@ export async function startTrial(userId: string, clerkBillingData?: {
   subscriptionId: string;
 }): Promise<TrialData> {
   try {
-    console.log('🎯 [TRIAL-SERVICE] Starting trial for user:', userId);
+    structuredConsole.log('🎯 [TRIAL-SERVICE] Starting trial for user:', userId);
 
     // First, get existing user profile to check for existing trial dates
     const existingProfile = await getUserProfile(userId);
@@ -122,7 +123,7 @@ export async function startTrial(userId: string, clerkBillingData?: {
       // Preserve existing trial dates to avoid resetting progress
       trialStartDate = existingProfile.trialStartDate;
       trialEndDate = existingProfile.trialEndDate;
-      console.log('📅 [TRIAL-SERVICE] Preserving existing trial dates:', {
+      structuredConsole.log('📅 [TRIAL-SERVICE] Preserving existing trial dates:', {
         startDate: trialStartDate.toISOString(),
         endDate: trialEndDate.toISOString(),
         daysRemaining: Math.ceil((trialEndDate.getTime() - Date.now()) / (24 * 60 * 60 * 1000))
@@ -131,7 +132,7 @@ export async function startTrial(userId: string, clerkBillingData?: {
       // Create new trial dates if none exist
       trialStartDate = new Date();
       trialEndDate = new Date(trialStartDate.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
-      console.log('📅 [TRIAL-SERVICE] Creating new trial dates:', {
+      structuredConsole.log('📅 [TRIAL-SERVICE] Creating new trial dates:', {
         startDate: trialStartDate.toISOString(),
         endDate: trialEndDate.toISOString()
       });
@@ -148,9 +149,9 @@ export async function startTrial(userId: string, clerkBillingData?: {
       stripeSubscriptionId: clerkBillingData?.subscriptionId || null,
     });
 
-    console.log('✅ [TRIAL-SERVICE] Trial started successfully');
-    console.log('💳 [TRIAL-SERVICE] Clerk billing data:', clerkBillingData || 'None');
-    console.log('📋 [TRIAL-SERVICE] Current plan: (preserved from background job)');
+    structuredConsole.log('✅ [TRIAL-SERVICE] Trial started successfully');
+    structuredConsole.log('💳 [TRIAL-SERVICE] Clerk billing data:', clerkBillingData || 'None');
+    structuredConsole.log('📋 [TRIAL-SERVICE] Current plan: (preserved from background job)');
 
     // Fetch updated user profile to get current plan (set by background job)
     const userProfile = await getUserProfile(userId);
@@ -166,7 +167,7 @@ export async function startTrial(userId: string, clerkBillingData?: {
       isTrialing: true
     };
 
-    console.log('📋 [TRIAL-SERVICE] Retrieved current plan:', billingStatus.currentPlan);
+    structuredConsole.log('📋 [TRIAL-SERVICE] Retrieved current plan:', billingStatus.currentPlan);
 
     // Calculate countdown data
     const countdown = calculateCountdown(trialStartDate, trialEndDate);
@@ -185,7 +186,7 @@ export async function startTrial(userId: string, clerkBillingData?: {
       hasActiveSubscription: false // Trial users don't have active subscriptions
     };
 
-    console.log('⏰ [TRIAL-SERVICE] Countdown calculated:', {
+    structuredConsole.log('⏰ [TRIAL-SERVICE] Countdown calculated:', {
       daysRemaining: countdown.daysRemaining,
       hoursRemaining: countdown.hoursRemaining,
       minutesRemaining: countdown.minutesRemaining,
@@ -194,7 +195,7 @@ export async function startTrial(userId: string, clerkBillingData?: {
 
     return trialData;
   } catch (error) {
-    console.error('❌ [TRIAL-SERVICE] Error starting trial:', error);
+    structuredConsole.error('❌ [TRIAL-SERVICE] Error starting trial:', error);
     throw new Error('Failed to start trial');
   }
 }
@@ -204,13 +205,13 @@ export async function startTrial(userId: string, clerkBillingData?: {
  */
 export async function getTrialStatus(userId: string): Promise<TrialData | null> {
   try {
-    console.log('🔍 [TRIAL-SERVICE] Getting trial status for user:', userId);
+    structuredConsole.log('🔍 [TRIAL-SERVICE] Getting trial status for user:', userId);
 
     // Get user profile with trial data
     const userProfile = await getUserProfile(userId);
 
     if (!userProfile) {
-      console.log('❌ [TRIAL-SERVICE] User profile not found');
+      structuredConsole.log('❌ [TRIAL-SERVICE] User profile not found');
       return null;
     }
 
@@ -227,7 +228,7 @@ export async function getTrialStatus(userId: string): Promise<TrialData | null> 
     
     // If user has active paid subscription, return subscription data instead of trial data
     if (isPaidUser) {
-      console.log('✅ [TRIAL-SERVICE] Active paid subscription detected, returning subscription status');
+      structuredConsole.log('✅ [TRIAL-SERVICE] Active paid subscription detected, returning subscription status');
       return {
         userId,
         trialStatus: 'converted' as TrialStatus,
@@ -251,7 +252,7 @@ export async function getTrialStatus(userId: string): Promise<TrialData | null> 
 
     // If no trial dates, create default trial data with billing info
     if (!userProfile.trialStartDate || !userProfile.trialEndDate) {
-      console.log('ℹ️ [TRIAL-SERVICE] No trial data found, using billing status');
+      structuredConsole.log('ℹ️ [TRIAL-SERVICE] No trial data found, using billing status');
       return {
         userId,
         trialStatus: 'pending',
@@ -279,7 +280,7 @@ export async function getTrialStatus(userId: string): Promise<TrialData | null> 
     // Check if trial should be expired
     let currentTrialStatus = userProfile.trialStatus as TrialStatus;
     if (countdown.isExpired && currentTrialStatus === 'active') {
-      console.log('⚠️ [TRIAL-SERVICE] Trial has expired, updating status');
+      structuredConsole.log('⚠️ [TRIAL-SERVICE] Trial has expired, updating status');
       
       // Update status to expired
       await updateUserProfile(userId, {
@@ -304,7 +305,7 @@ export async function getTrialStatus(userId: string): Promise<TrialData | null> 
       hasActiveSubscription: false // Trial users don't have active subscriptions
     };
 
-    console.log('📊 [TRIAL-SERVICE] Trial status retrieved:', {
+    structuredConsole.log('📊 [TRIAL-SERVICE] Trial status retrieved:', {
       status: currentTrialStatus,
       daysRemaining: countdown.daysRemaining,
       progressPercentage: countdown.progressPercentage,
@@ -315,7 +316,7 @@ export async function getTrialStatus(userId: string): Promise<TrialData | null> 
 
     return trialData;
   } catch (error) {
-    console.error('❌ [TRIAL-SERVICE] Error getting trial status:', error);
+    structuredConsole.error('❌ [TRIAL-SERVICE] Error getting trial status:', error);
     return null;
   }
 }
@@ -325,17 +326,17 @@ export async function getTrialStatus(userId: string): Promise<TrialData | null> 
  */
 export async function cancelTrial(userId: string): Promise<boolean> {
   try {
-    console.log('🚫 [TRIAL-SERVICE] Canceling trial for user:', userId);
+    structuredConsole.log('🚫 [TRIAL-SERVICE] Canceling trial for user:', userId);
 
     await updateUserProfile(userId, {
       trialStatus: 'cancelled',
       subscriptionStatus: 'canceled',
     });
 
-    console.log('✅ [TRIAL-SERVICE] Trial cancelled successfully');
+    structuredConsole.log('✅ [TRIAL-SERVICE] Trial cancelled successfully');
     return true;
   } catch (error) {
-    console.error('❌ [TRIAL-SERVICE] Error canceling trial:', error);
+    structuredConsole.error('❌ [TRIAL-SERVICE] Error canceling trial:', error);
     return false;
   }
 }
@@ -345,17 +346,17 @@ export async function cancelTrial(userId: string): Promise<boolean> {
  */
 export async function convertTrial(userId: string): Promise<boolean> {
   try {
-    console.log('💰 [TRIAL-SERVICE] Converting trial to paid for user:', userId);
+    structuredConsole.log('💰 [TRIAL-SERVICE] Converting trial to paid for user:', userId);
 
     await updateUserProfile(userId, {
       trialStatus: 'converted',
       subscriptionStatus: 'active',
     });
 
-    console.log('✅ [TRIAL-SERVICE] Trial converted successfully');
+    structuredConsole.log('✅ [TRIAL-SERVICE] Trial converted successfully');
     return true;
   } catch (error) {
-    console.error('❌ [TRIAL-SERVICE] Error converting trial:', error);
+    structuredConsole.error('❌ [TRIAL-SERVICE] Error converting trial:', error);
     return false;
   }
 }

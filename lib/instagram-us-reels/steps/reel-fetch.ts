@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import type { ProfileSummary, ReelMedia } from '../types';
 import {
   getInstagramPost,
@@ -46,7 +47,7 @@ export async function fetchReelsForProfiles(
         const reels = await fetchReelsForProfile(profile, { amount, fetchDetails });
         collected.push(...reels);
       } catch (error) {
-        console.warn('[reel-fetch] failed', {
+        structuredConsole.warn('[reel-fetch] failed', {
           handle: profile.handle,
           error: error instanceof Error ? error.message : String(error),
         });
@@ -128,7 +129,7 @@ async function enrichWithPostDetails(reels: ReelMedia[]): Promise<void> {
         reel.likeCount = data.edge_media_preview_like?.count ?? data.like_count ?? reel.likeCount;
         reel.url = data.video_url ?? reel.url;
       } catch (error) {
-        console.warn('[reel-fetch] post detail fetch failed', {
+        structuredConsole.warn('[reel-fetch] post detail fetch failed', {
           shortcode: reel.shortcode,
           error: error instanceof Error ? error.message : String(error),
         });

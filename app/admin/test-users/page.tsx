@@ -1,5 +1,7 @@
 'use client';
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,15 +35,15 @@ export default function AdminTestUsersPage() {
       if (result.success) {
         setTestUser(result.credentials);
         setMessage('✅ Test user created successfully! Check console for detailed instructions.');
-        console.log('🧪 [TEST-USER-CREATED] Test user credentials:', result.credentials);
-        console.log('📋 [TEST-USER-INSTRUCTIONS]:', result.credentials.instructions);
+        structuredConsole.log('🧪 [TEST-USER-CREATED] Test user credentials:', result.credentials);
+        structuredConsole.log('📋 [TEST-USER-INSTRUCTIONS]:', result.credentials.instructions);
         loadTestUsers(); // Refresh the list
       } else {
         setMessage(`❌ Failed: ${result.error}`);
       }
     } catch (error) {
       setMessage('❌ Error creating test user');
-      console.error('Error:', error);
+      structuredConsole.error('Error:', error);
     }
     
     setLoading(false);
@@ -53,7 +55,7 @@ export default function AdminTestUsersPage() {
       const result = await response.json();
       setTestUsers(result.testUsers || []);
     } catch (error) {
-      console.error('Error loading test users:', error);
+      structuredConsole.error('Error loading test users:', error);
     }
   };
 
@@ -72,14 +74,14 @@ export default function AdminTestUsersPage() {
       
       if (result.success) {
         setMessage(`✅ Test login setup for ${userId}. Follow instructions in console.`);
-        console.log('🔐 [TEST-LOGIN-SETUP] Instructions:', result.instructions);
-        console.log('🔐 [TEST-LOGIN-SETUP] Next steps:', result.nextSteps);
+        structuredConsole.log('🔐 [TEST-LOGIN-SETUP] Instructions:', result.instructions);
+        structuredConsole.log('🔐 [TEST-LOGIN-SETUP] Next steps:', result.nextSteps);
       } else {
         setMessage(`❌ Failed: ${result.error}`);
       }
     } catch (error) {
       setMessage('❌ Error setting up test login');
-      console.error('Error:', error);
+      structuredConsole.error('Error:', error);
     }
   };
 

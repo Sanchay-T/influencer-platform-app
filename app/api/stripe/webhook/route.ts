@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
 import { StripeService } from '@/lib/stripe/stripe-service';
 import { db } from '@/lib/db';
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
     // Validate webhook signature
     const event = StripeService.validateWebhookSignature(body, signature);
 
-    console.log('📥 [STRIPE-WEBHOOK] Received event:', event.type);
+    structuredConsole.log('📥 [STRIPE-WEBHOOK] Received event:', event.type);
 
     switch (event.type) {
       case 'checkout.session.completed':
@@ -61,13 +62,13 @@ export async function POST(req: NextRequest) {
         break;
 
       default:
-        console.log('⚠️ [STRIPE-WEBHOOK] Unhandled event type:', event.type);
+        structuredConsole.log('⚠️ [STRIPE-WEBHOOK] Unhandled event type:', event.type);
     }
 
     return NextResponse.json({ received: true });
 
   } catch (error) {
-    console.error('❌ [STRIPE-WEBHOOK] Error:', error);
+    structuredConsole.error('❌ [STRIPE-WEBHOOK] Error:', error);
     return NextResponse.json(
       { error: 'Webhook handler failed' },
       { status: 500 }
@@ -89,13 +90,13 @@ function getPlanFromPriceId(priceId: string): string {
   const plan = priceIdToplan[priceId];
   
   if (!plan) {
-    console.error('⚠️ [STRIPE-WEBHOOK] Unknown price ID encountered:', {
+    structuredConsole.error('⚠️ [STRIPE-WEBHOOK] Unknown price ID encountered:', {
       priceId,
       availableMappings: Object.keys(priceIdToplan).filter(key => key !== 'undefined'),
       allEnvVars: Object.entries(priceIdToplan).map(([key, value]) => ({ priceId: key, plan: value }))
     });
   } else {
-    console.log('✅ [STRIPE-WEBHOOK] Plan mapped successfully:', { priceId, plan });
+    structuredConsole.log('✅ [STRIPE-WEBHOOK] Plan mapped successfully:', { priceId, plan });
   }
   
   return plan || 'unknown';
@@ -105,7 +106,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   const requestId = `webhook_checkout_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const userId = session.metadata?.userId;
 
-  console.log('🧾 [STRIPE-WEBHOOK] checkout.session.completed received', {
+  structuredConsole.log('🧾 [STRIPE-WEBHOOK] checkout.session.completed received', {
     requestId,
     sessionId: session.id,
     userId,
@@ -115,7 +116,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   });
 
   if (!userId) {
-    console.warn('⚠️ [STRIPE-WEBHOOK] Checkout session missing userId metadata; skipping onboarding finalization.', {
+    structuredConsole.warn('⚠️ [STRIPE-WEBHOOK] Checkout session missing userId metadata; skipping onboarding finalization.', {
       requestId,
       sessionId: session.id,
     });
@@ -125,7 +126,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   const userProfile = await getUserProfile(userId);
 
   if (!userProfile) {
-    console.warn('⚠️ [STRIPE-WEBHOOK] User profile not found while finalizing onboarding from checkout session', {
+    structuredConsole.warn('⚠️ [STRIPE-WEBHOOK] User profile not found while finalizing onboarding from checkout session', {
       requestId,
       userId,
       sessionId: session.id,
@@ -134,7 +135,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   }
 
   if (userProfile.onboardingStep === 'completed') {
-    console.log('✅ [STRIPE-WEBHOOK] Onboarding already completed, skipping finalizeOnboarding', {
+    structuredConsole.log('✅ [STRIPE-WEBHOOK] Onboarding already completed, skipping finalizeOnboarding', {
       requestId,
       userId,
     });
@@ -150,7 +151,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       skipIfCompleted: true,
     });
 
-    console.log('✅ [STRIPE-WEBHOOK] finalizeOnboarding executed from checkout session', {
+    structuredConsole.log('✅ [STRIPE-WEBHOOK] finalizeOnboarding executed from checkout session', {
       requestId,
       userId,
       sessionId: session.id,
@@ -159,7 +160,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       emailScheduled: result.emails?.success ?? false,
     });
   } catch (error) {
-    console.error('❌ [STRIPE-WEBHOOK] finalizeOnboarding failed during checkout session handling', {
+    structuredConsole.error('❌ [STRIPE-WEBHOOK] finalizeOnboarding failed during checkout session handling', {
       requestId,
       userId,
       sessionId: session.id,
@@ -172,10 +173,10 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   try {
     const webhookTestId = `WEBHOOK_SUBSCRIPTION_CREATED_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    console.log(`🎯 [WEBHOOK-TEST] ${webhookTestId} - Processing subscription.created webhook`);
+    structuredConsole.log(`🎯 [WEBHOOK-TEST] ${webhookTestId} - Processing subscription.created webhook`);
     
     const customerId = subscription.customer as string;
-    console.log(`🔍 [WEBHOOK-TEST] ${webhookTestId} - Subscription details:`, {
+    structuredConsole.log(`🔍 [WEBHOOK-TEST] ${webhookTestId} - Subscription details:`, {
       subscriptionId: subscription.id,
       customerId,
       status: subscription.status,
@@ -191,13 +192,13 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
       const priceId = subscription.items.data[0]?.price?.id;
       if (priceId) {
         planId = getPlanFromPriceId(priceId);
-        console.log('🔍 [STRIPE-WEBHOOK] Plan determined from price ID:', { priceId, planId });
+        structuredConsole.log('🔍 [STRIPE-WEBHOOK] Plan determined from price ID:', { priceId, planId });
       }
     }
     
     // 🚨 CRITICAL: Never use arbitrary fallback plan - this causes upgrade bugs
     if (!planId || planId === 'unknown') {
-      console.error('❌ [STRIPE-WEBHOOK] CRITICAL: Cannot determine plan from subscription', {
+      structuredConsole.error('❌ [STRIPE-WEBHOOK] CRITICAL: Cannot determine plan from subscription', {
         subscriptionId: subscription.id,
         customerId,
         metadata: subscription.metadata,
@@ -214,7 +215,7 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
       throw new Error(`Cannot determine plan for subscription ${subscription.id}. This webhook will be retried.`);
     }
 
-    console.log('🎯 [STRIPE-WEBHOOK] Processing subscription created (Event-Driven):', {
+    structuredConsole.log('🎯 [STRIPE-WEBHOOK] Processing subscription created (Event-Driven):', {
       subscriptionId: subscription.id,
       customerId,
       planId,
@@ -225,23 +226,23 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
 
     // 🔍 DIAGNOSTIC LOGS - Check if event sourcing system is available
     try {
-      console.log('🔍 [STRIPE-WEBHOOK-DIAGNOSTICS] Checking event sourcing system availability...');
+      structuredConsole.log('🔍 [STRIPE-WEBHOOK-DIAGNOSTICS] Checking event sourcing system availability...');
       const { EventService, EVENT_TYPES } = await import('@/lib/events/event-service');
-      console.log('✅ [STRIPE-WEBHOOK-DIAGNOSTICS] Event sourcing system imported successfully');
+      structuredConsole.log('✅ [STRIPE-WEBHOOK-DIAGNOSTICS] Event sourcing system imported successfully');
     } catch (importError) {
-      console.error('❌ [STRIPE-WEBHOOK-DIAGNOSTICS] Event sourcing system import failed:', importError);
-      console.error('🚨 [STRIPE-WEBHOOK-DIAGNOSTICS] CRITICAL: Event sourcing not available - falling back to direct DB update');
+      structuredConsole.error('❌ [STRIPE-WEBHOOK-DIAGNOSTICS] Event sourcing system import failed:', importError);
+      structuredConsole.error('🚨 [STRIPE-WEBHOOK-DIAGNOSTICS] CRITICAL: Event sourcing not available - falling back to direct DB update');
     }
 
     // Find user by Stripe customer ID (using normalized tables)
     const user = await getUserByStripeCustomerId(customerId);
 
     if (!user) {
-      console.error('❌ [STRIPE-WEBHOOK] User not found for customer:', customerId);
+      structuredConsole.error('❌ [STRIPE-WEBHOOK] User not found for customer:', customerId);
       return;
     }
 
-    console.log('✅ [STRIPE-WEBHOOK] User found:', user.userId);
+    structuredConsole.log('✅ [STRIPE-WEBHOOK] User found:', user.userId);
 
     // Generate correlation ID for tracking related events
     const correlationId = EventService.generateCorrelationId();
@@ -276,12 +277,12 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
     });
 
     if (!planDetails) {
-      console.error('❌ [STRIPE-WEBHOOK] Plan details not found for:', planId);
+      structuredConsole.error('❌ [STRIPE-WEBHOOK] Plan details not found for:', planId);
       // Continue with basic update, but log the issue
     }
 
     // Update subscription info immediately using normalized tables
-    console.log(`🔄 [WEBHOOK-TEST] ${webhookTestId} - Updating user profile with plan: ${planId}`);
+    structuredConsole.log(`🔄 [WEBHOOK-TEST] ${webhookTestId} - Updating user profile with plan: ${planId}`);
     const updateData = {
       stripeSubscriptionId: subscription.id,
       currentPlan: planId,
@@ -295,11 +296,11 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
       lastWebhookTimestamp: new Date(),
     };
     
-    console.log(`🔍 [WEBHOOK-TEST] ${webhookTestId} - Update data being applied:`, updateData);
+    structuredConsole.log(`🔍 [WEBHOOK-TEST] ${webhookTestId} - Update data being applied:`, updateData);
     await updateUserProfile(user.userId, updateData);
-    console.log(`✅ [WEBHOOK-TEST] ${webhookTestId} - User profile updated successfully`);
+    structuredConsole.log(`✅ [WEBHOOK-TEST] ${webhookTestId} - User profile updated successfully`);
 
-    console.log('✅ [STRIPE-WEBHOOK] User plan limits updated:', {
+    structuredConsole.log('✅ [STRIPE-WEBHOOK] User plan limits updated:', {
       planId,
       campaignsLimit: planDetails?.campaignsLimit,
       creatorsLimit: planDetails?.creatorsLimit
@@ -307,13 +308,13 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
 
     // If subscription has trial, queue background job to complete onboarding (Industry Standard)
     if (subscription.trial_end && subscription.status === 'trialing') {
-      console.log('🚀 [STRIPE-WEBHOOK] Queueing background job to complete onboarding');
+      structuredConsole.log('🚀 [STRIPE-WEBHOOK] Queueing background job to complete onboarding');
       
       try {
         // 🔍 DIAGNOSTIC LOGS - Check JobProcessor availability
-        console.log('🔍 [STRIPE-WEBHOOK-DIAGNOSTICS] Importing JobProcessor...');
+        structuredConsole.log('🔍 [STRIPE-WEBHOOK-DIAGNOSTICS] Importing JobProcessor...');
         const { JobProcessor } = await import('@/lib/jobs/job-processor');
-        console.log('✅ [STRIPE-WEBHOOK-DIAGNOSTICS] JobProcessor imported successfully');
+        structuredConsole.log('✅ [STRIPE-WEBHOOK-DIAGNOSTICS] JobProcessor imported successfully');
         
         const jobId = await JobProcessor.queueJob({
           jobType: 'complete_onboarding',
@@ -330,7 +331,7 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
           priority: 10 // High priority
         });
 
-        console.log('✅ [STRIPE-WEBHOOK] Background job queued successfully:', {
+        structuredConsole.log('✅ [STRIPE-WEBHOOK] Background job queued successfully:', {
           jobId,
           jobType: 'complete_onboarding',
           userId: user.userId,
@@ -338,14 +339,14 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
         });
 
         // 🔍 DIAGNOSTIC LOGS - Verify job was created in database
-        console.log('🔍 [STRIPE-WEBHOOK-DIAGNOSTICS] Verifying job creation in database...');
+        structuredConsole.log('🔍 [STRIPE-WEBHOOK-DIAGNOSTICS] Verifying job creation in database...');
         
       } catch (jobError) {
-        console.error('❌ [STRIPE-WEBHOOK-DIAGNOSTICS] JobProcessor failed:', jobError);
-        console.error('🚨 [STRIPE-WEBHOOK-DIAGNOSTICS] CRITICAL: Background job not queued - onboarding will not complete automatically');
+        structuredConsole.error('❌ [STRIPE-WEBHOOK-DIAGNOSTICS] JobProcessor failed:', jobError);
+        structuredConsole.error('🚨 [STRIPE-WEBHOOK-DIAGNOSTICS] CRITICAL: Background job not queued - onboarding will not complete automatically');
         
         // FALLBACK: Direct onboarding completion (temporary emergency fix)
-        console.log('🔧 [STRIPE-WEBHOOK-DIAGNOSTICS] EMERGENCY FALLBACK: Completing onboarding directly');
+        structuredConsole.log('🔧 [STRIPE-WEBHOOK-DIAGNOSTICS] EMERGENCY FALLBACK: Completing onboarding directly');
         const trialStartDate = new Date();
         const trialEndDate = new Date(subscription.trial_end * 1000);
         
@@ -357,18 +358,18 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
           billingSyncStatus: 'webhook_emergency_fallback',
         });
           
-        console.log('🔧 [STRIPE-WEBHOOK-DIAGNOSTICS] Emergency fallback completed - onboarding set to completed');
+        structuredConsole.log('🔧 [STRIPE-WEBHOOK-DIAGNOSTICS] Emergency fallback completed - onboarding set to completed');
       }
     }
 
-    console.log('✅ [STRIPE-WEBHOOK] Subscription created event processed (Event-Driven):', {
+    structuredConsole.log('✅ [STRIPE-WEBHOOK] Subscription created event processed (Event-Driven):', {
       userId: user.userId,
       eventId: subscriptionEvent?.id,
       hasTrialJob: !!(subscription.trial_end && subscription.status === 'trialing')
     });
 
   } catch (error) {
-    console.error('❌ [STRIPE-WEBHOOK] Error handling subscription created:', error);
+    structuredConsole.error('❌ [STRIPE-WEBHOOK] Error handling subscription created:', error);
   }
 }
 
@@ -384,13 +385,13 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       const priceId = subscription.items.data[0]?.price?.id;
       if (priceId) {
         planId = getPlanFromPriceId(priceId);
-        console.log('🔍 [STRIPE-WEBHOOK] Plan determined from price ID for update:', { priceId, planId });
+        structuredConsole.log('🔍 [STRIPE-WEBHOOK] Plan determined from price ID for update:', { priceId, planId });
       }
     }
 
     // 🚨 CRITICAL: Never proceed with unknown plan - this causes upgrade bugs
     if (!planId || planId === 'unknown') {
-      console.error('❌ [STRIPE-WEBHOOK] CRITICAL: Cannot determine plan for subscription update', {
+      structuredConsole.error('❌ [STRIPE-WEBHOOK] CRITICAL: Cannot determine plan for subscription update', {
         subscriptionId: subscription.id,
         customerId,
         metadata: subscription.metadata,
@@ -403,7 +404,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     const user = await getUserByStripeCustomerId(customerId);
 
     if (!user) {
-      console.error('❌ [STRIPE-WEBHOOK] User not found for customer:', customerId);
+      structuredConsole.error('❌ [STRIPE-WEBHOOK] User not found for customer:', customerId);
       return;
     }
 
@@ -418,7 +419,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 
     // Handle trial conversion - more comprehensive logic
     if (subscription.status === 'active' && user.trialStatus === 'active') {
-      console.log('🎯 [STRIPE-WEBHOOK] Trial converted to paid subscription');
+      structuredConsole.log('🎯 [STRIPE-WEBHOOK] Trial converted to paid subscription');
       updateData.trialStatus = 'converted';
       updateData.trialConversionDate = new Date();
     }
@@ -449,10 +450,10 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 
     await updateUserProfile(user.userId, updateData);
 
-    console.log('✅ [STRIPE-WEBHOOK] Subscription updated for user:', user.userId);
+    structuredConsole.log('✅ [STRIPE-WEBHOOK] Subscription updated for user:', user.userId);
 
   } catch (error) {
-    console.error('❌ [STRIPE-WEBHOOK] Error handling subscription updated:', error);
+    structuredConsole.error('❌ [STRIPE-WEBHOOK] Error handling subscription updated:', error);
   }
 }
 
@@ -464,7 +465,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     const user = await getUserByStripeCustomerId(customerId);
 
     if (!user) {
-      console.error('❌ [STRIPE-WEBHOOK] User not found for customer:', customerId);
+      structuredConsole.error('❌ [STRIPE-WEBHOOK] User not found for customer:', customerId);
       return;
     }
 
@@ -482,10 +483,10 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
       planFeatures: {}
     });
 
-    console.log('✅ [STRIPE-WEBHOOK] Subscription deleted for user:', user.userId);
+    structuredConsole.log('✅ [STRIPE-WEBHOOK] Subscription deleted for user:', user.userId);
 
   } catch (error) {
-    console.error('❌ [STRIPE-WEBHOOK] Error handling subscription deleted:', error);
+    structuredConsole.error('❌ [STRIPE-WEBHOOK] Error handling subscription deleted:', error);
   }
 }
 
@@ -497,7 +498,7 @@ async function handleTrialWillEnd(subscription: Stripe.Subscription) {
     const user = await getUserByStripeCustomerId(customerId);
 
     if (!user) {
-      console.error('❌ [STRIPE-WEBHOOK] User not found for customer:', customerId);
+      structuredConsole.error('❌ [STRIPE-WEBHOOK] User not found for customer:', customerId);
       return;
     }
 
@@ -508,12 +509,12 @@ async function handleTrialWillEnd(subscription: Stripe.Subscription) {
       lastWebhookTimestamp: new Date()
     });
 
-    console.log('✅ [STRIPE-WEBHOOK] Trial will end for user:', user.userId);
+    structuredConsole.log('✅ [STRIPE-WEBHOOK] Trial will end for user:', user.userId);
 
     // Here you could send a reminder email or trigger other actions
 
   } catch (error) {
-    console.error('❌ [STRIPE-WEBHOOK] Error handling trial will end:', error);
+    structuredConsole.error('❌ [STRIPE-WEBHOOK] Error handling trial will end:', error);
   }
 }
 
@@ -525,7 +526,7 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
     const user = await getUserByStripeCustomerId(customerId);
 
     if (!user) {
-      console.error('❌ [STRIPE-WEBHOOK] User not found for customer:', customerId);
+      structuredConsole.error('❌ [STRIPE-WEBHOOK] User not found for customer:', customerId);
       return;
     }
 
@@ -536,10 +537,10 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
       lastWebhookTimestamp: new Date()
     });
 
-    console.log('✅ [STRIPE-WEBHOOK] Payment succeeded for user:', user.userId);
+    structuredConsole.log('✅ [STRIPE-WEBHOOK] Payment succeeded for user:', user.userId);
 
   } catch (error) {
-    console.error('❌ [STRIPE-WEBHOOK] Error handling payment succeeded:', error);
+    structuredConsole.error('❌ [STRIPE-WEBHOOK] Error handling payment succeeded:', error);
   }
 }
 
@@ -551,7 +552,7 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
     const user = await getUserByStripeCustomerId(customerId);
 
     if (!user) {
-      console.error('❌ [STRIPE-WEBHOOK] User not found for customer:', customerId);
+      structuredConsole.error('❌ [STRIPE-WEBHOOK] User not found for customer:', customerId);
       return;
     }
 
@@ -562,12 +563,12 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
       lastWebhookTimestamp: new Date()
     });
 
-    console.log('✅ [STRIPE-WEBHOOK] Payment failed for user:', user.userId);
+    structuredConsole.log('✅ [STRIPE-WEBHOOK] Payment failed for user:', user.userId);
 
     // Here you could send a payment failure notification or retry logic
 
   } catch (error) {
-    console.error('❌ [STRIPE-WEBHOOK] Error handling payment failed:', error);
+    structuredConsole.error('❌ [STRIPE-WEBHOOK] Error handling payment failed:', error);
   }
 }
 
@@ -579,7 +580,7 @@ async function handleSetupIntentSucceeded(setupIntent: Stripe.SetupIntent) {
     const user = await getUserByStripeCustomerId(customerId);
 
     if (!user) {
-      console.error('❌ [STRIPE-WEBHOOK] User not found for customer:', customerId);
+      structuredConsole.error('❌ [STRIPE-WEBHOOK] User not found for customer:', customerId);
       return;
     }
 
@@ -590,10 +591,10 @@ async function handleSetupIntentSucceeded(setupIntent: Stripe.SetupIntent) {
       lastWebhookTimestamp: new Date()
     });
 
-    console.log('✅ [STRIPE-WEBHOOK] Setup intent succeeded for user:', user.userId);
+    structuredConsole.log('✅ [STRIPE-WEBHOOK] Setup intent succeeded for user:', user.userId);
 
   } catch (error) {
-    console.error('❌ [STRIPE-WEBHOOK] Error handling setup intent succeeded:', error);
+    structuredConsole.error('❌ [STRIPE-WEBHOOK] Error handling setup intent succeeded:', error);
   }
 }
 
@@ -605,7 +606,7 @@ async function handlePaymentMethodAttached(paymentMethod: Stripe.PaymentMethod) 
     const user = await getUserByStripeCustomerId(customerId);
 
     if (!user) {
-      console.error('❌ [STRIPE-WEBHOOK] User not found for customer:', customerId);
+      structuredConsole.error('❌ [STRIPE-WEBHOOK] User not found for customer:', customerId);
       return;
     }
 
@@ -627,9 +628,9 @@ async function handlePaymentMethodAttached(paymentMethod: Stripe.PaymentMethod) 
 
     await updateUserProfile(user.userId, updateData);
 
-    console.log('✅ [STRIPE-WEBHOOK] Payment method attached for user:', user.userId);
+    structuredConsole.log('✅ [STRIPE-WEBHOOK] Payment method attached for user:', user.userId);
 
   } catch (error) {
-    console.error('❌ [STRIPE-WEBHOOK] Error handling payment method attached:', error);
+    structuredConsole.error('❌ [STRIPE-WEBHOOK] Error handling payment method attached:', error);
   }
 }

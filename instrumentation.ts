@@ -4,6 +4,7 @@ export async function register() {
     // [Bootstrap] Ensure environment validation runs once during server start before any routes resolve.
     const { validateEnvironmentOnStartup } = await import('./lib/startup-validation.js')
     validateEnvironmentOnStartup()
+    await import('./lib/logging/server-console-bridge')
   }
 
   if (process.env.NEXT_RUNTIME === 'edge') {

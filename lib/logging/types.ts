@@ -171,6 +171,8 @@ export interface LoggerConfig {
   
   // Environment-specific settings
   environment: 'development' | 'test' | 'production';
+  prettyConsole?: boolean;
+  categoryOverrides?: Partial<Record<LogCategory, LogLevel>>;
   
   // Sentry configuration
   sentryConfig?: {

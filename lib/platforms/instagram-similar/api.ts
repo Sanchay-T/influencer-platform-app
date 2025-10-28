@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 /**
  * Instagram Similar Creator Search API Integration (Apify)
  */
@@ -22,7 +23,7 @@ const INSTAGRAM_PROFILE_ACTOR_ID = process.env.INSTAGRAM_SCRAPER_ACTOR_ID || 'dS
  * Get Instagram profile data including related profiles using Apify
  */
 export async function getInstagramProfile(username: string): Promise<InstagramSimilarSearchResult> {
-  console.log(`📱 [INSTAGRAM-API] Fetching profile for @${username}`);
+  structuredConsole.log(`📱 [INSTAGRAM-API] Fetching profile for @${username}`);
   
   try {
     const client = getApifyClient();
@@ -37,13 +38,13 @@ export async function getInstagramProfile(username: string): Promise<InstagramSi
       addParentData: false
     };
     
-    console.log('🚀 [INSTAGRAM-API] Starting Apify actor run with input:', JSON.stringify(input, null, 2));
+    structuredConsole.log('🚀 [INSTAGRAM-API] Starting Apify actor run with input:', JSON.stringify(input, null, 2));
     
     // Start the actor run
     const run = await client.actor(INSTAGRAM_PROFILE_ACTOR_ID).call(input);
     
-    console.log('⏳ [INSTAGRAM-API] Actor run started, ID:', run.id);
-    console.log('📊 [INSTAGRAM-API] Run status:', run.status);
+    structuredConsole.log('⏳ [INSTAGRAM-API] Actor run started, ID:', run.id);
+    structuredConsole.log('📊 [INSTAGRAM-API] Run status:', run.status);
     
     // Wait for the run to finish (with timeout)
     const maxWaitTime = 60000; // 60 seconds timeout
@@ -57,14 +58,14 @@ export async function getInstagramProfile(username: string): Promise<InstagramSi
       
       await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
       finalRun = await client.run(run.id).get();
-      console.log('⏳ [INSTAGRAM-API] Checking run status:', finalRun.status);
+      structuredConsole.log('⏳ [INSTAGRAM-API] Checking run status:', finalRun.status);
     }
     
     if (finalRun.status === 'FAILED') {
       throw new Error(`Apify run failed: ${finalRun.statusMessage}`);
     }
     
-    console.log('✅ [INSTAGRAM-API] Run completed successfully');
+    structuredConsole.log('✅ [INSTAGRAM-API] Run completed successfully');
     
     // Get the results from the dataset
     const dataset = await client.dataset(finalRun.defaultDatasetId).listItems();
@@ -81,7 +82,7 @@ export async function getInstagramProfile(username: string): Promise<InstagramSi
     
     const profileData = items[0] as unknown as ApifyInstagramProfileResponse;
     
-    console.log('📊 [INSTAGRAM-API] Profile data retrieved:', {
+    structuredConsole.log('📊 [INSTAGRAM-API] Profile data retrieved:', {
       username: profileData.username,
       fullName: profileData.fullName,
       followersCount: profileData.followersCount,
@@ -103,7 +104,7 @@ export async function getInstagramProfile(username: string): Promise<InstagramSi
     };
     
   } catch (error: any) {
-    console.error('❌ [INSTAGRAM-API] Error fetching profile:', error.message);
+    structuredConsole.error('❌ [INSTAGRAM-API] Error fetching profile:', error.message);
     return {
       success: false,
       error: error.message || 'Failed to fetch Instagram profile'
@@ -115,7 +116,7 @@ export async function getInstagramProfile(username: string): Promise<InstagramSi
  * Get enhanced Instagram profile data (with bio) using Apify
  */
 export async function getEnhancedInstagramProfile(username: string): Promise<InstagramSimilarSearchResult> {
-  console.log(`📱 [INSTAGRAM-ENHANCED] Fetching enhanced profile for @${username}`);
+  structuredConsole.log(`📱 [INSTAGRAM-ENHANCED] Fetching enhanced profile for @${username}`);
   
   try {
     const client = getApifyClient();
@@ -130,7 +131,7 @@ export async function getEnhancedInstagramProfile(username: string): Promise<Ins
       addParentData: false
     };
     
-    console.log('🚀 [INSTAGRAM-ENHANCED] Starting enhanced profile fetch');
+    structuredConsole.log('🚀 [INSTAGRAM-ENHANCED] Starting enhanced profile fetch');
     
     const run = await client.actor(INSTAGRAM_PROFILE_ACTOR_ID).call(input);
     
@@ -166,7 +167,7 @@ export async function getEnhancedInstagramProfile(username: string): Promise<Ins
     
     const profileData = items[0] as unknown as ApifyInstagramProfileResponse;
     
-    console.log('📊 [INSTAGRAM-ENHANCED] Enhanced profile retrieved:', {
+    structuredConsole.log('📊 [INSTAGRAM-ENHANCED] Enhanced profile retrieved:', {
       username: profileData.username,
       biography: profileData.biography?.substring(0, 100) + '...',
       followersCount: profileData.followersCount
@@ -185,7 +186,7 @@ export async function getEnhancedInstagramProfile(username: string): Promise<Ins
     };
     
   } catch (error: any) {
-    console.error('❌ [INSTAGRAM-ENHANCED] Error fetching enhanced profile:', error.message);
+    structuredConsole.error('❌ [INSTAGRAM-ENHANCED] Error fetching enhanced profile:', error.message);
     return {
       success: false,
       error: error.message || 'Failed to fetch enhanced Instagram profile'
@@ -202,7 +203,7 @@ export function extractEmailsFromBio(bio: string): string[] {
   const emailRegex = /[\w\.-]+@[\w\.-]+\.\w+/g;
   const extractedEmails = bio.match(emailRegex) || [];
   
-  console.log('📧 [INSTAGRAM-EMAIL] Email extraction:', {
+  structuredConsole.log('📧 [INSTAGRAM-EMAIL] Email extraction:', {
     bioInput: bio.substring(0, 100) + '...',
     emailsFound: extractedEmails,
     emailCount: extractedEmails.length

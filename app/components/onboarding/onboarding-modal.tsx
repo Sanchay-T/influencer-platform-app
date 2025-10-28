@@ -1,5 +1,7 @@
 'use client';
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -144,7 +146,7 @@ export default function OnboardingModal({
         toStep: 2
       }, sessionId);
     } catch (error) {
-      console.error('❌ Error saving step 1:', error);
+      structuredConsole.error('❌ Error saving step 1:', error);
       const errorMessage = error instanceof Error ? error.message : 'Something went wrong';
       
       await OnboardingLogger.logError('FORM-ERROR', 'Step 1 form submission failed', user?.id, {
@@ -227,7 +229,7 @@ export default function OnboardingModal({
         toStep: 3
       }, sessionId);
     } catch (error) {
-      console.error('❌ Error saving step 2:', error);
+      structuredConsole.error('❌ Error saving step 2:', error);
       const errorMessage = error instanceof Error ? error.message : 'Something went wrong';
       
       await OnboardingLogger.logError('FORM-ERROR', 'Step 2 form submission failed', user?.id, {
@@ -312,7 +314,7 @@ export default function OnboardingModal({
         finalData: data
       }, sessionId);
     } catch (error) {
-      console.error('❌ Error completing onboarding:', error);
+      structuredConsole.error('❌ Error completing onboarding:', error);
       const errorMessage = error instanceof Error ? error.message : 'Something went wrong';
       
       await OnboardingLogger.logError('COMPLETION-ERROR', 'Onboarding completion failed', user?.id, {

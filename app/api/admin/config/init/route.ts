@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server';
 import { SystemConfig } from '@/lib/config/system-config';
 import { isAdminUser } from '@/lib/auth/admin-utils';
@@ -6,21 +7,21 @@ export const maxDuration = 30;
 
 // POST - Initialize default configurations
 export async function POST(request: Request) {
-  console.log('\n\n====== ADMIN CONFIG INIT API POST CALLED ======');
-  console.log('🔄 [ADMIN-CONFIG-INIT] POST request received at:', new Date().toISOString());
+  structuredConsole.log('\n\n====== ADMIN CONFIG INIT API POST CALLED ======');
+  structuredConsole.log('🔄 [ADMIN-CONFIG-INIT] POST request received at:', new Date().toISOString());
   
   try {
     // Check admin permissions
     if (!(await isAdminUser())) {
-      console.error('❌ [ADMIN-CONFIG-INIT] Unauthorized - Not an admin user');
+      structuredConsole.error('❌ [ADMIN-CONFIG-INIT] Unauthorized - Not an admin user');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
-    console.log('🔄 [ADMIN-CONFIG-INIT] Initializing default configurations...');
+    structuredConsole.log('🔄 [ADMIN-CONFIG-INIT] Initializing default configurations...');
     
     await SystemConfig.initializeDefaults();
     
-    console.log('✅ [ADMIN-CONFIG-INIT] Default configurations initialized successfully');
+    structuredConsole.log('✅ [ADMIN-CONFIG-INIT] Default configurations initialized successfully');
     
     return NextResponse.json({
       success: true,
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
     });
     
   } catch (error: any) {
-    console.error('💥 [ADMIN-CONFIG-INIT] Error initializing defaults:', error);
+    structuredConsole.error('💥 [ADMIN-CONFIG-INIT] Error initializing defaults:', error);
     return NextResponse.json(
       { error: 'Internal Server Error', details: error.message },
       { status: 500 }
@@ -39,17 +40,17 @@ export async function POST(request: Request) {
 
 // GET - Check initialization status
 export async function GET(request: Request) {
-  console.log('\n\n====== ADMIN CONFIG INIT API GET CALLED ======');
-  console.log('🔍 [ADMIN-CONFIG-INIT] GET request received at:', new Date().toISOString());
+  structuredConsole.log('\n\n====== ADMIN CONFIG INIT API GET CALLED ======');
+  structuredConsole.log('🔍 [ADMIN-CONFIG-INIT] GET request received at:', new Date().toISOString());
   
   try {
     // Check admin permissions
     if (!(await isAdminUser())) {
-      console.error('❌ [ADMIN-CONFIG-INIT] Unauthorized - Not an admin user');
+      structuredConsole.error('❌ [ADMIN-CONFIG-INIT] Unauthorized - Not an admin user');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
-    console.log('🔍 [ADMIN-CONFIG-INIT] Checking initialization status...');
+    structuredConsole.log('🔍 [ADMIN-CONFIG-INIT] Checking initialization status...');
     
     const configs = await SystemConfig.getAll();
     const categories = SystemConfig.getCategories();
@@ -58,7 +59,7 @@ export async function GET(request: Request) {
       configs[category] && configs[category].length > 0
     );
     
-    console.log(`✅ [ADMIN-CONFIG-INIT] Initialization status: ${isInitialized ? 'INITIALIZED' : 'NOT INITIALIZED'}`);
+    structuredConsole.log(`✅ [ADMIN-CONFIG-INIT] Initialization status: ${isInitialized ? 'INITIALIZED' : 'NOT INITIALIZED'}`);
     
     return NextResponse.json({
       isInitialized,
@@ -68,7 +69,7 @@ export async function GET(request: Request) {
     });
     
   } catch (error: any) {
-    console.error('💥 [ADMIN-CONFIG-INIT] Error checking initialization status:', error);
+    structuredConsole.error('💥 [ADMIN-CONFIG-INIT] Error checking initialization status:', error);
     return NextResponse.json(
       { error: 'Internal Server Error', details: error.message },
       { status: 500 }

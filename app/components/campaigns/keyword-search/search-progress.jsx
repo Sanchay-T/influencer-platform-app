@@ -1,4 +1,6 @@
-'use client'
+'use client';
+
+import { structuredConsole } from '@/lib/logging/console-proxy';
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useAuth } from '@clerk/nextjs'
@@ -95,7 +97,7 @@ export default function SearchProgress({
         })
       }
     } catch (snapshotError) {
-      console.warn('[SEARCH-PROGRESS] Snapshot fallback failed', snapshotError)
+      structuredConsole.warn('[SEARCH-PROGRESS] Snapshot fallback failed', snapshotError)
     }
   }, [campaignId, jobId, onIntermediateResults, onProgress])
 
@@ -243,7 +245,7 @@ export default function SearchProgress({
         schedule(2500)
       }
     } catch (controllerError) {
-      console.error('[SEARCH-PROGRESS] Unexpected polling error', controllerError)
+      structuredConsole.error('[SEARCH-PROGRESS] Unexpected polling error', controllerError)
       schedule(3000)
     }
   }, [

@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import Stripe from 'stripe';
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
     const priceId = planPrices?.[billing as keyof typeof planPrices];
     if (!priceId) return NextResponse.json({ error: 'Invalid plan or price not configured' }, { status: 400 });
 
-    console.log(`🛒 [CHECKOUT-UPGRADE-AUDIT] Starting checkout upgrade:`, { 
+    structuredConsole.log(`🛒 [CHECKOUT-UPGRADE-AUDIT] Starting checkout upgrade:`, { 
       planId, 
       billing, 
       priceId,
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest) {
     // For existing subscriptions, ALWAYS use checkout sessions for proper payment flow
     // This ensures proper proration, payment confirmation, and audit trail
     if (profile.stripeSubscriptionId) {
-      console.log(`🛒 [CHECKOUT-UPGRADE] Existing subscription detected - using checkout session for proper payment flow`, {
+      structuredConsole.log(`🛒 [CHECKOUT-UPGRADE] Existing subscription detected - using checkout session for proper payment flow`, {
         hasExistingSubscription: !!profile.stripeSubscriptionId,
         subscriptionId: profile.stripeSubscriptionId?.slice(0, 8) + '...',
         planId, 
@@ -82,7 +83,7 @@ export async function POST(req: NextRequest) {
       ? 'upgrade_subscription' 
       : 'new_paid_subscription';
       
-    console.log(`🛒 [CHECKOUT-UPGRADE] Creating checkout session - source: ${sessionSource}`);
+    structuredConsole.log(`🛒 [CHECKOUT-UPGRADE] Creating checkout session - source: ${sessionSource}`);
     
     const session = await stripe.checkout.sessions.create({
         mode: 'subscription',
@@ -134,7 +135,7 @@ export async function POST(req: NextRequest) {
         isUpgrade: !!profile.stripeSubscriptionId
       });
   } catch (error) {
-    console.error('❌ [CHECKOUT-UPGRADE] Error:', error);
+    structuredConsole.error('❌ [CHECKOUT-UPGRADE] Error:', error);
     return NextResponse.json({ error: 'Failed to create upgrade checkout session' }, { status: 500 });
   }
 }

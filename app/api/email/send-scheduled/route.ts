@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server';
 import { Receiver } from "@upstash/qstash";
 import { sendEmail, updateEmailScheduleStatus, EMAIL_CONFIG } from '@/lib/email/email-service';
@@ -108,7 +109,7 @@ export async function POST(request: Request) {
         break;
       
       default:
-        console.error('❌ [SCHEDULED-EMAIL] Unknown email type:', emailType);
+        structuredConsole.error('❌ [SCHEDULED-EMAIL] Unknown email type:', emailType);
         return NextResponse.json({ error: 'Unknown email type' }, { status: 400 });
     }
 

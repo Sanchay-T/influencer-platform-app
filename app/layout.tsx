@@ -4,6 +4,7 @@ import { ReactNode } from 'react';
 import { ClerkProvider } from '@clerk/nextjs';
 import type { Appearance } from '@clerk/nextjs';
 import { ToastProvider } from './providers/toast-provider';
+import { ClientConsoleBridge } from './providers/console-bridge';
 import { AuthLogger } from './components/auth/auth-logger';
 import { NavigationLogger } from './components/navigation/navigation-logger';
 // Font configuration for app-wide Inter usage.
@@ -109,6 +110,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
     <ClerkProvider appearance={clerkAppearance}>
       <html lang="en" className="dark">
         <body className={`${inter.variable} font-sans bg-background text-foreground antialiased`}>
+          <ClientConsoleBridge />
           <AuthLogger />
           <NavigationLogger />
           {children}

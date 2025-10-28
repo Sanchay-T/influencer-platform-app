@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -12,7 +13,7 @@ export function writeSnapshot(label: string, data: unknown): void {
     const filePath = path.join(dir, `${timestamp}.json`);
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
   } catch (error) {
-    console.warn('[snapshot] failed', error);
+    structuredConsole.warn('[snapshot] failed', error);
   }
 }
 

@@ -1,5 +1,7 @@
 'use client';
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
 import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/app/components/layout/dashboard-layout';
@@ -76,7 +78,7 @@ export default function ListsPageClient({ initialLists }: ListsPageClientProps) 
       setForm({ name: '', description: '', type: form.type });
       toast.success('List created');
     } catch (error) {
-      console.error(error);
+      structuredConsole.error(error);
       toast.error((error as Error).message);
     } finally {
       setCreating(false);
@@ -120,7 +122,7 @@ export default function ListsPageClient({ initialLists }: ListsPageClientProps) 
         setLists((prev) => prev.filter((item) => item.id !== list.id));
         toast.success('List deleted');
       } catch (error) {
-        console.error('[LISTS-DELETE]', error);
+        structuredConsole.error('[LISTS-DELETE]', error);
         toast.error((error as Error).message);
       } finally {
         setDeletingId(null);

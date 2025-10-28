@@ -1,4 +1,6 @@
-'use client'
+'use client';
+
+import { structuredConsole } from '@/lib/logging/console-proxy';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
@@ -113,7 +115,7 @@ export default function KeywordReview({ onSubmit, isLoading, platform }) {
 
     if (event.type === 'error') {
       const message = typeof event.message === 'string' ? event.message : 'Suggestion stream error';
-      console.warn('[KeywordSuggestions] stream error', message);
+      structuredConsole.warn('[KeywordSuggestions] stream error', message);
       toast.error(message);
       return;
     }
@@ -188,7 +190,7 @@ export default function KeywordReview({ onSubmit, isLoading, platform }) {
                   const event = JSON.parse(payload);
                   handleSuggestionEvent(event);
                 } catch (error) {
-                  console.warn('[KeywordSuggestions] failed to parse event', error);
+                  structuredConsole.warn('[KeywordSuggestions] failed to parse event', error);
                 }
               }
             }
@@ -198,7 +200,7 @@ export default function KeywordReview({ onSubmit, isLoading, platform }) {
         }
       } catch (error) {
         if (!controller.signal.aborted) {
-          console.warn('[KeywordSuggestions] stream failed', error);
+          structuredConsole.warn('[KeywordSuggestions] stream failed', error);
           toast.error(error instanceof Error ? error.message : 'Suggestion stream error');
         }
       } finally {
@@ -315,7 +317,7 @@ export default function KeywordReview({ onSubmit, isLoading, platform }) {
         : { keywords };
       await onSubmit(payload);
     } catch (error) {
-      console.warn('[KeywordReview] submission failed', error);
+      structuredConsole.warn('[KeywordReview] submission failed', error);
       toast.error(error.message || "Failed to submit campaign. Please try again.");
     } finally {
       setIsSubmitting(false);

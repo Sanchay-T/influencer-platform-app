@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { redirect } from 'next/navigation';
 import { auth } from '@clerk/nextjs/server';
 import DashboardPageClient from './_components/dashboard-page-client';
@@ -21,7 +22,7 @@ export default async function DashboardPage() {
   try {
     userProfile = await getUserProfile(userId);
   } catch (error) {
-    console.error('❌ [DASHBOARD] Failed to fetch user profile:', error);
+    structuredConsole.error('❌ [DASHBOARD] Failed to fetch user profile:', error);
     // If profile doesn't exist, redirect to create one (shouldn't happen with auto-creation)
     userProfile = null;
   }

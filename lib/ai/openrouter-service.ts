@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import OpenAI from 'openai';
 
 export class OpenRouterService {
@@ -49,7 +50,7 @@ export class OpenRouterService {
       // Final fallback
       return [originalQuery];
     } catch (error) {
-      console.error('AI keyword generation failed:', error);
+      structuredConsole.error('AI keyword generation failed:', error);
       return [originalQuery];
     }
   }
@@ -96,7 +97,7 @@ export class OpenRouterService {
         }
       };
     } catch (error) {
-      console.error('Bulk search failed:', error);
+      structuredConsole.error('Bulk search failed:', error);
       return {
         totalResults: 0,
         totalFetched: 0,

@@ -1,5 +1,7 @@
 'use client';
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
 import { useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,7 +32,7 @@ function BillingContent() {
   // Auto-scroll to pricing table if coming from pricing page
   useEffect(() => {
     if (upgradeParam || planParam) {
-      console.log('🛒 [BILLING] Auto-scrolling to pricing table. Upgrade:', upgradeParam, 'Plan:', planParam, 'Success:', successParam);
+      structuredConsole.log('🛒 [BILLING] Auto-scrolling to pricing table. Upgrade:', upgradeParam, 'Plan:', planParam, 'Success:', successParam);
       setTimeout(() => {
         const pricingSection = document.querySelector('[data-testid="pricing-table"]') || 
                               document.querySelector('.max-w-5xl') ||
@@ -44,9 +46,9 @@ function BillingContent() {
     // ★★★ CRITICAL FIX: Process upgrade when returning from successful Stripe checkout
     if ((successParam || upgradedParam) && typeof window !== 'undefined') {
       const checkoutTestId = `CHECKOUT_SUCCESS_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      console.log(`🎯 [BILLING-CHECKOUT-TEST] ${checkoutTestId} - Starting checkout success flow`);
-      console.log('🎉 [BILLING] Successful upgrade detected, processing upgrade and refreshing billing status');
-      console.log(`🔍 [BILLING-CHECKOUT-TEST] ${checkoutTestId} - URL params:`, {
+      structuredConsole.log(`🎯 [BILLING-CHECKOUT-TEST] ${checkoutTestId} - Starting checkout success flow`);
+      structuredConsole.log('🎉 [BILLING] Successful upgrade detected, processing upgrade and refreshing billing status');
+      structuredConsole.log(`🔍 [BILLING-CHECKOUT-TEST] ${checkoutTestId} - URL params:`, {
         upgrade: upgradeParam,
         plan: planParam,
         success: successParam,
@@ -55,7 +57,7 @@ function BillingContent() {
       });
       
       // ★ NOTE: Upgrade processing now happens on /onboarding/success page via checkout-success API
-      console.log(`💡 [BILLING-CHECKOUT-TEST] ${checkoutTestId} - Upgrade should have been processed by success page`);
+      structuredConsole.log(`💡 [BILLING-CHECKOUT-TEST] ${checkoutTestId} - Upgrade should have been processed by success page`);
       
       // ★★★ CRITICAL FIX: Prevent reload loop by clearing problematic URL parameters immediately
       // Keep 'plan' and 'upgrade' params but remove 'upgraded' and 'success' to prevent loop
@@ -63,7 +65,7 @@ function BillingContent() {
       currentUrl.searchParams.delete('upgraded');
       currentUrl.searchParams.delete('success');
       window.history.replaceState({}, '', currentUrl.toString());
-      console.log(`🔄 [BILLING-CHECKOUT-TEST] ${checkoutTestId} - Cleared upgraded/success params to prevent reload loop, kept plan param`);
+      structuredConsole.log(`🔄 [BILLING-CHECKOUT-TEST] ${checkoutTestId} - Cleared upgraded/success params to prevent reload loop, kept plan param`);
       
       // Clear all billing caches
       try {
@@ -73,13 +75,13 @@ function BillingContent() {
           (globalThis as any).__BILLING_CACHE__.ts = 0;
           (globalThis as any).__BILLING_CACHE__.inflight = null;
         }
-        console.log(`✅ [BILLING-CHECKOUT-TEST] ${checkoutTestId} - Cache cleared successfully`);
+        structuredConsole.log(`✅ [BILLING-CHECKOUT-TEST] ${checkoutTestId} - Cache cleared successfully`);
       } catch (e) {
-        console.log(`❌ [BILLING-CHECKOUT-TEST] ${checkoutTestId} - Cache clear failed:`, e);
+        structuredConsole.log(`❌ [BILLING-CHECKOUT-TEST] ${checkoutTestId} - Cache clear failed:`, e);
       }
       
       // ★ REMOVE: No more automatic reload - let the cleared cache refresh the data naturally
-      console.log(`✅ [BILLING-CHECKOUT-TEST] ${checkoutTestId} - Upgrade processing complete, no reload needed`);
+      structuredConsole.log(`✅ [BILLING-CHECKOUT-TEST] ${checkoutTestId} - Upgrade processing complete, no reload needed`);
     }
   }, [upgradeParam, planParam, successParam, upgradedParam]);
 
