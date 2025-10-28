@@ -99,7 +99,7 @@ app/
     profile/route.ts
     proxy/image/route.ts
     qstash/{process-scraping,process-results,test}/route.ts
-    scraping/{tiktok,tiktok-similar,instagram,instagram-enhanced,instagram-hashtag,instagram-reels,youtube,youtube-similar}/route.ts
+    scraping/{tiktok,tiktok-similar,instagram,instagram-hashtag,instagram-reels,youtube,youtube-similar}/route.ts
     status/route.ts
     stripe/{webhook,create-checkout,checkout-success,checkout-upgrade,convert-now,create-subscription,customer-portal,save-payment-method,session,setup-intent,upgrade,upgrade-direct}
     subscription/status/route.ts

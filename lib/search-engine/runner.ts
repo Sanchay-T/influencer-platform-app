@@ -7,7 +7,6 @@ import { runYouTubeKeywordProvider } from './providers/youtube-keyword';
 import { runYouTubeSimilarProvider } from './providers/youtube-similar';
 import { runInstagramSimilarProvider } from './providers/instagram-similar';
 import { runInstagramReelsProvider } from './providers/instagram-reels';
-import { runInstagramEnhancedProvider } from './providers/instagram-enhanced';
 import { runGoogleSerpProvider } from './providers/google-serp';
 import { runInstagramUsReelsProvider } from './providers/instagram-us-reels';
 import { runInstagramV2Provider } from './providers/instagram-v2';
@@ -71,20 +70,11 @@ function isInstagramSimilar(jobPlatform?: string, targetUsername?: unknown): boo
 function isInstagramReels(jobPlatform?: string, keywords?: unknown, searchParams?: any): boolean {
   if (!keywords || !Array.isArray(keywords)) return false;
   const platform = (jobPlatform ?? '').toLowerCase();
-  // Instagram Reels: platform=Instagram AND has keywords AND NOT enhanced
+  // Instagram Reels: platform=Instagram AND has keywords AND not handled by the US Reels runner
   return (
     platform === 'instagram' &&
-    searchParams?.runner !== 'instagram_enhanced' &&
     searchParams?.runner !== 'instagram_us_reels'
   );
-}
-
-function isInstagramEnhanced(jobPlatform?: string, keywords?: unknown, searchParams?: any): boolean {
-  if (!keywords || !Array.isArray(keywords)) return false;
-  const platform = (jobPlatform ?? '').toLowerCase();
-  // Enhanced Instagram: explicitly marked in searchParams or metadata
-  return (platform === 'instagram' || platform === 'enhanced-instagram' || platform === 'instagram_enhanced') &&
-         (searchParams?.runner === 'instagram_enhanced' || searchParams?.searchType === 'instagram_enhanced');
 }
 
 function isGoogleSerp(jobPlatform?: string, searchParams?: any): boolean {
@@ -123,8 +113,6 @@ export async function runSearchJob(jobId: string): Promise<SearchExecutionResult
     providerResult = await runYouTubeSimilarProvider({ job, config }, service);
   } else if (isInstagramSimilar(job.platform, job.targetUsername)) {
     providerResult = await runInstagramSimilarProvider({ job, config }, service);
-  } else if (isInstagramEnhanced(job.platform, job.keywords, searchParams)) {
-    providerResult = await runInstagramEnhancedProvider({ job, config }, service);
   } else if (isInstagramV2(searchParams)) {
     providerResult = await runInstagramV2Provider({ job, config }, service);
   } else if (isInstagramUsReels(searchParams)) {

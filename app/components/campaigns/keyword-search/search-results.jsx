@@ -171,7 +171,6 @@ const SearchResults = ({ searchData }) => {
   const [isFetching, setIsFetching] = useState(false);
   const [campaignName, setCampaignName] = useState("Campaign");
   const [stillProcessing, setStillProcessing] = useState(false);
-  const [enhancedMeta, setEnhancedMeta] = useState(null);
   const [progressInfo, setProgressInfo] = useState(null);
   const [selectedCreators, setSelectedCreators] = useState({});
   const [viewMode, setViewMode] = useState("table");
@@ -211,7 +210,6 @@ const SearchResults = ({ searchData }) => {
     setCurrentPage(1);
     setEmailOverlayDismissed(false);
     setProgressInfo(null);
-    setEnhancedMeta(null);
 
     const cached = resultsCacheRef.current.get(cacheKey);
     if (cached && cached.length) {
@@ -311,8 +309,6 @@ const SearchResults = ({ searchData }) => {
           platformNormalized === 'instagram_v2'
         ) {
           apiEndpoint = '/api/scraping/instagram-v2';
-        } else if (platformNormalized === 'enhanced-instagram') {
-          apiEndpoint = '/api/scraping/instagram-enhanced';
         } else if (platformNormalized === 'google-serp' || platformNormalized === 'google_serp') {
           apiEndpoint = '/api/scraping/google-serp';
         }
@@ -537,8 +533,6 @@ const SearchResults = ({ searchData }) => {
             platformNormalized === 'instagram_v2'
           ) {
             apiEndpoint = '/api/scraping/instagram-v2';
-          } else if (platformNormalized === 'enhanced-instagram') {
-            apiEndpoint = '/api/scraping/instagram-enhanced';
           } else if (platformNormalized === 'google-serp' || platformNormalized === 'google_serp') {
             apiEndpoint = '/api/scraping/google-serp';
           }
@@ -581,7 +575,6 @@ const SearchResults = ({ searchData }) => {
                 jobId={searchData.jobId}
                 platform={searchData.selectedPlatform || searchData.platform}
                 searchData={searchData}
-                onMeta={setEnhancedMeta}
                 onProgress={setProgressInfo}
                 onIntermediateResults={(data) => {
                   try {
@@ -742,11 +735,6 @@ const SearchResults = ({ searchData }) => {
       <div className="flex flex-wrap items-center justify-between gap-3 md:gap-4">
         <div className="flex items-center gap-3 min-w-0">
           <h2 className="text-2xl font-bold text-zinc-100">Results Found</h2>
-          {platformNormalized === "enhanced-instagram" && (
-            <Badge variant="secondary" className="bg-gradient-to-r from-violet-500/20 to-pink-500/20 text-violet-300 border-violet-500/30">
-              AI-Enhanced
-            </Badge>
-          )}
           {isInstagramUs && (
             <Badge variant="secondary" className="bg-gradient-to-r from-emerald-500/15 to-sky-500/15 text-emerald-200 border-emerald-500/30">
               US Reels
@@ -867,7 +855,6 @@ const SearchResults = ({ searchData }) => {
             jobId={searchData.jobId}
             platform={searchData.selectedPlatform || searchData.platform}
             searchData={searchData}
-            onMeta={setEnhancedMeta}
             onProgress={setProgressInfo}
             onIntermediateResults={(data) => {
               try {
@@ -910,9 +897,6 @@ const SearchResults = ({ searchData }) => {
                   ? ` ${progressInfo.processedResults}/${progressInfo.targetResults}`
                   : ''}
               </span>
-                  {platformNormalized === 'enhanced-instagram' && enhancedMeta?.execution?.maxConcurrency && (
-                    <span className="text-zinc-500">• Parallel ×{enhancedMeta.execution.maxConcurrency}</span>
-                  )}
                 </div>
           </div>
         )}

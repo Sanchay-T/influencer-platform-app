@@ -188,9 +188,6 @@ const resolveScrapingEndpoint = (platform?: string) => {
     case 'instagram-v2':
     case 'instagram_v2':
       return '/api/scraping/instagram-v2'
-    case 'instagram-enhanced':
-    case 'enhanced-instagram':
-      return '/api/scraping/instagram-enhanced'
     case 'instagram-similar':
     case 'instagram_similar':
       return '/api/scraping/instagram'

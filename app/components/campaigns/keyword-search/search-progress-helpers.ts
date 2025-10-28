@@ -74,8 +74,6 @@ export function buildEndpoint(platformNormalized: string, hasTargetUsername: boo
     case 'instagram-v2':
     case 'instagram_v2':
       return `/api/scraping/instagram-v2?jobId=${jobId}`
-    case 'enhanced-instagram':
-      return `/api/scraping/instagram-enhanced?jobId=${jobId}`
     case 'google-serp':
     case 'google_serp':
       return `/api/scraping/google-serp?jobId=${jobId}`
@@ -133,11 +131,6 @@ export function computeStage({
   }
 
   switch (platformNormalized) {
-    case 'enhanced-instagram':
-      if (percent < 20) return 'Generating strategic Instagram keyword clusters'
-      if (percent < 55) return 'Processing Instagram reels and bios'
-      if (percent < 85) return 'Extracting contact details'
-      return 'Deduplicating Instagram creators'
     case 'google-serp':
     case 'google_serp':
       if (percent < 25) return `Running Google SERP discovery for ${keyword}`

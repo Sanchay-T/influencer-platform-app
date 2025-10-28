@@ -661,7 +661,6 @@ Latest Results (search-matrix/) + Legacy Results (search-matrix-legacy/)
 - **Error Recovery**: Graceful handling of profile fetch failures
 
 ##### **Instagram Testing (`/test-scripts/search/keyword/` & `/test-scripts/search/similar/`)**
-- **`instagram-enhanced.test.ts`**: Instagram keyword search with Apify integration
 - **`instagram-similar.test.ts`**: Instagram similar search testing
 
 **Features**:
@@ -762,8 +761,6 @@ logs/
 TEST_TIKTOK_KEYWORD="beauty influencer" tsx test-scripts/search/keyword/tiktok-keyword.test.ts
 tsx test-scripts/search/similar/tiktok-similar.test.ts
 
-# Instagram testing
-tsx test-scripts/search/keyword/instagram-enhanced.test.ts
 tsx test-scripts/search/similar/instagram-similar.test.ts
 
 # YouTube testing

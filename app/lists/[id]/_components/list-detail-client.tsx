@@ -1010,7 +1010,6 @@ function resolveProfileUrl(creator: ListItem['creator']) {
     case 'tiktok':
       return `https://www.tiktok.com/@${normalizedHandle}`;
     case 'instagram':
-    case 'enhanced-instagram':
       return `https://www.instagram.com/${normalizedHandle}`;
     case 'youtube':
       return `https://www.youtube.com/@${normalizedHandle}`;
