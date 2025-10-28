@@ -15,8 +15,12 @@ export default function KeywordSearch() {
     platforms: [],
     creatorsCount: 1000,
     keywords: [],
+    usernames: [],
     jobId: null,
-    campaignId: null
+    campaignId: null,
+    selectedPlatform: null,
+    targetUsernames: [],
+    targetUsername: null
   });
   const [isLoading, setIsLoading] = useState(true);
   const [campaignName, setCampaignName] = useState("");
@@ -81,28 +85,55 @@ export default function KeywordSearch() {
       platforms: data.platforms,
       creatorsCount: data.creatorsCount,
       scraperLimit: data.scraperLimit,
-      campaignId: data.campaignId || prev.campaignId
+      campaignId: data.campaignId || prev.campaignId,
+      selectedPlatform: data.platforms?.[0] || prev.selectedPlatform
     }));
     setStep(2);
   };
 
   // Manejar el paso 2: Revisión y envío de keywords
-  const handleKeywordsSubmit = async (keywords) => {
+  const handleKeywordsSubmit = async (payload) => {
     try {
       // Obtener el campaignId de searchData o del sessionStorage
       const campaignId = searchData.campaignId || JSON.parse(sessionStorage.getItem('currentCampaign'))?.id;
-      
+
       if (!campaignId) {
         console.warn('[KeywordSearch] no campaign ID found');
         throw new Error('Campaign not found');
       }
 
+      const platformRaw = searchData.platforms?.[0] || searchData.selectedPlatform || '';
+      const normalizedPlatform = typeof platformRaw === 'string' ? platformRaw.toLowerCase() : '';
+      const submittedUsernames = Array.isArray(payload?.usernames)
+        ? payload.usernames
+            .map((value) => (typeof value === 'string' ? value.trim() : ''))
+            .filter((value) => value.length > 0)
+        : [];
+      const submittedKeywords = Array.isArray(payload?.keywords)
+        ? payload.keywords
+            .map((value) => (typeof value === 'string' ? value.trim() : ''))
+            .filter((value) => value.length > 0)
+        : [];
+      const hasUsernames = submittedUsernames.length > 0;
+
       // Determine API endpoint based on selected platform
       // For now, we'll handle one platform at a time - prioritize the first selected platform
       let apiEndpoint = '/api/scraping/tiktok'; // Default to TikTok
-      if (searchData.platforms.includes('instagram')) {
+      if (
+        hasUsernames ||
+        normalizedPlatform === 'instagram-similar' ||
+        normalizedPlatform === 'instagram_similar'
+      ) {
+        apiEndpoint = '/api/scraping/instagram';
+      } else if (
+        normalizedPlatform === 'instagram' ||
+        normalizedPlatform === 'instagram_us_reels' ||
+        normalizedPlatform === 'instagram-us-reels' ||
+        normalizedPlatform === 'instagram-1.0' ||
+        normalizedPlatform === 'instagram_1.0'
+      ) {
         apiEndpoint = '/api/scraping/instagram-us-reels';
-      } else if (searchData.platforms.includes('youtube')) {
+      } else if (normalizedPlatform === 'youtube') {
         apiEndpoint = '/api/scraping/youtube';
       }
 
@@ -113,32 +144,51 @@ export default function KeywordSearch() {
         },
         body: JSON.stringify({
           campaignId: campaignId,
-          keywords: keywords,
-          targetResults: searchData.creatorsCount
+          targetResults: searchData.creatorsCount,
+          ...(hasUsernames
+            ? { usernames: submittedUsernames }
+            : { keywords: submittedKeywords }
+          )
         }),
       });
-      
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Error starting the scraping process');
       }
 
       const data = await response.json();
-      
-    const nextPlatform = searchData.platforms.includes('instagram')
-      ? 'instagram'
-      : searchData.platforms.includes('youtube')
-        ? 'youtube'
-        : 'tiktok';
 
-    setSearchData(prev => ({ 
-      ...prev, 
-      keywords,
-      jobId: data.jobId,
-      selectedPlatform: nextPlatform
-    }));
-    toast.success('Campaign started successfully');
-    router.push(`/campaigns/${campaignId}?jobId=${data.jobId}`);
+      const nextPlatform = (() => {
+        if (hasUsernames) {
+          return 'instagram-similar';
+        }
+        if (
+          normalizedPlatform === 'instagram' ||
+          normalizedPlatform === 'instagram_us_reels' ||
+          normalizedPlatform === 'instagram-us-reels' ||
+          normalizedPlatform === 'instagram-1.0' ||
+          normalizedPlatform === 'instagram_1.0'
+        ) {
+          return 'instagram';
+        }
+        if (normalizedPlatform === 'youtube') {
+          return 'youtube';
+        }
+        return 'tiktok';
+      })();
+
+      setSearchData(prev => ({
+        ...prev,
+        keywords: hasUsernames ? [] : submittedKeywords,
+        usernames: hasUsernames ? submittedUsernames : [],
+        targetUsernames: hasUsernames ? submittedUsernames : [],
+        targetUsername: hasUsernames ? (submittedUsernames[0] || null) : null,
+        jobId: data.jobId,
+        selectedPlatform: nextPlatform
+      }));
+      toast.success('Campaign started successfully');
+      router.push(`/campaigns/${campaignId}?jobId=${data.jobId}`);
   } catch (error) {
     console.warn('[KeywordSearch] keyword submission failed', error);
     toast.error(error.message || "Failed to start campaign");
@@ -185,9 +235,10 @@ export default function KeywordSearch() {
 
         {step === 1 && <KeywordSearchForm onSubmit={handleFormSubmit} />}
         {step === 2 && (
-          <KeywordReview 
+          <KeywordReview
             onSubmit={handleKeywordsSubmit}
             isLoading={isLoading}
+            platform={searchData?.selectedPlatform || searchData.platforms?.[0]}
           />
         )}
       </div>

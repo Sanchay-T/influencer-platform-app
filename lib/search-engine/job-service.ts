@@ -8,6 +8,41 @@ import { PlanValidator } from '@/lib/services/plan-validator';
 import { logger, LogCategory } from '@/lib/logging';
 
 const DEFAULT_PROGRESS_PRECISION = 2;
+const HANDLE_QUEUE_KEY = 'searchEngineHandleQueue';
+
+type HandleQueueMetric = {
+  handle: string;
+  keyword?: string | null;
+  totalCreators: number;
+  newCreators: number;
+  duplicateCreators: number;
+  batches: number;
+  lastUpdatedAt: string;
+};
+
+type HandleQueueState = {
+  totalHandles: number;
+  completedHandles: string[];
+  remainingHandles: string[];
+  activeHandle: string | null;
+  metrics: Record<string, HandleQueueMetric>;
+  startedAt?: string;
+  lastUpdatedAt?: string;
+};
+
+type HandleQueueUpdate =
+  | { type: 'initialize'; handles: string[]; keyword?: string | null }
+  | {
+      type: 'advance';
+      handle: string;
+      keyword?: string | null;
+      totalCreators: number;
+      newCreators: number;
+      duplicateCreators: number;
+      remainingHandles: string[];
+    };
+
+const normalizeHandleKey = (handle: string): string => handle.trim().toLowerCase();
 
 type DedupeKeyFn = (creator: NormalizedCreator) => string | null;
 
@@ -87,18 +122,48 @@ export class SearchJobService {
     await this.refresh();
   }
 
-  async recordProgress({ processedRuns, processedResults, cursor, progress }: {
+  async setTargetUsername(targetUsername: string | null) {
+    await db
+      .update(scrapingJobs)
+      .set({
+        targetUsername,
+        updatedAt: new Date(),
+      })
+      .where(eq(scrapingJobs.id, this.job.id));
+    await this.refresh();
+  }
+
+  async recordProgress({
+    processedRuns,
+    processedResults,
+    cursor,
+    progress,
+    mode = 'absolute',
+  }: {
     processedRuns: number;
     processedResults: number;
     cursor: number;
     progress: number;
+    mode?: 'absolute' | 'delta';
   }) {
+    const currentRuns = this.job.processedRuns ?? 0;
+    const currentResults = this.job.processedResults ?? 0;
+    const currentCursor = this.job.cursor ?? 0;
+
+    const nextRuns = mode === 'delta' ? currentRuns + processedRuns : processedRuns;
+    const nextResults = mode === 'delta' ? currentResults + processedResults : processedResults;
+    const nextCursor = mode === 'delta' ? currentCursor + cursor : cursor;
+
+    const safeRuns = Math.max(0, nextRuns);
+    const safeResults = Math.max(0, nextResults);
+    const safeCursor = Math.max(0, nextCursor);
+
     await db
       .update(scrapingJobs)
       .set({
-        processedRuns,
-        processedResults,
-        cursor,
+        processedRuns: safeRuns,
+        processedResults: safeResults,
+        cursor: safeCursor,
         progress: progress.toFixed(DEFAULT_PROGRESS_PRECISION),
         updatedAt: new Date(),
       })
@@ -190,6 +255,180 @@ export class SearchJobService {
       .where(eq(scrapingJobs.id, this.job.id));
 
     await this.refresh();
+  }
+
+  private getHandleQueueState(): HandleQueueState {
+    const params = (this.job.searchParams ?? {}) as Record<string, unknown>;
+    const raw = params[HANDLE_QUEUE_KEY];
+
+    const baseState: HandleQueueState = {
+      totalHandles: 0,
+      completedHandles: [],
+      remainingHandles: [],
+      activeHandle: null,
+      metrics: {},
+      startedAt: undefined,
+      lastUpdatedAt: undefined,
+    };
+
+    if (!raw || typeof raw !== 'object') {
+      return baseState;
+    }
+
+    const rawRecord = raw as Record<string, unknown>;
+    const completedHandles = Array.isArray(rawRecord.completedHandles)
+      ? (rawRecord.completedHandles as unknown[]).filter((value): value is string => typeof value === 'string')
+      : [];
+    const remainingHandles = Array.isArray(rawRecord.remainingHandles)
+      ? (rawRecord.remainingHandles as unknown[]).filter((value): value is string => typeof value === 'string')
+      : [];
+
+    const metrics: Record<string, HandleQueueMetric> = {};
+    if (rawRecord.metrics && typeof rawRecord.metrics === 'object') {
+      const rawMetrics = rawRecord.metrics as Record<string, unknown>;
+      for (const [key, value] of Object.entries(rawMetrics)) {
+        if (!value || typeof value !== 'object') {
+          continue;
+        }
+        const metricRecord = value as Record<string, unknown>;
+        const handleValue = typeof metricRecord.handle === 'string' && metricRecord.handle.trim().length > 0
+          ? metricRecord.handle
+          : key;
+        const normalizedKey = normalizeHandleKey(handleValue);
+        metrics[normalizedKey] = {
+          handle: handleValue,
+          keyword: typeof metricRecord.keyword === 'string'
+            ? metricRecord.keyword
+            : (metricRecord.keyword as string | null | undefined) ?? undefined,
+          totalCreators: Number(metricRecord.totalCreators) || 0,
+          newCreators: Number(metricRecord.newCreators) || 0,
+          duplicateCreators: Number(metricRecord.duplicateCreators) || 0,
+          batches: Number(metricRecord.batches) || 0,
+          lastUpdatedAt: typeof metricRecord.lastUpdatedAt === 'string'
+            ? metricRecord.lastUpdatedAt
+            : new Date().toISOString(),
+        };
+      }
+    }
+
+    return {
+      totalHandles: Number(rawRecord.totalHandles) || Math.max(completedHandles.length + remainingHandles.length, 0),
+      completedHandles,
+      remainingHandles,
+      activeHandle:
+        typeof rawRecord.activeHandle === 'string' && rawRecord.activeHandle.trim().length > 0
+          ? rawRecord.activeHandle
+          : null,
+      metrics,
+      startedAt: typeof rawRecord.startedAt === 'string' ? rawRecord.startedAt : undefined,
+      lastUpdatedAt: typeof rawRecord.lastUpdatedAt === 'string' ? rawRecord.lastUpdatedAt : undefined,
+    };
+  }
+
+  async updateHandleQueue(update: HandleQueueUpdate): Promise<HandleQueueState> {
+    const state = this.getHandleQueueState();
+    const nowIso = new Date().toISOString();
+
+    if (update.type === 'initialize') {
+      const normalizedHandles = Array.from(
+        new Set(
+          update.handles
+            .map((handle) => (typeof handle === 'string' ? handle.trim() : ''))
+            .filter((handle) => handle.length > 0),
+        ),
+      );
+
+      const completedSet = new Set(
+        state.completedHandles.filter((handle) =>
+          normalizedHandles.some((candidate) => normalizeHandleKey(candidate) === normalizeHandleKey(handle)),
+        ),
+      );
+
+      const nextRemaining = normalizedHandles.filter(
+        (handle) => !completedSet.has(handle),
+      );
+
+      const nextMetricsEntries = Object.entries(state.metrics).filter(([key]) =>
+        normalizedHandles.some((handle) => normalizeHandleKey(handle) === key),
+      );
+
+      const nextMetrics: Record<string, HandleQueueMetric> = {};
+      nextMetricsEntries.forEach(([key, value]) => {
+        nextMetrics[key] = value;
+      });
+
+      const nextState: HandleQueueState = {
+        totalHandles: normalizedHandles.length,
+        completedHandles: Array.from(completedSet),
+        remainingHandles: nextRemaining,
+        activeHandle: nextRemaining[0] ?? null,
+        metrics: nextMetrics,
+        startedAt: state.startedAt ?? nowIso,
+        lastUpdatedAt: nowIso,
+      };
+
+      await this.updateSearchParams({ [HANDLE_QUEUE_KEY]: nextState });
+      return nextState;
+    }
+
+    const normalizedHandle = normalizeHandleKey(update.handle);
+    const displayHandle = update.handle.trim().length > 0 ? update.handle : normalizedHandle;
+    const existingMetric = state.metrics[normalizedHandle];
+
+    const metric: HandleQueueMetric = {
+      handle: displayHandle,
+      keyword: update.keyword ?? existingMetric?.keyword,
+      totalCreators: (existingMetric?.totalCreators ?? 0) + update.totalCreators,
+      newCreators: (existingMetric?.newCreators ?? 0) + update.newCreators,
+      duplicateCreators: (existingMetric?.duplicateCreators ?? 0) + update.duplicateCreators,
+      batches: (existingMetric?.batches ?? 0) + 1,
+      lastUpdatedAt: nowIso,
+    };
+
+    const completedHandles = [...state.completedHandles];
+    const normalizedCompleted = completedHandles.map((handle) => normalizeHandleKey(handle));
+    const completedIndex = normalizedCompleted.findIndex((value) => value === normalizedHandle);
+    if (completedIndex === -1) {
+      completedHandles.push(displayHandle);
+    } else {
+      completedHandles[completedIndex] = displayHandle;
+    }
+
+    const remainingHandles = update.remainingHandles
+      .filter((handle) => typeof handle === 'string' && handle.trim().length > 0)
+      .filter((handle) => normalizeHandleKey(handle) !== normalizedHandle);
+
+    const dedupedRemaining: string[] = [];
+    const seenRemaining = new Set<string>();
+    for (const handle of remainingHandles) {
+      const normalized = normalizeHandleKey(handle);
+      if (seenRemaining.has(normalized)) {
+        continue;
+      }
+      seenRemaining.add(normalized);
+      dedupedRemaining.push(handle);
+    }
+
+    const totalHandles = Math.max(
+      state.totalHandles,
+      new Set([...completedHandles, ...dedupedRemaining].map((handle) => normalizeHandleKey(handle))).size,
+    );
+
+    const nextState: HandleQueueState = {
+      totalHandles,
+      completedHandles,
+      remainingHandles: dedupedRemaining,
+      activeHandle: dedupedRemaining[0] ?? null,
+      metrics: {
+        ...state.metrics,
+        [normalizedHandle]: metric,
+      },
+      startedAt: state.startedAt ?? nowIso,
+      lastUpdatedAt: nowIso,
+    };
+
+    await this.updateSearchParams({ [HANDLE_QUEUE_KEY]: nextState });
+    return nextState;
   }
 
   async replaceCreators(creators: NormalizedCreator[]) {

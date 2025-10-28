@@ -1,25 +1,24 @@
 // search-engine/providers/instagram-us-reels.ts — US Reels agent-backed pipeline integration
 import { runInstagramUsReelsAgent } from '@/lib/instagram-us-reels/agent/runner';
-import type { NormalizedCreator, ProviderContext, ProviderRunResult, SearchMetricsSnapshot } from '../types';
+import type {
+  HandleMetricSnapshot,
+  NormalizedCreator,
+  ProviderContext,
+  ProviderRunResult,
+  SearchMetricsSnapshot,
+} from '../types';
 import { SearchJobService } from '../job-service';
-import { computeProgress, sleep } from '../utils';
+import { computeProgress } from '../utils';
 import { logger, LogCategory } from '@/lib/logging';
 import { addCost } from '../utils/cost';
+
+const HANDLE_QUEUE_PARAM_KEY = 'searchEngineHandleQueue';
 import {
   SCRAPECREATORS_COST_PER_CALL_USD,
   SERPER_COST_PER_CALL_USD,
   OPENAI_GPT4O_INPUT_PER_MTOK_USD,
   OPENAI_GPT4O_OUTPUT_PER_MTOK_USD,
 } from '@/lib/cost/constants';
-
-const DEFAULT_STREAM_CHUNK = Math.max(
-  1,
-  Number(process.env.US_REELS_STREAM_CHUNK ?? 12),
-);
-const STREAM_DELAY_MS = Math.max(
-  0,
-  Number(process.env.US_REELS_STREAM_DELAY_MS ?? 0),
-);
 
 function resolveCreatorMergeKey(creator: NormalizedCreator): string | null {
   const handle = typeof creator?.handle === 'string' ? creator.handle.trim().toLowerCase() : '';
@@ -105,6 +104,52 @@ function recordAgentCost(
   }
 }
 
+type HandleGroup = {
+  key: string;
+  handle: string;
+  creators: NormalizedCreator[];
+};
+
+function groupCreatorsByHandle(creators: NormalizedCreator[]): HandleGroup[] {
+  const map = new Map<string, HandleGroup>();
+
+  creators.forEach((creator, index) => {
+    const candidates: string[] = [];
+
+    if (typeof creator.handle === 'string' && creator.handle.trim().length > 0) {
+      candidates.push(creator.handle.trim());
+    }
+
+    const nestedCreator = creator.creator as Record<string, unknown> | undefined;
+    if (nestedCreator) {
+      const username = typeof nestedCreator.username === 'string' ? nestedCreator.username.trim() : '';
+      if (username.length > 0) {
+        candidates.push(username);
+      }
+      const uniqueId = typeof nestedCreator.uniqueId === 'string' ? nestedCreator.uniqueId.trim() : '';
+      if (uniqueId.length > 0) {
+        candidates.push(uniqueId);
+      }
+    }
+
+    if (typeof creator.id === 'string' && creator.id.trim().length > 0) {
+      candidates.push(creator.id.trim());
+    }
+
+    const fallback = `creator_${index + 1}`;
+    const displayHandle = (candidates.find((candidate) => candidate.length > 0) ?? fallback).trim();
+    const normalized = displayHandle.toLowerCase();
+
+    if (!map.has(normalized)) {
+      map.set(normalized, { key: normalized, handle: displayHandle, creators: [] });
+    }
+
+    map.get(normalized)!.creators.push(creator);
+  });
+
+  return Array.from(map.values());
+}
+
 export async function runInstagramUsReelsProvider(
   ctx: ProviderContext,
   service: SearchJobService,
@@ -158,7 +203,6 @@ export async function runInstagramUsReelsProvider(
     keywords,
     userId: job.userId,
     targetResults: job.targetResults,
-    chunkSize: DEFAULT_STREAM_CHUNK,
   }, LogCategory.SCRAPING);
   console.warn('[US_REELS][ENTRY]', {
     jobId: job.id,
@@ -166,7 +210,6 @@ export async function runInstagramUsReelsProvider(
     keywords,
     userId: job.userId,
     targetResults: job.targetResults,
-    chunkSize: DEFAULT_STREAM_CHUNK,
     timestamp: new Date().toISOString(),
   });
   console.warn('[US_REELS][ENV]', {
@@ -174,7 +217,6 @@ export async function runInstagramUsReelsProvider(
     hasOpenAI: Boolean(process.env.OPENAI_API_KEY),
     hasSerper: Boolean(process.env.SERPER_API_KEY),
     hasScrapeCreatorsKey: Boolean(process.env.SC_API_KEY),
-    usReelsStreamChunk: process.env.US_REELS_STREAM_CHUNK ?? null,
     usReelsStreamDelayMs: process.env.US_REELS_STREAM_DELAY_MS ?? null,
   });
 
@@ -185,11 +227,10 @@ export async function runInstagramUsReelsProvider(
   let cursor = job.cursor ?? 0;
   let processedRuns = job.processedRuns ?? 0;
   let batchIndex = 0;
-  let hasPersistedCreators = processedResults > 0;
   const sessionMeta = Array.isArray(searchParams?.instagramUsReelsAgent)
     ? [...(searchParams.instagramUsReelsAgent as any[])]
     : [];
-  let successfulRuns = 0;
+  let successfulAgentRuns = 0;
   let lastError: Error | null = null;
 
   try {
@@ -238,8 +279,6 @@ export async function runInstagramUsReelsProvider(
         continue;
       }
 
-      successfulRuns += 1;
-      processedRuns += 1;
       console.warn('[US_REELS][AGENT_RESULT]', {
         jobId: job.id,
         keyword,
@@ -265,44 +304,93 @@ export async function runInstagramUsReelsProvider(
         ? agentResult.creators
         : [];
 
-      if (!normalizedCreators.length) {
+      successfulAgentRuns += 1;
+
+      const handleGroups = groupCreatorsByHandle(normalizedCreators);
+      const handleMetricsRecord: Record<string, HandleMetricSnapshot> = metrics.handles?.metrics
+        ? { ...metrics.handles.metrics }
+        : {};
+
+      const snapshotParams = (service.snapshot().searchParams ?? {}) as Record<string, unknown>;
+      const existingQueueRaw = snapshotParams[HANDLE_QUEUE_PARAM_KEY] as Record<string, unknown> | undefined;
+      const existingCompletedHandles = Array.isArray(existingQueueRaw?.completedHandles)
+        ? (existingQueueRaw.completedHandles as unknown[]).filter((value): value is string => typeof value === 'string')
+        : [];
+      const existingRemainingHandles = Array.isArray(existingQueueRaw?.remainingHandles)
+        ? (existingQueueRaw.remainingHandles as unknown[]).filter((value): value is string => typeof value === 'string')
+        : [];
+
+      const combinedHandlesOrdered: string[] = [];
+      const seenHandlesGlobal = new Set<string>();
+      const pushHandle = (handle: string) => {
+        if (typeof handle !== 'string') return;
+        const trimmed = handle.trim();
+        if (!trimmed) return;
+        const normalized = trimmed.toLowerCase();
+        if (seenHandlesGlobal.has(normalized)) return;
+        seenHandlesGlobal.add(normalized);
+        combinedHandlesOrdered.push(trimmed);
+      };
+
+      existingCompletedHandles.forEach(pushHandle);
+      existingRemainingHandles.forEach(pushHandle);
+      handleGroups.forEach((group) => pushHandle(group.handle));
+
+      await service.updateHandleQueue({
+        type: 'initialize',
+        handles: combinedHandlesOrdered,
+        keyword,
+      });
+
+      const completedHandlesAggregate = new Map<string, string>();
+      existingCompletedHandles.forEach((handle) => {
+        const normalized = handle.trim().toLowerCase();
+        if (normalized) {
+          completedHandlesAggregate.set(normalized, handle);
+        }
+      });
+
+      const handleStateTimestamp = new Date().toISOString();
+      const completedHandlesOrdered = combinedHandlesOrdered
+        .filter((handle) => completedHandlesAggregate.has(handle.toLowerCase()))
+        .map((handle) => completedHandlesAggregate.get(handle.toLowerCase()) ?? handle);
+      const remainingHandlesOrdered = combinedHandlesOrdered.filter(
+        (handle) => !completedHandlesAggregate.has(handle.toLowerCase()),
+      );
+
+      metrics.handles = {
+        totalHandles: combinedHandlesOrdered.length,
+        completedHandles: completedHandlesOrdered,
+        remainingHandles: remainingHandlesOrdered,
+        activeHandle: remainingHandlesOrdered[0] ?? null,
+        metrics: handleMetricsRecord,
+        lastUpdatedAt: handleStateTimestamp,
+      };
+
+      if (!handleGroups.length) {
         metrics.batches.push({
           index: batchIndex++,
           size: 0,
           durationMs: Date.now() - keywordStartedAt,
+          handle: null,
+          keyword,
+          note: `No handles discovered for keyword ${keyword}`,
         });
         recordAgentCost(metrics, keyword, agentResult.cost);
         continue;
       }
 
-      const chunkSize = Math.min(DEFAULT_STREAM_CHUNK, normalizedCreators.length);
-      for (let offset = 0; offset < normalizedCreators.length; offset += chunkSize) {
-        const chunkStartedAt = Date.now();
-        const chunk = normalizedCreators.slice(offset, offset + chunkSize);
-        if (!chunk.length) {
-          continue;
-        }
+      for (let handleIndex = 0; handleIndex < handleGroups.length; handleIndex += 1) {
+        const group = handleGroups[handleIndex];
+        const handleStartedAt = Date.now();
+        const mergeResult = await service.mergeCreators(group.creators, resolveCreatorMergeKey);
 
-        const isFirstPersist = !hasPersistedCreators;
-        let mergeResult: { total: number; newCount: number } | null = null;
-
-        if (isFirstPersist) {
-          processedResults = await service.replaceCreators(chunk);
-          hasPersistedCreators = true;
-        } else {
-          mergeResult = await service.mergeCreators(chunk, resolveCreatorMergeKey);
-          processedResults = mergeResult.total;
-        }
-
+        processedRuns += 1;
+        processedResults = mergeResult.total;
         cursor = processedResults;
         metrics.processedCreators = processedResults;
 
-        metrics.batches.push({
-          index: batchIndex++,
-          size: !isFirstPersist && mergeResult ? mergeResult.newCount : chunk.length,
-          durationMs: Date.now() - chunkStartedAt,
-        });
-
+        const duplicates = Math.max(group.creators.length - mergeResult.newCount, 0);
         const progressValue = computeProgress(processedResults, targetResults);
         await service.recordProgress({
           processedRuns,
@@ -311,9 +399,78 @@ export async function runInstagramUsReelsProvider(
           progress: Math.max(progressValue, 5),
         });
 
-        if (STREAM_DELAY_MS > 0 && offset + chunkSize < normalizedCreators.length) {
-          await sleep(STREAM_DELAY_MS);
-        }
+        const normalizedKey = group.key;
+        completedHandlesAggregate.set(normalizedKey, group.handle);
+
+        const completedHandlesOrdered = combinedHandlesOrdered
+          .filter((handle) => completedHandlesAggregate.has(handle.toLowerCase()))
+          .map((handle) => completedHandlesAggregate.get(handle.toLowerCase()) ?? handle);
+        const remainingHandlesOrdered = combinedHandlesOrdered.filter(
+          (handle) => !completedHandlesAggregate.has(handle.toLowerCase()),
+        );
+
+        await service.updateHandleQueue({
+          type: 'advance',
+          handle: group.handle,
+          keyword,
+          totalCreators: group.creators.length,
+          newCreators: mergeResult.newCount,
+          duplicateCreators: duplicates,
+          remainingHandles: remainingHandlesOrdered,
+        });
+
+        const handleDuration = Date.now() - handleStartedAt;
+        metrics.batches.push({
+          index: batchIndex++,
+          size: group.creators.length,
+          durationMs: handleDuration,
+          handle: group.handle,
+          keyword,
+          newCreators: mergeResult.newCount,
+          totalCreators: group.creators.length,
+          duplicates,
+          note: `US Reels handle ${group.handle}`,
+        });
+
+        const previousMetric = handleMetricsRecord[normalizedKey];
+        const handleMetric = {
+          handle: group.handle,
+          keyword,
+          totalCreators: (previousMetric?.totalCreators ?? 0) + group.creators.length,
+          newCreators: (previousMetric?.newCreators ?? 0) + mergeResult.newCount,
+          duplicateCreators: (previousMetric?.duplicateCreators ?? 0) + duplicates,
+          batches: (previousMetric?.batches ?? 0) + 1,
+          lastUpdatedAt: new Date().toISOString(),
+        };
+        handleMetricsRecord[normalizedKey] = handleMetric;
+
+        metrics.handles = {
+          totalHandles: combinedHandlesOrdered.length,
+          completedHandles: completedHandlesOrdered,
+          remainingHandles: remainingHandlesOrdered,
+          activeHandle: remainingHandlesOrdered[0] ?? null,
+          metrics: { ...handleMetricsRecord },
+          lastUpdatedAt: handleMetric.lastUpdatedAt,
+        };
+
+        logger.info('Instagram US Reels handle completed', {
+          jobId: job.id,
+          keyword,
+          handle: group.handle,
+          newCreators: mergeResult.newCount,
+          duplicates,
+          durationMs: handleDuration,
+        }, LogCategory.SCRAPING);
+
+        console.warn('[US_REELS][HANDLE_COMPLETE]', {
+          jobId: job.id,
+          keyword,
+          handle: group.handle,
+          newCreators: mergeResult.newCount,
+          duplicates,
+          processedResults,
+          timestamp: new Date().toISOString(),
+        });
 
         if (processedResults >= targetResults) {
           break;
@@ -340,7 +497,7 @@ export async function runInstagramUsReelsProvider(
       }
     }
 
-    if (successfulRuns === 0) {
+    if (successfulAgentRuns === 0) {
       throw lastError ?? new Error('Instagram US Reels agent failed for all keywords');
     }
 
@@ -374,6 +531,8 @@ export async function runInstagramUsReelsProvider(
       batches: metrics.batches.length,
       durationMs: metrics.timings.totalDurationMs,
       finalProgress,
+      handlesProcessed: metrics.handles?.completedHandles?.length ?? 0,
+      handlesRemaining: metrics.handles?.remainingHandles?.length ?? 0,
     }, LogCategory.SCRAPING);
     console.warn('[US_REELS][COMPLETE]', {
       jobId: job.id,

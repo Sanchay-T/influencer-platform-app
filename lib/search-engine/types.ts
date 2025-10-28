@@ -19,14 +19,41 @@ export interface CostEntry {
   note?: string;
 }
 
+export interface SearchBatchMetric {
+  index: number;
+  size: number;
+  durationMs: number;
+  handle?: string | null;
+  keyword?: string | null;
+  newCreators?: number;
+  totalCreators?: number;
+  duplicates?: number;
+  note?: string;
+}
+
+export interface HandleMetricSnapshot {
+  handle: string;
+  keyword?: string | null;
+  totalCreators: number;
+  newCreators: number;
+  duplicateCreators: number;
+  batches?: number;
+  lastUpdatedAt: string;
+}
+
+export interface HandleMetricsSnapshot {
+  totalHandles?: number;
+  completedHandles?: string[];
+  remainingHandles?: string[];
+  activeHandle?: string | null;
+  metrics: Record<string, HandleMetricSnapshot>;
+  lastUpdatedAt?: string;
+}
+
 export interface SearchMetricsSnapshot {
   apiCalls: number;
   processedCreators: number;
-  batches: Array<{
-    index: number;
-    size: number;
-    durationMs: number;
-  }>;
+  batches: SearchBatchMetric[];
   timings: {
     startedAt: string;
     finishedAt?: string;
@@ -34,6 +61,7 @@ export interface SearchMetricsSnapshot {
   };
   costs?: CostEntry[];
   totalCostUsd?: number;
+  handles?: HandleMetricsSnapshot;
 }
 
 export interface ProviderRunResult {

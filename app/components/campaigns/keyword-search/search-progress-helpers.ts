@@ -8,10 +8,47 @@ export function flattenCreators(results: any) {
   if (!results) return [] as any[]
   const items = Array.isArray(results) ? results : [results]
   const creators: any[] = []
+  // Breadcrumb: dedupe across multi-handle batches so progress metrics avoid double counting creators.
+  const seen = new Set<string>()
+
+  const resolveCreatorKey = (creator: any): string | null => {
+    if (!creator || typeof creator !== 'object') return null
+    const candidateList: Array<unknown> = [
+      (creator as any).username,
+      (creator as any).handle,
+      (creator as any).id,
+      (creator as any).profileId,
+      (creator as any).externalId,
+      (creator.creator as any)?.username,
+      (creator.creator as any)?.uniqueId,
+      (creator.creator as any)?.handle,
+      (creator.metadata as any)?.username,
+      (creator.metadata as any)?.handle,
+    ]
+
+    for (const candidate of candidateList) {
+      if (typeof candidate === 'string' && candidate.trim().length > 0) {
+        return candidate.trim().toLowerCase()
+      }
+    }
+
+    return null
+  }
+
   for (const item of items) {
     if (!item) continue
     const list = Array.isArray(item.creators) ? item.creators : []
-    creators.push(...list)
+    for (const creator of list) {
+      if (!creator) continue
+      const key = resolveCreatorKey(creator)
+      if (key) {
+        if (seen.has(key)) {
+          continue
+        }
+        seen.add(key)
+      }
+      creators.push(creator)
+    }
   }
   return creators
 }

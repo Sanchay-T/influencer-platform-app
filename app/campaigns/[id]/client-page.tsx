@@ -27,6 +27,26 @@ const dedupeCache = new Map<string, any[]>()
 
 const SHOW_DIAGNOSTICS = process.env.NEXT_PUBLIC_SHOW_SEARCH_DIAGNOSTICS === 'true'
 const DEFAULT_PAGE_LIMIT = 200
+const HANDLE_QUEUE_PARAM_KEY = 'searchEngineHandleQueue'
+
+type HandleQueueMetric = {
+  handle: string
+  keyword?: string | null
+  totalCreators: number
+  newCreators: number
+  duplicateCreators: number
+  batches?: number
+  lastUpdatedAt?: string | null
+}
+
+type HandleQueueState = {
+  totalHandles: number
+  completedHandles: string[]
+  remainingHandles: string[]
+  activeHandle: string | null
+  metrics: Record<string, HandleQueueMetric>
+  lastUpdatedAt?: string | null
+}
 
 type UiScrapingJob = ScrapingJob & {
   resultsLoaded?: boolean
@@ -39,6 +59,7 @@ type UiScrapingJob = ScrapingJob & {
   }
   creatorBuffer?: unknown[]
   pageLimit?: number
+  handleQueue?: HandleQueueState | null
 }
 
 type SearchDiagnostics = {
@@ -48,10 +69,25 @@ type SearchDiagnostics = {
   totalMs: number | null
   apiCalls: number | null
   processedCreators: number | null
-  batches: Array<{ index?: number; size?: number; durationMs?: number }>
+  batches: Array<{
+    index?: number
+    size?: number
+    durationMs?: number
+    handle?: string | null
+    keyword?: string | null
+    newCreators?: number
+    totalCreators?: number
+    duplicates?: number
+    note?: string | null
+  }>
   startedAt?: string | null
   finishedAt?: string | null
   lastUpdated: string
+  handles?: {
+    totalHandles?: number
+    completedHandles?: string[]
+    remainingHandles?: string[]
+  } | null
 }
 
 interface ClientCampaignPageProps {
@@ -198,6 +234,8 @@ const createJobUpdateFromPayload = (
     ? data.totalCreators
     : dedupedCreators.length
 
+  const queueState = parseHandleQueueState(data?.queue ?? data?.job?.queue ?? null)
+
   return {
     status: data?.status ?? job.status,
     progress: data?.progress ?? job.progress,
@@ -208,6 +246,55 @@ const createJobUpdateFromPayload = (
     pagination: data?.pagination ?? job.pagination,
     pageLimit: data?.pagination?.limit ?? job.pageLimit ?? DEFAULT_PAGE_LIMIT,
     resultsError: null,
+    handleQueue: queueState ?? job.handleQueue ?? null,
+  }
+}
+
+function parseHandleQueueState(raw: unknown): HandleQueueState | null {
+  if (!raw || typeof raw !== 'object') {
+    return null
+  }
+
+  const record = raw as Record<string, unknown>
+
+  const completedHandles = Array.isArray(record.completedHandles)
+    ? (record.completedHandles as unknown[]).filter((value): value is string => typeof value === 'string')
+    : []
+
+  const remainingHandles = Array.isArray(record.remainingHandles)
+    ? (record.remainingHandles as unknown[]).filter((value): value is string => typeof value === 'string')
+    : []
+
+  const metricsRecord: Record<string, HandleQueueMetric> = {}
+  if (record.metrics && typeof record.metrics === 'object' && record.metrics !== null) {
+    const rawMetrics = record.metrics as Record<string, unknown>
+    Object.entries(rawMetrics).forEach(([key, value]) => {
+      if (!value || typeof value !== 'object') {
+        return
+      }
+      const metric = value as Record<string, unknown>
+      const handle = typeof metric.handle === 'string' && metric.handle.trim().length > 0
+        ? metric.handle
+        : key
+      metricsRecord[key] = {
+        handle,
+        keyword: typeof metric.keyword === 'string' ? metric.keyword : null,
+        totalCreators: Number(metric.totalCreators) || 0,
+        newCreators: Number(metric.newCreators) || 0,
+        duplicateCreators: Number(metric.duplicateCreators) || 0,
+        batches: Number(metric.batches) || undefined,
+        lastUpdatedAt: typeof metric.lastUpdatedAt === 'string' ? metric.lastUpdatedAt : undefined,
+      }
+    })
+  }
+
+  return {
+    totalHandles: Number(record.totalHandles) || completedHandles.length + remainingHandles.length,
+    completedHandles,
+    remainingHandles,
+    activeHandle: typeof record.activeHandle === 'string' ? record.activeHandle : null,
+    metrics: metricsRecord,
+    lastUpdatedAt: typeof record.lastUpdatedAt === 'string' ? record.lastUpdatedAt : undefined,
   }
 }
 
@@ -220,6 +307,9 @@ const toUiJob = (job: ScrapingJob): UiScrapingJob => {
     ? dedupeCreators(creatorCandidates, { platformHint })
     : []
 
+  const rawSearchParams = (job.searchParams ?? {}) as Record<string, unknown>
+  const queueState = parseHandleQueueState(rawSearchParams[HANDLE_QUEUE_PARAM_KEY])
+
   return {
     ...job,
     results: hydratedResults,
@@ -227,6 +317,7 @@ const toUiJob = (job: ScrapingJob): UiScrapingJob => {
     totalCreators: totalCreators > 0 ? totalCreators : undefined,
     creatorBuffer,
     pageLimit: DEFAULT_PAGE_LIMIT,
+    handleQueue: queueState,
   }
 }
 
@@ -581,6 +672,14 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
             ? queueLatencyMs + processingMs
             : processingMs
 
+          const handlesSummary = data?.queue
+            ? {
+                totalHandles: typeof data.queue.totalHandles === 'number' ? data.queue.totalHandles : undefined,
+                completedHandles: Array.isArray(data.queue.completedHandles) ? data.queue.completedHandles : [],
+                remainingHandles: Array.isArray(data.queue.remainingHandles) ? data.queue.remainingHandles : [],
+              }
+            : null
+
           setDiagnostics((prev) => ({
             ...prev,
             [current.id]: {
@@ -593,7 +692,8 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
               batches,
               startedAt: timings?.startedAt ?? null,
               finishedAt: timings?.finishedAt ?? null,
-              lastUpdated: new Date().toISOString()
+              lastUpdated: new Date().toISOString(),
+              handles: handlesSummary,
             }
           }))
         }
@@ -982,6 +1082,65 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
             <p className="text-xs uppercase tracking-wide text-zinc-500">Progress</p>
             <Progress value={selectedJob?.progress ?? 0} className="h-2" />
             <p className="text-xs text-zinc-500">Updating with live results. This page will refresh when the run completes.</p>
+          </div>
+        )}
+        {selectedJob?.handleQueue && (
+          <div className="space-y-2">
+            <p className="text-xs uppercase tracking-wide text-zinc-500">Handle queue</p>
+            <div className="space-y-2 rounded-md border border-zinc-800/60 bg-zinc-900/70 p-3 text-xs text-zinc-300">
+              <div className="flex items-center justify-between text-sm text-zinc-200">
+                <span>Completed</span>
+                <span className="font-mono text-zinc-100">
+                  {selectedJob.handleQueue.completedHandles.length.toLocaleString()} /
+                  {' '}
+                  {selectedJob.handleQueue.totalHandles.toLocaleString()}
+                </span>
+              </div>
+              {selectedJob.handleQueue.activeHandle && (
+                <div className="flex items-center justify-between">
+                  <span>Active</span>
+                  <span className="font-mono text-zinc-100">
+                    @{selectedJob.handleQueue.activeHandle}
+                  </span>
+                </div>
+              )}
+              {selectedJob.handleQueue.completedHandles.length > 0 && (
+                <div>
+                  <p className="text-[11px] uppercase tracking-wide text-zinc-500">Recent</p>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {selectedJob.handleQueue.completedHandles
+                      .slice(-4)
+                      .map((handle) => (
+                        <Badge
+                          key={`completed-${handle}`}
+                          variant="outline"
+                          className="border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
+                        >
+                          @{handle}
+                        </Badge>
+                      ))}
+                  </div>
+                </div>
+              )}
+              {selectedJob.handleQueue.remainingHandles.length > 0 && (
+                <div>
+                  <p className="text-[11px] uppercase tracking-wide text-zinc-500">Upcoming</p>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {selectedJob.handleQueue.remainingHandles
+                      .slice(0, 4)
+                      .map((handle) => (
+                        <Badge
+                          key={`upcoming-${handle}`}
+                          variant="outline"
+                          className="border-indigo-500/40 bg-indigo-500/10 text-indigo-200"
+                        >
+                          @{handle}
+                        </Badge>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </CardContent>

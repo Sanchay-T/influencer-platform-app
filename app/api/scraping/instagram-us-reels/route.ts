@@ -251,6 +251,31 @@ export async function GET(req: NextRequest) {
       pagination,
     } = paginateCreators(job.results, limit, offset);
 
+    const queueStateRaw = (job.searchParams as Record<string, unknown> | null | undefined)?.searchEngineHandleQueue;
+    const queueState = queueStateRaw && typeof queueStateRaw === 'object'
+      ? queueStateRaw as Record<string, unknown>
+      : null;
+    const completedHandles = queueState && Array.isArray(queueState.completedHandles)
+      ? (queueState.completedHandles as unknown[]).filter((value): value is string => typeof value === 'string')
+      : [];
+    const remainingHandles = queueState && Array.isArray(queueState.remainingHandles)
+      ? (queueState.remainingHandles as unknown[]).filter((value): value is string => typeof value === 'string')
+      : [];
+    const queueMetrics = queueState && typeof queueState.metrics === 'object' && queueState.metrics !== null
+      ? queueState.metrics
+      : {};
+
+    const queuePayload = queueState
+      ? {
+          totalHandles: Number(queueState.totalHandles) || completedHandles.length + remainingHandles.length,
+          completedHandles,
+          remainingHandles,
+          activeHandle: typeof queueState.activeHandle === 'string' ? queueState.activeHandle : null,
+          metrics: queueMetrics,
+          lastUpdatedAt: typeof queueState.lastUpdatedAt === 'string' ? queueState.lastUpdatedAt : null,
+        }
+      : null;
+
     return NextResponse.json({
       job: {
         id: job.id,
@@ -263,10 +288,12 @@ export async function GET(req: NextRequest) {
         error: job.error,
         createdAt: job.createdAt,
         completedAt: job.completedAt,
+        queue: queuePayload,
       },
       results: paginatedResults ?? [],
       totalCreators,
       pagination,
+      queue: queuePayload,
     });
   } catch (error: any) {
     console.error('[instagram-us-reels] GET failed', error);
