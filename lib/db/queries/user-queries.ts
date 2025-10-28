@@ -5,6 +5,7 @@
  * =====================================================
  */
 
+import { clerkBackendClient } from '@/lib/auth/backend-auth';
 import { db } from '../index';
 import { 
   users, 
@@ -298,6 +299,60 @@ export async function createUser(userData: {
       throw transactionError;
     }
   });
+}
+
+export async function ensureUserProfile(userId: string): Promise<UserProfileComplete> {
+  const existingProfile = await getUserProfile(userId);
+  if (existingProfile) {
+    debug('ensureUserProfile resolved existing record', { userId });
+    return existingProfile;
+  }
+
+  info('ensureUserProfile creating normalized profile', { userId });
+
+  let email: string | undefined;
+  let fullName: string | undefined;
+
+  try {
+    const clerkUser = await clerkBackendClient.users.getUser(userId);
+    email = clerkUser.emailAddresses?.[0]?.emailAddress ?? undefined;
+    const clerkFullName = `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim();
+    fullName = clerkFullName || undefined;
+  } catch (clerkError) {
+    warn('Failed to fetch Clerk metadata during ensureUserProfile', {
+      userId,
+      errorMessage: clerkError instanceof Error ? clerkError.message : String(clerkError)
+    });
+  }
+
+  const fallbackEmail = `user-${userId}@example.com`;
+
+  try {
+    const createdProfile = await createUser({
+      userId,
+      email: email || fallbackEmail,
+      fullName: fullName || 'User',
+      onboardingStep: 'pending',
+      currentPlan: 'free'
+    });
+
+    info('ensureUserProfile created new record', { userId });
+    return createdProfile;
+  } catch (createError: any) {
+    const message = createError?.message?.toLowerCase?.() ?? '';
+    const duplicate = message.includes('duplicate') || message.includes('unique') || createError?.code === '23505';
+
+    if (duplicate) {
+      warn('ensureUserProfile detected concurrent creation, refetching', { userId });
+      const profile = await getUserProfile(userId);
+      if (profile) {
+        return profile;
+      }
+    }
+
+    logError('ensureUserProfile failed to create user', createError, { userId });
+    throw createError;
+  }
 }
 
 /**
