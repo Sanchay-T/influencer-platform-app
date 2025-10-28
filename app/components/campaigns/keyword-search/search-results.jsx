@@ -166,6 +166,21 @@ const normalizePlatformValue = (value) => {
   return value.toString().toLowerCase();
 };
 
+const normalizeEmailList = (list) =>
+  Array.isArray(list)
+    ? list
+        .map((value) => (typeof value === 'string' ? value.trim() : null))
+        .filter((value) => typeof value === 'string' && value.length)
+    : [];
+
+const arraysEqual = (a, b) => {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+};
+
 const formatFollowers = (value) => {
   if (value == null) return null;
 
@@ -325,7 +340,7 @@ const SearchResults = ({ searchData }) => {
   const resultsCacheRef = useRef(new Map());
 
   const applyEnrichmentToCreators = useCallback(
-    (record, targetData, rawReference) => {
+    (record, targetData, rawReference, origin = 'hydrate') => {
       if (!record) return;
 
       const incomingEmails = Array.isArray(record.summary?.allEmails)
@@ -344,6 +359,15 @@ const SearchResults = ({ searchData }) => {
       const patchEntry = (entry) => {
         const metadata =
           entry && typeof entry.metadata === 'object' && entry.metadata !== null ? { ...entry.metadata } : {};
+        const existingBefore = extractEmails(entry).map((value) => value.toLowerCase());
+        const existingBeforeSet = new Set(existingBefore);
+        const clientNewEmails =
+          origin === 'interactive'
+            ? incomingEmails.filter((email) => {
+                const lower = email.toLowerCase();
+                return !existingBeforeSet.has(lower);
+              })
+            : [];
         const contactEmails = mergeEmailLists(metadata.contactEmails, incomingEmails);
         const nextMetadata = {
           ...metadata,
@@ -352,6 +376,11 @@ const SearchResults = ({ searchData }) => {
           primaryEmail: primaryEmail ?? metadata.primaryEmail ?? null,
           lastEnrichedAt: record.enrichedAt,
         };
+        if (clientNewEmails.length) {
+          nextMetadata.clientNewEmails = clientNewEmails;
+        } else if (nextMetadata.clientNewEmails) {
+          delete nextMetadata.clientNewEmails;
+        }
 
         const nextEntry = {
           ...entry,
@@ -385,7 +414,65 @@ const SearchResults = ({ searchData }) => {
           nextEntry.contact = contactField;
         }
 
-        return nextEntry;
+        const previousContactEmails = normalizeEmailList(metadata.contactEmails);
+        const nextContactEmails = normalizeEmailList(nextMetadata.contactEmails);
+        let changed =
+          !arraysEqual(previousContactEmails, nextContactEmails) ||
+          metadata.primaryEmail !== nextMetadata.primaryEmail ||
+          metadata.lastEnrichedAt !== nextMetadata.lastEnrichedAt ||
+          (metadata.enrichment?.enrichedAt ?? null) !== (nextMetadata.enrichment?.enrichedAt ?? null) ||
+          (!!metadata.clientNewEmails !== !!nextMetadata.clientNewEmails) ||
+          (Array.isArray(metadata.clientNewEmails) &&
+            Array.isArray(nextMetadata.clientNewEmails) &&
+            !arraysEqual(
+              normalizeEmailList(metadata.clientNewEmails),
+              normalizeEmailList(nextMetadata.clientNewEmails),
+            ));
+
+        if (!changed && Array.isArray(entry.emails) && Array.isArray(nextEntry.emails)) {
+          const currentEmails = normalizeEmailList(entry.emails);
+          const updatedEmails = normalizeEmailList(nextEntry.emails);
+          if (!arraysEqual(currentEmails, updatedEmails)) {
+            changed = true;
+          }
+        }
+
+        if (
+          !changed &&
+          entry?.email &&
+          primaryEmail &&
+          (entry.email ?? '').trim().toLowerCase() !== primaryEmail.toLowerCase()
+        ) {
+          changed = true;
+        }
+
+        if (!changed && creatorField && entry?.creator) {
+          const currentCreatorEmails = normalizeEmailList(entry.creator.emails);
+          const updatedCreatorEmails = normalizeEmailList(creatorField.emails);
+          if (!arraysEqual(currentCreatorEmails, updatedCreatorEmails)) {
+            changed = true;
+          }
+          if (
+            (entry.creator.email ?? '').trim().toLowerCase() !== (creatorField.email ?? '').trim().toLowerCase()
+          ) {
+            changed = true;
+          }
+        }
+
+        if (!changed && contactField && entry?.contact) {
+          const currentContactEmails = normalizeEmailList(entry.contact.emails);
+          const updatedContactEmails = normalizeEmailList(contactField.emails);
+          if (!arraysEqual(currentContactEmails, updatedContactEmails)) {
+            changed = true;
+          }
+          if (
+            (entry.contact.email ?? '').trim().toLowerCase() !== (contactField.email ?? '').trim().toLowerCase()
+          ) {
+            changed = true;
+          }
+        }
+
+        return { entry: changed ? nextEntry : entry, changed };
       };
 
       const doesEntryMatchTarget = (entry) => {
@@ -435,18 +522,32 @@ const SearchResults = ({ searchData }) => {
         return normalizedHandles.includes(normalizedHandle);
       };
 
-      setCreators((prev) =>
+      let didChange = false;
+      const nextCreators = (prev) =>
         prev.map((entry) => {
           if (!entry) return entry;
           if (doesEntryMatchTarget(entry)) {
-            return patchEntry(entry);
+            const { entry: patched, changed } = patchEntry(entry);
+            if (changed) {
+              didChange = true;
+            }
+            return patched;
           }
           if (typeof entry === 'object' && entry !== null && entry.creator && doesEntryMatchTarget(entry.creator)) {
-            return patchEntry(entry);
+            const { entry: patched, changed } = patchEntry(entry);
+            if (changed) {
+              didChange = true;
+            }
+            return patched;
           }
           return entry;
-        }),
-      );
+        });
+
+      setCreators((prev) => {
+        didChange = false;
+        const updated = nextCreators(prev);
+        return didChange ? updated : prev;
+      });
     },
     [setCreators],
   );
@@ -533,11 +634,33 @@ const SearchResults = ({ searchData }) => {
     if (result?.records?.length) {
       result.records.forEach(({ target, record }) => {
         if (record) {
-          applyEnrichmentToCreators(record, target);
+          const normalizedHandle = normalizeHandleValue(target.handle);
+          const normalizedPlatform = normalizePlatformValue(target.platform);
+          const rawMatch = creators.find((entry) => {
+            if (!entry) return false;
+            const base = entry && typeof entry.creator === 'object' && entry.creator !== null ? entry.creator : entry;
+            const entryHandle =
+              normalizeHandleValue(
+                base?.handle ??
+                  base?.username ??
+                  base?.uniqueId ??
+                  entry?.handle ??
+                  entry?.username ??
+                  entry?.uniqueId ??
+                  null,
+              ) ?? null;
+            if (!entryHandle || entryHandle !== normalizedHandle) {
+              return false;
+            }
+            if (!normalizedPlatform) return true;
+            const entryPlatform = normalizePlatformValue(base?.platform ?? entry?.platform ?? null);
+            return !entryPlatform || entryPlatform === normalizedPlatform;
+          });
+          applyEnrichmentToCreators(record, target, rawMatch ?? null, 'interactive');
         }
       });
     }
-  }, [applyEnrichmentToCreators, enrichMany, selectedEnrichmentTargets]);
+  }, [applyEnrichmentToCreators, enrichMany, selectedEnrichmentTargets, creators]);
 
   const [emailOverlayDismissed, setEmailOverlayDismissed] = useState(false);
 
@@ -770,15 +893,21 @@ const SearchResults = ({ searchData }) => {
 
   useEffect(() => {
     currentRows.forEach(({ snapshot, raw }) => {
-      const platformValue = (snapshot.platform || platformNormalized || 'tiktok').toString().toLowerCase();
+      const target = buildEnrichmentTarget(snapshot, platformNormalized);
+      const platformValue = target.platform || 'tiktok';
       const existing = raw?.metadata?.enrichment || snapshot?.metadata?.enrichment || raw?.enrichment;
       if (existing) {
-        seedEnrichment(platformValue, snapshot.handle, existing);
+        seedEnrichment(platformValue, target.handle, existing);
+        applyEnrichmentToCreators(existing, target, raw, 'hydrate');
       } else {
-        prefetchEnrichment(platformValue, snapshot.handle);
+        void prefetchEnrichment(platformValue, target.handle).then((record) => {
+          if (record) {
+            applyEnrichmentToCreators(record, target, raw, 'hydrate');
+          }
+        });
       }
     });
-  }, [currentRows, platformNormalized, prefetchEnrichment, seedEnrichment]);
+  }, [currentRows, platformNormalized, prefetchEnrichment, seedEnrichment, applyEnrichmentToCreators]);
 
   const toggleSelection = (rowId, snapshot) => {
     setSelectedCreators((prev) => {
@@ -1302,13 +1431,6 @@ const SearchResults = ({ searchData }) => {
                   const imageUrl = ensureImageUrl(avatarUrl);
                   const isSelected = !!selectedCreators[rowId];
                   const metadata = creator.metadata || {};
-                  const matchedTermsDisplay = Array.isArray(metadata.matchedTerms)
-                    ? metadata.matchedTerms.slice(0, 4)
-                    : [];
-                  const snippetText =
-                    typeof metadata.snippet === "string" && metadata.snippet.trim().length > 0
-                      ? metadata.snippet.trim()
-                      : null;
                   const enrichmentTarget = buildEnrichmentTarget(snapshot, platformNormalized);
                   const enrichment = getEnrichment(enrichmentTarget.platform, enrichmentTarget.handle);
                   const enrichmentLoading = isEnrichmentLoading(enrichmentTarget.platform, enrichmentTarget.handle);
@@ -1326,11 +1448,11 @@ const SearchResults = ({ searchData }) => {
                     : enrichmentEmailsNormalized;
                   const existingEmails = extractEmails(creator);
                   const displayEmails = enrichmentEmails.length ? enrichmentEmails : existingEmails;
-                  const existingEmailSet = new Set(existingEmails.map((value) => value.toLowerCase()));
-                  const enrichmentEmailSet = new Set(enrichmentEmails.map((value) => value.toLowerCase()));
+                  const clientNewEmails = Array.isArray(metadata.clientNewEmails) ? metadata.clientNewEmails : [];
+                  const clientNewEmailSet = new Set(clientNewEmails.map((value) => value.toLowerCase()));
                   const displayEmailEntries = displayEmails.map((email) => {
                     const lower = email.toLowerCase();
-                    const isNew = enrichmentEmailSet.has(lower) && !existingEmailSet.has(lower);
+                    const isNew = clientNewEmailSet.has(lower);
                     return { value: email, isNew };
                   });
                   const highlightNewEmail = displayEmailEntries.some((entry) => entry.isNew);
@@ -1352,7 +1474,7 @@ const SearchResults = ({ searchData }) => {
                       />
                     </div>
                   </TableCell>
-                  <TableCell className="px-4 py-4 align-top">
+                  <TableCell className="px-4 py-4 align-top w-[260px] max-w-[280px]">
                     <div className="flex items-start gap-3">
                       <Avatar className="h-10 w-10 flex-shrink-0">
                         <AvatarImage
@@ -1399,66 +1521,10 @@ const SearchResults = ({ searchData }) => {
                           <span className="text-sm text-zinc-500">{snapshot.handle}</span>
                         )}
                         <div className="text-xs text-zinc-400">@{snapshot.handle}</div>
-                        {isInstagramUs && matchedTermsDisplay.length > 0 && (
-                          <div className="flex flex-wrap gap-1 pt-1">
-                            {matchedTermsDisplay.map((term) => (
-                              <span
-                                key={term}
-                                className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-emerald-200"
-                              >
-                                {term}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        {isInstagramUs && snippetText && (
-                          <p className="text-[11px] italic text-zinc-400 line-clamp-2">
-                            “{snippetText}”
-                          </p>
-                        )}
-                        <div className="space-y-1 text-xs text-zinc-400">
-                          <div>
-                            <span className="font-medium text-zinc-300">Followers:</span>{' '}
-                            {snapshot.followers != null ? formatFollowers(snapshot.followers) : 'N/A'}
-                          </div>
-                          {creator.creator?.emails?.[0] && (
-                            <div className="break-words">
-                              <span className="font-medium text-zinc-300">Email:</span>{' '}
-                              {creator.creator.emails[0]}
-                            </div>
-                          )}
-                          {creator.video?.statistics?.views && (
-                            <div>
-                              <span className="font-medium text-zinc-300">Views:</span>{' '}
-                              {(creator.video.statistics.views || 0).toLocaleString()}
-                            </div>
-                          )}
-                        </div>
                       </div>
-                      {isInstagramUs && (matchedTermsDisplay.length > 0 || snippetText) && (
-                        <div className="hidden sm:flex flex-col gap-1 pt-1">
-                          {matchedTermsDisplay.length > 0 && (
-                            <div className="flex flex-wrap gap-1 text-[10px] uppercase tracking-wide text-emerald-200">
-                              {matchedTermsDisplay.map((term) => (
-                                <span
-                                  key={term}
-                                  className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5"
-                                >
-                                  {term}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                          {snippetText && (
-                            <p className="text-[11px] italic text-zinc-400 line-clamp-2">
-                              “{snippetText}”
-                            </p>
-                          )}
-                        </div>
-                      )}
                     </div>
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell px-4 py-4 align-top">
+                  <TableCell className="hidden sm:table-cell px-4 py-4 align-top w-[220px] max-w-[260px]">
                     {creator.creator?.name && creator.creator.name !== 'N/A' ? (
                       <a
                         href={renderProfileLink(creator)}
@@ -1485,17 +1551,17 @@ const SearchResults = ({ searchData }) => {
                         <span className="font-medium text-zinc-300">Followers:</span>{' '}
                         {snapshot.followers != null ? formatFollowers(snapshot.followers) : 'N/A'}
                       </div>
-                    {displayEmailEntries.length ? (
-                        <div className="space-y-1">
+                      {displayEmailEntries.length ? (
+                        <div className="space-y-1 whitespace-normal break-words">
                           {displayEmailEntries.map(({ value: email, isNew }) => (
                             <div
                               key={email}
                               className={cn(
-                                "flex items-center gap-1 break-words",
+                                "flex items-center gap-1",
                                 isNew ? "text-pink-300" : undefined
                               )}
                             >
-                              <a href={`mailto:${email}`} className="hover:underline">
+                              <a href={`mailto:${email}`} className="hover:underline break-words whitespace-normal">
                                 {email}
                               </a>
                               {isNew && (
@@ -1532,7 +1598,7 @@ const SearchResults = ({ searchData }) => {
                   <TableCell className="hidden md:table-cell px-4 py-4 text-right text-sm text-zinc-200">
                     {snapshot.followers != null ? formatFollowers(snapshot.followers) : 'N/A'}
                   </TableCell>
-                  <TableCell className="hidden xl:table-cell max-w-0 px-4 py-4">
+                  <TableCell className="hidden xl:table-cell px-4 py-4 max-w-[260px]">
                     <div className="truncate" title={creator.creator?.bio || 'No bio available'}>
                       {creator.creator?.bio ? (
                         <span className="text-sm text-zinc-300">{creator.creator.bio}</span>
@@ -1541,9 +1607,9 @@ const SearchResults = ({ searchData }) => {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="hidden lg:table-cell max-w-0 px-4 py-4">
-                      {displayEmailEntries.length > 0 ? (
-                        <div className="space-y-1 text-sm">
+                  <TableCell className="hidden lg:table-cell px-4 py-4 align-top w-[260px] max-w-[320px]">
+                    {displayEmailEntries.length > 0 ? (
+                      <div className="space-y-1 text-sm whitespace-normal break-words">
                         {displayEmailEntries.map(({ value: email, isNew }) => (
                           <div
                             key={email}
@@ -1554,7 +1620,7 @@ const SearchResults = ({ searchData }) => {
                           >
                             <a
                               href={`mailto:${email}`}
-                              className="block truncate text-pink-400 hover:underline"
+                              className="block text-pink-400 hover:underline break-words whitespace-normal"
                               title={`Send email to ${email}`}
                             >
                               {email}
@@ -1584,7 +1650,7 @@ const SearchResults = ({ searchData }) => {
                       <span className="text-sm text-zinc-500">No email</span>
                     )}
                   </TableCell>
-                  <TableCell className="hidden xl:table-cell max-w-0 px-4 py-4">
+                  <TableCell className="hidden xl:table-cell px-4 py-4 max-w-[260px]">
                     <div className="truncate" title={creator.video?.description || 'No title'}>
                       {creator.video?.description || 'No title'}
                     </div>
@@ -1619,7 +1685,7 @@ const SearchResults = ({ searchData }) => {
                         void (async () => {
                           const record = await enrichCreator({ ...enrichmentTarget, forceRefresh: Boolean(enrichment) });
                           if (record) {
-                            applyEnrichmentToCreators(record, enrichmentTarget, creator);
+                            applyEnrichmentToCreators(record, enrichmentTarget, creator, 'interactive');
                           }
                         })();
                       }}

@@ -64,10 +64,10 @@ export function useCreatorEnrichment(initial?: Record<string, CreatorEnrichmentR
 
   const prefetchEnrichment = useCallback(async (platform: string, handle: string) => {
     const sanitized = sanitizeHandle(handle);
-    if (!sanitized) return;
+    if (!sanitized) return null;
     const key = buildKey(platform, sanitized);
     if (enrichments[key] || prefetchingRef.current.has(key)) {
-      return;
+      return enrichments[key] ?? null;
     }
     prefetchingRef.current.add(key);
     try {
@@ -76,17 +76,21 @@ export function useCreatorEnrichment(initial?: Record<string, CreatorEnrichmentR
         { cache: "no-store" },
       );
       if (response.status === 204) {
-        return;
+        return null;
       }
       if (!response.ok) {
-        return;
+        return null;
       }
       const json = await response.json();
       if (json?.data) {
-        setEnrichments((prev) => ({ ...prev, [key]: json.data as CreatorEnrichmentRecord }));
+        const record = json.data as CreatorEnrichmentRecord;
+        setEnrichments((prev) => ({ ...prev, [key]: record }));
+        return record;
       }
+      return null;
     } catch (error) {
       structuredConsole.warn('[creator-enrichment] prefetch failed', { error: error instanceof Error ? error.message : String(error) });
+      return null;
     } finally {
       prefetchingRef.current.delete(key);
     }
@@ -161,7 +165,11 @@ export function useCreatorEnrichment(initial?: Record<string, CreatorEnrichmentR
   const enrichMany = useCallback(
     async (targets: EnrichmentTarget[]) => {
       if (!targets.length) {
-        return { success: 0, failed: [] as Array<{ target: EnrichmentTarget; error: string }>, records: [] as Array<{ target: EnrichmentTarget; record: CreatorEnrichmentRecord | null }> };
+        return {
+          success: 0,
+          failed: [] as Array<{ target: EnrichmentTarget; error: string }>,
+          records: [] as Array<{ target: EnrichmentTarget; record: CreatorEnrichmentRecord | null }>,
+        };
       }
 
       setBulkState({ inProgress: true, processed: 0, total: targets.length });
