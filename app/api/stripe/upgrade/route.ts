@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { StripeService } from '@/lib/stripe/stripe-service';
@@ -118,7 +119,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ [STRIPE-UPGRADE] Error:', error);
+    structuredConsole.error('❌ [STRIPE-UPGRADE] Error:', error);
     return NextResponse.json(
       { error: 'Failed to process upgrade' },
       { status: 500 }

@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import '@/lib/config/load-env';
 import { NextRequest, NextResponse } from 'next/server';
 import { Client } from '@upstash/qstash';
@@ -10,7 +11,7 @@ export async function POST(req: NextRequest) {
     }
     // Critical: Check if user is admin
     if (!(await isAdminUser())) {
-      console.error('❌ [ADMIN-EMAIL] Unauthorized - Not an admin user');
+      structuredConsole.error('❌ [ADMIN-EMAIL] Unauthorized - Not an admin user');
       return NextResponse.json({ error: 'Unauthorized: Admin access required' }, { status: 401 });
     }
 
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
     // Get current admin user info for logging
     const { user: adminUser } = await getCurrentUserAdminInfo();
     
-    console.log('🚀 [ADMIN-EMAIL] Scheduling admin test email:', {
+    structuredConsole.log('🚀 [ADMIN-EMAIL] Scheduling admin test email:', {
       targetUserId,
       emailType,
       delay: delay || '30s',
@@ -73,7 +74,7 @@ export async function POST(req: NextRequest) {
       delay: delay || '30s'
     });
 
-    console.log('✅ [ADMIN-EMAIL] Email scheduled successfully:', {
+    structuredConsole.log('✅ [ADMIN-EMAIL] Email scheduled successfully:', {
       messageId: response.messageId,
       emailType,
       targetUser: userEmail,
@@ -91,7 +92,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ [ADMIN-EMAIL] Error scheduling email:', error);
+    structuredConsole.error('❌ [ADMIN-EMAIL] Error scheduling email:', error);
     return NextResponse.json(
       { 
         error: 'Failed to schedule email', 

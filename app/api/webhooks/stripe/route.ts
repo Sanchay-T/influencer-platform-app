@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import Stripe from 'stripe';
@@ -31,7 +32,7 @@ async function fetchAvailablePlanKeys(): Promise<string[]> {
     cachedPlanKeys = rows.map((row) => row.planKey);
     return cachedPlanKeys;
   } catch (error) {
-    console.error('[STRIPE-WEBHOOK] Failed to fetch plan keys:', error);
+    structuredConsole.error('[STRIPE-WEBHOOK] Failed to fetch plan keys:', error);
     return cachedPlanKeys ?? [];
   }
 }
@@ -66,7 +67,7 @@ async function resolvePlanConfig(planKey: string | undefined | null): Promise<Pl
     planConfigCache.set(planKey, config);
     return config;
   } catch (error) {
-    console.error('[STRIPE-WEBHOOK] Failed to resolve plan config:', error);
+    structuredConsole.error('[STRIPE-WEBHOOK] Failed to resolve plan config:', error);
     return null;
   }
 }
@@ -809,15 +810,17 @@ async function handlePaymentSucceeded(event: Stripe.Event, requestId: string) {
 
   if (currentMonth !== lastResetMonth) {
     updateData.usageCreatorsCurrentMonth = 0;
+    updateData.enrichmentsCurrentMonth = 0;
     updateData.usageResetDate = new Date();
-    
+
     await BillingLogger.logUsage(
       'LIMIT_CHECK',
       'Monthly usage reset after payment',
       userProfile.userId,
       {
         resetDate: new Date().toISOString(),
-        previousUsage: userProfile.usageCreatorsCurrentMonth || 0
+        previousUsage: userProfile.usageCreatorsCurrentMonth || 0,
+        previousEnrichmentUsage: userProfile.enrichmentsCurrentMonth || 0
       },
       requestId
     );

@@ -1,5 +1,7 @@
 'use client';
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
 import { useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,7 +26,7 @@ export default function TestPage() {
         setLoading(false);
       })
       .catch(err => {
-        console.error('Error:', err);
+        structuredConsole.error('Error:', err);
         setLoading(false);
       });
   }, []);
@@ -115,7 +117,7 @@ export default function TestPage() {
         setUserStatus(data.status);
       }
     } catch (error) {
-      console.error('Error refreshing user status:', error);
+      structuredConsole.error('Error refreshing user status:', error);
     }
   }, [selectedUser]);
 

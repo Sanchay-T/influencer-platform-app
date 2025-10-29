@@ -1,4 +1,6 @@
-'use client'
+'use client';
+
+import { structuredConsole } from '@/lib/logging/console-proxy';
 
 import { useState, useEffect, useCallback } from "react";
 import CampaignCard from "./campaign-card";
@@ -62,7 +64,7 @@ export default function CampaignList() {
       setRetryCount(0);
       setTotalRetries(0); // Reset global retries on success
     } catch (error) {
-      console.error('Error detallado:', error);
+      structuredConsole.error('Error detallado:', error);
       setError(error.message);
       
       // Solo reintentamos errores de red o timeout, no errores de validación

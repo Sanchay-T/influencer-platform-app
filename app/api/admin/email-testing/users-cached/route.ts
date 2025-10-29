@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import '@/lib/config/load-env';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
@@ -43,7 +44,7 @@ export async function GET(req: NextRequest) {
     const cached = userCache.get(cacheKey);
     
     if (cached && (Date.now() - cached.timestamp) < CACHE_TTL) {
-      console.log(`⚡ [CACHED-SEARCH] Cache hit for "${query}" (${Date.now() - startTime}ms)`);
+      structuredConsole.log(`⚡ [CACHED-SEARCH] Cache hit for "${query}" (${Date.now() - startTime}ms)`);
       return NextResponse.json({
         users: cached.data,
         query,
@@ -52,7 +53,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    console.log(`🔍 [CACHED-SEARCH] Cache miss, fetching for: ${query}`);
+    structuredConsole.log(`🔍 [CACHED-SEARCH] Cache miss, fetching for: ${query}`);
     
     const sql = postgres(process.env.DATABASE_URL!, {
       max: 1,
@@ -111,7 +112,7 @@ export async function GET(req: NextRequest) {
       }
       
       const totalTime = Date.now() - startTime;
-      console.log(`⚡ [CACHED-SEARCH] Fresh data: ${totalTime}ms (DB: ${dbTime}ms)`);
+      structuredConsole.log(`⚡ [CACHED-SEARCH] Fresh data: ${totalTime}ms (DB: ${dbTime}ms)`);
       
       return NextResponse.json({
         users: results,
@@ -127,7 +128,7 @@ export async function GET(req: NextRequest) {
     }
 
   } catch (error) {
-    console.error('❌ [CACHED-SEARCH] Error:', error);
+    structuredConsole.error('❌ [CACHED-SEARCH] Error:', error);
     return NextResponse.json(
       { error: 'Search failed' },
       { status: 500 }

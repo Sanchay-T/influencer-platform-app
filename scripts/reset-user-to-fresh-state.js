@@ -104,6 +104,7 @@ async function resetUserToFreshState() {
         // Reset usage tracking
         usageCampaignsCurrent: 0,
         usageCreatorsCurrentMonth: 0,
+        enrichmentsCurrentMonth: 0,
         usageResetDate: now,
         
         // Clear Stripe data

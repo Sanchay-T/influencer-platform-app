@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { scrapingJobs, scrapingResults } from '@/lib/db/schema';
@@ -55,7 +56,7 @@ export async function GET(req: Request) {
     return NextResponse.json(debugAnalysis);
     
   } catch (error) {
-    console.error('Debug endpoint error:', error);
+    structuredConsole.error('Debug endpoint error:', error);
     return NextResponse.json({ error: 'Failed to analyze job' }, { status: 500 });
   }
 }

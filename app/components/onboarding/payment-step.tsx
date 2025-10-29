@@ -1,5 +1,7 @@
 'use client';
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -218,7 +220,7 @@ export default function PaymentStep({ onComplete, sessionId, userId }: PaymentSt
       window.location.href = url;
       
     } catch (err) {
-      console.error('Checkout error:', err);
+      structuredConsole.error('Checkout error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to proceed with checkout. Please try again.';
       
       await OnboardingLogger.logError('CHECKOUT-ERROR', 'Checkout process failed', userId, {

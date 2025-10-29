@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import '@/lib/config/load-env';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
@@ -24,14 +25,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
 
-    console.log('🧪 [TEST-USER-CREATE] Starting test user creation process');
-    console.log('📧 [TEST-USER-CREATE] Email provided:', email);
+    structuredConsole.log('🧪 [TEST-USER-CREATE] Starting test user creation process');
+    structuredConsole.log('📧 [TEST-USER-CREATE] Email provided:', email);
 
     // Generate a test user ID (you can use this to "login" as the test user)
     const testUserId = `test_user_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     const testPassword = `test_${Math.random().toString(36).substring(2, 15)}`;
     
-    console.log('🆔 [TEST-USER-CREATE] Generated test credentials:', {
+    structuredConsole.log('🆔 [TEST-USER-CREATE] Generated test credentials:', {
       userId: testUserId,
       password: testPassword,
       email: email
@@ -47,7 +48,7 @@ export async function POST(req: Request) {
       onboardingStep: 'pending'
     });
 
-    console.log('✅ [TEST-USER-CREATE] Test user profile created in database');
+    structuredConsole.log('✅ [TEST-USER-CREATE] Test user profile created in database');
 
     // Return the test credentials
     const testCredentials = {
@@ -64,8 +65,8 @@ export async function POST(req: Request) {
       ]
     };
 
-    console.log('🎯 [TEST-USER-CREATE] Test user creation completed');
-    console.log('📋 [TEST-USER-CREATE] Test credentials:', testCredentials);
+    structuredConsole.log('🎯 [TEST-USER-CREATE] Test user creation completed');
+    structuredConsole.log('📋 [TEST-USER-CREATE] Test credentials:', testCredentials);
 
     return NextResponse.json({
       success: true,
@@ -75,7 +76,7 @@ export async function POST(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ [TEST-USER-CREATE] Error creating test user:', error);
+    structuredConsole.error('❌ [TEST-USER-CREATE] Error creating test user:', error);
     return NextResponse.json({
       error: 'Failed to create test user',
       details: error.message
@@ -100,7 +101,7 @@ export async function GET(req: Request) {
     // For now, return empty array as this is just for testing
     const testUsers: any[] = [];
 
-    console.log(`📊 [TEST-USER-LIST] Found ${testUsers.length} test users`);
+    structuredConsole.log(`📊 [TEST-USER-LIST] Found ${testUsers.length} test users`);
 
     return NextResponse.json({
       testUsers: testUsers.map(user => ({
@@ -114,7 +115,7 @@ export async function GET(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ [TEST-USER-LIST] Error listing test users:', error);
+    structuredConsole.error('❌ [TEST-USER-LIST] Error listing test users:', error);
     return NextResponse.json({
       error: 'Failed to list test users'
     }, { status: 500 });

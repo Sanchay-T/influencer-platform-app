@@ -1,5 +1,6 @@
-'use client'
+'use client';
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { useAuth } from '@clerk/nextjs'
 import { loggedApiCall, logTiming } from '@/lib/utils/frontend-logger'
 import { useState, useEffect } from 'react'
@@ -125,7 +126,7 @@ export function useBilling(): BillingStatus {
         setFromData(data)
 
       } catch (error) {
-        console.error('❌ [STRIPE-BILLING] Error fetching billing status:', error)
+        structuredConsole.error('❌ [STRIPE-BILLING] Error fetching billing status:', error)
         setOnError()
       }
     }

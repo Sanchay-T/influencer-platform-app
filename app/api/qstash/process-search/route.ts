@@ -59,7 +59,21 @@ export async function POST(req: Request) {
     const { result, service, config } = execution;
     const snapshot = service.snapshot();
 
+    // 🔍 DIAGNOSTIC: Log before potentially overriding status
+    logger.info('[DIAGNOSTIC] QStash handler checking completion', {
+      jobId,
+      resultStatus: result.status,
+      hasMore: result.hasMore,
+      willOverrideToCompleted: (result.status === 'completed' || !result.hasMore),
+      currentDbStatus: snapshot.status,
+    }, LogCategory.JOB);
+
     if (result.status === 'completed' || !result.hasMore) {
+      logger.warn('[DIAGNOSTIC] QStash handler calling complete("completed") - may override error!', {
+        jobId,
+        resultStatus: result.status,
+        hasMore: result.hasMore,
+      }, LogCategory.JOB);
       await service.complete('completed', {});
     }
 
@@ -96,12 +110,23 @@ export async function POST(req: Request) {
     });
   } catch (error: any) {
     logger.error('Search runner failed', error, { jobId }, LogCategory.JOB);
-    console.error('[search-runner] provider failure', {
+
+    // Attempt to mark job as failed to prevent stuck "processing" status
+    try {
+      const { SearchJobService } = await import('@/lib/search-engine/job-service');
+      const service = await SearchJobService.load(jobId);
+      if (service) {
+        await service.complete('error', { error: error?.message ?? 'Search runner failure' });
+        logger.info('Job marked as error after failure', { jobId }, LogCategory.JOB);
+      }
+    } catch (completionError) {
+      logger.error('Failed to mark job as error', completionError, { jobId }, LogCategory.JOB);
+    }
+
+    return NextResponse.json({
+      error: error?.message ?? 'Search runner failure',
       jobId,
-      message: error?.message,
-      stack: error?.stack,
-      name: error?.name,
-    });
-    return NextResponse.json({ error: error?.message ?? 'Search runner failure' }, { status: 500 });
+      marked: 'error'
+    }, { status: 500 });
   }
 }

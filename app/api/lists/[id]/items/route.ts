@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { addCreatorsToList, removeListItems, updateListItems } from '@/lib/db/queries/list-queries';
@@ -10,7 +11,7 @@ function errorToResponse(error: unknown) {
   if (message === 'LIST_PERMISSION_DENIED') {
     return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
   }
-  console.error('[LIST_ITEMS_API]', error);
+  structuredConsole.error('[LIST_ITEMS_API]', error);
   return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
 }
 

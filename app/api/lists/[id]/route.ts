@@ -1,9 +1,10 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { deleteList, getListDetail, updateList } from '@/lib/db/queries/list-queries';
 
 function handleError(error: unknown) {
-  console.error('[LIST_DETAIL_API]', error);
+  structuredConsole.error('[LIST_DETAIL_API]', error);
   const message = (error as Error).message;
   if (message === 'USER_NOT_FOUND') {
     return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
@@ -54,9 +55,9 @@ export async function DELETE(_: Request, context: { params: Promise<{ id: string
   }
   try {
     const { id } = await context.params;
-    console.debug('[LIST-DELETE-API] Request received', { listId: id, userId });
+    structuredConsole.debug('[LIST-DELETE-API] Request received', { listId: id, userId });
     await deleteList(userId, id);
-    console.debug('[LIST-DELETE-API] Completed', { listId: id, userId });
+    structuredConsole.debug('[LIST-DELETE-API] Completed', { listId: id, userId });
     return NextResponse.json({ ok: true });
   } catch (error) {
     return handleError(error);

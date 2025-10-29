@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 /**
  * Centralized Logging System - Public API
  * 
@@ -332,12 +333,12 @@ export const devLogger = {
 };
 
 /**
- * Migration helper for existing console.log statements
- * Use this to gradually replace console.log calls while maintaining functionality
+ * Migration helper for existing structuredConsole.log statements
+ * Use this to gradually replace structuredConsole.log calls while maintaining functionality
  */
 export const migration = {
   /**
-   * Drop-in replacement for console.log
+   * Drop-in replacement for structuredConsole.log
    * Provides structured logging while maintaining similar interface
    */
   console: {

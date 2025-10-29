@@ -1,4 +1,6 @@
-'use client'
+'use client';
+
+import { structuredConsole } from '@/lib/logging/console-proxy';
 
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/app/components/layout/dashboard-layout";
@@ -18,34 +20,34 @@ export default function SimilarCreatorSearch() {
   const [campaignName, setCampaignName] = useState("");
 
   useEffect(() => {
-    console.log('🔄 [SIMILAR-SEARCH-PAGE] Initializing similar creator search page');
+    structuredConsole.log('🔄 [SIMILAR-SEARCH-PAGE] Initializing similar creator search page');
     // Obtener campaignId del sessionStorage
     const campaign = JSON.parse(sessionStorage.getItem('currentCampaign'));
     if (campaign) {
-      console.log('📋 [SIMILAR-SEARCH-PAGE] Campaign found in session storage:', campaign.id);
+      structuredConsole.log('📋 [SIMILAR-SEARCH-PAGE] Campaign found in session storage:', campaign.id);
       setSearchData(prev => ({
         ...prev,
         campaignId: campaign.id
       }));
       setCampaignName(campaign.name ?? "");
     } else {
-      console.log('❌ [SIMILAR-SEARCH-PAGE] No campaign found in session storage');
+      structuredConsole.log('❌ [SIMILAR-SEARCH-PAGE] No campaign found in session storage');
       // Try to get from URL
       try {
         const urlParams = new URLSearchParams(window.location.search);
         const urlCampaignId = urlParams.get('campaignId');
         if (urlCampaignId) {
-          console.log('📋 [SIMILAR-SEARCH-PAGE] Campaign ID found in URL:', urlCampaignId);
+          structuredConsole.log('📋 [SIMILAR-SEARCH-PAGE] Campaign ID found in URL:', urlCampaignId);
           setSearchData(prev => ({
             ...prev,
             campaignId: urlCampaignId
           }));
         }
       } catch (error) {
-        console.error('💥 [SIMILAR-SEARCH-PAGE] Error parsing URL params:', error);
+        structuredConsole.error('💥 [SIMILAR-SEARCH-PAGE] Error parsing URL params:', error);
       }
     }
-    console.log('✅ [SIMILAR-SEARCH-PAGE] Initialization complete');
+    structuredConsole.log('✅ [SIMILAR-SEARCH-PAGE] Initialization complete');
   }, []);
 
   useEffect(() => {
@@ -56,13 +58,13 @@ export default function SimilarCreatorSearch() {
           setCampaignName(campaign.name);
         }
       } catch (error) {
-        console.error('💥 [SIMILAR-SEARCH-PAGE] Error reloading campaign info:', error);
+        structuredConsole.error('💥 [SIMILAR-SEARCH-PAGE] Error reloading campaign info:', error);
       }
     }
   }, [searchData.campaignId, campaignName]);
 
   const handleSearchSubmit = async (data) => {
-    console.log('✅ [SIMILAR-SEARCH-PAGE] Search started:', data);
+    structuredConsole.log('✅ [SIMILAR-SEARCH-PAGE] Search started:', data);
     setSearchData(prev => ({
       ...prev,
       jobId: data.jobId,

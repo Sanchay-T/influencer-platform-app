@@ -1,5 +1,7 @@
 'use client';
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
 import { SubscriptionStatusModern } from '@/app/components/subscription-status-modern';
 
 export default function TestSubscriptionPage() {
@@ -22,10 +24,10 @@ export default function TestSubscriptionPage() {
               try {
                 const response = await fetch('/api/subscription/status');
                 const data = await response.json();
-                console.log('Subscription Status:', data);
+                structuredConsole.log('Subscription Status:', data);
                 alert(JSON.stringify(data, null, 2));
               } catch (error) {
-                console.error('Error:', error);
+                structuredConsole.error('Error:', error);
                 alert('Error fetching subscription status');
               }
             }}

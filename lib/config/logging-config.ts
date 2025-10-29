@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 /**
  * Centralized logging configuration management for Phase 5
  * Integrates with existing SystemConfig and provides environment-specific logging settings
@@ -250,7 +251,7 @@ export class LoggingConfigManager {
       
       return config;
     } catch (error) {
-      console.warn('[LOGGING-CONFIG] Failed to load from database, using defaults:', error);
+      structuredConsole.warn('[LOGGING-CONFIG] Failed to load from database, using defaults:', error);
       return defaultConfig;
     }
   }
@@ -303,7 +304,7 @@ export class LoggingConfigManager {
       );
       
     } catch (error) {
-      console.warn('[LOGGING-CONFIG] Error loading specific config values:', error);
+      structuredConsole.warn('[LOGGING-CONFIG] Error loading specific config values:', error);
       // Return default config if database loading fails
     }
     
@@ -443,9 +444,9 @@ export class LoggingConfigManager {
         );
       }
       
-      console.log(`[LOGGING-CONFIG] Initialized default configurations for ${environment}`);
+      structuredConsole.log(`[LOGGING-CONFIG] Initialized default configurations for ${environment}`);
     } catch (error) {
-      console.error('[LOGGING-CONFIG] Failed to initialize defaults:', error);
+      structuredConsole.error('[LOGGING-CONFIG] Failed to initialize defaults:', error);
       throw error;
     }
   }

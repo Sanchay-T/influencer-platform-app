@@ -1,5 +1,7 @@
 "use client";
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -16,12 +18,12 @@ import { resolveCreatorPreview } from '@/lib/utils/media-preview';
 const isDev = process.env.NODE_ENV !== 'production';
 const debugLog = (...args) => {
   if (isDev) {
-    console.log(...args);
+    structuredConsole.log(...args);
   }
 };
 const debugError = (...args) => {
   if (isDev) {
-    console.error(...args);
+    structuredConsole.error(...args);
   }
 };
 

@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server';
 import { and, eq } from 'drizzle-orm';
 
@@ -105,7 +106,7 @@ export async function POST(req: Request) {
       });
       qstashMessageId = (result as any)?.messageId ?? null;
     } catch (error) {
-      console.warn('Instagram similar QStash enqueue warning', error);
+      structuredConsole.warn('Instagram similar QStash enqueue warning', error);
     }
 
     return NextResponse.json({
@@ -115,7 +116,7 @@ export async function POST(req: Request) {
       engine: 'search-engine',
     });
   } catch (error: any) {
-    console.error('Instagram similar POST failed', error);
+    structuredConsole.error('Instagram similar POST failed', error);
     return NextResponse.json({ error: error?.message ?? 'Internal server error' }, { status: 500 });
   }
 }
@@ -192,7 +193,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json(payload);
   } catch (error: any) {
-    console.error('Instagram similar GET failed', error);
+    structuredConsole.error('Instagram similar GET failed', error);
     return NextResponse.json({ error: error?.message ?? 'Internal server error' }, { status: 500 });
   }
 }

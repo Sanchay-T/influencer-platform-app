@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server'
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test'
 import { getUserProfile } from '@/lib/db/queries/user-queries'
@@ -14,38 +15,38 @@ export async function PATCH(request: Request) {
       requestId
     })
 
-    console.log('🚀🚀🚀 [ONBOARDING-COMPLETE] ===============================')
-    console.log('🚀🚀🚀 [ONBOARDING-COMPLETE] STARTING COMPLETE ONBOARDING FLOW')
-    console.log('🚀🚀🚀 [ONBOARDING-COMPLETE] ===============================')
-    console.log('🆔 [ONBOARDING-COMPLETE] Request ID:', requestId)
-    console.log('⏰ [ONBOARDING-COMPLETE] Timestamp:', new Date().toISOString())
+    structuredConsole.log('🚀🚀🚀 [ONBOARDING-COMPLETE] ===============================')
+    structuredConsole.log('🚀🚀🚀 [ONBOARDING-COMPLETE] STARTING COMPLETE ONBOARDING FLOW')
+    structuredConsole.log('🚀🚀🚀 [ONBOARDING-COMPLETE] ===============================')
+    structuredConsole.log('🆔 [ONBOARDING-COMPLETE] Request ID:', requestId)
+    structuredConsole.log('⏰ [ONBOARDING-COMPLETE] Timestamp:', new Date().toISOString())
 
     const { userId } = await getAuthOrTest()
 
     if (!userId) {
-      console.error('❌ [ONBOARDING-COMPLETE] Unauthorized - No valid user session')
+      structuredConsole.error('❌ [ONBOARDING-COMPLETE] Unauthorized - No valid user session')
       await OnboardingLogger.logAPI('AUTH-ERROR', 'Onboarding completion unauthorized - no user ID', undefined, { requestId })
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    console.log('✅ [ONBOARDING-COMPLETE] User authenticated:', userId)
-    console.log('🔍 [ONBOARDING-COMPLETE] Auth check completed in:', Date.now() - startTime, 'ms')
+    structuredConsole.log('✅ [ONBOARDING-COMPLETE] User authenticated:', userId)
+    structuredConsole.log('🔍 [ONBOARDING-COMPLETE] Auth check completed in:', Date.now() - startTime, 'ms')
 
     const payload = await request.json().catch(() => ({}))
-    console.log('📥 [ONBOARDING-COMPLETE] Request data:', { ...payload, userId })
+    structuredConsole.log('📥 [ONBOARDING-COMPLETE] Request data:', { ...payload, userId })
 
-    console.log('🔍 [ONBOARDING-COMPLETE] Fetching user profile')
+    structuredConsole.log('🔍 [ONBOARDING-COMPLETE] Fetching user profile')
     const userProfile = await getUserProfile(userId)
 
     if (!userProfile) {
-      console.error('❌ [ONBOARDING-COMPLETE] User profile not found')
+      structuredConsole.error('❌ [ONBOARDING-COMPLETE] User profile not found')
       await OnboardingLogger.logError('PROFILE-NOT-FOUND', 'Onboarding completion failed: profile missing', userId, { requestId })
       return NextResponse.json({
         error: 'User profile not found. Please complete step 1 first.'
       }, { status: 404 })
     }
 
-    console.log('✅ [ONBOARDING-COMPLETE] User profile found:', {
+    structuredConsole.log('✅ [ONBOARDING-COMPLETE] User profile found:', {
       fullName: userProfile.fullName,
       businessName: userProfile.businessName,
       onboardingStep: userProfile.onboardingStep,
@@ -54,8 +55,8 @@ export async function PATCH(request: Request) {
       currentTrialStatus: userProfile.trialStatus
     })
 
-    console.log('💳 [ONBOARDING-COMPLETE] Skipping Stripe setup - already completed during checkout')
-    console.log('✅ [ONBOARDING-COMPLETE] User already has:', {
+    structuredConsole.log('💳 [ONBOARDING-COMPLETE] Skipping Stripe setup - already completed during checkout')
+    structuredConsole.log('✅ [ONBOARDING-COMPLETE] User already has:', {
       stripeCustomerId: userProfile.stripeCustomerId,
       stripeSubscriptionId: userProfile.stripeSubscriptionId,
       subscriptionStatus: userProfile.subscriptionStatus,
@@ -108,11 +109,11 @@ export async function PATCH(request: Request) {
 
     const totalTime = Date.now() - startTime
 
-    console.log('🎉🎉🎉 [ONBOARDING-COMPLETE] ===============================')
-    console.log('🎉🎉🎉 [ONBOARDING-COMPLETE] COMPLETE FLOW FINISHED SUCCESSFULLY')
-    console.log('🎉🎉🎉 [ONBOARDING-COMPLETE] ===============================')
-    console.log('⏱️ [ONBOARDING-COMPLETE] Total execution time:', totalTime, 'ms')
-    console.log('📊 [ONBOARDING-COMPLETE] Final response data:', {
+    structuredConsole.log('🎉🎉🎉 [ONBOARDING-COMPLETE] ===============================')
+    structuredConsole.log('🎉🎉🎉 [ONBOARDING-COMPLETE] COMPLETE FLOW FINISHED SUCCESSFULLY')
+    structuredConsole.log('🎉🎉🎉 [ONBOARDING-COMPLETE] ===============================')
+    structuredConsole.log('⏱️ [ONBOARDING-COMPLETE] Total execution time:', totalTime, 'ms')
+    structuredConsole.log('📊 [ONBOARDING-COMPLETE] Final response data:', {
       trialStatus: responseData.trial?.status,
       daysRemaining: responseData.trial?.daysRemaining,
       emailsScheduled: responseData.emails.scheduled,
@@ -136,7 +137,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json(responseData)
 
   } catch (error: any) {
-    console.error('💥 [ONBOARDING-COMPLETE] Error in complete onboarding flow:', error)
+    structuredConsole.error('💥 [ONBOARDING-COMPLETE] Error in complete onboarding flow:', error)
     await OnboardingLogger.logError('API-ERROR', 'Onboarding completion request failed', undefined, {
       errorMessage: error?.message || 'Unknown error'
     })
@@ -150,7 +151,7 @@ export async function PATCH(request: Request) {
 
 export async function GET(request: Request) {
   try {
-    console.log('🔍 [ONBOARDING-COMPLETE-GET] Checking onboarding completion status')
+    structuredConsole.log('🔍 [ONBOARDING-COMPLETE-GET] Checking onboarding completion status')
 
     const { userId } = await getAuthOrTest()
 
@@ -184,11 +185,11 @@ export async function GET(request: Request) {
       }
     }
 
-    console.log('📊 [ONBOARDING-COMPLETE-GET] Status retrieved:', responseData)
+    structuredConsole.log('📊 [ONBOARDING-COMPLETE-GET] Status retrieved:', responseData)
     return NextResponse.json(responseData)
 
   } catch (error: any) {
-    console.error('❌ [ONBOARDING-COMPLETE-GET] Error checking status:', error)
+    structuredConsole.error('❌ [ONBOARDING-COMPLETE-GET] Error checking status:', error)
     return NextResponse.json({
       error: 'Internal server error'
     }, { status: 500 })

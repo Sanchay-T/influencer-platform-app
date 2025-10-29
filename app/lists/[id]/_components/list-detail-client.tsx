@@ -1,5 +1,7 @@
 'use client';
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
@@ -108,7 +110,7 @@ export default function ListDetailClient({ listId, initialDetail }: ListDetailCl
       });
       return data;
     } catch (error) {
-      console.error(error);
+      structuredConsole.error(error);
       toast.error('Something went wrong loading this list.');
       return null;
     } finally {
@@ -204,7 +206,7 @@ export default function ListDetailClient({ listId, initialDetail }: ListDetailCl
       });
       setDetail((prev) => (prev ? { ...prev, items: flattenColumnsForDetail(next) } : prev));
     } catch (error) {
-      console.error(error);
+      structuredConsole.error(error);
       toast.error('Unable to update ordering, refreshing list.');
       setColumns(bucketize(detail?.items ?? []));
     } finally {
@@ -251,7 +253,7 @@ export default function ListDetailClient({ listId, initialDetail }: ListDetailCl
       });
       setDetail((prev) => (prev ? { ...prev, items: flattenColumnsForDetail(next) } : prev));
     } catch (error) {
-      console.error(error);
+      structuredConsole.error(error);
       toast.error('Unable to update status, refreshing list.');
       setColumns(bucketize(detail?.items ?? []));
     } finally {
@@ -296,7 +298,7 @@ export default function ListDetailClient({ listId, initialDetail }: ListDetailCl
 
       toast.success(newPinnedState ? 'Creator pinned' : 'Creator unpinned');
     } catch (error) {
-      console.error(error);
+      structuredConsole.error(error);
       toast.error('Unable to update pin status');
       // Revert optimistic update
       setColumns(bucketize(detail?.items ?? []));
@@ -319,7 +321,7 @@ export default function ListDetailClient({ listId, initialDetail }: ListDetailCl
       toast.success('List updated');
       setEditingMeta(false);
     } catch (error) {
-      console.error(error);
+      structuredConsole.error(error);
       toast.error((error as Error).message);
     }
   };
@@ -338,7 +340,7 @@ export default function ListDetailClient({ listId, initialDetail }: ListDetailCl
       setDeletePending(false);
       router.push('/lists');
   } catch (error) {
-    console.error('[LIST-DELETE]', error);
+    structuredConsole.error('[LIST-DELETE]', error);
     toast.error((error as Error).message);
     setDeletePending(false);
   }
@@ -1010,7 +1012,6 @@ function resolveProfileUrl(creator: ListItem['creator']) {
     case 'tiktok':
       return `https://www.tiktok.com/@${normalizedHandle}`;
     case 'instagram':
-    case 'enhanced-instagram':
       return `https://www.instagram.com/${normalizedHandle}`;
     case 'youtube':
       return `https://www.youtube.com/@${normalizedHandle}`;

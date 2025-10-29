@@ -15,12 +15,16 @@ interface DashboardPageClientProps {
   favorites: DashboardFavorite[];
   recentLists: DashboardRecentList[];
   metrics: DashboardOverviewMetrics;
+  showOnboarding?: boolean;
+  onboardingStatusLoaded?: boolean;
 }
 
 export default function DashboardPageClient({
   favorites,
   recentLists,
   metrics,
+  showOnboarding = false,
+  onboardingStatusLoaded = true,
 }: DashboardPageClientProps) {
   const normalizedMetrics = {
     averageSearchMs: metrics.averageSearchMs ?? null,
@@ -30,7 +34,10 @@ export default function DashboardPageClient({
   };
 
   return (
-    <DashboardLayout>
+    <DashboardLayout
+      showOnboarding={showOnboarding}
+      onboardingStatusLoaded={onboardingStatusLoaded}
+    >
       <div className="space-y-6">
         {/* Page header */}
         <div className="flex items-center justify-between">

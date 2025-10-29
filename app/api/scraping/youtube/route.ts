@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server';
 import { eq, and } from 'drizzle-orm';
 
@@ -111,7 +112,7 @@ export async function POST(req: Request) {
       qstashMessageId = (result as any)?.messageId ?? null;
     } catch (error) {
       // In local dev, Upstash callbacks may fail (e.g., localhost). We still return success so the client can poll.
-      console.warn('YouTube QStash publish warning', error);
+      structuredConsole.warn('YouTube QStash publish warning', error);
     }
 
     return NextResponse.json({
@@ -121,7 +122,7 @@ export async function POST(req: Request) {
       engine: 'search-engine',
     });
   } catch (error: any) {
-    console.error('YouTube keyword search failed', error);
+    structuredConsole.error('YouTube keyword search failed', error);
     return NextResponse.json(
       { error: error?.message ?? 'Internal server error' },
       { status: 500 }
@@ -202,7 +203,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json(payload);
   } catch (error: any) {
-    console.error('YouTube keyword status check failed', error);
+    structuredConsole.error('YouTube keyword status check failed', error);
     return NextResponse.json(
       { error: error?.message ?? 'Internal server error' },
       { status: 500 }

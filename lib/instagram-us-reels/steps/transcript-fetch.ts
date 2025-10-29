@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import type { ReelMedia } from '../types';
 import { getInstagramTranscript } from '../clients/scrapecreators';
 
@@ -32,7 +33,7 @@ export async function attachTranscripts(
         const transcript = await fetchTranscript(reel.url, options.timeoutMs);
         reel.transcript = transcript;
       } catch (error) {
-        console.warn('[transcript-fetch] failed', {
+        structuredConsole.warn('[transcript-fetch] failed', {
           url: reel.url,
           error: error instanceof Error ? error.message : String(error),
         });

@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server';
 
 export async function GET() {
@@ -36,11 +37,11 @@ export async function GET() {
                 try {
                     // Clear localStorage
                     localStorage.clear();
-                    console.log('✅ localStorage cleared');
+                    structuredConsole.log('✅ localStorage cleared');
                     
                     // Clear sessionStorage
                     sessionStorage.clear();
-                    console.log('✅ sessionStorage cleared');
+                    structuredConsole.log('✅ sessionStorage cleared');
                     
                     // Clear indexedDB
                     if ('indexedDB' in window) {
@@ -48,21 +49,21 @@ export async function GET() {
                         databases.forEach(db => {
                             indexedDB.deleteDatabase(db.name);
                         });
-                        console.log('✅ indexedDB cleared');
+                        structuredConsole.log('✅ indexedDB cleared');
                     }
                     
                     // Clear caches
                     if ('caches' in window) {
                         const cacheNames = await caches.keys();
                         await Promise.all(cacheNames.map(name => caches.delete(name)));
-                        console.log('✅ Service Worker caches cleared');
+                        structuredConsole.log('✅ Service Worker caches cleared');
                     }
                     
                     document.getElementById('result').innerHTML = 
                         '<div class="success">✅ All frontend storage cleared!</div>';
                         
                 } catch (error) {
-                    console.error('❌ Error clearing cache:', error);
+                    structuredConsole.error('❌ Error clearing cache:', error);
                     document.getElementById('result').innerHTML = 
                         '<div style="color: red;">❌ Error: ' + error.message + '</div>';
                 }
@@ -82,7 +83,7 @@ export async function GET() {
                         throw new Error(data.error || 'Reset failed');
                     }
                 } catch (error) {
-                    console.error('❌ Error resetting profile:', error);
+                    structuredConsole.error('❌ Error resetting profile:', error);
                     document.getElementById('profileResult').innerHTML = 
                         '<div style="color: red;">❌ Error: ' + error.message + '</div>';
                 }

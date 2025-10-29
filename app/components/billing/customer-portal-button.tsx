@@ -1,5 +1,7 @@
 'use client';
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -38,7 +40,7 @@ export default function CustomerPortalButton({
     setError('');
 
     try {
-      console.log('🔗 [CUSTOMER-PORTAL-BUTTON] Opening customer portal...');
+      structuredConsole.log('🔗 [CUSTOMER-PORTAL-BUTTON] Opening customer portal...');
       
       // First check if user can access portal
       const accessCheckResponse = await fetch('/api/stripe/customer-portal', {
@@ -85,7 +87,7 @@ export default function CustomerPortalButton({
         throw new Error('Invalid portal response');
       }
 
-      console.log('✅ [CUSTOMER-PORTAL-BUTTON] Portal session created, redirecting...');
+      structuredConsole.log('✅ [CUSTOMER-PORTAL-BUTTON] Portal session created, redirecting...');
       
       // Show success toast
       toast.success('Opening subscription management portal...');
@@ -94,7 +96,7 @@ export default function CustomerPortalButton({
       window.location.href = portalData.portalUrl;
 
     } catch (err) {
-      console.error('❌ [CUSTOMER-PORTAL-BUTTON] Portal access error:', err);
+      structuredConsole.error('❌ [CUSTOMER-PORTAL-BUTTON] Portal access error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to open customer portal';
       setError(errorMessage);
       toast.error(errorMessage);

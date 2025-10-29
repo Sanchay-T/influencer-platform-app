@@ -1,5 +1,7 @@
 'use client';
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
 import { useEffect } from 'react';
 import { useAuth, useUser } from '@clerk/nextjs';
 import { logAuth, logUserAction, logError } from '@/lib/utils/frontend-logger';
@@ -26,7 +28,7 @@ export function AuthLogger() {
       };
       logAuth('session_check', sessionPayload);
       if (process.env.NODE_ENV !== 'production') {
-        console.log('🔐 [AUTH-CLIENT] session_check', sessionPayload);
+        structuredConsole.log('🔐 [AUTH-CLIENT] session_check', sessionPayload);
       }
 
       if (isSignedIn && userId) {
@@ -45,7 +47,7 @@ export function AuthLogger() {
           userEmail: user?.primaryEmailAddress?.emailAddress
         });
         if (process.env.NODE_ENV !== 'production') {
-          console.log('🔐 [AUTH-CLIENT] authentication_success', authSuccessPayload);
+          structuredConsole.log('🔐 [AUTH-CLIENT] authentication_success', authSuccessPayload);
         }
       } else if (isLoaded && !isSignedIn) {
         logUserAction('authentication_required', {
@@ -81,7 +83,7 @@ export function AuthLogger() {
       };
       logAuth('user_loaded', userLoadedPayload);
       if (process.env.NODE_ENV !== 'production') {
-        console.log('🔐 [AUTH-CLIENT] user_loaded', userLoadedPayload);
+        structuredConsole.log('🔐 [AUTH-CLIENT] user_loaded', userLoadedPayload);
       }
     }
   }, [userIsLoaded, user, isSignedIn]);

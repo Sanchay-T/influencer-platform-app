@@ -1,5 +1,7 @@
 'use client';
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
 import React, {
   useCallback,
   useEffect,
@@ -154,7 +156,7 @@ export default function SimilarSearchResults({ searchData }) {
           setCampaignName(payload.name);
         }
       } catch (error) {
-        console.warn('[SIMILAR-SEARCH] Failed to fetch campaign name', error);
+        structuredConsole.warn('[SIMILAR-SEARCH] Failed to fetch campaign name', error);
       }
     };
 

@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { auth as backendAuth } from '@/lib/auth/backend-auth'
 import { headers } from 'next/headers'
 import { verifyTestAuthHeaders } from '@/lib/auth/testable-auth'
@@ -7,11 +8,14 @@ export async function getAuthOrTest() {
   // Breadcrumb: Resolve auth context -> prefer test headers/bypass -> fall back to Clerk auth.
   const requestId = `auth_ctx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
   const isProd = process.env.NODE_ENV === 'production'
+  const emitConsoleTrace = process.env.AUTH_TRACE_CONSOLE === 'true'
   const emitDevTrace = (message: string, extra: Record<string, unknown>) => {
     if (isProd) return
     const context = { requestId, ...extra }
     // Breadcrumb: Surface raw auth resolver payloads during local debugging.
-    console.log(`🔐 [AUTH-TRACE] ${message}`, context)
+    if (emitConsoleTrace) {
+      structuredConsole.log(`🔐 [AUTH-TRACE] ${message}`, context)
+    }
     authLogger.debug(message, context)
   }
 

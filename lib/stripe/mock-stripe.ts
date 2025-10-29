@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 /**
  * Mock Stripe Service - Simulates Stripe API for trial system
  * Only the payment processing is mocked, everything else is production-ready
@@ -58,7 +59,7 @@ export interface MockStripeCheckoutSession {
 export function createMockCustomer(email: string, userId: string): MockStripeCustomer {
   const customerId = `cus_mock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   
-  console.log('💳 [MOCK-STRIPE] Creating mock customer:', {
+  structuredConsole.log('💳 [MOCK-STRIPE] Creating mock customer:', {
     customerId,
     email,
     userId
@@ -76,7 +77,7 @@ export function createMockCustomer(email: string, userId: string): MockStripeCus
     }
   };
 
-  console.log('✅ [MOCK-STRIPE] Mock customer created:', customer.id);
+  structuredConsole.log('✅ [MOCK-STRIPE] Mock customer created:', customer.id);
   return customer;
 }
 
@@ -92,7 +93,7 @@ export function createMockSubscription(
   const now = Math.floor(Date.now() / 1000);
   const trialEnd = now + (trialDays * 24 * 60 * 60); // 7 days in seconds
 
-  console.log('💳 [MOCK-STRIPE] Creating mock subscription:', {
+  structuredConsole.log('💳 [MOCK-STRIPE] Creating mock subscription:', {
     subscriptionId,
     customerId,
     trialDays,
@@ -127,7 +128,7 @@ export function createMockSubscription(
     }
   };
 
-  console.log('✅ [MOCK-STRIPE] Mock subscription created:', {
+  structuredConsole.log('✅ [MOCK-STRIPE] Mock subscription created:', {
     id: subscription.id,
     status: subscription.status,
     trialEnd: new Date(subscription.trial_end * 1000).toISOString()
@@ -148,7 +149,7 @@ export function createMockCheckoutSession(
   const sessionId = `cs_mock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const checkoutUrl = `https://checkout.stripe.com/c/pay/${sessionId}#mock`;
 
-  console.log('💳 [MOCK-STRIPE] Creating mock checkout session:', {
+  structuredConsole.log('💳 [MOCK-STRIPE] Creating mock checkout session:', {
     sessionId,
     customerId,
     subscriptionId
@@ -166,7 +167,7 @@ export function createMockCheckoutSession(
     url: checkoutUrl
   };
 
-  console.log('✅ [MOCK-STRIPE] Mock checkout session created:', session.id);
+  structuredConsole.log('✅ [MOCK-STRIPE] Mock checkout session created:', session.id);
   return session;
 }
 
@@ -193,7 +194,7 @@ export function simulateWebhookEvent(
 ): MockStripeWebhookEvent {
   const eventId = `evt_mock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-  console.log('🔔 [MOCK-STRIPE] Simulating webhook event:', {
+  structuredConsole.log('🔔 [MOCK-STRIPE] Simulating webhook event:', {
     eventId,
     type: eventType,
     objectId: dataObject.id
@@ -210,7 +211,7 @@ export function simulateWebhookEvent(
     livemode: false
   };
 
-  console.log('✅ [MOCK-STRIPE] Webhook event simulated:', event.id);
+  structuredConsole.log('✅ [MOCK-STRIPE] Webhook event simulated:', event.id);
   return event;
 }
 
@@ -218,7 +219,7 @@ export function simulateWebhookEvent(
  * Mock cancel subscription
  */
 export function cancelMockSubscription(subscription: MockStripeSubscription): MockStripeSubscription {
-  console.log('🚫 [MOCK-STRIPE] Canceling mock subscription:', subscription.id);
+  structuredConsole.log('🚫 [MOCK-STRIPE] Canceling mock subscription:', subscription.id);
 
   const canceledSubscription: MockStripeSubscription = {
     ...subscription,
@@ -226,7 +227,7 @@ export function cancelMockSubscription(subscription: MockStripeSubscription): Mo
     cancel_at_period_end: true
   };
 
-  console.log('✅ [MOCK-STRIPE] Mock subscription canceled:', canceledSubscription.id);
+  structuredConsole.log('✅ [MOCK-STRIPE] Mock subscription canceled:', canceledSubscription.id);
   return canceledSubscription;
 }
 
@@ -234,7 +235,7 @@ export function cancelMockSubscription(subscription: MockStripeSubscription): Mo
  * Mock activate subscription (convert from trial)
  */
 export function activateMockSubscription(subscription: MockStripeSubscription): MockStripeSubscription {
-  console.log('💰 [MOCK-STRIPE] Activating mock subscription:', subscription.id);
+  structuredConsole.log('💰 [MOCK-STRIPE] Activating mock subscription:', subscription.id);
 
   const now = Math.floor(Date.now() / 1000);
   const nextPeriodEnd = now + (30 * 24 * 60 * 60); // 30 days from now
@@ -248,7 +249,7 @@ export function activateMockSubscription(subscription: MockStripeSubscription): 
     current_period_end: nextPeriodEnd
   };
 
-  console.log('✅ [MOCK-STRIPE] Mock subscription activated:', {
+  structuredConsole.log('✅ [MOCK-STRIPE] Mock subscription activated:', {
     id: activeSubscription.id,
     status: activeSubscription.status,
     nextBillingDate: new Date(activeSubscription.current_period_end * 1000).toISOString()
@@ -269,7 +270,7 @@ export class MockStripeService {
     subscription: MockStripeSubscription;
     checkoutSession: MockStripeCheckoutSession;
   }> {
-    console.log('🎯 [MOCK-STRIPE] Setting up complete trial flow for:', { email, userId });
+    structuredConsole.log('🎯 [MOCK-STRIPE] Setting up complete trial flow for:', { email, userId });
 
     // Create customer
     const customer = createMockCustomer(email, userId);
@@ -285,19 +286,19 @@ export class MockStripeService {
       `${getClientUrl()}/onboarding/complete`
     );
 
-    console.log('✅ [MOCK-STRIPE] Complete trial setup finished:', {
+    structuredConsole.log('✅ [MOCK-STRIPE] Complete trial setup finished:', {
       customerId: customer.id,
       subscriptionId: subscription.id,
       sessionId: checkoutSession.id
     });
 
     // 🚀 NEW: Trigger event-driven system (simulate webhook)
-    console.log('🔔 [MOCK-STRIPE] Triggering event-driven system to complete onboarding...');
+    structuredConsole.log('🔔 [MOCK-STRIPE] Triggering event-driven system to complete onboarding...');
     try {
       await this.simulateSubscriptionCreatedWebhook(subscription, userId);
     } catch (error) {
-      console.error('❌ [MOCK-STRIPE] Failed to trigger event system:', error);
-      console.log('⚠️ [MOCK-STRIPE] Onboarding will remain incomplete - manual intervention required');
+      structuredConsole.error('❌ [MOCK-STRIPE] Failed to trigger event system:', error);
+      structuredConsole.log('⚠️ [MOCK-STRIPE] Onboarding will remain incomplete - manual intervention required');
     }
 
     return {
@@ -314,7 +315,7 @@ export class MockStripeService {
     subscription: MockStripeSubscription,
     userId: string
   ): Promise<void> {
-    console.log('🔔 [MOCK-STRIPE-WEBHOOK] Simulating customer.subscription.created webhook for:', {
+    structuredConsole.log('🔔 [MOCK-STRIPE-WEBHOOK] Simulating customer.subscription.created webhook for:', {
       subscriptionId: subscription.id,
       customerId: subscription.customer,
       userId,
@@ -327,7 +328,7 @@ export class MockStripeService {
       const { EventService, EVENT_TYPES, AGGREGATE_TYPES, SOURCE_SYSTEMS } = await import('@/lib/events/event-service');
       const { JobProcessor } = await import('@/lib/jobs/job-processor');
       
-      console.log('✅ [MOCK-STRIPE-WEBHOOK] Event sourcing services imported successfully');
+      structuredConsole.log('✅ [MOCK-STRIPE-WEBHOOK] Event sourcing services imported successfully');
 
       // Generate correlation ID for tracking
       const correlationId = EventService.generateCorrelationId();
@@ -358,11 +359,11 @@ export class MockStripeService {
         idempotencyKey: EventService.generateIdempotencyKey('mock_stripe', subscription.id, 'subscription_created')
       });
 
-      console.log('✅ [MOCK-STRIPE-WEBHOOK] Subscription event created:', subscriptionEvent?.id);
+      structuredConsole.log('✅ [MOCK-STRIPE-WEBHOOK] Subscription event created:', subscriptionEvent?.id);
 
       // Queue background job to complete onboarding (same as real webhook)
       if (subscription.trial_end && subscription.status === 'trialing') {
-        console.log('🚀 [MOCK-STRIPE-WEBHOOK] Queueing background job to complete onboarding');
+        structuredConsole.log('🚀 [MOCK-STRIPE-WEBHOOK] Queueing background job to complete onboarding');
         
         const jobId = await JobProcessor.queueJob({
           jobType: 'complete_onboarding',
@@ -380,17 +381,17 @@ export class MockStripeService {
           priority: 5 // High priority for mock
         });
 
-        console.log('✅ [MOCK-STRIPE-WEBHOOK] Background job queued successfully:', {
+        structuredConsole.log('✅ [MOCK-STRIPE-WEBHOOK] Background job queued successfully:', {
           jobId,
           jobType: 'complete_onboarding',
           userId
         });
       }
 
-      console.log('🎉 [MOCK-STRIPE-WEBHOOK] Mock webhook simulation completed successfully');
+      structuredConsole.log('🎉 [MOCK-STRIPE-WEBHOOK] Mock webhook simulation completed successfully');
 
     } catch (error) {
-      console.error('❌ [MOCK-STRIPE-WEBHOOK] Webhook simulation failed:', error);
+      structuredConsole.error('❌ [MOCK-STRIPE-WEBHOOK] Webhook simulation failed:', error);
       throw error;
     }
   }

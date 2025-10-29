@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { scheduleEmail, getUserEmailFromClerk, updateEmailScheduleStatus, shouldSendEmail } from './email-service';
 
 /**
@@ -7,25 +8,25 @@ export async function scheduleTrialEmails(userId: string, userInfo: { fullName: 
   const startTime = Date.now();
   const requestId = `trial_emails_${Date.now()}_${Math.random().toString(36).substring(7)}`;
   
-  console.log('📧📧📧 [TRIAL-EMAILS] ===============================');
-  console.log('📧📧📧 [TRIAL-EMAILS] SCHEDULING TRIAL EMAIL SEQUENCE');
-  console.log('📧📧📧 [TRIAL-EMAILS] ===============================');
-  console.log('🆔 [TRIAL-EMAILS] Request ID:', requestId);
-  console.log('⏰ [TRIAL-EMAILS] Timestamp:', new Date().toISOString());
-  console.log('📧 [TRIAL-EMAILS] Target user:', userId);
-  console.log('📧 [TRIAL-EMAILS] User info:', userInfo);
+  structuredConsole.log('📧📧📧 [TRIAL-EMAILS] ===============================');
+  structuredConsole.log('📧📧📧 [TRIAL-EMAILS] SCHEDULING TRIAL EMAIL SEQUENCE');
+  structuredConsole.log('📧📧📧 [TRIAL-EMAILS] ===============================');
+  structuredConsole.log('🆔 [TRIAL-EMAILS] Request ID:', requestId);
+  structuredConsole.log('⏰ [TRIAL-EMAILS] Timestamp:', new Date().toISOString());
+  structuredConsole.log('📧 [TRIAL-EMAILS] Target user:', userId);
+  structuredConsole.log('📧 [TRIAL-EMAILS] User info:', userInfo);
 
   try {
-    console.log('🔍 [TRIAL-EMAILS] Getting user email from Clerk...');
+    structuredConsole.log('🔍 [TRIAL-EMAILS] Getting user email from Clerk...');
     const userEmail = await getUserEmailFromClerk(userId);
     
     if (!userEmail) {
-      console.error('❌❌❌ [TRIAL-EMAILS] NO EMAIL FOUND FOR USER:', userId);
+      structuredConsole.error('❌❌❌ [TRIAL-EMAILS] NO EMAIL FOUND FOR USER:', userId);
       return { success: false, error: 'User email not found' };
     }
     
-    console.log('✅ [TRIAL-EMAILS] User email retrieved:', userEmail);
-    console.log('⏱️ [TRIAL-EMAILS] Email lookup completed in:', Date.now() - startTime, 'ms');
+    structuredConsole.log('✅ [TRIAL-EMAILS] User email retrieved:', userEmail);
+    structuredConsole.log('⏱️ [TRIAL-EMAILS] Email lookup completed in:', Date.now() - startTime, 'ms');
 
     const dashboardUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/campaigns`;
     const templateProps = {
@@ -34,16 +35,16 @@ export async function scheduleTrialEmails(userId: string, userInfo: { fullName: 
       dashboardUrl
     };
     
-    console.log('📧 [TRIAL-EMAILS] Template props prepared:', templateProps);
-    console.log('📧 [TRIAL-EMAILS] Dashboard URL:', dashboardUrl);
+    structuredConsole.log('📧 [TRIAL-EMAILS] Template props prepared:', templateProps);
+    structuredConsole.log('📧 [TRIAL-EMAILS] Dashboard URL:', dashboardUrl);
 
     const results = [];
 
     // Schedule Trial Day 2 email (2 days after trial starts)
-    console.log('🔍 [TRIAL-EMAILS] Checking if trial day 2 email should be sent...');
+    structuredConsole.log('🔍 [TRIAL-EMAILS] Checking if trial day 2 email should be sent...');
     if (await shouldSendEmail(userId, 'trial_day2')) {
-      console.log('📧📧📧 [TRIAL-EMAILS] SCHEDULING TRIAL DAY 2 EMAIL');
-      console.log('📧 [TRIAL-EMAILS] Email will be sent 2 days after trial start');
+      structuredConsole.log('📧📧📧 [TRIAL-EMAILS] SCHEDULING TRIAL DAY 2 EMAIL');
+      structuredConsole.log('📧 [TRIAL-EMAILS] Email will be sent 2 days after trial start');
       
       const day2StartTime = Date.now();
       
@@ -64,8 +65,8 @@ export async function scheduleTrialEmails(userId: string, userInfo: { fullName: 
           deliveryTime: day2Result.deliveryTime,
           delay: '2d'
         });
-        console.log('✅✅✅ [TRIAL-EMAILS] TRIAL DAY 2 EMAIL SCHEDULED SUCCESSFULLY');
-        console.log('📧 [TRIAL-EMAILS] Day 2 details:', {
+        structuredConsole.log('✅✅✅ [TRIAL-EMAILS] TRIAL DAY 2 EMAIL SCHEDULED SUCCESSFULLY');
+        structuredConsole.log('📧 [TRIAL-EMAILS] Day 2 details:', {
           messageId: day2Result.messageId,
           scheduledFor: day2Result.deliveryTime,
           qstashId: day2Result.qstashId || 'N/A',
@@ -73,18 +74,18 @@ export async function scheduleTrialEmails(userId: string, userInfo: { fullName: 
         });
       } else {
         results.push({ emailType: 'trial_day2', success: false, error: day2Result.error });
-        console.error('❌❌❌ [TRIAL-EMAILS] FAILED TO SCHEDULE TRIAL DAY 2 EMAIL');
-        console.error('📧 [TRIAL-EMAILS] Day 2 error:', day2Result.error);
+        structuredConsole.error('❌❌❌ [TRIAL-EMAILS] FAILED TO SCHEDULE TRIAL DAY 2 EMAIL');
+        structuredConsole.error('📧 [TRIAL-EMAILS] Day 2 error:', day2Result.error);
       }
     } else {
-      console.log('⚠️ [TRIAL-EMAILS] Trial day 2 email skipped (shouldSendEmail returned false)');
+      structuredConsole.log('⚠️ [TRIAL-EMAILS] Trial day 2 email skipped (shouldSendEmail returned false)');
     }
 
     // Schedule Trial Day 5 email (5 days after trial starts)
-    console.log('🔍 [TRIAL-EMAILS] Checking if trial day 5 email should be sent...');
+    structuredConsole.log('🔍 [TRIAL-EMAILS] Checking if trial day 5 email should be sent...');
     if (await shouldSendEmail(userId, 'trial_day5')) {
-      console.log('📧📧📧 [TRIAL-EMAILS] SCHEDULING TRIAL DAY 5 EMAIL');
-      console.log('📧 [TRIAL-EMAILS] Email will be sent 5 days after trial start');
+      structuredConsole.log('📧📧📧 [TRIAL-EMAILS] SCHEDULING TRIAL DAY 5 EMAIL');
+      structuredConsole.log('📧 [TRIAL-EMAILS] Email will be sent 5 days after trial start');
       
       const day5StartTime = Date.now();
       
@@ -105,8 +106,8 @@ export async function scheduleTrialEmails(userId: string, userInfo: { fullName: 
           deliveryTime: day5Result.deliveryTime,
           delay: '5d'
         });
-        console.log('✅✅✅ [TRIAL-EMAILS] TRIAL DAY 5 EMAIL SCHEDULED SUCCESSFULLY');
-        console.log('📧 [TRIAL-EMAILS] Day 5 details:', {
+        structuredConsole.log('✅✅✅ [TRIAL-EMAILS] TRIAL DAY 5 EMAIL SCHEDULED SUCCESSFULLY');
+        structuredConsole.log('📧 [TRIAL-EMAILS] Day 5 details:', {
           messageId: day5Result.messageId,
           scheduledFor: day5Result.deliveryTime,
           qstashId: day5Result.qstashId || 'N/A',
@@ -114,20 +115,20 @@ export async function scheduleTrialEmails(userId: string, userInfo: { fullName: 
         });
       } else {
         results.push({ emailType: 'trial_day5', success: false, error: day5Result.error });
-        console.error('❌❌❌ [TRIAL-EMAILS] FAILED TO SCHEDULE TRIAL DAY 5 EMAIL');
-        console.error('📧 [TRIAL-EMAILS] Day 5 error:', day5Result.error);
+        structuredConsole.error('❌❌❌ [TRIAL-EMAILS] FAILED TO SCHEDULE TRIAL DAY 5 EMAIL');
+        structuredConsole.error('📧 [TRIAL-EMAILS] Day 5 error:', day5Result.error);
       }
     } else {
-      console.log('⚠️ [TRIAL-EMAILS] Trial day 5 email skipped (shouldSendEmail returned false)');
+      structuredConsole.log('⚠️ [TRIAL-EMAILS] Trial day 5 email skipped (shouldSendEmail returned false)');
     }
 
     const totalTime = Date.now() - startTime;
     
-    console.log('🎉🎉🎉 [TRIAL-EMAILS] ===============================');
-    console.log('🎉🎉🎉 [TRIAL-EMAILS] TRIAL EMAIL SEQUENCE COMPLETED');
-    console.log('🎉🎉🎉 [TRIAL-EMAILS] ===============================');
-    console.log('⏱️ [TRIAL-EMAILS] Total execution time:', totalTime, 'ms');
-    console.log('📊 [TRIAL-EMAILS] Summary:', {
+    structuredConsole.log('🎉🎉🎉 [TRIAL-EMAILS] ===============================');
+    structuredConsole.log('🎉🎉🎉 [TRIAL-EMAILS] TRIAL EMAIL SEQUENCE COMPLETED');
+    structuredConsole.log('🎉🎉🎉 [TRIAL-EMAILS] ===============================');
+    structuredConsole.log('⏱️ [TRIAL-EMAILS] Total execution time:', totalTime, 'ms');
+    structuredConsole.log('📊 [TRIAL-EMAILS] Summary:', {
       emailsScheduled: results.filter(r => r.success).length,
       emailsFailed: results.filter(r => !r.success).length,
       totalEmails: results.length,
@@ -135,12 +136,12 @@ export async function scheduleTrialEmails(userId: string, userInfo: { fullName: 
       userId,
       requestId
     });
-    console.log('📧 [TRIAL-EMAILS] Detailed results:', results);
+    structuredConsole.log('📧 [TRIAL-EMAILS] Detailed results:', results);
     
     return { success: true, results };
 
   } catch (error) {
-    console.error('❌ [TRIAL-EMAILS] Error scheduling trial emails:', error);
+    structuredConsole.error('❌ [TRIAL-EMAILS] Error scheduling trial emails:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
@@ -150,16 +151,16 @@ export async function scheduleTrialEmails(userId: string, userInfo: { fullName: 
  */
 export async function cancelAbandonmentEmail(userId: string) {
   try {
-    console.log('🚫 [TRIAL-EMAILS] Canceling abandonment email for user:', userId);
+    structuredConsole.log('🚫 [TRIAL-EMAILS] Canceling abandonment email for user:', userId);
     
     // Mark abandonment email as cancelled (we can't actually cancel QStash messages, 
     // but we can track that the user completed the trial)
     await updateEmailScheduleStatus(userId, 'abandonment', 'cancelled');
     
-    console.log('✅ [TRIAL-EMAILS] Abandonment email marked as cancelled');
+    structuredConsole.log('✅ [TRIAL-EMAILS] Abandonment email marked as cancelled');
     return { success: true };
   } catch (error) {
-    console.error('❌ [TRIAL-EMAILS] Error canceling abandonment email:', error);
+    structuredConsole.error('❌ [TRIAL-EMAILS] Error canceling abandonment email:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
@@ -169,11 +170,11 @@ export async function cancelAbandonmentEmail(userId: string) {
  */
 export async function cancelTrialEmailsOnSubscription(userId: string) {
   try {
-    console.log('🚫🚫🚫 [TRIAL-EMAILS] ===============================');
-    console.log('🚫🚫🚫 [TRIAL-EMAILS] CANCELING TRIAL EMAILS ON SUBSCRIPTION');
-    console.log('🚫🚫🚫 [TRIAL-EMAILS] ===============================');
-    console.log('🚫 [TRIAL-EMAILS] Target user:', userId);
-    console.log('📧 [TRIAL-EMAILS] Reason: User subscribed to paid plan');
+    structuredConsole.log('🚫🚫🚫 [TRIAL-EMAILS] ===============================');
+    structuredConsole.log('🚫🚫🚫 [TRIAL-EMAILS] CANCELING TRIAL EMAILS ON SUBSCRIPTION');
+    structuredConsole.log('🚫🚫🚫 [TRIAL-EMAILS] ===============================');
+    structuredConsole.log('🚫 [TRIAL-EMAILS] Target user:', userId);
+    structuredConsole.log('📧 [TRIAL-EMAILS] Reason: User subscribed to paid plan');
     
     const results = [];
     
@@ -181,9 +182,9 @@ export async function cancelTrialEmailsOnSubscription(userId: string) {
     try {
       await updateEmailScheduleStatus(userId, 'trial_day2', 'cancelled_subscription');
       results.push({ emailType: 'trial_day2', cancelled: true });
-      console.log('✅ [TRIAL-EMAILS] Trial Day 2 email marked as cancelled');
+      structuredConsole.log('✅ [TRIAL-EMAILS] Trial Day 2 email marked as cancelled');
     } catch (error) {
-      console.error('❌ [TRIAL-EMAILS] Error canceling trial day 2 email:', error);
+      structuredConsole.error('❌ [TRIAL-EMAILS] Error canceling trial day 2 email:', error);
       results.push({ emailType: 'trial_day2', cancelled: false, error: error instanceof Error ? error.message : 'Unknown error' });
     }
     
@@ -191,9 +192,9 @@ export async function cancelTrialEmailsOnSubscription(userId: string) {
     try {
       await updateEmailScheduleStatus(userId, 'trial_day5', 'cancelled_subscription');
       results.push({ emailType: 'trial_day5', cancelled: true });
-      console.log('✅ [TRIAL-EMAILS] Trial Day 5 email marked as cancelled');
+      structuredConsole.log('✅ [TRIAL-EMAILS] Trial Day 5 email marked as cancelled');
     } catch (error) {
-      console.error('❌ [TRIAL-EMAILS] Error canceling trial day 5 email:', error);
+      structuredConsole.error('❌ [TRIAL-EMAILS] Error canceling trial day 5 email:', error);
       results.push({ emailType: 'trial_day5', cancelled: false, error: error instanceof Error ? error.message : 'Unknown error' });
     }
     
@@ -201,16 +202,16 @@ export async function cancelTrialEmailsOnSubscription(userId: string) {
     try {
       await updateEmailScheduleStatus(userId, 'abandonment', 'cancelled_subscription');
       results.push({ emailType: 'abandonment', cancelled: true });
-      console.log('✅ [TRIAL-EMAILS] Abandonment email marked as cancelled');
+      structuredConsole.log('✅ [TRIAL-EMAILS] Abandonment email marked as cancelled');
     } catch (error) {
-      console.error('❌ [TRIAL-EMAILS] Error canceling abandonment email:', error);
+      structuredConsole.error('❌ [TRIAL-EMAILS] Error canceling abandonment email:', error);
       results.push({ emailType: 'abandonment', cancelled: false, error: error instanceof Error ? error.message : 'Unknown error' });
     }
     
     const successCount = results.filter(r => r.cancelled).length;
     const failureCount = results.filter(r => !r.cancelled).length;
     
-    console.log('🎉 [TRIAL-EMAILS] Trial email cancellation completed:', {
+    structuredConsole.log('🎉 [TRIAL-EMAILS] Trial email cancellation completed:', {
       userId,
       emailsCancelled: successCount,
       emailsFailed: failureCount,
@@ -225,7 +226,7 @@ export async function cancelTrialEmailsOnSubscription(userId: string) {
     };
     
   } catch (error) {
-    console.error('❌ [TRIAL-EMAILS] Error canceling trial emails on subscription:', error);
+    structuredConsole.error('❌ [TRIAL-EMAILS] Error canceling trial emails on subscription:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
@@ -239,16 +240,16 @@ export async function scheduleSubscriptionWelcomeEmail(userId: string, subscript
   businessName: string; 
 }) {
   try {
-    console.log('📧📧📧 [SUBSCRIPTION-EMAILS] ===============================');
-    console.log('📧📧📧 [SUBSCRIPTION-EMAILS] SCHEDULING SUBSCRIPTION WELCOME EMAIL');
-    console.log('📧📧📧 [SUBSCRIPTION-EMAILS] ===============================');
-    console.log('📧 [SUBSCRIPTION-EMAILS] Target user:', userId);
-    console.log('📧 [SUBSCRIPTION-EMAILS] Subscription info:', subscriptionInfo);
+    structuredConsole.log('📧📧📧 [SUBSCRIPTION-EMAILS] ===============================');
+    structuredConsole.log('📧📧📧 [SUBSCRIPTION-EMAILS] SCHEDULING SUBSCRIPTION WELCOME EMAIL');
+    structuredConsole.log('📧📧📧 [SUBSCRIPTION-EMAILS] ===============================');
+    structuredConsole.log('📧 [SUBSCRIPTION-EMAILS] Target user:', userId);
+    structuredConsole.log('📧 [SUBSCRIPTION-EMAILS] Subscription info:', subscriptionInfo);
     
     const userEmail = await getUserEmailFromClerk(userId);
     
     if (!userEmail) {
-      console.error('❌ [SUBSCRIPTION-EMAILS] No email found for user:', userId);
+      structuredConsole.error('❌ [SUBSCRIPTION-EMAILS] No email found for user:', userId);
       return { success: false, error: 'User email not found' };
     }
     
@@ -278,8 +279,8 @@ export async function scheduleSubscriptionWelcomeEmail(userId: string, subscript
     
     if (emailResult.success) {
       await updateEmailScheduleStatus(userId, 'subscription_welcome', 'scheduled', emailResult.messageId);
-      console.log('✅✅✅ [SUBSCRIPTION-EMAILS] SUBSCRIPTION WELCOME EMAIL SCHEDULED');
-      console.log('📧 [SUBSCRIPTION-EMAILS] Welcome email details:', {
+      structuredConsole.log('✅✅✅ [SUBSCRIPTION-EMAILS] SUBSCRIPTION WELCOME EMAIL SCHEDULED');
+      structuredConsole.log('📧 [SUBSCRIPTION-EMAILS] Welcome email details:', {
         messageId: emailResult.messageId,
         userEmail,
         plan: subscriptionInfo.plan
@@ -292,12 +293,12 @@ export async function scheduleSubscriptionWelcomeEmail(userId: string, subscript
         plan: subscriptionInfo.plan
       };
     } else {
-      console.error('❌ [SUBSCRIPTION-EMAILS] Failed to schedule welcome email:', emailResult.error);
+      structuredConsole.error('❌ [SUBSCRIPTION-EMAILS] Failed to schedule welcome email:', emailResult.error);
       return { success: false, error: emailResult.error };
     }
     
   } catch (error) {
-    console.error('❌ [SUBSCRIPTION-EMAILS] Error scheduling subscription welcome email:', error);
+    structuredConsole.error('❌ [SUBSCRIPTION-EMAILS] Error scheduling subscription welcome email:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }

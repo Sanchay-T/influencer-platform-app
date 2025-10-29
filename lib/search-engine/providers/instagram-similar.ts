@@ -94,11 +94,33 @@ export async function runInstagramSimilarProvider(
   { job, config }: ProviderContext,
   service: SearchJobService,
 ): Promise<ProviderRunResult> {
+  const searchParams = (job.searchParams ?? {}) as Record<string, any>;
+  const previousBenchmark = (searchParams.searchEngineBenchmark as SearchMetricsSnapshot | undefined) ?? undefined;
+
+  const toNumber = (value: unknown): number | null => {
+    if (value == null) {
+      return null;
+    }
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
+  const priorApiCalls = toNumber(searchParams.totalApiCalls) ?? job.processedRuns ?? 0;
+  const previousTotalCost = typeof previousBenchmark?.totalCostUsd === 'number' && Number.isFinite(previousBenchmark.totalCostUsd)
+    ? previousBenchmark.totalCostUsd
+    : 0;
+
   const metrics: SearchMetricsSnapshot = {
-    apiCalls: 0,
-    processedCreators: job.processedResults || 0,
-    batches: [],
-    timings: { startedAt: new Date().toISOString() },
+    apiCalls: priorApiCalls,
+    processedCreators: job.processedResults || previousBenchmark?.processedCreators || 0,
+    batches: previousBenchmark?.batches ? [...previousBenchmark.batches] : [],
+    timings: {
+      startedAt: previousBenchmark?.timings?.startedAt ?? new Date().toISOString(),
+      finishedAt: previousBenchmark?.timings?.finishedAt,
+      totalDurationMs: previousBenchmark?.timings?.totalDurationMs,
+    },
+    costs: previousBenchmark?.costs ? [...previousBenchmark.costs] : [],
+    totalCostUsd: previousTotalCost,
   };
 
   if (!job.targetUsername) {
@@ -106,24 +128,131 @@ export async function runInstagramSimilarProvider(
   }
 
   const username = extractUsername(String(job.targetUsername));
+  const normalizedCurrentHandle = username.toLowerCase();
+
+  const sanitizeHandles = (values: unknown[] | undefined): string[] => {
+    if (!Array.isArray(values)) {
+      return [];
+    }
+    const result: string[] = [];
+    const seen = new Set<string>();
+    for (const value of values) {
+      let candidate: string | null = null;
+      if (typeof value === 'string' || typeof value === 'number') {
+        candidate = String(value);
+      } else if (value && typeof value === 'object') {
+        if (typeof (value as Record<string, any>).handle === 'string') {
+          candidate = (value as Record<string, any>).handle;
+        } else if (typeof (value as Record<string, any>).username === 'string') {
+          candidate = (value as Record<string, any>).username;
+        }
+      }
+      if (!candidate) {
+        continue;
+      }
+      try {
+        const handle = extractUsername(candidate);
+        const lowered = handle.toLowerCase();
+        if (seen.has(lowered)) {
+          continue;
+        }
+        seen.add(lowered);
+        result.push(handle);
+      } catch {
+        // Ignore invalid handles that cannot be normalized
+      }
+    }
+    return result;
+  };
+
+  const pushUniqueHandle = (list: string[], handle: string) => {
+    const lowered = handle.toLowerCase();
+    if (!list.some((existing) => existing.toLowerCase() === lowered)) {
+      list.push(handle);
+    }
+  };
+
+  const pendingHandles = sanitizeHandles(searchParams.pendingUsernames);
+  const completedHandles = sanitizeHandles(searchParams.completedUsernames);
+
+  const auditTrail: Array<{ handle: string; newCreators: number; processedAt?: string }> = Array.isArray(searchParams.auditTrail)
+    ? searchParams.auditTrail
+        .map((entry: any) => {
+          if (!entry || typeof entry !== 'object') {
+            return null;
+          }
+          const handleValue = typeof entry.handle === 'string'
+            ? entry.handle
+            : typeof entry.username === 'string'
+              ? entry.username
+              : null;
+          if (!handleValue) {
+            return null;
+          }
+          const newCreatorsValue = typeof entry.newCreators === 'number'
+            ? entry.newCreators
+            : Number((entry as Record<string, any>).new_count ?? (entry as Record<string, any>).count ?? 0);
+          const processedAtValue = typeof entry.processedAt === 'string' ? entry.processedAt : undefined;
+          return {
+            handle: handleValue,
+            newCreators: Number.isFinite(newCreatorsValue) ? newCreatorsValue : 0,
+            ...(processedAtValue ? { processedAt: processedAtValue } : {}),
+          };
+        })
+        .filter((entry): entry is { handle: string; newCreators: number; processedAt?: string } => !!entry)
+    : [];
+
+  const previousInitialCreators = toNumber(searchParams.initialCreators) ?? 0;
+  const previousEnhancedProfiles = toNumber(searchParams.enhancedProfiles) ?? 0;
+
+  let totalApifyComputeUnits = toNumber(searchParams.totalApifyComputeUnits) ?? 0;
+  let totalApifyResultCount = toNumber(searchParams.totalApifyResultCount) ?? 0;
+  let totalApifyResultCostUsd = toNumber(searchParams.totalApifyResultCostUsd) ?? 0;
+
   const targetResults = job.targetResults && job.targetResults > 0 ? job.targetResults : 100;
   const enhancementCap = resolveEnhancementCap();
   const maxApiCalls = config.maxApiCalls && config.maxApiCalls > 0 ? config.maxApiCalls : Number.MAX_SAFE_INTEGER;
 
+  const computedRemaining = Math.max(maxApiCalls - priorApiCalls, 0);
+  const persistedRemaining = toNumber(searchParams.remainingApiBudget);
+  const carriedRemaining = persistedRemaining != null
+    ? Math.max(Math.min(persistedRemaining, computedRemaining), 0)
+    : computedRemaining;
+  let remainingApiBudget = carriedRemaining;
+
   await service.markProcessing();
+
+  if (remainingApiBudget <= 0) {
+    const queueError = `Instagram similar queue exhausted API call budget before processing @${username}`;
+    await service.updateSearchParams({
+      runner: 'search-engine',
+      platform: 'instagram_similar',
+      targetUsername: username,
+      pendingUsernames: pendingHandles,
+      completedUsernames: completedHandles,
+      auditTrail,
+      totalApiCalls: priorApiCalls,
+      remainingApiBudget: 0,
+      queueError,
+    });
+    throw new Error(queueError);
+  }
 
   const profileStarted = Date.now();
   const profileResult = await getInstagramProfile(username);
   metrics.apiCalls += 1;
-  let totalApifyComputeUnits = 0;
-  let totalApifyResultCount = 0;
-  let totalApifyResultCostUsd = 0;
+  remainingApiBudget = Math.max(remainingApiBudget - 1, 0);
+
+  let computeUnitsThisRun = 0;
+  let resultCountThisRun = 0;
+  let resultCostThisRun = 0;
 
   if (profileResult.cost) {
-    totalApifyComputeUnits += profileResult.cost.computeUnits;
-    totalApifyResultCount += profileResult.cost.results;
-    totalApifyResultCostUsd += profileResult.cost.results * profileResult.cost.pricePerResultUsd;
+    computeUnitsThisRun += profileResult.cost.computeUnits;
+    resultCountThisRun += profileResult.cost.results;
+    resultCostThisRun += profileResult.cost.results * profileResult.cost.pricePerResultUsd;
   }
+
   metrics.batches.push({
     index: metrics.apiCalls,
     size: profileResult?.data?.relatedProfiles?.length || 0,
@@ -136,31 +265,16 @@ export async function runInstagramSimilarProvider(
 
   const transformed = transformInstagramProfile(profileResult.data).map(normalizeCreatorPayload);
   let creators = dedupeInstagramCreators(transformed);
+  const initialCreatorCount = creators.length;
 
-  await service.updateSearchParams({
-    runner: 'search-engine',
-    platform: 'instagram_similar',
-    targetUsername: username,
-    initialCreators: creators.length,
-  });
-
-  await service.replaceCreators(creators);
-  metrics.processedCreators = creators.length;
-
-  const initialProgress = computeProgress(creators.length, targetResults) || (creators.length > 0 ? 100 : 0);
-  await service.recordProgress({
-    processedRuns: metrics.apiCalls,
-    processedResults: creators.length,
-    cursor: creators.length,
-    progress: initialProgress,
-  });
-
-  const remainingApiBudget = Math.max(maxApiCalls - metrics.apiCalls, 0);
-  const enhancementBudget = Math.min(enhancementCap, creators.length, remainingApiBudget);
   let enrichedCount = 0;
-  let mutated = false;
+  const maxEnhancements = Math.min(enhancementCap, creators.length);
 
-  for (let index = 0; index < enhancementBudget; index += 1) {
+  for (let index = 0; index < maxEnhancements; index += 1) {
+    if (remainingApiBudget <= 0) {
+      break;
+    }
+
     const candidate = creators[index];
     if (!candidate || !candidate.username) {
       continue;
@@ -169,11 +283,14 @@ export async function runInstagramSimilarProvider(
     const enhancementStarted = Date.now();
     const enhanced = await getEnhancedInstagramProfile(candidate.username);
     metrics.apiCalls += 1;
+    remainingApiBudget = Math.max(remainingApiBudget - 1, 0);
+
     if (enhanced.cost) {
-      totalApifyComputeUnits += enhanced.cost.computeUnits;
-      totalApifyResultCount += enhanced.cost.results;
-      totalApifyResultCostUsd += enhanced.cost.results * enhanced.cost.pricePerResultUsd;
+      computeUnitsThisRun += enhanced.cost.computeUnits;
+      resultCountThisRun += enhanced.cost.results;
+      resultCostThisRun += enhanced.cost.results * enhanced.cost.pricePerResultUsd;
     }
+
     metrics.batches.push({
       index: metrics.apiCalls,
       size: 1,
@@ -185,76 +302,146 @@ export async function runInstagramSimilarProvider(
         transformEnhancedProfile(candidate, enhanced.data),
       );
       enrichedCount += 1;
-      mutated = true;
     }
 
-    if (metrics.apiCalls >= maxApiCalls) {
+    if (remainingApiBudget <= 0) {
       break;
     }
 
-    if (config.continuationDelayMs > 0 && index < enhancementBudget - 1) {
+    if (config.continuationDelayMs > 0 && index < maxEnhancements - 1) {
       await sleep(config.continuationDelayMs);
     }
   }
 
-  if (mutated) {
-    creators = dedupeInstagramCreators(creators);
-    await service.replaceCreators(creators);
-    metrics.processedCreators = creators.length;
-  }
+  creators = dedupeInstagramCreators(creators);
 
-  const finalCount = metrics.processedCreators;
-  const finalProgress = computeProgress(finalCount, targetResults) || (finalCount > 0 ? 100 : 0);
+  totalApifyComputeUnits += computeUnitsThisRun;
+  totalApifyResultCount += resultCountThisRun;
+  totalApifyResultCostUsd += resultCostThisRun;
+
+  const merged = await service.mergeCreators(creators, instagramDedupeKey);
+  const mergedTotal = merged.total ?? creators.length;
+  const newCreators = merged.newCount ?? 0;
+
+  metrics.processedCreators = mergedTotal;
+
+  const progress = computeProgress(mergedTotal, targetResults) || (mergedTotal > 0 ? 100 : 0);
 
   await service.recordProgress({
     processedRuns: metrics.apiCalls,
-    processedResults: finalCount,
-    cursor: finalCount,
-    progress: finalProgress,
+    processedResults: mergedTotal,
+    cursor: mergedTotal,
+    progress,
   });
 
-  await service.updateSearchParams({
-    runner: 'search-engine',
-    platform: 'instagram_similar',
-    targetUsername: username,
-    finalResults: finalCount,
-    enhancedProfiles: enrichedCount,
-    searchesMade: metrics.apiCalls,
+  const aggregatedInitialCreators = previousInitialCreators + initialCreatorCount;
+  const totalEnhancedProfiles = previousEnhancedProfiles + enrichedCount;
+
+  pushUniqueHandle(completedHandles, username);
+  const pendingAfterCurrent = pendingHandles.filter(
+    (handle) => handle.toLowerCase() !== normalizedCurrentHandle,
+  );
+  const nextTarget = pendingAfterCurrent[0] ?? null;
+
+  auditTrail.push({
+    handle: username,
+    newCreators,
+    processedAt: new Date().toISOString(),
   });
 
-  const finishedAt = new Date();
-  metrics.timings.finishedAt = finishedAt.toISOString();
-  const startedAt = metrics.timings.startedAt ? new Date(metrics.timings.startedAt) : null;
-  metrics.timings.totalDurationMs = startedAt ? finishedAt.getTime() - startedAt.getTime() : undefined;
-  metrics.processedCreators = finalCount;
+  if (pendingAfterCurrent.length > 0 && remainingApiBudget <= 0) {
+    const queueError = `Instagram similar queue exhausted API budget with ${pendingAfterCurrent.length} handles remaining`;
+    await service.updateSearchParams({
+      runner: 'search-engine',
+      platform: 'instagram_similar',
+      targetUsername: username,
+      pendingUsernames: pendingAfterCurrent,
+      completedUsernames: completedHandles,
+      auditTrail,
+      totalApiCalls: metrics.apiCalls,
+      remainingApiBudget: 0,
+      enhancedProfiles: totalEnhancedProfiles,
+      initialCreators: aggregatedInitialCreators,
+      finalResults: mergedTotal,
+      searchesMade: metrics.apiCalls,
+      totalApifyComputeUnits,
+      totalApifyResultCount,
+      totalApifyResultCostUsd,
+      lastProcessedHandle: username,
+      queueError,
+    });
+    throw new Error(queueError);
+  }
 
-  if (totalApifyComputeUnits > 0) {
+  if (computeUnitsThisRun > 0) {
     addCost(metrics, {
       provider: 'Apify',
       unit: 'compute_unit',
-      quantity: totalApifyComputeUnits,
+      quantity: computeUnitsThisRun,
       unitCostUsd: APIFY_COST_PER_CU_USD,
-      totalCostUsd: totalApifyComputeUnits * APIFY_COST_PER_CU_USD,
+      totalCostUsd: computeUnitsThisRun * APIFY_COST_PER_CU_USD,
       note: 'Instagram Similar actor compute',
     });
   }
 
-  if (totalApifyResultCount > 0 && totalApifyResultCostUsd > 0) {
+  if (resultCountThisRun > 0 && resultCostThisRun > 0) {
     addCost(metrics, {
       provider: 'Apify',
       unit: 'result',
-      quantity: totalApifyResultCount,
-      unitCostUsd: totalApifyResultCostUsd / totalApifyResultCount,
-      totalCostUsd: totalApifyResultCostUsd,
+      quantity: resultCountThisRun,
+      unitCostUsd: resultCostThisRun / resultCountThisRun,
+      totalCostUsd: resultCostThisRun,
       note: 'Instagram Similar dataset results',
     });
   }
 
+  const hasMore = nextTarget !== null;
+  const queuePatch: Record<string, any> = {
+    runner: 'search-engine',
+    platform: 'instagram_similar',
+    targetUsername: nextTarget ?? username,
+    pendingUsernames: pendingAfterCurrent,
+    completedUsernames: completedHandles,
+    completedCount: completedHandles.length,
+    pendingCount: pendingAfterCurrent.length,
+    handlesRemaining: pendingAfterCurrent.length,
+    auditTrail,
+    totalApiCalls: metrics.apiCalls,
+    searchesMade: metrics.apiCalls,
+    remainingApiBudget,
+    enhancedProfiles: totalEnhancedProfiles,
+    initialCreators: aggregatedInitialCreators,
+    finalResults: mergedTotal,
+    lastProcessedHandle: username,
+    lastNewCreatorsCount: newCreators,
+    lastRunAt: new Date().toISOString(),
+    queueStatus: hasMore ? 'pending' : 'completed',
+    queueError: null,
+    totalApifyComputeUnits,
+    totalApifyResultCount,
+    totalApifyResultCostUsd,
+  };
+
+  await service.updateSearchParams(queuePatch);
+  await service.setTargetUsername(nextTarget ?? username);
+
+  if (hasMore) {
+    delete metrics.timings.finishedAt;
+    delete metrics.timings.totalDurationMs;
+  } else {
+    const finishedAt = new Date();
+    metrics.timings.finishedAt = finishedAt.toISOString();
+    const startedAt = metrics.timings.startedAt ? new Date(metrics.timings.startedAt) : null;
+    metrics.timings.totalDurationMs = startedAt
+      ? finishedAt.getTime() - startedAt.getTime()
+      : undefined;
+  }
+
   return {
-    status: 'completed',
-    processedResults: finalCount,
-    cursor: finalCount,
-    hasMore: false,
+    status: hasMore ? 'partial' : 'completed',
+    processedResults: mergedTotal,
+    cursor: mergedTotal,
+    hasMore,
     metrics,
   };
 }

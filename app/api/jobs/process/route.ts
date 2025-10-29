@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
 import { Receiver } from '@upstash/qstash';
 import { JobProcessor } from '@/lib/jobs/job-processor';
@@ -13,11 +14,11 @@ export async function POST(req: NextRequest) {
     const body = await req.text();
     const signature = req.headers.get('Upstash-Signature');
 
-    console.log('📥 [JOB-PROCESSOR-API] Received job processing request');
+    structuredConsole.log('📥 [JOB-PROCESSOR-API] Received job processing request');
 
     // Verify QStash signature for security
     if (!signature) {
-      console.error('❌ [JOB-PROCESSOR-API] No signature provided');
+      structuredConsole.error('❌ [JOB-PROCESSOR-API] No signature provided');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!isValid) {
-      console.error('❌ [JOB-PROCESSOR-API] Invalid signature');
+      structuredConsole.error('❌ [JOB-PROCESSOR-API] Invalid signature');
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
     const jobData = JSON.parse(body);
     const { jobId, jobType, payload, attempt = 1, maxRetries = 3 } = jobData;
 
-    console.log('🔄 [JOB-PROCESSOR-API] Processing job:', {
+    structuredConsole.log('🔄 [JOB-PROCESSOR-API] Processing job:', {
       jobId,
       jobType,
       attempt,
@@ -48,14 +49,14 @@ export async function POST(req: NextRequest) {
     const result = await JobProcessor.processJob(jobId, attempt);
 
     if (result.success) {
-      console.log('✅ [JOB-PROCESSOR-API] Job processed successfully:', jobId);
+      structuredConsole.log('✅ [JOB-PROCESSOR-API] Job processed successfully:', jobId);
       return NextResponse.json({
         success: true,
         jobId,
         result: result.data
       });
     } else {
-      console.error('❌ [JOB-PROCESSOR-API] Job processing failed:', {
+      structuredConsole.error('❌ [JOB-PROCESSOR-API] Job processing failed:', {
         jobId,
         error: result.error,
         retryable: result.retryable
@@ -73,7 +74,7 @@ export async function POST(req: NextRequest) {
     }
 
   } catch (error) {
-    console.error('❌ [JOB-PROCESSOR-API] Error processing job request:', error);
+    structuredConsole.error('❌ [JOB-PROCESSOR-API] Error processing job request:', error);
     
     return NextResponse.json({
       success: false,

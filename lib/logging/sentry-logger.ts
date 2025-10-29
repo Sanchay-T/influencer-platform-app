@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 /**
  * Sentry Integration Logger
  * 
@@ -70,7 +71,7 @@ export class SentryLogger {
 
       this.isInitialized = true;
     } catch (error) {
-      console.error('🚨 [SENTRY-LOGGER] Failed to initialize:', error);
+      structuredConsole.error('🚨 [SENTRY-LOGGER] Failed to initialize:', error);
     }
   }
 
@@ -115,7 +116,7 @@ export class SentryLogger {
         });
       }
     } catch (error) {
-      console.error('🚨 [SENTRY-LOGGER] Failed to set user context:', error);
+      structuredConsole.error('🚨 [SENTRY-LOGGER] Failed to set user context:', error);
     }
   }
 
@@ -146,7 +147,7 @@ export class SentryLogger {
 
       return transaction;
     } catch (error) {
-      console.error('🚨 [SENTRY-LOGGER] Failed to set transaction context:', error);
+      structuredConsole.error('🚨 [SENTRY-LOGGER] Failed to set transaction context:', error);
       return undefined;
     }
   }
@@ -185,7 +186,7 @@ export class SentryLogger {
       }
 
     } catch (error) {
-      console.error('🚨 [SENTRY-LOGGER] Failed to add breadcrumb:', error);
+      structuredConsole.error('🚨 [SENTRY-LOGGER] Failed to add breadcrumb:', error);
     }
   }
 
@@ -220,7 +221,7 @@ export class SentryLogger {
         fingerprint: sentryContext?.fingerprint
       });
     } catch (err) {
-      console.error('🚨 [SENTRY-LOGGER] Failed to capture exception:', err);
+      structuredConsole.error('🚨 [SENTRY-LOGGER] Failed to capture exception:', err);
       return '';
     }
   }
@@ -254,7 +255,7 @@ export class SentryLogger {
         user: context?.user
       });
     } catch (error) {
-      console.error('🚨 [SENTRY-LOGGER] Failed to capture message:', error);
+      structuredConsole.error('🚨 [SENTRY-LOGGER] Failed to capture message:', error);
       return '';
     }
   }
@@ -371,7 +372,7 @@ export class SentryLogger {
       }
 
     } catch (error) {
-      console.error('🚨 [SENTRY-LOGGER] Failed to log to Sentry:', error);
+      structuredConsole.error('🚨 [SENTRY-LOGGER] Failed to log to Sentry:', error);
     }
   }
 
@@ -397,7 +398,7 @@ export class SentryLogger {
         transaction.finish();
       }
     } catch (error) {
-      console.error('🚨 [SENTRY-LOGGER] Failed to finish transaction:', error);
+      structuredConsole.error('🚨 [SENTRY-LOGGER] Failed to finish transaction:', error);
     }
   }
 
@@ -408,7 +409,7 @@ export class SentryLogger {
     try {
       Sentry.setContext(key, context);
     } catch (error) {
-      console.error('🚨 [SENTRY-LOGGER] Failed to set context:', error);
+      structuredConsole.error('🚨 [SENTRY-LOGGER] Failed to set context:', error);
     }
   }
 
@@ -419,7 +420,7 @@ export class SentryLogger {
     try {
       Sentry.setTags(tags);
     } catch (error) {
-      console.error('🚨 [SENTRY-LOGGER] Failed to set tags:', error);
+      structuredConsole.error('🚨 [SENTRY-LOGGER] Failed to set tags:', error);
     }
   }
 
@@ -430,7 +431,7 @@ export class SentryLogger {
     try {
       return await Sentry.flush(timeout);
     } catch (error) {
-      console.error('🚨 [SENTRY-LOGGER] Failed to flush:', error);
+      structuredConsole.error('🚨 [SENTRY-LOGGER] Failed to flush:', error);
       return false;
     }
   }
@@ -474,7 +475,7 @@ export class SentryLogger {
         Sentry.captureMessage(`User feedback: ${feedback.comments}`, 'info');
       });
     } catch (error) {
-      console.error('🚨 [SENTRY-LOGGER] Failed to capture user feedback:', error);
+      structuredConsole.error('🚨 [SENTRY-LOGGER] Failed to capture user feedback:', error);
     }
   }
 }

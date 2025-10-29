@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import type {
   CandidateHandle,
   HandleHarvestResult,
@@ -105,7 +106,7 @@ async function resolveFetcher(limit: number) {
           hl: 'en',
         });
       } catch (error) {
-        console.warn('[handle-harvest] Serper fetch failed', {
+        structuredConsole.warn('[handle-harvest] Serper fetch failed', {
           query,
           error: error instanceof Error ? error.message : String(error),
         });
@@ -123,7 +124,7 @@ async function resolveFetcher(limit: number) {
         hl: 'en',
       });
     } catch (error) {
-      console.warn('[handle-harvest] SerpApi fetch failed', {
+      structuredConsole.warn('[handle-harvest] SerpApi fetch failed', {
         query,
         error: error instanceof Error ? error.message : String(error),
       });

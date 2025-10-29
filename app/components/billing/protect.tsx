@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import { Protect as ClerkProtect } from '@clerk/nextjs'
 import { useFeatureAccess, usePlanAccess, useBilling } from '@/lib/hooks/use-billing'

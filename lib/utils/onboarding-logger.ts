@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 interface OnboardingLogEntry {
   timestamp: string;
   step: string;
@@ -48,16 +49,16 @@ export class OnboardingLogger {
         }
       } catch (clientErr) {
         // Swallow client logging errors; still print to console
-        console.warn('⚠️ [ONBOARDING-LOG] Client log POST failed:', clientErr);
+        structuredConsole.warn('⚠️ [ONBOARDING-LOG] Client log POST failed:', clientErr);
       } finally {
-        console.log(`📝 [ONBOARDING-LOG] ${logLine}`);
+        structuredConsole.log(`📝 [ONBOARDING-LOG] ${logLine}`);
       }
       return;
     }
 
     // Server-side: avoid Node 'fs' imports in shared module to keep it client-safe
     // Just echo to console; API route can be used by server code if persistent logging is needed
-    console.log(`📝 [ONBOARDING-LOG] ${logLine}`);
+    structuredConsole.log(`📝 [ONBOARDING-LOG] ${logLine}`);
   }
 
   /**

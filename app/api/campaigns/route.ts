@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test'
 import { db } from '@/lib/db'
 import { campaigns, scrapingJobs } from '@/lib/db/schema'
@@ -250,27 +251,27 @@ export async function POST(req: Request) {
 }
 
 export async function GET(request: Request) {
-  console.log('\n\n====== CAMPAIGNS API GET CALLED ======');
-  console.log('🔍 [CAMPAIGNS-API] GET request received at:', new Date().toISOString());
+  structuredConsole.log('\n\n====== CAMPAIGNS API GET CALLED ======');
+  structuredConsole.log('🔍 [CAMPAIGNS-API] GET request received at:', new Date().toISOString());
   try {
-    console.log('🔐 [CAMPAIGNS-API] Getting authenticated user from Clerk');
+    structuredConsole.log('🔐 [CAMPAIGNS-API] Getting authenticated user from Clerk');
     const { userId } = await getAuthOrTest()
     
     if (!userId) {
-      console.error('❌ [CAMPAIGNS-API] Unauthorized - No valid user session');
+      structuredConsole.error('❌ [CAMPAIGNS-API] Unauthorized - No valid user session');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    console.log('✅ [CAMPAIGNS-API] User authenticated', { userId });
+    structuredConsole.log('✅ [CAMPAIGNS-API] User authenticated', { userId });
 
     const url = new URL(request.url)
     const page = parseInt(url.searchParams.get('page') || '1')
     const limit = parseInt(url.searchParams.get('limit') || '10')
     const offset = (page - 1) * limit
     
-    console.log('🔍 [CAMPAIGNS-API] Fetching campaigns with pagination', { page, limit, offset });
+    structuredConsole.log('🔍 [CAMPAIGNS-API] Fetching campaigns with pagination', { page, limit, offset });
 
     // Realizar ambas consultas en paralelo
-    console.log('🔄 [CAMPAIGNS-API] Executing parallel database queries');
+    structuredConsole.log('🔄 [CAMPAIGNS-API] Executing parallel database queries');
     const [totalCount, userCampaigns] = await Promise.all([
       // Consulta optimizada para contar
       db.select({ count: count() }).from(campaigns)
@@ -306,7 +307,7 @@ export async function GET(request: Request) {
       })
     ]);
 
-    console.log('✅ [CAMPAIGNS-API] Campaigns fetched successfully', { 
+    structuredConsole.log('✅ [CAMPAIGNS-API] Campaigns fetched successfully', { 
       totalCount, 
       fetchedCount: userCampaigns.length,
       pagination: {
@@ -332,7 +333,7 @@ export async function GET(request: Request) {
     }, { headers });
 
   } catch (error: any) {
-    console.error('💥 [CAMPAIGNS-API] Error fetching campaigns:', error);
+    structuredConsole.error('💥 [CAMPAIGNS-API] Error fetching campaigns:', error);
     return NextResponse.json(
       { error: 'Error al cargar campañas', details: error?.message || 'Unknown error' },
       { status: 500 }

@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 /**
  * Performance monitoring utility for measuring loading times
  * Tracks user experience metrics and data loading performance
@@ -46,7 +47,7 @@ class PerformanceMonitor {
     
     this.metrics.get(operation)!.push(metric);
     
-    console.log(`⏱️ [PERF] Started: ${operation}`, { metadata, timerId });
+    structuredConsole.log(`⏱️ [PERF] Started: ${operation}`, { metadata, timerId });
     return timerId;
   }
 
@@ -56,7 +57,7 @@ class PerformanceMonitor {
   endTimer(timerId: string, metadata?: Record<string, any>): number {
     const startTime = this.activeTimers.get(timerId);
     if (!startTime) {
-      console.warn(`⚠️ [PERF] Timer not found: ${timerId}`);
+      structuredConsole.warn(`⚠️ [PERF] Timer not found: ${timerId}`);
       return 0;
     }
 
@@ -73,7 +74,7 @@ class PerformanceMonitor {
           metric.metadata = { ...metric.metadata, ...metadata };
         }
         
-        console.log(`✅ [PERF] Completed: ${operation} in ${duration.toFixed(2)}ms`, {
+        structuredConsole.log(`✅ [PERF] Completed: ${operation} in ${duration.toFixed(2)}ms`, {
           duration: `${duration.toFixed(2)}ms`,
           metadata: metric.metadata
         });
@@ -150,21 +151,21 @@ class PerformanceMonitor {
   logReport(): void {
     const summaries = this.getAllSummaries();
     
-    console.group('📊 Performance Report');
+    structuredConsole.group('📊 Performance Report');
     
     Object.entries(summaries).forEach(([operation, summary]) => {
-      console.group(`🔍 ${operation}`);
-      console.log(`⏱️ Average: ${summary.averageTime.toFixed(2)}ms`);
-      console.log(`⚡ Fastest: ${summary.minTime.toFixed(2)}ms`);
-      console.log(`🐌 Slowest: ${summary.maxTime.toFixed(2)}ms`);
-      console.log(`📈 Total Calls: ${summary.totalCalls}`);
+      structuredConsole.group(`🔍 ${operation}`);
+      structuredConsole.log(`⏱️ Average: ${summary.averageTime.toFixed(2)}ms`);
+      structuredConsole.log(`⚡ Fastest: ${summary.minTime.toFixed(2)}ms`);
+      structuredConsole.log(`🐌 Slowest: ${summary.maxTime.toFixed(2)}ms`);
+      structuredConsole.log(`📈 Total Calls: ${summary.totalCalls}`);
       if (summary.cacheHitRate !== undefined) {
-        console.log(`🎯 Cache Hit Rate: ${(summary.cacheHitRate * 100).toFixed(1)}%`);
+        structuredConsole.log(`🎯 Cache Hit Rate: ${(summary.cacheHitRate * 100).toFixed(1)}%`);
       }
-      console.groupEnd();
+      structuredConsole.groupEnd();
     });
     
-    console.groupEnd();
+    structuredConsole.groupEnd();
   }
 
   /**
@@ -173,7 +174,7 @@ class PerformanceMonitor {
   clear(): void {
     this.metrics.clear();
     this.activeTimers.clear();
-    console.log('🧹 [PERF] Cleared all metrics');
+    structuredConsole.log('🧹 [PERF] Cleared all metrics');
   }
 
   /**

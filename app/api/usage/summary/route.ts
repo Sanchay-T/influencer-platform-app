@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { PlanValidator } from '@/lib/services/plan-validator';
@@ -24,7 +25,7 @@ export async function GET() {
       }
     });
   } catch (err) {
-    console.error('[USAGE-SUMMARY][GET] error', err);
+    structuredConsole.error('[USAGE-SUMMARY][GET] error', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { db } from '@/lib/db';
 import { events, backgroundJobs, Event, NewEvent, NewBackgroundJob } from '@/lib/db/schema';
 import { eq, desc, and } from 'drizzle-orm';
@@ -80,7 +81,7 @@ export class EventService {
     idempotencyKey: string;
   }): Promise<Event | null> {
     
-    console.log('🎯 [EVENT-SERVICE] Creating event:', {
+    structuredConsole.log('🎯 [EVENT-SERVICE] Creating event:', {
       aggregateId,
       aggregateType,
       eventType,
@@ -95,7 +96,7 @@ export class EventService {
       });
 
       if (existingEvent) {
-        console.log('✅ [EVENT-SERVICE] Event already exists (idempotent):', existingEvent.id);
+        structuredConsole.log('✅ [EVENT-SERVICE] Event already exists (idempotent):', existingEvent.id);
         return existingEvent;
       }
 
@@ -118,7 +119,7 @@ export class EventService {
 
       const [createdEvent] = await db.insert(events).values(newEvent).returning();
       
-      console.log('✅ [EVENT-SERVICE] Event created successfully:', {
+      structuredConsole.log('✅ [EVENT-SERVICE] Event created successfully:', {
         eventId: createdEvent.id,
         eventType,
         aggregateId
@@ -127,7 +128,7 @@ export class EventService {
       return createdEvent;
 
     } catch (error) {
-      console.error('❌ [EVENT-SERVICE] Error creating event:', error);
+      structuredConsole.error('❌ [EVENT-SERVICE] Error creating event:', error);
       throw error;
     }
   }
@@ -182,7 +183,7 @@ export class EventService {
       })
       .where(eq(events.id, eventId));
 
-    console.log('✅ [EVENT-SERVICE] Event marked as processed:', eventId);
+    structuredConsole.log('✅ [EVENT-SERVICE] Event marked as processed:', eventId);
   }
 
   /**
@@ -201,7 +202,7 @@ export class EventService {
       })
       .where(eq(events.id, eventId));
 
-    console.log('❌ [EVENT-SERVICE] Event marked as failed:', { eventId, error });
+    structuredConsole.log('❌ [EVENT-SERVICE] Event marked as failed:', { eventId, error });
   }
 
   /**
@@ -236,7 +237,7 @@ export class EventService {
 
     const [createdJob] = await db.insert(backgroundJobs).values(job).returning();
     
-    console.log('✅ [EVENT-SERVICE] Background job created:', {
+    structuredConsole.log('✅ [EVENT-SERVICE] Background job created:', {
       jobId: createdJob.id,
       jobType,
       eventId

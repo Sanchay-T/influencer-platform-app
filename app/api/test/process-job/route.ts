@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
@@ -8,7 +9,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'jobId is required' }, { status: 400 });
     }
     
-    console.log('🧪 [TEST] Manually triggering job processing for:', jobId);
+    structuredConsole.log('🧪 [TEST] Manually triggering job processing for:', jobId);
     
     // Call the QStash processing endpoint directly
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
     
     const result = await response.json();
     
-    console.log('🧪 [TEST] Job processing result:', result);
+    structuredConsole.log('🧪 [TEST] Job processing result:', result);
     
     return NextResponse.json({
       success: true,
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
     });
     
   } catch (error: any) {
-    console.error('🧪 [TEST] Error:', error);
+    structuredConsole.error('🧪 [TEST] Error:', error);
     return NextResponse.json({ 
       error: error.message,
       details: error.stack 

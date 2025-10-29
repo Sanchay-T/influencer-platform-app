@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { and, desc, eq, gte, inArray, or, sql } from 'drizzle-orm';
 import { db } from '../index';
 import {
@@ -29,13 +30,15 @@ type SearchTelemetrySummary = {
 };
 
 // Shared with dashboard overview API to translate Clerk user -> internal id
-async function resolveInternalUserId(clerkUserId: string) {
+async function resolveInternalUserId(clerkUserId: string): Promise<string | null> {
   const user = await db.query.users.findFirst({
     where: eq(users.userId, clerkUserId),
   });
 
   if (!user) {
-    throw new Error('USER_NOT_FOUND');
+    // Return null instead of throwing - let caller handle gracefully
+    structuredConsole.log(`⚠️ [DASHBOARD-QUERIES] User not found (likely new user): ${clerkUserId}`);
+    return null;
   }
 
   return user.id;
@@ -73,6 +76,11 @@ export async function getFavoriteInfluencersForDashboard(
   limit = 10
 ): Promise<DashboardFavoriteInfluencer[]> {
   const internalUserId = await resolveInternalUserId(clerkUserId);
+
+  // If user not found (new user, webhook pending), return empty array
+  if (!internalUserId) {
+    return [];
+  }
 
   const rows = await db
     .select({
@@ -158,7 +166,6 @@ function resolveProfileUrl(
     case 'tiktok':
       return `https://www.tiktok.com/@${normalizedHandle}`;
     case 'instagram':
-    case 'enhanced-instagram':
       return `https://www.instagram.com/${normalizedHandle}`;
     case 'youtube':
       return `https://www.youtube.com/@${normalizedHandle}`;

@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server'
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test'
 import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries'
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
     await updateUserProfile(targetUserId, { email })
     return NextResponse.json({ success: true, email, updated: true })
   } catch (error: any) {
-    console.error('[ENSURE-EMAIL] Failed to ensure email', error)
+    structuredConsole.error('[ENSURE-EMAIL] Failed to ensure email', error)
     return NextResponse.json(
       { error: 'Failed to ensure email', detail: error?.message || String(error) },
       { status: 500 }

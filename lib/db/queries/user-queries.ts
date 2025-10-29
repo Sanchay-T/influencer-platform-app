@@ -5,6 +5,7 @@
  * =====================================================
  */
 
+import { clerkBackendClient } from '@/lib/auth/backend-auth';
 import { db } from '../index';
 import { 
   users, 
@@ -105,6 +106,7 @@ export async function getUserProfile(userId: string): Promise<UserProfileComplet
       planFeatures: userUsage.planFeatures,
       usageCampaignsCurrent: userUsage.usageCampaignsCurrent,
       usageCreatorsCurrentMonth: userUsage.usageCreatorsCurrentMonth,
+      enrichmentsCurrentMonth: userUsage.enrichmentsCurrentMonth,
       usageResetDate: userUsage.usageResetDate,
       
       // System data
@@ -154,6 +156,7 @@ export async function getUserProfile(userId: string): Promise<UserProfileComplet
     planFeatures: userRecord.planFeatures || {},
     usageCampaignsCurrent: userRecord.usageCampaignsCurrent || 0,
     usageCreatorsCurrentMonth: userRecord.usageCreatorsCurrentMonth || 0,
+    enrichmentsCurrentMonth: userRecord.enrichmentsCurrentMonth || 0,
     usageResetDate: userRecord.usageResetDate || new Date(),
     signupTimestamp: userRecord.signupTimestamp || userRecord.createdAt,
     emailScheduleStatus: userRecord.emailScheduleStatus || {},
@@ -218,6 +221,7 @@ export async function createUser(userData: {
       planFeatures: {},
       usageCampaignsCurrent: 0,
       usageCreatorsCurrentMonth: 0,
+      enrichmentsCurrentMonth: 0,
     }).returning();
 
     // 4. Insert system data
@@ -271,6 +275,7 @@ export async function createUser(userData: {
       planFeatures: newUsage.planFeatures,
       usageCampaignsCurrent: newUsage.usageCampaignsCurrent,
       usageCreatorsCurrentMonth: newUsage.usageCreatorsCurrentMonth,
+      enrichmentsCurrentMonth: newUsage.enrichmentsCurrentMonth,
       usageResetDate: newUsage.usageResetDate,
       
       // System data
@@ -294,6 +299,60 @@ export async function createUser(userData: {
       throw transactionError;
     }
   });
+}
+
+export async function ensureUserProfile(userId: string): Promise<UserProfileComplete> {
+  const existingProfile = await getUserProfile(userId);
+  if (existingProfile) {
+    debug('ensureUserProfile resolved existing record', { userId });
+    return existingProfile;
+  }
+
+  info('ensureUserProfile creating normalized profile', { userId });
+
+  let email: string | undefined;
+  let fullName: string | undefined;
+
+  try {
+    const clerkUser = await clerkBackendClient.users.getUser(userId);
+    email = clerkUser.emailAddresses?.[0]?.emailAddress ?? undefined;
+    const clerkFullName = `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim();
+    fullName = clerkFullName || undefined;
+  } catch (clerkError) {
+    warn('Failed to fetch Clerk metadata during ensureUserProfile', {
+      userId,
+      errorMessage: clerkError instanceof Error ? clerkError.message : String(clerkError)
+    });
+  }
+
+  const fallbackEmail = `user-${userId}@example.com`;
+
+  try {
+    const createdProfile = await createUser({
+      userId,
+      email: email || fallbackEmail,
+      fullName: fullName || 'User',
+      onboardingStep: 'pending',
+      currentPlan: 'free'
+    });
+
+    info('ensureUserProfile created new record', { userId });
+    return createdProfile;
+  } catch (createError: any) {
+    const message = createError?.message?.toLowerCase?.() ?? '';
+    const duplicate = message.includes('duplicate') || message.includes('unique') || createError?.code === '23505';
+
+    if (duplicate) {
+      warn('ensureUserProfile detected concurrent creation, refetching', { userId });
+      const profile = await getUserProfile(userId);
+      if (profile) {
+        return profile;
+      }
+    }
+
+    logError('ensureUserProfile failed to create user', createError, { userId });
+    throw createError;
+  }
 }
 
 /**
@@ -342,6 +401,7 @@ export async function updateUserProfile(
     planFeatures?: any;
     usageCampaignsCurrent?: number;
     usageCreatorsCurrentMonth?: number;
+    enrichmentsCurrentMonth?: number;
     usageResetDate?: Date;
     
     // System updates
@@ -405,6 +465,7 @@ export async function updateUserProfile(
       planFeatures: updates.planFeatures,
       usageCampaignsCurrent: updates.usageCampaignsCurrent,
       usageCreatorsCurrentMonth: updates.usageCreatorsCurrentMonth,
+      enrichmentsCurrentMonth: updates.enrichmentsCurrentMonth,
       usageResetDate: updates.usageResetDate,
     };
     
@@ -548,7 +609,7 @@ export async function getUserUsage(userId: string): Promise<UserUsage | null> {
  */
 export async function incrementUsage(
   userId: string, 
-  type: 'campaigns' | 'creators', 
+  type: 'campaigns' | 'creators' | 'enrichments', 
   amount: number = 1
 ): Promise<void> {
   await db
@@ -556,7 +617,9 @@ export async function incrementUsage(
     .set({
       ...(type === 'campaigns' 
         ? { usageCampaignsCurrent: sql`usage_campaigns_current + ${amount}` }
-        : { usageCreatorsCurrentMonth: sql`usage_creators_current_month + ${amount}` }
+        : type === 'creators'
+          ? { usageCreatorsCurrentMonth: sql`usage_creators_current_month + ${amount}` }
+          : { enrichmentsCurrentMonth: sql`enrichments_current_month + ${amount}` }
       ),
       updatedAt: new Date(),
     })
@@ -617,6 +680,7 @@ export async function getUserByStripeCustomerId(stripeCustomerId: string): Promi
       planFeatures: userUsage.planFeatures,
       usageCampaignsCurrent: userUsage.usageCampaignsCurrent,
       usageCreatorsCurrentMonth: userUsage.usageCreatorsCurrentMonth,
+      enrichmentsCurrentMonth: userUsage.enrichmentsCurrentMonth,
       usageResetDate: userUsage.usageResetDate,
       
       // System data
@@ -649,6 +713,7 @@ export async function getUserByStripeCustomerId(stripeCustomerId: string): Promi
     planFeatures: userRecord.planFeatures || {},
     usageCampaignsCurrent: userRecord.usageCampaignsCurrent || 0,
     usageCreatorsCurrentMonth: userRecord.usageCreatorsCurrentMonth || 0,
+    enrichmentsCurrentMonth: userRecord.enrichmentsCurrentMonth || 0,
     usageResetDate: userRecord.usageResetDate || new Date(),
     signupTimestamp: userRecord.signupTimestamp || userRecord.createdAt,
     emailScheduleStatus: userRecord.emailScheduleStatus || {},

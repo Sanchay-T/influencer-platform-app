@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -62,7 +63,7 @@ export class BillingLogger {
     }
 
     this.runtimeWarningIssued = true;
-    console.warn(
+    structuredConsole.warn(
       '⚠️ [BILLING-LOGGER] File system logging disabled for this runtime. Falling back to console logging only.'
     );
   }
@@ -76,7 +77,7 @@ export class BillingLogger {
       data,
       metadata
     };
-    console.log(`🏦 [BILLING-LOGGER:${eventType}] ${action} - ${message}`, context);
+    structuredConsole.log(`🏦 [BILLING-LOGGER:${eventType}] ${action} - ${message}`, context);
   }
   
   /**
@@ -142,7 +143,7 @@ export class BillingLogger {
         return;
       }
 
-      console.error('❌ [BILLING-LOGGER] Failed to write log:', error);
+      structuredConsole.error('❌ [BILLING-LOGGER] Failed to write log:', error);
       this.logToConsole(entry);
     }
   }
@@ -593,7 +594,7 @@ export class BillingLogger {
 
       return logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     } catch (error) {
-      console.error('❌ [BILLING-LOGGER] Error reading logs:', error);
+      structuredConsole.error('❌ [BILLING-LOGGER] Error reading logs:', error);
       return [];
     }
   }
@@ -619,13 +620,13 @@ export class BillingLogger {
             const fileDate = new Date(dateMatch[1]);
             if (fileDate < cutoffDate) {
               await fs.unlink(path.join(logDirectory, file));
-              console.log(`🗑️ [BILLING-LOGGER] Cleaned up old log file: ${file}`);
+              structuredConsole.log(`🗑️ [BILLING-LOGGER] Cleaned up old log file: ${file}`);
             }
           }
         }
       }
     } catch (error) {
-      console.error('❌ [BILLING-LOGGER] Error cleaning up logs:', error);
+      structuredConsole.error('❌ [BILLING-LOGGER] Error cleaning up logs:', error);
     }
   }
 }

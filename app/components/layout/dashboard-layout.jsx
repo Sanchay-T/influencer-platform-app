@@ -1,25 +1,44 @@
 "use client";
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Sidebar from "./sidebar";
 import DashboardHeader from "./dashboard-header";
 import AccessGuardOverlay from "../billing/access-guard-overlay";
+import OnboardingModal from "../onboarding/onboarding-modal";
 
 const DESKTOP_HEADER_HEIGHT = 64;
 const SIDEBAR_PIN_STORAGE_KEY = 'dashboard-sidebar-pinned';
 
-export default function DashboardLayout({ 
-  children, 
-  onboardingStatusLoaded = true, 
-  showOnboarding = false 
+export default function DashboardLayout({
+  children,
+  onboardingStatusLoaded = true,
+  showOnboarding = false
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(showOnboarding);
   const [isLarge, setIsLarge] = useState(false);
   const [sidebarSheetOpen, setSidebarSheetOpen] = useState(false);
   // Initialize deterministically for SSR; hydrate from localStorage after mount
   // Default to pinned so the navigation is visible on first load; localStorage overrides post-hydration.
   const [sidebarPinned, setSidebarPinned] = useState(true);
+
+  // Update onboarding modal state when showOnboarding prop changes
+  useEffect(() => {
+    setIsOnboardingOpen(showOnboarding);
+  }, [showOnboarding]);
+
+  // Handler for when onboarding is completed
+  const handleOnboardingComplete = useCallback(() => {
+    structuredConsole.log('✅ [ONBOARDING] User completed onboarding flow');
+    setIsOnboardingOpen(false);
+    // Refresh the page to update trial status and dashboard data
+    router.refresh();
+  }, [router]);
+
   useEffect(() => {
     try {
       const stored = typeof window !== 'undefined' ? window.localStorage.getItem(SIDEBAR_PIN_STORAGE_KEY) : null;
@@ -197,9 +216,15 @@ export default function DashboardLayout({
           </div>
         </div>
         {/* Global access overlay to gate unpaid/expired users */}
-        <AccessGuardOverlay 
+        <AccessGuardOverlay
           onboardingStatusLoaded={onboardingStatusLoaded}
           showOnboarding={showOnboarding}
+        />
+
+        {/* Onboarding modal for new users */}
+        <OnboardingModal
+          isOpen={isOnboardingOpen}
+          onComplete={handleOnboardingComplete}
         />
       </main>
     </div>

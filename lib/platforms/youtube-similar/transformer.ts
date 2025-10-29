@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 /**
  * YouTube Similar Creator Search - Data Transformation
  */
@@ -9,14 +10,14 @@ import { YouTubeChannelProfile, YouTubeVideo, YouTubeSimilarChannel } from './ty
  * Enhanced to detect channel type and generate better search queries
  */
 export function extractSearchKeywords(channelProfile: YouTubeChannelProfile): string[] {
-  console.log('🔍 [YOUTUBE-TRANSFORMER] Extracting keywords from channel:', channelProfile.name);
+  structuredConsole.log('🔍 [YOUTUBE-TRANSFORMER] Extracting keywords from channel:', channelProfile.name);
   
   const description = channelProfile.description.toLowerCase();
   const name = channelProfile.name.toLowerCase();
   
   // Detect channel type and get relevant keywords
   const channelCategories = detectChannelCategory(name, description);
-  console.log('📊 [YOUTUBE-TRANSFORMER] Detected categories:', channelCategories);
+  structuredConsole.log('📊 [YOUTUBE-TRANSFORMER] Detected categories:', channelCategories);
   
   // Generate content-based search terms
   const searchTerms: string[] = [];
@@ -36,7 +37,7 @@ export function extractSearchKeywords(channelProfile: YouTubeChannelProfile): st
     .filter(term => term && term.length > 2)
     .slice(0, 10); // More keywords for better search variety
   
-  console.log('✅ [YOUTUBE-TRANSFORMER] Generated search terms:', uniqueTerms);
+  structuredConsole.log('✅ [YOUTUBE-TRANSFORMER] Generated search terms:', uniqueTerms);
   return uniqueTerms;
 }
 
@@ -139,7 +140,7 @@ export function extractChannelsFromVideos(videos: YouTubeVideo[], excludeHandle:
     publishedTime: string;
   }>;
 }> {
-  console.log('🔍 [YOUTUBE-TRANSFORMER] Extracting channels from', videos.length, 'videos');
+  structuredConsole.log('🔍 [YOUTUBE-TRANSFORMER] Extracting channels from', videos.length, 'videos');
   
   const channelMap = new Map();
   
@@ -172,7 +173,7 @@ export function extractChannelsFromVideos(videos: YouTubeVideo[], excludeHandle:
   });
   
   const channels = Array.from(channelMap.values());
-  console.log('✅ [YOUTUBE-TRANSFORMER] Extracted', channels.length, 'unique channels');
+  structuredConsole.log('✅ [YOUTUBE-TRANSFORMER] Extracted', channels.length, 'unique channels');
   
   return channels;
 }
@@ -326,7 +327,7 @@ export function transformToSimilarChannels(
   targetProfile: YouTubeChannelProfile,
   searchKeywords: string[]
 ): YouTubeSimilarChannel[] {
-  console.log('🔄 [YOUTUBE-TRANSFORMER] Transforming', channels.length, 'channels to similar format');
+  structuredConsole.log('🔄 [YOUTUBE-TRANSFORMER] Transforming', channels.length, 'channels to similar format');
   
   const similarChannels = channels.map(channel => {
     const similarityScore = calculateSimilarityScore(channel, targetProfile, searchKeywords);
@@ -345,6 +346,6 @@ export function transformToSimilarChannels(
   // Sort by relevance score (highest first)
   similarChannels.sort((a, b) => b.relevanceScore - a.relevanceScore);
   
-  console.log('✅ [YOUTUBE-TRANSFORMER] Transformed and sorted channels by relevance');
+  structuredConsole.log('✅ [YOUTUBE-TRANSFORMER] Transformed and sorted channels by relevance');
   return similarChannels;
 }

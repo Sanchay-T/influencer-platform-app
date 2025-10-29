@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server'
 
 // DEV-ONLY: Exchanges a Clerk Admin session for a browser-compatible __session cookie
@@ -104,10 +105,10 @@ export async function POST(req: NextRequest) {
         if (payload?.token) devBrowserToken = payload.token as string
       } else {
         const detail = await devBrowserRes.text().catch(() => '')
-        console.warn('[SESSION-EXCHANGE] dev_browser request failed', devBrowserRes.status, detail)
+        structuredConsole.warn('[SESSION-EXCHANGE] dev_browser request failed', devBrowserRes.status, detail)
       }
     } catch (err) {
-      console.warn('[SESSION-EXCHANGE] dev_browser request error', err)
+      structuredConsole.warn('[SESSION-EXCHANGE] dev_browser request error', err)
     }
 
     const devBrowserCookie = devBrowserToken

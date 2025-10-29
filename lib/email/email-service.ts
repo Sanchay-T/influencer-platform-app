@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { Resend } from 'resend';
 import { qstash } from '@/lib/queue/qstash';
 import { clerkBackendClient } from '@/lib/auth/backend-auth';
@@ -58,7 +59,7 @@ export async function sendEmail(
   from?: string
 ) {
   try {
-    console.log('📧 [EMAIL-SERVICE] Sending email:', { to, subject, from: from || EMAIL_CONFIG.fromAddress });
+    structuredConsole.log('📧 [EMAIL-SERVICE] Sending email:', { to, subject, from: from || EMAIL_CONFIG.fromAddress });
 
     const result = await resend.emails.send({
       from: from || EMAIL_CONFIG.fromAddress,
@@ -67,10 +68,10 @@ export async function sendEmail(
       react: reactComponent,
     });
 
-    console.log('✅ [EMAIL-SERVICE] Email sent successfully:', result.id);
+    structuredConsole.log('✅ [EMAIL-SERVICE] Email sent successfully:', result.id);
     return { success: true, id: result.id };
   } catch (error) {
-    console.error('❌ [EMAIL-SERVICE] Failed to send email:', error);
+    structuredConsole.error('❌ [EMAIL-SERVICE] Failed to send email:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
@@ -83,7 +84,7 @@ export async function scheduleEmail(params: EmailScheduleParams) {
     const { userId, emailType, userEmail, templateProps, delay } = params;
     const emailDelay = delay || EMAIL_CONFIG.delays[emailType];
     
-    console.log('📅 [EMAIL-SCHEDULER] Scheduling email:', {
+    structuredConsole.log('📅 [EMAIL-SCHEDULER] Scheduling email:', {
       userId,
       emailType,
       userEmail,
@@ -108,7 +109,7 @@ export async function scheduleEmail(params: EmailScheduleParams) {
       delay: emailDelay,
     });
 
-    console.log('✅ [EMAIL-SCHEDULER] Email scheduled successfully:', {
+    structuredConsole.log('✅ [EMAIL-SCHEDULER] Email scheduled successfully:', {
       messageId: result.messageId,
       emailType,
       delay: emailDelay
@@ -116,7 +117,7 @@ export async function scheduleEmail(params: EmailScheduleParams) {
 
     return { success: true, messageId: result.messageId };
   } catch (error) {
-    console.error('❌ [EMAIL-SCHEDULER] Failed to schedule email:', error);
+    structuredConsole.error('❌ [EMAIL-SCHEDULER] Failed to schedule email:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
@@ -157,7 +158,7 @@ export async function updateEmailScheduleStatus(
       emailScheduleStatus: updatedStatus,
     });
 
-    console.log('✅ [EMAIL-STATUS] Updated email schedule status:', {
+    structuredConsole.log('✅ [EMAIL-STATUS] Updated email schedule status:', {
       userId,
       emailType,
       status,
@@ -166,7 +167,7 @@ export async function updateEmailScheduleStatus(
 
     return { success: true };
   } catch (error) {
-    console.error('❌ [EMAIL-STATUS] Failed to update email schedule status:', error);
+    structuredConsole.error('❌ [EMAIL-STATUS] Failed to update email schedule status:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
@@ -176,11 +177,11 @@ export async function updateEmailScheduleStatus(
  */
 export async function getUserEmailFromClerk(userId: string): Promise<string | null> {
   try {
-    console.log('🔍 [CLERK-EMAIL] Starting Clerk email retrieval for userId:', userId);
+    structuredConsole.log('🔍 [CLERK-EMAIL] Starting Clerk email retrieval for userId:', userId);
     const user = await clerkBackendClient.users.getUser(userId);
     
     if (!user) {
-      console.error('❌ [CLERK-EMAIL] User not found:', userId);
+      structuredConsole.error('❌ [CLERK-EMAIL] User not found:', userId);
       return null;
     }
     
@@ -193,19 +194,19 @@ export async function getUserEmailFromClerk(userId: string): Promise<string | nu
     const resolvedEmail = primaryEmail?.emailAddress || fallbackEmail?.emailAddress || null;
 
     if (!resolvedEmail) {
-      console.error('❌ [CLERK-EMAIL] No email found for user:', userId);
-      console.log('🔍 [CLERK-EMAIL] Available emails:', user.emailAddresses?.map(e => ({ id: e.id, email: e.emailAddress, verified: e.verification?.status })));
+      structuredConsole.error('❌ [CLERK-EMAIL] No email found for user:', userId);
+      structuredConsole.log('🔍 [CLERK-EMAIL] Available emails:', user.emailAddresses?.map(e => ({ id: e.id, email: e.emailAddress, verified: e.verification?.status })));
       return null;
     }
 
     if (!primaryEmail) {
-      console.warn('⚠️ [CLERK-EMAIL] No primary email set; using fallback email:', resolvedEmail);
+      structuredConsole.warn('⚠️ [CLERK-EMAIL] No primary email set; using fallback email:', resolvedEmail);
     }
 
-    console.log('✅ [CLERK-EMAIL] Retrieved user email:', resolvedEmail);
+    structuredConsole.log('✅ [CLERK-EMAIL] Retrieved user email:', resolvedEmail);
     return resolvedEmail;
   } catch (error) {
-    console.error('❌ [CLERK-EMAIL] Failed to get user email from Clerk:', error);
+    structuredConsole.error('❌ [CLERK-EMAIL] Failed to get user email from Clerk:', error);
     return null;
   }
 }
@@ -228,13 +229,13 @@ export async function shouldSendEmail(userId: string, emailType: string): Promis
 
     // Don't send if already sent or scheduled
     if (emailInfo && (emailInfo.status === 'sent' || emailInfo.status === 'scheduled')) {
-      console.log(`⏭️ [EMAIL-CHECK] Email ${emailType} already ${emailInfo.status} for user ${userId}`);
+      structuredConsole.log(`⏭️ [EMAIL-CHECK] Email ${emailType} already ${emailInfo.status} for user ${userId}`);
       return false;
     }
 
     return true;
   } catch (error) {
-    console.error('❌ [EMAIL-CHECK] Error checking email status:', error);
+    structuredConsole.error('❌ [EMAIL-CHECK] Error checking email status:', error);
     return false;
   }
 }

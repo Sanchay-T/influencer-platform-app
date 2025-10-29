@@ -1,6 +1,7 @@
 import { unstable_noStore as noStore } from 'next/cache';
 import { getFavoriteInfluencersForDashboard, getSearchTelemetryForDashboard } from '@/lib/db/queries/dashboard-queries';
 import { getListsForUser } from '@/lib/db/queries/list-queries';
+import { ensureUserProfile } from '@/lib/db/queries/user-queries';
 import { PlanValidator } from '@/lib/services/plan-validator';
 import type { DashboardFavoriteInfluencer } from '@/lib/db/queries/dashboard-queries';
 
@@ -47,6 +48,8 @@ function normalizeRecentLists(lists: Awaited<ReturnType<typeof getListsForUser>>
 
 export async function getDashboardOverview(clerkUserId: string): Promise<DashboardOverviewData> {
   noStore();
+  // Ensure normalized profile exists before downstream queries (first dashboard load happens pre-billing).
+  await ensureUserProfile(clerkUserId);
   const [favorites, lists, searchTelemetry, planStatus] = await Promise.all([
     getFavoriteInfluencersForDashboard(clerkUserId, 10),
     getListsForUser(clerkUserId),

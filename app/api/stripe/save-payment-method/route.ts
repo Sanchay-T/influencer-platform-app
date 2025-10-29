@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { StripeService } from '@/lib/stripe/stripe-service';
@@ -64,7 +65,7 @@ export async function POST(req: NextRequest) {
 
     await updateUserProfile(userId, updateData);
 
-    console.log('✅ [STRIPE-SAVE-PAYMENT] Payment method saved successfully');
+    structuredConsole.log('✅ [STRIPE-SAVE-PAYMENT] Payment method saved successfully');
 
     return NextResponse.json({
       success: true,
@@ -78,7 +79,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ [STRIPE-SAVE-PAYMENT] Error:', error);
+    structuredConsole.error('❌ [STRIPE-SAVE-PAYMENT] Error:', error);
     return NextResponse.json(
       { error: 'Failed to save payment method' },
       { status: 500 }

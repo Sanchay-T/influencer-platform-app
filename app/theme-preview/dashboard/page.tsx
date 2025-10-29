@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import DashboardLayout from "@/app/components/layout/dashboard-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"

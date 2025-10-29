@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { updateUserProfile } from '@/lib/db/queries/user-queries';
@@ -67,7 +68,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true });
 
   } catch (error) {
-    console.error('❌ [SAVE-PLAN] Error:', error);
+    structuredConsole.error('❌ [SAVE-PLAN] Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     
     await OnboardingLogger.logError('API-ERROR', 'Save plan API request failed', undefined, {

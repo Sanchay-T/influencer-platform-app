@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 // api/scraping/google-serp — production entry for the Google SERP → ScrapeCreators keyword flow
 
 import { NextResponse } from 'next/server';
@@ -156,7 +157,7 @@ export async function POST(req: Request) {
       });
       qstashMessageId = (result as any)?.messageId ?? null;
     } catch (error) {
-      console.warn('[google-serp] QStash publish warning', error);
+      structuredConsole.warn('[google-serp] QStash publish warning', error);
     }
 
     return NextResponse.json({
@@ -166,7 +167,7 @@ export async function POST(req: Request) {
       engine: 'search-engine',
     });
   } catch (error: any) {
-    console.error('[google-serp] POST failed', error);
+    structuredConsole.error('[google-serp] POST failed', error);
     return NextResponse.json({ error: error?.message ?? 'Internal server error' }, { status: 500 });
   }
 }
@@ -244,7 +245,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json(payload);
   } catch (error: any) {
-    console.error('[google-serp] GET failed', error);
+    structuredConsole.error('[google-serp] GET failed', error);
     return NextResponse.json({ error: error?.message ?? 'Internal server error' }, { status: 500 });
   }
 }

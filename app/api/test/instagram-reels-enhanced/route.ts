@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
 import { OpenRouterService } from '@/lib/ai/openrouter-service';
 
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
             totalSuggestions: expandedKeywords.length - 1
           };
         } catch (aiError) {
-          console.warn('AI suggestions failed:', aiError);
+          structuredConsole.warn('AI suggestions failed:', aiError);
           // Continue with normal search even if AI fails
         }
       }
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
     let nextMaxId: string | undefined = undefined;
     let currentPage = 0;
 
-    console.log(`Fetching ${pagesNeeded} pages for query: "${query}" to get ${maxResults} results`);
+    structuredConsole.log(`Fetching ${pagesNeeded} pages for query: "${query}" to get ${maxResults} results`);
 
     // Fetch multiple pages
     for (let page = 0; page < pagesNeeded; page++) {
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
         querystring.page_index = page;
       }
 
-      console.log(`Fetching page ${page + 1}/${pagesNeeded}`, querystring);
+      structuredConsole.log(`Fetching page ${page + 1}/${pagesNeeded}`, querystring);
 
       const response = await fetch(`${url}?${new URLSearchParams(querystring)}`, {
         method: 'GET',
@@ -92,14 +93,14 @@ export async function POST(request: NextRequest) {
       const pageData = await response.json();
       const clips = pageData.reels_serp_modules?.[0]?.clips || [];
       
-      console.log(`Page ${page + 1} returned ${clips.length} clips`);
+      structuredConsole.log(`Page ${page + 1} returned ${clips.length} clips`);
       
       // Add clips to our results
       allResults.push(...clips);
       
       // Check if we have enough results or if there are no more pages
       if (allResults.length >= maxResults || !pageData.has_more || clips.length === 0) {
-        console.log(`Stopping: ${allResults.length} results collected, has_more: ${pageData.has_more}`);
+        structuredConsole.log(`Stopping: ${allResults.length} results collected, has_more: ${pageData.has_more}`);
         break;
       }
       
@@ -169,7 +170,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Enhanced Instagram Reels API Error:', error);
+    structuredConsole.error('Enhanced Instagram Reels API Error:', error);
     return NextResponse.json(
       { 
         success: false, 

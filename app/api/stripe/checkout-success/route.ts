@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { BillingService } from '@/lib/services/billing-service';
@@ -18,35 +19,35 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
  * This is how Stripe, Notion, Linear, Vercel handle upgrades.
  */
 export async function POST(request: NextRequest) {
-  console.log('🚨🚨🚨 [CHECKOUT-SUCCESS-API] =====================================');
-  console.log('🚨🚨🚨 [CHECKOUT-SUCCESS-API] *** API ROUTE HAS BEEN CALLED ***');
-  console.log('🚨🚨🚨 [CHECKOUT-SUCCESS-API] STRIPE CHECKOUT SUCCESS HANDLER STARTED');
-  console.log('🚨🚨🚨 [CHECKOUT-SUCCESS-API] ====================================');
+  structuredConsole.log('🚨🚨🚨 [CHECKOUT-SUCCESS-API] =====================================');
+  structuredConsole.log('🚨🚨🚨 [CHECKOUT-SUCCESS-API] *** API ROUTE HAS BEEN CALLED ***');
+  structuredConsole.log('🚨🚨🚨 [CHECKOUT-SUCCESS-API] STRIPE CHECKOUT SUCCESS HANDLER STARTED');
+  structuredConsole.log('🚨🚨🚨 [CHECKOUT-SUCCESS-API] ====================================');
   
-  console.log('🚀 [CHECKOUT-SUCCESS] ====================================');
-  console.log('🚀 [CHECKOUT-SUCCESS] STRIPE CHECKOUT SUCCESS HANDLER STARTED');
-  console.log('🚀 [CHECKOUT-SUCCESS] ====================================');
+  structuredConsole.log('🚀 [CHECKOUT-SUCCESS] ====================================');
+  structuredConsole.log('🚀 [CHECKOUT-SUCCESS] STRIPE CHECKOUT SUCCESS HANDLER STARTED');
+  structuredConsole.log('🚀 [CHECKOUT-SUCCESS] ====================================');
   
   try {
     const { sessionId, checkoutSessionId } = await request.json();
     const actualSessionId = sessionId || checkoutSessionId;
     
-    console.log('📥 [CHECKOUT-SUCCESS] Request payload:', { sessionId, checkoutSessionId });
+    structuredConsole.log('📥 [CHECKOUT-SUCCESS] Request payload:', { sessionId, checkoutSessionId });
     
     if (!actualSessionId) {
-      console.error('❌ [CHECKOUT-SUCCESS] No session ID provided in request');
+      structuredConsole.error('❌ [CHECKOUT-SUCCESS] No session ID provided in request');
       return NextResponse.json({ error: 'Session ID required' }, { status: 400 });
     }
 
-    console.log(`🎯 [CHECKOUT-SUCCESS] Processing immediate upgrade for session: ${actualSessionId}`);
+    structuredConsole.log(`🎯 [CHECKOUT-SUCCESS] Processing immediate upgrade for session: ${actualSessionId}`);
 
     // Get the completed checkout session from Stripe
-    console.log('🔍 [CHECKOUT-SUCCESS] Retrieving Stripe session with expanded data...');
+    structuredConsole.log('🔍 [CHECKOUT-SUCCESS] Retrieving Stripe session with expanded data...');
     const session = await stripe.checkout.sessions.retrieve(actualSessionId, {
       expand: ['subscription', 'subscription.items.data.price']
     });
     
-    console.log('✅ [CHECKOUT-SUCCESS] Stripe session retrieved:', {
+    structuredConsole.log('✅ [CHECKOUT-SUCCESS] Stripe session retrieved:', {
       payment_status: session.payment_status,
       customer: session.customer,
       mode: session.mode,
@@ -54,16 +55,16 @@ export async function POST(request: NextRequest) {
     });
 
     if (session.payment_status !== 'paid') {
-      console.error('❌ [CHECKOUT-SUCCESS] Payment not completed:', session.payment_status);
+      structuredConsole.error('❌ [CHECKOUT-SUCCESS] Payment not completed:', session.payment_status);
       return NextResponse.json({ error: 'Payment not completed' }, { status: 400 });
     }
 
     // Extract user ID from session metadata
     const userId = session.metadata?.userId;
-    console.log('🔐 [CHECKOUT-SUCCESS] Extracted user ID from session metadata:', userId);
+    structuredConsole.log('🔐 [CHECKOUT-SUCCESS] Extracted user ID from session metadata:', userId);
     
     if (!userId) {
-      console.error('❌ [CHECKOUT-SUCCESS] No user ID found in session metadata:', session.metadata);
+      structuredConsole.error('❌ [CHECKOUT-SUCCESS] No user ID found in session metadata:', session.metadata);
       return NextResponse.json({ error: 'User ID not found in session metadata' }, { status: 400 });
     }
 
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No price ID found' }, { status: 400 });
     }
 
-    console.log(`🔍 [CHECKOUT-SUCCESS-DEBUG] Raw price ID from Stripe: ${priceId}`);
+    structuredConsole.log(`🔍 [CHECKOUT-SUCCESS-DEBUG] Raw price ID from Stripe: ${priceId}`);
 
     // Map price ID to plan
     const planMapping: Record<string, string> = {
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
       [process.env.STRIPE_FAME_FLEX_YEARLY_PRICE_ID!]: 'fame_flex',
     };
 
-    console.log(`🔍 [CHECKOUT-SUCCESS-DEBUG] Plan mapping table:`, {
+    structuredConsole.log(`🔍 [CHECKOUT-SUCCESS-DEBUG] Plan mapping table:`, {
       GLOW_UP_MONTHLY: process.env.STRIPE_GLOW_UP_MONTHLY_PRICE_ID,
       VIRAL_SURGE_MONTHLY: process.env.STRIPE_VIRAL_SURGE_MONTHLY_PRICE_ID,
       FAME_FLEX_MONTHLY: process.env.STRIPE_FAME_FLEX_MONTHLY_PRICE_ID,
@@ -100,11 +101,11 @@ export async function POST(request: NextRequest) {
     });
 
     const newPlan = planMapping[priceId];
-    console.log(`🔍 [CHECKOUT-SUCCESS-DEBUG] Price ID "${priceId}" mapped to plan: "${newPlan}"`);
+    structuredConsole.log(`🔍 [CHECKOUT-SUCCESS-DEBUG] Price ID "${priceId}" mapped to plan: "${newPlan}"`);
 
     if (!newPlan) {
-      console.error(`❌ [CHECKOUT-SUCCESS] CRITICAL: No plan mapping found for price ID: ${priceId}`);
-      console.error(`❌ [CHECKOUT-SUCCESS] Available mappings:`, Object.keys(planMapping));
+      structuredConsole.error(`❌ [CHECKOUT-SUCCESS] CRITICAL: No plan mapping found for price ID: ${priceId}`);
+      structuredConsole.error(`❌ [CHECKOUT-SUCCESS] Available mappings:`, Object.keys(planMapping));
       return NextResponse.json({ 
         error: 'Unknown plan for price ID: ' + priceId,
         availablePriceIds: Object.keys(planMapping),
@@ -112,13 +113,13 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    console.log(`💰 [CHECKOUT-SUCCESS] Plan identified: ${newPlan} for user: ${userId}, price ID: ${priceId}`);
+    structuredConsole.log(`💰 [CHECKOUT-SUCCESS] Plan identified: ${newPlan} for user: ${userId}, price ID: ${priceId}`);
 
     // ★★★ THIS IS THE KEY: IMMEDIATE PLAN UPDATE ★★★
     const upgradeTestId = `CHECKOUT_UPGRADE_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    console.log(`🎯 [CHECKOUT-SUCCESS-TEST] ${upgradeTestId} - Starting immediate upgrade`);
-    console.log('⚡ [CHECKOUT-SUCCESS] Calling BillingService.immediateUpgrade...');
-    console.log('⚡ [CHECKOUT-SUCCESS] BillingService parameters:', {
+    structuredConsole.log(`🎯 [CHECKOUT-SUCCESS-TEST] ${upgradeTestId} - Starting immediate upgrade`);
+    structuredConsole.log('⚡ [CHECKOUT-SUCCESS] Calling BillingService.immediateUpgrade...');
+    structuredConsole.log('⚡ [CHECKOUT-SUCCESS] BillingService parameters:', {
       userId,
       newPlan,
       stripeData: {
@@ -143,27 +144,27 @@ export async function POST(request: NextRequest) {
         'checkout' // Source tracking
       );
       
-      console.log(`✅ [CHECKOUT-SUCCESS-TEST] ${upgradeTestId} - BillingService.immediateUpgrade completed successfully`);
-      console.log(`🔍 [CHECKOUT-SUCCESS-TEST] ${upgradeTestId} - New billing state:`, {
+      structuredConsole.log(`✅ [CHECKOUT-SUCCESS-TEST] ${upgradeTestId} - BillingService.immediateUpgrade completed successfully`);
+      structuredConsole.log(`🔍 [CHECKOUT-SUCCESS-TEST] ${upgradeTestId} - New billing state:`, {
         currentPlan: newBillingState.currentPlan,
         subscriptionStatus: newBillingState.subscriptionStatus,
         isActive: newBillingState.isActive
       });
     } catch (upgradeError) {
-      console.error(`❌ [CHECKOUT-SUCCESS-TEST] ${upgradeTestId} - BillingService.immediateUpgrade FAILED:`, upgradeError);
+      structuredConsole.error(`❌ [CHECKOUT-SUCCESS-TEST] ${upgradeTestId} - BillingService.immediateUpgrade FAILED:`, upgradeError);
       throw upgradeError; // This will now preserve the error and prevent accessing undefined newBillingState
     }
 
     // ★ FIX: Ensure newBillingState is defined before accessing it
     if (!newBillingState) {
-      console.error(`❌ [CHECKOUT-SUCCESS] CRITICAL ERROR: newBillingState is undefined after BillingService call`);
+      structuredConsole.error(`❌ [CHECKOUT-SUCCESS] CRITICAL ERROR: newBillingState is undefined after BillingService call`);
       return NextResponse.json({
         error: 'Failed to process upgrade - billing state undefined',
         details: 'BillingService.immediateUpgrade returned undefined result'
       }, { status: 500 });
     }
 
-    console.log(`✅ [CHECKOUT-SUCCESS] IMMEDIATE UPDATE COMPLETE:`, {
+    structuredConsole.log(`✅ [CHECKOUT-SUCCESS] IMMEDIATE UPDATE COMPLETE:`, {
       userId,
       newPlan,
       subscriptionId: subscription.id,
@@ -186,7 +187,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error(`❌ [CHECKOUT-SUCCESS] Error processing upgrade:`, error);
+    structuredConsole.error(`❌ [CHECKOUT-SUCCESS] Error processing upgrade:`, error);
     return NextResponse.json({
       error: 'Failed to process upgrade',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -215,7 +216,7 @@ export async function GET(request: NextRequest) {
       customerEmail: session.customer_details?.email
     });
   } catch (error) {
-    console.error('Error retrieving checkout session:', error);
+    structuredConsole.error('Error retrieving checkout session:', error);
     return NextResponse.json({
       error: 'Failed to retrieve session',
       details: error instanceof Error ? error.message : 'Unknown error'

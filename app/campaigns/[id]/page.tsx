@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { Suspense } from 'react'
 import DashboardLayout from '@/app/components/layout/dashboard-layout'
 import { db } from '@/lib/db'
@@ -21,7 +22,7 @@ async function getCampaign(id: string) {
 
     const debugCampaign = process.env.CAMPAIGN_DEBUG_LOGS === 'true';
     if (debugCampaign) {
-      console.log('Fetching campaign with id:', id);
+      structuredConsole.log('Fetching campaign with id:', id);
     }
     const campaign = await db.query.campaigns.findFirst({
       where: and(eq(campaigns.id, id), eq(campaigns.userId, userId)),
@@ -34,13 +35,13 @@ async function getCampaign(id: string) {
     
     if (!campaign) {
       if (debugCampaign) {
-        console.log('No campaign found with id:', id);
+        structuredConsole.log('No campaign found with id:', id);
       }
       return null
     }
 
     if (debugCampaign) {
-      console.log('📊 [CAMPAIGN-DEBUG] Campaign structure:', JSON.stringify({
+      structuredConsole.log('📊 [CAMPAIGN-DEBUG] Campaign structure:', JSON.stringify({
         id: campaign.id,
         name: campaign.name,
         status: campaign.status,
@@ -59,9 +60,9 @@ async function getCampaign(id: string) {
       }, null, 2));
 
       // 🔍 ADDITIONAL LOGGING: Check if multiple jobs exist for this campaign
-      console.log('🔍 [CAMPAIGN-RUNS-DEBUG] Total jobs found for campaign:', campaign.scrapingJobs?.length || 0);
+      structuredConsole.log('🔍 [CAMPAIGN-RUNS-DEBUG] Total jobs found for campaign:', campaign.scrapingJobs?.length || 0);
       campaign.scrapingJobs?.forEach((job, index) => {
-        console.log(`🏃 [RUN-${index + 1}] Job ${job.id}:`, {
+        structuredConsole.log(`🏃 [RUN-${index + 1}] Job ${job.id}:`, {
           status: job.status,
           createdAt: job.createdAt,
           platform: job.platform,
@@ -73,9 +74,9 @@ async function getCampaign(id: string) {
       const completedJobs = campaign.scrapingJobs?.filter(job => 
         job.status === 'completed'
       ) || [];
-      console.log('✅ [COMPLETED-JOBS-DEBUG] Found completed jobs:', completedJobs.length);
+      structuredConsole.log('✅ [COMPLETED-JOBS-DEBUG] Found completed jobs:', completedJobs.length);
       completedJobs.forEach((job, index) => {
-        console.log(`✅ [COMPLETED-${index + 1}] Job ${job.id}:`, {
+        structuredConsole.log(`✅ [COMPLETED-${index + 1}] Job ${job.id}:`, {
           platform: job.platform,
           createdAt: job.createdAt,
           resultsHydration: 'client-fetch'
@@ -91,7 +92,7 @@ async function getCampaign(id: string) {
       })) ?? []
     }
   } catch (error) {
-    console.error('Error fetching campaign:', error)
+    structuredConsole.error('Error fetching campaign:', error)
     throw error
   }
 }

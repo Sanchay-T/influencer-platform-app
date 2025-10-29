@@ -1,5 +1,7 @@
 'use client';
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ErrorBoundary } from '../error-boundary';
@@ -107,9 +109,9 @@ function UpgradeButtonContent({
 
       // Always use checkout for plan upgrades (cleaner UX)
       if (hasActiveSubscription || isTrialing) {
-        console.log('📡 [UPGRADE-AUDIT] Using checkout for existing subscription upgrade');
+        structuredConsole.log('📡 [UPGRADE-AUDIT] Using checkout for existing subscription upgrade');
       } else {
-        console.log('📡 [UPGRADE-AUDIT] Using checkout for new subscription');
+        structuredConsole.log('📡 [UPGRADE-AUDIT] Using checkout for new subscription');
       }
       
       // Use checkout-upgrade for all scenarios (better UX than programmatic updates)
@@ -152,7 +154,7 @@ function UpgradeButtonContent({
       try {
         // All upgrades now go through Stripe checkout for proper payment processing
         if (data.price?.displayAmount && data.price?.interval) {
-          console.log('💰 [UPGRADE-AUDIT] Redirecting to Stripe checkout', { 
+          structuredConsole.log('💰 [UPGRADE-AUDIT] Redirecting to Stripe checkout', { 
             amount: data.price.displayAmount, 
             interval: data.price.interval, 
             portal: !!data.portal,

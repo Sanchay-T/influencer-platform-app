@@ -1,19 +1,22 @@
-'use client'
+'use client';
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { X, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { toast } from "react-hot-toast";
 
 const MAX_KEYWORDS = 10;
 const MIN_SUGGEST_LENGTH = 3;
 const SUGGESTION_FETCH_DELAY = 350;
+const INSTAGRAM_HANDLE_REGEX = /^[a-z0-9._]{1,30}$/;
 
-export default function KeywordReview({ onSubmit, isLoading }) {
+// [KeywordReview] Rendered by keyword search wizard step 2 to capture keywords/handles prior to submission.
+export default function KeywordReview({ onSubmit, isLoading, platform }) {
   const [keywords, setKeywords] = useState([]);
   const [newKeyword, setNewKeyword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -24,17 +27,47 @@ export default function KeywordReview({ onSubmit, isLoading }) {
   const suggestionRegistryRef = useRef(new Set());
   const keywordsRef = useRef([]);
   const debounceRef = useRef(null);
+  const normalizedPlatform = useMemo(
+    () => (platform || '').toString().toLowerCase(),
+    [platform]
+  );
+  const isInstagramSimilarMode = useMemo(
+    () =>
+      [
+        'instagram-similar',
+        'instagram_similar',
+        'instagram similar'
+      ].includes(normalizedPlatform),
+    [normalizedPlatform]
+  );
   const availableSlots = MAX_KEYWORDS - keywords.length;
   const normalizedExisting = useMemo(
     () => keywords.map((keyword) => keyword.toLowerCase()),
     [keywords]
   );
 
+  const sanitizeInstagramHandle = (rawValue) => {
+    if (typeof rawValue !== 'string') return '';
+    return rawValue.trim().replace(/^@+/, '').toLowerCase();
+  };
+
+  const validateInstagramHandle = (handle) => {
+    if (!handle) {
+      toast.error('Please enter an Instagram handle');
+      return false;
+    }
+    if (!INSTAGRAM_HANDLE_REGEX.test(handle)) {
+      toast.error('Handles can include letters, numbers, underscores, and periods only (max 30 characters)');
+      return false;
+    }
+    return true;
+  };
+
   useEffect(() => {
     keywordsRef.current = keywords;
   }, [keywords]);
 
-  const abortSuggestionStream = (reset = false) => {
+  const abortSuggestionStream = useCallback((reset = false) => {
     if (streamControllerRef.current) {
       streamControllerRef.current.abort();
       streamControllerRef.current = null;
@@ -45,7 +78,7 @@ export default function KeywordReview({ onSubmit, isLoading }) {
       setStreamingPreview("");
     }
     setIsSuggesting(false);
-  };
+  }, []);
 
   const handleSuggestionEvent = (event) => {
     if (!event || typeof event !== 'object') return;
@@ -82,7 +115,7 @@ export default function KeywordReview({ onSubmit, isLoading }) {
 
     if (event.type === 'error') {
       const message = typeof event.message === 'string' ? event.message : 'Suggestion stream error';
-      console.warn('[KeywordSuggestions] stream error', message);
+      structuredConsole.warn('[KeywordSuggestions] stream error', message);
       toast.error(message);
       return;
     }
@@ -92,7 +125,11 @@ export default function KeywordReview({ onSubmit, isLoading }) {
     }
   };
 
-  const startSuggestionStream = (seed) => {
+  const startSuggestionStream = useCallback((seed) => {
+    if (isInstagramSimilarMode) {
+      abortSuggestionStream(true);
+      return;
+    }
     if (!seed || seed.length < MIN_SUGGEST_LENGTH || availableSlots <= 0) {
       abortSuggestionStream(true);
       return;
@@ -153,7 +190,7 @@ export default function KeywordReview({ onSubmit, isLoading }) {
                   const event = JSON.parse(payload);
                   handleSuggestionEvent(event);
                 } catch (error) {
-                  console.warn('[KeywordSuggestions] failed to parse event', error);
+                  structuredConsole.warn('[KeywordSuggestions] failed to parse event', error);
                 }
               }
             }
@@ -163,7 +200,7 @@ export default function KeywordReview({ onSubmit, isLoading }) {
         }
       } catch (error) {
         if (!controller.signal.aborted) {
-          console.warn('[KeywordSuggestions] stream failed', error);
+          structuredConsole.warn('[KeywordSuggestions] stream failed', error);
           toast.error(error instanceof Error ? error.message : 'Suggestion stream error');
         }
       } finally {
@@ -174,11 +211,16 @@ export default function KeywordReview({ onSubmit, isLoading }) {
         setStreamingPreview("");
       }
     })();
-  };
+  }, [abortSuggestionStream, availableSlots, isInstagramSimilarMode]);
 
   useEffect(() => {
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
+    }
+
+    if (isInstagramSimilarMode) {
+      abortSuggestionStream(true);
+      return;
     }
 
     if (!newKeyword || newKeyword.trim().length < MIN_SUGGEST_LENGTH || availableSlots <= 0) {
@@ -196,34 +238,57 @@ export default function KeywordReview({ onSubmit, isLoading }) {
         clearTimeout(debounceRef.current);
       }
     };
-  }, [newKeyword, availableSlots, keywords]);
+  }, [newKeyword, availableSlots, keywords, isInstagramSimilarMode, abortSuggestionStream, startSuggestionStream]);
 
   useEffect(() => () => {
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
     abortSuggestionStream();
-  }, []);
+  }, [abortSuggestionStream]);
+
+  useEffect(() => {
+    if (isInstagramSimilarMode) {
+      abortSuggestionStream(true);
+      setSuggestions([]);
+      setStreamingPreview("");
+    }
+  }, [abortSuggestionStream, isInstagramSimilarMode]);
 
   const handleAddKeyword = (e) => {
     e.preventDefault();
-    const trimmedKeyword = newKeyword.trim();
-    
+    const rawValue = newKeyword;
+    const trimmedKeyword = rawValue.trim();
+
     if (!trimmedKeyword) return;
 
-    // Check if keyword already exists (case-insensitive)
+    if (keywords.length >= MAX_KEYWORDS) {
+      toast.error(isInstagramSimilarMode ? 'Maximum number of handles reached' : 'Maximum number of keywords reached');
+      setNewKeyword("");
+      return;
+    }
+
+    if (isInstagramSimilarMode) {
+      const sanitized = sanitizeInstagramHandle(rawValue);
+      if (!validateInstagramHandle(sanitized)) {
+        return;
+      }
+      if (normalizedExisting.includes(sanitized)) {
+        toast.error('This handle is already added');
+        setNewKeyword("");
+        return;
+      }
+      setKeywords([...keywords, sanitized]);
+      setNewKeyword("");
+      return;
+    }
+
     const keywordExists = keywords.some(
       keyword => keyword.toLowerCase() === trimmedKeyword.toLowerCase()
     );
 
     if (keywordExists) {
       toast.error("This keyword already exists");
-      setNewKeyword("");
-      return;
-    }
-
-    if (keywords.length >= MAX_KEYWORDS) {
-      toast.error("Maximum number of keywords reached");
       setNewKeyword("");
       return;
     }
@@ -241,15 +306,18 @@ export default function KeywordReview({ onSubmit, isLoading }) {
 
   const handleSubmit = async () => {
     if (keywords.length === 0) {
-      toast.error("Please add at least one keyword");
+      toast.error(isInstagramSimilarMode ? 'Please add at least one Instagram handle' : 'Please add at least one keyword');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await onSubmit(keywords);
+      const payload = isInstagramSimilarMode
+        ? { usernames: keywords }
+        : { keywords };
+      await onSubmit(payload);
     } catch (error) {
-      console.warn('[KeywordReview] submission failed', error);
+      structuredConsole.warn('[KeywordReview] submission failed', error);
       toast.error(error.message || "Failed to submit campaign. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -257,6 +325,9 @@ export default function KeywordReview({ onSubmit, isLoading }) {
   };
 
   const handleSuggestionClick = (suggestion) => {
+    if (isInstagramSimilarMode) {
+      return;
+    }
     if (keywords.length >= MAX_KEYWORDS) {
       toast.error("Keyword limit reached");
       return;
@@ -279,6 +350,10 @@ export default function KeywordReview({ onSubmit, isLoading }) {
   };
 
   const handleRefreshSuggestions = () => {
+    if (isInstagramSimilarMode) {
+      toast.error('Suggestions are unavailable for Instagram handles');
+      return;
+    }
     if (!newKeyword || newKeyword.trim().length < MIN_SUGGEST_LENGTH) {
       toast.error("Type at least three characters to get suggestions");
       return;
@@ -286,17 +361,33 @@ export default function KeywordReview({ onSubmit, isLoading }) {
     startSuggestionStream(newKeyword.trim());
   };
 
+  const handleInputChange = (value) => {
+    if (isInstagramSimilarMode) {
+      const restricted = value.replace(/[^a-zA-Z0-9._@]/g, '');
+      setNewKeyword(restricted);
+      return;
+    }
+    setNewKeyword(value);
+  };
+
+  const renderKeywordLabel = (keyword) => (isInstagramSimilarMode ? `@${keyword}` : keyword);
+  const cardTitle = isInstagramSimilarMode ? 'Review Instagram Handles' : 'Review Your Keywords';
+  const inputPlaceholder = isInstagramSimilarMode ? 'Add an Instagram handle...' : 'Add a keyword...';
+  const helperCopy = isInstagramSimilarMode
+    ? 'Enter up to ten Instagram handles. We’ll remove the @ symbol and validate characters automatically.'
+    : 'You can use single words or phrases with spaces (e.g., “airpods pro”).';
+
   return (
     <Card className="bg-zinc-900/80 border border-zinc-700/50">
       <CardHeader>
-        <CardTitle>Review Your Keywords</CardTitle>
+        <CardTitle>{cardTitle}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
           <div className="flex flex-wrap gap-2">
             {keywords.map((keyword) => (
               <Badge key={keyword} variant="secondary" className="px-3 py-1">
-                {keyword}
+                {renderKeywordLabel(keyword)}
                 <button
                   onClick={() => handleRemoveKeyword(keyword)}
                   className="ml-2 hover:text-destructive"
@@ -311,24 +402,23 @@ export default function KeywordReview({ onSubmit, isLoading }) {
           <form onSubmit={handleAddKeyword} className="flex gap-2">
             <Input
               value={newKeyword}
-              onChange={(e) => setNewKeyword(e.target.value)}
-              placeholder="Add a keyword..."
+              onChange={(e) => handleInputChange(e.target.value)}
+              placeholder={inputPlaceholder}
               className="flex-1"
               disabled={isSubmitting || keywords.length >= MAX_KEYWORDS}
             />
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={isSubmitting || keywords.length >= MAX_KEYWORDS}
             >
               Add
             </Button>
           </form>
           
-          <p className="text-xs text-muted-foreground">
-            You can use single words or phrases with spaces (e.g., &ldquo;airpods pro&rdquo;).
-          </p>
+          <p className="text-xs text-muted-foreground">{helperCopy}</p>
 
-          <div className="space-y-3">
+          {!isInstagramSimilarMode && (
+            <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-medium text-zinc-200">AI Suggestions</h3>
               <Button
@@ -381,9 +471,10 @@ export default function KeywordReview({ onSubmit, isLoading }) {
                 </Badge>
               ))}
             </div>
-          </div>
+            </div>
+          )}
 
-          <Button 
+          <Button
             onClick={handleSubmit}
             className="w-full"
             disabled={isLoading || isSubmitting || keywords.length === 0}

@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
@@ -21,26 +22,26 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    console.log('🔐 [TEST-LOGIN] Attempting test login for userId:', userId);
+    structuredConsole.log('🔐 [TEST-LOGIN] Attempting test login for userId:', userId);
 
     // Verify the test user exists in database
     const testUser = await getUserProfile(userId);
 
     if (!testUser) {
-      console.error('❌ [TEST-LOGIN] Test user not found:', userId);
+      structuredConsole.error('❌ [TEST-LOGIN] Test user not found:', userId);
       return NextResponse.json({ 
         error: 'Test user not found' 
       }, { status: 404 });
     }
 
     if (!userId.startsWith('test_user_')) {
-      console.error('❌ [TEST-LOGIN] Invalid test user ID format:', userId);
+      structuredConsole.error('❌ [TEST-LOGIN] Invalid test user ID format:', userId);
       return NextResponse.json({ 
         error: 'Invalid test user ID format' 
       }, { status: 400 });
     }
 
-    console.log('✅ [TEST-LOGIN] Test user verified:', {
+    structuredConsole.log('✅ [TEST-LOGIN] Test user verified:', {
       userId: testUser.userId,
       onboardingStep: testUser.onboardingStep,
       fullName: testUser.fullName,
@@ -76,13 +77,13 @@ export async function POST(req: Request) {
       }
     };
 
-    console.log('🎯 [TEST-LOGIN] Test login setup completed');
-    console.log('📋 [TEST-LOGIN] Instructions provided for test authentication');
+    structuredConsole.log('🎯 [TEST-LOGIN] Test login setup completed');
+    structuredConsole.log('📋 [TEST-LOGIN] Instructions provided for test authentication');
 
     return NextResponse.json(authInstructions);
 
   } catch (error: any) {
-    console.error('❌ [TEST-LOGIN] Error in test login:', error);
+    structuredConsole.error('❌ [TEST-LOGIN] Error in test login:', error);
     return NextResponse.json({
       error: 'Failed to setup test login',
       details: error.message
@@ -102,7 +103,7 @@ export async function GET(req: Request) {
     const currentTestUserId = process.env.TEST_USER_ID;
     const testAuthEnabled = process.env.ENABLE_TEST_AUTH === 'true';
 
-    console.log('📊 [TEST-LOGIN-STATUS] Current test auth status:', {
+    structuredConsole.log('📊 [TEST-LOGIN-STATUS] Current test auth status:', {
       enabled: testAuthEnabled,
       currentTestUserId
     });
@@ -130,7 +131,7 @@ export async function GET(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ [TEST-LOGIN-STATUS] Error checking status:', error);
+    structuredConsole.error('❌ [TEST-LOGIN-STATUS] Error checking status:', error);
     return NextResponse.json({
       error: 'Failed to check test login status'
     }, { status: 500 });
