@@ -1452,3 +1452,66 @@
 [2025-10-28 17:30:17.154] [MODAL] [CLOSE] - Modal closeed
 [2025-10-28 17:31:17.981] [MODAL] [CLOSE] - Modal closeed
 [2025-10-28 17:31:18.080] [MODAL] [CLOSE] - Modal closeed
+[2025-11-20 17:34:52.569] [MODAL] [OPEN] - Modal opened
+[2025-11-20 17:34:52.569] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-11-20 17:34:52.569] [MODAL] [OPEN] - Modal opened
+[2025-11-20 17:34:52.606] [MODAL] [STEP_CHANGE] - Modal moved to step 1
+[2025-11-20 17:53:37.082] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-11-20 17:53:37.082] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-11-20 17:53:37.094] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-11-20 17:53:37.151] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-11-20 17:53:37.426] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-11-20 17:53:37.606] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-11-20 17:53:37.618] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-11-20 17:53:37.726] [STEP-1] [USER-INPUT] - User entered data in field: fullName
+[2025-11-20 17:53:38.685] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-11-20 17:53:38.742] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-11-20 17:53:39.064] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-11-20 17:53:39.309] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-11-20 17:53:39.552] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-11-20 17:53:39.672] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-11-20 17:53:39.683] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-11-20 17:53:39.794] [STEP-1] [USER-INPUT] - User entered data in field: businessName
+[2025-11-20 17:53:41.431] [STEP-1] [FORM-VALIDATION] - Starting step 1 form validation
+[2025-11-20 17:53:42.678] [STEP-1] [FORM-SUBMIT] - Step 1 form submission started
+[2025-11-20 17:53:42.678] [API] [API-CALL-START] - Making API call to /api/onboarding/step-1
+[2025-11-20 17:53:44.026] [API] [API-RESPONSE] - Received response from /api/onboarding/step-1
+[2025-11-20 17:53:44.041] [STEP-1] [FORM-SUCCESS] - Step 1 completed successfully
+[2025-11-20 17:53:44.041] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 1 to step 2
+[2025-11-20 17:53:44.055] [MODAL] [OPEN] - Modal opened
+[2025-11-20 17:53:44.056] [MODAL] [STEP_CHANGE] - Modal moved to step 2
+[2025-11-20 17:53:44.828] [STEP-2] [EXAMPLE-SELECTED] - User selected example prompt
+[2025-11-20 17:53:45.567] [STEP-2] [FORM-SUBMIT] - Step 2 form submission started
+[2025-11-20 17:53:45.574] [STEP-2] [FORM-VALIDATION] - Starting step 2 form validation
+[2025-11-20 17:53:45.574] [API] [API-CALL-START] - Making API call to /api/onboarding/step-2
+[2025-11-20 17:53:46.375] [STEP-2] [FORM-SUCCESS] - Step 2 completed successfully
+[2025-11-20 17:53:46.400] [API] [API-RESPONSE] - Received response from /api/onboarding/step-2
+[2025-11-20 17:53:46.400] [NAVIGATION] [STEP-ADVANCE] - User advanced from step 2 to step 3
+[2025-11-20 17:53:46.420] [MODAL] [STEP_CHANGE] - Modal moved to step 3
+[2025-11-20 17:53:46.431] [MODAL] [OPEN] - Modal opened
+[2025-11-20 17:53:48.226] [STEP-3] [BILLING-CYCLE-CHANGE] - User changed billing cycle
+[2025-11-20 17:53:49.223] [STEP-3] [PLAN-SELECT] - User selected a plan
+[2025-11-20 17:53:50.116] [STEP-3] [TRIAL-START-ATTEMPT] - User clicked start trial button
+[2025-11-20 17:53:50.123] [API] [API-CALL-START] - Making API call to save selected plan
+[2025-11-20 17:53:50.723] [API] [API-RESPONSE] - Received response from save-plan API
+[2025-11-20 17:53:52.088] [API] [API-CALL-START] - Making API call to create Stripe checkout
+[2025-11-20 17:53:52.088] [PAYMENT] [PLAN-SAVED] - Plan selection saved successfully
+[2025-11-20 17:53:53.221] [API] [API-RESPONSE] - Received response from Stripe checkout API
+[2025-11-20 17:53:53.227] [PAYMENT] [STRIPE-REDIRECT] - Redirecting user to Stripe checkout
+[2025-11-20 17:54:35.434] [MODAL] [CLOSE] - Modal closeed
+[2025-11-20 17:54:35.458] [MODAL] [CLOSE] - Modal closeed
+[2025-11-20 17:54:47.461] [MODAL] [CLOSE] - Modal closeed
+[2025-11-20 17:54:47.480] [MODAL] [CLOSE] - Modal closeed
+[2025-11-20 17:55:20.146] [MODAL] [CLOSE] - Modal closeed
+[2025-11-20 17:55:20.196] [MODAL] [CLOSE] - Modal closeed
+[2025-11-20 18:02:03.983] [MODAL] [CLOSE] - Modal closeed
+[2025-11-20 18:02:14.379] [MODAL] [CLOSE] - Modal closeed
+[2025-11-20 18:02:17.185] [MODAL] [CLOSE] - Modal closeed
+[2025-11-20 18:02:18.187] [MODAL] [CLOSE] - Modal closeed
+[2025-11-20 18:02:18.187] [MODAL] [CLOSE] - Modal closeed
+[2025-11-20 18:02:36.701] [MODAL] [CLOSE] - Modal closeed
+[2025-11-20 18:02:36.717] [MODAL] [CLOSE] - Modal closeed
+[2025-11-20 18:51:38.746] [MODAL] [CLOSE] - Modal closeed
+[2025-11-20 18:51:38.746] [MODAL] [CLOSE] - Modal closeed
+[2025-11-20 18:51:40.612] [MODAL] [CLOSE] - Modal closeed
+[2025-11-20 18:51:40.612] [MODAL] [CLOSE] - Modal closeed

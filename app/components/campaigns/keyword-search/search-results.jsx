@@ -597,7 +597,7 @@ const SearchResults = ({ searchData }) => {
     setProgressInfo(null);
 
     const cached = resultsCacheRef.current.get(cacheKey);
-    if (cached && cached.length) {
+   if (cached && cached.length) {
       setCreators(cached);
       setIsLoading(false);
       setIsFetching(true);

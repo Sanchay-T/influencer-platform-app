@@ -127,6 +127,8 @@ export default function KeywordSearch() {
         normalizedPlatform === 'instagram_similar'
       ) {
         apiEndpoint = '/api/scraping/instagram';
+      } else if (normalizedPlatform === 'instagram_scrapecreators') {
+        apiEndpoint = '/api/scraping/instagram-scrapecreators';
       } else if (
         normalizedPlatform === 'instagram' ||
         normalizedPlatform === 'instagram_us_reels' ||
@@ -164,6 +166,9 @@ export default function KeywordSearch() {
       const nextPlatform = (() => {
         if (hasUsernames) {
           return 'instagram-similar';
+        }
+        if (normalizedPlatform === 'instagram_scrapecreators') {
+          return 'instagram_scrapecreators';
         }
         if (
           normalizedPlatform === 'instagram' ||

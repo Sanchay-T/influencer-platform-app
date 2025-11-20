@@ -62,7 +62,6 @@ export default function KeywordSearchForm({ onSubmit }) {
 
     // Asegurarnos de que creatorsCount sea un número
     const numericCreatorsCount = Number(creatorsCount);
-
     // Pasar el campaignId si existe
     onSubmit({
       platforms: [selectedPlatform],
@@ -79,7 +78,12 @@ export default function KeywordSearchForm({ onSubmit }) {
     { value: "tiktok", label: "TikTok" },
     { value: "instagram", label: "Instagram", badge: "US" },
     { value: "youtube", label: "YouTube" },
+    { value: "instagram_scrapecreators", label: "Instagram Reels (ScrapeCreators)", badge: "API" },
   ];
+  const sliderMin = 100;
+  const sliderMax = 1000;
+  const sliderStep = 100;
+  const sliderMarks = [100, 500, 1000];
 
   return (
     <div className="rounded-lg text-card-foreground shadow-sm bg-zinc-900/80 border border-zinc-700/50">
@@ -140,13 +144,13 @@ export default function KeywordSearchForm({ onSubmit }) {
             <Slider
               value={[creatorsCount]}
               onValueChange={([value]) => setCreatorsCount(value)}
-              min={100}
-              max={1000}
-              step={100}
+              min={sliderMin}
+              max={sliderMax}
+              step={sliderStep}
               className="py-4"
             />
             <div className="flex justify-between text-md text-muted-foreground">
-              {[100, 500, 1000].map((value) => (
+              {sliderMarks.map((value) => (
                 <span
                   key={value}
                   className={creatorsCount === value ? "font-black" : ""}

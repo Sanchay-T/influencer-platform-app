@@ -177,7 +177,7 @@ export async function runTikTokKeywordProvider(
   }
 
   const maxApiCalls = Math.max(config.maxApiCalls, 1);
-  const targetResults = job.targetResults && job.targetResults > 0 ? job.targetResults : Math.max(100, keywords.length * 100);
+  const targetResults = job.targetResults && job.targetResults > 0 ? job.targetResults : Infinity;
   const region = job.region || 'US';
 
   await service.markProcessing();
@@ -222,7 +222,7 @@ export async function runTikTokKeywordProvider(
     let cursor = 0;
     let localHasMore = true;
 
-    while (localHasMore && processedResults < targetResults && metrics.apiCalls < maxApiCalls) {
+    while (localHasMore && processedResults < targetResults) {
       const batchStarted = Date.now();
       const { items, hasMore: batchHasMore } = await fetchKeywordPage(keyword, cursor, region);
       metrics.apiCalls += 1;
@@ -269,10 +269,6 @@ export async function runTikTokKeywordProvider(
 
       localHasMore = batchHasMore && items.length > 0;
       if (!localHasMore) {
-        break;
-      }
-
-      if (metrics.apiCalls >= maxApiCalls) {
         break;
       }
 

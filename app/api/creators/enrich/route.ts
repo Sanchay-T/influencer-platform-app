@@ -98,10 +98,16 @@ export async function POST(request: Request) {
       const status = error.status >= 500 ? 502 : Math.max(error.status, 400);
       logger.error('Influencers.Club enrichment API failed', error, {
         status: error.status,
+        payload: error.payload,
       });
+      const payload = error.payload as any;
+      const detail =
+        (payload && typeof payload.detail === 'string' && payload.detail) ||
+        (payload && typeof payload.message === 'string' && payload.message) ||
+        error.message;
       return NextResponse.json({
         error: 'ENRICHMENT_FAILED',
-        message: 'Unable to enrich creator at this time. Please retry later.',
+        message: detail || 'Unable to enrich creator at this time. Please retry later.',
         statusCode: error.status,
       }, { status });
     }

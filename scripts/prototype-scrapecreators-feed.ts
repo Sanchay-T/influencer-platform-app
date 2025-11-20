@@ -326,8 +326,7 @@ async function fetchProfile(handle: string): Promise<ProfilePayload | null> {
       return json?.data?.user ?? null;
     } catch (error: any) {
       console.warn(
-        `[profile] ${handle} error on attempt ${attempt}: ${
-          error?.message ?? error
+        `[profile] ${handle} error on attempt ${attempt}: ${error?.message ?? error
         }`,
       );
       if (attempt === 3) return null;
@@ -477,7 +476,7 @@ async function fetchSerpHandles(params: {
 }): Promise<string[]> {
   const apiKey = requireEnv('SERP_API_KEY');
   const site = (params.site ?? SERP_DEFAULT_SITE).trim() || SERP_DEFAULT_SITE;
-  const limit = Math.min(Math.max(params.limit ?? 10, 1), 40);
+  const limit = Math.max(params.limit ?? 10, 1);
   const scopedQuery = normalizeSerpQuery(params.query, site);
   const location = (params.location ?? SERP_DEFAULT_LOCATION).trim();
   const googleDomain = params.googleDomain?.trim() ?? '';

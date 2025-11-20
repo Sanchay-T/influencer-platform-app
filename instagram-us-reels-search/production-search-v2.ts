@@ -62,15 +62,13 @@ async function discoverURLs(keyword: string): Promise<string[]> {
       const links = (data?.organic || []).filter((r: any) => r.link?.includes('/reel/'));
       console.log(`   Found ${links.length} reels`);
       links.forEach((r: any) => urls.add(r.link.split('?')[0]));
-      if (urls.size >= 50) break;
-      await new Promise(r => setTimeout(r, 1000));
     } catch (error: any) {
       console.error(`   Error: ${error.message || error}`);
     }
   }
 
   console.log(`   ✓ Found ${urls.size} URLs\n`);
-  return Array.from(urls).slice(0, 50);
+  return Array.from(urls);
 }
 
 // -------- ScrapeCreators: Fetch Data + Transcript --------
@@ -335,11 +333,11 @@ function shuffle(reels: Reel[]): Reel[] {
 }
 
 // -------- MAIN PIPELINE --------
-export async function productionSearchV2(keyword: string) {
+export async function productionSearchV2(keyword: string, targetCount: number = 60) {
   console.log(`\n${"=".repeat(70)}`);
   console.log(`🚀 PRODUCTION SEARCH V2: ${keyword}`);
   console.log(`   Strategy: Keyword matching (transcript + caption + bio) + AI`);
-  console.log(`   Target: 50-60 highly relevant US-based reels`);
+  console.log(`   Target: ~${targetCount} highly relevant US-based reels`);
   console.log(`${"=".repeat(70)}`);
 
   // Step 1: SERP
@@ -429,8 +427,13 @@ export async function productionSearchV2(keyword: string) {
     .map(r => r.handle);
   const uniqueUS = Array.from(new Set(usCreators));
 
-  console.log(`🚀 Step 5: Expanding from ${uniqueUS.length} US creators`);
-  const expandedURLs = await fetchFromCreators(uniqueUS.slice(0, 15), 8);
+  // Dynamic expansion based on targetCount
+  // If target is high, use more creators and fetch more reels per creator
+  const expansionCreatorCount = Math.max(15, Math.ceil(targetCount / 3));
+  const reelsPerCreator = Math.max(8, Math.ceil(targetCount / 5));
+
+  console.log(`🚀 Step 5: Expanding from ${Math.min(uniqueUS.length, expansionCreatorCount)} US creators (Target: ${targetCount})`);
+  const expandedURLs = await fetchFromCreators(uniqueUS.slice(0, expansionCreatorCount), reelsPerCreator);
   console.log(`   ✓ Got ${expandedURLs.length} additional URLs\n`);
 
   // Fetch expanded (with keyword matching)
@@ -473,8 +476,8 @@ export async function productionSearchV2(keyword: string) {
       return b.usConfidence - a.usConfidence;
     });
 
-  // Limit per creator
-  const perCreatorLimit = 3;
+  // Limit per creator - scale with targetCount
+  const perCreatorLimit = Math.max(3, Math.ceil(targetCount / 20));
   const limited: Reel[] = [];
   const creatorCounts = new Map<string, number>();
 
@@ -489,7 +492,7 @@ export async function productionSearchV2(keyword: string) {
   console.log(`   Unique creators: ${creatorCounts.size}`);
   console.log(`   Reels after limit (${perCreatorLimit}/creator): ${limited.length}`);
 
-  const final = shuffle(limited).slice(0, 60);
+  const final = shuffle(limited);
 
   console.log(`${"=".repeat(70)}`);
   console.log(`✨ FINAL: ${final.length} highly relevant US-based reels`);
@@ -507,6 +510,8 @@ export async function productionSearchV2(keyword: string) {
 if (process.argv[1]?.includes('production-search-v2.ts')) {
   const keyword = process.argv.slice(2).join(" ") || "nutrition";
 
+  // Simple CLI arg parsing for target count if provided as last arg number
+  // But for now just default to 60 or whatever
   productionSearchV2(keyword)
     .then(async (results) => {
       console.log(`📋 RESULTS:\n`);

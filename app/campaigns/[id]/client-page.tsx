@@ -176,6 +176,8 @@ const resolveScrapingEndpoint = (platform?: string) => {
   const normalized = (platform || '').toLowerCase()
 
   switch (normalized) {
+    case 'instagram_scrapecreators':
+      return '/api/scraping/instagram-scrapecreators'
     case 'instagram_us_reels':
     case 'instagram-us-reels':
     case 'instagram us reels':
