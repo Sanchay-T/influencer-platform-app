@@ -14,6 +14,10 @@ This root file is the entry point. Each major folder has its own CLAUDE.md that 
 
 ```
 CLAUDE.md (you are here)
+├── TESTING.md             → TDD workflow, test templates, testing guide ⭐
+├── CONSTRAINTS.md         → Hard rules that must never be violated
+├── DECISIONS.md           → Decision trees for common scenarios
+├── AGENT_OPTIMIZATION.md  → Agent coding optimization system
 ├── app/CLAUDE.md          → Frontend pages, layouts, API routes
 │   └── app/api/CLAUDE.md  → All backend API endpoints
 ├── lib/CLAUDE.md          → Core business logic, services, utilities
@@ -108,8 +112,56 @@ Secrets live in `.env.local` (never commit). Key variables:
 
 ---
 
+## Test-Driven Development (TDD) — MANDATORY
+
+**Every new feature MUST follow the TDD workflow.** See `TESTING.md` for complete guide.
+
+### The Red-Green-Refactor Cycle
+
+```
+1. RED    → Write a failing test first
+2. GREEN  → Write minimal code to pass
+3. REFACTOR → Clean up while tests pass
+```
+
+### Quick Test Commands
+
+```bash
+# Run all tests
+npm test
+
+# Run specific test file
+node --test lib/services/__tests__/plan-validator.test.ts
+
+# Run tests matching pattern
+node --test --test-name-pattern="validateCampaignCreation"
+```
+
+### Test File Location Rules
+
+| Code Location | Test Location |
+|---------------|---------------|
+| `lib/services/billing-service.ts` | `lib/services/__tests__/billing-service.test.ts` |
+| `app/api/campaigns/route.ts` | `app/api/campaigns/__tests__/route.test.ts` |
+| `lib/search-engine/runner.ts` | `lib/search-engine/__tests__/runner.test.ts` |
+
+### Agent TDD Checklist (Before Every Feature)
+
+```
+□ 1. Read TESTING.md for patterns
+□ 2. Find existing tests in same area
+□ 3. Write failing test FIRST
+□ 4. Implement minimal code to pass
+□ 5. Refactor if needed
+□ 6. Run full test suite
+□ 7. Commit tests WITH implementation
+```
+
+---
+
 ## What NOT To Do
 
+- **Never** skip writing tests — TDD is mandatory for all new features
 - **Never** use `console.log` — use `lib/logging` loggers
 - **Never** modify `lib/db/schema.ts` without running `db:generate` + `db:migrate`
 - **Never** query user data without using `getUserProfile()` — it handles the 5-table join
@@ -120,9 +172,16 @@ Secrets live in `.env.local` (never commit). Key variables:
 
 ## Next Steps
 
-For deeper understanding, read these CLAUDE.md files in order:
+### Before Writing Any Code
+1. `TESTING.md` — **READ FIRST** - TDD workflow and test templates
+2. `CONSTRAINTS.md` — Hard rules you must never violate
+3. `DECISIONS.md` — Decision trees for common choices
+
+### For Understanding the Codebase
 1. `app/CLAUDE.md` — Frontend structure and pages
 2. `lib/CLAUDE.md` — Core business logic
 3. `scripts/CLAUDE.md` — CLI tools for development and testing
 
-For the complete historical context and detailed architecture decisions, see `.claude/CLAUDE.md`.
+### For Advanced Optimization
+- `AGENT_OPTIMIZATION.md` — Complete agent coding system
+- `.claude/CLAUDE.md` — Extended project memory and architecture decisions
