@@ -12,6 +12,8 @@ import IntermediateList from './search-progress-intermediate-list'
 import {
   MAX_AUTH_RETRIES,
   MAX_GENERAL_RETRIES,
+  FRONTEND_TIMEOUT_MS,
+  STALL_DETECTION_MS,
   buildEndpoint,
   clampProgress,
   computeStage,
@@ -55,12 +57,20 @@ export default function SearchProgress({
   const [processingSpeed, setProcessingSpeed] = useState(0)
   const [showIntermediateResults, setShowIntermediateResults] = useState(false)
   const [intermediateCreators, setIntermediateCreators] = useState([])
+  // New: Track retry attempts for user visibility
+  const [retryInfo, setRetryInfo] = useState({ authRetries: 0, generalRetries: 0, isRetrying: false })
+  // New: Track stall/timeout state for user visibility
+  const [stallWarning, setStallWarning] = useState(false)
+  const [frontendTimeout, setFrontendTimeout] = useState(false)
 
   const pollTimeoutRef = useRef(null)
   const startTimeRef = useRef(Date.now())
   const lastCreatorCountRef = useRef(0)
   const authRetryRef = useRef(0)
   const generalRetryRef = useRef(0)
+  // New: Track when progress last changed for stall detection
+  const lastProgressRef = useRef(0)
+  const lastProgressTimeRef = useRef(Date.now())
 
   const clearPollTimeout = useCallback(() => {
     if (pollTimeoutRef.current) {
@@ -131,8 +141,15 @@ export default function SearchProgress({
 
         if (response.status === 401) {
           authRetryRef.current += 1
+          // Show retry info to user
+          setRetryInfo({
+            authRetries: authRetryRef.current,
+            generalRetries: generalRetryRef.current,
+            isRetrying: true
+          })
           if (authRetryRef.current >= MAX_AUTH_RETRIES) {
             setError('We lost your session. Please refresh the page and sign in again.')
+            setRetryInfo(prev => ({ ...prev, isRetrying: false }))
             clearPollTimeout()
             return
           }
@@ -150,8 +167,15 @@ export default function SearchProgress({
 
         if (!response.ok) {
           generalRetryRef.current += 1
+          // Show retry info to user
+          setRetryInfo({
+            authRetries: authRetryRef.current,
+            generalRetries: generalRetryRef.current,
+            isRetrying: true
+          })
           setError(`Temporary issue fetching progress (${response.status})`)
           if (generalRetryRef.current >= MAX_GENERAL_RETRIES) {
+            setRetryInfo(prev => ({ ...prev, isRetrying: false }))
             clearPollTimeout()
             return
           }
@@ -163,6 +187,8 @@ export default function SearchProgress({
         authRetryRef.current = 0
         generalRetryRef.current = 0
         setError(null)
+        // Clear retry info on successful response
+        setRetryInfo({ authRetries: 0, generalRetries: 0, isRetrying: false })
 
         if (typeof onMeta === 'function' && data?.metadata) {
           onMeta(data.metadata)
@@ -183,6 +209,31 @@ export default function SearchProgress({
         const elapsedSeconds = Math.max(1, (Date.now() - startTimeRef.current) / 1000)
         if (jobProcessed > 0) {
           setProcessingSpeed(Math.round((jobProcessed / elapsedSeconds) * 60))
+        }
+
+        // Stall/timeout detection
+        const now = Date.now()
+        const totalElapsed = now - startTimeRef.current
+
+        // Check if progress has changed
+        if (jobProgress !== lastProgressRef.current) {
+          lastProgressRef.current = jobProgress
+          lastProgressTimeRef.current = now
+          setStallWarning(false)
+        } else {
+          // Progress hasn't changed - check for stall
+          const timeSinceLastProgress = now - lastProgressTimeRef.current
+          if (timeSinceLastProgress > STALL_DETECTION_MS && !stallWarning) {
+            setStallWarning(true)
+          }
+        }
+
+        // Check for frontend timeout
+        if (totalElapsed > FRONTEND_TIMEOUT_MS && jobStatus === 'processing') {
+          setFrontendTimeout(true)
+          setError('Search is taking longer than expected. The job may have stalled.')
+          clearPollTimeout()
+          return
         }
 
         if (typeof onProgress === 'function') {
@@ -237,8 +288,15 @@ export default function SearchProgress({
           return
         }
         generalRetryRef.current += 1
+        // Show retry info to user for network errors
+        setRetryInfo({
+          authRetries: authRetryRef.current,
+          generalRetries: generalRetryRef.current,
+          isRetrying: true
+        })
         setError('Network error while polling progress')
         if (generalRetryRef.current >= MAX_GENERAL_RETRIES) {
+          setRetryInfo(prev => ({ ...prev, isRetrying: false }))
           clearPollTimeout()
           return
         }
@@ -266,9 +324,14 @@ export default function SearchProgress({
     lastCreatorCountRef.current = 0
     authRetryRef.current = 0
     generalRetryRef.current = 0
+    // Reset stall detection refs
+    lastProgressRef.current = 0
+    lastProgressTimeRef.current = Date.now()
 
     setStatus('processing')
     setProgress(0)
+    setStallWarning(false)
+    setFrontendTimeout(false)
     setDisplayProgress(0)
     setProcessedResults(0)
     setTargetResults(0)
@@ -331,11 +394,13 @@ export default function SearchProgress({
 
   const statusTitle = status === 'completed'
     ? 'Campaign completed'
-    : status === 'timeout'
-      ? 'Campaign timed out'
+    : status === 'timeout' || frontendTimeout
+      ? 'Search timed out'
       : error
         ? 'Connection issue'
-        : 'Processing search'
+        : stallWarning
+          ? 'Search may be stalled'
+          : 'Processing search'
 
   return (
     <div className="w-full max-w-md mx-auto">
@@ -343,10 +408,12 @@ export default function SearchProgress({
         <div className="flex flex-col items-center gap-2 text-center">
           {status === 'completed' ? (
             <CheckCircle2 className="h-6 w-6 text-primary" />
-          ) : status === 'timeout' ? (
+          ) : status === 'timeout' || frontendTimeout ? (
             <AlertCircle className="h-6 w-6 text-amber-500" />
           ) : error ? (
             <RefreshCcw className="h-6 w-6 text-zinc-200" />
+          ) : stallWarning ? (
+            <AlertCircle className="h-6 w-6 text-amber-400 animate-pulse" />
           ) : (
             <Loader2 className="h-6 w-6 animate-spin text-zinc-300" />
           )}
@@ -354,8 +421,19 @@ export default function SearchProgress({
           <h2 className="text-xl font-medium text-zinc-100 mt-2">{statusTitle}</h2>
 
           {error ? (
-            <p className="text-sm text-zinc-400">
-              {error}
+            <div className="text-center">
+              <p className="text-sm text-zinc-400">
+                {error}
+              </p>
+              {retryInfo.isRetrying && (
+                <p className="text-xs text-amber-400 mt-1">
+                  Retrying... (attempt {retryInfo.generalRetries + retryInfo.authRetries}/{MAX_GENERAL_RETRIES + MAX_AUTH_RETRIES})
+                </p>
+              )}
+            </div>
+          ) : stallWarning ? (
+            <p className="text-sm text-amber-400">
+              Progress hasn't changed in 2 minutes. Still waiting...
             </p>
           ) : recovery ? (
             <p className="text-sm text-zinc-400">{recovery}</p>

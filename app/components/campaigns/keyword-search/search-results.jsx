@@ -1009,10 +1009,10 @@ const SearchResults = ({ searchData }) => {
     if (waitingForResults) {
       return (
         <>
-          {/* Keep polling even while showing the minimal loader */}
+          {/* Show real progress UI instead of hiding it */}
           {shouldPoll && (
-            <div className="hidden" aria-hidden="true">
-              <SearchProgress 
+            <div className="w-full">
+              <SearchProgress
                 jobId={searchData.jobId}
                 platform={searchData.selectedPlatform || searchData.platform}
                 searchData={searchData}
@@ -1033,10 +1033,13 @@ const SearchResults = ({ searchData }) => {
               />
             </div>
           )}
-          <div className="flex flex-col items-center justify-center min-h-[240px] text-sm text-zinc-400 gap-2">
-            <PinkSpinner size="h-4 w-4" label="Loading results" />
-            Waiting for results...
-          </div>
+          {/* Fallback if shouldPoll is false but we're still waiting */}
+          {!shouldPoll && (
+            <div className="flex flex-col items-center justify-center min-h-[240px] text-sm text-zinc-400 gap-2">
+              <PinkSpinner size="h-4 w-4" label="Loading results" />
+              Initializing search...
+            </div>
+          )}
         </>
       );
     }

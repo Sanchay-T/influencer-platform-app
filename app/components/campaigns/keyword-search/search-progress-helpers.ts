@@ -2,6 +2,10 @@
 
 export const MAX_AUTH_RETRIES = 6
 export const MAX_GENERAL_RETRIES = 4
+// Frontend timeout: 5 minutes of no progress before showing timeout warning
+export const FRONTEND_TIMEOUT_MS = 5 * 60 * 1000
+// Stall detection: if progress doesn't change for 2 minutes, show warning
+export const STALL_DETECTION_MS = 2 * 60 * 1000
 
 // [ResultShape] Normalises API payloads so downstream consumers always see an array of creators
 export function flattenCreators(results: any) {

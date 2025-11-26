@@ -2,7 +2,7 @@
 
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,6 +15,51 @@ import PaymentStep from './payment-step';
 import OnboardingLogger from '@/lib/utils/onboarding-logger';
 import { useUser } from '@clerk/nextjs';
 
+// Storage key for persisting onboarding progress
+const ONBOARDING_STORAGE_KEY = 'gemz_onboarding_progress';
+
+interface OnboardingProgress {
+  step: number;
+  fullName: string;
+  businessName: string;
+  brandDescription: string;
+  lastUpdated: string;
+}
+
+function saveOnboardingProgress(progress: OnboardingProgress) {
+  try {
+    localStorage.setItem(ONBOARDING_STORAGE_KEY, JSON.stringify(progress));
+  } catch (e) {
+    // localStorage may not be available
+  }
+}
+
+function loadOnboardingProgress(): OnboardingProgress | null {
+  try {
+    const stored = localStorage.getItem(ONBOARDING_STORAGE_KEY);
+    if (stored) {
+      const progress = JSON.parse(stored) as OnboardingProgress;
+      // Only use saved progress if less than 24 hours old
+      const lastUpdated = new Date(progress.lastUpdated);
+      const hoursSinceUpdate = (Date.now() - lastUpdated.getTime()) / (1000 * 60 * 60);
+      if (hoursSinceUpdate < 24) {
+        return progress;
+      }
+    }
+  } catch (e) {
+    // localStorage may not be available
+  }
+  return null;
+}
+
+function clearOnboardingProgress() {
+  try {
+    localStorage.removeItem(ONBOARDING_STORAGE_KEY);
+  } catch (e) {
+    // localStorage may not be available
+  }
+}
+
 interface OnboardingModalProps {
   isOpen: boolean;
   onComplete: () => void;
@@ -26,22 +71,63 @@ interface OnboardingModalProps {
   };
 }
 
-export default function OnboardingModal({ 
-  isOpen, 
-  onComplete, 
+export default function OnboardingModal({
+  isOpen,
+  onComplete,
   initialStep = 1,
-  existingData 
+  existingData
 }: OnboardingModalProps) {
   const { user } = useUser();
-  const [step, setStep] = useState(initialStep);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [sessionId] = useState(OnboardingLogger.generateSessionId());
-  
-  // Form data
-  const [fullName, setFullName] = useState(existingData?.fullName || '');
-  const [businessName, setBusinessName] = useState(existingData?.businessName || '');
-  const [brandDescription, setBrandDescription] = useState(existingData?.brandDescription || '');
+
+  // Initialize state from localStorage or props
+  const [step, setStep] = useState(() => {
+    const saved = loadOnboardingProgress();
+    return saved?.step || initialStep;
+  });
+
+  // Form data - restore from localStorage if available
+  const [fullName, setFullName] = useState(() => {
+    const saved = loadOnboardingProgress();
+    return saved?.fullName || existingData?.fullName || '';
+  });
+  const [businessName, setBusinessName] = useState(() => {
+    const saved = loadOnboardingProgress();
+    return saved?.businessName || existingData?.businessName || '';
+  });
+  const [brandDescription, setBrandDescription] = useState(() => {
+    const saved = loadOnboardingProgress();
+    return saved?.brandDescription || existingData?.brandDescription || '';
+  });
+
+  // Persist progress to localStorage whenever state changes
+  useEffect(() => {
+    if (isOpen && step < 4) {
+      saveOnboardingProgress({
+        step,
+        fullName,
+        businessName,
+        brandDescription,
+        lastUpdated: new Date().toISOString()
+      });
+    }
+  }, [isOpen, step, fullName, businessName, brandDescription]);
+
+  // Prevent ESC key from closing the modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        e.preventDefault();
+        e.stopPropagation();
+        toast.error('Please complete onboarding to continue');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [isOpen]);
 
   // Log modal lifecycle events
   useEffect(() => {
@@ -307,8 +393,12 @@ export default function OnboardingModal({
       }, sessionId);
 
       toast.success('Welcome to Gemz! 🎉');
+
+      // Clear persisted progress since onboarding is complete
+      clearOnboardingProgress();
+
       onComplete();
-      
+
       await OnboardingLogger.logModalEvent('CLOSE', 4, user?.id, {
         reason: 'COMPLETION_SUCCESS',
         finalData: data
@@ -341,9 +431,22 @@ export default function OnboardingModal({
     "Tech startup building productivity apps. We're seeking tech reviewers, productivity experts, and entrepreneurs who create content about business tools and efficiency."
   ];
 
+  // Handle backdrop click - prevent dismissal during onboarding
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Only trigger if clicking directly on the backdrop (not the modal content)
+    if (e.target === e.currentTarget) {
+      e.preventDefault();
+      e.stopPropagation();
+      toast.error('Please complete onboarding to continue');
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div
+      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+      onClick={handleBackdropClick}
+    >
+      <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         {/* Progress indicator */}
         <div className="mb-6">
           <div className="flex items-center justify-center space-x-2 mb-4">

@@ -27,7 +27,10 @@ export default async function DashboardPage() {
     userProfile = null;
   }
 
-  const showOnboarding = userProfile?.onboardingStep === 'pending';
+  // Show onboarding modal for ANY incomplete state (not just 'pending')
+  // This fixes bug where users get stuck if they refresh mid-onboarding
+  // Valid incomplete states: 'pending', 'info_captured', 'step_2_info', null, undefined
+  const showOnboarding = userProfile?.onboardingStep !== 'completed';
 
   return (
     <DashboardPageClient

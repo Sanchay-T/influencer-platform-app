@@ -22,15 +22,21 @@ export async function GET() {
     return NextResponse.json({ allowed: true });
   } catch (err) {
     // Log the error with full context for debugging
-    logger.error('Campaign creation validation failed - failing open', err instanceof Error ? err : new Error(String(err)), {
+    // SECURITY FIX: Fail-closed instead of fail-open to prevent limit bypass
+    logger.error('Campaign creation validation failed - failing closed for security', err instanceof Error ? err : new Error(String(err)), {
       errorType: err instanceof Error ? err.constructor.name : typeof err,
       message: err instanceof Error ? err.message : String(err),
       stack: err instanceof Error ? err.stack : undefined,
-      failureMode: 'fail-open',
-      securityNote: 'Failing open allows campaign creation despite validation failure'
+      failureMode: 'fail-closed',
+      securityNote: 'Failing closed prevents users from bypassing limits during service errors'
     });
 
     structuredConsole.error('[CAN-CREATE-CAMPAIGN] error', err);
-    return NextResponse.json({ allowed: true }); // fail-open to avoid blocking
+    // SECURITY: Return allowed: false on errors to prevent limit bypass attacks
+    return NextResponse.json({
+      allowed: false,
+      message: 'Unable to verify campaign limits. Please try again.',
+      error: 'SERVICE_TEMPORARILY_UNAVAILABLE'
+    }, { status: 503 });
   }
 }
