@@ -3,7 +3,18 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ExternalLink, User, LayoutGrid, Table2, MailCheck, Youtube, Sparkles, RefreshCw } from "lucide-react";
+import { ExternalLink, User, LayoutGrid, Table2, MailCheck, Youtube, Sparkles, RefreshCw, Info } from "lucide-react";
+import toast from "react-hot-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -14,6 +25,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { AddToListButton } from "@/components/lists/add-to-list-button";
 import { dedupeCreators } from "../utils/dedupe-creators";
 import { useCreatorEnrichment } from "./useCreatorEnrichment";
+import {
+  filterCreatorsByLikes,
+  filterCreatorsByViews,
+  MIN_LIKES_THRESHOLD,
+  MIN_VIEWS_THRESHOLD,
+} from "@/lib/search-engine/utils/filter-creators";
 import {
   Table,
   TableBody,
@@ -305,6 +322,210 @@ const ensureImageUrl = (value) => {
   return normalized;
 };
 
+// Expandable Bio + Links cell component
+const BioLinksCell = ({ bio, bioLinks = [], externalUrl }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const hasBio = bio && bio.trim().length > 0;
+  const hasLinks = Array.isArray(bioLinks) && bioLinks.length > 0;
+  const hasExternalUrl = externalUrl && externalUrl.trim().length > 0;
+  const hasContent = hasBio || hasLinks || hasExternalUrl;
+
+  // Check if bio is long enough to need expansion (more than ~80 chars or has newlines)
+  const needsExpansion = hasBio && (bio.length > 80 || bio.includes('\n'));
+
+  // Extract domain from URL for display
+  const extractDomain = (url) => {
+    try {
+      const parsed = new URL(url.startsWith('http') ? url : `https://${url}`);
+      return parsed.hostname.replace('www.', '');
+    } catch {
+      return url;
+    }
+  };
+
+  if (!hasContent) {
+    return <span className="text-sm text-zinc-500">No bio</span>;
+  }
+
+  return (
+    <div className="space-y-2">
+      {/* Bio text */}
+      {hasBio && (
+        <div className="relative">
+          <p
+            className={cn(
+              "text-sm text-zinc-300 whitespace-pre-wrap break-words",
+              !isExpanded && needsExpansion && "line-clamp-2"
+            )}
+          >
+            {bio}
+          </p>
+          {needsExpansion && (
+            <button
+              type="button"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="text-xs text-pink-400 hover:text-pink-300 hover:underline mt-1"
+            >
+              {isExpanded ? '← Show less' : 'Show more →'}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Bio links as chips */}
+      {(hasLinks || hasExternalUrl) && (
+        <div className="flex flex-wrap gap-1.5">
+          {/* External URL first if not in bioLinks */}
+          {hasExternalUrl && !bioLinks.some(link => link.url === externalUrl) && (
+            <a
+              href={externalUrl.startsWith('http') ? externalUrl : `https://${externalUrl}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-pink-300 hover:border-pink-500/50 transition-colors"
+              title={externalUrl}
+            >
+              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+              {extractDomain(externalUrl)}
+            </a>
+          )}
+
+          {/* Bio links */}
+          {bioLinks.slice(0, isExpanded ? bioLinks.length : 3).map((link, idx) => {
+            const url = link.url || link.lynx_url;
+            if (!url) return null;
+            const title = link.title || extractDomain(url);
+            return (
+              <a
+                key={idx}
+                href={url.startsWith('http') ? url : `https://${url}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-pink-300 hover:border-pink-500/50 transition-colors"
+                title={url}
+              >
+                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+                <span className="truncate max-w-[120px]">{title}</span>
+              </a>
+            );
+          })}
+
+          {/* Show more links indicator */}
+          {!isExpanded && bioLinks.length > 3 && (
+            <button
+              type="button"
+              onClick={() => setIsExpanded(true)}
+              className="inline-flex items-center px-2 py-0.5 text-xs rounded-full bg-zinc-800/50 border border-zinc-700/50 text-zinc-400 hover:text-pink-300 hover:border-pink-500/50 transition-colors"
+            >
+              +{bioLinks.length - 3} more
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
+ * Hook to automatically fetch bio data for creators when search completes.
+ * Uses ScrapeCreators basic-profile API (no rate limits).
+ */
+const useBioEnrichment = (creators, jobStatus, jobId, platformNormalized) => {
+  const [bioData, setBioData] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+  const hasFetched = useRef(false);
+  const lastJobId = useRef(null);
+
+  // Reset when jobId changes
+  useEffect(() => {
+    if (jobId !== lastJobId.current) {
+      lastJobId.current = jobId;
+      hasFetched.current = false;
+      setBioData({});
+    }
+  }, [jobId]);
+
+  useEffect(() => {
+    // Only fetch for instagram_scrapecreators platform
+    const isScrapecreatorsPlatform = platformNormalized === 'instagram_scrapecreators';
+    if (!isScrapecreatorsPlatform) return;
+
+    // Only fetch when search is complete and we haven't fetched yet
+    if (jobStatus !== 'completed' || hasFetched.current || creators.length === 0) {
+      return;
+    }
+
+    const fetchBios = async () => {
+      hasFetched.current = true;
+      setIsLoading(true);
+
+      // Get user IDs that need bio data (have owner.id but no biography yet)
+      const userIds = creators
+        .filter(c => {
+          const ownerId = c.owner?.id;
+          const hasBio = c.owner?.biography || c.creator?.bio || c.bio_enriched?.biography;
+          return ownerId && !hasBio;
+        })
+        .map(c => c.owner.id);
+
+      if (userIds.length === 0) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/creators/fetch-bios', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userIds, jobId }),
+        });
+
+        if (!response.ok) {
+          console.error('Failed to fetch bios:', response.status);
+          return;
+        }
+
+        const data = await response.json();
+        setBioData(data.results || {});
+
+        // Show toast with stats
+        if (data.stats) {
+          const emailsFound = Object.values(data.results || {}).filter(b => b.extracted_email).length;
+          if (emailsFound > 0) {
+            toast.success(`Found ${emailsFound} emails from bios (${(data.stats.durationMs / 1000).toFixed(1)}s)`);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching bios:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchBios();
+  }, [jobStatus, creators, jobId, platformNormalized]);
+
+  return { bioData, isLoading };
+};
+
+// Guard against HTML error pages so the table doesn't crash on JSON.parse
+const parseJsonSafe = async (response) => {
+  const text = await response.text();
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    console.error('Non-JSON response while fetching search results', {
+      status: response.status,
+      snippet: text?.slice?.(0, 500),
+    });
+    return { error: 'invalid_json', raw: text, status: response.status };
+  }
+};
+
 const SearchResults = ({ searchData }) => {
   const componentMountTime = useRef(performance.now());
   const componentId = useMemo(() =>
@@ -336,6 +557,8 @@ const SearchResults = ({ searchData }) => {
   const [selectedCreators, setSelectedCreators] = useState({});
   const [viewMode, setViewMode] = useState("table");
   const [showEmailOnly, setShowEmailOnly] = useState(false);
+  // Engagement filter: 'all' | '100likes' | '1000views'
+  const [engagementFilter, setEngagementFilter] = useState("all");
   const itemsPerPage = viewMode === "gallery" ? 9 : 10;
   const resultsCacheRef = useRef(new Map());
 
@@ -563,8 +786,85 @@ const SearchResults = ({ searchData }) => {
     bulkState: enrichmentBulkState,
   } = useCreatorEnrichment();
 
+  // Bio enrichment for ScrapeCreators results (auto-fetches bio data when search completes)
   const jobStatusRaw = searchData?.status;
-  const jobStatus = typeof jobStatusRaw === 'string' ? jobStatusRaw.toLowerCase() : '';
+  const jobStatusNormalized = typeof jobStatusRaw === 'string' ? jobStatusRaw.toLowerCase() : '';
+  const platformNormalizedEarly = (searchData?.selectedPlatform || searchData?.platform || 'tiktok').toString().toLowerCase();
+
+  // TEMPORARILY DISABLED for debugging - will re-enable once bio display is fixed
+  // const { bioData, isLoading: bioLoading } = useBioEnrichment(
+  //   creators,
+  //   jobStatusNormalized,
+  //   searchData?.jobId,
+  //   platformNormalizedEarly
+  // );
+  const bioData = {};
+  const bioLoading = false;
+
+  // Confirmation dialog state for "Use Bio Email" vs "Enrich Anyway"
+  const [bioEmailConfirmDialog, setBioEmailConfirmDialog] = useState({
+    open: false,
+    creator: null,
+    bioEmail: null,
+    enrichmentTarget: null,
+  });
+
+  // Handler for "Use Bio Email" button
+  const handleUseBioEmail = useCallback(async () => {
+    const { creator, bioEmail, enrichmentTarget } = bioEmailConfirmDialog;
+    if (!creator || !bioEmail) {
+      setBioEmailConfirmDialog({ open: false, creator: null, bioEmail: null, enrichmentTarget: null });
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/creators/save-bio-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobId: searchData?.jobId,
+          creatorId: creator.owner?.id || creator.id,
+          email: bioEmail,
+        }),
+      });
+
+      if (response.ok) {
+        // Update local state to show email is now saved
+        setCreators(prev => prev.map(c => {
+          const cOwnerId = c.owner?.id;
+          const creatorOwnerId = creator.owner?.id;
+          if (cOwnerId && creatorOwnerId && cOwnerId === creatorOwnerId) {
+            return { ...c, contact_email: bioEmail, email_source: 'bio' };
+          }
+          return c;
+        }));
+        toast.success(`Email saved: ${bioEmail}`);
+      } else {
+        toast.error('Failed to save email');
+      }
+    } catch (error) {
+      console.error('Error saving bio email:', error);
+      toast.error('Failed to save email');
+    }
+
+    setBioEmailConfirmDialog({ open: false, creator: null, bioEmail: null, enrichmentTarget: null });
+  }, [bioEmailConfirmDialog, searchData?.jobId, setCreators]);
+
+  // Helper to get bio-extracted email for a creator
+  const getBioEmailForCreator = useCallback((creator) => {
+    const ownerId = creator?.owner?.id;
+    if (!ownerId) return null;
+    return bioData[ownerId]?.extracted_email || null;
+  }, [bioData]);
+
+  // Helper to get full bio data for a creator
+  const getBioDataForCreator = useCallback((creator) => {
+    const ownerId = creator?.owner?.id;
+    if (!ownerId) return null;
+    return bioData[ownerId] || null;
+  }, [bioData]);
+
+  const jobStatus = jobStatusNormalized;
   const jobIsActive = jobStatus === 'processing' || jobStatus === 'pending';
 
   // Normalize platform from either selectedPlatform (wizard) or platform (reopen flow)
@@ -670,17 +970,39 @@ const SearchResults = ({ searchData }) => {
     }
   }, [creators, searchData?.jobId]);
 
+  // Helper to check if creator has any email (including bio-extracted)
+  const hasAnyEmail = useCallback((creator) => {
+    if (hasContactEmail(creator)) return true;
+    if (creator.contact_email) return true;
+    // Check bio_enriched from database
+    if (creator.bio_enriched?.extracted_email) return true;
+    // Check bioData from live state
+    const ownerId = creator?.owner?.id;
+    if (ownerId && bioData[ownerId]?.extracted_email) return true;
+    return false;
+  }, [bioData]);
+
   const filteredCreators = useMemo(() => {
-    if (!showEmailOnly) return creators;
-    return creators.filter((creator) => hasContactEmail(creator));
-  }, [creators, showEmailOnly]);
+    // Step 1: Apply engagement filter based on selected option
+    let engagementFiltered = creators;
+    if (engagementFilter === "100likes") {
+      engagementFiltered = filterCreatorsByLikes(creators, 100, false); // Strict: exclude null likes
+    } else if (engagementFilter === "1000views") {
+      engagementFiltered = filterCreatorsByViews(creators, 1000, false); // Strict: exclude null views
+    }
+    // Note: 'all' shows all creators without engagement filtering
+
+    // Step 2: Apply email filter if enabled
+    if (!showEmailOnly) return engagementFiltered;
+    return engagementFiltered.filter((creator) => hasAnyEmail(creator));
+  }, [creators, showEmailOnly, engagementFilter, hasAnyEmail]);
 
   const waitingForResults = (jobIsActive || stillProcessing || isFetching || isLoading) && creators.length === 0;
   const shouldPoll = Boolean(searchData?.jobId) && (jobIsActive || stillProcessing || isFetching || isLoading);
 
   const showFilteredEmpty = useMemo(
-    () => showEmailOnly && creators.length > 0 && filteredCreators.length === 0,
-    [showEmailOnly, creators.length, filteredCreators.length]
+    () => (showEmailOnly || engagementFilter !== "all") && creators.length > 0 && filteredCreators.length === 0,
+    [showEmailOnly, engagementFilter, creators.length, filteredCreators.length]
   );
 
   useEffect(() => {
@@ -723,6 +1045,8 @@ const SearchResults = ({ searchData }) => {
           platformNormalized === 'instagram_1.0'
         ) {
           apiEndpoint = '/api/scraping/instagram-us-reels';
+        } else if (platformNormalized === 'instagram_scrapecreators') {
+          apiEndpoint = '/api/scraping/instagram-scrapecreators';
         } else if (platformNormalized === 'youtube') {
           apiEndpoint = '/api/scraping/youtube';
         } else if (
@@ -739,7 +1063,14 @@ const SearchResults = ({ searchData }) => {
         // Making API call to fetch results
 
         const response = await fetch(`${apiEndpoint}?jobId=${searchData.jobId}` , { credentials: 'include' });
-        const data = await response.json();
+        const data = await parseJsonSafe(response);
+
+        if (data?.error === 'invalid_json') {
+          setIsLoading(false);
+          setStillProcessing(false);
+          setIsFetching(false);
+          return;
+        }
 
         if (data.error) {
           console.error("Error fetching results:", data.error);
@@ -782,7 +1113,9 @@ const SearchResults = ({ searchData }) => {
 
       try {
         const response = await fetch(`/api/campaigns/${searchData.campaignId}`);
-        const data = await response.json();
+        const data = await parseJsonSafe(response);
+
+        if (data?.error === 'invalid_json') return;
 
         if (data && data.name) {
           setCampaignName(data.name);
@@ -944,65 +1277,70 @@ const SearchResults = ({ searchData }) => {
 
   // Unified completion handler (used for both initial and silent polling)
   const handleSearchComplete = (data) => {
-    if (data && data.status === "completed") {
-      // Use creators directly from data.creators (already processed with bio/email)
-        const allCreators = dedupeCreators(data.creators || [], { platformHint: platformNormalized });
-        if (allCreators.length > 0) {
-          setCreators(allCreators);
-          setIsLoading(false);
-          setStillProcessing(false);
-          setIsFetching(false);
-          if (searchData?.jobId) {
-            resultsCacheRef.current.set(searchData.jobId, allCreators);
-          }
-        } else {
-          // As a fallback, re-fetch latest results from the corresponding endpoint
-          let apiEndpoint = '/api/scraping/tiktok';
-          if (
-            platformNormalized === 'instagram' ||
-            platformNormalized === 'instagram_us_reels' ||
-            platformNormalized === 'instagram-1.0' ||
-            platformNormalized === 'instagram_1.0'
-          ) {
-            apiEndpoint = '/api/scraping/instagram-us-reels';
-          } else if (platformNormalized === 'youtube') {
-            apiEndpoint = '/api/scraping/youtube';
-          } else if (
-            platformNormalized === 'instagram-2.0' ||
-            platformNormalized === 'instagram_2.0' ||
-            platformNormalized === 'instagram-v2' ||
-            platformNormalized === 'instagram_v2'
-          ) {
-            apiEndpoint = '/api/scraping/instagram-v2';
-          } else if (platformNormalized === 'google-serp' || platformNormalized === 'google_serp') {
-            apiEndpoint = '/api/scraping/google-serp';
-          }
+    // FIX: Always stop processing indicators immediately when job completes
+    // The job is done regardless of whether we have creators data yet
+    if (data && (data.status === "completed" || data.status === "error" || data.status === "timeout")) {
+      // Immediately mark as not processing - the job is finished
+      setStillProcessing(false);
+      setIsFetching(false);
 
+      // Use creators directly from data.creators (already processed with bio/email)
+      const allCreators = dedupeCreators(data.creators || [], { platformHint: platformNormalized });
+      if (allCreators.length > 0) {
+        setCreators(allCreators);
+        setIsLoading(false);
+        if (searchData?.jobId) {
+          resultsCacheRef.current.set(searchData.jobId, allCreators);
+        }
+      } else {
+        // As a fallback, re-fetch latest results from the corresponding endpoint
+        let apiEndpoint = '/api/scraping/tiktok';
+        if (
+          platformNormalized === 'instagram' ||
+          platformNormalized === 'instagram_us_reels' ||
+          platformNormalized === 'instagram-1.0' ||
+          platformNormalized === 'instagram_1.0'
+        ) {
+          apiEndpoint = '/api/scraping/instagram-us-reels';
+        } else if (platformNormalized === 'instagram_scrapecreators') {
+          apiEndpoint = '/api/scraping/instagram-scrapecreators';
+        } else if (platformNormalized === 'youtube') {
+          apiEndpoint = '/api/scraping/youtube';
+        } else if (
+          platformNormalized === 'instagram-2.0' ||
+          platformNormalized === 'instagram_2.0' ||
+          platformNormalized === 'instagram-v2' ||
+          platformNormalized === 'instagram_v2'
+        ) {
+          apiEndpoint = '/api/scraping/instagram-v2';
+        } else if (platformNormalized === 'google-serp' || platformNormalized === 'google_serp') {
+          apiEndpoint = '/api/scraping/google-serp';
+        }
+
+        // FIX: Fetch is still fire-and-forget but processing state is already stopped above
         fetch(`${apiEndpoint}?jobId=${searchData.jobId}`, { credentials: 'include' })
-          .then((response) => response.json())
+          .then((response) => parseJsonSafe(response))
           .then((result) => {
+            if (result?.error === 'invalid_json') {
+              setIsLoading(false);
+              return;
+            }
             const foundCreators =
               result.results?.reduce((acc, res) => {
                 return [...acc, ...(res.creators || [])];
               }, []) || [];
             const deduped = dedupeCreators(foundCreators, { platformHint: platformNormalized });
             setCreators(deduped);
-            if (deduped.length) {
-              setIsLoading(false);
-            }
-            setStillProcessing(false);
-            setIsFetching(false);
+            setIsLoading(false);
             if (searchData?.jobId && deduped.length) {
               resultsCacheRef.current.set(searchData.jobId, deduped);
             }
           })
           .catch(() => {
             setIsLoading(false);
-            setStillProcessing(false);
-            setIsFetching(false);
           });
-        }
       }
+    }
   };
 
   if (!filteredCreators.length && !showFilteredEmpty) {
@@ -1220,6 +1558,37 @@ const SearchResults = ({ searchData }) => {
               <MailCheck className="h-4 w-4" />
               Email only
             </Button>
+            <Separator orientation="vertical" className="hidden h-6 md:block" />
+            {/* Engagement filter buttons */}
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                variant={engagementFilter === "all" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setEngagementFilter("all")}
+                aria-pressed={engagementFilter === "all"}
+              >
+                All
+              </Button>
+              <Button
+                type="button"
+                variant={engagementFilter === "100likes" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setEngagementFilter("100likes")}
+                aria-pressed={engagementFilter === "100likes"}
+              >
+                100+ likes
+              </Button>
+              <Button
+                type="button"
+                variant={engagementFilter === "1000views" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setEngagementFilter("1000views")}
+                aria-pressed={engagementFilter === "1000views"}
+              >
+                1K+ views
+              </Button>
+            </div>
           </div>
         <div className="text-sm text-zinc-400 order-3 md:order-none">
           Page {currentPage} of {totalPages} •
@@ -1294,12 +1663,31 @@ const SearchResults = ({ searchData }) => {
       {shouldShowEmailOverlay && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/80 px-4">
           <div className="w-full max-w-md space-y-4 rounded-2xl border border-zinc-700/60 bg-zinc-900/95 p-6 text-center shadow-xl">
-            <h3 className="text-lg font-semibold text-zinc-100">No creators with a contact email</h3>
+            <h3 className="text-lg font-semibold text-zinc-100">
+              {showEmailOnly && engagementFilter !== "all"
+                ? "No creators match both filters"
+                : showEmailOnly
+                ? "No creators with a contact email"
+                : engagementFilter === "100likes"
+                ? "No creators with 100+ likes"
+                : "No creators with 1000+ views"}
+            </h3>
             <p className="text-sm text-zinc-400">
-              We didn’t find any creators in this list with a visible email. You can disable the filter to review all results or keep the filter and try another search.
+              {showEmailOnly && engagementFilter !== "all"
+                ? "No creators match both the email and engagement filters. Try adjusting your filters."
+                : showEmailOnly
+                ? "We didn't find any creators in this list with a visible email."
+                : `No creators in this search meet the ${engagementFilter === "100likes" ? "100+ likes" : "1000+ views"} threshold.`}
             </p>
             <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
-              <Button size="sm" className="bg-emerald-500 text-emerald-950" onClick={() => setShowEmailOnly(false)}>
+              <Button
+                size="sm"
+                className="bg-emerald-500 text-emerald-950"
+                onClick={() => {
+                  setShowEmailOnly(false);
+                  setEngagementFilter("all");
+                }}
+              >
                 Show all creators
               </Button>
               <Button
@@ -1308,7 +1696,7 @@ const SearchResults = ({ searchData }) => {
                 onClick={() => setEmailOverlayDismissed(true)}
                 className="border-zinc-700 text-zinc-200 hover:bg-zinc-800"
               >
-                Keep email filter
+                Keep filters
               </Button>
             </div>
           </div>
@@ -1394,14 +1782,11 @@ const SearchResults = ({ searchData }) => {
                   <TableHead className="hidden md:table-cell px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-zinc-400">
                     Followers
                   </TableHead>
-                  <TableHead className="hidden xl:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
-                    Bio
+                  <TableHead className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400 w-[320px]">
+                    Bio & Links
                   </TableHead>
                   <TableHead className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
                     Email
-                  </TableHead>
-                  <TableHead className="hidden xl:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">
-                    Video Title
                   </TableHead>
                   <TableHead className="hidden lg:table-cell px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-zinc-400">
                     Views
@@ -1598,62 +1983,100 @@ const SearchResults = ({ searchData }) => {
                   <TableCell className="hidden md:table-cell px-4 py-4 text-right text-sm text-zinc-200">
                     {snapshot.followers != null ? formatFollowers(snapshot.followers) : 'N/A'}
                   </TableCell>
-                  <TableCell className="hidden xl:table-cell px-4 py-4 max-w-[260px]">
-                    <div className="truncate" title={creator.creator?.bio || 'No bio available'}>
-                      {creator.creator?.bio ? (
-                        <span className="text-sm text-zinc-300">{creator.creator.bio}</span>
-                      ) : (
-                        <span className="text-sm text-zinc-500">No bio</span>
-                      )}
-                    </div>
+                  <TableCell className="hidden lg:table-cell px-4 py-4 w-[320px] max-w-[320px] align-top">
+                    <BioLinksCell
+                      bio={
+                        creator.bio_enriched?.biography ||
+                        creator.creator?.bio ||
+                        creator.owner?.biography ||
+                        creator.biography
+                      }
+                      bioLinks={
+                        creator.bio_enriched?.bio_links ||
+                        creator.owner?.bio_links ||
+                        creator.bio_links ||
+                        []
+                      }
+                      externalUrl={
+                        creator.bio_enriched?.external_url ||
+                        creator.owner?.external_url ||
+                        creator.external_url
+                      }
+                    />
                   </TableCell>
                   <TableCell className="hidden lg:table-cell px-4 py-4 align-top w-[260px] max-w-[320px]">
-                    {displayEmailEntries.length > 0 ? (
-                      <div className="space-y-1 text-sm whitespace-normal break-words">
-                        {displayEmailEntries.map(({ value: email, isNew }) => (
-                          <div
-                            key={email}
-                            className={cn(
-                              "flex items-center gap-1",
-                              isNew ? "text-pink-300" : undefined
-                            )}
-                          >
-                            <a
-                              href={`mailto:${email}`}
-                              className="block text-pink-400 hover:underline break-words whitespace-normal"
-                              title={`Send email to ${email}`}
-                            >
-                              {email}
-                            </a>
-                            {isNew && (
-                              <Badge className="bg-pink-500/15 text-pink-100 border border-pink-500/40">
-                                new
-                              </Badge>
-                            )}
-                            <svg
-                              className="h-3 w-3 text-pink-400 opacity-60"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                              />
-                            </svg>
+                    {(() => {
+                      // Check for bio-extracted email (from DB or from live bioData state)
+                      const bioEmailFromDb = creator.bio_enriched?.extracted_email;
+                      const bioEmailFromState = getBioEmailForCreator(creator);
+                      const bioEmail = bioEmailFromDb || bioEmailFromState;
+                      const savedBioEmail = creator.contact_email;
+                      const emailSource = creator.email_source;
+
+                      // Combine all email sources
+                      const allEmails = [...displayEmailEntries];
+
+                      // Add bio-extracted email if not already in list and not enriched
+                      if (bioEmail && !allEmails.some(e => e.value.toLowerCase() === bioEmail.toLowerCase())) {
+                        allEmails.unshift({ value: bioEmail, isNew: false, isFromBio: true });
+                      }
+
+                      // Add saved bio email if not already in list
+                      if (savedBioEmail && !allEmails.some(e => e.value.toLowerCase() === savedBioEmail.toLowerCase())) {
+                        allEmails.unshift({ value: savedBioEmail, isNew: false, isFromBio: emailSource === 'bio' });
+                      }
+
+                      if (allEmails.length > 0) {
+                        return (
+                          <div className="space-y-1 text-sm whitespace-normal break-words">
+                            {allEmails.map(({ value: email, isNew, isFromBio }) => (
+                              <div
+                                key={email}
+                                className={cn(
+                                  "flex items-center gap-1 flex-wrap",
+                                  isNew ? "text-pink-300" : isFromBio ? "text-emerald-300" : undefined
+                                )}
+                              >
+                                <a
+                                  href={`mailto:${email}`}
+                                  className={cn(
+                                    "block hover:underline break-words whitespace-normal",
+                                    isFromBio ? "text-emerald-400" : "text-pink-400"
+                                  )}
+                                  title={`Send email to ${email}`}
+                                >
+                                  {email}
+                                </a>
+                                {isNew && (
+                                  <Badge className="bg-pink-500/15 text-pink-100 border border-pink-500/40 text-[10px]">
+                                    new
+                                  </Badge>
+                                )}
+                                {isFromBio && (
+                                  <Badge className="bg-emerald-500/15 text-emerald-100 border border-emerald-500/40 text-[10px]">
+                                    from bio
+                                  </Badge>
+                                )}
+                                <svg
+                                  className={cn("h-3 w-3 opacity-60", isFromBio ? "text-emerald-400" : "text-pink-400")}
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                                  />
+                                </svg>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-sm text-zinc-500">No email</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="hidden xl:table-cell px-4 py-4 max-w-[260px]">
-                    <div className="truncate" title={creator.video?.description || 'No title'}>
-                      {creator.video?.description || 'No title'}
-                    </div>
+                        );
+                      }
+                      return <span className="text-sm text-zinc-500">No email</span>;
+                    })()}
                   </TableCell>
                   <TableCell className="hidden lg:table-cell px-4 py-4 text-right text-sm tabular-nums">
                     {(creator.video?.statistics?.views || 0).toLocaleString()}
@@ -1671,39 +2094,66 @@ const SearchResults = ({ searchData }) => {
                     )}
                   </TableCell>
                   <TableCell className="px-4 py-4 text-right">
-                    <Button
-                      variant={enrichment ? "outline" : "secondary"}
-                      size="sm"
-                      className={cn(
-                        "gap-1",
-                        enrichment
-                          ? "border-pink-500/40 text-pink-200 hover:text-pink-100"
-                          : "bg-pink-500 text-pink-950 hover:bg-pink-500/90"
-                      )}
-                      disabled={enrichmentLoading}
-                      onClick={() => {
+                    {(() => {
+                      // Check bio email from DB or state
+                      const bioEmailFromDb = creator.bio_enriched?.extracted_email;
+                      const bioEmailFromState = getBioEmailForCreator(creator);
+                      const bioEmail = bioEmailFromDb || bioEmailFromState;
+                      const hasExistingEmail = displayEmailEntries.length > 0;
+
+                      // Handler that checks for bio email before enriching
+                      const handleEnrichClick = () => {
+                        // If there's a bio email and no enriched email, show confirmation
+                        if (bioEmail && !enrichment && !hasExistingEmail) {
+                          setBioEmailConfirmDialog({
+                            open: true,
+                            creator,
+                            bioEmail,
+                            enrichmentTarget,
+                          });
+                          return;
+                        }
+
+                        // Otherwise, proceed with enrichment directly
                         void (async () => {
                           const record = await enrichCreator({ ...enrichmentTarget, forceRefresh: Boolean(enrichment) });
                           if (record) {
                             applyEnrichmentToCreators(record, enrichmentTarget, creator, 'interactive');
                           }
                         })();
-                      }}
-                    >
-                      {enrichmentLoading ? (
-                        <PinkSpinner size="h-3.5 w-3.5" label="Enriching creator" />
-                      ) : enrichment ? (
-                        <RefreshCw className="h-3.5 w-3.5" />
-                      ) : (
-                        <Sparkles className="h-3.5 w-3.5" />
-                      )}
-                      {enrichment ? 'Refresh' : 'Enrich'}
-                    </Button>
-                    {enrichedAtLabel && (
-                      <div className="mt-1 text-[10px] uppercase tracking-wide text-pink-200/70">
-                        Refreshed {enrichedAtLabel}
-                      </div>
-                    )}
+                      };
+
+                      return (
+                        <>
+                          <Button
+                            variant={enrichment ? "outline" : "secondary"}
+                            size="sm"
+                            className={cn(
+                              "gap-1",
+                              enrichment
+                                ? "border-pink-500/40 text-pink-200 hover:text-pink-100"
+                                : "bg-pink-500 text-pink-950 hover:bg-pink-500/90"
+                            )}
+                            disabled={enrichmentLoading}
+                            onClick={handleEnrichClick}
+                          >
+                            {enrichmentLoading ? (
+                              <PinkSpinner size="h-3.5 w-3.5" label="Enriching creator" />
+                            ) : enrichment ? (
+                              <RefreshCw className="h-3.5 w-3.5" />
+                            ) : (
+                              <Sparkles className="h-3.5 w-3.5" />
+                            )}
+                            {enrichment ? 'Refresh' : 'Enrich'}
+                          </Button>
+                          {enrichedAtLabel && (
+                            <div className="mt-1 text-[10px] uppercase tracking-wide text-pink-200/70">
+                              Refreshed {enrichedAtLabel}
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell className="px-4 py-4 text-right">
                     <AddToListButton
@@ -1972,6 +2422,53 @@ const SearchResults = ({ searchData }) => {
           Last
         </Button>
       </div>
+
+      {/* Bio Email Confirmation Dialog */}
+      <AlertDialog
+        open={bioEmailConfirmDialog.open}
+        onOpenChange={(open) =>
+          setBioEmailConfirmDialog((prev) => ({ ...prev, open }))
+        }
+      >
+        <AlertDialogContent className="border-zinc-800 bg-zinc-900">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-zinc-100">
+              Email Already Found
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              We found an email in this creator&apos;s bio:{' '}
+              <strong className="text-emerald-400">{bioEmailConfirmDialog.bioEmail}</strong>
+              <br /><br />
+              Enriching will use a credit to get additional contact info from our database. Would you like to use the bio email or enrich anyway?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={handleUseBioEmail}
+              className="border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
+            >
+              Use Bio Email
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const { enrichmentTarget, creator } = bioEmailConfirmDialog;
+                setBioEmailConfirmDialog({ open: false, creator: null, bioEmail: null, enrichmentTarget: null });
+                if (enrichmentTarget) {
+                  void (async () => {
+                    const record = await enrichCreator({ ...enrichmentTarget, forceRefresh: false });
+                    if (record) {
+                      applyEnrichmentToCreators(record, enrichmentTarget, creator, 'interactive');
+                    }
+                  })();
+                }
+              }}
+              className="bg-pink-500 text-pink-950 hover:bg-pink-500/90"
+            >
+              Enrich Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

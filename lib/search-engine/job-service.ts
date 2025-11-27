@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import type { NormalizedCreator, ScrapingJobRecord, SearchMetricsSnapshot } from './types';
 import { PlanValidator } from '@/lib/services/plan-validator';
 import { logger, LogCategory } from '@/lib/logging';
+import { filterCreatorsByLikes, MIN_LIKES_THRESHOLD } from './utils/filter-creators';
 
 const DEFAULT_PROGRESS_PRECISION = 2;
 const HANDLE_QUEUE_KEY = 'searchEngineHandleQueue';
@@ -172,6 +173,12 @@ export class SearchJobService {
   }
 
   async mergeCreators(creators: NormalizedCreator[], getKey: DedupeKeyFn) {
+    // Enforce minimum engagement threshold before dedupe/persist
+    const filtered = filterCreatorsByLikes(creators, MIN_LIKES_THRESHOLD);
+    if (!filtered.length) {
+      return { total: this.job.processedResults, newCount: 0 };
+    }
+
     if (!creators.length) {
       return { total: this.job.processedResults, newCount: 0 };
     }
