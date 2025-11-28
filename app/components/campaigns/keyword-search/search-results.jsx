@@ -791,15 +791,13 @@ const SearchResults = ({ searchData }) => {
   const jobStatusNormalized = typeof jobStatusRaw === 'string' ? jobStatusRaw.toLowerCase() : '';
   const platformNormalizedEarly = (searchData?.selectedPlatform || searchData?.platform || 'tiktok').toString().toLowerCase();
 
-  // TEMPORARILY DISABLED for debugging - will re-enable once bio display is fixed
-  // const { bioData, isLoading: bioLoading } = useBioEnrichment(
-  //   creators,
-  //   jobStatusNormalized,
-  //   searchData?.jobId,
-  //   platformNormalizedEarly
-  // );
-  const bioData = {};
-  const bioLoading = false;
+  // Bio enrichment - auto-fetches bio data when search completes for instagram_scrapecreators
+  const { bioData, isLoading: bioLoading } = useBioEnrichment(
+    creators,
+    jobStatusNormalized,
+    searchData?.jobId,
+    platformNormalizedEarly
+  );
 
   // Confirmation dialog state for "Use Bio Email" vs "Enrich Anyway"
   const [bioEmailConfirmDialog, setBioEmailConfirmDialog] = useState({
