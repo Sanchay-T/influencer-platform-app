@@ -76,9 +76,8 @@ export default function KeywordSearchForm({ onSubmit }) {
 
   const platformOptions = [
     { value: "tiktok", label: "TikTok" },
-    { value: "instagram", label: "Instagram", badge: "US" },
+    { value: "instagram_scrapecreators", label: "Instagram" },
     { value: "youtube", label: "YouTube" },
-    { value: "instagram_scrapecreators", label: "Instagram Reels (ScrapeCreators)", badge: "API" },
   ];
   const sliderMin = 100;
   const sliderMax = 1000;
