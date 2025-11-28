@@ -226,6 +226,7 @@ export async function GET(req: NextRequest) {
       error: job.error,
       results: paginatedResults ?? [],
       progress: Number(job.progress ?? '0'),
+      platform: job.platform ?? 'instagram_scrapecreators',
       engine: (job.searchParams as any)?.runner ?? 'instagram_scrapecreators',
       benchmark: (job.searchParams as any)?.searchEngineBenchmark ?? null,
       totalCreators,
