@@ -2,11 +2,13 @@ import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { db } from '@/lib/db';
-import { campaigns, scrapingJobs } from '@/lib/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { campaigns, scrapingJobs, type JobStatus } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 import { PlanEnforcementService } from '@/lib/services/plan-enforcement';
 import { qstash } from '@/lib/queue/qstash';
 import { getWebhookUrl } from '@/lib/utils/url-utils';
+import { normalizePageParams, paginateCreators } from '@/lib/search-engine/utils/pagination';
+import { createRunLogger } from '@/lib/search-engine/utils/run-logger';
 
 const TIMEOUT_MINUTES = 60;
 
@@ -51,9 +53,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Campaign not found or unauthorized' }, { status: 404 });
     }
 
-    const amount = Number.isNaN(Number(rawAmount)) ? 20 : Number(rawAmount ?? 20);
-    const requestedTarget = Number(rawTarget ?? amount);
-    const targetResults = Number.isNaN(requestedTarget) ? amount : requestedTarget;
+    const requestedTarget = Number(rawTarget ?? rawAmount ?? 100);
+    const targetResults = Number.isNaN(requestedTarget) ? 100 : Math.max(1, requestedTarget);
+    // Fetch budget per job: align amount with requested target so we actually try to fill it
+    const amount = Number.isNaN(Number(rawAmount))
+      ? Math.min(targetResults, 1000)
+      : Math.max(1, Math.min(Number(rawAmount), 1000));
 
     const planCheck = await PlanEnforcementService.validateJobCreation(userId, targetResults);
     if (!planCheck.allowed) {
@@ -98,6 +103,16 @@ export async function POST(req: NextRequest) {
       })
       .returning();
 
+    const runLogger = createRunLogger('instagram-scrapecreators', job.id);
+    await runLogger.log('job_created', {
+      jobId: job.id,
+      keywords: sanitizedKeywords,
+      targetResults: adjustedTargetResults,
+      amount,
+      userId,
+      campaignId,
+    });
+
     // enqueue for processing
     if (process.env.QSTASH_TOKEN) {
       const callbackUrl = `${getWebhookUrl()}/api/qstash/process-search`;
@@ -106,10 +121,12 @@ export async function POST(req: NextRequest) {
         body: { jobId: job.id },
         retries: 3,
       });
+      await runLogger.log('enqueue', { jobId: job.id, callbackUrl });
     } else {
       structuredConsole.warn('[INSTAGRAM-SCRAPECREATORS] QStash token missing, job will stay pending', {
         jobId: job.id,
       });
+      await runLogger.log('enqueue_skipped', { jobId: job.id, reason: 'missing_qstash_token' });
     }
 
     return NextResponse.json({
@@ -122,6 +139,102 @@ export async function POST(req: NextRequest) {
     structuredConsole.error('[INSTAGRAM-SCRAPECREATORS] request failed', error);
     return NextResponse.json(
       { error: 'Internal server error', message: error?.message },
+      { status: 500 },
+    );
+  }
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const { userId } = await getAuthOrTest();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const jobId = searchParams.get('jobId');
+
+    if (!jobId) {
+      return NextResponse.json({ error: 'jobId is required' }, { status: 400 });
+    }
+
+    const job = await db.query.scrapingJobs.findFirst({
+      where: (table, { eq: equals, and: combine }) =>
+        combine(equals(table.id, jobId), equals(table.userId, userId)),
+      with: {
+        results: {
+          columns: { id: true, jobId: true, creators: true, createdAt: true },
+          orderBy: (table, { desc }) => [desc(table.createdAt)],
+          limit: 1,
+        },
+      },
+    });
+
+    const runLogger = createRunLogger('instagram-scrapecreators', jobId);
+
+    if (!job) {
+      await runLogger.log('job_missing', { jobId });
+      return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+    }
+
+    if (
+      job.timeoutAt &&
+      new Date(job.timeoutAt) < new Date() &&
+      (job.status === 'processing' || job.status === 'pending')
+    ) {
+      await db
+        .update(scrapingJobs)
+        .set({
+          status: 'timeout' as JobStatus,
+          error: 'Job exceeded maximum allowed time',
+          completedAt: new Date(),
+        })
+        .where(eq(scrapingJobs.id, job.id));
+
+      await runLogger.log('timeout', { jobId, timeoutAt: job.timeoutAt });
+
+      return NextResponse.json({
+        status: 'timeout',
+        error: 'Job exceeded maximum allowed time',
+      });
+    }
+
+    const { limit, offset } = normalizePageParams(
+      searchParams.get('limit'),
+      searchParams.get('offset') ?? searchParams.get('cursor'),
+    );
+
+    const { results: paginatedResults, totalCreators, pagination } = paginateCreators(
+      job.results,
+      limit,
+      offset,
+    );
+
+    await runLogger.log('get_results', {
+      jobId,
+      status: job.status,
+      totalCreators,
+      limit,
+      offset,
+      nextOffset: pagination.nextOffset,
+    });
+
+    return NextResponse.json({
+      status: job.status,
+      processedResults: job.processedResults,
+      targetResults: job.targetResults,
+      error: job.error,
+      results: paginatedResults ?? [],
+      progress: Number(job.progress ?? '0'),
+      engine: (job.searchParams as any)?.runner ?? 'instagram_scrapecreators',
+      benchmark: (job.searchParams as any)?.searchEngineBenchmark ?? null,
+      totalCreators,
+      pagination,
+    });
+  } catch (error: any) {
+    structuredConsole.error('[INSTAGRAM-SCRAPECREATORS] GET failed', error);
+    return NextResponse.json(
+      { error: error?.message ?? 'Internal server error' },
       { status: 500 },
     );
   }

@@ -6,11 +6,7 @@ import { runTikTokKeywordProvider } from './providers/tiktok-keyword';
 import { runYouTubeKeywordProvider } from './providers/youtube-keyword';
 import { runYouTubeSimilarProvider } from './providers/youtube-similar';
 import { runInstagramSimilarProvider } from './providers/instagram-similar';
-import { runInstagramReelsProvider } from './providers/instagram-reels';
 import { runInstagramScrapeCreatorsProvider } from './providers/instagram-reels-scrapecreators';
-import { runGoogleSerpProvider } from './providers/google-serp';
-import { runInstagramUsReelsProvider } from './providers/instagram-us-reels';
-import { runInstagramV2Provider } from './providers/instagram-v2';
 import { logger, LogCategory } from '@/lib/logging';
 
 export interface SearchExecutionResult {
@@ -69,36 +65,10 @@ function isInstagramSimilar(jobPlatform?: string, targetUsername?: unknown): boo
   return !!targetUsername && (platform === 'instagram' || platform === 'instagram_similar');
 }
 
-function isInstagramReels(jobPlatform?: string, keywords?: unknown, searchParams?: any): boolean {
-  if (!keywords || !Array.isArray(keywords)) return false;
-  const platform = (jobPlatform ?? '').toLowerCase();
-  // Instagram Reels: platform=Instagram AND has keywords AND not handled by the US Reels runner
-  return (
-    platform === 'instagram' &&
-    searchParams?.runner !== 'instagram_us_reels'
-  );
-}
-
-function isGoogleSerp(jobPlatform?: string, searchParams?: any): boolean {
-  const platform = (jobPlatform ?? '').toLowerCase();
-  const runner = (searchParams?.runner ?? '').toLowerCase();
-  return platform === 'google_serp' || runner === 'google_serp';
-}
-
-function isInstagramUsReels(searchParams?: any): boolean {
-  const runner = (searchParams?.runner ?? '').toLowerCase();
-  return runner === 'instagram_us_reels';
-}
-
 function isInstagramScrapeCreators(jobPlatform?: string, searchParams?: any): boolean {
   const platform = (jobPlatform ?? '').toLowerCase();
   const runner = (searchParams?.runner ?? '').toLowerCase();
   return runner === 'instagram_scrapecreators' || platform === 'instagram_scrapecreators';
-}
-
-function isInstagramV2(searchParams?: any): boolean {
-  const runner = (searchParams?.runner ?? '').toLowerCase();
-  return runner === 'instagram_v2' || runner === 'instagram-2.0';
 }
 
 export async function runSearchJob(jobId: string): Promise<SearchExecutionResult> {
@@ -169,14 +139,6 @@ export async function runSearchJob(jobId: string): Promise<SearchExecutionResult
     providerResult = await runInstagramSimilarProvider({ job, config }, service);
   } else if (isInstagramScrapeCreators(job.platform, searchParams)) {
     providerResult = await runInstagramScrapeCreatorsProvider({ job, config }, service);
-  } else if (isInstagramV2(searchParams)) {
-    providerResult = await runInstagramV2Provider({ job, config }, service);
-  } else if (isInstagramUsReels(searchParams)) {
-    providerResult = await runInstagramUsReelsProvider({ job, config }, service);
-  } else if (isInstagramReels(job.platform, job.keywords, searchParams)) {
-    providerResult = await runInstagramReelsProvider({ job, config }, service);
-  } else if (isGoogleSerp(job.platform, searchParams)) {
-    providerResult = await runGoogleSerpProvider({ job, config }, service);
   } else {
     throw new Error(`Unsupported platform for new search runner: ${job.platform} (keywords: ${!!job.keywords}, targetUsername: ${!!job.targetUsername}, searchParams: ${JSON.stringify(searchParams)})`);
   }

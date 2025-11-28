@@ -77,27 +77,29 @@ export const metadata: Metadata = {
   title: 'Gemz — Real-time influencer discovery & campaign activation',
   description:
     'Gemz helps growth teams find, qualify, and activate high-performing creators across TikTok, Instagram, and YouTube with AI-ranked insights.',
+  metadataBase: new URL('https://usegemz.com'),
   openGraph: {
-    title: 'Gemz — Real-time influencer discovery & campaign activation',
+    title: 'Gemz — Find the Right Influencer, Fast. With AI.',
     description:
       'Source verified creators, enrich outreach data, and launch campaigns in minutes with Gemz.',
-    url: 'https://usegems.com',
+    url: 'https://usegemz.com',
     siteName: 'Gemz',
     images: [
       {
-        url: '/landing/og-preview.jpg',
-        width: 1200,
-        height: 630,
-        alt: 'Gemz marketing preview',
+        url: '/landing/og-preview.png',
+        width: 1536,
+        height: 1024,
+        alt: 'Gemz - Find the Right Influencer, Fast. With AI.',
       },
     ],
+    type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Gemz — Real-time influencer discovery & activation',
+    title: 'Gemz — Find the Right Influencer, Fast. With AI.',
     description:
       'AI-powered influencer discovery that keeps your pipeline fresh across every platform.',
-    images: ['/landing/og-preview.jpg'],
+    images: ['/landing/og-preview.png'],
   },
 };
 

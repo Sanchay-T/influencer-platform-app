@@ -1,0 +1,19 @@
+Fetching 60 reels for "meditation wellness"...
+Success: true
+Reels: 60
+Quality (100+): 13
+
+USERNAME,LIKES,REEL_URL,PROFILE_URL
+drbindiyamd,510,https://instagram.com/reel/DOY5LdBjgo6,https://instagram.com/drbindiyamd
+maneuvering_mic,164,https://instagram.com/reel/DQhctAhjBep,https://instagram.com/maneuvering_mic
+jeffkobermeditation,504,https://instagram.com/reel/DKqz5S9gulF,https://instagram.com/jeffkobermeditation
+kyserili38_38,1030,https://instagram.com/reel/DRcW5r3DNVE,https://instagram.com/kyserili38_38
+sjanaelise,2300,https://instagram.com/reel/C7H6hl5SoeO,https://instagram.com/sjanaelise
+wakeupist,134,https://instagram.com/reel/DQIAZUJAeVO,https://instagram.com/wakeupist
+pujarinews,547,https://instagram.com/reel/DRb9ZvYk7yt,https://instagram.com/pujarinews
+thewellnessspaceglobal,101,https://instagram.com/reel/DQ4v_twAXpZ,https://instagram.com/thewellnessspaceglobal
+loxxtuz,4881,https://instagram.com/reel/DRZ2aGZk-rA,https://instagram.com/loxxtuz
+unc.pappy,1272,https://instagram.com/reel/DRUi4RLARFN,https://instagram.com/unc.pappy
+uwyo_campusrec,193,https://instagram.com/reel/DQcw1pwj3Ny,https://instagram.com/uwyo_campusrec
+gvmeditation,124,https://instagram.com/reel/C6KYM6ryk26,https://instagram.com/gvmeditation
+mohammadirfan467,222,https://instagram.com/reel/DRMTO1jkYpu,https://instagram.com/mohammadirfan467

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Image Fallback Test - Current vs Fixed</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: #09090b; }
+  </style>
+</head>
+<body class="p-8">
+  <h1 class="text-3xl font-bold text-white mb-2">Image Fallback Comparison</h1>
+  <p class="text-zinc-400 mb-8">Open browser DevTools (F12) → Network tab to see image failures</p>
+
+  <div class="grid grid-cols-2 gap-12">
+    <!-- CURRENT BEHAVIOR -->
+    <div>
+      <h2 class="text-xl font-semibold text-red-400 mb-2">❌ Current Behavior</h2>
+      <p class="text-sm text-zinc-500 mb-4">handleImageError hides image → blank space</p>
+
+      <div class="grid grid-cols-2 gap-4">
+        <!-- Working image -->
+        <div class="rounded-xl overflow-hidden bg-zinc-800/70 aspect-[9/16] relative">
+          <img
+            src="https://picsum.photos/300/500"
+            alt="Working"
+            class="h-full w-full object-cover"
+            onerror="this.style.display='none'"
+          />
+          <div class="absolute top-2 right-2 bg-black/70 px-2 py-1 rounded text-xs text-white">@working_user</div>
+        </div>
+
+        <!-- Broken image - shows BLANK -->
+        <div class="rounded-xl overflow-hidden bg-zinc-800/70 aspect-[9/16] relative">
+          <img
+            src="https://broken-url.invalid/image.jpg"
+            alt="Broken"
+            class="h-full w-full object-cover"
+            onerror="this.style.display='none'"
+          />
+          <div class="absolute top-2 right-2 bg-black/70 px-2 py-1 rounded text-xs text-white">@broken_user</div>
+          <p class="absolute bottom-2 left-2 text-xs text-red-400">← Notice: blank space!</p>
+        </div>
+
+        <!-- No URL -->
+        <div class="rounded-xl overflow-hidden bg-zinc-800/70 aspect-[9/16] relative flex items-center justify-center">
+          <span class="text-zinc-500 text-sm">No preview available</span>
+          <div class="absolute top-2 right-2 bg-black/70 px-2 py-1 rounded text-xs text-white">@no_url</div>
+        </div>
+
+        <!-- Expired CDN -->
+        <div class="rounded-xl overflow-hidden bg-zinc-800/70 aspect-[9/16] relative">
+          <img
+            src="https://scontent.cdninstagram.com/v/expired123"
+            alt="Expired"
+            class="h-full w-full object-cover"
+            onerror="this.style.display='none'"
+          />
+          <div class="absolute top-2 right-2 bg-black/70 px-2 py-1 rounded text-xs text-white">@expired_cdn</div>
+          <p class="absolute bottom-2 left-2 text-xs text-red-400">← Also blank!</p>
+        </div>
+      </div>
+
+      <div class="mt-4 p-4 bg-red-900/20 border border-red-800 rounded-lg">
+        <p class="text-red-300 text-sm">
+          <strong>Problem:</strong> When images fail (403, timeout, expired CDN), the user sees
+          empty gray boxes. Bad UX - looks broken.
+        </p>
+      </div>
+    </div>
+
+    <!-- FIXED BEHAVIOR -->
+    <div>
+      <h2 class="text-xl font-semibold text-green-400 mb-2">✅ Fixed Behavior</h2>
+      <p class="text-sm text-zinc-500 mb-4">Track failures in state → show nice fallback</p>
+
+      <div class="grid grid-cols-2 gap-4">
+        <!-- Working image -->
+        <div class="rounded-xl overflow-hidden bg-zinc-800/70 aspect-[9/16] relative">
+          <img
+            src="https://picsum.photos/300/500?random=2"
+            alt="Working"
+            class="h-full w-full object-cover"
+            id="fixed-working"
+            onerror="showFallback(this, 'working_user', 'Instagram')"
+          />
+          <div class="absolute top-2 right-2 bg-black/70 px-2 py-1 rounded text-xs text-white">@working_user</div>
+        </div>
+
+        <!-- Broken image - shows FALLBACK -->
+        <div class="rounded-xl overflow-hidden bg-zinc-800/70 aspect-[9/16] relative" id="card-broken">
+          <img
+            src="https://broken-url.invalid/image.jpg"
+            alt="Broken"
+            class="h-full w-full object-cover"
+            id="fixed-broken"
+            onerror="showFallback(this, 'broken_user', 'TikTok')"
+          />
+          <div class="absolute top-2 right-2 bg-black/70 px-2 py-1 rounded text-xs text-white z-10">@broken_user</div>
+        </div>
+
+        <!-- No URL -->
+        <div class="rounded-xl overflow-hidden bg-zinc-800/70 aspect-[9/16] relative">
+          <div class="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-b from-zinc-800/60 to-zinc-900/60">
+            <span class="rounded-full bg-zinc-900/70 px-2 py-1 text-[10px] uppercase tracking-wide text-zinc-300">YouTube</span>
+            <div class="flex h-12 w-12 items-center justify-center rounded-full bg-pink-500/20 text-lg font-semibold text-pink-300">N</div>
+            <span class="text-zinc-500 text-xs">No preview</span>
+          </div>
+          <div class="absolute top-2 right-2 bg-black/70 px-2 py-1 rounded text-xs text-white">@no_url</div>
+        </div>
+
+        <!-- Expired CDN - shows FALLBACK -->
+        <div class="rounded-xl overflow-hidden bg-zinc-800/70 aspect-[9/16] relative" id="card-expired">
+          <img
+            src="https://scontent.cdninstagram.com/v/expired123"
+            alt="Expired"
+            class="h-full w-full object-cover"
+            id="fixed-expired"
+            onerror="showFallback(this, 'expired_cdn', 'Instagram')"
+          />
+          <div class="absolute top-2 right-2 bg-black/70 px-2 py-1 rounded text-xs text-white z-10">@expired_cdn</div>
+        </div>
+      </div>
+
+      <div class="mt-4 p-4 bg-green-900/20 border border-green-800 rounded-lg">
+        <p class="text-green-300 text-sm">
+          <strong>Solution:</strong> Track failed images in React state. When image fails,
+          re-render with a nice fallback showing platform + user initial.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Implementation Code -->
+  <div class="mt-12 p-6 bg-zinc-900 rounded-xl">
+    <h3 class="text-lg font-semibold text-white mb-4">Production Implementation</h3>
+    <pre class="bg-zinc-950 p-4 rounded-lg overflow-x-auto text-sm"><code class="text-green-300">// 1. Add state to track failed images (near other useState)
+const [failedImageIds, setFailedImageIds] = useState(new Set());
+
+// 2. Replace handleImageError
+const handleImageError = useCallback((imageKey) => {
+  setFailedImageIds(prev => {
+    const next = new Set(prev);
+    next.add(imageKey);
+    return next;
+  });
+}, []);
+
+// 3. Update gallery card JSX (~line 2236)
+{(!previewUrl || failedImageIds.has(id)) ? (
+  &lt;div className="flex h-full w-full flex-col items-center justify-center gap-2 ..."&gt;
+    &lt;span className="..."&gt;{platformLabel}&lt;/span&gt;
+    &lt;div className="... rounded-full bg-pink-500/20 ..."&gt;
+      {snapshot.handle.charAt(0).toUpperCase()}
+    &lt;/div&gt;
+    &lt;span&gt;{previewUrl ? "Failed to load" : "No preview"}&lt;/span&gt;
+  &lt;/div&gt;
+) : (
+  &lt;img
+    src={previewUrl}
+    onError={() => handleImageError(id)}  // Pass row ID
+    ...
+  /&gt;
+)}</code></pre>
+  </div>
+
+  <!-- Benefits -->
+  <div class="mt-8 grid grid-cols-3 gap-4">
+    <div class="p-4 bg-zinc-900 rounded-lg">
+      <h4 class="font-semibold text-white mb-2">✓ Better UX</h4>
+      <p class="text-sm text-zinc-400">Users see meaningful fallback instead of blank space</p>
+    </div>
+    <div class="p-4 bg-zinc-900 rounded-lg">
+      <h4 class="font-semibold text-white mb-2">✓ Pure React</h4>
+      <p class="text-sm text-zinc-400">No DOM manipulation - uses state for re-renders</p>
+    </div>
+    <div class="p-4 bg-zinc-900 rounded-lg">
+      <h4 class="font-semibold text-white mb-2">✓ O(1) Lookup</h4>
+      <p class="text-sm text-zinc-400">Set-based tracking for fast failed image checks</p>
+    </div>
+  </div>
+
+  <script>
+    // Simulates the fixed behavior by replacing image with fallback
+    function showFallback(img, handle, platform) {
+      const parent = img.parentElement;
+      img.remove();
+
+      const fallback = document.createElement('div');
+      fallback.className = 'flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-b from-zinc-800/60 to-zinc-900/60';
+      fallback.innerHTML = `
+        <span class="rounded-full bg-zinc-900/70 px-2 py-1 text-[10px] uppercase tracking-wide text-zinc-300">${platform}</span>
+        <div class="flex h-12 w-12 items-center justify-center rounded-full bg-pink-500/20 text-lg font-semibold text-pink-300">${handle.charAt(0).toUpperCase()}</div>
+        <span class="text-zinc-500 text-xs">Failed to load</span>
+      `;
+
+      // Insert at beginning so handle badge stays on top
+      parent.insertBefore(fallback, parent.firstChild);
+    }
+  </script>
+</body>
+</html>

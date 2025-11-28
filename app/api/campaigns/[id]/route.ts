@@ -28,6 +28,25 @@ export async function GET(
       where: (campaigns, { eq }) => eq(campaigns.id, id),
       with: {
         scrapingJobs: {
+          // FIX: Explicitly include processedResults so sidebar can show creator count
+          // even when full results aren't loaded yet
+          columns: {
+            id: true,
+            campaignId: true,
+            userId: true,
+            status: true,
+            keywords: true,
+            platform: true,
+            searchParams: true,
+            targetResults: true,
+            processedResults: true,  // Critical for sidebar creator count
+            progress: true,
+            error: true,
+            createdAt: true,
+            updatedAt: true,
+            completedAt: true,
+            timeoutAt: true,
+          },
           with: {
             results: {
               columns: {

@@ -1,0 +1,26 @@
+Fetching 60 reels...
+Success: true
+Reels: 60
+Quality (100+): 35
+
+USERNAME,LIKES,REEL_URL,PROFILE_URL
+tay_onajourney,909,https://instagram.com/reel/DRfZHv_EWFR,https://instagram.com/tay_onajourney
+danjakoka,418,https://instagram.com/reel/DRfZFciiO4n,https://instagram.com/danjakoka
+athflex,227,https://instagram.com/reel/DResHdoCBTr,https://instagram.com/athflex
+anthonyscrafano,430,https://instagram.com/reel/DRfaE0MCVxs,https://instagram.com/anthonyscrafano
+brodney,809,https://instagram.com/reel/DReyLuODdzZ,https://instagram.com/brodney
+crunchgym,100,https://instagram.com/reel/DRfH7LLCh_p,https://instagram.com/crunchgym
+nevedhxetquar,1100,https://instagram.com/reel/DRej922EYY7,https://instagram.com/nevedhxetquar
+coachemuppodcast,2151,https://instagram.com/reel/DRe13QOiV3W,https://instagram.com/coachemuppodcast
+solidcore,1100,https://instagram.com/reel/DRdFYfUkdTL,https://instagram.com/solidcore
+cubicsocialclub,260,https://instagram.com/reel/DRebiGDD5fh,https://instagram.com/cubicsocialclub
+planetfitness,306,https://instagram.com/reel/DNBPywFJ0Xh,https://instagram.com/planetfitness
+trainwithflorence,510,https://instagram.com/reel/DRefc58EV1R,https://instagram.com/trainwithflorence
+planetfitness,429,https://instagram.com/reel/DLK4dpEti0Z,https://instagram.com/planetfitness
+fkbodyfit,111,https://instagram.com/reel/DRewodxjwt2,https://instagram.com/fkbodyfit
+crossfittraining,3010,https://instagram.com/reel/DNqi62WJwkM,https://instagram.com/crossfittraining
+lifetime.life,3151,https://instagram.com/reel/DQpm_dVjVqA,https://instagram.com/lifetime.life
+crossfit,216,https://instagram.com/reel/DRdvD4LiTdu,https://instagram.com/crossfit
+peelefitness,159,https://instagram.com/reel/DRdIcyqkm_i,https://instagram.com/peelefitness
+butterflyeffectcompetition,210,https://instagram.com/reel/DRdyXmpklD_,https://instagram.com/butterflyeffectcompetition
+sachin_arm_wrestler,20914,https://instagram.com/reel/DReP02XDAyz,https://instagram.com/sachin_arm_wrestler

@@ -18,6 +18,19 @@ import {
   flattenCreators
 } from './search-progress-helpers'
 
+const parseJsonSafe = async (response) => {
+  const text = await response.text();
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    console.error('[SEARCH-PROGRESS] Non-JSON response', {
+      status: response.status,
+      snippet: text?.slice?.(0, 500),
+    });
+    return { error: 'invalid_json', raw: text, status: response.status };
+  }
+}
+
 // [ComponentUsage] Rendered by `search-results.jsx` to drive progress UI and intermediate result hydration
 export default function SearchProgress({
   jobId,
@@ -74,7 +87,8 @@ export default function SearchProgress({
     try {
       const res = await fetch(`/api/campaigns/${campaignId}`, { credentials: 'include' })
       if (!res.ok) return
-      const snapshot = await res.json()
+      const snapshot = await parseJsonSafe(res)
+      if (snapshot?.error === 'invalid_json') return
       const jobs = Array.isArray(snapshot?.scrapingJobs) ? snapshot.scrapingJobs : []
       const job = jobs.find((entry) => entry?.id === jobId)
       if (!job) return
@@ -159,7 +173,12 @@ export default function SearchProgress({
           return
         }
 
-        const data = await response.json()
+        const data = await parseJsonSafe(response)
+        if (data?.error === 'invalid_json') {
+          setError('Progress endpoint returned non-JSON');
+          clearPollTimeout()
+          return
+        }
         authRetryRef.current = 0
         generalRetryRef.current = 0
         setError(null)
@@ -211,18 +230,22 @@ export default function SearchProgress({
           }
         }
 
-        if (jobStatus === 'completed') {
+        // FIX: Handle all terminal states (completed, error, timeout)
+        if (jobStatus === 'completed' || jobStatus === 'error' || jobStatus === 'timeout') {
           clearPollTimeout()
-          setDisplayProgress(100)
-          setProgress(100)
+          if (jobStatus === 'completed') {
+            setDisplayProgress(100)
+            setProgress(100)
+          }
           setShowIntermediateResults(false)
           if (typeof onComplete === 'function') {
             onComplete({
-              status: 'completed',
+              status: jobStatus,
               creators,
               partialCompletion: Boolean(data?.partialCompletion),
               finalCount: jobProcessed || creators.length,
-              errorRecovered: Boolean(data?.errorRecovered)
+              errorRecovered: Boolean(data?.errorRecovered),
+              error: data?.error || null
             })
           }
           return

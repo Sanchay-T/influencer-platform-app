@@ -301,7 +301,7 @@ function parseHandleQueueState(raw: unknown): HandleQueueState | null {
 
 const toUiJob = (job: ScrapingJob): UiScrapingJob => {
   const hydratedResults = Array.isArray(job.results) ? job.results : []
-  const totalCreators = countCreatorsFromResults(hydratedResults as Array<{ creators?: PlatformResult }>)
+  const countedCreators = countCreatorsFromResults(hydratedResults as Array<{ creators?: PlatformResult }>)
   const platformHint = job.platform?.toLowerCase?.() ?? 'tiktok'
   const creatorCandidates = flattenCreatorsFromResults(hydratedResults as Array<{ creators?: PlatformResult }>)
   const creatorBuffer = creatorCandidates.length > 0
@@ -311,11 +311,15 @@ const toUiJob = (job: ScrapingJob): UiScrapingJob => {
   const rawSearchParams = (job.searchParams ?? {}) as Record<string, unknown>
   const queueState = parseHandleQueueState(rawSearchParams[HANDLE_QUEUE_PARAM_KEY])
 
+  // Only use counted creators from loaded results (deduplicated)
+  // Don't use processedResults as fallback - it may not be deduplicated
+  const totalCreators = countedCreators > 0 ? countedCreators : undefined
+
   return {
     ...job,
     results: hydratedResults,
     resultsLoaded: hydratedResults.length > 0,
-    totalCreators: totalCreators > 0 ? totalCreators : undefined,
+    totalCreators,
     creatorBuffer,
     pageLimit: DEFAULT_PAGE_LIMIT,
     handleQueue: queueState,
@@ -344,14 +348,26 @@ function formatDuration(ms: number | null | undefined) {
   return `${minutes}m ${remainingSeconds.toFixed(1)}s`
 }
 
-function getCreatorsCount(job?: UiScrapingJob | null) {
-  if (typeof job?.totalCreators === 'number') {
-    return job.totalCreators
-  }
-  if (Array.isArray(job?.creatorBuffer)) {
+function getCreatorsCount(job?: UiScrapingJob | null): number {
+  // Priority 1: Use creatorBuffer (deduplicated list) - this matches what the table shows
+  if (Array.isArray(job?.creatorBuffer) && job.creatorBuffer.length > 0) {
     return job.creatorBuffer.length
   }
-  return countCreatorsFromResults(job?.results as Array<{ creators?: PlatformResult }>)
+  // Priority 2: Use totalCreators if set (from loaded results)
+  if (typeof job?.totalCreators === 'number' && job.totalCreators > 0) {
+    return job.totalCreators
+  }
+  // Priority 3: Count from results if loaded
+  const counted = countCreatorsFromResults(job?.results as Array<{ creators?: PlatformResult }>)
+  if (counted > 0) {
+    return counted
+  }
+  // Priority 4: Use processedResults from DB for unloaded runs
+  // Note: This is the raw count, may differ slightly from deduplicated count shown in table
+  if (typeof job?.processedResults === 'number' && job.processedResults > 0) {
+    return job.processedResults
+  }
+  return 0
 }
 
 function getRunDisplayLabel(index: number) {
@@ -440,7 +456,23 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
         credentials: 'include'
       })
 
-      const data = await response.json()
+      // Safe JSON parsing to handle HTML error pages
+      const text = await response.text()
+      let data: any
+      try {
+        data = JSON.parse(text)
+      } catch {
+        structuredConsole.error('fetchJobSnapshot received non-JSON response', {
+          jobId: job.id,
+          status: response.status,
+          snippet: text?.slice?.(0, 200)
+        })
+        updateJobState(job.id, {
+          resultsError: 'Server returned invalid response',
+          resultsLoaded: true
+        })
+        return
+      }
 
       if (!response.ok || data?.error) {
         updateJobState(job.id, {
@@ -489,7 +521,22 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
         credentials: 'include'
       })
 
-      const data = await response.json()
+      // Safe JSON parsing to handle HTML error pages
+      const text = await response.text()
+      let data: any
+      try {
+        data = JSON.parse(text)
+      } catch {
+        structuredConsole.error('loadMoreResults received non-JSON response', {
+          jobId: job.id,
+          status: response.status,
+          snippet: text?.slice?.(0, 200)
+        })
+        updateJobState(job.id, {
+          resultsError: 'Server returned invalid response'
+        })
+        return
+      }
 
       if (!response.ok || data?.error) {
         updateJobState(job.id, {
@@ -654,8 +701,26 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
           return
         }
 
-        const response = await fetch(`/api/scraping/${current.platform.toLowerCase()}?jobId=${current.id}`, { credentials: 'include' })
-        const data = await response.json()
+        // FIX: Use resolveScrapingEndpoint instead of direct platform string
+        // Platform values use underscores (instagram_scrapecreators) but routes use hyphens
+        const endpoint = resolveScrapingEndpoint(current.platform)
+        const response = await fetch(`${endpoint}?jobId=${current.id}`, { credentials: 'include' })
+
+        // FIX: Safe JSON parsing to handle HTML error pages gracefully
+        const text = await response.text()
+        let data: any
+        try {
+          data = JSON.parse(text)
+        } catch {
+          structuredConsole.error('Polling received non-JSON response', {
+            jobId: current.id,
+            platform: current.platform,
+            status: response.status,
+            snippet: text?.slice?.(0, 200)
+          })
+          // Retry on next interval instead of crashing
+          return
+        }
 
         if (SHOW_DIAGNOSTICS && data) {
           const timings = data?.benchmark?.timings ?? {}

@@ -5,6 +5,9 @@ import { qstash } from '@/lib/queue/qstash';
 import { logger, LogCategory } from '@/lib/logging';
 import { runSearchJob } from '@/lib/search-engine/runner';
 import { getWebhookUrl } from '@/lib/utils/url-utils';
+import { db } from '@/lib/db';
+import { scrapingJobs } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 
 const receiver = new Receiver({
   currentSigningKey: process.env.QSTASH_CURRENT_SIGNING_KEY!,
@@ -54,28 +57,86 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'jobId is required' }, { status: 400 });
   }
 
+  // --- FIX 1.2: Idempotency Check ---
+  // Skip if job already completed/errored/timed out (prevents duplicate processing)
+  const [existingJob] = await db
+    .select({ id: scrapingJobs.id, status: scrapingJobs.status, timeoutAt: scrapingJobs.timeoutAt })
+    .from(scrapingJobs)
+    .where(eq(scrapingJobs.id, jobId))
+    .limit(1);
+
+  if (!existingJob) {
+    logger.warn('Job not found for processing', { jobId }, LogCategory.JOB);
+    return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+  }
+
+  // Skip already-processed jobs (idempotency)
+  if (existingJob.status === 'completed' || existingJob.status === 'error' || existingJob.status === 'timeout') {
+    logger.info('Skipping already-processed job (idempotency check)', {
+      jobId,
+    }, LogCategory.JOB);
+    return NextResponse.json({
+      skipped: true,
+      reason: 'already_processed',
+      status: existingJob.status,
+    });
+  }
+
+  // --- FIX 1.3: Timeout Enforcement ---
+  // Check if job has exceeded its timeout before processing
+  if (existingJob.timeoutAt && new Date(existingJob.timeoutAt) < new Date()) {
+    logger.warn('Job exceeded timeout, marking as timed out', {
+      jobId,
+    }, LogCategory.JOB);
+
+    // Mark job as timeout in database
+    await db.update(scrapingJobs)
+      .set({
+        status: 'timeout',
+        error: 'Job exceeded maximum allowed processing time',
+        completedAt: new Date(),
+      })
+      .where(eq(scrapingJobs.id, jobId));
+
+    return NextResponse.json({
+      status: 'timeout',
+      error: 'Job timed out',
+      jobId,
+    }, { status: 408 });
+  }
+
   try {
     const execution = await runSearchJob(jobId);
     const { result, service, config } = execution;
     const snapshot = service.snapshot();
 
-    // 🔍 DIAGNOSTIC: Log before potentially overriding status
-    logger.info('[DIAGNOSTIC] QStash handler checking completion', {
+    // --- FIX 1.1: Status Override Bug ---
+    // Only mark as completed if provider actually succeeded
+    // Previously: `if (result.status === 'completed' || !result.hasMore)` would mark
+    // errors as completed because `!result.hasMore` could be true for error status
+    logger.info('QStash handler determining final status', {
       jobId,
-      resultStatus: result.status,
-      hasMore: result.hasMore,
-      willOverrideToCompleted: (result.status === 'completed' || !result.hasMore),
-      currentDbStatus: snapshot.status,
     }, LogCategory.JOB);
 
-    if (result.status === 'completed' || !result.hasMore) {
-      logger.warn('[DIAGNOSTIC] QStash handler calling complete("completed") - may override error!', {
-        jobId,
-        resultStatus: result.status,
-        hasMore: result.hasMore,
-      }, LogCategory.JOB);
+    if (result.status === 'completed') {
+      // Provider explicitly completed - mark as completed
       await service.complete('completed', {});
+      logger.info('Job marked as completed (provider succeeded)', { jobId }, LogCategory.JOB);
+    } else if (result.status === 'error') {
+      // Provider returned error - preserve the error status (don't override!)
+      // Note: service.complete('error') should have been called by provider,
+      // but we call it here as a safety net in case it wasn't
+      await service.complete('error', {
+        error: 'Provider returned error status'
+      });
+      logger.warn('Job marked as error (provider failed)', { jobId }, LogCategory.JOB);
+    } else if (!result.hasMore) {
+      // Provider finished but with partial status (no more results to fetch)
+      // This happens when target wasn't reached but there's nothing more to fetch
+      await service.complete('completed', {});
+      logger.info('Job marked as completed (partial - no more results available)', { jobId }, LogCategory.JOB);
     }
+    // If hasMore=true and status is not error/completed, job continues (no completion call)
 
     const needsContinuation =
       result.status !== 'error' &&
@@ -84,23 +145,18 @@ export async function POST(req: Request) {
 
     if (needsContinuation) {
       const callbackUrl = `${getWebhookUrl()}/api/qstash/process-search`;
+      // Convert ms to seconds for QStash delay format
+      const delaySeconds = Math.ceil(config.continuationDelayMs / 1000);
       await qstash.publishJSON({
         url: callbackUrl,
         body: { jobId },
-        delay: `${config.continuationDelayMs}ms`,
+        delay: `${BigInt(delaySeconds)}s` as const,
         retries: 3,
         notifyOnFailure: true,
       });
     }
 
-    logger.info('Search runner completed', {
-      jobId,
-      platform: snapshot.platform,
-      processedResults: snapshot.processedResults,
-      processedRuns: snapshot.processedRuns,
-      continuationScheduled: needsContinuation,
-      metrics: result.metrics,
-    }, LogCategory.JOB);
+    logger.info('Search runner completed', { jobId }, LogCategory.JOB);
 
     return NextResponse.json({
       status: result.status,
@@ -120,7 +176,7 @@ export async function POST(req: Request) {
         logger.info('Job marked as error after failure', { jobId }, LogCategory.JOB);
       }
     } catch (completionError) {
-      logger.error('Failed to mark job as error', completionError, { jobId }, LogCategory.JOB);
+      logger.error('Failed to mark job as error', completionError instanceof Error ? completionError : new Error(String(completionError)), { jobId }, LogCategory.JOB);
     }
 
     return NextResponse.json({

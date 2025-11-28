@@ -1,19 +1,19 @@
-# CLAUDE.md - Instagram US Reels Search
+# instagram-us-reels-search/CLAUDE.md — IG Search Scripts
+Last updated: 2025-11-27
+Imports: ../CLAUDE.md, ../.claude/CLAUDE.md.
 
-## Context
-You are in the `instagram-us-reels-search/` directory. This folder contains scripts for advanced Instagram search capabilities.
+## Scope
+Standalone scripts experimenting with Instagram keyword/similar search pipelines.
 
-## Local Map
-- **Core Scripts:**
-  - `production-search.ts`: Main production entry point.
-  - `production-search-v2.ts`: Next-gen production search.
-  - `ai-powered-search.ts`: AI-driven search logic.
-- **Data:** JSON files containing search results.
+## Map
+- `production-search.ts`, `production-search-v2.ts` — main runners.
+- `ai-powered-search.ts` — AI-driven variant.
+- JSON files — captured outputs.
 
-## Local Patterns
-- **Execution:** Scripts are designed to be run standalone via `npm run <script>`.
-- **Concurrency:** Uses `p-limit` for controlling concurrent requests.
-- **Output:** Check the JSON output files to verify results.
+## Patterns
+- Run via `npm run <script>` or `tsx <file>`.
+- Concurrency controlled with `p-limit`; adjust carefully to avoid provider throttling.
+- Validate outputs by inspecting generated JSON.
 
 ## Navigation
-- Go up to `../` for the main project root.
+Return to repo root for production search engine in `lib/search-engine/`.

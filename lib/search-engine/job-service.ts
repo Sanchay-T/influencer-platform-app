@@ -6,7 +6,8 @@ import { eq } from 'drizzle-orm';
 import type { NormalizedCreator, ScrapingJobRecord, SearchMetricsSnapshot } from './types';
 import { PlanValidator } from '@/lib/services/plan-validator';
 import { logger, LogCategory } from '@/lib/logging';
-import { filterCreatorsByLikes, MIN_LIKES_THRESHOLD } from './utils/filter-creators';
+// Note: filterCreatorsByLikes removed from backend - filtering now done in frontend
+// import { filterCreatorsByLikes, MIN_LIKES_THRESHOLD } from './utils/filter-creators';
 
 const DEFAULT_PROGRESS_PRECISION = 2;
 const HANDLE_QUEUE_KEY = 'searchEngineHandleQueue';
@@ -140,12 +141,14 @@ export class SearchJobService {
     cursor,
     progress,
     mode = 'absolute',
+    searchParams,
   }: {
     processedRuns: number;
     processedResults: number;
     cursor: number;
     progress: number;
     mode?: 'absolute' | 'delta';
+    searchParams?: Record<string, unknown>;
   }) {
     const currentRuns = this.job.processedRuns ?? 0;
     const currentResults = this.job.processedResults ?? 0;
@@ -159,68 +162,107 @@ export class SearchJobService {
     const safeResults = Math.max(0, nextResults);
     const safeCursor = Math.max(0, nextCursor);
 
+    // Build update object - only include searchParams if provided
+    const updateData: Record<string, unknown> = {
+      processedRuns: safeRuns,
+      processedResults: safeResults,
+      cursor: safeCursor,
+      progress: progress.toFixed(DEFAULT_PROGRESS_PRECISION),
+      updatedAt: new Date(),
+    };
+
+    // Merge searchParams if provided (preserves existing fields, updates/adds new ones)
+    if (searchParams) {
+      const existingParams = (this.job.searchParams ?? {}) as Record<string, unknown>;
+      updateData.searchParams = { ...existingParams, ...searchParams };
+    }
+
     await db
       .update(scrapingJobs)
-      .set({
-        processedRuns: safeRuns,
-        processedResults: safeResults,
-        cursor: safeCursor,
-        progress: progress.toFixed(DEFAULT_PROGRESS_PRECISION),
-        updatedAt: new Date(),
-      })
+      .set(updateData)
       .where(eq(scrapingJobs.id, this.job.id));
     await this.refresh();
   }
 
   async mergeCreators(creators: NormalizedCreator[], getKey: DedupeKeyFn) {
-    // Enforce minimum engagement threshold before dedupe/persist
-    const filtered = filterCreatorsByLikes(creators, MIN_LIKES_THRESHOLD);
-    if (!filtered.length) {
-      return { total: this.job.processedResults, newCount: 0 };
-    }
-
+    // Early return if no creators to process
     if (!creators.length) {
-      return { total: this.job.processedResults, newCount: 0 };
+      return { total: this.job.processedResults ?? 0, newCount: 0 };
     }
 
-    const existing = await db.query.scrapingResults.findFirst({
-      where: (results, { eq }) => eq(results.jobId, this.job.id),
-    });
-
+    // Note: Backend no longer filters by likes - ALL API results are stored
+    // Filtering by engagement (100+ likes, 1000+ views) is done in frontend
     const platformHint = typeof this.job.platform === 'string' ? this.job.platform : null;
 
-    const existingRaw = existing && Array.isArray(existing.creators)
-      ? (existing.creators as NormalizedCreator[])
-      : [];
+    // --- FIX 1.4: Prevent Race Conditions ---
+    // Wrap read-modify-write in a transaction to prevent concurrent QStash
+    // invocations from corrupting data (e.g., both read same state, both write,
+    // second write overwrites first's additions)
+    const result = await db.transaction(async (tx) => {
+      // Check if job is already completed (another concurrent call finished first)
+      const [currentJob] = await tx
+        .select({ id: scrapingJobs.id, status: scrapingJobs.status, processedResults: scrapingJobs.processedResults })
+        .from(scrapingJobs)
+        .where(eq(scrapingJobs.id, this.job.id))
+        .limit(1);
 
-    const existingWithKeys = attachMergeKeys(existingRaw, getKey);
-    const normalizedExisting = dedupeWithHint(existingWithKeys, platformHint);
+      // If job already completed by another concurrent call, skip this merge
+      if (currentJob?.status === 'completed' || currentJob?.status === 'error' || currentJob?.status === 'timeout') {
+        logger.info('Skipping mergeCreators - job already finalized by concurrent call', {
+          jobId: this.job.id,
+        }, LogCategory.JOB);
+        return { total: currentJob.processedResults ?? 0, newCount: 0, skipped: true };
+      }
 
-    const incomingWithKeys = attachMergeKeys(creators, getKey);
-    const combined = [...normalizedExisting, ...incomingWithKeys];
-    const dedupedWithKeys = dedupeWithHint(combined, platformHint);
-    const dedupedCreators = stripMergeKeys(dedupedWithKeys);
+      // Load existing results within transaction
+      const [existing] = await tx
+        .select()
+        .from(scrapingResults)
+        .where(eq(scrapingResults.jobId, this.job.id))
+        .limit(1);
 
-    const previousCount = normalizedExisting.length;
-    const newCount = Math.max(dedupedCreators.length - previousCount, 0);
+      const existingRaw = existing && Array.isArray(existing.creators)
+        ? (existing.creators as NormalizedCreator[])
+        : [];
 
-    if (existing) {
-      await db
-        .update(scrapingResults)
-        .set({ creators: dedupedCreators })
-        .where(eq(scrapingResults.id, existing.id));
-    } else {
-      await db.insert(scrapingResults).values({
-        jobId: this.job.id,
-        creators: dedupedCreators,
-      });
+      const existingWithKeys = attachMergeKeys(existingRaw, getKey);
+      const normalizedExisting = dedupeWithHint(existingWithKeys, platformHint);
+
+      // Process all incoming creators (no backend filtering - frontend handles engagement filters)
+      const incomingWithKeys = attachMergeKeys(creators, getKey);
+      const combined = [...normalizedExisting, ...incomingWithKeys];
+      const dedupedWithKeys = dedupeWithHint(combined, platformHint);
+      const dedupedCreators = stripMergeKeys(dedupedWithKeys);
+
+      const previousCount = normalizedExisting.length;
+      const newCount = Math.max(dedupedCreators.length - previousCount, 0);
+
+      // Write within transaction
+      if (existing) {
+        await tx
+          .update(scrapingResults)
+          .set({ creators: dedupedCreators })
+          .where(eq(scrapingResults.id, existing.id));
+      } else {
+        await tx.insert(scrapingResults).values({
+          jobId: this.job.id,
+          creators: dedupedCreators,
+        });
+      }
+
+      return { total: dedupedCreators.length, newCount, skipped: false };
+    });
+
+    // If we skipped due to concurrent completion, just return
+    if (result.skipped) {
+      return { total: result.total, newCount: 0 };
     }
 
     await this.refresh();
-    if (newCount > 0) {
-      await this.incrementCreatorUsage(newCount, 'merge_creators');
+    if (result.newCount > 0) {
+      await this.incrementCreatorUsage(result.newCount, 'merge_creators');
     }
-    return { total: dedupedCreators.length, newCount };
+    return { total: result.total, newCount: result.newCount };
   }
 
   async complete(finalStatus: 'completed' | 'error', data: { error?: string }) {

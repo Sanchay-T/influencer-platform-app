@@ -1,0 +1,19 @@
+
+🔍 Fetching Instagram Reels for: "yoga workout"
+
+⏳ Please wait ~2 minutes for API response...
+
+<anonymous_script>:1
+<!DOCTYPE html>
+^
+
+SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseJSONFromBytes (node:internal/deps/undici/undici:5738:19)
+    at successSteps (node:internal/deps/undici/undici:5719:27)
+    at fullyReadBody (node:internal/deps/undici/undici:4609:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async consumeBody (node:internal/deps/undici/undici:5728:7)
+    at async file:///Users/sanchay/Documents/projects/personal/influencerplatform-wt2/scripts/fetch-reels-with-links.mjs:24:14
+
+Node.js v23.11.0

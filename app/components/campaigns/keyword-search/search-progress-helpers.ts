@@ -69,6 +69,8 @@ export function buildEndpoint(platformNormalized: string, hasTargetUsername: boo
     case 'instagram_1.0':
     case 'instagram_us_reels':
       return `/api/scraping/instagram-us-reels?jobId=${jobId}`
+    case 'instagram_scrapecreators':
+      return `/api/scraping/instagram-scrapecreators?jobId=${jobId}`
     case 'instagram-2.0':
     case 'instagram_2.0':
     case 'instagram-v2':
@@ -131,6 +133,10 @@ export function computeStage({
   }
 
   switch (platformNormalized) {
+    case 'instagram_scrapecreators':
+      if (percent < 25) return `Running ScrapeCreators reels search for ${keyword}`
+      if (percent < 65) return 'Filtering posts with 100+ likes'
+      return 'Packaging Instagram reels table'
     case 'google-serp':
     case 'google_serp':
       if (percent < 25) return `Running Google SERP discovery for ${keyword}`

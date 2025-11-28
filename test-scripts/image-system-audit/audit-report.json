@@ -1,0 +1,274 @@
+{
+  "timestamp": "2025-11-27T21:00:49.559Z",
+  "summary": {
+    "current": {
+      "totalImages": 12,
+      "loaded": 3,
+      "hidden": 7,
+      "blankSpaces": 7,
+      "errors": [
+        {
+          "imageId": "ig-scontent-expired",
+          "error": "Instagram CDN blocks server-side requests without proper auth tokens",
+          "action": "HIDDEN"
+        },
+        {
+          "imageId": "ig-fbcdn-expired",
+          "error": "Facebook CDN URLs expire after ~24 hours",
+          "action": "HIDDEN"
+        },
+        {
+          "imageId": "ig-profile-pic",
+          "error": "Profile pic CDN URLs are short-lived",
+          "action": "HIDDEN"
+        },
+        {
+          "imageId": "tt-p16-expired",
+          "error": "TikTok CDN signatures expire within hours",
+          "action": "HIDDEN"
+        },
+        {
+          "imageId": "tt-p77-expired",
+          "error": "Invalid or expired CDN path",
+          "action": "HIDDEN"
+        },
+        {
+          "imageId": "tt-muscdn",
+          "error": "CDN domain may be blocked or expired",
+          "action": "HIDDEN"
+        },
+        {
+          "imageId": "malformed-url",
+          "error": "Invalid URL format",
+          "action": "HIDDEN"
+        }
+      ]
+    },
+    "proposed": {
+      "totalImages": 12,
+      "loaded": 3,
+      "fallbacksShown": 9,
+      "blankSpaces": 0,
+      "events": [
+        {
+          "imageId": "ig-scontent-expired",
+          "error": "Instagram CDN blocks server-side requests without proper auth tokens",
+          "action": "FALLBACK_SHOWN"
+        },
+        {
+          "imageId": "ig-fbcdn-expired",
+          "error": "Facebook CDN URLs expire after ~24 hours",
+          "action": "FALLBACK_SHOWN"
+        },
+        {
+          "imageId": "ig-profile-pic",
+          "error": "Profile pic CDN URLs are short-lived",
+          "action": "FALLBACK_SHOWN"
+        },
+        {
+          "imageId": "tt-p16-expired",
+          "error": "TikTok CDN signatures expire within hours",
+          "action": "FALLBACK_SHOWN"
+        },
+        {
+          "imageId": "tt-p77-expired",
+          "error": "Invalid or expired CDN path",
+          "action": "FALLBACK_SHOWN"
+        },
+        {
+          "imageId": "tt-muscdn",
+          "error": "CDN domain may be blocked or expired",
+          "action": "FALLBACK_SHOWN"
+        },
+        {
+          "imageId": "malformed-url",
+          "error": "Invalid URL format",
+          "action": "FALLBACK_SHOWN"
+        }
+      ]
+    },
+    "improvement": {
+      "blankSpacesEliminated": 7,
+      "fallbacksAdded": 9
+    }
+  },
+  "proxyTests": {
+    "total": 12,
+    "successful": 1,
+    "placeholders": 4,
+    "errors": 5,
+    "skipped": 2
+  },
+  "byCategory": {
+    "working": {
+      "total": 2,
+      "failed": 1,
+      "scenarios": [
+        {
+          "name": "Direct image URL (should always work)",
+          "result": "SUCCESS",
+          "status": 200
+        },
+        {
+          "name": "Placeholder service",
+          "result": "SVG_PLACEHOLDER",
+          "status": 200
+        }
+      ]
+    },
+    "instagram": {
+      "total": 3,
+      "failed": 3,
+      "scenarios": [
+        {
+          "name": "Instagram scontent CDN (expired/blocked)",
+          "result": "ERROR",
+          "status": 403
+        },
+        {
+          "name": "Instagram fbcdn CDN (expired)",
+          "result": "ERROR",
+          "status": 403
+        },
+        {
+          "name": "Instagram profile picture",
+          "result": "ERROR",
+          "status": 403
+        }
+      ]
+    },
+    "tiktok": {
+      "total": 3,
+      "failed": 3,
+      "scenarios": [
+        {
+          "name": "TikTok p16 CDN (expired signature)",
+          "result": "SVG_PLACEHOLDER",
+          "status": 200
+        },
+        {
+          "name": "TikTok p77 CDN",
+          "result": "ERROR",
+          "status": 400
+        },
+        {
+          "name": "TikTok muscdn (music CDN)",
+          "result": "ERROR",
+          "status": 400
+        }
+      ]
+    },
+    "edge-case": {
+      "total": 2,
+      "failed": 2,
+      "scenarios": [
+        {
+          "name": "Malformed URL",
+          "result": "SVG_PLACEHOLDER",
+          "status": 200
+        },
+        {
+          "name": "Slow CDN (potential timeout)",
+          "result": "SVG_PLACEHOLDER",
+          "status": 200
+        }
+      ]
+    }
+  },
+  "failureAnalysis": [
+    {
+      "scenario": "Placeholder service",
+      "category": "working",
+      "reason": "Unknown",
+      "proxyResponse": "SVG_PLACEHOLDER",
+      "currentUserExperience": "BLANK_SPACE",
+      "proposedUserExperience": "FALLBACK_UI"
+    },
+    {
+      "scenario": "Instagram scontent CDN (expired/blocked)",
+      "category": "instagram",
+      "reason": "Instagram CDN blocks server-side requests without proper auth tokens",
+      "proxyResponse": "ERROR",
+      "currentUserExperience": "BLANK_SPACE",
+      "proposedUserExperience": "FALLBACK_UI"
+    },
+    {
+      "scenario": "Instagram fbcdn CDN (expired)",
+      "category": "instagram",
+      "reason": "Facebook CDN URLs expire after ~24 hours",
+      "proxyResponse": "ERROR",
+      "currentUserExperience": "BLANK_SPACE",
+      "proposedUserExperience": "FALLBACK_UI"
+    },
+    {
+      "scenario": "Instagram profile picture",
+      "category": "instagram",
+      "reason": "Profile pic CDN URLs are short-lived",
+      "proxyResponse": "ERROR",
+      "currentUserExperience": "BLANK_SPACE",
+      "proposedUserExperience": "FALLBACK_UI"
+    },
+    {
+      "scenario": "TikTok p16 CDN (expired signature)",
+      "category": "tiktok",
+      "reason": "TikTok CDN signatures expire within hours",
+      "proxyResponse": "SVG_PLACEHOLDER",
+      "currentUserExperience": "BLANK_SPACE",
+      "proposedUserExperience": "FALLBACK_UI"
+    },
+    {
+      "scenario": "TikTok p77 CDN",
+      "category": "tiktok",
+      "reason": "Invalid or expired CDN path",
+      "proxyResponse": "ERROR",
+      "currentUserExperience": "BLANK_SPACE",
+      "proposedUserExperience": "FALLBACK_UI"
+    },
+    {
+      "scenario": "TikTok muscdn (music CDN)",
+      "category": "tiktok",
+      "reason": "CDN domain may be blocked or expired",
+      "proxyResponse": "ERROR",
+      "currentUserExperience": "BLANK_SPACE",
+      "proposedUserExperience": "FALLBACK_UI"
+    },
+    {
+      "scenario": "Malformed URL",
+      "category": "edge-case",
+      "reason": "Invalid URL format",
+      "proxyResponse": "SVG_PLACEHOLDER",
+      "currentUserExperience": "BLANK_SPACE",
+      "proposedUserExperience": "FALLBACK_UI"
+    },
+    {
+      "scenario": "Slow CDN (potential timeout)",
+      "category": "edge-case",
+      "reason": "May timeout on slow connections",
+      "proxyResponse": "SVG_PLACEHOLDER",
+      "currentUserExperience": "BLANK_SPACE",
+      "proposedUserExperience": "FALLBACK_UI"
+    }
+  ],
+  "productionChanges": [
+    {
+      "file": "app/components/campaigns/keyword-search/search-results.jsx",
+      "line": "~557",
+      "change": "ADD_STATE",
+      "code": "const [failedImageIds, setFailedImageIds] = useState(new Set());"
+    },
+    {
+      "file": "app/components/campaigns/keyword-search/search-results.jsx",
+      "line": "~1478-1482",
+      "change": "REPLACE_HANDLER",
+      "currentCode": "const handleImageError = (e) => {\n  const img = e.target;\n  if (img) {\n    img.style.display = \"none\";  // ❌ PROBLEM: Hides image\n  }\n};",
+      "newCode": "const handleImageError = useCallback((imageId) => {\n  setFailedImageIds(prev => {\n    const next = new Set(prev);\n    next.add(imageId);\n    return next;\n  });\n}, []);"
+    },
+    {
+      "file": "app/components/campaigns/keyword-search/search-results.jsx",
+      "line": "~2236-2252",
+      "change": "UPDATE_JSX",
+      "currentCode": "{previewUrl ? (\n  <img\n    src={previewUrl}\n    onError={(event) => handleImageError(event)}\n  />\n) : (\n  <div>No preview available</div>\n)}",
+      "newCode": "{(!previewUrl || failedImageIds.has(id)) ? (\n  <FallbackPlaceholder\n    handle={snapshot.handle}\n    platform={platformLabel}\n    message={previewUrl ? \"Failed to load\" : \"No preview\"}\n  />\n) : (\n  <img\n    src={previewUrl}\n    onError={() => handleImageError(id)}\n  />\n)}"
+    }
+  ]
+}
