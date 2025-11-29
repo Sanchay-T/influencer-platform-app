@@ -340,7 +340,7 @@ const ensureImageUrl = (value) => {
 };
 
 // Expandable Bio + Links cell component
-const BioLinksCell = ({ bio, bioLinks = [], externalUrl }) => {
+const BioLinksCell = ({ bio, bioLinks = [], externalUrl, isLoading = false }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const hasBio = bio && bio.trim().length > 0;
@@ -362,6 +362,18 @@ const BioLinksCell = ({ bio, bioLinks = [], externalUrl }) => {
   };
 
   if (!hasContent) {
+    // Show loading indicator when bios are being fetched
+    if (isLoading) {
+      return (
+        <div className="flex items-center gap-2 text-sm text-zinc-400">
+          <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+          <span>Fetching bio...</span>
+        </div>
+      );
+    }
     return <span className="text-sm text-zinc-500">No bio</span>;
   }
 
@@ -453,23 +465,32 @@ const BioLinksCell = ({ bio, bioLinks = [], externalUrl }) => {
  */
 const useBioEnrichment = (creators, jobStatus, jobId, platformNormalized) => {
   const [bioData, setBioData] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
+  const [hasFetchedComplete, setHasFetchedComplete] = useState(false);
   const hasFetched = useRef(false);
   const lastJobId = useRef(null);
+
+  // For instagram_scrapecreators, bio comes from enrichment - show loading until fetch completes
+  const isScrapecreatorsPlatform = platformNormalized === 'instagram_scrapecreators';
+  const isLoading = isScrapecreatorsPlatform && !hasFetchedComplete && creators.length > 0;
 
   // Reset when jobId changes
   useEffect(() => {
     if (jobId !== lastJobId.current) {
       lastJobId.current = jobId;
       hasFetched.current = false;
+      setHasFetchedComplete(false);
       setBioData({});
     }
   }, [jobId]);
 
   useEffect(() => {
     // Only fetch for instagram_scrapecreators platform
-    const isScrapecreatorsPlatform = platformNormalized === 'instagram_scrapecreators';
-    if (!isScrapecreatorsPlatform) return;
+    if (!isScrapecreatorsPlatform) {
+      // For non-scrapecreators platforms, mark as complete immediately
+      setHasFetchedComplete(true);
+      return;
+    }
 
     // Only fetch when search is complete and we haven't fetched yet
     if (jobStatus !== 'completed' || hasFetched.current || creators.length === 0) {
@@ -478,7 +499,7 @@ const useBioEnrichment = (creators, jobStatus, jobId, platformNormalized) => {
 
     const fetchBios = async () => {
       hasFetched.current = true;
-      setIsLoading(true);
+      setIsFetching(true);
 
       // Get user IDs that need bio data (have owner.id but no biography yet)
       const userIds = creators
@@ -490,7 +511,8 @@ const useBioEnrichment = (creators, jobStatus, jobId, platformNormalized) => {
         .map(c => c.owner.id);
 
       if (userIds.length === 0) {
-        setIsLoading(false);
+        setIsFetching(false);
+        setHasFetchedComplete(true);
         return;
       }
 
@@ -519,12 +541,13 @@ const useBioEnrichment = (creators, jobStatus, jobId, platformNormalized) => {
       } catch (error) {
         console.error('Error fetching bios:', error);
       } finally {
-        setIsLoading(false);
+        setIsFetching(false);
+        setHasFetchedComplete(true);
       }
     };
 
     fetchBios();
-  }, [jobStatus, creators, jobId, platformNormalized]);
+  }, [jobStatus, creators, jobId, platformNormalized, isScrapecreatorsPlatform]);
 
   return { bioData, isLoading };
 };
@@ -2074,6 +2097,7 @@ const SearchResults = ({ searchData }) => {
                           bio={liveBioData?.biography}
                           bioLinks={liveBioData?.bio_links || []}
                           externalUrl={liveBioData?.external_url}
+                          isLoading={bioLoading}
                         />
                       );
                     })()}
