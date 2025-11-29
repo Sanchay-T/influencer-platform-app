@@ -1,5 +1,5 @@
 import { SearchJobService } from '../job-service';
-import { computeProgress, sleep } from '../utils';
+import { chunk, computeProgress, sleep } from '../utils';
 import type {
   NormalizedCreator,
   ProviderContext,
@@ -7,6 +7,7 @@ import type {
   SearchMetricsSnapshot,
 } from '../types';
 import { addCost, SCRAPECREATORS_COST_PER_CALL_USD } from '../utils/cost';
+import { scrapingLogger } from '@/lib/logging';
 
 const YOUTUBE_SEARCH_API_URL = 'https://api.scrapecreators.com/v1/youtube/search';
 const YOUTUBE_CHANNEL_API_URL = 'https://api.scrapecreators.com/v1/youtube/channel';
@@ -19,29 +20,54 @@ function assertApiConfig() {
   }
 }
 
+type FetchPageResult = {
+  videos: any[];
+  continuationToken: string | null;
+  durationMs: number;
+  error?: string;
+};
+
 async function fetchYouTubeKeywordPage(
   keywords: string[],
   continuationToken?: string | null,
-) {
+): Promise<FetchPageResult> {
   assertApiConfig();
   const params = new URLSearchParams({ query: keywords.join(', ') });
   if (continuationToken) params.set('continuationToken', continuationToken);
 
-  const response = await fetch(`${YOUTUBE_SEARCH_API_URL}?${params.toString()}`, {
-    headers: { 'x-api-key': process.env.SCRAPECREATORS_API_KEY! },
-    signal: AbortSignal.timeout(30_000),
-  });
+  const startedAt = Date.now();
+  try {
+    const response = await fetch(`${YOUTUBE_SEARCH_API_URL}?${params.toString()}`, {
+      headers: { 'x-api-key': process.env.SCRAPECREATORS_API_KEY! },
+      signal: AbortSignal.timeout(30_000),
+    });
 
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => '');
-    throw new Error(`YouTube keyword API error ${response.status}: ${errorText}`);
+    const durationMs = Date.now() - startedAt;
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      return {
+        videos: [],
+        continuationToken: null,
+        durationMs,
+        error: `YouTube keyword API error ${response.status}: ${errorText}`,
+      };
+    }
+
+    const payload = await response.json();
+    const videos = Array.isArray(payload?.videos) ? payload.videos : [];
+    const nextToken = payload?.continuationToken ?? null;
+
+    return { videos, continuationToken: nextToken, durationMs };
+  } catch (error) {
+    const durationMs = Date.now() - startedAt;
+    return {
+      videos: [],
+      continuationToken: null,
+      durationMs,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
-
-  const payload = await response.json();
-  const videos = Array.isArray(payload?.videos) ? payload.videos : [];
-  const nextToken = payload?.continuationToken ?? null;
-
-  return { videos, continuationToken: nextToken };
 }
 
 async function fetchChannelProfile(handle: string) {
@@ -73,14 +99,6 @@ function dedupeYouTubeCreators(creators: NormalizedCreator[]): NormalizedCreator
   return unique;
 }
 
-function chunk<T>(items: T[], size: number) {
-  if (size <= 0) return [items];
-  const result: T[][] = [];
-  for (let i = 0; i < items.length; i += size) {
-    result.push(items.slice(i, i + size));
-  }
-  return result;
-}
 
 function normalizeCreator(video: any, profile: any, keywords: string[]): NormalizedCreator {
   const channel = video?.channel ?? {};
@@ -125,6 +143,8 @@ export async function runYouTubeKeywordProvider(
   { job, config }: ProviderContext,
   service: SearchJobService,
 ): Promise<ProviderRunResult> {
+  const providerStartTime = Date.now();
+
   const metrics: SearchMetricsSnapshot = {
     apiCalls: 0,
     processedCreators: job.processedResults || 0,
@@ -134,25 +154,67 @@ export async function runYouTubeKeywordProvider(
 
   const keywords = Array.isArray(job.keywords) ? (job.keywords as string[]).map((k) => String(k)) : [];
   if (!keywords.length) {
-    throw new Error('YouTube keyword job is missing keywords');
+    const error = 'YouTube keyword job is missing keywords';
+    scrapingLogger.error(error, { jobId: job.id });
+    throw new Error(error);
   }
+
+  scrapingLogger.info('YouTube keyword provider started', {
+    jobId: job.id,
+    keywords,
+    targetResults: job.targetResults,
+    processedResults: job.processedResults,
+  });
 
   const maxApiCalls = Math.max(config.maxApiCalls, 1);
   const targetResults = job.targetResults || 0;
   let continuationToken = (job.searchParams as any)?.continuationToken ?? null;
   let processedRuns = job.processedRuns || 0;
-  let processedResults = job.processedResults || 0;
+  let runningTotal = job.processedResults || 0;
   let hasMore = true;
 
   const channelProfileCache = new Map<string, any>();
 
   await service.markProcessing();
 
-  for (let callIndex = 0; callIndex < maxApiCalls && hasMore && processedResults < targetResults; callIndex++) {
+  for (let callIndex = 0; callIndex < maxApiCalls && hasMore && runningTotal < targetResults; callIndex++) {
     const fetchStarted = Date.now();
-    const { videos, continuationToken: nextToken } = await fetchYouTubeKeywordPage(keywords, continuationToken);
+
+    scrapingLogger.debug('Fetching YouTube keyword page', {
+      jobId: job.id,
+      callIndex,
+      continuationToken,
+      keywords,
+    });
+
+    const { videos, continuationToken: nextToken, durationMs, error } = await fetchYouTubeKeywordPage(keywords, continuationToken);
     metrics.apiCalls += 1;
 
+    // Handle errors - log and continue
+    if (error) {
+      scrapingLogger.error('YouTube keyword API error', {
+        jobId: job.id,
+        error,
+        callIndex,
+        durationMs,
+      });
+
+      console.warn(`[STREAMING] YouTube keyword fetch error: ${error}`);
+
+      // Continue to next iteration instead of throwing
+      continuationToken = null;
+      hasMore = false;
+      break;
+    }
+
+    scrapingLogger.debug('YouTube keyword page fetched', {
+      jobId: job.id,
+      videosCount: videos.length,
+      durationMs,
+      hasNextToken: !!nextToken,
+    });
+
+    // Enrich with channel profiles in parallel chunks
     const enrichedCreators: NormalizedCreator[] = [];
     const chunks = chunk(videos, Math.max(PROFILE_CONCURRENCY, 1));
 
@@ -179,27 +241,46 @@ export async function runYouTubeKeywordProvider(
     }
 
     const uniqueCreators = dedupeYouTubeCreators(enrichedCreators);
-    const { total } = await service.mergeCreators(uniqueCreators, (creator) => {
+
+    // Stream results: save immediately as batch completes
+    const { total, newCount } = await service.mergeCreators(uniqueCreators, (creator) => {
       const id = creator?.creator?.channelId || creator?.creator?.handle;
       return typeof id === 'string' && id.length > 0 ? id : null;
     });
 
+    const previousTotal = runningTotal;
+    runningTotal = total;
     processedRuns += 1;
-    processedResults = total;
 
-    const progress = computeProgress(processedResults, targetResults);
+    const progress = computeProgress(runningTotal, targetResults);
+
+    // Update progress immediately so polling frontend sees it
     await service.recordProgress({
       processedRuns,
-      processedResults,
-      cursor: processedResults,
+      processedResults: runningTotal,
+      cursor: runningTotal,
       progress,
     });
 
-    metrics.processedCreators = processedResults;
+    // Streaming console log for diagnostics
+    console.warn(`[STREAMING] YouTube keyword batch complete (${callIndex + 1}/${maxApiCalls}): +${newCount} new (${uniqueCreators.length} fetched), total=${runningTotal}, progress=${progress}%`);
+
+    scrapingLogger.info('YouTube keyword batch processed', {
+      jobId: job.id,
+      batchIndex: callIndex,
+      fetchedCount: uniqueCreators.length,
+      newCount,
+      previousTotal,
+      newTotal: runningTotal,
+      progress,
+    });
+
+    metrics.processedCreators = runningTotal;
     metrics.batches.push({
       index: metrics.apiCalls,
       size: videos.length,
-      durationMs: Date.now() - fetchStarted,
+      durationMs,
+      keyword: keywords.join(', '),
     });
 
     continuationToken = nextToken;
@@ -210,7 +291,13 @@ export async function runYouTubeKeywordProvider(
     });
 
     hasMore = !!nextToken && videos.length > 0;
-    if (!hasMore || processedResults >= targetResults) {
+    if (!hasMore || runningTotal >= targetResults) {
+      scrapingLogger.info('YouTube keyword provider stopping', {
+        jobId: job.id,
+        reason: runningTotal >= targetResults ? 'target_reached' : 'no_more_results',
+        processedResults: runningTotal,
+        targetResults,
+      });
       break;
     }
 
@@ -219,10 +306,10 @@ export async function runYouTubeKeywordProvider(
     }
   }
 
+  const totalElapsed = Date.now() - providerStartTime;
   const finishedAt = new Date();
   metrics.timings.finishedAt = finishedAt.toISOString();
-  const started = metrics.timings.startedAt ? new Date(metrics.timings.startedAt) : null;
-  metrics.timings.totalDurationMs = started ? finishedAt.getTime() - started.getTime() : undefined;
+  metrics.timings.totalDurationMs = totalElapsed;
 
   await service.updateSearchParams({
     runner: 'search-engine',
@@ -241,10 +328,23 @@ export async function runYouTubeKeywordProvider(
     });
   }
 
+  const status = runningTotal >= targetResults || !hasMore ? 'completed' : 'partial';
+
+  scrapingLogger.info('YouTube keyword provider finished', {
+    jobId: job.id,
+    status,
+    processedResults: runningTotal,
+    targetResults,
+    apiCalls: metrics.apiCalls,
+    totalDurationMs: totalElapsed,
+  });
+
+  console.warn(`[STREAMING] YouTube keyword provider complete: status=${status}, results=${runningTotal}/${targetResults}, elapsed=${totalElapsed}ms`);
+
   return {
-    status: processedResults >= targetResults || !hasMore ? 'completed' : 'partial',
-    processedResults,
-    cursor: processedResults,
+    status,
+    processedResults: runningTotal,
+    cursor: runningTotal,
     hasMore,
     metrics,
   };

@@ -1,7 +1,7 @@
 // search-engine/providers/tiktok-keyword.ts — TikTok keyword adapter for the shared runner
 import { ImageCache } from '@/lib/services/image-cache';
 import { SearchJobService } from '../job-service';
-import { computeProgress, sleep } from '../utils';
+import { computeProgress, sleep, chunk } from '../utils';
 import type { NormalizedCreator, ProviderRunResult, ProviderContext, SearchMetricsSnapshot } from '../types';
 import { addCost, SCRAPECREATORS_COST_PER_CALL_USD } from '../utils/cost';
 import { logger, LogCategory } from '@/lib/logging';
@@ -52,6 +52,98 @@ async function fetchKeywordPage(keyword: string, cursor: number, region: string)
   const payload = (await response.json()) as ScrapeCreatorsResponse;
   const items = Array.isArray(payload.search_item_list) ? payload.search_item_list : [];
   return { items, hasMore: Boolean(payload?.has_more), apiDurationMs: durationMs };
+}
+
+type KeywordFetchResult = {
+  keyword: string;
+  creators: NormalizedCreator[];
+  durationMs: number;
+  apiCalls: number;
+  error?: string;
+};
+
+/**
+ * Fetch all pages for a single keyword, enriching creators in parallel batches
+ * Optional callback fires when keyword completes, enabling streaming results
+ */
+async function fetchKeywordWithPages(
+  keyword: string,
+  region: string,
+  targetResults: number,
+  currentTotal: number,
+  continuationDelayMs: number,
+  onComplete?: (result: KeywordFetchResult) => Promise<void>
+): Promise<KeywordFetchResult> {
+  const startTime = Date.now();
+  let cursor = 0;
+  let hasMore = true;
+  const allCreators: NormalizedCreator[] = [];
+  let apiCalls = 0;
+  const maxStreamChunk = Math.max(Math.floor(DEFAULT_CONCURRENCY), 1);
+
+  try {
+    while (hasMore && (currentTotal + allCreators.length) < targetResults) {
+      const { items, hasMore: batchHasMore } = await fetchKeywordPage(keyword, cursor, region);
+      apiCalls++;
+
+      // Process creators in chunks to avoid memory spikes
+      const batches = chunk(items, maxStreamChunk);
+      for (const slice of batches) {
+        const chunkCreators = await Promise.all(
+          slice.map(async (entry) => {
+            const awemeInfo = entry?.aweme_info ?? {};
+            const author = awemeInfo?.author ?? {};
+            return await enrichCreator(author, awemeInfo);
+          }),
+        );
+        for (const creator of chunkCreators) {
+          if (creator) allCreators.push(creator);
+        }
+      }
+
+      cursor += items.length;
+      hasMore = batchHasMore && items.length > 0;
+
+      // Stop if we've hit our target
+      if ((currentTotal + allCreators.length) >= targetResults) {
+        break;
+      }
+
+      // Rate limiting between pages
+      if (hasMore && continuationDelayMs > 0) {
+        await sleep(continuationDelayMs);
+      }
+    }
+
+    const result: KeywordFetchResult = {
+      keyword,
+      creators: allCreators,
+      durationMs: Date.now() - startTime,
+      apiCalls,
+    };
+
+    // Fire callback immediately when this keyword completes
+    if (onComplete) {
+      await onComplete(result);
+    }
+
+    return result;
+  } catch (error) {
+    const errorResult: KeywordFetchResult = {
+      keyword,
+      creators: [],
+      durationMs: Date.now() - startTime,
+      apiCalls,
+      error: error instanceof Error ? error.message : String(error),
+    };
+
+    // Still call callback for errors so progress updates
+    if (onComplete) {
+      await onComplete(errorResult);
+    }
+
+    return errorResult;
+  }
 }
 
 async function enrichCreator(author: any, awemeInfo: any): Promise<NormalizedCreator | null> {
@@ -130,15 +222,6 @@ async function enrichCreator(author: any, awemeInfo: any): Promise<NormalizedCre
   };
 }
 
-function chunk<T>(items: T[], size: number) {
-  if (size <= 0) return [items];
-  const chunks: T[][] = [];
-  for (let index = 0; index < items.length; index += size) {
-    chunks.push(items.slice(index, index + size));
-  }
-  return chunks;
-}
-
 function creatorKey(creator: NormalizedCreator) {
   const uniqueId = creator?.creator?.uniqueId;
   if (typeof uniqueId === 'string' && uniqueId.length > 0) return uniqueId;
@@ -176,7 +259,6 @@ export async function runTikTokKeywordProvider(
     throw new Error('TikTok keyword job is missing keywords');
   }
 
-  const maxApiCalls = Math.max(config.maxApiCalls, 1);
   const targetResults = job.targetResults && job.targetResults > 0 ? job.targetResults : Infinity;
   const region = job.region || 'US';
 
@@ -190,7 +272,6 @@ export async function runTikTokKeywordProvider(
       targetResults,
       processedRuns: job.processedRuns,
       processedResults: job.processedResults,
-      maxApiCalls,
       continuationDelayMs: config.continuationDelayMs,
       region,
     },
@@ -203,98 +284,144 @@ export async function runTikTokKeywordProvider(
     targetResults,
     processedRuns: job.processedRuns,
     processedResults: job.processedResults,
-    maxApiCalls,
     continuationDelayMs: config.continuationDelayMs,
     region,
   }));
 
-  let processedRuns = job.processedRuns ?? 0;
-  let processedResults = job.processedResults ?? 0;
-  metrics.processedCreators = processedResults;
+  let runningTotal = job.processedResults ?? 0;
+  let totalNewCount = 0;
+  let keywordsProcessed = 0;
+  let totalFetchedThisRun = 0;
 
-  const maxStreamChunk = Math.max(Math.floor(DEFAULT_CONCURRENCY), 1);
-
-  outer: for (const keyword of keywords) {
-    if (processedResults >= targetResults) {
+  // ========================================================
+  // STREAMING RESULTS: Process keywords sequentially,
+  // save each keyword as it completes
+  // ========================================================
+  for (const keyword of keywords) {
+    if (runningTotal >= targetResults) {
       break;
     }
 
-    let cursor = 0;
-    let localHasMore = true;
+    keywordsProcessed++;
 
-    while (localHasMore && processedResults < targetResults) {
-      const batchStarted = Date.now();
-      const { items, hasMore: batchHasMore } = await fetchKeywordPage(keyword, cursor, region);
-      metrics.apiCalls += 1;
+    const result = await fetchKeywordWithPages(
+      keyword,
+      region,
+      targetResults,
+      runningTotal,
+      config.continuationDelayMs,
+      async (keywordResult) => {
+        // This callback fires when the keyword completes
 
-      const enrichedCreators: NormalizedCreator[] = [];
-      const batches = chunk(items, maxStreamChunk);
-      for (const slice of batches) {
-        const chunkCreators = await Promise.all(
-          slice.map(async (entry) => {
-            const awemeInfo = entry?.aweme_info ?? {};
-            const author = awemeInfo?.author ?? {};
-            const creator = await enrichCreator(author, awemeInfo);
-            return creator;
-          }),
-        );
-        for (const creator of chunkCreators) {
-          if (creator) enrichedCreators.push(creator);
+        // Track metrics
+        metrics.apiCalls += keywordResult.apiCalls;
+
+        // Handle errors
+        if (keywordResult.error) {
+          logger.warn(
+            'TikTok keyword fetch error',
+            {
+              jobId: job.id,
+              keyword: keywordResult.keyword,
+              error: keywordResult.error
+            },
+            LogCategory.TIKTOK
+          );
+          console.warn(`[STREAMING] TikTok keyword "${keywordResult.keyword}" failed: ${keywordResult.error}`);
+          return;
+        }
+
+        totalFetchedThisRun += keywordResult.creators.length;
+
+        if (keywordResult.creators.length > 0) {
+          // Save immediately - mergeCreators is idempotent and thread-safe
+          const { total: newTotal, newCount } = await service.mergeCreators(
+            keywordResult.creators,
+            creatorKey
+          );
+          runningTotal = newTotal;
+          totalNewCount += newCount;
+
+          // Update progress immediately so polling frontend sees it
+          const progress = computeProgress(runningTotal, targetResults);
+          await service.recordProgress({
+            processedRuns: (job.processedRuns ?? 0) + 1,
+            processedResults: runningTotal,
+            cursor: runningTotal,
+            progress,
+          });
+
+          console.warn(
+            `[STREAMING] TikTok keyword "${keywordResult.keyword}" complete (${keywordsProcessed}/${keywords.length}): +${newCount} new (${keywordResult.creators.length} fetched), total=${runningTotal}, progress=${progress}%`
+          );
+        } else {
+          console.warn(
+            `[STREAMING] TikTok keyword "${keywordResult.keyword}" complete (${keywordsProcessed}/${keywords.length}): 0 results`
+          );
         }
       }
+    );
 
-      const { total } = await service.mergeCreators(enrichedCreators, creatorKey);
-      processedRuns += 1;
-      processedResults = total;
-      cursor += items.length;
+    // Record batch metrics
+    metrics.batches.push({
+      index: keywordsProcessed,
+      size: result.creators.length,
+      durationMs: result.durationMs,
+      keyword: result.keyword,
+    });
 
-      const progress = computeProgress(processedResults, targetResults);
-      await service.recordProgress({
-        processedRuns,
-        processedResults,
-        cursor: total,
-        progress,
+    // Add cost tracking
+    if (result.apiCalls > 0) {
+      addCost(metrics, {
+        provider: 'ScrapeCreators',
+        unit: 'call',
+        quantity: result.apiCalls,
+        unitCostUsd: SCRAPECREATORS_COST_PER_CALL_USD,
+        totalCostUsd: result.apiCalls * SCRAPECREATORS_COST_PER_CALL_USD,
+        note: `TikTok keyword search: ${result.keyword}`,
       });
+    }
 
-      metrics.processedCreators = processedResults;
-      metrics.batches.push({
-        index: metrics.apiCalls,
-        size: items.length,
-        durationMs: Date.now() - batchStarted,
-      });
-
-      if (processedResults >= targetResults) {
-        break outer;
-      }
-
-      localHasMore = batchHasMore && items.length > 0;
-      if (!localHasMore) {
-        break;
-      }
-
-      if (config.continuationDelayMs > 0) {
-        await sleep(config.continuationDelayMs);
-      }
+    // Stop if we've reached target
+    if (runningTotal >= targetResults) {
+      break;
     }
   }
 
+  // ========================================================
+  // FINALIZE METRICS
+  // ========================================================
+  metrics.processedCreators = runningTotal;
   const finishedAt = new Date();
   metrics.timings.finishedAt = finishedAt.toISOString();
   metrics.timings.totalDurationMs = finishedAt.getTime() - startTimestamp;
 
-  if (metrics.apiCalls > 0) {
-    addCost(metrics, {
-      provider: 'ScrapeCreators',
-      unit: 'api_call',
-      quantity: metrics.apiCalls,
-      unitCostUsd: SCRAPECREATORS_COST_PER_CALL_USD,
-      totalCostUsd: metrics.apiCalls * SCRAPECREATORS_COST_PER_CALL_USD,
-      note: 'TikTok keyword search fetch',
-    });
-  }
+  const status = runningTotal >= targetResults ? 'completed' : 'partial';
+  const hasMore = runningTotal < targetResults;
 
-  const status = processedResults >= targetResults ? 'completed' : 'partial';
-  const hasMore = processedResults < targetResults;
+  logger.info(
+    'TikTok keyword provider complete',
+    {
+      jobId: job.id,
+      keywordsProcessed,
+      totalKeywords: keywords.length,
+      fetchedThisRun: totalFetchedThisRun,
+      newCreatorsAdded: totalNewCount,
+      totalCreators: runningTotal,
+      targetResults,
+      status,
+      hasMore,
+    },
+    LogCategory.TIKTOK,
+  );
+
+  console.warn('[tiktok-provider] complete', JSON.stringify({
+    jobId: job.id,
+    status,
+    processedResults: runningTotal,
+    hasMore,
+    totalElapsed: metrics.timings.totalDurationMs,
+  }));
 
   if (status === 'completed' && !hasMore) {
     await service.complete('completed', {});
@@ -302,8 +429,8 @@ export async function runTikTokKeywordProvider(
 
   return {
     status,
-    processedResults,
-    cursor: processedResults,
+    processedResults: runningTotal,
+    cursor: runningTotal,
     hasMore,
     metrics,
   };
