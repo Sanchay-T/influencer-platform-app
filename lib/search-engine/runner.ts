@@ -7,6 +7,7 @@ import { runYouTubeKeywordProvider } from './providers/youtube-keyword';
 import { runYouTubeSimilarProvider } from './providers/youtube-similar';
 import { runInstagramSimilarProvider } from './providers/instagram-similar';
 import { runInstagramScrapeCreatorsProvider } from './providers/instagram-reels-scrapecreators';
+import { runSimilarDiscoveryProvider } from './providers/similar-discovery';
 import { logger, LogCategory } from '@/lib/logging';
 
 export interface SearchExecutionResult {
@@ -69,6 +70,12 @@ function isInstagramScrapeCreators(jobPlatform?: string, searchParams?: any): bo
   const platform = (jobPlatform ?? '').toLowerCase();
   const runner = (searchParams?.runner ?? '').toLowerCase();
   return runner === 'instagram_scrapecreators' || platform === 'instagram_scrapecreators';
+}
+
+function isSimilarDiscovery(jobPlatform?: string, searchParams?: any): boolean {
+  const platform = (jobPlatform ?? '').toLowerCase();
+  const runner = (searchParams?.runner ?? '').toLowerCase();
+  return runner === 'similar_discovery' || platform.startsWith('similar_discovery_');
 }
 
 export async function runSearchJob(jobId: string): Promise<SearchExecutionResult> {
@@ -139,6 +146,13 @@ export async function runSearchJob(jobId: string): Promise<SearchExecutionResult
     providerResult = await runInstagramSimilarProvider({ job, config }, service);
   } else if (isInstagramScrapeCreators(job.platform, searchParams)) {
     providerResult = await runInstagramScrapeCreatorsProvider({ job, config }, service);
+  } else if (isSimilarDiscovery(job.platform, searchParams)) {
+    console.log('[SEARCH-RUNNER] Dispatching to runSimilarDiscoveryProvider', {
+      jobId: job.id,
+      platform: job.platform,
+      targetUsername: job.targetUsername,
+    });
+    providerResult = await runSimilarDiscoveryProvider({ job, config }, service);
   } else {
     throw new Error(`Unsupported platform for new search runner: ${job.platform} (keywords: ${!!job.keywords}, targetUsername: ${!!job.targetUsername}, searchParams: ${JSON.stringify(searchParams)})`);
   }

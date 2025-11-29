@@ -9,24 +9,40 @@ const LOG_ENABLED = ['1', 'true', 'yes', 'on'].includes(
 
 export type RunLogger = {
   log: (event: string, payload?: Record<string, any>) => Promise<void>;
+  logTiming: (phase: string, durationMs: number, payload?: Record<string, any>) => Promise<void>;
   filePath: string;
   enabled: boolean;
+  startTime: number;
 };
 
-export function createRunLogger(platform: string, jobId?: string): RunLogger {
+export interface RunLoggerContext {
+  userId?: string;
+  userEmail?: string;
+  keywords?: string[];
+  targetResults?: number;
+}
+
+export function createRunLogger(platform: string, jobId?: string, context?: RunLoggerContext): RunLogger {
   const platformDir = platform.toLowerCase();
   const targetJobId = jobId || 'unknown-job';
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
   const directory = path.join(process.cwd(), 'logs', 'runs', platformDir);
-  const filePath = path.join(directory, `${targetJobId}.log`);
+  // Include timestamp in filename for easy sorting
+  const filePath = path.join(directory, `${timestamp}_${targetJobId}.log`);
+  const startTime = Date.now();
 
   const log = async (event: string, payload: Record<string, any> = {}) => {
     if (!LOG_ENABLED) return;
     try {
       await fs.mkdir(directory, { recursive: true });
+      const elapsed = Date.now() - startTime;
       const entry = {
         ts: new Date().toISOString(),
+        elapsed: `${elapsed}ms`,
         platform: platformDir,
         jobId: targetJobId,
+        ...(context?.userId && { userId: context.userId }),
+        ...(context?.userEmail && { userEmail: context.userEmail }),
         event,
         ...payload,
       };
@@ -36,10 +52,16 @@ export function createRunLogger(platform: string, jobId?: string): RunLogger {
     }
   };
 
+  const logTiming = async (phase: string, durationMs: number, payload: Record<string, any> = {}) => {
+    await log(`timing_${phase}`, { durationMs, ...payload });
+  };
+
   return {
     log,
+    logTiming,
     filePath,
     enabled: LOG_ENABLED,
+    startTime,
   };
 }
 

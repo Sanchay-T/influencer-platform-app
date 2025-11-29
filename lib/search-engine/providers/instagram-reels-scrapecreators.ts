@@ -19,10 +19,8 @@ import { addCost, SCRAPECREATORS_COST_PER_CALL_USD } from '../utils/cost';
 import { logger, LogCategory } from '@/lib/logging';
 import { createRunLogger } from '../utils/run-logger';
 import { OpenRouterService } from '@/lib/ai/openrouter-service';
-import { ImageCache } from '@/lib/services/image-cache';
 
 const ENDPOINT = 'https://api.scrapecreators.com/v1/instagram/reels/search';
-const imageCache = new ImageCache();
 
 // How many parallel keyword searches to run at once
 // Updated from 5 to 3 based on H2 performance test data (2025-11-27)
@@ -56,6 +54,9 @@ type ApiReel = {
     profile_pic_url?: string;
     follower_count?: number;
     post_count?: number;
+    biography?: string;
+    bio_links?: Array<{ title?: string; url?: string; link_type?: string }>;
+    external_url?: string;
   };
 };
 
@@ -79,7 +80,7 @@ function creatorKey(creator: NormalizedCreator) {
   return null;
 }
 
-async function mapReelToCreator(reel: ApiReel): Promise<NormalizedCreator | null> {
+function mapReelToCreator(reel: ApiReel): NormalizedCreator | null {
   if (!reel) return null;
 
   const owner = reel.owner ?? {};
@@ -104,12 +105,9 @@ async function mapReelToCreator(reel: ApiReel): Promise<NormalizedCreator | null
 
   const mergeKey = reel.shortcode || reel.id || undefined;
 
-  // Cache profile picture to Vercel Blob for permanent storage
-  // Instagram CDN URLs expire in 24-48h, blob URLs are permanent
+  // Use original Instagram URL - image caching is done lazily on display
+  // This speeds up search by 10x (was blocking on 300+ blob API calls)
   const rawProfilePicUrl = owner.profile_pic_url || '';
-  const cachedProfilePicUrl = rawProfilePicUrl
-    ? await imageCache.getCachedImageUrl(rawProfilePicUrl, 'Instagram', username || 'unknown')
-    : '';
 
   return {
     platform: 'Instagram',
@@ -123,9 +121,10 @@ async function mapReelToCreator(reel: ApiReel): Promise<NormalizedCreator | null
       username,
       name: owner.full_name || username || 'Unknown creator',
       followers: owner.follower_count || 0,
-      profilePicUrl: cachedProfilePicUrl,
-      avatarUrl: cachedProfilePicUrl,
+      profilePicUrl: rawProfilePicUrl,
+      avatarUrl: rawProfilePicUrl,
       verified: Boolean(owner.is_verified),
+      bio: owner.biography || undefined,
     },
     video: {
       id: reel.id || reel.shortcode,
@@ -150,9 +149,12 @@ async function mapReelToCreator(reel: ApiReel): Promise<NormalizedCreator | null
       username,
       full_name: owner.full_name,
       is_verified: owner.is_verified,
-      profile_pic_url: cachedProfilePicUrl,
+      profile_pic_url: rawProfilePicUrl,
       follower_count: owner.follower_count,
       post_count: owner.post_count,
+      biography: owner.biography || undefined,
+      bio_links: Array.isArray(owner.bio_links) ? owner.bio_links : [],
+      external_url: owner.external_url || undefined,
     },
     metadata: {
       creditsRemaining: undefined,
@@ -299,35 +301,53 @@ type ParallelFetchResult = {
 
 /**
  * Fetch reels for multiple keywords in parallel (up to MAX_PARALLEL_SEARCHES at once)
+ * Optional callback fires as each keyword completes, enabling streaming results
  */
-async function fetchReelsParallel(keywords: string[], amountPerKeyword: number): Promise<ParallelFetchResult[]> {
+async function fetchReelsParallel(
+  keywords: string[],
+  amountPerKeyword: number,
+  onKeywordComplete?: (result: ParallelFetchResult) => Promise<void>
+): Promise<ParallelFetchResult[]> {
   const results: ParallelFetchResult[] = [];
 
   // Process in batches to avoid overwhelming the API
   for (let i = 0; i < keywords.length; i += MAX_PARALLEL_SEARCHES) {
     const batch = keywords.slice(i, i + MAX_PARALLEL_SEARCHES);
 
-    const batchResults = await Promise.all(
-      batch.map(async (keyword): Promise<ParallelFetchResult> => {
-        try {
-          const result = await fetchReels(keyword, amountPerKeyword);
-          return {
-            keyword,
-            reels: result.reels,
-            creditsRemaining: result.creditsRemaining,
-            durationMs: result.durationMs,
-          };
-        } catch (error) {
-          return {
-            keyword,
-            reels: [],
-            durationMs: 0,
-            error: error instanceof Error ? error.message : String(error),
-          };
-        }
-      })
-    );
+    const batchPromises = batch.map(async (keyword): Promise<ParallelFetchResult> => {
+      try {
+        const result = await fetchReels(keyword, amountPerKeyword);
+        const fetchResult: ParallelFetchResult = {
+          keyword,
+          reels: result.reels,
+          creditsRemaining: result.creditsRemaining,
+          durationMs: result.durationMs,
+        };
 
+        // Fire callback immediately when this keyword completes
+        if (onKeywordComplete) {
+          await onKeywordComplete(fetchResult);
+        }
+
+        return fetchResult;
+      } catch (error) {
+        const errorResult: ParallelFetchResult = {
+          keyword,
+          reels: [],
+          durationMs: 0,
+          error: error instanceof Error ? error.message : String(error),
+        };
+
+        // Still call callback for errors so progress updates
+        if (onKeywordComplete) {
+          await onKeywordComplete(errorResult);
+        }
+
+        return errorResult;
+      }
+    });
+
+    const batchResults = await Promise.all(batchPromises);
     results.push(...batchResults);
   }
 
@@ -338,7 +358,29 @@ export async function runInstagramScrapeCreatorsProvider(
   { job, config }: ProviderContext,
   service: SearchJobService,
 ): Promise<ProviderRunResult> {
-  const runLogger = createRunLogger('instagram-scrapecreators', job.id);
+  const providerStartTime = Date.now();
+
+  // Create run logger with context for persistent file logging
+  const runLogger = createRunLogger('instagram-scrapecreators', job.id, {
+    userId: job.userId,
+    keywords: Array.isArray(job.keywords) ? job.keywords as string[] : [],
+    targetResults: job.targetResults,
+  });
+
+  // Log to both console and file
+  console.log('[SCRAPECREATORS-PROVIDER] Starting', {
+    jobId: job.id,
+    keywords: job.keywords,
+    targetResults: job.targetResults,
+    processedResults: job.processedResults,
+    logFile: runLogger.filePath,
+  });
+
+  await runLogger.log('provider_start', {
+    keywords: job.keywords,
+    targetResults: job.targetResults,
+    processedResults: job.processedResults,
+  });
   const metrics: SearchMetricsSnapshot = {
     apiCalls: 0,
     processedCreators: job.processedResults ?? 0,
@@ -451,16 +493,40 @@ export async function runInstagramScrapeCreatorsProvider(
   // ========================================================
   let keywordsToProcess: string[] = [];
 
+  console.log('[SCRAPECREATORS-PROVIDER] Starting keyword generation', {
+    jobId: job.id,
+    currentRun,
+    elapsed: Date.now() - providerStartTime,
+  });
+
   if (currentRun === 1) {
     // First run: expand original keywords with AI
     await runLogger.log('first_run_expansion', { originalKeywords });
 
+    console.log('[SCRAPECREATORS-PROVIDER] Calling AI for keyword expansion...', {
+      jobId: job.id,
+      originalKeywords,
+    });
+
+    const aiStartTime = Date.now();
     const expandedArrays = await Promise.all(
       originalKeywords.map(async (keyword) => {
         const expanded = await expandKeywordsWithAI(keyword, KEYWORDS_PER_RUN, processedKeywords);
         return [keyword, ...expanded];
       })
     );
+
+    const aiDuration = Date.now() - aiStartTime;
+    console.log('[SCRAPECREATORS-PROVIDER] AI keyword expansion complete', {
+      jobId: job.id,
+      aiDurationMs: aiDuration,
+      totalElapsed: Date.now() - providerStartTime,
+    });
+
+    await runLogger.logTiming('ai_expansion', aiDuration, {
+      originalKeywords,
+      expandedCount: expandedArrays.flat().length,
+    });
 
     const allKeywords = new Set<string>();
     for (const arr of expandedArrays) {
@@ -520,28 +586,106 @@ export async function runInstagramScrapeCreatorsProvider(
   });
 
   // ========================================================
-  // STEP 2: PARALLEL API CALLS
+  // STEP 2: PARALLEL API CALLS WITH STREAMING RESULTS
+  // Process and save each keyword as it completes (~30s each)
+  // instead of waiting for all keywords (~2+ mins)
   // ========================================================
-  const normalizedAll: NormalizedCreator[] = [];
+  console.log('[SCRAPECREATORS-PROVIDER] Starting parallel API calls with streaming', {
+    jobId: job.id,
+    keywordsToProcess: keywordsToProcess.length,
+    keywords: keywordsToProcess.slice(0, 5),
+    elapsed: Date.now() - providerStartTime,
+  });
+
   let lastCreditsRemaining: number | undefined;
+  let runningTotal = job.processedResults ?? 0;
+  let totalNewCount = 0;
+  let keywordsProcessed = 0;
+  let totalFetchedThisRun = 0;
 
-  const parallelResults = await fetchReelsParallel(keywordsToProcess, MAX_PER_CALL);
+  const apiStartTime = Date.now();
 
-  // Process all parallel results
-  let callIndex = 0;
+  // Stream results: save each keyword as it completes
+  const parallelResults = await fetchReelsParallel(
+    keywordsToProcess,
+    MAX_PER_CALL,
+    async (result) => {
+      keywordsProcessed++;
+
+      // Track credits
+      if (result.creditsRemaining !== undefined) {
+        lastCreditsRemaining = result.creditsRemaining;
+      }
+
+      // Handle errors
+      if (result.error) {
+        await runLogger.log('fetch_error', { keyword: result.keyword, error: result.error });
+        console.warn(`[STREAMING] Keyword "${result.keyword}" failed: ${result.error}`);
+        return;
+      }
+
+      // Normalize the reels immediately
+      const normalizedChunk = result.reels
+        .map(mapReelToCreator)
+        .filter((creator): creator is NormalizedCreator => Boolean(creator));
+
+      totalFetchedThisRun += normalizedChunk.length;
+
+      if (normalizedChunk.length > 0) {
+        // Save immediately - mergeCreators is idempotent and thread-safe
+        const { total: newTotal, newCount } = await service.mergeCreators(normalizedChunk, creatorKey);
+        runningTotal = newTotal;
+        totalNewCount += newCount;
+
+        // Update progress immediately so polling frontend sees it
+        const progress = computeProgress(runningTotal, targetResults);
+        await service.recordProgress({
+          processedRuns: currentRun,
+          processedResults: runningTotal,
+          cursor: runningTotal,
+          progress,
+        });
+
+        console.warn(`[STREAMING] Keyword "${result.keyword}" complete (${keywordsProcessed}/${keywordsToProcess.length}): +${newCount} new (${normalizedChunk.length} fetched), total=${runningTotal}, progress=${progress}%`);
+      } else {
+        console.warn(`[STREAMING] Keyword "${result.keyword}" complete (${keywordsProcessed}/${keywordsToProcess.length}): 0 results`);
+      }
+    }
+  );
+
+  const apiDuration = Date.now() - apiStartTime;
+  const totalReels = parallelResults.reduce((sum, r) => sum + r.reels.length, 0);
+
+  console.log('[SCRAPECREATORS-PROVIDER] Parallel API calls complete', {
+    jobId: job.id,
+    resultsCount: parallelResults.length,
+    totalReels,
+    totalFetchedThisRun,
+    totalNewCount,
+    runningTotal,
+    apiDurationMs: apiDuration,
+    elapsed: Date.now() - providerStartTime,
+  });
+
+  await runLogger.logTiming('api_calls', apiDuration, {
+    keywordsProcessed: keywordsToProcess.length,
+    totalReels,
+    totalFetchedThisRun,
+    totalNewCount,
+    avgPerKeyword: Math.round(totalReels / keywordsToProcess.length),
+  });
+
+  // ========================================================
+  // STEP 3: COLLECT METRICS (results already saved by callback)
+  // ========================================================
   const keywordsUsedThisRun: string[] = [];
 
   for (const result of parallelResults) {
-    callIndex += 1;
     metrics.apiCalls += 1;
     keywordsUsedThisRun.push(result.keyword);
 
-    if (result.creditsRemaining !== undefined) {
-      lastCreditsRemaining = result.creditsRemaining;
-    }
-
     metrics.batches.push({
-      index: callIndex,
+      index: metrics.apiCalls,
       size: result.reels.length,
       durationMs: result.durationMs,
       keyword: result.keyword,
@@ -556,39 +700,33 @@ export async function runInstagramScrapeCreatorsProvider(
       note: `instagram reels search: ${result.keyword}`,
     });
 
-    if (result.error) {
-      await runLogger.log('fetch_error', { keyword: result.keyword, error: result.error });
-      continue;
-    }
-
-    // Map reels to creators with image caching (async)
-    const normalizedPromises = result.reels.map(mapReelToCreator);
-    const normalizedResults = await Promise.all(normalizedPromises);
-    const normalizedChunk = normalizedResults.filter(
-      (creator): creator is NormalizedCreator => Boolean(creator)
-    );
-
-    normalizedAll.push(...normalizedChunk);
-
     await runLogger.log('batch_processed', {
       keyword: result.keyword,
       reelsCount: result.reels.length,
-      normalizedCount: normalizedChunk.length,
       durationMs: result.durationMs,
     });
   }
 
   // ========================================================
-  // STEP 3: MERGE RESULTS & UPDATE CONTINUATION STATE
+  // STEP 4: FINALIZE METRICS (results already saved by streaming callback)
   // ========================================================
+  const newTotal = runningTotal;
+  const newCount = totalNewCount;
+  metrics.processedCreators = newTotal;
+
+  console.log('[SCRAPECREATORS-PROVIDER] All keywords processed', {
+    jobId: job.id,
+    totalKeywords: parallelResults.length,
+    newTotal,
+    totalNewCount,
+    elapsed: Date.now() - providerStartTime,
+  });
+
   metrics.timings.finishedAt = new Date().toISOString();
   if (metrics.batches.length) {
     const totalMs = metrics.batches.reduce((sum, b) => sum + (b.durationMs || 0), 0);
     metrics.timings.totalDurationMs = totalMs;
   }
-
-  const { total: newTotal, newCount } = await service.mergeCreators(normalizedAll, creatorKey);
-  metrics.processedCreators = newTotal;
 
   // Update processed keywords list (persist for next run)
   const updatedProcessedKeywords = [...processedKeywords, ...keywordsUsedThisRun];
@@ -601,7 +739,7 @@ export async function runInstagramScrapeCreatorsProvider(
 
   await runLogger.log('run_results', {
     runNumber: currentRun,
-    fetchedThisRun: normalizedAll.length,
+    fetchedThisRun: totalFetchedThisRun,
     newCreatorsAdded: newCount,
     totalCreators: newTotal,
     targetResults,
@@ -610,7 +748,7 @@ export async function runInstagramScrapeCreatorsProvider(
   });
 
   // ========================================================
-  // STEP 4: DETERMINE CONTINUATION
+  // STEP 5: DETERMINE CONTINUATION
   // ========================================================
   const reachedTarget = newTotal >= targetResults;
   const tooManyRuns = currentRun >= MAX_CONTINUATION_RUNS;
@@ -631,6 +769,14 @@ export async function runInstagramScrapeCreatorsProvider(
   };
 
   // Persist continuation state
+  console.log('[SCRAPECREATORS-PROVIDER] Step 5: Recording progress', {
+    jobId: job.id,
+    progress,
+    newTotal,
+    elapsed: Date.now() - providerStartTime,
+  });
+
+  const progressStartTime = Date.now();
   await service.recordProgress({
     processedRuns: currentRun,
     processedResults: newTotal,
@@ -639,10 +785,16 @@ export async function runInstagramScrapeCreatorsProvider(
     searchParams: updatedSearchParams,
   });
 
+  console.log('[SCRAPECREATORS-PROVIDER] Progress recorded', {
+    jobId: job.id,
+    progressDurationMs: Date.now() - progressStartTime,
+    elapsed: Date.now() - providerStartTime,
+  });
+
   logger.info('ScrapeCreators run complete', {
     jobId: job.id,
     runNumber: currentRun,
-    fetchedThisRun: normalizedAll.length,
+    fetchedThisRun: totalFetchedThisRun,
     newCreatorsAdded: newCount,
     totalCreators: newTotal,
     targetResults,
@@ -674,6 +826,27 @@ export async function runInstagramScrapeCreatorsProvider(
         tooManyEmptyRuns ? 'consecutive_empty_runs' : 'unknown';
     await service.complete('completed', { reason });
   }
+
+  const totalElapsed = Date.now() - providerStartTime;
+  console.log('[SCRAPECREATORS-PROVIDER] Run complete', {
+    jobId: job.id,
+    status: completed ? 'completed' : 'partial',
+    processedResults: newTotal,
+    hasMore,
+    totalElapsed,
+  });
+
+  // Final summary log with all timing info
+  await runLogger.log('run_complete', {
+    status: completed ? 'completed' : 'partial',
+    totalElapsedMs: totalElapsed,
+    runNumber: currentRun,
+    processedResults: newTotal,
+    targetResults,
+    progress,
+    hasMore,
+    logFile: runLogger.filePath,
+  });
 
   return {
     status: completed ? 'completed' : 'partial',
