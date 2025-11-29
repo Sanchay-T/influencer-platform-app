@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ExternalLink, User, LayoutGrid, Table2, MailCheck, Youtube, Sparkles, RefreshCw, Info } from "lucide-react";
+import { ExternalLink, User, LayoutGrid, Table2, MailCheck, Youtube, Sparkles, RefreshCw, Info, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import {
   AlertDialog,
@@ -18,6 +18,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import ExportButton from "../export-button";
 import { cn } from "@/lib/utils";
 import { FeatureGate } from "@/app/components/billing/protect";
@@ -58,6 +59,22 @@ const VIEW_MODE_META = {
   gallery: { label: "Gallery", Icon: LayoutGrid },
 };
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Platform-aware progress stage messages
+const getProgressStage = (progress, platform) => {
+  const isInstagram = platform?.includes('instagram');
+  const isYoutube = platform?.includes('youtube');
+  const isTiktok = platform?.includes('tiktok') || !platform;
+  const platformName = isInstagram ? 'Instagram' : isYoutube ? 'YouTube' : 'TikTok';
+
+  if (progress < 25) return `Connecting to ${platformName}...`;
+  if (progress < 50) return isInstagram ? 'Searching reels for your keywords...' :
+                            isYoutube ? 'Searching videos for your keywords...' :
+                            'Searching videos for your keywords...';
+  if (progress < 70) return 'Analyzing creator profiles...';
+  if (progress < 85) return 'Filtering by engagement...';
+  return 'Packaging results...';
+};
 
 // Breadcrumb: PinkSpinner -> shared pink-accent loader to align with enrichment brand styling.
 const PinkSpinner = ({ size = "h-4 w-4", className = "", label } = {}) => (
@@ -554,6 +571,8 @@ const SearchResults = ({ searchData }) => {
   const [campaignName, setCampaignName] = useState("Campaign");
   const [stillProcessing, setStillProcessing] = useState(false);
   const [progressInfo, setProgressInfo] = useState(null);
+  const [fakeProgress, setFakeProgress] = useState(0);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [selectedCreators, setSelectedCreators] = useState({});
   const [viewMode, setViewMode] = useState("table");
   const [showEmailOnly, setShowEmailOnly] = useState(false);
@@ -998,6 +1017,36 @@ const SearchResults = ({ searchData }) => {
   const waitingForResults = (jobIsActive || stillProcessing || isFetching || isLoading) && creators.length === 0;
   const shouldPoll = Boolean(searchData?.jobId) && (jobIsActive || stillProcessing || isFetching || isLoading);
 
+  // Simulated progress animation for initial wait period
+  useEffect(() => {
+    if (!waitingForResults) {
+      setFakeProgress(0);
+      setElapsedSeconds(0);
+      return;
+    }
+
+    const startTime = Date.now();
+    const maxProgress = 85;  // Cap at 85%
+    const tau = 18000;       // Time constant for logarithmic curve
+
+    const intervalId = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const elapsedSec = Math.floor(elapsed / 1000);
+      setElapsedSeconds(elapsedSec);
+      // Logarithmic curve: fast start, slows approaching 85%
+      const progress = maxProgress * (1 - Math.exp(-elapsed / tau));
+      setFakeProgress(Math.min(Math.round(progress), maxProgress));
+    }, 500);
+
+    return () => clearInterval(intervalId);
+  }, [waitingForResults]);
+
+  // Use real progress if available, otherwise use simulated
+  const displayedProgress = useMemo(() => {
+    const realProgress = progressInfo?.progress ?? 0;
+    return realProgress > 0 ? realProgress : fakeProgress;
+  }, [progressInfo?.progress, fakeProgress]);
+
   const showFilteredEmpty = useMemo(
     () => (showEmailOnly || engagementFilter !== "all") && creators.length > 0 && filteredCreators.length === 0,
     [showEmailOnly, engagementFilter, creators.length, filteredCreators.length]
@@ -1369,9 +1418,38 @@ const SearchResults = ({ searchData }) => {
               />
             </div>
           )}
-          <div className="flex flex-col items-center justify-center min-h-[240px] text-sm text-zinc-400 gap-2">
-            <PinkSpinner size="h-4 w-4" label="Loading results" />
-            Waiting for results...
+          <div className="flex flex-col items-center justify-center min-h-[300px] px-4">
+            <div className="w-full max-w-md space-y-6">
+              {/* Header */}
+              <div className="text-center space-y-2">
+                <Loader2 className="h-8 w-8 animate-spin text-pink-400 mx-auto" />
+                <h2 className="text-xl font-medium text-zinc-100">Discovering Creators</h2>
+                <p className="text-sm text-zinc-400">
+                  {elapsedSeconds < 60
+                    ? `~${Math.max(60 - elapsedSeconds, 10)} seconds remaining`
+                    : 'Almost there...'}
+                </p>
+              </div>
+
+              {/* Progress Card */}
+              <div className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg p-4">
+                <div className="flex justify-between items-center mb-3">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-zinc-300" />
+                    <span className="text-sm font-medium text-zinc-100">
+                      {getProgressStage(displayedProgress, platformNormalized)}
+                    </span>
+                  </div>
+                </div>
+
+                <Progress value={displayedProgress} className="h-2" />
+
+                <div className="mt-3 flex justify-between text-xs text-zinc-400">
+                  <span>{displayedProgress}%</span>
+                  <span>{elapsedSeconds}s elapsed</span>
+                </div>
+              </div>
+            </div>
           </div>
         </>
       );
@@ -1636,9 +1714,14 @@ const SearchResults = ({ searchData }) => {
           </div>
         )}
         {stillProcessing && (
-          <span className="text-xs px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">
-            Processing… live results updating
-          </span>
+          <div className="flex items-center gap-3 px-3 py-1.5 rounded-lg bg-zinc-800/60 border border-zinc-700/50">
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-pink-400" />
+            <div className="flex items-center gap-2">
+              <Progress value={displayedProgress} className="h-1.5 w-24" />
+              <span className="text-xs text-zinc-300">{displayedProgress}%</span>
+            </div>
+            <span className="text-xs text-zinc-400">Finding more creators...</span>
+          </div>
         )}
           {(searchData?.campaignId || searchData?.jobId) && (
             <FeatureGate
@@ -1982,25 +2065,18 @@ const SearchResults = ({ searchData }) => {
                     {snapshot.followers != null ? formatFollowers(snapshot.followers) : 'N/A'}
                   </TableCell>
                   <TableCell className="hidden lg:table-cell px-4 py-4 w-[320px] max-w-[320px] align-top">
-                    <BioLinksCell
-                      bio={
-                        creator.bio_enriched?.biography ||
-                        creator.creator?.bio ||
-                        creator.owner?.biography ||
-                        creator.biography
-                      }
-                      bioLinks={
-                        creator.bio_enriched?.bio_links ||
-                        creator.owner?.bio_links ||
-                        creator.bio_links ||
-                        []
-                      }
-                      externalUrl={
-                        creator.bio_enriched?.external_url ||
-                        creator.owner?.external_url ||
-                        creator.external_url
-                      }
-                    />
+                    {(() => {
+                      // Get live bio data from the fetch hook (updates reactively)
+                      // Reels API doesn't return bio - it comes from the enrichment hook
+                      const liveBioData = getBioDataForCreator(creator);
+                      return (
+                        <BioLinksCell
+                          bio={liveBioData?.biography}
+                          bioLinks={liveBioData?.bio_links || []}
+                          externalUrl={liveBioData?.external_url}
+                        />
+                      );
+                    })()}
                   </TableCell>
                   <TableCell className="hidden lg:table-cell px-4 py-4 align-top w-[260px] max-w-[320px]">
                     {(() => {
