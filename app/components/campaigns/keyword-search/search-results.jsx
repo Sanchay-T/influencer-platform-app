@@ -26,12 +26,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { AddToListButton } from "@/components/lists/add-to-list-button";
 import { dedupeCreators } from "../utils/dedupe-creators";
 import { useCreatorEnrichment } from "./useCreatorEnrichment";
-import {
-  filterCreatorsByLikes,
-  filterCreatorsByViews,
-  MIN_LIKES_THRESHOLD,
-  MIN_VIEWS_THRESHOLD,
-} from "@/lib/search-engine/utils/filter-creators";
+// Filter imports removed - backend applies 1000+ views threshold automatically
 import {
   Table,
   TableBody,
@@ -460,8 +455,26 @@ const BioLinksCell = ({ bio, bioLinks = [], externalUrl, isLoading = false }) =>
 };
 
 /**
+ * Helper to check if a creator needs bio enrichment based on platform
+ */
+const creatorNeedsEnrichment = (creator, isInstagram, isTikTok) => {
+  if (isInstagram) {
+    const ownerId = creator?.owner?.id;
+    const hasBio = creator?.owner?.biography || creator?.creator?.bio || creator?.bio_enriched?.biography;
+    return ownerId && !hasBio;
+  }
+  if (isTikTok) {
+    const handle = creator?.creator?.uniqueId || creator?.creator?.username;
+    const hasEnrichedBio = creator?.bio_enriched?.biography;
+    return handle && !hasEnrichedBio;
+  }
+  return false;
+};
+
+/**
  * Hook to automatically fetch bio data for creators when search completes.
- * Uses ScrapeCreators basic-profile API (no rate limits).
+ * Supports Instagram (via ScrapeCreators basic-profile) and TikTok (via ScrapeCreators tiktok/profile).
+ * Bio enrichment provides bio links (external URLs) which aren't available in search APIs.
  */
 const useBioEnrichment = (creators, jobStatus, jobId, platformNormalized) => {
   const [bioData, setBioData] = useState({});
@@ -470,9 +483,19 @@ const useBioEnrichment = (creators, jobStatus, jobId, platformNormalized) => {
   const hasFetched = useRef(false);
   const lastJobId = useRef(null);
 
-  // For instagram_scrapecreators, bio comes from enrichment - show loading until fetch completes
+  // Platform detection - both Instagram and TikTok use post-search bio enrichment
   const isScrapecreatorsPlatform = platformNormalized === 'instagram_scrapecreators';
-  const isLoading = isScrapecreatorsPlatform && !hasFetchedComplete && creators.length > 0;
+  const isTikTokPlatform = platformNormalized === 'tiktok';
+  const shouldEnrich = isScrapecreatorsPlatform || isTikTokPlatform;
+
+  // Compute if any creators actually need enrichment (avoids showing spinner when all have bio_enriched)
+  const creatorsNeedingEnrichment = useMemo(() => {
+    if (!shouldEnrich || creators.length === 0) return 0;
+    return creators.filter(c => creatorNeedsEnrichment(c, isScrapecreatorsPlatform, isTikTokPlatform)).length;
+  }, [creators, shouldEnrich, isScrapecreatorsPlatform, isTikTokPlatform]);
+
+  // Only show loading if: platform needs enrichment, job is complete, and creators actually need it
+  const isLoading = shouldEnrich && !hasFetchedComplete && creators.length > 0 && creatorsNeedingEnrichment > 0;
 
   // Reset when jobId changes
   useEffect(() => {
@@ -485,9 +508,9 @@ const useBioEnrichment = (creators, jobStatus, jobId, platformNormalized) => {
   }, [jobId]);
 
   useEffect(() => {
-    // Only fetch for instagram_scrapecreators platform
-    if (!isScrapecreatorsPlatform) {
-      // For non-scrapecreators platforms, mark as complete immediately
+    // Only fetch for supported platforms
+    if (!shouldEnrich) {
+      // For non-enrichable platforms, mark as complete immediately
       setHasFetchedComplete(true);
       return;
     }
@@ -501,30 +524,42 @@ const useBioEnrichment = (creators, jobStatus, jobId, platformNormalized) => {
       hasFetched.current = true;
       setIsFetching(true);
 
-      // Get user IDs that need bio data (have owner.id but no biography yet)
-      const userIds = creators
-        .filter(c => {
-          const ownerId = c.owner?.id;
-          const hasBio = c.owner?.biography || c.creator?.bio || c.bio_enriched?.biography;
-          return ownerId && !hasBio;
-        })
-        .map(c => c.owner.id);
-
-      if (userIds.length === 0) {
-        setIsFetching(false);
-        setHasFetchedComplete(true);
-        return;
-      }
-
       try {
-        const response = await fetch('/api/creators/fetch-bios', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userIds, jobId }),
-        });
+        let response;
 
-        if (!response.ok) {
-          console.error('Failed to fetch bios:', response.status);
+        // Filter creators that need enrichment using shared helper
+        const creatorsToEnrich = creators.filter(c =>
+          creatorNeedsEnrichment(c, isScrapecreatorsPlatform, isTikTokPlatform)
+        );
+
+        if (creatorsToEnrich.length === 0) {
+          setIsFetching(false);
+          setHasFetchedComplete(true);
+          return;
+        }
+
+        if (isScrapecreatorsPlatform) {
+          // Instagram: extract owner.id, call fetch-bios
+          const userIds = creatorsToEnrich.map(c => c.owner.id);
+
+          response = await fetch('/api/creators/fetch-bios', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userIds, jobId }),
+          });
+        } else if (isTikTokPlatform) {
+          // TikTok: extract handles, call fetch-tiktok-bios
+          const handles = creatorsToEnrich.map(c => c.creator?.uniqueId || c.creator?.username);
+
+          response = await fetch('/api/creators/fetch-tiktok-bios', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ handles, jobId }),
+          });
+        }
+
+        if (!response || !response.ok) {
+          console.error('Failed to fetch bios:', response?.status);
           return;
         }
 
@@ -547,7 +582,7 @@ const useBioEnrichment = (creators, jobStatus, jobId, platformNormalized) => {
     };
 
     fetchBios();
-  }, [jobStatus, creators, jobId, platformNormalized, isScrapecreatorsPlatform]);
+  }, [jobStatus, creators, jobId, platformNormalized, isScrapecreatorsPlatform, isTikTokPlatform, shouldEnrich]);
 
   return { bioData, isLoading };
 };
@@ -599,8 +634,8 @@ const SearchResults = ({ searchData }) => {
   const [selectedCreators, setSelectedCreators] = useState({});
   const [viewMode, setViewMode] = useState("table");
   const [showEmailOnly, setShowEmailOnly] = useState(false);
-  // Engagement filter: 'all' | '100likes' | '1000views'
-  const [engagementFilter, setEngagementFilter] = useState("all");
+  // Note: Engagement filtering moved to backend (1000+ views threshold)
+  // UI toggle removed per product decision - show best results by default
   const itemsPerPage = viewMode === "gallery" ? 9 : 10;
   const resultsCacheRef = useRef(new Map());
 
@@ -891,17 +926,66 @@ const SearchResults = ({ searchData }) => {
   }, [bioEmailConfirmDialog, searchData?.jobId, setCreators]);
 
   // Helper to get bio-extracted email for a creator
+  // Supports both Instagram (by owner.id) and TikTok (by handle) from enrichment hook
   const getBioEmailForCreator = useCallback((creator) => {
+    // 1. Check Instagram enrichment (by owner.id)
     const ownerId = creator?.owner?.id;
-    if (!ownerId) return null;
-    return bioData[ownerId]?.extracted_email || null;
+    if (ownerId && bioData[ownerId]?.extracted_email) {
+      return bioData[ownerId].extracted_email;
+    }
+
+    // 2. Check TikTok enrichment (by handle)
+    const handle = creator?.creator?.uniqueId || creator?.creator?.username;
+    if (handle && bioData[handle]?.extracted_email) {
+      return bioData[handle].extracted_email;
+    }
+
+    // 3. Fall back to creator's own emails array
+    const creatorObj = creator?.creator || creator;
+    const emails = creatorObj?.emails;
+    if (Array.isArray(emails) && emails.length > 0) {
+      return emails[0];
+    }
+
+    // 4. Try to extract from bio text
+    const bio = creatorObj?.bio || creatorObj?.signature || creatorObj?.description || '';
+    if (bio) {
+      const emailMatch = bio.match(/[\w.-]+@[\w.-]+\.[\w-]+/i);
+      if (emailMatch) return emailMatch[0];
+    }
+
+    return null;
   }, [bioData]);
 
   // Helper to get full bio data for a creator
+  // Supports both Instagram (by owner.id) and TikTok (by handle) from enrichment hook
   const getBioDataForCreator = useCallback((creator) => {
+    // 1. Check Instagram enrichment (by owner.id)
     const ownerId = creator?.owner?.id;
-    if (!ownerId) return null;
-    return bioData[ownerId] || null;
+    if (ownerId && bioData[ownerId]) {
+      return bioData[ownerId];
+    }
+
+    // 2. Check TikTok enrichment (by handle)
+    const handle = creator?.creator?.uniqueId || creator?.creator?.username;
+    if (handle && bioData[handle]) {
+      return bioData[handle];
+    }
+
+    // 3. Fall back to creator's own bio data (from search results)
+    const creatorObj = creator?.creator || creator;
+    const bio = creatorObj?.bio || creatorObj?.signature || creatorObj?.description || '';
+    if (bio && bio.trim()) {
+      const emailMatch = bio.match(/[\w.-]+@[\w.-]+\.[\w-]+/i);
+      return {
+        biography: bio,
+        bio_links: [],
+        external_url: null,
+        extracted_email: emailMatch ? emailMatch[0] : null,
+      };
+    }
+
+    return null;
   }, [bioData]);
 
   const jobStatus = jobStatusNormalized;
@@ -1016,26 +1100,21 @@ const SearchResults = ({ searchData }) => {
     if (creator.contact_email) return true;
     // Check bio_enriched from database
     if (creator.bio_enriched?.extracted_email) return true;
-    // Check bioData from live state
+    // Check bioData from live state (Instagram - by ownerId)
     const ownerId = creator?.owner?.id;
     if (ownerId && bioData[ownerId]?.extracted_email) return true;
+    // Check bioData from live state (TikTok - by handle)
+    const handle = creator?.creator?.uniqueId || creator?.creator?.username;
+    if (handle && bioData[handle]?.extracted_email) return true;
     return false;
   }, [bioData]);
 
   const filteredCreators = useMemo(() => {
-    // Step 1: Apply engagement filter based on selected option
-    let engagementFiltered = creators;
-    if (engagementFilter === "100likes") {
-      engagementFiltered = filterCreatorsByLikes(creators, 100, false); // Strict: exclude null likes
-    } else if (engagementFilter === "1000views") {
-      engagementFiltered = filterCreatorsByViews(creators, 1000, false); // Strict: exclude null views
-    }
-    // Note: 'all' shows all creators without engagement filtering
-
-    // Step 2: Apply email filter if enabled
-    if (!showEmailOnly) return engagementFiltered;
-    return engagementFiltered.filter((creator) => hasAnyEmail(creator));
-  }, [creators, showEmailOnly, engagementFilter, hasAnyEmail]);
+    // Backend applies 1000+ views filter - no frontend engagement filtering needed
+    // Only apply email filter if enabled
+    if (!showEmailOnly) return creators;
+    return creators.filter((creator) => hasAnyEmail(creator));
+  }, [creators, showEmailOnly, hasAnyEmail]);
 
   const waitingForResults = (jobIsActive || stillProcessing || isFetching || isLoading) && creators.length === 0;
   const shouldPoll = Boolean(searchData?.jobId) && (jobIsActive || stillProcessing || isFetching || isLoading);
@@ -1071,8 +1150,8 @@ const SearchResults = ({ searchData }) => {
   }, [progressInfo?.progress, fakeProgress]);
 
   const showFilteredEmpty = useMemo(
-    () => (showEmailOnly || engagementFilter !== "all") && creators.length > 0 && filteredCreators.length === 0,
-    [showEmailOnly, engagementFilter, creators.length, filteredCreators.length]
+    () => showEmailOnly && creators.length > 0 && filteredCreators.length === 0,
+    [showEmailOnly, creators.length, filteredCreators.length]
   );
 
   useEffect(() => {
@@ -1657,38 +1736,8 @@ const SearchResults = ({ searchData }) => {
               <MailCheck className="h-4 w-4" />
               Email only
             </Button>
-            <Separator orientation="vertical" className="hidden h-6 md:block" />
-            {/* Engagement filter buttons */}
-            <div className="flex items-center gap-1">
-              <Button
-                type="button"
-                variant={engagementFilter === "all" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setEngagementFilter("all")}
-                aria-pressed={engagementFilter === "all"}
-              >
-                All
-              </Button>
-              <Button
-                type="button"
-                variant={engagementFilter === "100likes" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setEngagementFilter("100likes")}
-                aria-pressed={engagementFilter === "100likes"}
-              >
-                100+ likes
-              </Button>
-              <Button
-                type="button"
-                variant={engagementFilter === "1000views" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setEngagementFilter("1000views")}
-                aria-pressed={engagementFilter === "1000views"}
-              >
-                1K+ views
-              </Button>
-            </div>
           </div>
+          {/* Engagement filter removed - backend applies 1000+ views threshold automatically */}
         <div className="text-sm text-zinc-400 order-3 md:order-none">
           Page {currentPage} of {totalPages} •
           Showing {(currentPage - 1) * itemsPerPage + 1}-
@@ -1768,29 +1817,16 @@ const SearchResults = ({ searchData }) => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/80 px-4">
           <div className="w-full max-w-md space-y-4 rounded-2xl border border-zinc-700/60 bg-zinc-900/95 p-6 text-center shadow-xl">
             <h3 className="text-lg font-semibold text-zinc-100">
-              {showEmailOnly && engagementFilter !== "all"
-                ? "No creators match both filters"
-                : showEmailOnly
-                ? "No creators with a contact email"
-                : engagementFilter === "100likes"
-                ? "No creators with 100+ likes"
-                : "No creators with 1000+ views"}
+              No creators with a contact email
             </h3>
             <p className="text-sm text-zinc-400">
-              {showEmailOnly && engagementFilter !== "all"
-                ? "No creators match both the email and engagement filters. Try adjusting your filters."
-                : showEmailOnly
-                ? "We didn't find any creators in this list with a visible email."
-                : `No creators in this search meet the ${engagementFilter === "100likes" ? "100+ likes" : "1000+ views"} threshold.`}
+              We didn&apos;t find any creators in this list with a visible email.
             </p>
             <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
               <Button
                 size="sm"
                 className="bg-emerald-500 text-emerald-950"
-                onClick={() => {
-                  setShowEmailOnly(false);
-                  setEngagementFilter("all");
-                }}
+                onClick={() => setShowEmailOnly(false)}
               >
                 Show all creators
               </Button>

@@ -5,7 +5,8 @@ import { verifyTestAuthHeaders } from '@/lib/auth/testable-auth'
 import { authLogger } from '@/lib/logging'
 
 export async function getAuthOrTest() {
-  // Breadcrumb: Resolve auth context -> prefer test headers/bypass -> fall back to Clerk auth.
+  // Breadcrumb: Resolve auth context
+  // Priority: 1) Explicit test headers, 2) Explicit bypass header, 3) Clerk auth, 4) Env bypass fallback
   const requestId = `auth_ctx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
   const isProd = process.env.NODE_ENV === 'production'
   const emitConsoleTrace = process.env.AUTH_TRACE_CONSOLE === 'true'
@@ -24,6 +25,7 @@ export async function getAuthOrTest() {
     headerStore = await headers()
   } catch {}
 
+  // 1) Explicit test headers (CLI scripts with x-test-user-id)
   if (headerStore) {
     const payload = verifyTestAuthHeaders(headerStore)
     if (payload?.userId) {
@@ -39,6 +41,7 @@ export async function getAuthOrTest() {
       }
     }
 
+    // 2) Explicit bypass header (CLI scripts with x-dev-auth header)
     const defaultBypassToken = process.env.AUTH_BYPASS_TOKEN || 'dev-bypass'
     const bypassHeaderName = process.env.AUTH_BYPASS_HEADER?.toLowerCase() || 'x-dev-auth'
     if (
@@ -62,23 +65,7 @@ export async function getAuthOrTest() {
     }
   }
 
-  const bypassEnabled = process.env.ENABLE_AUTH_BYPASS === 'true'
-  const bypassUserId = process.env.AUTH_BYPASS_USER_ID
-  if (bypassEnabled && bypassUserId && process.env.NODE_ENV !== 'production') {
-    emitDevTrace('Auth resolved via .env bypass', {
-      resolver: 'envBypass',
-      userId: bypassUserId,
-      email: process.env.AUTH_BYPASS_EMAIL ?? 'NO_EMAIL',
-    })
-    return {
-      userId: bypassUserId,
-      sessionId: 'bypass',
-      sessionClaims: process.env.AUTH_BYPASS_EMAIL
-        ? { email: process.env.AUTH_BYPASS_EMAIL }
-        : undefined,
-    }
-  }
-
+  // 3) Try Clerk auth FIRST (browser users with real sessions)
   const authResult = await backendAuth()
 
   if (!isProd) {
@@ -107,5 +94,30 @@ export async function getAuthOrTest() {
     })
   }
 
+  // If Clerk returned a valid user, use it
+  if (authResult.userId) {
+    return authResult
+  }
+
+  // 4) Env bypass FALLBACK (only when no Clerk session exists)
+  // This allows CLI scripts and agents to work without browser auth
+  const bypassEnabled = process.env.ENABLE_AUTH_BYPASS === 'true'
+  const bypassUserId = process.env.AUTH_BYPASS_USER_ID
+  if (bypassEnabled && bypassUserId && process.env.NODE_ENV !== 'production') {
+    emitDevTrace('Auth resolved via .env bypass (fallback - no Clerk session)', {
+      resolver: 'envBypassFallback',
+      userId: bypassUserId,
+      email: process.env.AUTH_BYPASS_EMAIL ?? 'NO_EMAIL',
+    })
+    return {
+      userId: bypassUserId,
+      sessionId: 'bypass',
+      sessionClaims: process.env.AUTH_BYPASS_EMAIL
+        ? { email: process.env.AUTH_BYPASS_EMAIL }
+        : undefined,
+    }
+  }
+
+  // No auth found
   return authResult
 }
