@@ -77,12 +77,12 @@ export const metadata: Metadata = {
   title: 'Gemz — Real-time influencer discovery & campaign activation',
   description:
     'Gemz helps growth teams find, qualify, and activate high-performing creators across TikTok, Instagram, and YouTube with AI-ranked insights.',
-  metadataBase: new URL('https://usegemz.com'),
+  metadataBase: new URL('https://usegemz.io'),
   openGraph: {
     title: 'Gemz — Find the Right Influencer, Fast. With AI.',
     description:
       'Source verified creators, enrich outreach data, and launch campaigns in minutes with Gemz.',
-    url: 'https://usegemz.com',
+    url: 'https://usegemz.io',
     siteName: 'Gemz',
     images: [
       {
