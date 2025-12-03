@@ -1114,13 +1114,11 @@ const SearchResults = ({ searchData }) => {
     let filtered = creators;
 
     // Instagram keyword: only show creators with views > 1000
+    // Uses same path as table display (line 2232): creator.video?.statistics?.views
     const isInstagramKeyword = platformNormalized?.includes('instagram');
     if (isInstagramKeyword) {
       filtered = filtered.filter((creator) => {
-        const views = creator?.video?.statistics?.views ??
-                      creator?.video?.stats?.playCount ??
-                      creator?.video?.playCount ??
-                      creator?.stats?.playCount ?? 0;
+        const views = creator?.video?.statistics?.views || 0;
         return views > 1000;
       });
     }
