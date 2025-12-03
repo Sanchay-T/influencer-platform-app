@@ -1110,11 +1110,28 @@ const SearchResults = ({ searchData }) => {
   }, [bioData]);
 
   const filteredCreators = useMemo(() => {
-    // Backend applies 1000+ views filter - no frontend engagement filtering needed
-    // Only apply email filter if enabled
-    if (!showEmailOnly) return creators;
-    return creators.filter((creator) => hasAnyEmail(creator));
-  }, [creators, showEmailOnly, hasAnyEmail]);
+    // Apply default filters based on platform
+    let filtered = creators;
+
+    // Instagram keyword: only show creators with views > 1000
+    const isInstagramKeyword = platformNormalized?.includes('instagram');
+    if (isInstagramKeyword) {
+      filtered = filtered.filter((creator) => {
+        const views = creator?.video?.statistics?.views ??
+                      creator?.video?.stats?.playCount ??
+                      creator?.video?.playCount ??
+                      creator?.stats?.playCount ?? 0;
+        return views > 1000;
+      });
+    }
+
+    // Apply email filter if enabled
+    if (showEmailOnly) {
+      filtered = filtered.filter((creator) => hasAnyEmail(creator));
+    }
+
+    return filtered;
+  }, [creators, showEmailOnly, hasAnyEmail, platformNormalized]);
 
   const waitingForResults = (jobIsActive || stillProcessing || isFetching || isLoading) && creators.length === 0;
   const shouldPoll = Boolean(searchData?.jobId) && (jobIsActive || stillProcessing || isFetching || isLoading);
