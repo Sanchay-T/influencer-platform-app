@@ -1,5 +1,5 @@
 # Influencer Platform — Project Memory (Concise)
-Last updated: 2025-11-27
+Last updated: 2025-12-03
 Scope: High-signal context for LLMs and teammates. Read before coding; update when behavior changes.
 
 ## Purpose & Use
@@ -36,7 +36,8 @@ Scope: High-signal context for LLMs and teammates. Read before coding; update wh
 - Search job lifecycle: API validates auth & limits → create `scraping_jobs` → QStash POST to process → provider dispatch per platform → append results → update processed counts → schedule continuation if more → frontend polls `/api/jobs/[id]`.
 
 ## Operations Toolkit (most-used)
-- Dev server with tunnel: `npm run dev:ngrok` (or `dev:wt2` port 3002). Set `NEXT_PUBLIC_SITE_URL` & `AUTOMATION_BASE_URL` to tunnel URL.
+- Dev server with tunnel: `npm run dev:ngrok` (permanent URL: `usegemz.ngrok.app`). Set `NEXT_PUBLIC_SITE_URL` to tunnel URL.
+- View user signup logs: `npx tsx scripts/view-user-logs.ts <email>` or `--list`
 - Inspect user state: `node scripts/inspect-user-state.js <email>`
 - Reset onboarding (dev/test): `node scripts/reset-user-onboarding.js <email>`
 - Find user id: `node scripts/find-user-id.js <email>`
@@ -44,7 +45,7 @@ Scope: High-signal context for LLMs and teammates. Read before coding; update wh
 - Smoke/config: `npm run smoke:test`, `npm run validate:deployment`
 
 ## Gotchas (keep top of mind)
-- Stripe events out-of-order; two webhook paths exist (`/api/webhooks/stripe` and `/api/stripe/webhook`)—keep configured endpoint in sync with Stripe dashboard and avoid double-processing.
+- Stripe webhook: use `/api/stripe/webhook` only; `/api/webhooks/stripe` is deprecated (returns 410). Webhook handlers now throw errors to trigger Stripe retries on failure.
 - QStash jobs can run concurrently; ensure provider + persistence are idempotent; timeouts must be enforced manually. `process-results` endpoint schedules follow-ups.
 - Instagram keyword runners: prefer `instagram_scrapecreators` or `instagram_v2`/`instagram_us_reels` explicitly; legacy reels still present for fallback only.
 - Usage counters: campaigns don’t reset; creators/enrichments reset monthly on renewal date.
@@ -61,4 +62,5 @@ Scope: High-signal context for LLMs and teammates. Read before coding; update wh
 - Remove stale sections promptly; prefer bullets over prose; keep examples minimal.
 
 ## Changelog
+- 2025-12-03: Critical signup/payment hardening: (1) webhook handlers throw errors for Stripe retry, (2) NULL currentPlan preserved (not coerced to 'free'), (3) plan limits from DB not hardcoded, (4) sensitive routes require auth, (5) onboarding/complete idempotent + requires payment, (6) dashboard race condition fixed. Added user session logging (`lib/logging/user-session-logger.ts`, `scripts/view-user-logs.ts`), webhook idempotency (`lib/webhooks/`), permanent ngrok domain (`usegemz.ngrok.app`). Deprecated `/api/webhooks/stripe`.
 - 2025-11-27: Rewritten concise memory; IG provider list updated (scrapecreators, v2, US Reels) + SystemConfig delays; added Stripe dual webhook note and likes filter mention.
