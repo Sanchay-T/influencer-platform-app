@@ -50,6 +50,18 @@ CLAUDE.md (here)
 ## Core Commands
 `npm run dev` (3000) | `npm run dev:wt2` (3002) | `npm run db:generate` | `npm run db:migrate` | `npm run db:studio` | `npm run smoke:test` | `npm run validate:deployment`
 
+## Semantic Code Search (mgrep)
+Use `mgrep` for natural language code search instead of grep when exploring the codebase:
+```bash
+mgrep "where do we validate subscription limits"
+mgrep "how is auth handled in API routes"
+mgrep "stripe webhook processing"
+```
+- Run via Bash tool (not MCP) — simpler and works the same
+- Requires `mgrep watch` running in a terminal to keep index updated
+- Respects `.gitignore`, indexes code + text + PDFs
+- **Prefer mgrep over grep/ripgrep for exploratory/semantic queries**; use grep for exact pattern matching
+
 ## Env Keys (never commit secrets)
 `DATABASE_URL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_CLERK_*`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `QSTASH_*`, `ENABLE_AUTH_BYPASS` (dev), `NEXT_PUBLIC_ADMIN_EMAILS`, `SENTRY_DSN`, Stripe price IDs.
 

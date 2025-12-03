@@ -36,6 +36,7 @@ Scope: High-signal context for LLMs and teammates. Read before coding; update wh
 - Search job lifecycle: API validates auth & limits → create `scraping_jobs` → QStash POST to process → provider dispatch per platform → append results → update processed counts → schedule continuation if more → frontend polls `/api/jobs/[id]`.
 
 ## Operations Toolkit (most-used)
+- **Semantic code search**: `mgrep "natural language query"` — use via Bash for exploratory searches; requires `mgrep watch` running in terminal
 - Dev server with tunnel: `npm run dev:ngrok` (permanent URL: `usegemz.ngrok.app`). Set `NEXT_PUBLIC_SITE_URL` to tunnel URL.
 - View user signup logs: `npx tsx scripts/view-user-logs.ts <email>` or `--list`
 - Inspect user state: `node scripts/inspect-user-state.js <email>`
@@ -62,5 +63,6 @@ Scope: High-signal context for LLMs and teammates. Read before coding; update wh
 - Remove stale sections promptly; prefer bullets over prose; keep examples minimal.
 
 ## Changelog
+- 2025-12-03: Added mgrep semantic code search tool; use via Bash (`mgrep "query"`) for natural language codebase exploration; requires `mgrep watch` running.
 - 2025-12-03: Critical signup/payment hardening: (1) webhook handlers throw errors for Stripe retry, (2) NULL currentPlan preserved (not coerced to 'free'), (3) plan limits from DB not hardcoded, (4) sensitive routes require auth, (5) onboarding/complete idempotent + requires payment, (6) dashboard race condition fixed. Added user session logging (`lib/logging/user-session-logger.ts`, `scripts/view-user-logs.ts`), webhook idempotency (`lib/webhooks/`), permanent ngrok domain (`usegemz.ngrok.app`). Deprecated `/api/webhooks/stripe`.
 - 2025-11-27: Rewritten concise memory; IG provider list updated (scrapecreators, v2, US Reels) + SystemConfig delays; added Stripe dual webhook note and likes filter mention.

@@ -73,3 +73,9 @@ DO THIS < THIS IS QUITE IMPORTANT :
          (If you use Codex’s built-in port forwarding, grab the forwarded URL and set the env vars to that.)
 
   That’s the only real “choice” you have to make in the Codex environment.
+
+## Persistent preferences (Codex)
+- Keep each source file under 300 lines; favor modular, minimal code over inline repetition.
+- Per-user structured logging with PII masking and event sourcing for major state changes.
+- Prefer lean E2E coverage over unit-test clutter; use it to validate onboarding flows.
+- Onboarding is paid-only: card required, no free/no-card trial path.

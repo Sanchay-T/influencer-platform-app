@@ -21,13 +21,15 @@ export interface PlanConfig {
   };
 }
 
-// Legacy defaults kept as fallback for features only; limits now come from DB subscription_plans
+// Plan configurations - limits come from DB subscription_plans, these are fallback defaults
+// Note: 'free' is NOT an actual plan - it's a fallback config for users with NULL currentPlan
+// (i.e., users who haven't completed onboarding/payment yet). It has 0 limits to block all actions.
 export const PLAN_CONFIGS: Record<string, PlanConfig> = {
   'free': {
     id: 'free',
-    name: 'Free Plan',
-    campaignsLimit: 0,
-    creatorsLimit: 0,
+    name: 'No Plan (Onboarding Incomplete)', // Clarify this is not a real plan
+    campaignsLimit: 0,  // Block all campaigns
+    creatorsLimit: 0,   // Block all searches
     features: {
       analytics: 'basic',
       support: 'email',

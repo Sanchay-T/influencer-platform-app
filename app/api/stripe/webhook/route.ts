@@ -17,6 +17,11 @@ import {
 } from '@/lib/webhooks/idempotency';
 
 export async function POST(req: NextRequest) {
+  // Step 1: Parse request and validate signature
+  // Signature errors are CLIENT errors (400), not server errors (500)
+  // This is important because Stripe retries on 5xx but not on 4xx
+  let event: Stripe.Event;
+
   try {
     const body = await req.text();
     const signature = req.headers.get('stripe-signature');
@@ -25,8 +30,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No signature provided' }, { status: 400 });
     }
 
-    // Validate webhook signature
-    const event = StripeService.validateWebhookSignature(body, signature);
+    // Validate webhook signature - throws if invalid
+    event = StripeService.validateWebhookSignature(body, signature);
+  } catch (signatureError) {
+    // Signature validation failed - this is a CLIENT error (400)
+    // Do NOT return 500 here or Stripe will keep retrying forever
+    structuredConsole.error('❌ [STRIPE-WEBHOOK] Signature validation failed:', signatureError);
+    return NextResponse.json(
+      { error: 'Invalid webhook signature' },
+      { status: 400 }
+    );
+  }
+
+  // Step 2: Process the validated event
+  // Processing errors ARE server errors (500) so Stripe will retry
+  try {
 
     structuredConsole.log('📥 [STRIPE-WEBHOOK] Received event:', event.type);
 

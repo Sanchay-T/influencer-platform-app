@@ -96,9 +96,10 @@ export interface PlanConfig {
 export interface BillingState {
   // Core identifiers
   userId: string;
-  
+
   // Plan information
-  currentPlan: PlanKey;
+  // null = user hasn't selected a plan yet (different from 'free' which means explicitly on free tier)
+  currentPlan: PlanKey | null;
   intendedPlan?: PlanKey;
   
   // Status information  
@@ -215,10 +216,13 @@ export class BillingService {
     });
 
     // Determine effective plan (intended during trial, current otherwise)
+    // IMPORTANT: Preserve null/undefined - do NOT coerce to 'free'
+    // A user without a plan should have currentPlan: null, not currentPlan: 'free'
     const isTrialing = userProfile.trialStatus === 'active' && userProfile.subscriptionStatus !== 'active';
-    const effectivePlan = (isTrialing && userProfile.intendedPlan) 
+    const rawPlan = userProfile.currentPlan as PlanKey | null;
+    const effectivePlan = (isTrialing && userProfile.intendedPlan)
       ? userProfile.intendedPlan as PlanKey
-      : userProfile.currentPlan as PlanKey || 'free';
+      : rawPlan ?? 'free'; // Use nullish coalescing for plan config lookup only
     
     const planConfig = PLAN_CONFIGS[effectivePlan];
     
@@ -235,7 +239,9 @@ export class BillingService {
     
     const state: BillingState = {
       userId,
-      currentPlan: userProfile.currentPlan as PlanKey || 'free',
+      // IMPORTANT: Preserve null - don't coerce to 'free'
+      // null means "no plan selected yet", 'free' means "explicitly on free tier"
+      currentPlan: userProfile.currentPlan as PlanKey | null,
       intendedPlan: userProfile.intendedPlan as PlanKey,
       subscriptionStatus: userProfile.subscriptionStatus as SubscriptionStatus || 'none',
       trialStatus: userProfile.trialStatus as TrialStatus || 'pending',

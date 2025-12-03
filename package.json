@@ -32,7 +32,6 @@
     "reset-user": "node scripts/reset-user-onboarding.js",
     "reset-user:simple": "node scripts/reset-user-simple.js",
     "reset-user:ts": "tsx scripts/reset-user-onboarding.ts",
-    "upgrade-to-fame-flex": "DATABASE_URL=\"postgresql://postgres.cufwvosytcmaggyyfsix:DKVCh52QAgEMzGHT@aws-1-ap-south-1.pooler.supabase.com:6543/postgres\" npx tsx scripts/upgrade-user-to-fame-flex.ts",
     "find-user-id": "node scripts/find-user-id.js",
     "validate:deployment": "node scripts/validate-deployment.js",
     "validate:deployment:prod": "node scripts/validate-deployment.js --environment production",
@@ -66,7 +65,15 @@
     "test:legacy:instagram:similar": "tsx test-scripts/legacy/instagram-similar-old.test.ts",
     "compare:search": "tsx test-scripts/compare-search-results.ts",
     "smoke:test": "SMOKE_USER_ID=$SMOKE_USER_ID SMOKE_EMAIL=$SMOKE_EMAIL SMOKE_CAMPAIGN_ID=$SMOKE_CAMPAIGN_ID SMOKE_JOB_ID=$SMOKE_JOB_ID npx tsx testing/smoke/run-smoke.ts",
-    "report:founder": "DATABASE_URL=\"postgresql://postgres.akjntwwpuhcnfoxesfus:49Wux6f00oTp4qQc@aws-1-us-east-1.pooler.supabase.com:6543/postgres\" tsx scripts/generate-founder-report.ts"
+    "validate:onboarding": "npx tsx scripts/tests/onboarding-validation.ts",
+    "validate:webhooks": "npx tsx scripts/tests/webhook-validation.ts",
+    "validate:all": "npx tsx scripts/tests/run-all-validations.ts",
+    "validate:all:verbose": "npx tsx scripts/tests/run-all-validations.ts --verbose",
+    "validate:all:stress": "npx tsx scripts/tests/run-all-validations.ts --include-stress",
+    "stress:signup": "k6 run scripts/tests/concurrent-signup-stress.js",
+    "stress:signup:light": "k6 run --vus 10 --duration 30s scripts/tests/concurrent-signup-stress.js",
+    "stress:signup:heavy": "k6 run --vus 100 --duration 120s scripts/tests/concurrent-signup-stress.js",
+    "pre:deploy:validate": "npm run validate:all && npm run validate:deployment"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.23.3",

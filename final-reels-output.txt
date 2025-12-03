@@ -1,4 +1,0 @@
-
-🔍 Fetching: "fitness workout" - Please wait ~2 min...
-
-❌ API returned HTML error page. API may be down.
