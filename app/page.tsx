@@ -6,10 +6,15 @@ import MarketingLanding from './(marketing)/marketing-landing';
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  const { userId } = await auth();
-
-  if (userId) {
-    redirect('/dashboard');
+  // Try to get auth - may fail for bots that bypass Clerk middleware
+  // In that case, just show the marketing landing (which is what bots need for OG tags)
+  try {
+    const { userId } = await auth();
+    if (userId) {
+      redirect('/dashboard');
+    }
+  } catch {
+    // Auth failed (likely a bot bypassing Clerk) - show landing page
   }
 
   return <MarketingLanding />;
