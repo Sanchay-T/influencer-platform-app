@@ -1,6 +1,10 @@
 # CLAUDE.md — Root Guide (Concise)
-Last updated: 2025-11-27
+Last updated: 2025-12-03
 Imports: .claude/CLAUDE.md (project memory), CONSTRAINTS.md, TESTING.md, DECISIONS.md, AGENT_OPTIMIZATION.md.
+
+## Active Work Memory (CHECK FIRST)
+- **`task.md`** — Current task tracker, findings, and action items. Check this FIRST for context on ongoing work.
+- **`scratchpad.md`** — Implementation notes, code snippets, progress log. Use for detailed session context.
 
 ## Purpose
 Entry point for the whole repo. Use this file to route to deeper notes, remember invariants, and grab the handful of commands/env keys you need to work safely.
@@ -11,6 +15,8 @@ Gemz: B2B influencer discovery SaaS (Instagram, YouTube, TikTok) with keyword/si
 ## Navigation Chain
 ```
 CLAUDE.md (here)
+├ task.md           → ACTIVE WORK: current tasks, findings, action items
+├ scratchpad.md     → ACTIVE WORK: implementation notes, progress log
 ├ .claude/CLAUDE.md → full project memory & invariants
 ├ TESTING.md        → TDD workflow, patterns
 ├ CONSTRAINTS.md    → must-not-break rules
@@ -49,6 +55,19 @@ CLAUDE.md (here)
 
 ## Update Rules
 Keep this file lean (<150 lines). Link out instead of duplicating. When you change auth, plans, schema, or job flow, update here and add a dated note in `.claude/CLAUDE.md` changelog.
+
+## Code Quality Standards
+
+**Before writing any code:**
+1. **Explain the issue** — Clearly describe what problem was observed
+2. **Present the plan** — Outline the approach and what will be implemented to solve it
+3. **Get confirmation** — Wait for approval before implementing
+
+**When writing code:**
+- Write **clean, maintainable, modular** code
+- **No file should exceed 300 lines** — split into smaller modules if needed
+- Follow existing patterns in the codebase
+- Add meaningful comments only where logic isn't self-evident
 
 ## What NOT To Do
 

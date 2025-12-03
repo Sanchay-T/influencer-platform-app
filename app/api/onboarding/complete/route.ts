@@ -46,6 +46,25 @@ export async function PATCH(request: Request) {
       }, { status: 404 })
     }
 
+    // Phase 5: Idempotency - already completed, return early
+    if (userProfile.onboardingStep === 'completed') {
+      structuredConsole.log('✅ [ONBOARDING-COMPLETE] Already completed, returning early')
+      return NextResponse.json({
+        success: true,
+        message: 'Already completed',
+        alreadyCompleted: true,
+        onboarding: { step: 'completed' }
+      })
+    }
+
+    // Phase 6: Payment validation - require Stripe setup before completing
+    if (!userProfile.stripeCustomerId || !userProfile.stripeSubscriptionId) {
+      structuredConsole.error('❌ [ONBOARDING-COMPLETE] Payment not completed')
+      return NextResponse.json({
+        error: 'Payment required to complete onboarding'
+      }, { status: 400 })
+    }
+
     structuredConsole.log('✅ [ONBOARDING-COMPLETE] User profile found:', {
       fullName: userProfile.fullName,
       businessName: userProfile.businessName,

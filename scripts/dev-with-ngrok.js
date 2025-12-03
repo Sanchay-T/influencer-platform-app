@@ -1,14 +1,18 @@
 #!/usr/bin/env node
 
 /**
- * Development server with automatic ngrok tunnel setup
+ * Development server with permanent ngrok tunnel
+ *
+ * Uses permanent domain: usegemz.ngrok.app (paid ngrok plan)
  *
  * This script:
  * 1. Checks if ngrok is already running on port 3001
- * 2. If not, starts ngrok and waits for tunnel to be ready
+ * 2. If not, starts ngrok with the permanent domain
  * 3. Updates .env.local and .env.development with the ngrok URL
  * 4. Starts the Next.js dev server
  * 5. Handles cleanup on exit (keeps ngrok running by default)
+ *
+ * Run: npm run dev:ngrok
  */
 
 const http = require('http');
@@ -21,6 +25,10 @@ const TARGET_PORT = 3001;
 const ENV_VAR_NAME = 'NEXT_PUBLIC_SITE_URL';
 const POLL_INTERVAL = 500; // ms
 const MAX_POLL_ATTEMPTS = 40; // 20 seconds total
+
+// Permanent ngrok domain (paid plan)
+const NGROK_DOMAIN = 'usegemz.ngrok.app';
+const NGROK_URL = `https://${NGROK_DOMAIN}`;
 
 // Colors for terminal output
 const colors = {
@@ -74,23 +82,23 @@ async function checkNgrokStatus() {
 }
 
 async function startNgrok() {
-  logStep('NGROK', `Starting ngrok on port ${TARGET_PORT}...`);
+  logStep('NGROK', `Starting ngrok with permanent domain: ${NGROK_DOMAIN}...`);
 
-  const ngrokProcess = spawn('ngrok', ['http', TARGET_PORT.toString()], {
+  const ngrokProcess = spawn('ngrok', ['http', `--url=${NGROK_DOMAIN}`, TARGET_PORT.toString()], {
     detached: true,
     stdio: 'ignore'
   });
 
   ngrokProcess.unref(); // Allow parent to exit independently
 
-  // Wait for ngrok to start and get the URL
+  // Wait for ngrok to start
   for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
     await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
 
     const status = await checkNgrokStatus();
     if (status.running) {
-      log(`${colors.green}✓ Ngrok tunnel established: ${status.url}${colors.reset}`);
-      return status.url;
+      log(`${colors.green}✓ Ngrok tunnel established: ${NGROK_URL}${colors.reset}`);
+      return NGROK_URL;
     }
 
     if (attempt % 4 === 0) {
@@ -185,8 +193,8 @@ async function main() {
 
     let ngrokUrl;
     if (status.running) {
-      log(`${colors.green}✓ Ngrok is already running: ${status.url}${colors.reset}`);
-      ngrokUrl = status.url;
+      log(`${colors.green}✓ Ngrok is already running: ${NGROK_URL}${colors.reset}`);
+      ngrokUrl = NGROK_URL;
     } else {
       log('  Ngrok not running, starting it now...', colors.cyan);
       ngrokUrl = await startNgrok();

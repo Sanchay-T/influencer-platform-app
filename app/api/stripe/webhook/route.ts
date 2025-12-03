@@ -1,14 +1,20 @@
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { UserSessionLogger } from '@/lib/logging/user-session-logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { StripeService } from '@/lib/stripe/stripe-service';
 import { db } from '@/lib/db';
 import { subscriptionPlans } from '@/lib/db/schema';
-import { getUserProfile, updateUserProfile, getUserByStripeCustomerId } from '@/lib/db/queries/user-queries';
+import { getUserProfile, updateUserProfile, getUserByStripeCustomerId, ensureUserProfile } from '@/lib/db/queries/user-queries';
 import { eq } from 'drizzle-orm';
 import Stripe from 'stripe';
 import { EventService, EVENT_TYPES, AGGREGATE_TYPES, SOURCE_SYSTEMS } from '@/lib/events/event-service';
 import { JobProcessor } from '@/lib/jobs/job-processor';
 import { finalizeOnboarding } from '@/lib/onboarding/finalize-onboarding';
+import {
+  checkWebhookIdempotency,
+  markWebhookCompleted,
+  markWebhookFailed,
+} from '@/lib/webhooks/idempotency';
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,48 +30,85 @@ export async function POST(req: NextRequest) {
 
     structuredConsole.log('📥 [STRIPE-WEBHOOK] Received event:', event.type);
 
-    switch (event.type) {
-      case 'checkout.session.completed':
-        await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
-        break;
+    // Check idempotency - prevent duplicate processing
+    const { shouldProcess, reason } = await checkWebhookIdempotency(
+      event.id,
+      'stripe',
+      event.type,
+      new Date(event.created * 1000),
+      event.data.object
+    );
 
-      case 'customer.subscription.created':
-        await handleSubscriptionCreated(event.data.object as Stripe.Subscription);
-        break;
-
-      case 'customer.subscription.updated':
-        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
-        break;
-
-      case 'customer.subscription.deleted':
-        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
-        break;
-
-      case 'customer.subscription.trial_will_end':
-        await handleTrialWillEnd(event.data.object as Stripe.Subscription);
-        break;
-
-      case 'invoice.payment_succeeded':
-        await handlePaymentSucceeded(event.data.object as Stripe.Invoice);
-        break;
-
-      case 'invoice.payment_failed':
-        await handlePaymentFailed(event.data.object as Stripe.Invoice);
-        break;
-
-      case 'setup_intent.succeeded':
-        await handleSetupIntentSucceeded(event.data.object as Stripe.SetupIntent);
-        break;
-
-      case 'payment_method.attached':
-        await handlePaymentMethodAttached(event.data.object as Stripe.PaymentMethod);
-        break;
-
-      default:
-        structuredConsole.log('⚠️ [STRIPE-WEBHOOK] Unhandled event type:', event.type);
+    if (!shouldProcess) {
+      structuredConsole.log('⏭️ [STRIPE-WEBHOOK] Skipping duplicate event:', {
+        eventId: event.id,
+        eventType: event.type,
+        reason,
+      });
+      return NextResponse.json({ received: true, duplicate: true, reason });
     }
 
-    return NextResponse.json({ received: true });
+    // Process webhook events with idempotency tracking
+    try {
+      switch (event.type) {
+        case 'checkout.session.completed':
+          await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session);
+          break;
+
+        case 'customer.subscription.created':
+          await handleSubscriptionCreated(event.data.object as Stripe.Subscription);
+          break;
+
+        case 'customer.subscription.updated':
+          await handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
+          break;
+
+        case 'customer.subscription.deleted':
+          await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
+          break;
+
+        case 'customer.subscription.trial_will_end':
+          await handleTrialWillEnd(event.data.object as Stripe.Subscription);
+          break;
+
+        case 'invoice.payment_succeeded':
+          await handlePaymentSucceeded(event.data.object as Stripe.Invoice);
+          break;
+
+        case 'invoice.payment_failed':
+          await handlePaymentFailed(event.data.object as Stripe.Invoice);
+          break;
+
+        case 'setup_intent.succeeded':
+          await handleSetupIntentSucceeded(event.data.object as Stripe.SetupIntent);
+          break;
+
+        case 'payment_method.attached':
+          await handlePaymentMethodAttached(event.data.object as Stripe.PaymentMethod);
+          break;
+
+        default:
+          structuredConsole.log('⚠️ [STRIPE-WEBHOOK] Unhandled event type:', event.type);
+      }
+
+      // Mark webhook as completed
+      await markWebhookCompleted(event.id);
+
+      return NextResponse.json({ received: true });
+
+    } catch (processingError) {
+      // Mark webhook as failed
+      const errorMessage = processingError instanceof Error ? processingError.message : 'Unknown processing error';
+      await markWebhookFailed(event.id, errorMessage);
+
+      structuredConsole.error('❌ [STRIPE-WEBHOOK] Processing failed:', {
+        eventId: event.id,
+        eventType: event.type,
+        error: errorMessage,
+      });
+
+      throw processingError; // Re-throw to outer catch
+    }
 
   } catch (error) {
     structuredConsole.error('❌ [STRIPE-WEBHOOK] Error:', error);
@@ -123,15 +166,47 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     return;
   }
 
-  const userProfile = await getUserProfile(userId);
+  // Initialize user session logger
+  const emailHint = session.customer_details?.email || session.metadata?.email;
+  const userLogger = emailHint ? UserSessionLogger.forUser(emailHint, userId) : null;
 
-  if (!userProfile) {
-    structuredConsole.warn('⚠️ [STRIPE-WEBHOOK] User profile not found while finalizing onboarding from checkout session', {
+  userLogger?.log('STRIPE_WEBHOOK', 'checkout.session.completed received', {
+    sessionId: session.id,
+    paymentStatus: session.payment_status,
+    amountTotal: session.amount_total,
+    currency: session.currency,
+  });
+
+  // Use ensureUserProfile instead of getUserProfile to handle race condition:
+  // Stripe webhook can arrive BEFORE Clerk webhook creates the user.
+  // ensureUserProfile will create the user if they don't exist yet.
+  let userProfile;
+  try {
+    userProfile = await ensureUserProfile(userId);
+    structuredConsole.log('✅ [STRIPE-WEBHOOK] User profile ensured (created or fetched)', {
       requestId,
       userId,
       sessionId: session.id,
+      onboardingStep: userProfile.onboardingStep,
     });
-    return;
+
+    userLogger?.log('USER_ENSURED', 'User profile ensured for checkout', {
+      wasCreated: userProfile.onboardingStep === 'pending',
+      currentPlan: userProfile.currentPlan,
+      onboardingStep: userProfile.onboardingStep,
+    });
+  } catch (error) {
+    userLogger?.log('ERROR', 'Failed to ensure user profile', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+
+    structuredConsole.error('❌ [STRIPE-WEBHOOK] Failed to ensure user profile - cannot proceed with checkout', {
+      requestId,
+      userId,
+      sessionId: session.id,
+      error,
+    });
+    throw error; // Re-throw to trigger webhook retry
   }
 
   if (userProfile.onboardingStep === 'completed') {
@@ -158,6 +233,18 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       alreadyCompleted: result.alreadyCompleted,
       trialStatus: result.trial?.trialStatus,
       emailScheduled: result.emails?.success ?? false,
+    });
+
+    userLogger?.log('ONBOARDING_COMPLETE', 'User onboarding finalized successfully', {
+      alreadyCompleted: result.alreadyCompleted,
+      trialStatus: result.trial?.trialStatus,
+      trialEndDate: result.trial?.trialEndDate,
+      emailScheduled: result.emails?.success ?? false,
+    });
+
+    userLogger?.log('PAYMENT_SUCCESS', '🎉 User is now fully onboarded and can use the product!', {
+      plan: session.metadata?.plan || 'unknown',
+      paymentStatus: session.payment_status,
     });
   } catch (error) {
     structuredConsole.error('❌ [STRIPE-WEBHOOK] finalizeOnboarding failed during checkout session handling', {
@@ -370,6 +457,7 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
 
   } catch (error) {
     structuredConsole.error('❌ [STRIPE-WEBHOOK] Error handling subscription created:', error);
+    throw error;
   }
 }
 
@@ -430,17 +518,13 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       updateData.trialConversionDate = new Date();
     }
     
-    // Set plan limits based on the new plan
-    const planLimits = {
-      'glow_up': { campaigns: 3, creators: 1000 },
-      'viral_surge': { campaigns: 10, creators: 10000 },
-      'fame_flex': { campaigns: -1, creators: -1 }
-    };
-    
-    const limits = planLimits[planId as keyof typeof planLimits];
-    if (limits) {
-      updateData.planCampaignsLimit = limits.campaigns;
-      updateData.planCreatorsLimit = limits.creators;
+    // Set plan limits from database (not hardcoded)
+    const planDetails = await db.query.subscriptionPlans.findFirst({
+      where: eq(subscriptionPlans.planKey, planId)
+    });
+    if (planDetails) {
+      updateData.planCampaignsLimit = planDetails.campaignsLimit;
+      updateData.planCreatorsLimit = planDetails.creatorsLimit;
     }
 
     // Handle cancellation
@@ -454,6 +538,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 
   } catch (error) {
     structuredConsole.error('❌ [STRIPE-WEBHOOK] Error handling subscription updated:', error);
+    throw error;
   }
 }
 
@@ -487,6 +572,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 
   } catch (error) {
     structuredConsole.error('❌ [STRIPE-WEBHOOK] Error handling subscription deleted:', error);
+    throw error;
   }
 }
 
@@ -515,6 +601,7 @@ async function handleTrialWillEnd(subscription: Stripe.Subscription) {
 
   } catch (error) {
     structuredConsole.error('❌ [STRIPE-WEBHOOK] Error handling trial will end:', error);
+    throw error;
   }
 }
 
@@ -541,6 +628,7 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
 
   } catch (error) {
     structuredConsole.error('❌ [STRIPE-WEBHOOK] Error handling payment succeeded:', error);
+    throw error;
   }
 }
 
@@ -569,6 +657,7 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
 
   } catch (error) {
     structuredConsole.error('❌ [STRIPE-WEBHOOK] Error handling payment failed:', error);
+    throw error;
   }
 }
 
@@ -595,6 +684,7 @@ async function handleSetupIntentSucceeded(setupIntent: Stripe.SetupIntent) {
 
   } catch (error) {
     structuredConsole.error('❌ [STRIPE-WEBHOOK] Error handling setup intent succeeded:', error);
+    throw error;
   }
 }
 
@@ -632,5 +722,6 @@ async function handlePaymentMethodAttached(paymentMethod: Stripe.PaymentMethod) 
 
   } catch (error) {
     structuredConsole.error('❌ [STRIPE-WEBHOOK] Error handling payment method attached:', error);
+    throw error;
   }
 }

@@ -55,3 +55,6 @@ sorzproject-main/
 # database dumps (large files)
 *.sql
 data/*.sql
+
+# User session logs (local debugging)
+logs/users/

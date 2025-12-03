@@ -1,9 +1,15 @@
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { UserSessionLogger } from '@/lib/logging/user-session-logger';
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { Webhook } from 'svix';
 import { getUserProfile, createUser, updateUserProfile } from '@/lib/db/queries/user-queries';
 import BillingLogger from '@/lib/loggers/billing-logger';
+import {
+  checkWebhookIdempotency,
+  markWebhookCompleted,
+  markWebhookFailed,
+} from '@/lib/webhooks/idempotency';
 
 // Clerk webhook event types
 type WebhookEvent = {
@@ -101,6 +107,31 @@ export async function POST(req: NextRequest) {
 
     const { type, data } = evt;
 
+    // Check idempotency - prevent duplicate processing
+    const { shouldProcess, reason } = await checkWebhookIdempotency(
+      evt.id,
+      'clerk',
+      type,
+      new Date(evt.timestamp),
+      data
+    );
+
+    if (!shouldProcess) {
+      await BillingLogger.logAPI(
+        'RESPONSE',
+        `Clerk webhook skipped (idempotent): ${reason}`,
+        data?.id,
+        {
+          eventType: type,
+          eventId: evt.id,
+          reason,
+          requestId
+        },
+        requestId
+      );
+      return NextResponse.json({ received: true, duplicate: true, reason });
+    }
+
     await BillingLogger.logAPI(
       'RESPONSE',
       `Processing Clerk webhook event: ${type}`,
@@ -115,7 +146,8 @@ export async function POST(req: NextRequest) {
     );
 
     // Handle the webhook
-    switch (type) {
+    try {
+      switch (type) {
       case 'user.created':
         await handleUserCreated(data, requestId);
         break;
@@ -144,23 +176,47 @@ export async function POST(req: NextRequest) {
         break;
     }
 
-    await BillingLogger.logAPI(
-      'REQUEST_SUCCESS',
-      'Clerk webhook processed successfully',
-      data?.id,
-      {
-        eventType: type,
-        eventId: evt.id,
-        requestId
-      },
-      requestId
-    );
+      // Mark webhook as completed
+      await markWebhookCompleted(evt.id);
 
-    return NextResponse.json({ success: true });
+      await BillingLogger.logAPI(
+        'REQUEST_SUCCESS',
+        'Clerk webhook processed successfully',
+        data?.id,
+        {
+          eventType: type,
+          eventId: evt.id,
+          requestId
+        },
+        requestId
+      );
+
+      return NextResponse.json({ success: true });
+
+    } catch (processingError) {
+      // Mark webhook as failed
+      const errorMessage = processingError instanceof Error ? processingError.message : 'Unknown processing error';
+      await markWebhookFailed(evt.id, errorMessage);
+
+      await BillingLogger.logError(
+        'CLERK_WEBHOOK_PROCESSING_ERROR',
+        'Clerk webhook event processing failed',
+        data?.id,
+        {
+          eventType: type,
+          eventId: evt.id,
+          errorMessage,
+          requestId
+        },
+        requestId
+      );
+
+      throw processingError; // Re-throw to outer catch
+    }
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown webhook processing error';
-    
+
     await BillingLogger.logError(
       'CLERK_WEBHOOK_ERROR',
       'Clerk webhook processing failed',
@@ -194,6 +250,15 @@ async function handleUserCreated(userData: any, requestId: string) {
   const firstName = userData.first_name;
   const lastName = userData.last_name;
   const fullName = `${firstName || ''} ${lastName || ''}`.trim() || 'New User';
+
+  // Initialize user session logger for debugging
+  const userLogger = email ? UserSessionLogger.forUser(email, userId) : null;
+  userLogger?.log('CLERK_WEBHOOK', 'user.created webhook received', {
+    userId,
+    email,
+    fullName,
+    requestId,
+  });
 
   await BillingLogger.logDatabase(
     'CREATE',
@@ -229,19 +294,51 @@ async function handleUserCreated(userData: any, requestId: string) {
 
     // Create new user profile with normalized tables
     // DO NOT activate trial here - trial activates AFTER payment in onboarding Step 4
-    await createUser({
-      userId: userId,
-      email: email,
-      fullName: fullName,
-      onboardingStep: 'pending', // Will trigger onboarding modal
+    //
+    // ⚠️ RACE CONDITION HANDLING:
+    // Between getUserProfile() check above and createUser() below, the dashboard SSR
+    // might create the user via ensureUserProfile(). We catch the duplicate key error
+    // and treat it as success (user was created, just not by us).
+    try {
+      await createUser({
+        userId: userId,
+        email: email,
+        fullName: fullName,
+        onboardingStep: 'pending', // Will trigger onboarding modal
 
-      // NO TRIAL DATA - trial will be activated after payment
-      // trialStartDate: undefined,
-      // trialEndDate: undefined,
+        // NO TRIAL DATA - trial will be activated after payment
+        // trialStartDate: undefined,
+        // trialEndDate: undefined,
 
-      // Subscription defaults
-      currentPlan: 'free', // Start with free, upgrade during onboarding
-    });
+        // currentPlan is intentionally NOT set here
+        // It will be set by Stripe webhook after user completes payment
+        // NULL = user hasn't completed onboarding yet
+      });
+    } catch (createError: any) {
+      // Handle race condition: another process created the user between our check and insert
+      const message = createError?.message?.toLowerCase?.() ?? '';
+      const isDuplicate = message.includes('duplicate') || message.includes('unique') || createError?.code === '23505';
+
+      if (isDuplicate) {
+        await BillingLogger.logDatabase(
+          'READ',
+          'User profile created by concurrent process (race condition handled)',
+          userId,
+          {
+            table: 'userProfiles',
+            raceCondition: true,
+            note: 'Dashboard SSR likely created the user via ensureUserProfile()'
+          },
+          requestId
+        );
+        // User exists, which is what we wanted - continue successfully
+        structuredConsole.log(`⚡ [CLERK-WEBHOOK] Race condition handled: user ${userId} created by concurrent process`);
+        return;
+      }
+
+      // Re-throw non-duplicate errors
+      throw createError;
+    }
 
     await BillingLogger.logDatabase(
       'CREATE',
@@ -250,29 +347,36 @@ async function handleUserCreated(userData: any, requestId: string) {
       {
         table: 'userProfiles',
         recordId: userId,
-        currentPlan: 'free',
+        currentPlan: null, // NULL until Stripe confirms payment
         trialStatus: 'pending', // Trial NOT activated yet
         onboardingStep: 'pending',
-        note: 'Trial will activate after payment in onboarding Step 4'
+        note: 'currentPlan will be set by Stripe webhook after payment'
       },
       requestId
     );
 
     await BillingLogger.logPlanChange(
       'UPGRADE',
-      'New user created - trial will activate after payment',
+      'New user created - awaiting plan selection and payment',
       userId,
       {
         fromPlan: undefined,
-        toPlan: 'free',
+        toPlan: null, // No plan until payment confirmed
         reason: 'user_created',
-        billingCycle: 'none', // No trial yet
+        billingCycle: 'none', // No subscription yet
         effective: new Date().toISOString()
       },
       requestId
     );
 
     structuredConsole.log(`✅ [CLERK-WEBHOOK] User profile created for ${userId} (trial pending payment)`);
+
+    userLogger?.log('USER_CREATED', 'User profile created successfully', {
+      userId,
+      currentPlan: null,
+      onboardingStep: 'pending',
+      note: 'User must complete onboarding and payment to access product',
+    });
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Database error';

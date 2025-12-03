@@ -149,7 +149,7 @@ export async function getUserProfile(userId: string): Promise<UserProfileComplet
   return {
     ...userRecord,
     // Ensure required fields have defaults
-    currentPlan: userRecord.currentPlan || 'free',
+    currentPlan: userRecord.currentPlan, // NULL = not onboarded yet
     subscriptionStatus: userRecord.subscriptionStatus || 'none',
     trialStatus: userRecord.trialStatus || 'pending',
     billingSyncStatus: userRecord.billingSyncStatus || 'pending',
@@ -185,7 +185,7 @@ export async function createUser(userData: {
     email: userData.email,
     fullName: userData.fullName,
     onboardingStep: userData.onboardingStep || 'pending',
-    currentPlan: userData.currentPlan || 'free',
+    currentPlan: userData.currentPlan || null, // NULL until Stripe confirms payment
     hasTrialStart: !!userData.trialStartDate,
     hasTrialEnd: !!userData.trialEndDate,
   });
@@ -206,9 +206,10 @@ export async function createUser(userData: {
     }).returning();
 
     // 2. Insert subscription data
+    // Note: currentPlan is NULL until Stripe webhook confirms payment
     const [newSubscription] = await tx.insert(userSubscriptions).values({
       userId: newUser.id,
-      currentPlan: userData.currentPlan || 'free',
+      currentPlan: userData.currentPlan || null, // NULL = hasn't completed onboarding
       intendedPlan: userData.intendedPlan,
       trialStatus: userData.trialStartDate ? 'active' : 'pending',
       trialStartDate: userData.trialStartDate,
@@ -328,12 +329,14 @@ export async function ensureUserProfile(userId: string): Promise<UserProfileComp
   const fallbackEmail = `user-${userId}@example.com`;
 
   try {
+    // Note: currentPlan is intentionally not set here
+    // It will be set by Stripe webhook after user completes payment
     const createdProfile = await createUser({
       userId,
       email: email || fallbackEmail,
       fullName: fullName || 'User',
       onboardingStep: 'pending',
-      currentPlan: 'free'
+      // currentPlan: null - not set until Stripe confirms payment
     });
 
     info('ensureUserProfile created new record', { userId });
@@ -706,7 +709,7 @@ export async function getUserByStripeCustomerId(stripeCustomerId: string): Promi
   return {
     ...userRecord,
     // Ensure required fields have defaults
-    currentPlan: userRecord.currentPlan || 'free',
+    currentPlan: userRecord.currentPlan, // NULL = not onboarded yet
     subscriptionStatus: userRecord.subscriptionStatus || 'none',
     trialStatus: userRecord.trialStatus || 'pending',
     billingSyncStatus: userRecord.billingSyncStatus || 'pending',
