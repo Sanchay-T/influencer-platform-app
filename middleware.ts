@@ -68,5 +68,7 @@ export default clerkMiddleware((auth, request) => {
 })
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon\.ico).*)'],
+  // Use .+ instead of .* to require at least one character after /
+  // This excludes the root path / from middleware, letting OG crawlers read meta tags
+  matcher: ['/((?!_next/static|_next/image|favicon\\.ico|landing/).+)'],
 }
