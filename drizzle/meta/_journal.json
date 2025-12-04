@@ -1,27 +1,27 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1740199266892,
-      "tag": "0000_moaning_iceman",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1740199687799,
-      "tag": "0001_orange_proudstar",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1761661463000,
-      "tag": "0003_creator_enrichment_usage",
-      "breakpoints": true
-    }
-  ]
+	"version": "7",
+	"dialect": "postgresql",
+	"entries": [
+		{
+			"idx": 0,
+			"version": "7",
+			"when": 1740199266892,
+			"tag": "0000_moaning_iceman",
+			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "7",
+			"when": 1740199687799,
+			"tag": "0001_orange_proudstar",
+			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1761661463000,
+			"tag": "0003_creator_enrichment_usage",
+			"breakpoints": true
+		}
+	]
 }

@@ -1,31 +1,31 @@
+import { useCallback, useEffect, useState } from 'react';
 import { structuredConsole } from '@/lib/logging/console-proxy';
-import { useState, useEffect, useCallback } from 'react';
 
 export interface TrialCountdownData {
-  daysRemaining: number;
-  hoursRemaining: number;
-  minutesRemaining: number;
-  secondsRemaining?: number;
-  progressPercentage: number;
-  timeUntilExpiry: string;
-  isExpired: boolean;
-  isLoading: boolean;
-  error: string | null;
+	daysRemaining: number;
+	hoursRemaining: number;
+	minutesRemaining: number;
+	secondsRemaining?: number;
+	progressPercentage: number;
+	timeUntilExpiry: string;
+	isExpired: boolean;
+	isLoading: boolean;
+	error: string | null;
 }
 
 export interface TrialData {
-  status: string;
-  startDate: string;
-  endDate: string;
-  daysRemaining: number;
-  hoursRemaining: number;
-  minutesRemaining: number;
-  progressPercentage: number;
-  timeUntilExpiry: string;
-  isExpired: boolean;
-  stripeCustomerId?: string;
-  stripeSubscriptionId?: string;
-  subscriptionStatus?: string;
+	status: string;
+	startDate: string;
+	endDate: string;
+	daysRemaining: number;
+	hoursRemaining: number;
+	minutesRemaining: number;
+	progressPercentage: number;
+	timeUntilExpiry: string;
+	isExpired: boolean;
+	stripeCustomerId?: string;
+	stripeSubscriptionId?: string;
+	subscriptionStatus?: string;
 }
 
 /**
@@ -33,214 +33,222 @@ export interface TrialData {
  * Updates every minute and handles trial expiration
  */
 export function useTrialCountdown(initialTrialData?: TrialData | null) {
-  const [countdownData, setCountdownData] = useState<TrialCountdownData>({
-    daysRemaining: 0,
-    hoursRemaining: 0,
-    minutesRemaining: 0,
-    progressPercentage: 0,
-    timeUntilExpiry: 'Loading...',
-    isExpired: false,
-    isLoading: true,
-    error: null
-  });
+	const [countdownData, setCountdownData] = useState<TrialCountdownData>({
+		daysRemaining: 0,
+		hoursRemaining: 0,
+		minutesRemaining: 0,
+		progressPercentage: 0,
+		timeUntilExpiry: 'Loading...',
+		isExpired: false,
+		isLoading: true,
+		error: null,
+	});
 
-  const [trialData, setTrialData] = useState<TrialData | null>(initialTrialData || null);
+	const [trialData, setTrialData] = useState<TrialData | null>(initialTrialData || null);
 
-  // Calculate countdown from trial start/end dates (progress is time-based)
-  const calculateCountdown = useCallback((endDateString: string, startDateString?: string): TrialCountdownData => {
-    try {
-      const now = new Date();
-      const endDate = new Date(endDateString);
-      const startDate = startDateString ? new Date(startDateString) : null;
-      
-      // Calculate time difference in milliseconds
-      const timeDiff = endDate.getTime() - now.getTime();
-      
-      if (timeDiff <= 0) {
-        return {
-          daysRemaining: 0,
-          hoursRemaining: 0,
-          minutesRemaining: 0,
-          secondsRemaining: 0,
-          progressPercentage: 100,
-          timeUntilExpiry: 'Expired',
-          isExpired: true,
-          isLoading: false,
-          error: null
-        };
-      }
+	// Calculate countdown from trial start/end dates (progress is time-based)
+	const calculateCountdown = useCallback(
+		(endDateString: string, startDateString?: string): TrialCountdownData => {
+			try {
+				const now = new Date();
+				const endDate = new Date(endDateString);
+				const startDate = startDateString ? new Date(startDateString) : null;
 
-      // Convert to days, hours, minutes, seconds
-      const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+				// Calculate time difference in milliseconds
+				const timeDiff = endDate.getTime() - now.getTime();
 
-      // Calculate progress as precise time-based percentage
-      // Prefer using actual start/end dates if provided; fallback to 7-day window
-      let progressPercentage = 0;
-      if (startDate && !isNaN(startDate.getTime()) && endDate.getTime() > startDate.getTime()) {
-        const totalMs = endDate.getTime() - startDate.getTime();
-        const elapsedMs = now.getTime() - startDate.getTime();
-        progressPercentage = (elapsedMs / totalMs) * 100;
-      } else {
-        // Fallback assumes a 7-day trial window
-        const totalTrialMs = 7 * 24 * 60 * 60 * 1000;
-        const elapsedMs = totalTrialMs - timeDiff;
-        progressPercentage = (elapsedMs / totalTrialMs) * 100;
-      }
-      progressPercentage = Math.min(100, Math.max(0, progressPercentage));
+				if (timeDiff <= 0) {
+					return {
+						daysRemaining: 0,
+						hoursRemaining: 0,
+						minutesRemaining: 0,
+						secondsRemaining: 0,
+						progressPercentage: 100,
+						timeUntilExpiry: 'Expired',
+						isExpired: true,
+						isLoading: false,
+						error: null,
+					};
+				}
 
-      // Format time until expiry
-      let timeUntilExpiry = '';
-      if (days > 0) {
-        timeUntilExpiry += `${days}d `;
-      }
-      if (hours > 0 || days > 0) {
-        timeUntilExpiry += `${hours}h `;
-      }
-      timeUntilExpiry += `${minutes}m`;
+				// Convert to days, hours, minutes, seconds
+				const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+				const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+				const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+				const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
 
-      return {
-        daysRemaining: days,
-        hoursRemaining: hours,
-        minutesRemaining: minutes,
-        secondsRemaining: seconds,
-        progressPercentage: Math.round(progressPercentage),
-        timeUntilExpiry: timeUntilExpiry.trim(),
-        isExpired: false,
-        isLoading: false,
-        error: null
-      };
-    } catch (error) {
-      structuredConsole.error('❌ [TRIAL-COUNTDOWN] Error calculating countdown:', error);
-      return {
-        daysRemaining: 0,
-        hoursRemaining: 0,
-        minutesRemaining: 0,
-        progressPercentage: 0,
-        timeUntilExpiry: 'Error',
-        isExpired: false,
-        isLoading: false,
-        error: 'Failed to calculate countdown'
-      };
-    }
-  }, []);
+				// Calculate progress as precise time-based percentage
+				// Prefer using actual start/end dates if provided; fallback to 7-day window
+				let progressPercentage = 0;
+				if (startDate && !isNaN(startDate.getTime()) && endDate.getTime() > startDate.getTime()) {
+					const totalMs = endDate.getTime() - startDate.getTime();
+					const elapsedMs = now.getTime() - startDate.getTime();
+					progressPercentage = (elapsedMs / totalMs) * 100;
+				} else {
+					// Fallback assumes a 7-day trial window
+					const totalTrialMs = 7 * 24 * 60 * 60 * 1000;
+					const elapsedMs = totalTrialMs - timeDiff;
+					progressPercentage = (elapsedMs / totalTrialMs) * 100;
+				}
+				progressPercentage = Math.min(100, Math.max(0, progressPercentage));
 
-  // Fetch fresh trial data from API
-  const refreshTrialData = useCallback(async () => {
-    try {
-      structuredConsole.log('🔄 [TRIAL-COUNTDOWN] Refreshing trial data from API');
-      
-      const response = await fetch('/api/profile');
-      if (!response.ok) {
-        throw new Error('Failed to fetch profile data');
-      }
+				// Format time until expiry
+				let timeUntilExpiry = '';
+				if (days > 0) {
+					timeUntilExpiry += `${days}d `;
+				}
+				if (hours > 0 || days > 0) {
+					timeUntilExpiry += `${hours}h `;
+				}
+				timeUntilExpiry += `${minutes}m`;
 
-      const profileData = await response.json();
-      
-      if (profileData.trialData) {
-        structuredConsole.log('✅ [TRIAL-COUNTDOWN] Trial data refreshed:', {
-          status: profileData.trialData.status,   
-          endDate: profileData.trialData.endDate,
-          daysRemaining: profileData.trialData.daysRemaining
-        });
-        
-        setTrialData(profileData.trialData);
-        
-        // Calculate fresh countdown
-        if (profileData.trialData.endDate) {
-          const newCountdown = calculateCountdown(profileData.trialData.endDate, profileData.trialData.startDate);
-          setCountdownData(newCountdown);
-        }
-      } else {
-        structuredConsole.log('ℹ️ [TRIAL-COUNTDOWN] No trial data found');
-        setCountdownData(prev => ({
-          ...prev,
-          isLoading: false,
-          error: 'No trial data available'
-        }));
-      }
-    } catch (error) {
-      structuredConsole.error('❌ [TRIAL-COUNTDOWN] Error refreshing trial data:', error);
-      setCountdownData(prev => ({
-        ...prev,
-        isLoading: false,
-        error: 'Failed to refresh trial data'
-      }));
-    }
-  }, [calculateCountdown]);
+				return {
+					daysRemaining: days,
+					hoursRemaining: hours,
+					minutesRemaining: minutes,
+					secondsRemaining: seconds,
+					progressPercentage: Math.round(progressPercentage),
+					timeUntilExpiry: timeUntilExpiry.trim(),
+					isExpired: false,
+					isLoading: false,
+					error: null,
+				};
+			} catch (error) {
+				structuredConsole.error('❌ [TRIAL-COUNTDOWN] Error calculating countdown:', error);
+				return {
+					daysRemaining: 0,
+					hoursRemaining: 0,
+					minutesRemaining: 0,
+					progressPercentage: 0,
+					timeUntilExpiry: 'Error',
+					isExpired: false,
+					isLoading: false,
+					error: 'Failed to calculate countdown',
+				};
+			}
+		},
+		[]
+	);
 
-  // Update countdown based on current trial data
-  const updateCountdown = useCallback(() => {
-    if (trialData && trialData.endDate && !trialData.isExpired) {
-      const newCountdown = calculateCountdown(trialData.endDate, trialData.startDate);
-      setCountdownData(newCountdown);
-      
-      // If countdown shows expired but trial data doesn't, refresh from server
-      if (newCountdown.isExpired && trialData.status === 'active') {
-        structuredConsole.log('⚠️ [TRIAL-COUNTDOWN] Countdown expired, refreshing server data');
-        refreshTrialData();
-      }
-    }
-  }, [trialData, calculateCountdown, refreshTrialData]);
+	// Fetch fresh trial data from API
+	const refreshTrialData = useCallback(async () => {
+		try {
+			structuredConsole.log('🔄 [TRIAL-COUNTDOWN] Refreshing trial data from API');
 
-  // Initialize countdown on mount or when trial data changes
-  useEffect(() => {
-    if (trialData && trialData.endDate) {
-      updateCountdown();
-    } else if (!initialTrialData) {
-      // No initial data provided, fetch from API
-      refreshTrialData();
-    }
-  }, [trialData, updateCountdown, refreshTrialData, initialTrialData]);
+			const response = await fetch('/api/profile');
+			if (!response.ok) {
+				throw new Error('Failed to fetch profile data');
+			}
 
-  // Set up interval for real-time updates (every 60 seconds)
-  useEffect(() => {
-    structuredConsole.log('⏰ [TRIAL-COUNTDOWN] Setting up 60-second countdown interval');
-    
-    const interval = setInterval(() => {
-      structuredConsole.log('🔄 [TRIAL-COUNTDOWN] Updating countdown (60-second interval)');
-      updateCountdown();
-    }, 60 * 1000); // Update every 60 seconds
+			const profileData = await response.json();
 
-    // Cleanup interval on unmount
-    return () => {
-      structuredConsole.log('🧹 [TRIAL-COUNTDOWN] Cleaning up countdown interval');
-      clearInterval(interval);
-    };
-  }, [updateCountdown]);
+			if (profileData.trialData) {
+				structuredConsole.log('✅ [TRIAL-COUNTDOWN] Trial data refreshed:', {
+					status: profileData.trialData.status,
+					endDate: profileData.trialData.endDate,
+					daysRemaining: profileData.trialData.daysRemaining,
+				});
 
-  // Provide manual refresh function
-  const refresh = useCallback(() => {
-    structuredConsole.log('🔄 [TRIAL-COUNTDOWN] Manual refresh triggered');
-    refreshTrialData();
-  }, [refreshTrialData]);
+				setTrialData(profileData.trialData);
 
-  return {
-    ...countdownData,
-    trialData,
-    refresh
-  };
+				// Calculate fresh countdown
+				if (profileData.trialData.endDate) {
+					const newCountdown = calculateCountdown(
+						profileData.trialData.endDate,
+						profileData.trialData.startDate
+					);
+					setCountdownData(newCountdown);
+				}
+			} else {
+				structuredConsole.log('ℹ️ [TRIAL-COUNTDOWN] No trial data found');
+				setCountdownData((prev) => ({
+					...prev,
+					isLoading: false,
+					error: 'No trial data available',
+				}));
+			}
+		} catch (error) {
+			structuredConsole.error('❌ [TRIAL-COUNTDOWN] Error refreshing trial data:', error);
+			setCountdownData((prev) => ({
+				...prev,
+				isLoading: false,
+				error: 'Failed to refresh trial data',
+			}));
+		}
+	}, [calculateCountdown]);
+
+	// Update countdown based on current trial data
+	const updateCountdown = useCallback(() => {
+		if (trialData && trialData.endDate && !trialData.isExpired) {
+			const newCountdown = calculateCountdown(trialData.endDate, trialData.startDate);
+			setCountdownData(newCountdown);
+
+			// If countdown shows expired but trial data doesn't, refresh from server
+			if (newCountdown.isExpired && trialData.status === 'active') {
+				structuredConsole.log('⚠️ [TRIAL-COUNTDOWN] Countdown expired, refreshing server data');
+				refreshTrialData();
+			}
+		}
+	}, [trialData, calculateCountdown, refreshTrialData]);
+
+	// Initialize countdown on mount or when trial data changes
+	useEffect(() => {
+		if (trialData && trialData.endDate) {
+			updateCountdown();
+		} else if (!initialTrialData) {
+			// No initial data provided, fetch from API
+			refreshTrialData();
+		}
+	}, [trialData, updateCountdown, refreshTrialData, initialTrialData]);
+
+	// Set up interval for real-time updates (every 60 seconds)
+	useEffect(() => {
+		structuredConsole.log('⏰ [TRIAL-COUNTDOWN] Setting up 60-second countdown interval');
+
+		const interval = setInterval(() => {
+			structuredConsole.log('🔄 [TRIAL-COUNTDOWN] Updating countdown (60-second interval)');
+			updateCountdown();
+		}, 60 * 1000); // Update every 60 seconds
+
+		// Cleanup interval on unmount
+		return () => {
+			structuredConsole.log('🧹 [TRIAL-COUNTDOWN] Cleaning up countdown interval');
+			clearInterval(interval);
+		};
+	}, [updateCountdown]);
+
+	// Provide manual refresh function
+	const refresh = useCallback(() => {
+		structuredConsole.log('🔄 [TRIAL-COUNTDOWN] Manual refresh triggered');
+		refreshTrialData();
+	}, [refreshTrialData]);
+
+	return {
+		...countdownData,
+		trialData,
+		refresh,
+	};
 }
 
 /**
  * Hook for simple countdown formatting
  */
 export function useFormattedCountdown(trialData?: TrialData | null) {
-  const countdown = useTrialCountdown(trialData);
+	const countdown = useTrialCountdown(trialData);
 
-  const formatted = {
-    timeDisplay: countdown.timeUntilExpiry,
-    progressText: `${countdown.progressPercentage}% complete`,
-    statusText: countdown.isExpired ? 'Trial Expired' : 
-                countdown.daysRemaining === 0 ? 'Expires Today' :
-                `${countdown.daysRemaining} days remaining`,
-    progressWidth: `${countdown.progressPercentage}%`
-  };
+	const formatted = {
+		timeDisplay: countdown.timeUntilExpiry,
+		progressText: `${countdown.progressPercentage}% complete`,
+		statusText: countdown.isExpired
+			? 'Trial Expired'
+			: countdown.daysRemaining === 0
+				? 'Expires Today'
+				: `${countdown.daysRemaining} days remaining`,
+		progressWidth: `${countdown.progressPercentage}%`,
+	};
 
-  return {
-    ...countdown,
-    formatted
-  };
+	return {
+		...countdown,
+		formatted,
+	};
 }

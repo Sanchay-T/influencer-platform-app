@@ -1,216 +1,96 @@
-import { structuredConsole } from '@/lib/logging/console-proxy';
-import { NextResponse } from 'next/server'
-import { getAuthOrTest } from '@/lib/auth/get-auth-or-test'
-import { getUserProfile } from '@/lib/db/queries/user-queries'
-import OnboardingLogger from '@/lib/utils/onboarding-logger'
-import { finalizeOnboarding } from '@/lib/onboarding/finalize-onboarding'
+import { NextResponse } from 'next/server';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
+import { getUserProfile } from '@/lib/db/queries/user-queries';
+import { logError } from '@/lib/logging/onboarding-logger';
+import { finalizeOnboarding } from '@/lib/onboarding/finalize-onboarding';
+import { captureError, ensureStep, milestone, recordTransition } from '@/lib/onboarding/flow';
+import { PaymentRequiredError, requirePaidOrTrial } from '@/lib/onboarding/stripe-guard';
 
 export async function PATCH(request: Request) {
-  try {
-    const startTime = Date.now()
-    const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(7)}`
-    await OnboardingLogger.logAPI('REQUEST-START', 'Onboarding completion request received', undefined, {
-      endpoint: '/api/onboarding/complete',
-      method: 'PATCH',
-      requestId
-    })
+	const requestId = `complete_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 
-    structuredConsole.log('🚀🚀🚀 [ONBOARDING-COMPLETE] ===============================')
-    structuredConsole.log('🚀🚀🚀 [ONBOARDING-COMPLETE] STARTING COMPLETE ONBOARDING FLOW')
-    structuredConsole.log('🚀🚀🚀 [ONBOARDING-COMPLETE] ===============================')
-    structuredConsole.log('🆔 [ONBOARDING-COMPLETE] Request ID:', requestId)
-    structuredConsole.log('⏰ [ONBOARDING-COMPLETE] Timestamp:', new Date().toISOString())
+	try {
+		const { userId } = await getAuthOrTest();
+		if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { userId } = await getAuthOrTest()
+		const profile = await getUserProfile(userId);
+		if (!profile) {
+			return NextResponse.json(
+				{ error: 'User profile not found. Complete step 1 first.' },
+				{ status: 404 }
+			);
+		}
 
-    if (!userId) {
-      structuredConsole.error('❌ [ONBOARDING-COMPLETE] Unauthorized - No valid user session')
-      await OnboardingLogger.logAPI('AUTH-ERROR', 'Onboarding completion unauthorized - no user ID', undefined, { requestId })
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+		ensureStep(profile.onboardingStep, 'plan_selected');
 
-    structuredConsole.log('✅ [ONBOARDING-COMPLETE] User authenticated:', userId)
-    structuredConsole.log('🔍 [ONBOARDING-COMPLETE] Auth check completed in:', Date.now() - startTime, 'ms')
+		await requirePaidOrTrial(profile.stripeSubscriptionId, profile.stripeCustomerId);
 
-    const payload = await request.json().catch(() => ({}))
-    structuredConsole.log('📥 [ONBOARDING-COMPLETE] Request data:', { ...payload, userId })
+		const result = await finalizeOnboarding(userId, {
+			requestId,
+			clerkEmailHint: profile.email,
+			triggerEmails: false, // trial emails only used for no-sub legacy path
+			skipIfCompleted: false,
+		});
 
-    structuredConsole.log('🔍 [ONBOARDING-COMPLETE] Fetching user profile')
-    const userProfile = await getUserProfile(userId)
+		milestone('ONBOARDING_COMPLETED', {
+			userId,
+			email: profile.email || undefined,
+			onboardingStep: 'completed',
+			currentPlan: profile.currentPlan,
+			intendedPlan: profile.intendedPlan,
+			stripeStatus: profile.subscriptionStatus,
+		});
 
-    if (!userProfile) {
-      structuredConsole.error('❌ [ONBOARDING-COMPLETE] User profile not found')
-      await OnboardingLogger.logError('PROFILE-NOT-FOUND', 'Onboarding completion failed: profile missing', userId, { requestId })
-      return NextResponse.json({
-        error: 'User profile not found. Please complete step 1 first.'
-      }, { status: 404 })
-    }
+		await recordTransition(
+			{ userId, email: profile.email, onboardingStep: 'completed' },
+			'onboarding_completed',
+			{ step: 'completed', requestId },
+			{ requestId }
+		);
 
-    // Phase 5: Idempotency - already completed, return early
-    if (userProfile.onboardingStep === 'completed') {
-      structuredConsole.log('✅ [ONBOARDING-COMPLETE] Already completed, returning early')
-      return NextResponse.json({
-        success: true,
-        message: 'Already completed',
-        alreadyCompleted: true,
-        onboarding: { step: 'completed' }
-      })
-    }
-
-    // Phase 6: Payment validation - require Stripe setup before completing
-    if (!userProfile.stripeCustomerId || !userProfile.stripeSubscriptionId) {
-      structuredConsole.error('❌ [ONBOARDING-COMPLETE] Payment not completed')
-      return NextResponse.json({
-        error: 'Payment required to complete onboarding'
-      }, { status: 400 })
-    }
-
-    structuredConsole.log('✅ [ONBOARDING-COMPLETE] User profile found:', {
-      fullName: userProfile.fullName,
-      businessName: userProfile.businessName,
-      onboardingStep: userProfile.onboardingStep,
-      profileCreatedAt: userProfile.signupTimestamp,
-      hasTrialData: !!(userProfile.trialStartDate && userProfile.trialEndDate),
-      currentTrialStatus: userProfile.trialStatus
-    })
-
-    structuredConsole.log('💳 [ONBOARDING-COMPLETE] Skipping Stripe setup - already completed during checkout')
-    structuredConsole.log('✅ [ONBOARDING-COMPLETE] User already has:', {
-      stripeCustomerId: userProfile.stripeCustomerId,
-      stripeSubscriptionId: userProfile.stripeSubscriptionId,
-      subscriptionStatus: userProfile.subscriptionStatus,
-      currentPlan: userProfile.currentPlan,
-      note: 'These were created during the checkout flow, no need to recreate'
-    })
-
-    const finalizeResult = await finalizeOnboarding(userId, {
-      requestId,
-      clerkEmailHint: userProfile.email,
-      triggerEmails: true,
-      skipIfCompleted: false
-    })
-
-    const responseData = {
-      success: true,
-      message: 'Onboarding completed and trial started successfully',
-      onboarding: {
-        step: finalizeResult.profileStep || 'completed',
-        completedAt: new Date().toISOString()
-      },
-      trial: finalizeResult.trial
-        ? {
-            status: finalizeResult.trial.trialStatus,
-            startDate: finalizeResult.trial.trialStartDate?.toISOString(),
-            endDate: finalizeResult.trial.trialEndDate?.toISOString(),
-            daysRemaining: finalizeResult.trial.daysRemaining,
-            hoursRemaining: finalizeResult.trial.hoursRemaining,
-            minutesRemaining: finalizeResult.trial.minutesRemaining,
-            progressPercentage: finalizeResult.trial.progressPercentage,
-            timeUntilExpiry: finalizeResult.trial.timeUntilExpiry
-          }
-        : null,
-      stripe: {
-        customerId: userProfile.stripeCustomerId || 'not-set',
-        subscriptionId: userProfile.stripeSubscriptionId || 'not-set',
-        note: 'Stripe resources created during checkout, not onboarding'
-      },
-      emails: finalizeResult.emails
-        ? {
-            scheduled: finalizeResult.emails.success ?? false,
-            results: finalizeResult.emails.results || []
-          }
-        : {
-            scheduled: false,
-            skipped: true,
-            reason: finalizeResult.userEmail ? 'not_triggered' : 'email_unavailable'
-          }
-    }
-
-    const totalTime = Date.now() - startTime
-
-    structuredConsole.log('🎉🎉🎉 [ONBOARDING-COMPLETE] ===============================')
-    structuredConsole.log('🎉🎉🎉 [ONBOARDING-COMPLETE] COMPLETE FLOW FINISHED SUCCESSFULLY')
-    structuredConsole.log('🎉🎉🎉 [ONBOARDING-COMPLETE] ===============================')
-    structuredConsole.log('⏱️ [ONBOARDING-COMPLETE] Total execution time:', totalTime, 'ms')
-    structuredConsole.log('📊 [ONBOARDING-COMPLETE] Final response data:', {
-      trialStatus: responseData.trial?.status,
-      daysRemaining: responseData.trial?.daysRemaining,
-      emailsScheduled: responseData.emails.scheduled,
-      stripeCustomerId: responseData.stripe.customerId,
-      requestId,
-      executionTime: totalTime
-    })
-
-    await OnboardingLogger.logStep4('COMPLETION-SUCCESS', 'Onboarding completed and trial started', userId, {
-      requestId,
-      trialStatus: responseData.trial?.status,
-      stripeCustomerId: responseData.stripe.customerId,
-      stripeSubscriptionId: responseData.stripe.subscriptionId
-    })
-
-    await OnboardingLogger.logAPI('REQUEST-SUCCESS', 'Onboarding completion request processed', userId, {
-      requestId,
-      durationMs: totalTime
-    })
-
-    return NextResponse.json(responseData)
-
-  } catch (error: any) {
-    structuredConsole.error('💥 [ONBOARDING-COMPLETE] Error in complete onboarding flow:', error)
-    await OnboardingLogger.logError('API-ERROR', 'Onboarding completion request failed', undefined, {
-      errorMessage: error?.message || 'Unknown error'
-    })
-    return NextResponse.json({
-      success: false,
-      error: 'Internal server error',
-      details: error?.message || 'Unknown error'
-    }, { status: 500 })
-  }
+		return NextResponse.json({
+			success: true,
+			message: 'Onboarding completed',
+			onboarding: {
+				step: result.profileStep || 'completed',
+				completedAt: new Date().toISOString(),
+			},
+			requestId,
+		});
+	} catch (err) {
+		if (err instanceof PaymentRequiredError) {
+			return NextResponse.json({ error: err.message }, { status: err.status });
+		}
+		if (err instanceof Error && err.message.includes('order')) {
+			return NextResponse.json({ error: err.message }, { status: 409 });
+		}
+		captureError('COMPLETE_ERROR', err as Error, { userId: undefined });
+		return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+	}
 }
 
-export async function GET(request: Request) {
-  try {
-    structuredConsole.log('🔍 [ONBOARDING-COMPLETE-GET] Checking onboarding completion status')
+export async function GET() {
+	const { userId } = await getAuthOrTest();
+	if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { userId } = await getAuthOrTest()
+	const profile = await getUserProfile(userId);
+	if (!profile) return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
 
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const userProfile = await getUserProfile(userId)
-
-    if (!userProfile) {
-      return NextResponse.json({
-        error: 'User profile not found'
-      }, { status: 404 })
-    }
-
-    const responseData = {
-      onboarding: {
-        step: userProfile.onboardingStep,
-        isCompleted: userProfile.onboardingStep === 'completed'
-      },
-      trial: {
-        status: userProfile.trialStatus,
-        startDate: userProfile.trialStartDate?.toISOString() || null,
-        endDate: userProfile.trialEndDate?.toISOString() || null,
-        hasTrialData: !!(userProfile.trialStartDate && userProfile.trialEndDate)
-      },
-      stripe: {
-        customerId: userProfile.stripeCustomerId,
-        subscriptionId: userProfile.stripeSubscriptionId,
-        hasStripeData: !!(userProfile.stripeCustomerId && userProfile.stripeSubscriptionId)
-      }
-    }
-
-    structuredConsole.log('📊 [ONBOARDING-COMPLETE-GET] Status retrieved:', responseData)
-    return NextResponse.json(responseData)
-
-  } catch (error: any) {
-    structuredConsole.error('❌ [ONBOARDING-COMPLETE-GET] Error checking status:', error)
-    return NextResponse.json({
-      error: 'Internal server error'
-    }, { status: 500 })
-  }
+	return NextResponse.json({
+		onboarding: {
+			step: profile.onboardingStep,
+			isCompleted: profile.onboardingStep === 'completed',
+		},
+		trial: {
+			status: profile.trialStatus,
+			startDate: profile.trialStartDate?.toISOString() || null,
+			endDate: profile.trialEndDate?.toISOString() || null,
+			hasTrialData: !!(profile.trialStartDate && profile.trialEndDate),
+		},
+		stripe: {
+			customerId: profile.stripeCustomerId,
+			subscriptionId: profile.stripeSubscriptionId,
+			hasStripeData: !!(profile.stripeCustomerId && profile.stripeSubscriptionId),
+		},
+	});
 }

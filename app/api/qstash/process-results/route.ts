@@ -1,151 +1,165 @@
+import { Receiver } from '@upstash/qstash';
+import { eq } from 'drizzle-orm';
+import { NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { scrapingJobs } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
-import { db } from '@/lib/db'
-import { scrapingJobs } from '@/lib/db/schema'
-import { qstash } from '@/lib/queue/qstash'
-import { eq } from 'drizzle-orm'
-import { NextResponse } from 'next/server'
-import { Receiver } from "@upstash/qstash"
+import { qstash } from '@/lib/queue/qstash';
 
 // Inicializar el receptor de QStash
 const receiver = new Receiver({
-  currentSigningKey: process.env.QSTASH_CURRENT_SIGNING_KEY!,
-  nextSigningKey: process.env.QSTASH_NEXT_SIGNING_KEY!,
-})
+	currentSigningKey: process.env.QSTASH_CURRENT_SIGNING_KEY!,
+	nextSigningKey: process.env.QSTASH_NEXT_SIGNING_KEY!,
+});
 
 export async function POST(req: Request) {
-  structuredConsole.log('📊 Monitoreando progreso en /api/qstash/process-results')
-  
-  const signature = req.headers.get('Upstash-Signature')
-  if (!signature) {
-    return NextResponse.json({ error: 'Missing signature' }, { status: 401 })
-  }
+	structuredConsole.log('📊 Monitoreando progreso en /api/qstash/process-results');
 
-  try {
-    // Obtener la URL base del ambiente actual
-    const currentHost = req.headers.get('host') || process.env.VERCEL_URL || 'influencerplatform.vercel.app';
-    const protocol = currentHost.includes('localhost') ? 'http' : 'https';
-    const baseUrl = `${protocol}://${currentHost}`;
-    
-    structuredConsole.log('🌐 URL Base:', baseUrl);
+	const signature = req.headers.get('Upstash-Signature');
+	if (!signature) {
+		return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
+	}
 
-    // Leer el cuerpo una sola vez
-    const body = await req.text()
-    let jobId: string
+	try {
+		// Obtener la URL base del ambiente actual
+		const currentHost =
+			req.headers.get('host') || process.env.VERCEL_URL || 'influencerplatform.vercel.app';
+		const protocol = currentHost.includes('localhost') ? 'http' : 'https';
+		const baseUrl = `${protocol}://${currentHost}`;
 
-    // Verificar firma usando la URL actual
-    try {
-      const isValid = await receiver.verify({
-        signature,
-        body,
-        url: `${baseUrl}/api/qstash/process-results`
-      })
+		structuredConsole.log('🌐 URL Base:', baseUrl);
 
-      if (!isValid) {
-        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
-      }
-    } catch (verifyError: any) {
-      structuredConsole.error('❌ Error al verificar la firma:', verifyError);
-      return NextResponse.json({ 
-        error: `Signature verification error: ${verifyError.message || 'Unknown error'}` 
-      }, { status: 401 })
-    }
+		// Leer el cuerpo una sola vez
+		const body = await req.text();
+		let jobId: string;
 
-    try {
-      // Parsear el cuerpo como JSON
-      const data = JSON.parse(body)
-      jobId = data.jobId
-    } catch (error: any) {
-      structuredConsole.error('❌ Error al parsear el cuerpo de la solicitud:', error);
-      return NextResponse.json({ 
-        error: `Invalid JSON body: ${error.message || 'Unknown error'}` 
-      }, { status: 400 })
-    }
+		// Verificar firma usando la URL actual
+		try {
+			const isValid = await receiver.verify({
+				signature,
+				body,
+				url: `${baseUrl}/api/qstash/process-results`,
+			});
 
-    if (!jobId) {
-      return NextResponse.json({ error: 'Job ID is required' }, { status: 400 })
-    }
+			if (!isValid) {
+				return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+			}
+		} catch (verifyError: any) {
+			structuredConsole.error('❌ Error al verificar la firma:', verifyError);
+			return NextResponse.json(
+				{
+					error: `Signature verification error: ${verifyError.message || 'Unknown error'}`,
+				},
+				{ status: 401 }
+			);
+		}
 
-    // Obtener job de la base de datos
-    let job;
-    try {
-      job = await db.query.scrapingJobs.findFirst({
-        where: (jobs, { eq }) => eq(jobs.id, jobId)
-      })
-    } catch (dbError: any) {
-      structuredConsole.error('❌ Error al obtener el job de la base de datos:', dbError);
-      return NextResponse.json({ 
-        error: `Database error: ${dbError.message || 'Unknown error'}` 
-      }, { status: 500 })
-    }
+		try {
+			// Parsear el cuerpo como JSON
+			const data = JSON.parse(body);
+			jobId = data.jobId;
+		} catch (error: any) {
+			structuredConsole.error('❌ Error al parsear el cuerpo de la solicitud:', error);
+			return NextResponse.json(
+				{
+					error: `Invalid JSON body: ${error.message || 'Unknown error'}`,
+				},
+				{ status: 400 }
+			);
+		}
 
-    if (!job) {
-      return NextResponse.json({ error: 'Job not found' }, { status: 404 })
-    }
+		if (!jobId) {
+			return NextResponse.json({ error: 'Job ID is required' }, { status: 400 });
+		}
 
-    structuredConsole.log('📊 Estado actual:', {
-      jobId,
-      status: job.status,
-      processedResults: job.processedResults,
-      targetResults: job.targetResults,
-      cursor: job.cursor
-    })
+		// Obtener job de la base de datos
+		let job;
+		try {
+			job = await db.query.scrapingJobs.findFirst({
+				where: (jobs, { eq }) => eq(jobs.id, jobId),
+			});
+		} catch (dbError: any) {
+			structuredConsole.error('❌ Error al obtener el job de la base de datos:', dbError);
+			return NextResponse.json(
+				{
+					error: `Database error: ${dbError.message || 'Unknown error'}`,
+				},
+				{ status: 500 }
+			);
+		}
 
-    // Si el job está en error o completado, no hacer nada más
-    if (job.status === 'error' || job.status === 'completed') {
-      return NextResponse.json({
-        status: job.status,
-        processedResults: job.processedResults,
-        targetResults: job.targetResults,
-        error: job.error
-      })
-    }
+		if (!job) {
+			return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+		}
 
-    // Si el job está en timeout, marcarlo
-    if (job.timeoutAt && new Date(job.timeoutAt) < new Date()) {
-      try {
-        await db.update(scrapingJobs)
-          .set({ 
-            status: 'timeout',
-            error: 'Job exceeded maximum allowed time',
-            completedAt: new Date(),
-            updatedAt: new Date()
-          })
-          .where(eq(scrapingJobs.id, jobId))
-      } catch (dbError: any) {
-        structuredConsole.error('❌ Error al actualizar el job con timeout:', dbError);
-        // Continuamos con la respuesta de timeout aunque falle la actualización
-      }
+		structuredConsole.log('📊 Estado actual:', {
+			jobId,
+			status: job.status,
+			processedResults: job.processedResults,
+			targetResults: job.targetResults,
+			cursor: job.cursor,
+		});
 
-      return NextResponse.json({ 
-        status: 'timeout',
-        error: 'Job exceeded maximum allowed time'
-      })
-    }
+		// Si el job está en error o completado, no hacer nada más
+		if (job.status === 'error' || job.status === 'completed') {
+			return NextResponse.json({
+				status: job.status,
+				processedResults: job.processedResults,
+				targetResults: job.targetResults,
+				error: job.error,
+			});
+		}
 
-    // Si el job sigue en proceso, encolar otro monitoreo
-    try {
-      await qstash.publishJSON({
-        url: `${baseUrl}/api/qstash/process-results`,
-        body: { jobId: job.id },
-        delay: '30s',
-        retries: 3,
-        notifyOnFailure: true
-      })
-    } catch (queueError: any) {
-      structuredConsole.error('❌ Error al encolar el siguiente monitoreo:', queueError);
-      // No devolvemos error aquí, ya que el job ya se ha verificado correctamente
-    }
+		// Si el job está en timeout, marcarlo
+		if (job.timeoutAt && new Date(job.timeoutAt) < new Date()) {
+			try {
+				await db
+					.update(scrapingJobs)
+					.set({
+						status: 'timeout',
+						error: 'Job exceeded maximum allowed time',
+						completedAt: new Date(),
+						updatedAt: new Date(),
+					})
+					.where(eq(scrapingJobs.id, jobId));
+			} catch (dbError: any) {
+				structuredConsole.error('❌ Error al actualizar el job con timeout:', dbError);
+				// Continuamos con la respuesta de timeout aunque falle la actualización
+			}
 
-    return NextResponse.json({
-      status: 'monitoring',
-      processedResults: job.processedResults,
-      targetResults: job.targetResults,
-      nextCheck: '30 seconds'
-    })
-  } catch (error: any) {
-    structuredConsole.error('❌ Error:', error)
-    return NextResponse.json({ 
-      error: error instanceof Error ? error.message : 'Unknown error' 
-    }, { status: 500 })
-  }
-} 
+			return NextResponse.json({
+				status: 'timeout',
+				error: 'Job exceeded maximum allowed time',
+			});
+		}
+
+		// Si el job sigue en proceso, encolar otro monitoreo
+		try {
+			await qstash.publishJSON({
+				url: `${baseUrl}/api/qstash/process-results`,
+				body: { jobId: job.id },
+				delay: '30s',
+				retries: 3,
+				notifyOnFailure: true,
+			});
+		} catch (queueError: any) {
+			structuredConsole.error('❌ Error al encolar el siguiente monitoreo:', queueError);
+			// No devolvemos error aquí, ya que el job ya se ha verificado correctamente
+		}
+
+		return NextResponse.json({
+			status: 'monitoring',
+			processedResults: job.processedResults,
+			targetResults: job.targetResults,
+			nextCheck: '30 seconds',
+		});
+	} catch (error: any) {
+		structuredConsole.error('❌ Error:', error);
+		return NextResponse.json(
+			{
+				error: error instanceof Error ? error.message : 'Unknown error',
+			},
+			{ status: 500 }
+		);
+	}
+}

@@ -1,8 +1,8 @@
-import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server';
+import { structuredConsole } from '@/lib/logging/console-proxy';
 
 export async function GET() {
-  const html = `
+	const html = `
     <!DOCTYPE html>
     <html>
     <head>
@@ -101,7 +101,7 @@ export async function GET() {
     </html>
   `;
 
-  return new NextResponse(html, {
-    headers: { 'Content-Type': 'text/html' }
-  });
+	return new NextResponse(html, {
+		headers: { 'Content-Type': 'text/html' },
+	});
 }

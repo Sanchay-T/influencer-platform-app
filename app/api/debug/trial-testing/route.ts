@@ -1,154 +1,150 @@
-import { structuredConsole } from '@/lib/logging/console-proxy';
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { db } from '@/lib/db';
 import { updateUserProfile } from '@/lib/db/queries/user-queries';
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { getTrialStatus } from '@/lib/trial/trial-service';
 
 export async function POST(req: NextRequest) {
-  try {
-    const { userId } = await getAuthOrTest();
-    
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+	try {
+		const { userId } = await getAuthOrTest();
 
-    const { action, testDate } = await req.json();
-    
-    structuredConsole.log('🧪 [TRIAL-TESTING] Action:', action, 'Test Date:', testDate);
+		if (!userId) {
+			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+		}
 
-    switch (action) {
-      case 'set_trial_near_expiry':
-        // Set trial to expire in 1 hour
-        const nearExpiryDate = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
-        const startDate = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000); // 6 days ago
-        
-        await updateUserProfile(userId, {
-          trialStartDate: startDate,
-          trialEndDate: nearExpiryDate,
-          trialStatus: 'active',
-          subscriptionStatus: 'trialing'
-        });
-          
-        structuredConsole.log('🧪 [TRIAL-TESTING] Set trial to expire in 1 hour');
-        break;
+		const { action, testDate } = await req.json();
 
-      case 'set_trial_expired':
-        // Set trial as expired (1 hour ago)
-        const expiredDate = new Date(Date.now() - 60 * 60 * 1000); // 1 hour ago
-        const expiredStartDate = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000); // 8 days ago
-        
-        await updateUserProfile(userId, {
-          trialStartDate: expiredStartDate,
-          trialEndDate: expiredDate,
-          trialStatus: 'expired',
-          subscriptionStatus: 'canceled'
-        });
-          
-        structuredConsole.log('🧪 [TRIAL-TESTING] Set trial as expired 1 hour ago');
-        break;
+		structuredConsole.log('🧪 [TRIAL-TESTING] Action:', action, 'Test Date:', testDate);
 
-      case 'simulate_day':
-        // Simulate specific day (0-7)
-        const day = parseInt(testDate) || 3;
-        const simulatedStart = new Date(Date.now() - day * 24 * 60 * 60 * 1000);
-        const simulatedEnd = new Date(simulatedStart.getTime() + 7 * 24 * 60 * 60 * 1000);
-        
-        await updateUserProfile(userId, {
-          trialStartDate: simulatedStart,
-          trialEndDate: simulatedEnd,
-          trialStatus: 'active',
-          subscriptionStatus: 'trialing'
-        });
-          
-        structuredConsole.log(`🧪 [TRIAL-TESTING] Simulated day ${day} of trial`);
-        break;
+		switch (action) {
+			case 'set_trial_near_expiry': {
+				// Set trial to expire in 1 hour
+				const nearExpiryDate = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+				const startDate = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000); // 6 days ago
 
-      case 'reset_trial':
-        // Reset to fresh 7-day trial
-        const resetStart = new Date();
-        const resetEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-        
-        await updateUserProfile(userId, {
-          trialStartDate: resetStart,
-          trialEndDate: resetEnd,
-          trialStatus: 'active',
-          subscriptionStatus: 'trialing'
-        });
-          
-        structuredConsole.log('🧪 [TRIAL-TESTING] Reset to fresh 7-day trial');
-        break;
+				await updateUserProfile(userId, {
+					trialStartDate: startDate,
+					trialEndDate: nearExpiryDate,
+					trialStatus: 'active',
+					subscriptionStatus: 'trialing',
+				});
 
-      default:
-        return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
-    }
+				structuredConsole.log('🧪 [TRIAL-TESTING] Set trial to expire in 1 hour');
+				break;
+			}
 
-    // Get updated trial status
-    const updatedTrialStatus = await getTrialStatus(userId);
-    
-    return NextResponse.json({
-      success: true,
-      action,
-      trialStatus: updatedTrialStatus,
-      message: `Trial testing action '${action}' completed successfully`,
-      debug: {
-        now: new Date().toISOString(),
-        trialStart: updatedTrialStatus?.trialStartDate?.toISOString(),
-        trialEnd: updatedTrialStatus?.trialEndDate?.toISOString(),
-        daysRemaining: updatedTrialStatus?.daysRemaining,
-        progressPercentage: updatedTrialStatus?.progressPercentage,
-        isExpired: updatedTrialStatus?.isExpired
-      }
-    });
+			case 'set_trial_expired': {
+				// Set trial as expired (1 hour ago)
+				const expiredDate = new Date(Date.now() - 60 * 60 * 1000); // 1 hour ago
+				const expiredStartDate = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000); // 8 days ago
 
-  } catch (error) {
-    structuredConsole.error('❌ [TRIAL-TESTING] Error:', error);
-    return NextResponse.json(
-      { error: 'Failed to execute trial testing action' },
-      { status: 500 }
-    );
-  }
+				await updateUserProfile(userId, {
+					trialStartDate: expiredStartDate,
+					trialEndDate: expiredDate,
+					trialStatus: 'expired',
+					subscriptionStatus: 'canceled',
+				});
+
+				structuredConsole.log('🧪 [TRIAL-TESTING] Set trial as expired 1 hour ago');
+				break;
+			}
+
+			case 'simulate_day': {
+				// Simulate specific day (0-7)
+				const day = parseInt(testDate) || 3;
+				const simulatedStart = new Date(Date.now() - day * 24 * 60 * 60 * 1000);
+				const simulatedEnd = new Date(simulatedStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+				await updateUserProfile(userId, {
+					trialStartDate: simulatedStart,
+					trialEndDate: simulatedEnd,
+					trialStatus: 'active',
+					subscriptionStatus: 'trialing',
+				});
+
+				structuredConsole.log(`🧪 [TRIAL-TESTING] Simulated day ${day} of trial`);
+				break;
+			}
+
+			case 'reset_trial': {
+				// Reset to fresh 7-day trial
+				const resetStart = new Date();
+				const resetEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+				await updateUserProfile(userId, {
+					trialStartDate: resetStart,
+					trialEndDate: resetEnd,
+					trialStatus: 'active',
+					subscriptionStatus: 'trialing',
+				});
+
+				structuredConsole.log('🧪 [TRIAL-TESTING] Reset to fresh 7-day trial');
+				break;
+			}
+
+			default:
+				return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+		}
+
+		// Get updated trial status
+		const updatedTrialStatus = await getTrialStatus(userId);
+
+		return NextResponse.json({
+			success: true,
+			action,
+			trialStatus: updatedTrialStatus,
+			message: `Trial testing action '${action}' completed successfully`,
+			debug: {
+				now: new Date().toISOString(),
+				trialStart: updatedTrialStatus?.trialStartDate?.toISOString(),
+				trialEnd: updatedTrialStatus?.trialEndDate?.toISOString(),
+				daysRemaining: updatedTrialStatus?.daysRemaining,
+				progressPercentage: updatedTrialStatus?.progressPercentage,
+				isExpired: updatedTrialStatus?.isExpired,
+			},
+		});
+	} catch (error) {
+		structuredConsole.error('❌ [TRIAL-TESTING] Error:', error);
+		return NextResponse.json({ error: 'Failed to execute trial testing action' }, { status: 500 });
+	}
 }
 
 export async function GET(req: NextRequest) {
-  try {
-    const { userId } = await getAuthOrTest();
-    
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+	try {
+		const { userId } = await getAuthOrTest();
 
-    // Get current trial status for debugging
-    const trialStatus = await getTrialStatus(userId);
-    
-    return NextResponse.json({
-      currentTrialStatus: trialStatus,
-      testingOptions: [
-        {
-          action: 'set_trial_near_expiry',
-          description: 'Set trial to expire in 1 hour (test urgency UI)',
-        },
-        {
-          action: 'set_trial_expired', 
-          description: 'Set trial as expired (test expired state)',
-        },
-        {
-          action: 'simulate_day',
-          description: 'Simulate specific day of trial (0-7)',
-          parameter: 'testDate (day number)'
-        },
-        {
-          action: 'reset_trial',
-          description: 'Reset to fresh 7-day trial',
-        }
-      ]
-    });
+		if (!userId) {
+			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+		}
 
-  } catch (error) {
-    structuredConsole.error('❌ [TRIAL-TESTING] Error getting status:', error);
-    return NextResponse.json(
-      { error: 'Failed to get trial testing status' },
-      { status: 500 }
-    );
-  }
+		// Get current trial status for debugging
+		const trialStatus = await getTrialStatus(userId);
+
+		return NextResponse.json({
+			currentTrialStatus: trialStatus,
+			testingOptions: [
+				{
+					action: 'set_trial_near_expiry',
+					description: 'Set trial to expire in 1 hour (test urgency UI)',
+				},
+				{
+					action: 'set_trial_expired',
+					description: 'Set trial as expired (test expired state)',
+				},
+				{
+					action: 'simulate_day',
+					description: 'Simulate specific day of trial (0-7)',
+					parameter: 'testDate (day number)',
+				},
+				{
+					action: 'reset_trial',
+					description: 'Reset to fresh 7-day trial',
+				},
+			],
+		});
+	} catch (error) {
+		structuredConsole.error('❌ [TRIAL-TESTING] Error getting status:', error);
+		return NextResponse.json({ error: 'Failed to get trial testing status' }, { status: 500 });
+	}
 }

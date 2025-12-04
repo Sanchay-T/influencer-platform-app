@@ -1,0 +1,95 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.3.8/schema.json",
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": true
+	},
+	"files": {
+		"ignoreUnknown": true,
+		"includes": ["app/**", "lib/**", "components/**", "drizzle/**", "types/**", "e2e/**"]
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab",
+		"indentWidth": 2,
+		"lineWidth": 100
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"recommended": true,
+			"complexity": {
+				"noExcessiveCognitiveComplexity": {
+					"level": "warn",
+					"options": { "maxAllowedComplexity": 15 }
+				},
+				"noVoid": "error",
+				"useSimplifiedLogicExpression": "warn"
+			},
+			"correctness": {
+				"noUnusedImports": "error",
+				"noUnusedVariables": "error",
+				"noUnusedFunctionParameters": "warn",
+				"useExhaustiveDependencies": "warn",
+				"useHookAtTopLevel": "error"
+			},
+			"performance": {
+				"noAccumulatingSpread": "warn",
+				"noDelete": "warn"
+			},
+			"security": {
+				"noDangerouslySetInnerHtml": "error"
+			},
+			"style": {
+				"noNegationElse": "warn",
+				"noParameterAssign": "error",
+				"useBlockStatements": "error",
+				"useCollapsedElseIf": "warn",
+				"useConst": "error",
+				"useExportType": "error",
+				"useImportType": "error",
+				"useNamingConvention": {
+					"level": "warn",
+					"options": {
+						"strictCase": false,
+						"conventions": [
+							{ "selector": { "kind": "function" }, "formats": ["camelCase", "PascalCase"] },
+							{
+								"selector": { "kind": "variable" },
+								"formats": ["camelCase", "PascalCase", "CONSTANT_CASE"]
+							},
+							{ "selector": { "kind": "typeLike" }, "formats": ["PascalCase"] }
+						]
+					}
+				},
+				"useConsistentArrayType": "warn",
+				"useSingleVarDeclarator": "error"
+			},
+			"suspicious": {
+				"noConsole": "error",
+				"noDebugger": "error",
+				"noDoubleEquals": "error",
+				"noEmptyBlockStatements": "warn",
+				"noExplicitAny": "error",
+				"noImplicitAnyLet": "error"
+			}
+		}
+	},
+	"javascript": {
+		"formatter": {
+			"quoteStyle": "single",
+			"semicolons": "always",
+			"trailingCommas": "es5",
+			"arrowParentheses": "always"
+		}
+	},
+	"assist": {
+		"enabled": true,
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
+		}
+	}
+}

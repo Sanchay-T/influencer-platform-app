@@ -57,6 +57,8 @@ const clerk = clerkMiddleware((auth, request) => {
     '/api/proxy/(.*)',
     '/api/export/(.*)',
     '/api/email/send-scheduled',
+    // E2E test admin routes (dev only - routes check NODE_ENV internally)
+    '/api/admin/e2e/(.*)',
   ],
 });
 

@@ -1,109 +1,263 @@
-# CLAUDE.md — Root Guide (Concise)
-Last updated: 2025-12-03
-Imports: .claude/CLAUDE.md (project memory), CONSTRAINTS.md, TESTING.md, DECISIONS.md, AGENT_OPTIMIZATION.md.
+# UseGems.io (Gemz)
 
-## Active Work Memory (CHECK FIRST)
-- **`task.md`** — Current task tracker, findings, and action items. Check this FIRST for context on ongoing work.
-- **`scratchpad.md`** — Implementation notes, code snippets, progress log. Use for detailed session context.
+You're working on an influencer discovery platform for businesses to find, organize, and export creators across TikTok, Instagram, and YouTube.
 
-## Purpose
-Entry point for the whole repo. Use this file to route to deeper notes, remember invariants, and grab the handful of commands/env keys you need to work safely.
+**Deployment**: Vercel → usegems.io
 
-## What This Project Is
-Gemz: B2B influencer discovery SaaS (Instagram, YouTube, TikTok) with keyword/similar search, campaigns, saved lists, CSV export, tiered plans (glow_up, viral_surge, fame_flex), 7-day trial + 3-day grace. Stack: Next.js 15 App Router, TS strict, Tailwind/Radix, Supabase + Drizzle, Clerk, Stripe, QStash, Resend, Sentry, structured logging.
+## Tech Stack
 
-## Navigation Chain
-```
-CLAUDE.md (here)
-├ task.md           → ACTIVE WORK: current tasks, findings, action items
-├ scratchpad.md     → ACTIVE WORK: implementation notes, progress log
-├ .claude/CLAUDE.md → full project memory & invariants
-├ TESTING.md        → TDD workflow, patterns
-├ CONSTRAINTS.md    → must-not-break rules
-├ DECISIONS.md      → decision trees
-├ app/CLAUDE.md     → pages/layouts/providers
-│   └ app/api/CLAUDE.md → API routes (backend)
-├ lib/CLAUDE.md     → core logic/services/db/search/auth
-│   ├ lib/db/CLAUDE.md
-│   ├ lib/services/CLAUDE.md
-│   ├ lib/search-engine/CLAUDE.md
-│   └ lib/auth/CLAUDE.md
-├ components/CLAUDE.md → shared UI primitives
-├ scripts/CLAUDE.md    → CLI + ops tools
-└ drizzle/CLAUDE.md    → migrations
-```
+Next.js 15 (App Router) · Clerk · Drizzle + PostgreSQL (Supabase) · Stripe · QStash · Resend · Sentry
 
-## Non-Negotiables
-- Auth first: every API route uses `getAuthOrTest()`; middleware defaults to protected.
-- Logging: use `lib/logging` categories; no `console.log` in server code (search runner uses a documented console.warn diagnostic).
-- Normalized users: 5-table split; never assume single user table.
-- Plan enforcement: campaign= lifetime, creators/enrichments = monthly reset; validate before work.
-- Idempotency: webhooks (Stripe/Clerk) and QStash job processing must handle duplicates/order issues; Stripe has two webhook paths (`/api/webhooks/stripe`, `/api/stripe/webhook`)—ensure only one is configured in Stripe.
+## User Journey
 
-## Critical Entry Points
-- Auth: `lib/auth/get-auth-or-test.ts`, `middleware.ts`.
-- DB schema: `lib/db/schema.ts`; migrations in `drizzle/`.
-- Search: `lib/search-engine/runner.ts`, `lib/search-engine/job-service.ts`; providers include `instagram_scrapecreators`, `instagram_v2`, `instagram_us_reels`, legacy reels, Google SERP.
-- Billing: `lib/services/billing-service.ts`, Stripe webhooks (`app/api/webhooks/stripe/route.ts` and `app/api/stripe/webhook/route.ts`).
-- Campaign/job API: `app/api/campaigns/route.ts`, `app/api/qstash/process-search/route.ts`, `app/api/qstash/process-results/route.ts`.
+### Authentication & Onboarding
 
-## Core Commands
-`npm run dev` (3000) | `npm run dev:wt2` (3002) | `npm run db:generate` | `npm run db:migrate` | `npm run db:studio` | `npm run smoke:test` | `npm run validate:deployment`
+Users sign up or sign in via Clerk. After authentication, new users see an onboarding modal with 4 steps:
 
-## Semantic Code Search (mgrep)
-Use `mgrep` for natural language code search instead of grep when exploring the codebase:
+1. **Step 1**: Enter full name and business name
+2. **Step 2**: Describe their brand and influencer preferences
+3. **Step 3**: Select a plan (Glow Up, Viral Surge, or Fame Flex) with monthly/yearly toggle → Click "Start Checkout" → Redirected to Stripe checkout
+4. **Step 4**: Success screen showing plan benefits → Click "Continue" → Redirected to dashboard
+
+Every plan includes a 7-day free trial.
+
+### Main App Navigation
+
+The sidebar has 5 main tabs:
+- **Dashboard** — Overview and quick stats
+- **Campaigns** — Create and manage influencer search campaigns
+- **Lists** — Organize saved creators into lists
+- **Account Settings** — Profile, trial status, plan info
+- **Billing & Plans** — Subscription management, plan comparison, upgrade
+
+Below the tabs: Trial status component with upgrade option.
+
+### Campaigns (Core Feature)
+
+Campaigns are containers for influencer searches. To search for creators, users must first create a campaign.
+
+**Campaign List View:**
+- Create new campaign button
+- Filter/sort by: All, Draft, Active, Completed, Newest
+- Each campaign card shows: View, Similar search, Keyword search options
+
+**Inside a Campaign:**
+- Header: Campaign name, last search type, total runs, creation date
+- Top right actions: Keyword Search, Similar Search, Export CSV
+- Left sidebar: List of runs (Run #1, Run #2, etc.), New Search button
+
+### Search Types
+
+**Keyword Search:**
+1. Select platform: TikTok, Instagram, or YouTube
+2. Select creator count: Slider from 100 to 1000
+3. Click Continue
+4. Add keywords (AI suggestions appear as you type)
+5. Run the search
+
+**Similar Creator Search:**
+- Available for: Instagram, YouTube (TikTok is work-in-progress)
+- Enter a creator's username
+- Click "Find Similar Creators"
+- System finds creators in the same niche
+
+### Search Results
+
+Each run shows two tabs:
+- **Creators tab**: All discovered creators with their posts
+- **Activity tab**: Search activity and metadata
+
+**View Options:**
+- Table view or Gallery view
+- Email-only filter (shows only creators with email addresses)
+
+**Actions:**
+- Save individual creators to a list
+- Bulk select via checkboxes → Save all to a list
+- Create new list directly from the save dropdown
+
+### Lists
+
+Lists help organize creators for outreach and campaign management.
+
+**Creating a List:**
+- Enter list name
+- Select list type (Campaign, Favorites, Industry, Research, Contacted, Custom)
+- Add description
+- Click Create
+
+**Inside a List:**
+- Header: List details, Export CSV button, Delete button
+- **Board View**: Kanban-style with columns (Backlog, Shortlist, Contacted, Booked/Contract) — drag creators between stages
+- **List View**: Traditional table format
+
+### Account & Billing
+
+**Account Settings:**
+- Trial status: Days/hours remaining, start and expiry dates
+- Personal information
+- Current plan and status
+
+**Billing & Plans:**
+- Current subscription status
+- Quick actions
+- Plan comparison (all 3 plans with features)
+- Upgrade options
+
+### Plans
+
+| Plan | Price | Campaigns | Creators/month |
+|------|-------|-----------|----------------|
+| Glow Up | $99/mo | 3 | 1,000 |
+| Viral Surge | $249/mo | 10 | 10,000 |
+| Fame Flex | $499/mo | Unlimited | Unlimited |
+
+## Commands
+
+**Dev server:** `npm run dev:ngrok` (port 3001, ngrok domain: `usegemz.ngrok.app`)
+
+Before starting, check if the server is already running. If yes, proceed. If no, start it in the background.
+
 ```bash
-mgrep "where do we validate subscription limits"
-mgrep "how is auth handled in API routes"
-mgrep "stripe webhook processing"
+npm run db:studio        # Open Drizzle Studio
+npm run db:push          # Generate + run migrations (interactive)
+npm run lint:biome       # Run Biome linter
+npm run lint:biome:fix   # Auto-fix Biome issues
 ```
-- Run via Bash tool (not MCP) — simpler and works the same
-- Requires `mgrep watch` running in a terminal to keep index updated
-- Respects `.gitignore`, indexes code + text + PDFs
-- **Prefer mgrep over grep/ripgrep for exploratory/semantic queries**; use grep for exact pattern matching
 
-## Env Keys (never commit secrets)
-`DATABASE_URL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_CLERK_*`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `QSTASH_*`, `ENABLE_AUTH_BYPASS` (dev), `NEXT_PUBLIC_ADMIN_EMAILS`, `SENTRY_DSN`, Stripe price IDs.
+**Database operations:** Schema changes require human interaction for migration prompts. See @agent_docs/database.md for the full workflow.
 
-## Update Rules
-Keep this file lean (<150 lines). Link out instead of duplicating. When you change auth, plans, schema, or job flow, update here and add a dated note in `.claude/CLAUDE.md` changelog.
+## Folder Structure
 
-## Code Quality Standards
+```
+app/                     # Next.js App Router pages and API routes
+├── api/                 # API route handlers
+├── components/          # Page-specific components
+├── dashboard/           # Dashboard page
+├── campaigns/           # Campaigns pages
+├── lists/               # Lists pages
+├── onboarding/          # Onboarding flow pages
+├── billing/             # Billing page
+lib/                     # Core business logic
+├── auth/                # Clerk integration helpers
+├── db/                  # Drizzle schema and queries
+├── onboarding/          # Onboarding state machine
+├── search-engine/       # Creator search providers
+├── services/            # Billing, plans, feature gates
+├── stripe/              # Stripe client and service
+├── logging/             # Structured logging
+components/ui/           # Shared UI components (shadcn)
+scripts/                 # Utility and maintenance scripts
+```
 
-**Before writing any code:**
-1. **Explain the issue** — Clearly describe what problem was observed
-2. **Present the plan** — Outline the approach and what will be implemented to solve it
-3. **Get confirmation** — Wait for approval before implementing
+## Tool Usage
 
-**When writing code:**
-- Write **clean, maintainable, modular** code
-- **No file should exceed 300 lines** — split into smaller modules if needed
-- Follow existing patterns in the codebase
-- Add meaningful comments only where logic isn't self-evident
+### Searching the Codebase
 
-## What NOT To Do
+**Use semantic search when:**
+- You don't know exact file/function names
+- You're exploring feature flows
+- You're understanding connections between modules
 
-- **Never** skip writing tests — TDD is mandatory for all new features
-- **Never** use `console.log` — use `lib/logging` loggers
-- **Never** modify `lib/db/schema.ts` without running `db:generate` + `db:migrate`
-- **Never** query user data without using `getUserProfile()` — it handles the 5-table join
-- **Never** hardcode secrets — use `.env.local`
-- **Never** skip auth validation in API routes — always call `getAuthOrTest()`
+**Use regular grep when:**
+- You need an exact string match
+- You know the pattern or symbol name
+- You're counting occurrences
 
----
+### Editing Files
 
-## Next Steps
+**Prefer fast-apply tools** for file modifications. Use `// ... existing code ...` markers for unchanged sections.
 
-### Before Writing Any Code
-1. `TESTING.md` — **READ FIRST** - TDD workflow and test templates
-2. `CONSTRAINTS.md` — Hard rules you must never violate
-3. `DECISIONS.md` — Decision trees for common choices
+**Fall back to Edit tool** when fast-apply fails or you need `replace_all` for bulk renaming.
 
-### For Understanding the Codebase
-1. `app/CLAUDE.md` — Frontend structure and pages
-2. `lib/CLAUDE.md` — Core business logic
-3. `scripts/CLAUDE.md` — CLI tools for development and testing
+## Critical Rules
 
-### For Advanced Optimization
-- `AGENT_OPTIMIZATION.md` — Complete agent coding system
-- `.claude/CLAUDE.md` — Extended project memory and architecture decisions
+### Standard Practices
+
+- Use Server Components by default; only add `'use client'` when you need interactivity
+- Never use `any`; use Drizzle's inferred types for DB entities
+- Validate inputs, return `{ error: string }`, use proper HTTP status codes
+- Use transactions for multi-table ops; always include `userId` in queries
+- Use `lib/logging/` for structured logging — never use `console.log`
+
+### Linting (Biome)
+
+After you edit files, run: `npx biome check --write <files-you-edited>`
+
+⚠️ **Do NOT run on the entire codebase** — there are 2000+ legacy issues.
+
+See @agent_docs/code-patterns.md for patterns and common fixes.
+
+### Testing & Verification
+
+You can test API endpoints without Clerk auth using the test auth system. Use prompts like:
+- "Test TikTok keyword search for 'fitness influencer'"
+- "Verify campaign creation after my fix"
+- "Debug why Instagram search returns 403"
+
+**Before claiming done:** Lint → Type check → Test the feature → Tell the user how to verify in UI.
+
+(Context updates happen automatically with each commit — see Git Workflow below.)
+
+See @agent_docs/testing-verification.md for the full testing workflow.
+
+### Code Quality
+
+- Check existing patterns in `lib/` before creating new abstractions
+- **No file should exceed 300 lines** — split into focused modules (components → extract sub-components, API routes → extract to `lib/services/`)
+
+### Git Workflow + Context Management
+
+**At session start:** Read `@agent_docs/current-task.md` to know where you left off.
+
+**Before starting new work**, create a feature branch:
+```bash
+git checkout -b fix/short-description   # or feat/, refactor/
+```
+
+**After each logical change** — update context, then commit:
+1. Update `current-task.md` with what you just did
+2. Commit and push everything together:
+```bash
+git add -A && git commit -m "fix: description" && git push origin HEAD
+```
+
+This keeps code AND context backed up. You can't commit without updating your memory.
+
+**Before merging to main** (task complete):
+1. Append full entry to `session-history/YYYY-MM.md`
+2. User tests
+3. Merge:
+```bash
+git checkout main && git merge <branch> && git push origin main
+```
+
+Commit prefixes: `fix:`, `feat:`, `refactor:`, `chore:`
+
+**Session history entry format:**
+```
+## Mon DD, YYYY — HH:MM AM/PM
+**Task:** What you worked on
+**Branch:** branch-name  
+**Status:** Done / Waiting for user / In progress
+**What you did:** Bullet points
+**Decisions:** Key choices made
+**Next:** What comes next
+```
+
+## Key References
+
+**Your memory (read first):**
+- @agent_docs/current-task.md — What you're working on NOW (update every commit)
+- @agent_docs/session-history/YYYY-MM.md — What you did BEFORE (append before merge)
+
+**Domain docs (read when relevant):**
+- @agent_docs/architecture.md — System overview, domain boundaries
+- @agent_docs/onboarding-flow.md — 4-step onboarding, Stripe checkout
+- @agent_docs/billing-stripe.md — Plans, trials, webhooks
+- @agent_docs/search-engine.md — Keyword/Similar search providers
+- @agent_docs/campaigns-lists.md — Campaign CRUD, List management
+- @agent_docs/database.md — Drizzle schema, query patterns
+- @agent_docs/api-patterns.md — Route conventions, auth guards
+- @agent_docs/testing-verification.md — Testing workflow, verification checklist
+- @agent_docs/code-patterns.md — Common code patterns and fixes

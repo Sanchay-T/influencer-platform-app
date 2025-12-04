@@ -1,102 +1,104 @@
-import { structuredConsole } from '@/lib/logging/console-proxy';
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
-import { StripeService } from '@/lib/stripe/stripe-service';
 import { db } from '@/lib/db';
 import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
+import { structuredConsole } from '@/lib/logging/console-proxy';
+import { StripeService } from '@/lib/stripe/stripe-service';
 
 export async function POST(req: NextRequest) {
-  try {
-    const { userId } = await getAuthOrTest();
-    
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+	try {
+		const { userId } = await getAuthOrTest();
 
-    const { planId, immediate = false } = await req.json();
+		if (!userId) {
+			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+		}
 
-    if (!planId) {
-      return NextResponse.json({ error: 'Plan ID is required' }, { status: 400 });
-    }
+		const { planId, immediate = false } = await req.json();
 
-    // Validate plan
-    const planConfig = StripeService.getPlanConfig(planId);
-    if (!planConfig) {
-      return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
-    }
+		if (!planId) {
+			return NextResponse.json({ error: 'Plan ID is required' }, { status: 400 });
+		}
 
-    // Get user profile
-    const profile = await getUserProfile(userId);
+		// Validate plan
+		const planConfig = StripeService.getPlanConfig(planId);
+		if (!planConfig) {
+			return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
+		}
 
-    if (!profile || !profile.stripeCustomerId) {
-      return NextResponse.json({ error: 'User profile or Stripe customer not found' }, { status: 404 });
-    }
+		// Get user profile
+		const profile = await getUserProfile(userId);
 
-    // Create subscription
-    const subscription = immediate 
-      ? await StripeService.createImmediateSubscription(
-          profile.stripeCustomerId,
-          planId,
-          profile.paymentMethodId || undefined
-        )
-      : await StripeService.createTrialSubscription(
-          profile.stripeCustomerId,
-          planId,
-          profile.paymentMethodId || undefined
-        );
+		if (!(profile && profile.stripeCustomerId)) {
+			return NextResponse.json(
+				{ error: 'User profile or Stripe customer not found' },
+				{ status: 404 }
+			);
+		}
 
-    // Update user profile with subscription info
-    const updateData: any = {
-      stripeSubscriptionId: subscription.id,
-      currentPlan: planId,
-      subscriptionStatus: subscription.status,
-      billingSyncStatus: 'subscription_created',
-      updatedAt: new Date()
-    };
+		// Create subscription
+		const subscription = immediate
+			? await StripeService.createImmediateSubscription(
+					profile.stripeCustomerId,
+					planId,
+					profile.paymentMethodId || undefined
+				)
+			: await StripeService.createTrialSubscription(
+					profile.stripeCustomerId,
+					planId,
+					profile.paymentMethodId || undefined
+				);
 
-    // Update trial info if it's a trial
-    if (!immediate && subscription.trial_end) {
-      updateData.trialStatus = 'active';
-      updateData.trialStartDate = new Date(subscription.trial_start! * 1000);
-      updateData.trialEndDate = new Date(subscription.trial_end * 1000);
-    } else if (immediate) {
-      updateData.trialStatus = 'converted';
-      updateData.trialConversionDate = new Date();
-    }
+		// Update user profile with subscription info
+		const updateData: any = {
+			stripeSubscriptionId: subscription.id,
+			currentPlan: planId,
+			subscriptionStatus: subscription.status,
+			billingSyncStatus: 'subscription_created',
+			updatedAt: new Date(),
+		};
 
-    await updateUserProfile(userId, updateData);
+		// Update trial info if it's a trial
+		if (!immediate && subscription.trial_end) {
+			updateData.trialStatus = 'active';
+			updateData.trialStartDate = new Date(subscription.trial_start! * 1000);
+			updateData.trialEndDate = new Date(subscription.trial_end * 1000);
+		} else if (immediate) {
+			updateData.trialStatus = 'converted';
+			updateData.trialConversionDate = new Date();
+		}
 
-    structuredConsole.log(`✅ [STRIPE-SUBSCRIPTION] ${immediate ? 'Immediate' : 'Trial'} subscription created:`, subscription.id);
+		await updateUserProfile(userId, updateData);
 
-    // Extract payment intent if exists
-    const latestInvoice = subscription.latest_invoice;
-    let paymentIntentClientSecret = null;
+		structuredConsole.log(
+			`✅ [STRIPE-SUBSCRIPTION] ${immediate ? 'Immediate' : 'Trial'} subscription created:`,
+			subscription.id
+		);
 
-    if (latestInvoice && typeof latestInvoice === 'object' && 'payment_intent' in latestInvoice) {
-      const paymentIntent = latestInvoice.payment_intent;
-      if (paymentIntent && typeof paymentIntent === 'object' && 'client_secret' in paymentIntent) {
-        paymentIntentClientSecret = paymentIntent.client_secret;
-      }
-    }
+		// Extract payment intent if exists
+		const latestInvoice = subscription.latest_invoice;
+		let paymentIntentClientSecret = null;
 
-    return NextResponse.json({
-      success: true,
-      subscription: {
-        id: subscription.id,
-        status: subscription.status,
-        trialEnd: subscription.trial_end,
-        currentPeriodEnd: subscription.current_period_end,
-        plan: planConfig.name,
-        amount: planConfig.amount
-      },
-      paymentIntentClientSecret
-    });
+		if (latestInvoice && typeof latestInvoice === 'object' && 'payment_intent' in latestInvoice) {
+			const paymentIntent = latestInvoice.payment_intent;
+			if (paymentIntent && typeof paymentIntent === 'object' && 'client_secret' in paymentIntent) {
+				paymentIntentClientSecret = paymentIntent.client_secret;
+			}
+		}
 
-  } catch (error) {
-    structuredConsole.error('❌ [STRIPE-SUBSCRIPTION] Error:', error);
-    return NextResponse.json(
-      { error: 'Failed to create subscription' },
-      { status: 500 }
-    );
-  }
+		return NextResponse.json({
+			success: true,
+			subscription: {
+				id: subscription.id,
+				status: subscription.status,
+				trialEnd: subscription.trial_end,
+				currentPeriodEnd: subscription.current_period_end,
+				plan: planConfig.name,
+				amount: planConfig.amount,
+			},
+			paymentIntentClientSecret,
+		});
+	} catch (error) {
+		structuredConsole.error('❌ [STRIPE-SUBSCRIPTION] Error:', error);
+		return NextResponse.json({ error: 'Failed to create subscription' }, { status: 500 });
+	}
 }

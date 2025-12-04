@@ -58,3 +58,9 @@ data/*.sql
 
 # User session logs (local debugging)
 logs/users/
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
+e2e-*.png

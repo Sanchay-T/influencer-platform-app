@@ -20,12 +20,12 @@ const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
  * extractEmail('No email here!') // null
  */
 export function extractEmail(biography: string | null | undefined): string | null {
-  if (!biography || typeof biography !== 'string') {
-    return null;
-  }
+	if (!biography || typeof biography !== 'string') {
+		return null;
+	}
 
-  const matches = biography.match(EMAIL_REGEX);
-  return matches?.[0] || null;
+	const matches = biography.match(EMAIL_REGEX);
+	return matches?.[0] || null;
 }
 
 /**
@@ -38,12 +38,12 @@ export function extractEmail(biography: string | null | undefined): string | nul
  * extractAllEmails('work@a.com or personal@b.com') // ['work@a.com', 'personal@b.com']
  */
 export function extractAllEmails(biography: string | null | undefined): string[] {
-  if (!biography || typeof biography !== 'string') {
-    return [];
-  }
+	if (!biography || typeof biography !== 'string') {
+		return [];
+	}
 
-  const matches = biography.match(EMAIL_REGEX);
-  return matches || [];
+	const matches = biography.match(EMAIL_REGEX);
+	return matches || [];
 }
 
 /**
@@ -53,5 +53,5 @@ export function extractAllEmails(biography: string | null | undefined): string[]
  * @returns true if at least one email is found
  */
 export function hasEmail(text: string | null | undefined): boolean {
-  return extractEmail(text) !== null;
+	return extractEmail(text) !== null;
 }

@@ -1,431 +1,452 @@
-import { structuredConsole } from '@/lib/logging/console-proxy';
+import { and, count, eq, gte } from 'drizzle-orm';
 import { headers } from 'next/headers';
 import { db } from '@/lib/db';
-import { subscriptionPlans, campaigns, scrapingResults, scrapingJobs } from '@/lib/db/schema';
 import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
-import { eq, count, and, gte } from 'drizzle-orm';
+import { campaigns, scrapingJobs, scrapingResults, subscriptionPlans } from '@/lib/db/schema';
+import { structuredConsole } from '@/lib/logging/console-proxy';
 
 export interface PlanLimits {
-  campaignsLimit: number;
-  creatorsLimit: number;
-  isUnlimited: boolean;
+	campaignsLimit: number;
+	creatorsLimit: number;
+	isUnlimited: boolean;
 }
 
 export interface UsageInfo {
-  campaignsUsed: number;
-  creatorsUsed: number;
-  campaignsRemaining: number;
-  creatorsRemaining: number;
-  canCreateCampaign: boolean;
-  canCreateJob: boolean;
+	campaignsUsed: number;
+	creatorsUsed: number;
+	campaignsRemaining: number;
+	creatorsRemaining: number;
+	canCreateCampaign: boolean;
+	canCreateJob: boolean;
 }
 
 export class PlanEnforcementService {
-  private static resolveDefaultLimits(planKey: string): PlanLimits {
-    switch (planKey) {
-      case 'fame_flex':
-        return { campaignsLimit: -1, creatorsLimit: -1, isUnlimited: true };
-      case 'viral_surge':
-        return { campaignsLimit: 10, creatorsLimit: 10000, isUnlimited: false };
-      case 'glow_up':
-        return { campaignsLimit: 3, creatorsLimit: 1000, isUnlimited: false };
-      default:
-        return { campaignsLimit: 1, creatorsLimit: 50, isUnlimited: false };
-    }
-  }
+	private static resolveDefaultLimits(planKey: string): PlanLimits {
+		switch (planKey) {
+			case 'fame_flex':
+				return { campaignsLimit: -1, creatorsLimit: -1, isUnlimited: true };
+			case 'viral_surge':
+				return { campaignsLimit: 10, creatorsLimit: 10000, isUnlimited: false };
+			case 'glow_up':
+				return { campaignsLimit: 3, creatorsLimit: 1000, isUnlimited: false };
+			default:
+				return { campaignsLimit: 1, creatorsLimit: 50, isUnlimited: false };
+		}
+	}
 
-  private static normalizePlanLimits(planKey: string, campaignsLimit?: number | null, creatorsLimit?: number | null) {
-    const defaults = this.resolveDefaultLimits(planKey);
-    const normalizedCampaigns = campaignsLimit ?? defaults.campaignsLimit;
-    const normalizedCreators = creatorsLimit ?? defaults.creatorsLimit;
+	private static normalizePlanLimits(
+		planKey: string,
+		campaignsLimit?: number | null,
+		creatorsLimit?: number | null
+	) {
+		const defaults = PlanEnforcementService.resolveDefaultLimits(planKey);
+		const normalizedCampaigns = campaignsLimit ?? defaults.campaignsLimit;
+		const normalizedCreators = creatorsLimit ?? defaults.creatorsLimit;
 
-    // Fame Flex should always be unlimited regardless of DB values
-    if (planKey === 'fame_flex') {
-      return { campaignsLimit: -1, creatorsLimit: -1 };
-    }
+		// Fame Flex should always be unlimited regardless of DB values
+		if (planKey === 'fame_flex') {
+			return { campaignsLimit: -1, creatorsLimit: -1 };
+		}
 
-    return {
-      campaignsLimit: normalizedCampaigns,
-      creatorsLimit: normalizedCreators,
-    };
-  }
+		return {
+			campaignsLimit: normalizedCampaigns,
+			creatorsLimit: normalizedCreators,
+		};
+	}
 
-  /**
-   * Get user's current plan limits
-   */
-  static async getPlanLimits(userId: string): Promise<PlanLimits | null> {
-    try {
-      const userProfile = await getUserProfile(userId);
+	/**
+	 * Get user's current plan limits
+	 */
+	static async getPlanLimits(userId: string): Promise<PlanLimits | null> {
+		try {
+			const userProfile = await getUserProfile(userId);
 
-      if (!userProfile) {
-        structuredConsole.log(`⚠️ [PLAN-ENFORCEMENT] No user profile found for ${userId}`);
-        return null;
-      }
+			if (!userProfile) {
+				structuredConsole.log(`⚠️ [PLAN-ENFORCEMENT] No user profile found for ${userId}`);
+				return null;
+			}
 
-      // Get plan details from subscription_plans table
-      const plan = await db.query.subscriptionPlans.findFirst({
-        where: eq(subscriptionPlans.planKey, userProfile.currentPlan || 'free')
-      });
+			// Get plan details from subscription_plans table
+			const plan = await db.query.subscriptionPlans.findFirst({
+				where: eq(subscriptionPlans.planKey, userProfile.currentPlan || 'free'),
+			});
 
-      if (!plan) {
-        structuredConsole.log(`⚠️ [PLAN-ENFORCEMENT] No plan found for ${userProfile.currentPlan}, using defaults`);
-        return this.resolveDefaultLimits(userProfile.currentPlan || 'free');
-      }
+			if (!plan) {
+				structuredConsole.log(
+					`⚠️ [PLAN-ENFORCEMENT] No plan found for ${userProfile.currentPlan}, using defaults`
+				);
+				return PlanEnforcementService.resolveDefaultLimits(userProfile.currentPlan || 'free');
+			}
 
-      const normalizedPlan = this.normalizePlanLimits(plan.planKey, plan.campaignsLimit, plan.creatorsLimit);
-      const isUnlimited = normalizedPlan.campaignsLimit === -1 && normalizedPlan.creatorsLimit === -1;
+			const normalizedPlan = PlanEnforcementService.normalizePlanLimits(
+				plan.planKey,
+				plan.campaignsLimit,
+				plan.creatorsLimit
+			);
+			const isUnlimited =
+				normalizedPlan.campaignsLimit === -1 && normalizedPlan.creatorsLimit === -1;
 
-      structuredConsole.log(`✅ [PLAN-ENFORCEMENT] Plan limits for ${userId}:`, {
-        plan: plan.planKey,
-        campaignsLimit: normalizedPlan.campaignsLimit,
-        creatorsLimit: normalizedPlan.creatorsLimit,
-        isUnlimited
-      });
+			structuredConsole.log(`✅ [PLAN-ENFORCEMENT] Plan limits for ${userId}:`, {
+				plan: plan.planKey,
+				campaignsLimit: normalizedPlan.campaignsLimit,
+				creatorsLimit: normalizedPlan.creatorsLimit,
+				isUnlimited,
+			});
 
-      return {
-        campaignsLimit: normalizedPlan.campaignsLimit,
-        creatorsLimit: normalizedPlan.creatorsLimit,
-        isUnlimited
-      };
-    } catch (error) {
-      structuredConsole.error(`❌ [PLAN-ENFORCEMENT] Error getting plan limits:`, error);
-      return null;
-    }
-  }
+			return {
+				campaignsLimit: normalizedPlan.campaignsLimit,
+				creatorsLimit: normalizedPlan.creatorsLimit,
+				isUnlimited,
+			};
+		} catch (error) {
+			structuredConsole.error(`❌ [PLAN-ENFORCEMENT] Error getting plan limits:`, error);
+			return null;
+		}
+	}
 
-  /**
-   * Get user's current usage
-   */
-  static async getCurrentUsage(userId: string): Promise<UsageInfo | null> {
-    try {
-      const limits = await this.getPlanLimits(userId);
-      if (!limits) return null;
+	/**
+	 * Get user's current usage
+	 */
+	static async getCurrentUsage(userId: string): Promise<UsageInfo | null> {
+		try {
+			const limits = await PlanEnforcementService.getPlanLimits(userId);
+			if (!limits) return null;
 
-      // Count all campaigns for the user (draft + active + completed, etc.)
-      const [campaignCount] = await db
-        .select({ count: count() })
-        .from(campaigns)
-        .where(eq(campaigns.userId, userId));
+			// Count all campaigns for the user (draft + active + completed, etc.)
+			const [campaignCount] = await db
+				.select({ count: count() })
+				.from(campaigns)
+				.where(eq(campaigns.userId, userId));
 
-      const campaignsUsed = campaignCount.count;
+			const campaignsUsed = campaignCount.count;
 
-      // Count creators found this month
-      const startOfMonth = new Date();
-      startOfMonth.setDate(1);
-      startOfMonth.setHours(0, 0, 0, 0);
+			// Count creators found this month
+			const startOfMonth = new Date();
+			startOfMonth.setDate(1);
+			startOfMonth.setHours(0, 0, 0, 0);
 
-      // Get user's scraping jobs from this month and sum up results
-      let creatorsUsed = 0;
-      const monthlyJobs = await db.query.scrapingJobs.findMany({
-        where: and(
-          eq(scrapingJobs.userId, userId),
-          gte(scrapingJobs.createdAt, startOfMonth)
-        ),
-        with: {
-          results: true
-        }
-      });
+			// Get user's scraping jobs from this month and sum up results
+			let creatorsUsed = 0;
+			const monthlyJobs = await db.query.scrapingJobs.findMany({
+				where: and(eq(scrapingJobs.userId, userId), gte(scrapingJobs.createdAt, startOfMonth)),
+				with: {
+					results: true,
+				},
+			});
 
-      // Sum up all creators from all jobs this month
-      for (const job of monthlyJobs) {
-        for (const result of job.results) {
-          if (result.creators && Array.isArray(result.creators)) {
-            creatorsUsed += result.creators.length;
-          }
-        }
-      }
+			// Sum up all creators from all jobs this month
+			for (const job of monthlyJobs) {
+				for (const result of job.results) {
+					if (result.creators && Array.isArray(result.creators)) {
+						creatorsUsed += result.creators.length;
+					}
+				}
+			}
 
-      const campaignsRemaining = limits.isUnlimited ? Infinity : Math.max(0, limits.campaignsLimit - campaignsUsed);
-      const creatorsRemaining = limits.isUnlimited ? Infinity : Math.max(0, limits.creatorsLimit - creatorsUsed);
+			const campaignsRemaining = limits.isUnlimited
+				? Infinity
+				: Math.max(0, limits.campaignsLimit - campaignsUsed);
+			const creatorsRemaining = limits.isUnlimited
+				? Infinity
+				: Math.max(0, limits.creatorsLimit - creatorsUsed);
 
-      const usageInfo: UsageInfo = {
-        campaignsUsed,
-        creatorsUsed,
-        campaignsRemaining,
-        creatorsRemaining,
-        canCreateCampaign: limits.isUnlimited || campaignsUsed < limits.campaignsLimit,
-        canCreateJob: limits.isUnlimited || creatorsUsed < limits.creatorsLimit
-      };
+			const usageInfo: UsageInfo = {
+				campaignsUsed,
+				creatorsUsed,
+				campaignsRemaining,
+				creatorsRemaining,
+				canCreateCampaign: limits.isUnlimited || campaignsUsed < limits.campaignsLimit,
+				canCreateJob: limits.isUnlimited || creatorsUsed < limits.creatorsLimit,
+			};
 
-      structuredConsole.log(`📊 [PLAN-ENFORCEMENT] Usage for ${userId}:`, usageInfo);
+			structuredConsole.log(`📊 [PLAN-ENFORCEMENT] Usage for ${userId}:`, usageInfo);
 
-      return usageInfo;
-    } catch (error) {
-      structuredConsole.error(`❌ [PLAN-ENFORCEMENT] Error getting current usage:`, error);
-      return null;
-    }
-  }
+			return usageInfo;
+		} catch (error) {
+			structuredConsole.error(`❌ [PLAN-ENFORCEMENT] Error getting current usage:`, error);
+			return null;
+		}
+	}
 
-  /**
-   * Validate if user can create a new campaign
-   */
-  static async validateCampaignCreation(userId: string): Promise<{
-    allowed: boolean;
-    reason?: string;
-    usage?: UsageInfo;
-  }> {
-    const bypass = await this.getPlanBypassResult('campaigns');
-    if (bypass) {
-      return bypass;
-    }
+	/**
+	 * Validate if user can create a new campaign
+	 */
+	static async validateCampaignCreation(userId: string): Promise<{
+		allowed: boolean;
+		reason?: string;
+		usage?: UsageInfo;
+	}> {
+		const bypass = await PlanEnforcementService.getPlanBypassResult('campaigns');
+		if (bypass) {
+			return bypass;
+		}
 
-    try {
-      const usage = await this.getCurrentUsage(userId);
-      
-      if (!usage) {
-        return {
-          allowed: false,
-          reason: 'Unable to determine plan limits'
-        };
-      }
+		try {
+			const usage = await PlanEnforcementService.getCurrentUsage(userId);
 
-      if (!usage.canCreateCampaign) {
-        return {
-          allowed: false,
-          reason: `Campaign limit reached. You have ${usage.campaignsUsed} campaigns out of your ${usage.campaignsUsed + usage.campaignsRemaining} limit.`,
-          usage
-        };
-      }
+			if (!usage) {
+				return {
+					allowed: false,
+					reason: 'Unable to determine plan limits',
+				};
+			}
 
-      return {
-        allowed: true,
-        usage
-      };
-    } catch (error) {
-      structuredConsole.error(`❌ [PLAN-ENFORCEMENT] Error validating campaign creation:`, error);
-      return {
-        allowed: false,
-        reason: 'Validation error occurred'
-      };
-    }
-  }
+			if (!usage.canCreateCampaign) {
+				return {
+					allowed: false,
+					reason: `Campaign limit reached. You have ${usage.campaignsUsed} campaigns out of your ${usage.campaignsUsed + usage.campaignsRemaining} limit.`,
+					usage,
+				};
+			}
 
-  /**
-   * Validate if user can create a scraping job for specified number of creators
-   */
-  static async validateJobCreation(userId: string, expectedCreators: number = 1000): Promise<{
-    allowed: boolean;
-    reason?: string;
-    usage?: UsageInfo;
-    adjustedLimit?: number;
-  }> {
-    const bypass = await this.getPlanBypassResult('creators');
-    if (bypass) {
-      return bypass;
-    }
+			return {
+				allowed: true,
+				usage,
+			};
+		} catch (error) {
+			structuredConsole.error(`❌ [PLAN-ENFORCEMENT] Error validating campaign creation:`, error);
+			return {
+				allowed: false,
+				reason: 'Validation error occurred',
+			};
+		}
+	}
 
-    try {
-      const usage = await this.getCurrentUsage(userId);
-      
-      if (!usage) {
-        return {
-          allowed: false,
-          reason: 'Unable to determine plan limits'
-        };
-      }
+	/**
+	 * Validate if user can create a scraping job for specified number of creators
+	 */
+	static async validateJobCreation(
+		userId: string,
+		expectedCreators: number = 1000
+	): Promise<{
+		allowed: boolean;
+		reason?: string;
+		usage?: UsageInfo;
+		adjustedLimit?: number;
+	}> {
+		const bypass = await PlanEnforcementService.getPlanBypassResult('creators');
+		if (bypass) {
+			return bypass;
+		}
 
-      // Check if adding expected creators would exceed limit
-      const wouldExceedLimit = !usage.canCreateJob || (usage.creatorsUsed + expectedCreators > usage.creatorsUsed + usage.creatorsRemaining);
-      
-      if (wouldExceedLimit && usage.creatorsRemaining !== Infinity) {
-        const adjustedLimit = Math.max(0, usage.creatorsRemaining);
-        
-        if (adjustedLimit === 0) {
-          return {
-            allowed: false,
-            reason: `Creator limit reached. You have used ${usage.creatorsUsed} creators out of your monthly limit.`,
-            usage
-          };
-        }
+		try {
+			const usage = await PlanEnforcementService.getCurrentUsage(userId);
 
-        return {
-          allowed: true,
-          reason: `Request adjusted to fit your remaining limit of ${adjustedLimit} creators.`,
-          usage,
-          adjustedLimit
-        };
-      }
+			if (!usage) {
+				return {
+					allowed: false,
+					reason: 'Unable to determine plan limits',
+				};
+			}
 
-      return {
-        allowed: true,
-        usage
-      };
-    } catch (error) {
-      structuredConsole.error(`❌ [PLAN-ENFORCEMENT] Error validating job creation:`, error);
-      return {
-        allowed: false,
-        reason: 'Validation error occurred'
-      };
-    }
-  }
+			// Check if adding expected creators would exceed limit
+			const wouldExceedLimit =
+				!usage.canCreateJob ||
+				usage.creatorsUsed + expectedCreators > usage.creatorsUsed + usage.creatorsRemaining;
 
-  /**
-   * Update usage metrics after campaign creation
-   */
-  static async trackCampaignCreated(userId: string): Promise<void> {
-    try {
-      const userProfile = await getUserProfile(userId);
+			if (wouldExceedLimit && usage.creatorsRemaining !== Infinity) {
+				const adjustedLimit = Math.max(0, usage.creatorsRemaining);
 
-      if (userProfile) {
-        await updateUserProfile(userId, {
-          usageCampaignsCurrent: (userProfile.usageCampaignsCurrent || 0) + 1
-        });
+				if (adjustedLimit === 0) {
+					return {
+						allowed: false,
+						reason: `Creator limit reached. You have used ${usage.creatorsUsed} creators out of your monthly limit.`,
+						usage,
+					};
+				}
 
-        structuredConsole.log(`📈 [PLAN-ENFORCEMENT] Campaign created tracked for ${userId}`);
-      }
-    } catch (error) {
-      structuredConsole.error(`❌ [PLAN-ENFORCEMENT] Error tracking campaign creation:`, error);
-    }
-  }
+				return {
+					allowed: true,
+					reason: `Request adjusted to fit your remaining limit of ${adjustedLimit} creators.`,
+					usage,
+					adjustedLimit,
+				};
+			}
 
-  private static async getPlanBypassResult(scope: 'campaigns' | 'creators'): Promise<{
-    allowed: boolean;
-    reason?: string;
-    usage?: UsageInfo;
-    adjustedLimit?: number;
-  } | null> {
-    if (process.env.NODE_ENV === 'production') {
-      return null;
-    }
+			return {
+				allowed: true,
+				usage,
+			};
+		} catch (error) {
+			structuredConsole.error(`❌ [PLAN-ENFORCEMENT] Error validating job creation:`, error);
+			return {
+				allowed: false,
+				reason: 'Validation error occurred',
+			};
+		}
+	}
 
-    const normalize = (value?: string | null) =>
-      value
-        ?.split(',')
-        .map((entry) => entry.trim().toLowerCase())
-        .filter(Boolean) ?? [];
+	/**
+	 * Update usage metrics after campaign creation
+	 */
+	static async trackCampaignCreated(userId: string): Promise<void> {
+		try {
+			const userProfile = await getUserProfile(userId);
 
-    const usage: UsageInfo = {
-      campaignsUsed: 0,
-      creatorsUsed: 0,
-      campaignsRemaining: Infinity,
-      creatorsRemaining: Infinity,
-      canCreateCampaign: true,
-      canCreateJob: true,
-    };
+			if (userProfile) {
+				await updateUserProfile(userId, {
+					usageCampaignsCurrent: (userProfile.usageCampaignsCurrent || 0) + 1,
+				});
 
-    const envBypass = normalize(process.env.PLAN_VALIDATION_BYPASS);
-    if (envBypass.includes('all') || envBypass.includes(scope)) {
-      return {
-        allowed: true,
-        reason: 'Plan validation bypassed for testing',
-        usage,
-      };
-    }
+				structuredConsole.log(`📈 [PLAN-ENFORCEMENT] Campaign created tracked for ${userId}`);
+			}
+		} catch (error) {
+			structuredConsole.error(`❌ [PLAN-ENFORCEMENT] Error tracking campaign creation:`, error);
+		}
+	}
 
-    try {
-      const headerStore = await headers();
-      const headerBypass = normalize(headerStore.get('x-plan-bypass'));
-      if (headerBypass.includes('all') || headerBypass.includes(scope)) {
-        return {
-          allowed: true,
-          reason: 'Plan validation bypassed for testing',
-          usage,
-        };
-      }
-    } catch {
-      // headers() unavailable outside request context; ignore.
-    }
+	private static async getPlanBypassResult(scope: 'campaigns' | 'creators'): Promise<{
+		allowed: boolean;
+		reason?: string;
+		usage?: UsageInfo;
+		adjustedLimit?: number;
+	} | null> {
+		if (process.env.NODE_ENV === 'production') {
+			return null;
+		}
 
-    return null;
-  }
+		const normalize = (value?: string | null) =>
+			value
+				?.split(',')
+				.map((entry) => entry.trim().toLowerCase())
+				.filter(Boolean) ?? [];
 
-  /**
-   * Update usage metrics after job completion
-   */
-  static async trackCreatorsFound(userId: string, creatorCount: number): Promise<void> {
-    try {
-      const userProfile = await getUserProfile(userId);
+		const usage: UsageInfo = {
+			campaignsUsed: 0,
+			creatorsUsed: 0,
+			campaignsRemaining: Infinity,
+			creatorsRemaining: Infinity,
+			canCreateCampaign: true,
+			canCreateJob: true,
+		};
 
-      if (userProfile) {
-        await updateUserProfile(userId, {
-          usageCreatorsCurrentMonth: (userProfile.usageCreatorsCurrentMonth || 0) + creatorCount
-        });
+		const envBypass = normalize(process.env.PLAN_VALIDATION_BYPASS);
+		if (envBypass.includes('all') || envBypass.includes(scope)) {
+			return {
+				allowed: true,
+				reason: 'Plan validation bypassed for testing',
+				usage,
+			};
+		}
 
-        structuredConsole.log(`📈 [PLAN-ENFORCEMENT] ${creatorCount} creators tracked for ${userId}`);
-      }
-    } catch (error) {
-      structuredConsole.error(`❌ [PLAN-ENFORCEMENT] Error tracking creator count:`, error);
-    }
-  }
+		try {
+			const headerStore = await headers();
+			const headerBypass = normalize(headerStore.get('x-plan-bypass'));
+			if (headerBypass.includes('all') || headerBypass.includes(scope)) {
+				return {
+					allowed: true,
+					reason: 'Plan validation bypassed for testing',
+					usage,
+				};
+			}
+		} catch {
+			// headers() unavailable outside request context; ignore.
+		}
 
-  /**
-   * Reset monthly usage (called by scheduled job)
-   */
-  static async resetMonthlyUsage(): Promise<void> {
-    try {
-      // Reset monthly usage - this would need custom implementation for normalized schema
-      // For now, skip bulk update as it's complex with the new normalized structure
-      structuredConsole.log('🚧 [PLAN-ENFORCEMENT] Monthly usage reset needs custom implementation for normalized schema');
+		return null;
+	}
 
-      structuredConsole.log(`🔄 [PLAN-ENFORCEMENT] Monthly usage reset for all users`);
-    } catch (error) {
-      structuredConsole.error(`❌ [PLAN-ENFORCEMENT] Error resetting monthly usage:`, error);
-    }
-  }
+	/**
+	 * Update usage metrics after job completion
+	 */
+	static async trackCreatorsFound(userId: string, creatorCount: number): Promise<void> {
+		try {
+			const userProfile = await getUserProfile(userId);
 
-  /**
-   * Get upgrade suggestions based on current usage
-   */
-  static async getUpgradeSuggestions(userId: string): Promise<{
-    shouldUpgrade: boolean;
-    currentPlan: string;
-    suggestedPlan?: string;
-    reasons: string[];
-  }> {
-    try {
-      const usage = await this.getCurrentUsage(userId);
-      const userProfile = await getUserProfile(userId);
+			if (userProfile) {
+				await updateUserProfile(userId, {
+					usageCreatorsCurrentMonth: (userProfile.usageCreatorsCurrentMonth || 0) + creatorCount,
+				});
 
-      if (!usage || !userProfile) {
-        return {
-          shouldUpgrade: false,
-          currentPlan: 'unknown',
-          reasons: []
-        };
-      }
+				structuredConsole.log(
+					`📈 [PLAN-ENFORCEMENT] ${creatorCount} creators tracked for ${userId}`
+				);
+			}
+		} catch (error) {
+			structuredConsole.error(`❌ [PLAN-ENFORCEMENT] Error tracking creator count:`, error);
+		}
+	}
 
-      const reasons: string[] = [];
-      let suggestedPlan: string | undefined;
+	/**
+	 * Reset monthly usage (called by scheduled job)
+	 */
+	static async resetMonthlyUsage(): Promise<void> {
+		try {
+			// Reset monthly usage - this would need custom implementation for normalized schema
+			// For now, skip bulk update as it's complex with the new normalized structure
+			structuredConsole.log(
+				'🚧 [PLAN-ENFORCEMENT] Monthly usage reset needs custom implementation for normalized schema'
+			);
 
-      const currentPlan = userProfile.currentPlan || 'free';
+			structuredConsole.log(`🔄 [PLAN-ENFORCEMENT] Monthly usage reset for all users`);
+		} catch (error) {
+			structuredConsole.error(`❌ [PLAN-ENFORCEMENT] Error resetting monthly usage:`, error);
+		}
+	}
 
-      // Check if user is hitting limits
-      if (usage.campaignsRemaining <= 1) {
-        reasons.push('You\'re approaching your campaign limit');
-      }
+	/**
+	 * Get upgrade suggestions based on current usage
+	 */
+	static async getUpgradeSuggestions(userId: string): Promise<{
+		shouldUpgrade: boolean;
+		currentPlan: string;
+		suggestedPlan?: string;
+		reasons: string[];
+	}> {
+		try {
+			const usage = await PlanEnforcementService.getCurrentUsage(userId);
+			const userProfile = await getUserProfile(userId);
 
-      if (usage.creatorsRemaining <= 500) {
-        reasons.push('You\'re running low on creator searches');
-      }
+			if (!(usage && userProfile)) {
+				return {
+					shouldUpgrade: false,
+					currentPlan: 'unknown',
+					reasons: [],
+				};
+			}
 
-      // Suggest upgrades based on current plan
-      if (currentPlan === 'free' || currentPlan === 'glow_up') {
-        if (usage.campaignsUsed >= 3 || usage.creatorsUsed >= 800) {
-          suggestedPlan = 'viral_surge';
-          reasons.push('Viral Surge plan offers 10 campaigns and 10,000 creators');
-        }
-      }
+			const reasons: string[] = [];
+			let suggestedPlan: string | undefined;
 
-      if (currentPlan === 'viral_surge') {
-        if (usage.campaignsUsed >= 8 || usage.creatorsUsed >= 8000) {
-          suggestedPlan = 'fame_flex';
-          reasons.push('Fame Flex plan offers unlimited campaigns and creators');
-        }
-      }
+			const currentPlan = userProfile.currentPlan || 'free';
 
-      return {
-        shouldUpgrade: reasons.length > 0,
-        currentPlan,
-        suggestedPlan,
-        reasons
-      };
-    } catch (error) {
-      structuredConsole.error(`❌ [PLAN-ENFORCEMENT] Error getting upgrade suggestions:`, error);
-      return {
-        shouldUpgrade: false,
-        currentPlan: 'unknown',
-        reasons: []
-      };
-    }
-  }
+			// Check if user is hitting limits
+			if (usage.campaignsRemaining <= 1) {
+				reasons.push("You're approaching your campaign limit");
+			}
+
+			if (usage.creatorsRemaining <= 500) {
+				reasons.push("You're running low on creator searches");
+			}
+
+			// Suggest upgrades based on current plan
+			if (currentPlan === 'free' || currentPlan === 'glow_up') {
+				if (usage.campaignsUsed >= 3 || usage.creatorsUsed >= 800) {
+					suggestedPlan = 'viral_surge';
+					reasons.push('Viral Surge plan offers 10 campaigns and 10,000 creators');
+				}
+			}
+
+			if (currentPlan === 'viral_surge') {
+				if (usage.campaignsUsed >= 8 || usage.creatorsUsed >= 8000) {
+					suggestedPlan = 'fame_flex';
+					reasons.push('Fame Flex plan offers unlimited campaigns and creators');
+				}
+			}
+
+			return {
+				shouldUpgrade: reasons.length > 0,
+				currentPlan,
+				suggestedPlan,
+				reasons,
+			};
+		} catch (error) {
+			structuredConsole.error(`❌ [PLAN-ENFORCEMENT] Error getting upgrade suggestions:`, error);
+			return {
+				shouldUpgrade: false,
+				currentPlan: 'unknown',
+				reasons: [],
+			};
+		}
+	}
 }

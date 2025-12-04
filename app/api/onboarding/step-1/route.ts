@@ -1,294 +1,110 @@
-import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
-import { getUserProfile, updateUserProfile, createUser } from '@/lib/db/queries/user-queries';
-import { scheduleEmail, getUserEmailFromClerk, updateEmailScheduleStatus, shouldSendEmail } from '@/lib/email/email-service';
+import { createUser, getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
+import { getUserEmailFromClerk } from '@/lib/email/email-service';
+import { logError } from '@/lib/logging/onboarding-logger';
+import {
+	captureError,
+	ensureStep,
+	milestone,
+	recordTransition,
+	sendOnboardingEmails,
+} from '@/lib/onboarding/flow';
+import { Step1Schema } from '@/lib/onboarding/schemas';
+import { PaymentRequiredError } from '@/lib/onboarding/stripe-guard';
 
 export async function PATCH(request: Request) {
-  try {
-    const startTime = Date.now();
-    const requestId = `step1_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-    
-    structuredConsole.log('🚀🚀🚀 [ONBOARDING-STEP1] ===============================');
-    structuredConsole.log('🚀🚀🚀 [ONBOARDING-STEP1] STARTING STEP 1 - BASIC INFO CAPTURE');
-    structuredConsole.log('🚀🚀🚀 [ONBOARDING-STEP1] ===============================');
-    structuredConsole.log('🆔 [ONBOARDING-STEP1] Request ID:', requestId);
-    structuredConsole.log('⏰ [ONBOARDING-STEP1] Timestamp:', new Date().toISOString());
-    structuredConsole.log('🔐 [ONBOARDING-STEP1] Getting authenticated user from Clerk');
-    const { userId } = await getAuthOrTest();
+	const requestId = `step1_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 
-    if (!userId) {
-      structuredConsole.error('❌ [ONBOARDING-STEP1] Unauthorized - No valid user session');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+	try {
+		const { userId } = await getAuthOrTest();
+		if (!userId) {
+			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+		}
 
-    const { fullName, businessName } = await request.json();
-    structuredConsole.log('📥 [ONBOARDING-STEP1] Data received:', {
-      fullName: fullName || 'NOT_PROVIDED',
-      fullNameLength: fullName?.length || 0,
-      businessName: businessName || 'NOT_PROVIDED',
-      businessNameLength: businessName?.length || 0,
-      userId,
-      requestId
-    });
+		const body = await request.json();
+		const parsed = Step1Schema.safeParse(body);
+		if (!parsed.success) {
+			return NextResponse.json(
+				{ error: parsed.error.issues[0]?.message || 'Invalid input' },
+				{ status: 422 }
+			);
+		}
 
-    if (!fullName?.trim() || !businessName?.trim()) {
-      return NextResponse.json({ 
-        error: 'Full name and business name are required' 
-      }, { status: 400 });
-    }
+		const { fullName, businessName } = parsed.data;
+		const profile = await getUserProfile(userId);
 
-    // Resolve email from Clerk before proceeding
-    structuredConsole.log('📧 [ONBOARDING-STEP1] Resolving primary email from Clerk');
-    const clerkEmail = await getUserEmailFromClerk(userId);
+		ensureStep(profile?.onboardingStep, 'info_captured');
 
-    // Check if user profile exists
-    const existingProfile = await getUserProfile(userId);
-    let normalizedEmail: string | null = clerkEmail?.trim().toLowerCase() || null;
+		// Resolve email (Clerk first, then profile, then non-prod fallback)
+		const clerkEmail = await getUserEmailFromClerk(userId);
+		const email =
+			clerkEmail?.trim().toLowerCase() ||
+			profile?.email?.trim().toLowerCase() ||
+			(process.env.NODE_ENV !== 'production' ? `dev-user-${userId}@example.dev` : null);
 
-    if (!normalizedEmail && existingProfile?.email) {
-      normalizedEmail = existingProfile.email.trim().toLowerCase();
-      structuredConsole.warn('⚠️ [ONBOARDING-STEP1] Clerk email missing; falling back to stored profile email.', {
-        userId,
-        fallbackEmail: normalizedEmail,
-      });
-    }
+		if (!email) {
+			return NextResponse.json(
+				{ error: 'Email required to continue onboarding.' },
+				{ status: 409 }
+			);
+		}
 
-    if (!normalizedEmail) {
-      // In non-production environments, allow onboarding to continue even if Clerk didn't return an email.
-      const isProd = process.env.NODE_ENV === 'production';
-      if (!isProd) {
-        normalizedEmail = `dev-user-${userId}@example.dev`;
-        structuredConsole.warn('⚠️ [ONBOARDING-STEP1] No Clerk email found; using fallback for non-production environment.', {
-          userId,
-          fallbackEmail: normalizedEmail,
-          clerkEmails: clerkEmail,
-          env: process.env.NODE_ENV,
-        });
-      } else {
-        structuredConsole.error('❌ [ONBOARDING-STEP1] No email available from Clerk or profile. Blocking onboarding progress.');
-        return NextResponse.json(
-          {
-            error: 'Email required to continue onboarding. Add an email address to your account and try again.',
-          },
-          { status: 409 }
-        );
-      }
-    }
+		const ctx = {
+			userId,
+			email,
+			fullName,
+			businessName,
+			onboardingStep: profile?.onboardingStep,
+			currentPlan: profile?.currentPlan,
+			intendedPlan: profile?.intendedPlan,
+		};
 
-    structuredConsole.log('✅ [ONBOARDING-STEP1] Email confirmed for onboarding:', normalizedEmail);
+		if (profile) {
+			await updateUserProfile(userId, {
+				fullName,
+				businessName,
+				email,
+				onboardingStep: 'info_captured',
+			});
+			milestone('INFO_CAPTURED', { ...ctx, onboardingStep: 'info_captured' }, { existing: true });
+		} else {
+			await createUser({
+				userId,
+				email,
+				fullName,
+				businessName,
+				onboardingStep: 'info_captured',
+			});
+			milestone('INFO_CAPTURED', { ...ctx, onboardingStep: 'info_captured' }, { existing: false });
+		}
 
-    if (existingProfile) {
-      // Update existing profile
-      structuredConsole.log('🔄🔄🔄 [ONBOARDING-STEP1] UPDATING EXISTING PROFILE');
-      structuredConsole.log('📊 [ONBOARDING-STEP1] Existing profile data:', {
-        currentOnboardingStep: existingProfile.onboardingStep,
-        currentFullName: existingProfile.fullName,
-        currentBusinessName: existingProfile.businessName,
-        profileCreatedAt: existingProfile.signupTimestamp,
-        hasTrialData: !!(existingProfile.trialStartDate && existingProfile.trialEndDate)
-      });
-      
-      // Get user email from Clerk for database storage
-      await updateUserProfile(userId, {
-        fullName: fullName.trim(),
-        businessName: businessName.trim(),
-        email: normalizedEmail,
-        onboardingStep: 'info_captured',
-      });
+		await recordTransition(
+			{ userId, email, onboardingStep: 'info_captured' },
+			'onboarding_step',
+			{ step: 'info_captured' },
+			{ requestId }
+		);
 
-      structuredConsole.log('✅✅✅ [ONBOARDING-STEP1] PROFILE UPDATED SUCCESSFULLY');
-      structuredConsole.log('💾 [ONBOARDING-STEP1] Update completed in:', Date.now() - startTime, 'ms');
+		// Queue emails (idempotent inside helper)
+		await sendOnboardingEmails(
+			{ userId, email, fullName, businessName },
+			`${process.env.NEXT_PUBLIC_SITE_URL}/onboarding/step-2`
+		);
 
-      // Schedule welcome email for existing users too (if not already sent)
-      
-      if (await shouldSendEmail(userId, 'welcome')) {
-        structuredConsole.log('📧📧📧 [ONBOARDING-STEP1] SCHEDULING WELCOME EMAIL FOR EXISTING USER');
-        structuredConsole.log('📧 [ONBOARDING-STEP1] Email details:', {
-          targetEmail: normalizedEmail,
-          emailType: 'welcome',
-          fullName: fullName.trim(),
-          businessName: businessName.trim(),
-          dashboardUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/onboarding/step-2`
-        });
-        
-        const emailResult = await scheduleEmail({
-          userId,
-          emailType: 'welcome',
-          userEmail: normalizedEmail,
-          templateProps: {
-            fullName: fullName.trim(),
-            businessName: businessName.trim(),
-            dashboardUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/onboarding/step-2`
-          }
-        });
-
-        if (emailResult.success) {
-          await updateEmailScheduleStatus(userId, 'welcome', 'scheduled', emailResult.messageId);
-          structuredConsole.log('✅✅✅ [ONBOARDING-STEP1] WELCOME EMAIL SCHEDULED FOR EXISTING USER');
-          structuredConsole.log('📧 [ONBOARDING-STEP1] Welcome email details:', {
-            messageId: emailResult.messageId,
-            scheduledFor: 'In 10 minutes',
-            qstashId: 'N/A'
-          });
-        } else {
-          structuredConsole.error('❌ [ONBOARDING-STEP1] Welcome email scheduling failed:', emailResult.error);
-        }
-      }
-
-      // Schedule abandonment email for existing users too (if not already sent)
-      if (await shouldSendEmail(userId, 'abandonment')) {
-        structuredConsole.log('📧📧📧 [ONBOARDING-STEP1] SCHEDULING ABANDONMENT EMAIL FOR EXISTING USER');
-        structuredConsole.log('📧 [ONBOARDING-STEP1] Abandonment email details:', {
-          targetEmail: normalizedEmail,
-          emailType: 'abandonment',
-          scheduledFor: '2 hours after signup',
-          fullName: fullName.trim(),
-          businessName: businessName.trim()
-        });
-        
-        const abandonmentResult = await scheduleEmail({
-          userId,
-          emailType: 'abandonment',
-          userEmail: normalizedEmail,
-          templateProps: {
-            fullName: fullName.trim(),
-            businessName: businessName.trim(),
-            dashboardUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/onboarding/step-2`
-          }
-        });
-
-        if (abandonmentResult.success) {
-          await updateEmailScheduleStatus(userId, 'abandonment', 'scheduled', abandonmentResult.messageId);
-          structuredConsole.log('✅✅✅ [ONBOARDING-STEP1] ABANDONMENT EMAIL SCHEDULED FOR EXISTING USER');
-          structuredConsole.log('📧 [ONBOARDING-STEP1] Abandonment email details:', {
-            messageId: abandonmentResult.messageId,
-            scheduledFor: 'In 2 hours',
-            qstashId: 'N/A'
-          });
-        } else {
-          structuredConsole.error('❌ [ONBOARDING-STEP1] Abandonment email scheduling failed:', abandonmentResult.error);
-        }
-      }
-    } else {
-      // Create new profile
-      structuredConsole.log('🆕🆕🆕 [ONBOARDING-STEP1] CREATING NEW PROFILE');
-      structuredConsole.log('🆕 [ONBOARDING-STEP1] This is a first-time user signup');
-      
-      // Get user email from Clerk for database storage
-      await createUser({
-        userId,
-        email: normalizedEmail,
-        fullName: fullName.trim(),
-        businessName: businessName.trim(),
-        onboardingStep: 'info_captured',
-      });
-
-      structuredConsole.log('✅✅✅ [ONBOARDING-STEP1] PROFILE CREATED SUCCESSFULLY');
-      structuredConsole.log('💾 [ONBOARDING-STEP1] Profile creation completed in:', Date.now() - startTime, 'ms');
-
-      // Schedule welcome email (10 minutes after signup)
-      
-      if (await shouldSendEmail(userId, 'welcome')) {
-        structuredConsole.log('📧📧📧 [ONBOARDING-STEP1] SCHEDULING WELCOME EMAIL');
-        structuredConsole.log('📧 [ONBOARDING-STEP1] Email details:', {
-          targetEmail: normalizedEmail,
-          emailType: 'welcome',
-          fullName: fullName.trim(),
-          businessName: businessName.trim(),
-          dashboardUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/onboarding/step-2`
-        });
-        
-        const emailResult = await scheduleEmail({
-          userId,
-          emailType: 'welcome',
-          userEmail: normalizedEmail,
-          templateProps: {
-            fullName: fullName.trim(),
-            businessName: businessName.trim(),
-            dashboardUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/onboarding/step-2`
-          }
-        });
-
-        if (emailResult.success) {
-          await updateEmailScheduleStatus(userId, 'welcome', 'scheduled', emailResult.messageId);
-          structuredConsole.log('✅✅✅ [ONBOARDING-STEP1] WELCOME EMAIL SCHEDULED SUCCESSFULLY');
-          structuredConsole.log('📧 [ONBOARDING-STEP1] Welcome email details:', {
-            messageId: emailResult.messageId,
-            scheduledFor: 'In 10 minutes',
-            qstashId: 'N/A'
-          });
-        } else {
-          structuredConsole.error('❌ [ONBOARDING-STEP1] Welcome email scheduling failed:', emailResult.error);
-        }
-      }
-
-      // Schedule abandonment email (2 hours after signup)
-      if (await shouldSendEmail(userId, 'abandonment')) {
-        structuredConsole.log('📧📧📧 [ONBOARDING-STEP1] SCHEDULING ABANDONMENT EMAIL');
-        structuredConsole.log('📧 [ONBOARDING-STEP1] Abandonment email details:', {
-          targetEmail: normalizedEmail,
-          emailType: 'abandonment',
-          scheduledFor: '2 hours after signup',
-          fullName: fullName.trim(),
-          businessName: businessName.trim()
-        });
-        
-        const abandonmentResult = await scheduleEmail({
-          userId,
-          emailType: 'abandonment',
-          userEmail: normalizedEmail,
-          templateProps: {
-            fullName: fullName.trim(),
-            businessName: businessName.trim(),
-            dashboardUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/onboarding/step-2`
-          }
-        });
-
-        if (abandonmentResult.success) {
-          await updateEmailScheduleStatus(userId, 'abandonment', 'scheduled', abandonmentResult.messageId);
-          structuredConsole.log('✅✅✅ [ONBOARDING-STEP1] ABANDONMENT EMAIL SCHEDULED SUCCESSFULLY');
-          structuredConsole.log('📧 [ONBOARDING-STEP1] Abandonment email details:', {
-            messageId: abandonmentResult.messageId,
-            scheduledFor: 'In 2 hours',
-            qstashId: 'N/A'
-          });
-        } else {
-          structuredConsole.error('❌ [ONBOARDING-STEP1] Abandonment email scheduling failed:', abandonmentResult.error);
-        }
-      }
-    }
-
-    const totalTime = Date.now() - startTime;
-    
-    structuredConsole.log('🎉🎉🎉 [ONBOARDING-STEP1] ===============================');
-    structuredConsole.log('🎉🎉🎉 [ONBOARDING-STEP1] STEP 1 COMPLETED SUCCESSFULLY');
-    structuredConsole.log('🎉🎉🎉 [ONBOARDING-STEP1] ===============================');
-    structuredConsole.log('⏱️ [ONBOARDING-STEP1] Total execution time:', totalTime, 'ms');
-    structuredConsole.log('📊 [ONBOARDING-STEP1] Summary:', {
-      action: existingProfile ? 'PROFILE_UPDATED' : 'PROFILE_CREATED',
-      fullName: fullName.trim(),
-      businessName: businessName.trim(),
-      userId,
-      requestId,
-      executionTime: totalTime
-    });
-    structuredConsole.log('➡️ [ONBOARDING-STEP1] Next step: User should proceed to Step 2 (Brand Description)');
-    
-    return NextResponse.json({ 
-      success: true,
-      message: 'Step 1 completed successfully',
-      data: {
-        requestId,
-        executionTime: totalTime,
-        nextStep: '/onboarding/step-2'
-      }
-    });
-
-  } catch (error: any) {
-    structuredConsole.error('💥 [ONBOARDING-STEP1] Error saving step 1 data:', error);
-    return NextResponse.json({ 
-      error: 'Internal server error' 
-    }, { status: 500 });
-  }
+		return NextResponse.json({
+			success: true,
+			nextStep: '/onboarding/step-2',
+			requestId,
+		});
+	} catch (err) {
+		if (err instanceof PaymentRequiredError) {
+			return NextResponse.json({ error: err.message }, { status: 402 });
+		}
+		if (err instanceof Error && err.message.includes('order')) {
+			return NextResponse.json({ error: err.message }, { status: 409 });
+		}
+		captureError('STEP1_ERROR', err as Error, { userId: undefined });
+		return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+	}
 }

@@ -1,56 +1,52 @@
-import { structuredConsole } from '@/lib/logging/console-proxy';
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
-import { StripeService } from '@/lib/stripe/stripe-service';
 import { db } from '@/lib/db';
 import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
+import { structuredConsole } from '@/lib/logging/console-proxy';
+import { StripeService } from '@/lib/stripe/stripe-service';
 
 export async function POST(req: NextRequest) {
-  try {
-    const { userId } = await getAuthOrTest();
-    
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+	try {
+		const { userId } = await getAuthOrTest();
 
-    // Get user profile
-    const profile = await getUserProfile(userId);
+		if (!userId) {
+			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+		}
 
-    if (!profile) {
-      return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
-    }
+		// Get user profile
+		const profile = await getUserProfile(userId);
 
-    let stripeCustomerId = profile.stripeCustomerId;
+		if (!profile) {
+			return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
+		}
 
-    // Create Stripe customer if doesn't exist
-    if (!stripeCustomerId) {
-      const customer = await StripeService.createCustomer(
-        profile.email || `${userId}@clerk.user`,
-        profile.fullName || 'User',
-        userId
-      );
+		let stripeCustomerId = profile.stripeCustomerId;
 
-      stripeCustomerId = customer.id;
+		// Create Stripe customer if doesn't exist
+		if (!stripeCustomerId) {
+			const customer = await StripeService.createCustomer(
+				profile.email || `${userId}@clerk.user`,
+				profile.fullName || 'User',
+				userId
+			);
 
-      // Update user profile with Stripe customer ID
-      await updateUserProfile(userId, {
-        stripeCustomerId: customer.id,
-      });
-    }
+			stripeCustomerId = customer.id;
 
-    // Create setup intent for card collection
-    const setupIntent = await StripeService.createSetupIntent(stripeCustomerId);
+			// Update user profile with Stripe customer ID
+			await updateUserProfile(userId, {
+				stripeCustomerId: customer.id,
+			});
+		}
 
-    return NextResponse.json({
-      clientSecret: setupIntent.client_secret,
-      customerId: stripeCustomerId
-    });
+		// Create setup intent for card collection
+		const setupIntent = await StripeService.createSetupIntent(stripeCustomerId);
 
-  } catch (error) {
-    structuredConsole.error('❌ [STRIPE-SETUP-INTENT] Error:', error);
-    return NextResponse.json(
-      { error: 'Failed to create setup intent' },
-      { status: 500 }
-    );
-  }
+		return NextResponse.json({
+			clientSecret: setupIntent.client_secret,
+			customerId: stripeCustomerId,
+		});
+	} catch (error) {
+		structuredConsole.error('❌ [STRIPE-SETUP-INTENT] Error:', error);
+		return NextResponse.json({ error: 'Failed to create setup intent' }, { status: 500 });
+	}
 }

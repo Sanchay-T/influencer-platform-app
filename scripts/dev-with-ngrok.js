@@ -8,25 +8,20 @@
  * This script:
  * 1. Checks if ngrok is already running on port 3001
  * 2. If not, starts ngrok with the permanent domain
- * 3. Updates .env.local and .env.development with the ngrok URL
- * 4. Starts the Next.js dev server
- * 5. Handles cleanup on exit (keeps ngrok running by default)
+ * 3. Starts the Next.js dev server
  *
  * Run: npm run dev:ngrok
  */
 
 const http = require('http');
 const { spawn } = require('child_process');
-const fs = require('fs');
-const path = require('path');
 
 const NGROK_API_URL = 'http://localhost:4040/api/tunnels';
 const TARGET_PORT = 3001;
-const ENV_VAR_NAME = 'NEXT_PUBLIC_SITE_URL';
 const POLL_INTERVAL = 500; // ms
 const MAX_POLL_ATTEMPTS = 40; // 20 seconds total
 
-// Permanent ngrok domain (paid plan)
+// Permanent ngrok domain (paid plan) - no env file updates needed
 const NGROK_DOMAIN = 'usegemz.ngrok.app';
 const NGROK_URL = `https://${NGROK_DOMAIN}`;
 
@@ -60,17 +55,7 @@ async function checkNgrokStatus() {
           const tunnel = tunnels.find(t =>
             t.config && t.config.addr && t.config.addr.includes(`:${TARGET_PORT}`)
           );
-
-          if (tunnel && tunnel.public_url) {
-            // Prefer HTTPS URL
-            const httpsUrl = tunnel.public_url.startsWith('https')
-              ? tunnel.public_url
-              : tunnels.find(t => t.public_url.startsWith('https'))?.public_url || tunnel.public_url;
-
-            resolve({ running: true, url: httpsUrl });
-          } else {
-            resolve({ running: false });
-          }
+          resolve({ running: !!tunnel, url: tunnel?.public_url });
         } catch (error) {
           resolve({ running: false });
         }
@@ -109,52 +94,8 @@ async function startNgrok() {
   throw new Error('Ngrok failed to start within timeout period');
 }
 
-function updateEnvFile(filePath, url) {
-  if (!fs.existsSync(filePath)) {
-    log(`  ⚠ ${filePath} not found, skipping`, colors.yellow);
-    return false;
-  }
-
-  let content = fs.readFileSync(filePath, 'utf8');
-  const envVarRegex = new RegExp(`^${ENV_VAR_NAME}=.*$`, 'm');
-
-  // Check if URL is already correct
-  const currentMatch = content.match(envVarRegex);
-  if (currentMatch && currentMatch[0].includes(url)) {
-    log(`  ${path.basename(filePath)}: Already up to date`, colors.cyan);
-    return false;
-  }
-
-  // Update or add the env variable
-  if (envVarRegex.test(content)) {
-    content = content.replace(envVarRegex, `${ENV_VAR_NAME}=${url}`);
-  } else {
-    // Add to file if not present
-    content += `\n${ENV_VAR_NAME}=${url}\n`;
-  }
-
-  fs.writeFileSync(filePath, content, 'utf8');
-  log(`  ${colors.green}✓ Updated ${path.basename(filePath)}${colors.reset}`);
-  return true;
-}
-
-function updateEnvFiles(url) {
-  logStep('ENV', 'Updating environment files...');
-
-  const rootDir = path.resolve(__dirname, '..');
-  const envLocal = path.join(rootDir, '.env.local');
-  const envDevelopment = path.join(rootDir, '.env.development');
-
-  const localUpdated = updateEnvFile(envLocal, url);
-  const devUpdated = updateEnvFile(envDevelopment, url);
-
-  if (!localUpdated && !devUpdated) {
-    log('  No updates needed', colors.cyan);
-  }
-}
-
 function startDevServer() {
-  logStep('DEV SERVER', 'Starting Next.js development server...');
+  logStep('DEV SERVER', 'Starting Next.js development server on port 3001...');
 
   const devProcess = spawn('npm', ['run', 'dev'], {
     stdio: 'inherit',
@@ -183,28 +124,23 @@ function startDevServer() {
 
 async function main() {
   log(`\n${colors.bright}${colors.blue}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}`);
-  log(`${colors.bright}${colors.blue}  🚀 Starting Development Server with Ngrok  ${colors.reset}`);
+  log(`${colors.bright}${colors.blue}  🚀 Dev Server + Ngrok (${NGROK_DOMAIN})  ${colors.reset}`);
   log(`${colors.bright}${colors.blue}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}\n`);
 
   try {
     // Step 1: Check if ngrok is already running
     logStep('CHECK', 'Checking ngrok status...');
-    let status = await checkNgrokStatus();
+    const status = await checkNgrokStatus();
 
-    let ngrokUrl;
     if (status.running) {
-      log(`${colors.green}✓ Ngrok is already running: ${NGROK_URL}${colors.reset}`);
-      ngrokUrl = NGROK_URL;
+      log(`${colors.green}✓ Ngrok already running: ${NGROK_URL}${colors.reset}`);
     } else {
       log('  Ngrok not running, starting it now...', colors.cyan);
-      ngrokUrl = await startNgrok();
+      await startNgrok();
     }
 
-    // Step 2: Update env files
-    updateEnvFiles(ngrokUrl);
-
-    // Step 3: Start dev server
-    log('\n'); // spacing
+    // Step 2: Start dev server
+    log('\n');
     startDevServer();
 
   } catch (error) {
@@ -213,6 +149,7 @@ async function main() {
     log('  1. Make sure ngrok is installed and in your PATH');
     log('  2. Check if port 3001 is available');
     log('  3. Verify ngrok auth token is configured');
+    log('  4. Run: ngrok config add-authtoken <your-token>');
     process.exit(1);
   }
 }
