@@ -1,252 +1,180 @@
+/**
+ * ═══════════════════════════════════════════════════════════════
+ * BILLING STATUS ROUTE - Central Billing State Endpoint
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * Returns all billing information for the frontend:
+ * - Current plan and limits
+ * - Trial status and countdown
+ * - Usage information
+ * - Stripe IDs for portal access
+ *
+ * This endpoint is called frequently (sidebar, billing page, etc.)
+ * so it includes caching headers.
+ */
+
 import { clerkClient } from '@clerk/nextjs/server';
 import { type NextRequest, NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
+import { getBillingStatus } from '@/lib/billing';
 import { createUser } from '@/lib/db/queries/user-queries';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
-import { BillingService, type PlanKey } from '@/lib/services/billing-service';
 
-const CACHE_TTL_MS = 30_000; // mirror BillingService cache window
+const logger = createCategoryLogger(LogCategory.BILLING);
 
-const billingLogger = createCategoryLogger(LogCategory.BILLING);
-
-// Helper function for billing amounts
-function getBillingAmount(plan: PlanKey): number {
-	const amounts = {
-		free: 0,
-		glow_up: 99,
-		viral_surge: 249,
-		fame_flex: 499,
-	};
-	return amounts[plan] || 0;
-}
+const CACHE_TTL_MS = 30_000; // 30 seconds
 
 export async function GET(request: NextRequest) {
-	const startedAt = Date.now();
-	const reqId = `bill_${startedAt}_${Math.random().toString(36).slice(2, 8)}`;
-	const timestamp = new Date().toISOString();
-
-	const withContext = (extra?: Record<string, unknown>) => {
-		const context: { requestId: string; userId?: string; metadata?: Record<string, unknown> } = {
-			requestId: reqId,
-		};
-
-		if (extra && typeof extra.userId === 'string') {
-			context.userId = extra.userId;
-		}
-
-		if (extra && Object.keys(extra).length > 0) {
-			context.metadata = extra;
-		}
-
-		return context;
-	};
-
-	const debug = (message: string, extra?: Record<string, unknown>) => {
-		billingLogger.debug(message, withContext(extra));
-	};
-
-	const info = (message: string, extra?: Record<string, unknown>) => {
-		billingLogger.info(message, withContext(extra));
-	};
-
-	const warn = (message: string, extra?: Record<string, unknown>) => {
-		billingLogger.warn(message, withContext(extra));
-	};
-
-	const error = (message: string, err: unknown, extra?: Record<string, unknown>) => {
-		const normalized = err instanceof Error ? err : new Error(String(err));
-		billingLogger.error(message, normalized, withContext(extra));
-	};
-
-	let currentUserId: string | undefined;
+	const startTime = Date.now();
+	const requestId = `bill_${startTime}_${Math.random().toString(36).slice(2, 8)}`;
 
 	try {
-		info('Billing status request received', { timestamp });
+		// ─────────────────────────────────────────────────────────────
+		// AUTH
+		// ─────────────────────────────────────────────────────────────
 
 		const { userId } = await getAuthOrTest();
-		currentUserId = userId ?? undefined;
 
 		if (!userId) {
-			warn('Unauthorized billing status request');
-			const unauthorized = NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-			unauthorized.headers.set('x-request-id', reqId);
-			unauthorized.headers.set('x-started-at', timestamp);
-			unauthorized.headers.set('x-duration-ms', String(Date.now() - startedAt));
-			return unauthorized;
+			logger.warn('Billing status request unauthorized', {
+				metadata: { requestId },
+			});
+			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
 
-		debug('Fetching billing state from central service', { userId });
+		logger.debug('Fetching billing status', {
+			userId,
+			metadata: { requestId },
+		});
 
-		let cacheHit = false;
-		let billingState;
+		// ─────────────────────────────────────────────────────────────
+		// GET BILLING STATUS
+		// ─────────────────────────────────────────────────────────────
+
+		let billingStatus;
 
 		try {
-			const result = await BillingService.getBillingStateWithCache(userId);
-			billingState = result.state;
-			cacheHit = result.cacheHit;
-		} catch (serviceError) {
-			// User profile doesn't exist - AUTO-CREATE it (webhook may have failed/delayed)
-			const errorMessage =
-				serviceError instanceof Error ? serviceError.message : String(serviceError);
+			billingStatus = await getBillingStatus(userId);
+		} catch (error) {
+			// User might not exist yet - auto-create
+			const errorMessage = error instanceof Error ? error.message : String(error);
 
-			if (errorMessage.includes('USER_NOT_FOUND') || errorMessage.includes('not found')) {
-				info('🆕 New user detected - auto-creating database record', { userId });
+			if (errorMessage.includes('not found')) {
+				logger.info('User not found - auto-creating', {
+					userId,
+					metadata: { requestId },
+				});
 
 				try {
 					// Get user details from Clerk
 					const client = await clerkClient();
 					const clerkUser = await client.users.getUser(userId);
 					const email = clerkUser.emailAddresses?.[0]?.emailAddress;
-					const firstName = clerkUser.firstName || '';
-					const lastName = clerkUser.lastName || '';
-					const fullName = `${firstName} ${lastName}`.trim() || 'User';
+					const fullName =
+						`${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'User';
 
-					info('Creating user with Clerk data', {
+					// Create user in database
+					await createUser({
 						userId,
-						email,
+						email: email || `user-${userId}@placeholder.com`,
 						fullName,
-						hasEmail: !!email,
+						onboardingStep: 'pending',
 					});
 
-					try {
-						// Create user in database
-						await createUser({
-							userId,
-							email: email || `user-${userId}@example.com`, // Fallback email
-							fullName,
-							onboardingStep: 'pending', // Triggers onboarding modal
-						});
-
-						info('✅ User record created successfully', { userId });
-					} catch (createError: any) {
-						// Check if user was created by webhook in the meantime (race condition)
-						if (
-							createError.message?.includes('unique') ||
-							createError.message?.includes('duplicate')
-						) {
-							info('User already created (likely by webhook) - continuing', { userId });
-						} else {
-							throw createError; // Re-throw if it's a different error
-						}
-					}
-
-					// NOW fetch billing state with the newly created user (or webhook-created user)
-					const result = await BillingService.getBillingStateWithCache(userId);
-					billingState = result.state;
-					cacheHit = false; // Fresh data, not from cache
+					// Now get billing status
+					billingStatus = await getBillingStatus(userId);
 				} catch (createError) {
-					// If auto-creation fails, return safe defaults so user can proceed
-					error('Failed to auto-create user - returning safe defaults', createError, { userId });
-
-					const safeDefaults = NextResponse.json({
-						currentPlan: 'free',
-						isTrialing: false,
-						hasActiveSubscription: false,
-						trialStatus: 'pending',
-						subscriptionStatus: 'none',
-						daysRemaining: 0,
-						hoursRemaining: 0,
-						minutesRemaining: 0,
-						trialProgressPercentage: 0,
-						trialTimeRemaining: 'N/A',
-						trialTimeRemainingShort: 'N/A',
-						trialUrgencyLevel: 'low',
-						usageInfo: {
-							campaignsUsed: 0,
-							creatorsUsed: 0,
-							campaignsLimit: 0,
-							creatorsLimit: 0,
-							progressPercentage: 0,
-						},
-						canManageSubscription: false,
-						billingAmount: 0,
-						billingCycle: 'monthly' as const,
+					// If auto-creation fails, return safe defaults
+					logger.error('Failed to auto-create user', createError as Error, {
+						userId,
+						metadata: { requestId },
 					});
 
-					safeDefaults.headers.set('x-request-id', reqId);
-					safeDefaults.headers.set('x-started-at', timestamp);
-					safeDefaults.headers.set('x-duration-ms', String(Date.now() - startedAt));
-					safeDefaults.headers.set('x-fallback-mode', 'true');
-
-					return safeDefaults;
+					return NextResponse.json(getSafeDefaults(), {
+						headers: getResponseHeaders(requestId, startTime, false, true),
+					});
 				}
 			} else {
-				// Some other error - log and re-throw
-				error('Billing service error (not USER_NOT_FOUND)', serviceError, {
-					userId,
-					errorType:
-						serviceError instanceof Error ? serviceError.constructor.name : typeof serviceError,
-				});
-				throw serviceError;
+				throw error;
 			}
 		}
 
-		const responsePayload = {
-			currentPlan: billingState.currentPlan,
-			isTrialing:
-				billingState.trialStatus === 'active' && billingState.subscriptionStatus !== 'active',
-			hasActiveSubscription: billingState.subscriptionStatus === 'active',
-			trialStatus: billingState.trialStatus,
-			subscriptionStatus: billingState.subscriptionStatus,
-			daysRemaining: billingState.trialTimeDisplay?.daysRemaining || 0,
-			hoursRemaining: billingState.trialTimeDisplay?.hoursRemaining || 0,
-			minutesRemaining: billingState.trialTimeDisplay?.minutesRemaining || 0,
-			trialProgressPercentage: billingState.trialTimeDisplay?.progressPercentage || 0,
-			trialTimeRemaining: billingState.trialTimeDisplay?.timeRemainingLong || 'N/A',
-			trialTimeRemainingShort: billingState.trialTimeDisplay?.timeRemainingShort || 'N/A',
-			trialUrgencyLevel: billingState.trialTimeDisplay?.urgencyLevel || 'low',
-			usageInfo: {
-				campaignsUsed: billingState.usage.campaigns.used,
-				creatorsUsed: billingState.usage.creators.used,
-				campaignsLimit: billingState.usage.campaigns.limit,
-				creatorsLimit: billingState.usage.creators.limit,
-				progressPercentage: Math.max(
-					billingState.usage.campaigns.limit > 0
-						? (billingState.usage.campaigns.used / billingState.usage.campaigns.limit) * 100
-						: 0,
-					billingState.usage.creators.limit > 0
-						? (billingState.usage.creators.used / billingState.usage.creators.limit) * 100
-						: 0
-				),
-			},
-			stripeCustomerId: billingState.stripeCustomerId,
-			stripeSubscriptionId: billingState.stripeSubscriptionId,
-			canManageSubscription: !!billingState.stripeCustomerId,
-			billingAmount: getBillingAmount(billingState.currentPlan),
-			billingCycle: 'monthly' as const,
-			nextBillingDate:
-				billingState.subscriptionStatus === 'active'
-					? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-					: undefined,
-			trialStartDate: billingState.trialStartDate?.toISOString(),
-			trialEndDate: billingState.trialEndDate?.toISOString(),
-			trialEndsAt: billingState.trialEndDate?.toISOString().split('T')[0],
-			lastSyncTime: billingState.lastSyncTime.toISOString(),
-		};
+		// ─────────────────────────────────────────────────────────────
+		// RETURN RESPONSE
+		// ─────────────────────────────────────────────────────────────
 
-		const duration = Date.now() - startedAt;
-		info('Billing status request completed', {
+		const duration = Date.now() - startTime;
+		logger.info('Billing status fetched', {
 			userId,
-			durationMs: duration,
-			cacheHit,
+			metadata: {
+				requestId,
+				durationMs: duration,
+				currentPlan: billingStatus.currentPlan,
+				isTrialing: billingStatus.isTrialing,
+			},
 		});
 
-		const response = NextResponse.json(responsePayload);
-		response.headers.set('x-request-id', reqId);
-		response.headers.set('x-started-at', timestamp);
-		response.headers.set('x-duration-ms', String(duration));
-		response.headers.set('x-cache-hit', cacheHit ? 'true' : 'false');
-		response.headers.set('x-cache-ttl-ms', String(CACHE_TTL_MS));
-		return response;
-	} catch (err) {
-		error('Unhandled error while resolving billing status', err, {
-			userId: currentUserId,
+		return NextResponse.json(billingStatus, {
+			headers: getResponseHeaders(requestId, startTime, false, false),
+		});
+	} catch (error) {
+		logger.error('Failed to fetch billing status', error as Error, {
+			metadata: { requestId },
 		});
 
-		const failureId = `bill_err_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-		const res = NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-		res.headers.set('x-request-id', failureId);
-		res.headers.set('x-duration-ms', '0');
-		return res;
+		return NextResponse.json(
+			{ error: 'Internal server error' },
+			{ status: 500, headers: { 'x-request-id': requestId } }
+		);
 	}
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════
+
+function getResponseHeaders(
+	requestId: string,
+	startTime: number,
+	cacheHit: boolean,
+	fallbackMode: boolean
+): Record<string, string> {
+	return {
+		'x-request-id': requestId,
+		'x-duration-ms': String(Date.now() - startTime),
+		'x-cache-hit': cacheHit ? 'true' : 'false',
+		'x-cache-ttl-ms': String(CACHE_TTL_MS),
+		...(fallbackMode ? { 'x-fallback-mode': 'true' } : {}),
+		'Cache-Control': `private, max-age=${Math.floor(CACHE_TTL_MS / 1000)}`,
+	};
+}
+
+function getSafeDefaults() {
+	return {
+		currentPlan: null,
+		isTrialing: false,
+		hasActiveSubscription: false,
+		trialStatus: 'pending',
+		subscriptionStatus: 'none',
+		daysRemaining: 0,
+		hoursRemaining: 0,
+		minutesRemaining: 0,
+		trialProgressPercentage: 0,
+		trialTimeRemaining: 'N/A',
+		trialTimeRemainingShort: 'N/A',
+		trialUrgencyLevel: 'low',
+		usageInfo: {
+			campaignsUsed: 0,
+			creatorsUsed: 0,
+			campaignsLimit: 0,
+			creatorsLimit: 0,
+			progressPercentage: 0,
+		},
+		stripeCustomerId: null,
+		stripeSubscriptionId: null,
+		canManageSubscription: false,
+		billingAmount: 0,
+		billingCycle: 'monthly' as const,
+		lastSyncTime: new Date().toISOString(),
+	};
 }
