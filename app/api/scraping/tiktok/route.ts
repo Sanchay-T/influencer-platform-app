@@ -2,6 +2,7 @@ import { Receiver } from '@upstash/qstash';
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
+import { validateCreatorSearch } from '@/lib/billing';
 import { SystemConfig } from '@/lib/config/system-config';
 import { db } from '@/lib/db';
 import { campaigns, type JobStatus, scrapingJobs, scrapingResults } from '@/lib/db/schema';
@@ -15,7 +16,6 @@ import {
 } from '@/lib/middleware/api-logger';
 import { qstash } from '@/lib/queue/qstash';
 import { normalizePageParams, paginateCreators } from '@/lib/search-engine/utils/pagination';
-import { PlanValidator } from '@/lib/services/plan-validator';
 
 const fs = require('fs');
 const path = require('path');
@@ -277,7 +277,7 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
 			billingRequestId
 		);
 
-		const validation = await PlanValidator.validateCreatorSearch(
+		const validation = await validateCreatorSearch(
 			userId,
 			desiredTotalResults,
 			'tiktok_keyword',
@@ -294,9 +294,6 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
 					searchType: 'tiktok_keyword',
 					reason: validation.reason,
 					estimatedResults: desiredTotalResults,
-					currentUsage: validation.currentUsage,
-					limit: validation.limit,
-					upgradeRequired: validation.upgradeRequired,
 				},
 				billingRequestId
 			);
@@ -307,8 +304,6 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
 					requestId,
 					userId,
 					reason: validation.reason,
-					currentUsage: validation.currentUsage,
-					limit: validation.limit,
 				},
 				LogCategory.BILLING
 			);
@@ -316,10 +311,6 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
 			return createErrorResponse('Plan limit exceeded', 403, requestId, {
 				message: validation.reason,
 				upgrade: validation.upgradeRequired,
-				currentUsage: validation.currentUsage,
-				limit: validation.limit,
-				usagePercentage: validation.usagePercentage,
-				recommendedPlan: validation.recommendedPlan,
 				searchType: 'tiktok_keyword',
 				platform: 'TikTok',
 			});
@@ -334,10 +325,6 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
 				searchType: 'tiktok_keyword',
 				platform: 'TikTok',
 				estimatedResults: desiredTotalResults,
-				currentUsage: validation.currentUsage,
-				limit: validation.limit,
-				usagePercentage: validation.usagePercentage,
-				warningThreshold: validation.warningThreshold,
 			},
 			billingRequestId
 		);
@@ -348,16 +335,11 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
 				requestId,
 				userId,
 				targetResults: desiredTotalResults,
-				currentUsage: validation.currentUsage,
-				limit: validation.limit,
 			},
 			LogCategory.BILLING
 		);
 
-		const effectiveTargetResults =
-			validation.adjustedLimit && validation.adjustedLimit < desiredTotalResults
-				? validation.adjustedLimit
-				: desiredTotalResults;
+		const effectiveTargetResults = desiredTotalResults;
 
 		try {
 			logPhase('database');

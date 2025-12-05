@@ -104,7 +104,7 @@ WelcomeEmail.PreviewProps = {
 	username: 'johndoe',
 	fullName: 'John Doe',
 	businessName: 'Acme Corp',
-	dashboardUrl: 'https://influencerplatform.vercel.app/onboarding/step-1',
+	dashboardUrl: 'https://usegems.io/dashboard',
 } as WelcomeEmailProps;
 
 export default WelcomeEmail;

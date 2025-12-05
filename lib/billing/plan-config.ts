@@ -147,7 +147,9 @@ for (const [planKey, config] of Object.entries(PLANS)) {
  * Returns null if price ID is unknown (NEVER returns a 'free' plan).
  */
 export function getPlanByPriceId(priceId: string | undefined): PlanConfig | null {
-	if (!priceId) return null;
+	if (!priceId) {
+		return null;
+	}
 	const planKey = PRICE_ID_TO_PLAN.get(priceId);
 	return planKey ? PLANS[planKey] : null;
 }
@@ -157,7 +159,9 @@ export function getPlanByPriceId(priceId: string | undefined): PlanConfig | null
  * Returns null if price ID is unknown.
  */
 export function getPlanKeyByPriceId(priceId: string | undefined): PlanKey | null {
-	if (!priceId) return null;
+	if (!priceId) {
+		return null;
+	}
 	return PRICE_ID_TO_PLAN.get(priceId) || null;
 }
 
@@ -284,8 +288,12 @@ export function formatPrice(cents: number, interval?: BillingInterval): string {
 		maximumFractionDigits: 0,
 	}).format(dollars);
 
-	if (interval === 'monthly') return `${formatted}/mo`;
-	if (interval === 'yearly') return `${formatted}/yr`;
+	if (interval === 'monthly') {
+		return `${formatted}/mo`;
+	}
+	if (interval === 'yearly') {
+		return `${formatted}/yr`;
+	}
 	return formatted;
 }
 
@@ -293,7 +301,9 @@ export function formatPrice(cents: number, interval?: BillingInterval): string {
  * Format limit for display.
  */
 export function formatLimit(limit: number): string {
-	if (limit === -1) return 'Unlimited';
+	if (limit === -1) {
+		return 'Unlimited';
+	}
 	return limit.toLocaleString();
 }
 

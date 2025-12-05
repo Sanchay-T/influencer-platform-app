@@ -1,11 +1,11 @@
 import { and, eq } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
+import { validateCreatorSearch } from '@/lib/billing';
 import { db } from '@/lib/db';
 import { campaigns, type JobStatus, scrapingJobs } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { normalizePageParams, paginateCreators } from '@/lib/search-engine/utils/pagination';
-import { PlanEnforcementService } from '@/lib/services/plan-enforcement';
 import { getWebhookUrl } from '@/lib/utils/url-utils';
 
 // [InstagramV2Route] Breadcrumb: keyword search POST/GET entrypoint for instagram_v2 runner.
@@ -97,23 +97,19 @@ export async function POST(req: NextRequest) {
 				.where(eq(campaigns.id, campaignId));
 		}
 
-		const planValidation = await PlanEnforcementService.validateJobCreation(userId, targetResults);
+		const planValidation = await validateCreatorSearch(userId, targetResults);
 		if (!planValidation.allowed) {
 			return NextResponse.json(
 				{
 					error: 'Plan limit exceeded',
 					message: planValidation.reason,
 					upgrade: true,
-					usage: planValidation.usage,
 				},
 				{ status: 403 }
 			);
 		}
 
-		const adjustedTarget =
-			planValidation.adjustedLimit && planValidation.adjustedLimit < targetResults
-				? planValidation.adjustedLimit
-				: targetResults;
+		const adjustedTarget = targetResults;
 
 		if (![100, 500, 1000].includes(adjustedTarget)) {
 			return NextResponse.json(

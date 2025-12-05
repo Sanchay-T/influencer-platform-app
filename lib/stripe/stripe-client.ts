@@ -1,15 +1,20 @@
-'use client';
+/**
+ * Client-side Stripe.js loader
+ * This loads the Stripe.js SDK for browser-side payment UI
+ */
 
 import { loadStripe, type Stripe } from '@stripe/stripe-js';
 
-// Initialize Stripe
 let stripePromise: Promise<Stripe | null>;
 
-export const getStripe = (): Promise<Stripe | null> => {
+export default function getStripe(): Promise<Stripe | null> {
 	if (!stripePromise) {
-		stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+		const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+		if (!key) {
+			console.error('Missing NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY');
+			return Promise.resolve(null);
+		}
+		stripePromise = loadStripe(key);
 	}
 	return stripePromise;
-};
-
-export default getStripe;
+}

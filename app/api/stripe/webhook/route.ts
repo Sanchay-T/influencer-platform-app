@@ -193,7 +193,7 @@ export async function POST(request: NextRequest) {
 		// STEP 4: Mark as Processed
 		// ─────────────────────────────────────────────────────
 
-		await markWebhookCompleted(event.id, result);
+		await markWebhookCompleted(event.id);
 
 		const duration = Date.now() - startTime;
 		logger.info('Webhook processed successfully', {

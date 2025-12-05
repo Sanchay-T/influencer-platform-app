@@ -1,13 +1,12 @@
 import { and, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
-
+import { validateCreatorSearch } from '@/lib/billing';
 import { db } from '@/lib/db';
 import { campaigns, type JobStatus, scrapingJobs } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { qstash } from '@/lib/queue/qstash';
 import { normalizePageParams, paginateCreators } from '@/lib/search-engine/utils/pagination';
-import { PlanEnforcementService } from '@/lib/services/plan-enforcement';
 import { getWebhookUrl } from '@/lib/utils/url-utils';
 
 const TIMEOUT_MINUTES = 60;
@@ -74,25 +73,19 @@ export async function POST(req: Request) {
 				.where(eq(campaigns.id, campaignId));
 		}
 
-		const planValidation = await PlanEnforcementService.validateJobCreation(userId, targetResults);
+		const planValidation = await validateCreatorSearch(userId, targetResults);
 		if (!planValidation.allowed) {
 			return NextResponse.json(
 				{
 					error: 'Plan limit exceeded',
 					message: planValidation.reason,
 					upgrade: true,
-					usage: planValidation.usage,
 				},
 				{ status: 403 }
 			);
 		}
 
-		let adjustedTargetResults = targetResults;
-		if (planValidation.adjustedLimit && planValidation.adjustedLimit < targetResults) {
-			adjustedTargetResults = planValidation.adjustedLimit;
-		}
-
-		if (![100, 500, 1000].includes(adjustedTargetResults)) {
+		if (![100, 500, 1000].includes(targetResults)) {
 			return NextResponse.json(
 				{ error: 'targetResults must be 100, 500, or 1000' },
 				{ status: 400 }
@@ -104,7 +97,7 @@ export async function POST(req: Request) {
 			.values({
 				userId,
 				keywords: sanitizedKeywords,
-				targetResults: adjustedTargetResults,
+				targetResults: targetResults,
 				status: 'pending',
 				processedRuns: 0,
 				processedResults: 0,

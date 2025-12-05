@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
 		// GET BILLING STATUS
 		// ─────────────────────────────────────────────────────────────
 
-		let billingStatus;
+		let billingStatus: Awaited<ReturnType<typeof getBillingStatus>> | undefined;
 
 		try {
 			billingStatus = await getBillingStatus(userId);

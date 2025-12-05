@@ -33,7 +33,11 @@ All plans include 7-day free trial.
 | `lib/onboarding/flow.ts` | State transitions, event recording |
 | `lib/onboarding/finalize-onboarding.ts` | Completes onboarding after Stripe |
 | `lib/onboarding/email-hooks.ts` | Welcome/abandonment emails |
-| `app/onboarding/complete/page.tsx` | Success page after checkout |
+| `app/components/onboarding/onboarding-modal.tsx` | Main modal with all 4 steps |
+| `app/components/onboarding/payment-step.tsx` | Plan selection UI (step 3) |
+| `app/onboarding/success/page.tsx` | Stripe redirect after checkout |
+
+**Note:** Onboarding is a modal overlay on `/dashboard`, not separate pages. The modal is rendered in `app/components/layout/dashboard-layout.jsx` and controlled by `showOnboarding` prop from `app/dashboard/page.tsx`.
 
 ---
 
@@ -68,5 +72,5 @@ Trial statuses: `pending` | `active` | `expired` | `converted` | `cancelled`
 When working on onboarding:
 1. Read `lib/onboarding/schemas.ts` for step definitions
 2. Read `lib/onboarding/finalize-onboarding.ts` for completion logic
-3. Check `app/onboarding/` for UI pages
+3. Check `app/components/onboarding/onboarding-modal.tsx` for UI
 4. Check `app/api/webhooks/stripe/route.ts` for webhook handling

@@ -1,134 +1,79 @@
-import { type NextRequest, NextResponse } from 'next/server';
+import { eq } from 'drizzle-orm';
+import { NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
-import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
-import { UserSessionLogger } from '@/lib/logging/user-session-logger';
-import { captureError, ensureStep, milestone, recordTransition } from '@/lib/onboarding/flow';
-import { PlanSelectionSchema } from '@/lib/onboarding/schemas';
+import { db } from '@/lib/db';
+import { userSubscriptions, users } from '@/lib/db/schema';
 
-export async function POST(req: NextRequest) {
-	const requestId = `save-plan_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-
+export async function POST(req: Request) {
 	try {
 		const { userId } = await getAuthOrTest();
 		if (!userId) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
 
-		const profile = await getUserProfile(userId);
-		if (!profile) {
-			return NextResponse.json(
-				{ error: 'User profile not found. Complete earlier steps.' },
-				{ status: 404 }
-			);
-		}
-
 		const body = await req.json();
+		const { planId, billingInterval } = body;
 
-		// Accept both new shape ({planId, interval}) and legacy shape ({selectedPlan: "glow_up_monthly"})
-		// and the UI shape ({selectedPlan: "glow_up", interval|billing: "monthly|yearly"}).
-		const normalizedBody = normalizePlanBody(body);
-		const parsed = PlanSelectionSchema.safeParse(normalizedBody);
-		if (!parsed.success) {
-			milestone(
-				'PLAN_VALIDATION_FAILED',
-				{ userId, email: profile.email || undefined },
-				{ issues: parsed.error.issues, raw: normalizedBody }
-			);
-			return NextResponse.json(
-				{ error: parsed.error.issues[0]?.message || 'Invalid plan' },
-				{ status: 422 }
-			);
+		if (!planId) {
+			return NextResponse.json({ error: 'Plan ID is required' }, { status: 400 });
 		}
 
-		const ctx = {
-			userId,
-			email: profile.email,
-			onboardingStep: profile.onboardingStep,
-			currentPlan: profile.currentPlan,
-			intendedPlan: profile.intendedPlan,
-		} as const;
+		// Get the user's internal UUID
+		const user = await db.query.users.findFirst({
+			where: eq(users.userId, userId),
+			columns: { id: true },
+		});
 
-		try {
-			ensureStep(profile.onboardingStep, 'plan_selected');
-		} catch (orderErr) {
-			milestone('PLAN_ORDER_BLOCK', ctx, {
-				error: orderErr instanceof Error ? orderErr.message : String(orderErr),
+		if (!user) {
+			return NextResponse.json({ error: 'User not found' }, { status: 404 });
+		}
+
+		// Update user onboarding step
+		await db
+			.update(users)
+			.set({
+				onboardingStep: 'plan_selected',
+				updatedAt: new Date(),
+			})
+			.where(eq(users.userId, userId));
+
+		// Update or create subscription record with selected plan
+		// Note: userSubscriptions.userId references users.id (UUID), not Clerk ID
+		const existingSub = await db.query.userSubscriptions.findFirst({
+			where: eq(userSubscriptions.userId, user.id),
+		});
+
+		if (existingSub) {
+			await db
+				.update(userSubscriptions)
+				.set({
+					intendedPlan: planId,
+					billingInterval: billingInterval || 'monthly',
+					updatedAt: new Date(),
+				})
+				.where(eq(userSubscriptions.userId, user.id));
+		} else {
+			await db.insert(userSubscriptions).values({
+				userId: user.id,
+				intendedPlan: planId,
+				billingInterval: billingInterval || 'monthly',
+				subscriptionStatus: 'none',
+				createdAt: new Date(),
+				updatedAt: new Date(),
 			});
-			return NextResponse.json({ error: 'Onboarding step out of order' }, { status: 409 });
 		}
 
-		const { planId, interval } = parsed.data;
-		const intendedPlan = planId; // FK expects plan key, not interval suffix
-
-		const userLogger = profile.email ? UserSessionLogger.forUser(profile.email, userId) : null;
-		userLogger?.log(
-			'PLAN_SELECTED',
-			'User selected plan',
-			{ intendedPlan, requestId },
-			'onboarding'
-		);
-
-		await updateUserProfile(userId, {
-			intendedPlan,
-			billingSyncStatus: 'plan_selected',
-			onboardingStep: 'plan_selected',
-			subscriptionRenewalDate: null, // reset any stale interval data
+		return NextResponse.json({
+			success: true,
+			step: 'plan_selected',
+			planId,
+			message: 'Plan saved successfully',
 		});
-
-		milestone('PLAN_SELECTED', {
-			...ctx,
-			onboardingStep: 'plan_selected',
-			intendedPlan,
-		});
-
-		await recordTransition(
-			{ userId, email: profile.email, onboardingStep: 'plan_selected', intendedPlan },
-			'plan_selected',
-			{ intendedPlan },
-			{ requestId }
+	} catch (error) {
+		console.error('Save plan error:', error);
+		return NextResponse.json(
+			{ error: error instanceof Error ? error.message : 'Internal server error' },
+			{ status: 500 }
 		);
-
-		return NextResponse.json({ success: true, requestId });
-	} catch (err) {
-		if (err instanceof Error && err.message.includes('order')) {
-			return NextResponse.json({ error: err.message }, { status: 409 });
-		}
-		captureError('PLAN_SAVE_ERROR', err as Error, { userId: 'unknown' });
-		return NextResponse.json({ error: 'Failed to save plan selection' }, { status: 500 });
 	}
-}
-
-function normalizePlanBody(body: any): { planId: string; interval: 'monthly' | 'yearly' } {
-	const explicitInterval =
-		typeof body?.interval === 'string'
-			? body.interval
-			: typeof body?.billing === 'string'
-				? body.billing
-				: undefined;
-
-	if (body && typeof body.planId === 'string' && typeof body.interval === 'string') {
-		return { planId: body.planId, interval: body.interval } as any;
-	}
-	if (body && typeof body.planId === 'string' && explicitInterval) {
-		return {
-			planId: body.planId,
-			interval: explicitInterval === 'yearly' ? 'yearly' : 'monthly',
-		} as any;
-	}
-
-	if (typeof body?.selectedPlan === 'string') {
-		const raw = body.selectedPlan.trim();
-		const parts = raw.split('_');
-		if (parts.length >= 2) {
-			const maybeInterval = parts[parts.length - 1];
-			if (maybeInterval === 'monthly' || maybeInterval === 'yearly') {
-				const planId = parts.slice(0, -1).join('_');
-				return { planId, interval: maybeInterval } as any;
-			}
-		}
-		const interval = explicitInterval === 'yearly' ? 'yearly' : 'monthly';
-		return { planId: raw, interval } as any;
-	}
-
-	return body;
 }

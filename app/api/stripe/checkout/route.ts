@@ -77,11 +77,17 @@ export async function POST(request: NextRequest) {
 		// CREATE CHECKOUT SESSION
 		// ─────────────────────────────────────────────────────────────
 
+		// Use request origin for redirects (so localhost stays on localhost)
+		const origin =
+			request.headers.get('origin') ||
+			request.headers.get('referer')?.split('/').slice(0, 3).join('/');
+
 		const result = await CheckoutService.createCheckout({
 			userId,
 			email: user.email || '',
 			plan: planId as PlanKey,
 			interval: interval as BillingInterval,
+			redirectOrigin: origin,
 		});
 
 		const duration = Date.now() - startTime;

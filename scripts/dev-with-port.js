@@ -24,6 +24,7 @@ loadEnv('.env.local');
 loadEnv('.env.worktree');
 
 const port = process.env.LOCAL_PORT || process.env.PORT || '3000';
+const useTurbo = process.env.NO_TURBO !== 'true'; // Enable Turbopack by default for faster compilation
 
 // Resolve local next binary reliably
 let nextBin;
@@ -34,7 +35,13 @@ try {
   process.exit(1);
 }
 
-const child = spawn(process.execPath, [nextBin, 'dev', '-p', String(port)], {
+const args = [nextBin, 'dev', '-p', String(port)];
+if (useTurbo) {
+  args.push('--turbopack');
+  console.log('🚀 Using Turbopack for faster compilation');
+}
+
+const child = spawn(process.execPath, args, {
   stdio: 'inherit',
   env: { ...process.env, PORT: String(port) },
 });

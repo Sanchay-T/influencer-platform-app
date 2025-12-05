@@ -27,7 +27,7 @@ export default async function ListsPage() {
 		structuredConsole.error('[LISTS-RSC] error loading summaries', error);
 		const message = (error as Error).message;
 		if (message === 'USER_NOT_FOUND') {
-			redirect('/onboarding/step-1');
+			redirect('/dashboard');
 		}
 		throw error;
 	}

@@ -331,21 +331,8 @@ export class StripeClient {
 	// INVOICES
 	// ─────────────────────────────────────────────────────────────
 
-	/**
-	 * Get upcoming invoice for a customer.
-	 */
-	static async getUpcomingInvoice(customerId: string): Promise<Stripe.Invoice | null> {
-		const stripe = getStripe();
-		try {
-			return await stripe.invoices.upcoming({ customer: customerId });
-		} catch (error) {
-			// No upcoming invoice is expected for some states
-			if (error instanceof Stripe.errors.StripeError && error.code === 'invoice_upcoming_none') {
-				return null;
-			}
-			throw error;
-		}
-	}
+	// NOTE: getUpcomingInvoice is removed as it's not currently used
+	// and has API version compatibility issues. Add back when needed.
 
 	// ─────────────────────────────────────────────────────────────
 	// WEBHOOKS

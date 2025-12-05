@@ -1,6 +1,6 @@
 'use client';
 
-import { SignInButton, SignUpButton } from '@clerk/nextjs';
+import { SignInButton, SignUpButton, useAuth } from '@clerk/nextjs';
 import {
 	ArrowRight,
 	BarChart3,
@@ -22,9 +22,16 @@ import { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { structuredConsole } from '@/lib/logging/console-proxy';
 
 export default function MarketingLanding() {
 	const [activeStep, setActiveStep] = useState(1);
+	const { isSignedIn, isLoaded } = useAuth();
+
+	// Debug logging for auth state on landing page
+	if (process.env.NODE_ENV !== 'production') {
+		structuredConsole.log('[MarketingLanding] Auth state:', { isSignedIn, isLoaded });
+	}
 
 	return (
 		<div className="min-h-screen relative overflow-hidden bg-black">
@@ -63,17 +70,30 @@ export default function MarketingLanding() {
 					</nav>
 
 					<div className="flex items-center space-x-3">
-						<SignInButton mode="modal">
-							<Button
-								variant="ghost"
-								className="text-white hover:bg-white/10 border border-white/10"
-							>
-								Sign In
-							</Button>
-						</SignInButton>
-						<SignUpButton mode="modal">
-							<Button className="bg-white text-black hover:bg-white/90 font-medium">Sign Up</Button>
-						</SignUpButton>
+						{isLoaded && isSignedIn ? (
+							<a href="/dashboard">
+								<Button className="bg-white text-black hover:bg-white/90 font-medium">
+									Go to Dashboard
+									<ArrowRight className="ml-2 h-4 w-4" />
+								</Button>
+							</a>
+						) : (
+							<>
+								<SignInButton mode="modal">
+									<Button
+										variant="ghost"
+										className="text-white hover:bg-white/10 border border-white/10"
+									>
+										Sign In
+									</Button>
+								</SignInButton>
+								<SignUpButton mode="modal">
+									<Button className="bg-white text-black hover:bg-white/90 font-medium">
+										Sign Up
+									</Button>
+								</SignUpButton>
+							</>
+						)}
 					</div>
 				</header>
 
@@ -123,18 +143,34 @@ export default function MarketingLanding() {
 
 							{/* CTA Buttons */}
 							<div className="flex flex-col sm:flex-row gap-4">
-								<SignUpButton mode="modal">
-									<Button
-										size="lg"
-										className="bg-white text-black hover:bg-white/90 font-semibold transition-all"
-										style={{
-											boxShadow:
-												'0 20px 60px rgba(255, 255, 255, 0.5), 0 10px 30px rgba(255, 255, 255, 0.3)',
-										}}
-									>
-										Get Started for Free
-									</Button>
-								</SignUpButton>
+								{isLoaded && isSignedIn ? (
+									<a href="/dashboard">
+										<Button
+											size="lg"
+											className="bg-white text-black hover:bg-white/90 font-semibold transition-all"
+											style={{
+												boxShadow:
+													'0 20px 60px rgba(255, 255, 255, 0.5), 0 10px 30px rgba(255, 255, 255, 0.3)',
+											}}
+										>
+											Go to Dashboard
+											<ArrowRight className="ml-2 h-4 w-4" />
+										</Button>
+									</a>
+								) : (
+									<SignUpButton mode="modal">
+										<Button
+											size="lg"
+											className="bg-white text-black hover:bg-white/90 font-semibold transition-all"
+											style={{
+												boxShadow:
+													'0 20px 60px rgba(255, 255, 255, 0.5), 0 10px 30px rgba(255, 255, 255, 0.3)',
+											}}
+										>
+											Get Started for Free
+										</Button>
+									</SignUpButton>
+								)}
 							</div>
 						</div>
 
@@ -187,19 +223,35 @@ export default function MarketingLanding() {
 										</div>
 									</div>
 
-									<SignUpButton mode="modal">
-										<Button
-											size="lg"
-											className="w-full bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white font-semibold transition-all"
-											style={{
-												boxShadow:
-													'0 20px 60px rgba(236, 72, 153, 0.4), 0 10px 30px rgba(236, 72, 153, 0.3)',
-											}}
-										>
-											Get Deal
-											<ArrowRight className="ml-2 h-4 w-4" />
-										</Button>
-									</SignUpButton>
+									{isLoaded && isSignedIn ? (
+										<a href="/dashboard">
+											<Button
+												size="lg"
+												className="w-full bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white font-semibold transition-all"
+												style={{
+													boxShadow:
+														'0 20px 60px rgba(236, 72, 153, 0.4), 0 10px 30px rgba(236, 72, 153, 0.3)',
+												}}
+											>
+												Go to Dashboard
+												<ArrowRight className="ml-2 h-4 w-4" />
+											</Button>
+										</a>
+									) : (
+										<SignUpButton mode="modal">
+											<Button
+												size="lg"
+												className="w-full bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white font-semibold transition-all"
+												style={{
+													boxShadow:
+														'0 20px 60px rgba(236, 72, 153, 0.4), 0 10px 30px rgba(236, 72, 153, 0.3)',
+												}}
+											>
+												Get Deal
+												<ArrowRight className="ml-2 h-4 w-4" />
+											</Button>
+										</SignUpButton>
+									)}
 
 									<div className="pt-4 border-t border-white/10">
 										<p className="text-white/60 text-xs">

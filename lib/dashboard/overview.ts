@@ -1,4 +1,5 @@
 import { unstable_noStore as noStore } from 'next/cache';
+import { getBillingStatus } from '@/lib/billing';
 import type { DashboardFavoriteInfluencer } from '@/lib/db/queries/dashboard-queries';
 import {
 	getFavoriteInfluencersForDashboard,
@@ -6,7 +7,6 @@ import {
 } from '@/lib/db/queries/dashboard-queries';
 import { getListsForUser } from '@/lib/db/queries/list-queries';
 import { ensureUserProfile } from '@/lib/db/queries/user-queries';
-import { PlanValidator } from '@/lib/services/plan-validator';
 
 // Breadcrumb: getDashboardOverview -> consumed by RSC dashboard page & REST API -> relies on db/queries + plan validator.
 
@@ -62,11 +62,11 @@ export async function getDashboardOverview(clerkUserId: string): Promise<Dashboa
 		getFavoriteInfluencersForDashboard(clerkUserId, 10),
 		getListsForUser(clerkUserId),
 		getSearchTelemetryForDashboard(clerkUserId),
-		PlanValidator.getUserPlanStatus(clerkUserId),
+		getBillingStatus(clerkUserId),
 	]);
 
 	const normalizedLists = normalizeRecentLists(lists);
-	const searchLimit = planStatus?.planConfig.creatorsLimit ?? null;
+	const searchLimit = planStatus?.usageInfo?.creatorsLimit ?? null;
 	const normalizedLimit = searchLimit === -1 ? null : searchLimit;
 
 	return {

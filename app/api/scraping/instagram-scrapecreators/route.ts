@@ -1,13 +1,13 @@
 import { eq } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
+import { validateCreatorSearch } from '@/lib/billing';
 import { db } from '@/lib/db';
 import { campaigns, type JobStatus, scrapingJobs } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { qstash } from '@/lib/queue/qstash';
 import { normalizePageParams, paginateCreators } from '@/lib/search-engine/utils/pagination';
 import { createRunLogger } from '@/lib/search-engine/utils/run-logger';
-import { PlanEnforcementService } from '@/lib/services/plan-enforcement';
 import { getWebhookUrl } from '@/lib/utils/url-utils';
 
 const TIMEOUT_MINUTES = 60;
@@ -60,22 +60,16 @@ export async function POST(req: NextRequest) {
 			? Math.min(targetResults, 1000)
 			: Math.max(1, Math.min(Number(rawAmount), 1000));
 
-		const planCheck = await PlanEnforcementService.validateJobCreation(userId, targetResults);
+		const planCheck = await validateCreatorSearch(userId, targetResults);
 		if (!planCheck.allowed) {
 			return NextResponse.json(
 				{
 					error: 'Plan limit exceeded',
 					message: planCheck.reason,
 					upgrade: true,
-					usage: planCheck.usage,
 				},
 				{ status: 403 }
 			);
-		}
-
-		let adjustedTargetResults = targetResults;
-		if (planCheck.adjustedLimit && planCheck.adjustedLimit < targetResults) {
-			adjustedTargetResults = planCheck.adjustedLimit;
 		}
 
 		const [job] = await db
@@ -83,7 +77,7 @@ export async function POST(req: NextRequest) {
 			.values({
 				userId,
 				keywords: sanitizedKeywords,
-				targetResults: adjustedTargetResults,
+				targetResults: targetResults,
 				status: 'pending',
 				processedRuns: 0,
 				processedResults: 0,
@@ -107,7 +101,7 @@ export async function POST(req: NextRequest) {
 		await runLogger.log('job_created', {
 			jobId: job.id,
 			keywords: sanitizedKeywords,
-			targetResults: adjustedTargetResults,
+			targetResults: targetResults,
 			amount,
 			userId,
 			campaignId,
@@ -135,7 +129,7 @@ export async function POST(req: NextRequest) {
 		return NextResponse.json({
 			jobId: job.id,
 			status: 'queued',
-			targetResults: adjustedTargetResults,
+			targetResults: targetResults,
 			amount,
 		});
 	} catch (error: any) {

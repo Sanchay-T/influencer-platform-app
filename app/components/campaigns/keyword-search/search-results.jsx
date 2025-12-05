@@ -1228,8 +1228,11 @@ const SearchResults = ({ searchData }) => {
 		const isInstagramKeyword = platformNormalized?.includes('instagram');
 		if (isInstagramKeyword) {
 			filtered = filtered.filter((creator) => {
-				// Match exact paths used in table display (lines 2345-2352)
+				// Check all possible view count paths in the data structure
 				const rawViewCount =
+					creator?.video?.statistics?.views ?? // ScrapeCreators Instagram format
+					creator?.video?.statistics?.playCount ??
+					creator?.video?.statistics?.viewCount ??
 					creator?.video?.stats?.playCount ??
 					creator?.video?.stats?.viewCount ??
 					creator?.video?.playCount ??

@@ -1,11 +1,11 @@
 import { and, eq } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
+import { validateCreatorSearch } from '@/lib/billing';
 import { db } from '@/lib/db';
 import { campaigns, type JobStatus, scrapingJobs, scrapingResults } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { normalizePageParams, paginateCreators } from '@/lib/search-engine/utils/pagination';
-import { PlanEnforcementService } from '@/lib/services/plan-enforcement';
 import { getWebhookUrl } from '@/lib/utils/url-utils';
 
 const TIMEOUT_MINUTES = 60;
@@ -117,26 +117,19 @@ export async function POST(req: NextRequest) {
 			1000
 		);
 
-		const planValidation = await PlanEnforcementService.validateJobCreation(
-			userId,
-			desiredTotalResults
-		);
+		const planValidation = await validateCreatorSearch(userId, desiredTotalResults);
 		if (!planValidation.allowed) {
 			return NextResponse.json(
 				{
 					error: 'Plan limit exceeded',
 					message: planValidation.reason,
 					upgrade: true,
-					usage: planValidation.usage,
 				},
 				{ status: 403 }
 			);
 		}
 
-		const adjustedTarget =
-			planValidation.adjustedLimit && planValidation.adjustedLimit < desiredTotalResults
-				? planValidation.adjustedLimit
-				: desiredTotalResults;
+		const adjustedTarget = desiredTotalResults;
 
 		const searchKeywordMeta = {
 			allKeywords: keywords,

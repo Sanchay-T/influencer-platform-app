@@ -1,28 +1,15 @@
 'use client';
 
-import {
-	AlertCircle,
-	ArrowRight,
-	CheckCircle,
-	CreditCard,
-	Crown,
-	Lock,
-	Shield,
-	Star,
-	Zap,
-} from 'lucide-react';
-
-import { useEffect, useState } from 'react';
+import { AlertCircle, ArrowRight, CreditCard } from 'lucide-react';
+import { useState } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { PLAN_DISPLAY_CONFIGS } from '@/lib/billing/plan-display-config';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import OnboardingLogger from '@/lib/utils/onboarding-logger';
-
-// No complex Stripe Elements needed - using hosted checkout
+import BillingCycleToggle from './billing-cycle-toggle';
+import { PaymentSecurityCard, TrialInfoCard } from './payment-info-cards';
+import PlanCard from './plan-card';
 
 interface PaymentStepProps {
 	onComplete: () => void;
@@ -31,78 +18,11 @@ interface PaymentStepProps {
 	userId?: string;
 }
 
-// Removed complex card collection - using Stripe hosted checkout
-
-export default function PaymentStep({ onComplete, sessionId, userId }: PaymentStepProps) {
+export default function PaymentStep({ sessionId, userId }: PaymentStepProps) {
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState('');
 	const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
 	const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
-
-	// Your actual plan structure with monthly/yearly pricing
-	const plans = [
-		{
-			id: 'glow_up',
-			name: 'Glow Up',
-			monthlyPrice: '$99',
-			yearlyPrice: '$79',
-			yearlyTotal: '$948',
-			description: 'Perfect for growing brands',
-			icon: Star,
-			color: 'text-pink-400 bg-zinc-800',
-			features: [
-				'Up to 3 active campaigns',
-				'Up to 1,000 creators per month',
-				'Unlimited search',
-				'CSV export',
-				'Bio & email extraction',
-				'Basic analytics',
-			],
-			popular: true,
-		},
-		{
-			id: 'viral_surge',
-			name: 'Viral Surge',
-			monthlyPrice: '$249',
-			yearlyPrice: '$199',
-			yearlyTotal: '$2,388',
-			description: 'Best for scaling businesses',
-			icon: Zap,
-			color: 'text-pink-400 bg-zinc-800',
-			features: [
-				'Up to 10 active campaigns',
-				'Up to 10,000 creators per month',
-				'Unlimited search',
-				'CSV export',
-				'Bio & email extraction',
-				'Advanced analytics',
-				'Priority support',
-			],
-			popular: false,
-		},
-		{
-			id: 'fame_flex',
-			name: 'Fame Flex',
-			monthlyPrice: '$499',
-			yearlyPrice: '$399',
-			yearlyTotal: '$4,788',
-			description: 'For large-scale operations',
-			icon: Crown,
-			color: 'text-pink-400 bg-zinc-800',
-			features: [
-				'Unlimited campaigns',
-				'Unlimited creators',
-				'Unlimited search',
-				'CSV export',
-				'Bio & email extraction',
-				'Advanced analytics',
-				'API access',
-				'Priority support',
-				'Custom integrations',
-			],
-			popular: false,
-		},
-	];
 
 	const handlePlanSelect = (planId: string) => {
 		OnboardingLogger.logStep3(
@@ -112,13 +32,23 @@ export default function PaymentStep({ onComplete, sessionId, userId }: PaymentSt
 			{
 				planId,
 				billingCycle,
-				planName: plans.find((p) => p.id === planId)?.name,
+				planName: PLAN_DISPLAY_CONFIGS.find((p) => p.id === planId)?.name,
 			},
 			sessionId
 		);
-
 		setSelectedPlan(planId);
 		setError('');
+	};
+
+	const handleBillingCycleToggle = (cycle: 'monthly' | 'yearly') => {
+		OnboardingLogger.logStep3(
+			'BILLING-CYCLE-CHANGE',
+			'User changed billing cycle',
+			userId,
+			{ fromCycle: billingCycle, toCycle: cycle, savings: cycle === 'yearly' ? '20%' : 'none' },
+			sessionId
+		);
+		setBillingCycle(cycle);
 	};
 
 	const handleStartTrial = async () => {
@@ -129,21 +59,14 @@ export default function PaymentStep({ onComplete, sessionId, userId }: PaymentSt
 			{
 				selectedPlan,
 				billingCycle,
-				planName: selectedPlan ? plans.find((p) => p.id === selectedPlan)?.name : null,
+				planName: selectedPlan
+					? PLAN_DISPLAY_CONFIGS.find((p) => p.id === selectedPlan)?.name
+					: null,
 			},
 			sessionId
 		);
 
 		if (!selectedPlan) {
-			await OnboardingLogger.logStep3(
-				'VALIDATION-ERROR',
-				'No plan selected when trying to start trial',
-				userId,
-				{
-					error: 'NO_PLAN_SELECTED',
-				},
-				sessionId
-			);
 			setError('Please select a plan to continue');
 			return;
 		}
@@ -152,32 +75,16 @@ export default function PaymentStep({ onComplete, sessionId, userId }: PaymentSt
 		setError('');
 
 		try {
-			structuredConsole.log('🧭 [ONBOARDING] Save plan payload', {
-				selectedPlan,
-				billingCycle,
-			});
-			await OnboardingLogger.logAPI(
-				'API-CALL-START',
-				'Making API call to save selected plan',
-				userId,
-				{
-					endpoint: '/api/onboarding/save-plan',
-					method: 'POST',
-					planId: selectedPlan,
-				},
-				sessionId
-			);
+			structuredConsole.log('🧭 [ONBOARDING] Save plan payload', { selectedPlan, billingCycle });
 
 			// Save selected plan to user profile
 			const saveResponse = await fetch('/api/onboarding/save-plan', {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
+				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					planId: selectedPlan,
 					interval: billingCycle,
-					selectedPlan, // backward compatibility
+					selectedPlan,
 					billing: billingCycle,
 				}),
 			});
@@ -190,107 +97,29 @@ export default function PaymentStep({ onComplete, sessionId, userId }: PaymentSt
 				body: saveData,
 			});
 
-			await OnboardingLogger.logAPI(
-				'API-RESPONSE',
-				'Received response from save-plan API',
-				userId,
-				{
-					endpoint: '/api/onboarding/save-plan',
-					status: saveResponse.status,
-					ok: saveResponse.ok,
-					responseData: saveData,
-				},
-				sessionId
-			);
-
 			if (!saveResponse.ok) {
-				await OnboardingLogger.logError(
-					'API-ERROR',
-					'Failed to save plan selection',
-					userId,
-					{
-						status: saveResponse.status,
-						error: saveData?.error || 'Unknown error',
-					},
-					sessionId
-				);
 				throw new Error('Failed to save plan selection');
 			}
 
-			await OnboardingLogger.logPayment(
-				'PLAN-SAVED',
-				'Plan selection saved successfully',
-				userId,
-				{
-					planId: selectedPlan,
-					interval: billingCycle,
-					planName: plans.find((p) => p.id === selectedPlan)?.name,
-				},
-				sessionId
-			);
-
-			await OnboardingLogger.logAPI(
-				'API-CALL-START',
-				'Making API call to create Stripe checkout',
-				userId,
-				{
-					endpoint: '/api/stripe/create-checkout',
-					method: 'POST',
-					planId: selectedPlan,
-					billing: billingCycle,
-				},
-				sessionId
-			);
-
 			// Create Stripe checkout session
-			const checkoutResponse = await fetch('/api/stripe/create-checkout', {
+			const checkoutResponse = await fetch('/api/stripe/checkout', {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({
-					planId: selectedPlan,
-					billing: billingCycle,
-				}),
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ planId: selectedPlan, billing: billingCycle }),
 			});
 
 			const checkoutData = await checkoutResponse.json();
 
-			await OnboardingLogger.logAPI(
-				'API-RESPONSE',
-				'Received response from Stripe checkout API',
-				userId,
-				{
-					endpoint: '/api/stripe/create-checkout',
-					status: checkoutResponse.status,
-					ok: checkoutResponse.ok,
-					hasUrl: !!checkoutData?.url,
-				},
-				sessionId
-			);
-
 			if (!checkoutResponse.ok) {
-				await OnboardingLogger.logError(
-					'API-ERROR',
-					'Failed to create Stripe checkout session',
-					userId,
-					{
-						status: checkoutResponse.status,
-						error: checkoutData?.error || 'Unknown error',
-					},
-					sessionId
-				);
 				throw new Error('Failed to create checkout session');
 			}
-
-			const { url } = checkoutData;
 
 			await OnboardingLogger.logPayment(
 				'STRIPE-REDIRECT',
 				'Redirecting user to Stripe checkout',
 				userId,
 				{
-					checkoutUrl: url ? url.substring(0, 50) + '...' : 'No URL provided',
+					checkoutUrl: checkoutData.url ? `${checkoutData.url.substring(0, 50)}...` : 'No URL',
 					planId: selectedPlan,
 					billingCycle,
 				},
@@ -298,7 +127,7 @@ export default function PaymentStep({ onComplete, sessionId, userId }: PaymentSt
 			);
 
 			// Redirect to Stripe checkout
-			window.location.href = url;
+			window.location.href = checkoutData.url;
 		} catch (err) {
 			structuredConsole.error('Checkout error:', err);
 			const errorMessage =
@@ -308,12 +137,7 @@ export default function PaymentStep({ onComplete, sessionId, userId }: PaymentSt
 				'CHECKOUT-ERROR',
 				'Checkout process failed',
 				userId,
-				{
-					errorMessage,
-					errorType: err instanceof Error ? err.constructor.name : typeof err,
-					selectedPlan,
-					billingCycle,
-				},
+				{ errorMessage, selectedPlan, billingCycle },
 				sessionId
 			);
 
@@ -322,162 +146,33 @@ export default function PaymentStep({ onComplete, sessionId, userId }: PaymentSt
 		}
 	};
 
-	// Simple plan selection - no complex steps
-
 	return (
 		<div className="space-y-6">
-			{/* Billing Cycle Toggle - removed duplicate header */}
+			{/* Header text */}
 			<div className="text-center">
 				<p className="text-zinc-400 mb-6">
 					Select a plan to start your 7-day free trial. You won't be charged until the trial ends.
 				</p>
 
-				{/* Billing Cycle Toggle */}
-				<div className="flex items-center justify-center gap-4 mb-6">
-					<span
-						className={`text-sm ${billingCycle === 'monthly' ? 'text-zinc-100 font-medium' : 'text-zinc-500'}`}
-					>
-						Monthly
-					</span>
-					<button
-						onClick={() => {
-							const newCycle = billingCycle === 'monthly' ? 'yearly' : 'monthly';
-							setBillingCycle(newCycle);
-							OnboardingLogger.logStep3(
-								'BILLING-CYCLE-CHANGE',
-								'User changed billing cycle',
-								userId,
-								{
-									fromCycle: billingCycle,
-									toCycle: newCycle,
-									savings: newCycle === 'yearly' ? '20%' : 'none',
-								},
-								sessionId
-							);
-						}}
-						className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-							billingCycle === 'yearly' ? 'bg-pink-600' : 'bg-zinc-700'
-						}`}
-					>
-						<span
-							className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-								billingCycle === 'yearly' ? 'translate-x-6' : 'translate-x-1'
-							}`}
-						/>
-					</button>
-					<span
-						className={`text-sm ${billingCycle === 'yearly' ? 'text-zinc-100 font-medium' : 'text-zinc-500'}`}
-					>
-						Yearly
-					</span>
-					{billingCycle === 'yearly' && (
-						<Badge
-							variant="secondary"
-							className="bg-zinc-800 text-pink-400 border border-zinc-700/50"
-						>
-							Save 20%
-						</Badge>
-					)}
-				</div>
+				<BillingCycleToggle billingCycle={billingCycle} onToggle={handleBillingCycleToggle} />
 			</div>
 
 			{/* Plan Selection */}
 			<div className="grid gap-4">
-				{plans.map((plan) => {
-					const IconComponent = plan.icon;
-					const isSelected = selectedPlan === plan.id;
-
-					return (
-						<div key={plan.id} className="cursor-pointer" onClick={() => handlePlanSelect(plan.id)}>
-							<Card
-								className={`transition-all duration-200 ${
-									isSelected
-										? 'ring-2 ring-pink-500 border-pink-500 shadow-lg'
-										: 'border-zinc-700/50 hover:border-zinc-600 hover:shadow-md'
-								}`}
-							>
-								<CardHeader className="pb-3">
-									<div className="flex items-center justify-between">
-										<div className="flex items-center gap-3">
-											<div className={`p-2 rounded-full ${plan.color}`}>
-												<IconComponent className="h-5 w-5" />
-											</div>
-											<div>
-												<div className="flex items-center gap-2">
-													<CardTitle className="text-lg">{plan.name}</CardTitle>
-													{plan.popular && (
-														<Badge variant="default" className="bg-pink-600 text-white">
-															Popular
-														</Badge>
-													)}
-												</div>
-												<CardDescription>{plan.description}</CardDescription>
-											</div>
-										</div>
-										<div className="text-right">
-											<div className="text-2xl font-bold text-zinc-100">
-												{billingCycle === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice}
-											</div>
-											<div className="text-sm text-zinc-500">
-												{billingCycle === 'monthly' ? 'per month' : 'per month'}
-											</div>
-											{billingCycle === 'yearly' && (
-												<div className="text-xs text-zinc-400">
-													{plan.yearlyTotal} billed annually
-												</div>
-											)}
-										</div>
-									</div>
-								</CardHeader>
-								<CardContent>
-									<div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-										{plan.features.map((feature, index) => (
-											<div key={index} className="flex items-center gap-2 text-sm">
-												<CheckCircle className="h-4 w-4 text-pink-400 flex-shrink-0" />
-												<span>{feature}</span>
-											</div>
-										))}
-									</div>
-								</CardContent>
-							</Card>
-						</div>
-					);
-				})}
+				{PLAN_DISPLAY_CONFIGS.map((plan) => (
+					<PlanCard
+						key={plan.id}
+						plan={plan}
+						isSelected={selectedPlan === plan.id}
+						billingCycle={billingCycle}
+						onSelect={() => handlePlanSelect(plan.id)}
+					/>
+				))}
 			</div>
 
-			{/* Trial Information */}
-			<div className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg p-4">
-				<div className="flex items-start gap-3">
-					<Shield className="h-5 w-5 text-emerald-400 mt-0.5" />
-					<div>
-						<h3 className="font-medium text-zinc-100 mb-1">7-Day Free Trial Included</h3>
-						<p className="text-sm text-zinc-300">
-							Start your trial immediately after onboarding. Full access to all features during the
-							trial period.
-						</p>
-					</div>
-				</div>
-			</div>
-
-			{/* Payment Information */}
-			<div className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg p-4">
-				<div className="flex items-start gap-3">
-					<Lock className="h-5 w-5 text-pink-400 mt-0.5" />
-					<div>
-						<h3 className="font-medium text-zinc-100 mb-1">Secure Payment Processing</h3>
-						<p className="text-sm text-zinc-300 mb-2">
-							Payment method will be collected securely via Clerk's billing system after you
-							complete onboarding.
-						</p>
-						<ul className="text-sm text-zinc-300 space-y-1">
-							<li>• No charge during the 7-day trial</li>
-							<li>• Cancel anytime before trial ends</li>
-							<li>• Secure card storage with industry-standard encryption</li>
-							<li>• Change plans or cancel from your dashboard</li>
-						</ul>
-					</div>
-				</div>
-			</div>
+			{/* Info Cards */}
+			<TrialInfoCard />
+			<PaymentSecurityCard />
 
 			{/* Error Display */}
 			{error && (
@@ -487,7 +182,7 @@ export default function PaymentStep({ onComplete, sessionId, userId }: PaymentSt
 				</Alert>
 			)}
 
-			{/* Action Buttons */}
+			{/* Action Button */}
 			<div className="space-y-3">
 				<Button
 					onClick={handleStartTrial}
@@ -496,7 +191,7 @@ export default function PaymentStep({ onComplete, sessionId, userId }: PaymentSt
 				>
 					{isLoading ? (
 						<div className="flex items-center gap-2">
-							<div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+							<div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
 							Redirecting to secure checkout...
 						</div>
 					) : (
@@ -509,7 +204,7 @@ export default function PaymentStep({ onComplete, sessionId, userId }: PaymentSt
 				</Button>
 			</div>
 
-			{/* Additional Information */}
+			{/* Footer */}
 			<div className="text-center">
 				<p className="text-xs text-gray-500">
 					Questions about plans or pricing?{' '}

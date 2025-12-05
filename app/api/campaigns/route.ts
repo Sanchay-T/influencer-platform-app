@@ -1,112 +1,35 @@
 import { count, desc, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
+import { validateCampaignCreation } from '@/lib/billing';
 import { db } from '@/lib/db';
-import { campaigns, scrapingJobs } from '@/lib/db/schema';
-import BillingLogger from '@/lib/loggers/billing-logger';
+import { incrementUsage } from '@/lib/db/queries/user-queries';
+import { campaigns } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
-import { PlanValidator } from '@/lib/services/plan-validator';
 
-export const maxDuration = 10; // Aumentar el tiempo máximo de ejecución a 10 segundos
+export const maxDuration = 10;
 
 export async function POST(req: Request) {
-	const requestId = BillingLogger.generateRequestId();
-
 	try {
-		await BillingLogger.logAPI(
-			'REQUEST_START',
-			'Campaign creation API request started',
-			undefined,
-			{
-				endpoint: '/api/campaigns',
-				method: 'POST',
-				requestId,
-			},
-			requestId
-		);
-
 		const { userId } = await getAuthOrTest();
 
 		if (!userId) {
-			await BillingLogger.logAPI(
-				'REQUEST_ERROR',
-				'Campaign creation unauthorized',
-				undefined,
-				{
-					error: 'UNAUTHORIZED',
-					requestId,
-				},
-				requestId
-			);
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
 
-		await BillingLogger.logAPI(
-			'REQUEST_SUCCESS',
-			'User authenticated for campaign creation',
-			userId,
-			{ requestId },
-			requestId
-		);
-
-		// 🛡️ ENHANCED PLAN VALIDATION with detailed logging
-		await BillingLogger.logUsage(
-			'LIMIT_CHECK',
-			'Validating campaign creation limits',
-			userId,
-			{
-				usageType: 'campaigns',
-				action: 'create',
-			},
-			requestId
-		);
-
-		const validation = await PlanValidator.validateCampaignCreation(userId, requestId);
+		// Validate campaign creation limits
+		const validation = await validateCampaignCreation(userId);
 
 		if (!validation.allowed) {
-			await BillingLogger.logAccess(
-				'DENIED',
-				'Campaign creation denied due to plan limits',
-				userId,
-				{
-					resource: 'campaign_creation',
-					reason: validation.reason,
-					upgradeRequired: validation.upgradeRequired,
-					currentUsage: validation.currentUsage,
-					limit: validation.limit,
-					usagePercentage: validation.usagePercentage,
-				},
-				requestId
-			);
-
 			return NextResponse.json(
 				{
 					error: 'Plan limit exceeded',
 					message: validation.reason,
 					upgrade: validation.upgradeRequired,
-					currentUsage: validation.currentUsage,
-					limit: validation.limit,
-					usagePercentage: validation.usagePercentage,
-					recommendedPlan: validation.recommendedPlan,
-					warningThreshold: validation.warningThreshold,
 				},
 				{ status: 403 }
 			);
 		}
-
-		await BillingLogger.logAccess(
-			'GRANTED',
-			'Campaign creation approved',
-			userId,
-			{
-				resource: 'campaign_creation',
-				currentUsage: validation.currentUsage,
-				limit: validation.limit,
-				usagePercentage: validation.usagePercentage,
-				warningThreshold: validation.warningThreshold,
-			},
-			requestId
-		);
 
 		// Parse request body
 		const body = await req.json();
@@ -114,44 +37,7 @@ export async function POST(req: Request) {
 		const normalizedSearchType =
 			searchType === 'similar' ? 'similar' : searchType === 'keyword' ? 'keyword' : 'keyword';
 
-		if (!(searchType && ['keyword', 'similar'].includes(searchType))) {
-			await BillingLogger.logAPI(
-				'RESPONSE',
-				'Campaign search type defaulted to keyword',
-				userId,
-				{
-					providedType: searchType,
-					requestId,
-				},
-				requestId
-			);
-		}
-
-		await BillingLogger.logAPI(
-			'RESPONSE',
-			'Campaign data parsed successfully',
-			userId,
-			{
-				campaignName: name,
-				searchType,
-				hasDescription: !!description,
-			},
-			requestId
-		);
-
 		// Create campaign in database
-		await BillingLogger.logDatabase(
-			'CREATE',
-			'Creating new campaign in database',
-			userId,
-			{
-				table: 'campaigns',
-				operation: 'insert',
-				data: { name, searchType: normalizedSearchType, status: 'draft' },
-			},
-			requestId
-		);
-
 		const [campaign] = await db
 			.insert(campaigns)
 			.values({
@@ -163,92 +49,16 @@ export async function POST(req: Request) {
 			})
 			.returning();
 
-		await BillingLogger.logDatabase(
-			'CREATE',
-			'Campaign created successfully in database',
-			userId,
-			{
-				table: 'campaigns',
-				recordId: campaign.id,
-				campaignName: campaign.name,
-				searchType: normalizedSearchType,
-			},
-			requestId
-		);
-
-		// 📈 ENHANCED USAGE TRACKING with detailed logging
-		await BillingLogger.logUsage(
-			'CAMPAIGN_CREATE',
-			'Incrementing campaign usage counter',
-			userId,
-			{
-				campaignId: campaign.id,
-				campaignName: campaign.name,
-				searchType: normalizedSearchType,
-				usageType: 'campaigns',
-			},
-			requestId
-		);
-
-		await PlanValidator.incrementUsage(
-			userId,
-			'campaigns',
-			1,
-			{
-				campaignId: campaign.id,
-				campaignName: campaign.name,
-				searchType: campaign.searchType,
-			},
-			requestId
-		);
-
-		await BillingLogger.logAPI(
-			'REQUEST_SUCCESS',
-			'Campaign creation completed successfully',
-			userId,
-			{
-				campaignId: campaign.id,
-				campaignName: campaign.name,
-				searchType: normalizedSearchType,
-				executionTime: Date.now(),
-				requestId,
-			},
-			requestId
-		);
+		// Increment usage counter
+		await incrementUsage(userId, 'campaigns', 1);
 
 		return NextResponse.json(campaign);
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
-		await BillingLogger.logError(
-			'CAMPAIGN_CREATION_ERROR',
-			'Campaign creation failed',
-			undefined, // userId might not be available in catch
-			{
-				errorMessage,
-				errorType: error instanceof Error ? error.constructor.name : typeof error,
-				stack: error instanceof Error ? error.stack : undefined,
-				requestId,
-			},
-			requestId
-		);
-
-		await BillingLogger.logAPI(
-			'REQUEST_ERROR',
-			'Campaign creation API request failed',
-			undefined,
-			{
-				error: errorMessage,
-				requestId,
-			},
-			requestId
-		);
+		structuredConsole.error('Campaign creation failed', error);
 
 		return NextResponse.json(
-			{
-				error: 'Internal Server Error',
-				requestId,
-			},
+			{ error: 'Internal Server Error', message: errorMessage },
 			{ status: 500 }
 		);
 	}

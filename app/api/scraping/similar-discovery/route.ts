@@ -10,12 +10,12 @@
 import { eq } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
+import { validateCreatorSearch } from '@/lib/billing';
 import { db } from '@/lib/db';
 import { type JobStatus, scrapingJobs } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { qstash } from '@/lib/queue/qstash';
 import { normalizePageParams, paginateCreators } from '@/lib/search-engine/utils/pagination';
-import { PlanEnforcementService } from '@/lib/services/plan-enforcement';
 import { getWebhookUrl } from '@/lib/utils/url-utils';
 
 const TIMEOUT_MINUTES = 30;
@@ -89,22 +89,16 @@ export async function POST(req: NextRequest) {
 			: Math.max(100, Math.min(1000, Math.round(requestedTarget / 100) * 100));
 
 		// Plan enforcement
-		const planCheck = await PlanEnforcementService.validateJobCreation(userId, targetResults);
+		const planCheck = await validateCreatorSearch(userId, targetResults);
 		if (!planCheck.allowed) {
 			return NextResponse.json(
 				{
 					error: 'Plan limit exceeded',
 					message: planCheck.reason,
 					upgrade: true,
-					usage: planCheck.usage,
 				},
 				{ status: 403 }
 			);
-		}
-
-		let adjustedTargetResults = targetResults;
-		if (planCheck.adjustedLimit && planCheck.adjustedLimit < targetResults) {
-			adjustedTargetResults = planCheck.adjustedLimit;
 		}
 
 		// Create job with platform-specific identifier
@@ -119,7 +113,7 @@ export async function POST(req: NextRequest) {
 			.values({
 				userId,
 				targetUsername: sanitizedUsername,
-				targetResults: adjustedTargetResults,
+				targetResults: targetResults,
 				status: 'pending',
 				processedRuns: 0,
 				processedResults: 0,
@@ -178,7 +172,7 @@ export async function POST(req: NextRequest) {
 		return NextResponse.json({
 			jobId: job.id,
 			status: 'queued',
-			targetResults: adjustedTargetResults,
+			targetResults: targetResults,
 			platform: jobPlatform,
 		});
 	} catch (error: any) {

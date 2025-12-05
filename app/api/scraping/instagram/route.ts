@@ -1,14 +1,13 @@
 import { and, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
-
+import { validateCreatorSearch } from '@/lib/billing';
 import { db } from '@/lib/db';
 import { campaigns, type JobStatus, scrapingJobs } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { extractUsername } from '@/lib/platforms/instagram-similar/api';
 import { qstash } from '@/lib/queue/qstash';
 import { normalizePageParams, paginateCreators } from '@/lib/search-engine/utils/pagination';
-import { PlanEnforcementService } from '@/lib/services/plan-enforcement';
 import { getWebhookUrl } from '@/lib/utils/url-utils';
 
 const TIMEOUT_MINUTES = 60;
@@ -57,27 +56,20 @@ export async function POST(req: Request) {
 				.where(eq(campaigns.id, campaignId));
 		}
 
-		const planValidation = await PlanEnforcementService.validateJobCreation(
-			userId,
-			DEFAULT_TARGET_RESULTS
-		);
+		const planValidation = await validateCreatorSearch(userId, DEFAULT_TARGET_RESULTS);
 		if (!planValidation.allowed) {
 			return NextResponse.json(
 				{
 					error: 'Plan limit exceeded',
 					message: planValidation.reason,
 					upgrade: true,
-					usage: planValidation.usage,
 				},
 				{ status: 403 }
 			);
 		}
 
 		const sanitizedUsername = extractUsername(username);
-		const targetResults =
-			planValidation.adjustedLimit && planValidation.adjustedLimit < DEFAULT_TARGET_RESULTS
-				? planValidation.adjustedLimit
-				: DEFAULT_TARGET_RESULTS;
+		const targetResults = DEFAULT_TARGET_RESULTS;
 
 		const [job] = await db
 			.insert(scrapingJobs)

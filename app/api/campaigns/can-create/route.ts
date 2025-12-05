@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
+import { validateCampaignCreation } from '@/lib/billing';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
 import { structuredConsole } from '@/lib/logging/console-proxy';
-import { PlanValidator } from '@/lib/services/plan-validator';
 
 const logger = createCategoryLogger(LogCategory.BILLING);
 
@@ -11,7 +11,7 @@ export async function GET() {
 		const { userId } = await getAuthOrTest();
 		if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-		const validation = await PlanValidator.validateCampaignCreation(userId);
+		const validation = await validateCampaignCreation(userId);
 		if (!validation.allowed) {
 			return NextResponse.json(
 				{

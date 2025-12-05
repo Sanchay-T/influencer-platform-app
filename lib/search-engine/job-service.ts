@@ -2,9 +2,9 @@
 
 import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
+import { incrementUsage } from '@/lib/db/queries/user-queries';
 import { scrapingJobs, scrapingResults } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
-import { PlanValidator } from '@/lib/services/plan-validator';
 import { dedupeCreators as sharedDedupeCreators } from '@/lib/utils/dedupe-creators';
 import type { NormalizedCreator, ScrapingJobRecord, SearchMetricsSnapshot } from './types';
 
@@ -585,11 +585,7 @@ export class SearchJobService {
 		}
 
 		try {
-			await PlanValidator.incrementUsage(this.job.userId, 'creators', count, {
-				jobId: this.job.id,
-				platform: this.job.platform,
-				origin,
-			});
+			await incrementUsage(this.job.userId, 'creators', count);
 		} catch (error) {
 			logger.error(
 				'Failed to increment creator usage after job update',

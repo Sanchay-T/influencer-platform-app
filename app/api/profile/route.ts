@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
+import { getBillingStatus } from '@/lib/billing';
 import { createUser, getUserProfile } from '@/lib/db/queries/user-queries';
 import { structuredConsole } from '@/lib/logging/console-proxy';
-import { getTrialStatus } from '@/lib/trial/trial-service';
 
 export async function GET() {
 	try {
@@ -43,7 +43,7 @@ export async function GET() {
 		// Get trial status data
 		structuredConsole.log('🎯 [PROFILE-API-GET] Fetching trial status');
 		const trialStart = Date.now();
-		const trialData = await getTrialStatus(userId);
+		const trialData = await getBillingStatus(userId);
 		structuredConsole.log(
 			`⏱️ [PROFILE-API-GET:${reqId}] Trial service duration: ${Date.now() - trialStart}ms`
 		);

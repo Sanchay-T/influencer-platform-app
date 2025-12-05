@@ -17,7 +17,7 @@ export default function Page() {
 							card: 'shadow-xl border-0',
 						},
 					}}
-					fallbackRedirectUrl="/onboarding/step-1"
+					fallbackRedirectUrl="/dashboard"
 				/>
 			</div>
 		</div>

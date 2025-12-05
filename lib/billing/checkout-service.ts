@@ -38,6 +38,8 @@ export interface CheckoutParams {
 	plan: PlanKey;
 	interval: BillingInterval;
 	existingCustomerId?: string;
+	/** Origin URL for redirects (e.g., http://localhost:3001) - uses NEXT_PUBLIC_SITE_URL if not provided */
+	redirectOrigin?: string | null;
 }
 
 export interface CheckoutResult {
@@ -66,7 +68,7 @@ export class CheckoutService {
 	 * Create a checkout session for onboarding (new subscription with trial).
 	 */
 	static async createOnboardingCheckout(params: CheckoutParams): Promise<CheckoutResult> {
-		const { userId, email, plan, interval, existingCustomerId } = params;
+		const { userId, email, plan, interval, existingCustomerId, redirectOrigin } = params;
 
 		logger.info('Creating onboarding checkout session', {
 			userId,
@@ -83,7 +85,8 @@ export class CheckoutService {
 			throw new Error(`No price ID configured for plan: ${plan}, interval: ${interval}`);
 		}
 
-		const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+		// Use redirectOrigin if provided (from request), fallback to env var
+		const baseUrl = redirectOrigin || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
 		const session = await StripeClient.createCheckoutSession({
 			customerId: existingCustomerId,
@@ -117,10 +120,11 @@ export class CheckoutService {
 	}
 
 	/**
-	 * Create a checkout session for upgrading an existing subscription.
+	 * Create a checkout session for plan upgrades.
+	 * No trial period - upgrades are immediate.
 	 */
 	static async createUpgradeCheckout(params: CheckoutParams): Promise<UpgradeCheckoutResult> {
-		const { userId, email, plan, interval, existingCustomerId } = params;
+		const { userId, plan, interval, existingCustomerId, redirectOrigin } = params;
 
 		logger.info('Creating upgrade checkout session', {
 			userId,
@@ -142,7 +146,8 @@ export class CheckoutService {
 		}
 
 		const planConfig = getPlanConfig(plan);
-		const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+		// Use redirectOrigin if provided (from request), fallback to env var
+		const baseUrl = redirectOrigin || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
 		// For upgrades, no trial - immediate billing
 		const session = await StripeClient.createCheckoutSession({
@@ -192,7 +197,7 @@ export class CheckoutService {
 	static async createCheckout(
 		params: Omit<CheckoutParams, 'existingCustomerId'>
 	): Promise<CheckoutResult | UpgradeCheckoutResult> {
-		const { userId, email, plan, interval } = params;
+		const { userId, redirectOrigin } = params;
 
 		// Get user profile to check if they have an existing subscription
 		const user = await getUserProfile(userId);
@@ -202,6 +207,7 @@ export class CheckoutService {
 			return CheckoutService.createUpgradeCheckout({
 				...params,
 				existingCustomerId: user.stripeCustomerId,
+				redirectOrigin,
 			});
 		}
 
@@ -209,6 +215,7 @@ export class CheckoutService {
 		return CheckoutService.createOnboardingCheckout({
 			...params,
 			existingCustomerId: user?.stripeCustomerId || undefined,
+			redirectOrigin,
 		});
 	}
 
