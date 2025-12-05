@@ -132,3 +132,40 @@ export {
 	type Step2Data,
 	Step2Schema,
 } from './onboarding-service';
+
+// ═══════════════════════════════════════════════════════════════
+// FEATURE GATES
+// ═══════════════════════════════════════════════════════════════
+
+export {
+	// Functions
+	canExportFormat,
+	// Types
+	type FeatureCheckResult,
+	// Legacy class (deprecated)
+	FeatureGateService,
+	getUserFeatures,
+	getUserPlanKey,
+	hasAdvancedAnalytics,
+	hasApiAccess,
+	hasFeature,
+	hasPrioritySupport,
+	type UserFeaturesResult,
+} from './feature-gates';
+
+// ═══════════════════════════════════════════════════════════════
+// USAGE TRACKING
+// ═══════════════════════════════════════════════════════════════
+
+export {
+	// Functions
+	getUsageSummary,
+	// Types
+	type IncrementResult,
+	incrementCampaignCount,
+	incrementCreatorCount,
+	resetAllMonthlyUsage,
+	resetMonthlyUsage,
+	shouldResetUsage,
+	type UsageSummary,
+} from './usage-tracking';

@@ -1,11 +1,11 @@
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
+import { FeatureGateService } from '@/lib/billing';
 import { db } from '@/lib/db';
 import { scrapingJobs, scrapingResults } from '@/lib/db/schema';
 import { dedupeCreators, formatEmailsForCsv } from '@/lib/export/csv-utils';
 import { structuredConsole } from '@/lib/logging/console-proxy';
-import { FeatureGateService } from '@/lib/services/feature-gates';
 
 export async function GET(req: Request) {
 	try {
