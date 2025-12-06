@@ -1,6 +1,8 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from "react";
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
+import { useState, useEffect, useCallback } from "react";
 import CampaignCard from "./campaign-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
@@ -45,7 +47,7 @@ export default function CampaignList() {
   const [query, setQuery] = useState('');
   const [sortBy, setSortBy] = useState('newest'); // newest | updated | alpha
 
-  const fetchCampaigns = async (page = 1, retry = false) => {
+  const fetchCampaigns = useCallback(async (page = 1, retry = false) => {
     try {
       setLoading(true);
       setError(null);
@@ -62,7 +64,7 @@ export default function CampaignList() {
       setRetryCount(0);
       setTotalRetries(0); // Reset global retries on success
     } catch (error) {
-      console.error('Error detallado:', error);
+      structuredConsole.error('Error detallado:', error);
       setError(error.message);
       
       // Solo reintentamos errores de red o timeout, no errores de validación
@@ -88,11 +90,11 @@ export default function CampaignList() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pagination.limit, retryCount, totalRetries]);
 
   useEffect(() => {
     fetchCampaigns();
-  }, []);
+  }, [fetchCampaigns]);
 
   const handlePageChange = (page) => {
     fetchCampaigns(page);
@@ -213,8 +215,8 @@ export default function CampaignList() {
   return (
     <div className="space-y-6">
       {/* Controls: filters, search, sort */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
           {['all','draft','active','completed'].map((s) => {
             const isSelected = filterStatus === s
             return (
@@ -234,17 +236,17 @@ export default function CampaignList() {
             )
           })}
         </div>
-        <div className="flex items-center gap-3">
-          <div className="relative">
+        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 lg:w-auto">
+          <div className="relative w-full sm:w-64">
             <Input
               placeholder="Filter campaigns..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full sm:w-64 bg-zinc-800/60 border-zinc-700/50"
+              className="w-full bg-zinc-800/60 border-zinc-700/50"
             />
           </div>
           <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-36 sm:w-44 bg-zinc-800/60 border-zinc-700/50 text-zinc-200">
+            <SelectTrigger className="w-full sm:w-40 md:w-48 bg-zinc-800/60 border-zinc-700/50 text-zinc-200">
               <SelectValue placeholder="Sort by" />
             </SelectTrigger>
             <SelectContent className="bg-zinc-900 border-zinc-700/50">
@@ -256,7 +258,7 @@ export default function CampaignList() {
         </div>
       </div>
 
-      <div className="flex items-center justify-between text-xs text-zinc-400">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between text-xs text-zinc-400">
         <div>
           Showing {sorted.length} of {campaigns.length} on this page
         </div>

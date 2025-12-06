@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { ApifyClient as OriginalApifyClient } from 'apify-client';
 import { type CreatorResult } from '@/lib/db/schema'
 
@@ -50,7 +51,7 @@ export class ApifyClient {
 
     // Convertir el ID si es necesario al formato con tilde
     this.actorId = actorId.includes('/') ? actorId.replace('/', '~') : actorId;
-    console.log('🎭 Usando actor:', this.actorId);
+    structuredConsole.log('🎭 Usando actor:', this.actorId);
   }
 
   private formatSearchUrl(keyword: string): string {
@@ -60,7 +61,7 @@ export class ApifyClient {
 
   async startActor(options: ApifyRunOptions): Promise<ApifyRunResponse> {
     try {
-      console.log('🚀 Iniciando llamada a Apify API');
+      structuredConsole.log('🚀 Iniciando llamada a Apify API');
       
       // Convertir keywords en URLs de búsqueda
       const searchKeyword = options.keywords.join(' ');
@@ -74,12 +75,12 @@ export class ApifyClient {
         offset: options.offset || 0
       };
       
-      console.log('📤 Input:', JSON.stringify(input));
+      structuredConsole.log('📤 Input:', JSON.stringify(input));
 
       // Solo iniciar el run, no esperar a que termine
       const run = await this.client.actor(this.actorId).start(input);
       
-      console.log('✅ Run iniciado:', run);
+      structuredConsole.log('✅ Run iniciado:', run);
       return { 
         data: {
           id: run.id,
@@ -94,16 +95,16 @@ export class ApifyClient {
       };
 
     } catch (error) {
-      console.error('❌ Error en Apify:', error);
+      structuredConsole.error('❌ Error en Apify:', error);
       throw error;
     }
   }
 
   async checkRunStatus(runId: string): Promise<ApifyRunResponse['data']> {
     try {
-      console.log('🔍 Verificando estado del run:', runId);
+      structuredConsole.log('🔍 Verificando estado del run:', runId);
       const run = await this.client.run(runId).get();
-      console.log('📊 Estado actual:', run.status);
+      structuredConsole.log('📊 Estado actual:', run.status);
       
       return {
         id: run.id,
@@ -116,14 +117,14 @@ export class ApifyClient {
         exitCode: run.exitCode
       };
     } catch (error) {
-      console.error('❌ Error verificando run:', error);
+      structuredConsole.error('❌ Error verificando run:', error);
       throw error;
     }
   }
 
   async getDatasetItems(runId: string): Promise<CreatorResult[]> {
     try {
-      console.log('📊 Obteniendo items del run:', runId);
+      structuredConsole.log('📊 Obteniendo items del run:', runId);
       
       // Usar el cliente oficial para obtener los items
       const { items } = await this.client.dataset(runId).listItems();
@@ -155,10 +156,10 @@ export class ApifyClient {
           } satisfies CreatorResult;
         });
 
-      console.log(`✨ Items obtenidos: ${results.length}`);
+      structuredConsole.log(`✨ Items obtenidos: ${results.length}`);
       return results;
     } catch (error) {
-      console.error('❌ Error obteniendo dataset:', error);
+      structuredConsole.error('❌ Error obteniendo dataset:', error);
       throw error;
     }
   }

@@ -1,13 +1,13 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { StripeService } from '@/lib/stripe/stripe-service';
 import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
     
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -20,9 +20,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Get user profile
-    const profile = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.userId, userId)
-    });
+    const profile = await getUserProfile(userId);
 
     if (!profile || !profile.stripeCustomerId) {
       return NextResponse.json({ error: 'User profile or Stripe customer not found' }, { status: 404 });
@@ -38,7 +36,7 @@ export async function POST(req: NextRequest) {
     // Update user profile with payment method info
     const updateData: any = {
       paymentMethodId: paymentMethodId,
-      billingSyncStatus: 'payment_method_saved',
+      billingSyncStatus: 'payment_saved', // 13 chars - fits in varchar(20)
       updatedAt: new Date()
     };
 
@@ -65,11 +63,9 @@ export async function POST(req: NextRequest) {
       updateData.currentPlan = selectedPlan;
     }
 
-    await db.update(userProfiles)
-      .set(updateData)
-      .where(eq(userProfiles.userId, userId));
+    await updateUserProfile(userId, updateData);
 
-    console.log('✅ [STRIPE-SAVE-PAYMENT] Payment method saved successfully');
+    structuredConsole.log('✅ [STRIPE-SAVE-PAYMENT] Payment method saved successfully');
 
     return NextResponse.json({
       success: true,
@@ -83,7 +79,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ [STRIPE-SAVE-PAYMENT] Error:', error);
+    structuredConsole.error('❌ [STRIPE-SAVE-PAYMENT] Error:', error);
     return NextResponse.json(
       { error: 'Failed to save payment method' },
       { status: 500 }

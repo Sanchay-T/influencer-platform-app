@@ -1,5 +1,7 @@
 'use client';
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,7 +54,7 @@ export default function OnboardingModal({
     } else {
       OnboardingLogger.logModalEvent('CLOSE', step, user?.id, { finalStep: step }, sessionId);
     }
-  }, [isOpen]);
+  }, [isOpen, step, user?.id, initialStep, existingData, sessionId]);
 
   // Log step changes
   useEffect(() => {
@@ -63,7 +65,7 @@ export default function OnboardingModal({
         direction: 'forward'
       }, sessionId);
     }
-  }, [step, isOpen]);
+  }, [step, isOpen, user?.id, sessionId]);
 
   if (!isOpen) return null;
 
@@ -144,7 +146,7 @@ export default function OnboardingModal({
         toStep: 2
       }, sessionId);
     } catch (error) {
-      console.error('❌ Error saving step 1:', error);
+      structuredConsole.error('❌ Error saving step 1:', error);
       const errorMessage = error instanceof Error ? error.message : 'Something went wrong';
       
       await OnboardingLogger.logError('FORM-ERROR', 'Step 1 form submission failed', user?.id, {
@@ -163,8 +165,7 @@ export default function OnboardingModal({
   const handleStep2Submit = async () => {
     await OnboardingLogger.logStep2('FORM-VALIDATION', 'Starting step 2 form validation', user?.id, {
       brandDescriptionProvided: !!brandDescription.trim(),
-      brandDescriptionLength: brandDescription.length,
-      meetsMinLength: brandDescription.trim().length >= 50
+      brandDescriptionLength: brandDescription.length
     }, sessionId);
 
     if (!brandDescription.trim()) {
@@ -172,16 +173,6 @@ export default function OnboardingModal({
         error: 'MISSING_BRAND_DESCRIPTION'
       }, sessionId);
       setError('Please describe your brand and influencer preferences');
-      return;
-    }
-
-    if (brandDescription.trim().length < 50) {
-      await OnboardingLogger.logStep2('VALIDATION-ERROR', 'Step 2 validation failed - brand description too short', user?.id, {
-        error: 'DESCRIPTION_TOO_SHORT',
-        currentLength: brandDescription.trim().length,
-        requiredLength: 50
-      }, sessionId);
-      setError('Please provide more details (at least 50 characters)');
       return;
     }
 
@@ -238,7 +229,7 @@ export default function OnboardingModal({
         toStep: 3
       }, sessionId);
     } catch (error) {
-      console.error('❌ Error saving step 2:', error);
+      structuredConsole.error('❌ Error saving step 2:', error);
       const errorMessage = error instanceof Error ? error.message : 'Something went wrong';
       
       await OnboardingLogger.logError('FORM-ERROR', 'Step 2 form submission failed', user?.id, {
@@ -323,7 +314,7 @@ export default function OnboardingModal({
         finalData: data
       }, sessionId);
     } catch (error) {
-      console.error('❌ Error completing onboarding:', error);
+      structuredConsole.error('❌ Error completing onboarding:', error);
       const errorMessage = error instanceof Error ? error.message : 'Something went wrong';
       
       await OnboardingLogger.logError('COMPLETION-ERROR', 'Onboarding completion failed', user?.id, {
@@ -332,10 +323,10 @@ export default function OnboardingModal({
         stack: error instanceof Error ? error.stack : undefined
       }, sessionId);
       
-      toast.error('Something went wrong, but you can continue using the platform');
-      onComplete();
+      setError(errorMessage);
+      toast.error('We hit a snag finishing onboarding. Please try again.');
       
-      await OnboardingLogger.logModalEvent('CLOSE', 4, user?.id, {
+      await OnboardingLogger.logModalEvent('ERROR', 4, user?.id, {
         reason: 'COMPLETION_ERROR',
         error: errorMessage
       }, sessionId);
@@ -509,9 +500,7 @@ export default function OnboardingModal({
                       className="min-h-[120px] text-base resize-none bg-zinc-800/50 border-zinc-700/50 focus:border-primary"
                       disabled={isLoading}
                     />
-                    <div className="absolute bottom-2 right-2 text-xs text-zinc-400">
-                      {brandDescription.length}/500
-                    </div>
+      
                   </div>
 
                   <div className="flex items-start gap-2 p-3 bg-zinc-800/30 border border-zinc-700/50 rounded-lg">
@@ -556,7 +545,7 @@ export default function OnboardingModal({
                 <Button
                   onClick={handleStep2Submit}
                   className="w-full h-12 text-base bg-primary hover:bg-primary/90 text-primary-foreground"
-                  disabled={isLoading || brandDescription.trim().length < 50}
+                  disabled={isLoading || !brandDescription.trim()}
                 >
                   {isLoading ? (
                     <div className="flex items-center gap-2">
@@ -571,11 +560,6 @@ export default function OnboardingModal({
                   )}
                 </Button>
 
-                {brandDescription.trim().length < 50 && brandDescription.trim().length > 0 && (
-                  <p className="text-sm text-amber-400 text-center">
-                    Please provide more details (at least 50 characters) for better AI recommendations
-                  </p>
-                )}
               </CardContent>
             </>
           )}

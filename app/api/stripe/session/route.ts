@@ -1,5 +1,6 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -8,7 +9,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function GET(req: NextRequest) {
   try {
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
     
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -34,11 +35,15 @@ export async function GET(req: NextRequest) {
     // Get plan details
     const planId = session.metadata?.planId;
     const billing = session.metadata?.billing;
+    const sessionType = session.metadata?.type;
+    const isUpgrade = sessionType === 'upgrade_subscription';
 
-    console.log('🔍 [STRIPE-SESSION] Session details:', {
+    structuredConsole.log('🔍 [STRIPE-SESSION] Session details:', {
       sessionId,
       planId,
       billing,
+      sessionType,
+      isUpgrade,
       hasSubscription: !!session.subscription,
       metadata: session.metadata
     });
@@ -103,6 +108,7 @@ export async function GET(req: NextRequest) {
       planId,
       billing,
       plan,
+      isUpgrade, // ★ ADD: Flag to indicate if this is an upgrade vs initial onboarding
       subscription: {
         id: session.subscription?.id,
         status: session.subscription?.status,
@@ -114,7 +120,7 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ [STRIPE-SESSION] Error:', error);
+    structuredConsole.error('❌ [STRIPE-SESSION] Error:', error);
     return NextResponse.json(
       { error: 'Failed to retrieve session' },
       { status: 500 }

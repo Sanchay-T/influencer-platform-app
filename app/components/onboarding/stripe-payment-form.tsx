@@ -1,5 +1,7 @@
 'use client';
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
 import { useState, useEffect } from 'react';
 import { useStripe, useElements, CardElement } from '@stripe/react-stripe-js';
 import { Button } from '@/components/ui/button';
@@ -65,7 +67,7 @@ export default function StripePaymentForm({ selectedPlan, onSuccess, onError }: 
         const data = await response.json();
         setClientSecret(data.clientSecret);
       } catch (err) {
-        console.error('Error creating setup intent:', err);
+        structuredConsole.error('Error creating setup intent:', err);
         setError('Failed to initialize payment form');
       }
     };
@@ -136,7 +138,7 @@ export default function StripePaymentForm({ selectedPlan, onSuccess, onError }: 
         onSuccess(setupIntent.payment_method.id);
       }
     } catch (err) {
-      console.error('Payment error:', err);
+      structuredConsole.error('Payment error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Payment failed';
       setError(errorMessage);
       onError(errorMessage);

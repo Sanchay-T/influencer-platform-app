@@ -1,5 +1,7 @@
 'use client';
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,7 +31,7 @@ export default function TrialTestingPage() {
       const data = await response.json();
       setTrialStatus(data.currentTrialStatus);
     } catch (error) {
-      console.error('Error fetching trial status:', error);
+      structuredConsole.error('Error fetching trial status:', error);
     }
   };
 
@@ -59,13 +61,13 @@ export default function TrialTestingPage() {
       const result = await response.json();
       
       if (result.success) {
-        console.log('✅ Test action successful:', result);
+        structuredConsole.log('✅ Test action successful:', result);
         await fetchTrialStatus(); // Refresh status
       } else {
-        console.error('❌ Test action failed:', result.error);
+        structuredConsole.error('❌ Test action failed:', result.error);
       }
     } catch (error) {
-      console.error('❌ Error executing test action:', error);
+      structuredConsole.error('❌ Error executing test action:', error);
     } finally {
       setIsLoading(false);
     }

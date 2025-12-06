@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import { Protect as ClerkProtect } from '@clerk/nextjs'
 import { useFeatureAccess, usePlanAccess, useBilling } from '@/lib/hooks/use-billing'
@@ -25,9 +25,12 @@ export function Protect({
   fallback, 
   showUpgradePrompt = true 
 }: ProtectProps) {
+  const featureAccess = useFeatureAccess(feature)
+  const planAccess = usePlanAccess(plan)
+
   // Use feature access if feature is specified
   if (feature) {
-    const { hasAccess, isLoaded, currentPlan } = useFeatureAccess(feature)
+    const { hasAccess, isLoaded, currentPlan } = featureAccess
     
     if (!isLoaded) {
       return (
@@ -54,7 +57,7 @@ export function Protect({
 
   // Use plan access if plan is specified
   if (plan) {
-    const { hasAccess, isLoaded } = usePlanAccess(plan)
+    const { hasAccess, isLoaded } = planAccess
     
     if (!isLoaded) {
       return (

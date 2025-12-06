@@ -1,7 +1,9 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { db } from '@/lib/db';
-import { userProfiles, campaigns } from '@/lib/db/schema';
+import { campaigns } from '@/lib/db/schema';
+import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
 import { eq, count } from 'drizzle-orm';
 
 export async function GET() {
@@ -10,16 +12,16 @@ export async function GET() {
 
 export async function POST() {
   try {
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
     
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // For now, allow any authenticated user to run this (remove in production)
-    console.log('⚠️ [ADMIN-BACKFILL] Running campaign count backfill as user:', userId);
+    structuredConsole.log('⚠️ [ADMIN-BACKFILL] Running campaign count backfill as user:', userId);
 
-    console.log('🔧 [ADMIN-BACKFILL] Starting campaign count backfill process');
+    structuredConsole.log('🔧 [ADMIN-BACKFILL] Starting campaign count backfill process');
 
     // Get all users who have campaigns
     const usersWithCampaigns = await db
@@ -30,7 +32,7 @@ export async function POST() {
       .from(campaigns)
       .groupBy(campaigns.userId);
 
-    console.log(`📊 [ADMIN-BACKFILL] Found ${usersWithCampaigns.length} users with campaigns`);
+    structuredConsole.log(`📊 [ADMIN-BACKFILL] Found ${usersWithCampaigns.length} users with campaigns`);
 
     let updatedCount = 0;
     let errorCount = 0;
@@ -38,20 +40,14 @@ export async function POST() {
 
     for (const userCampaignData of usersWithCampaigns) {
       try {
-        console.log(`🔍 [ADMIN-BACKFILL] Processing user: ${userCampaignData.userId} with ${userCampaignData.campaignCount} campaigns`);
+        structuredConsole.log(`🔍 [ADMIN-BACKFILL] Processing user: ${userCampaignData.userId} with ${userCampaignData.campaignCount} campaigns`);
         
         // Get current usage count from database
-        const userProfile = await db.query.userProfiles.findFirst({
-          where: eq(userProfiles.userId, userCampaignData.userId),
-          columns: { 
-            userId: true, 
-            usageCampaignsCurrent: true 
-          }
-        });
+        const userProfile = await getUserProfile(userCampaignData.userId);
 
         if (!userProfile) {
           const result = `⚠️ No user profile found for ${userCampaignData.userId}`;
-          console.log(`⚠️ [ADMIN-BACKFILL] ${result}`);
+          structuredConsole.log(`⚠️ [ADMIN-BACKFILL] ${result}`);
           results.push(result);
           continue;
         }
@@ -61,26 +57,23 @@ export async function POST() {
 
         if (currentUsage !== actualCount) {
           // Update the usage count to match actual campaign count
-          await db.update(userProfiles)
-            .set({ 
-              usageCampaignsCurrent: actualCount,
-              updatedAt: new Date() 
-            })
-            .where(eq(userProfiles.userId, userCampaignData.userId));
+          await updateUserProfile(userCampaignData.userId, {
+            usageCampaignsCurrent: actualCount,
+          });
           
           updatedCount++;
           const result = `✅ Updated ${userCampaignData.userId}: ${currentUsage} → ${actualCount} campaigns`;
-          console.log(`✅ [ADMIN-BACKFILL] ${result}`);
+          structuredConsole.log(`✅ [ADMIN-BACKFILL] ${result}`);
           results.push(result);
         } else {
           const result = `✓ Skipped ${userCampaignData.userId}: already correct (${actualCount} campaigns)`;
-          console.log(`✓ [ADMIN-BACKFILL] ${result}`);
+          structuredConsole.log(`✓ [ADMIN-BACKFILL] ${result}`);
           results.push(result);
         }
       } catch (error) {
         errorCount++;
         const result = `❌ Failed ${userCampaignData.userId}: ${error}`;
-        console.error(`❌ [ADMIN-BACKFILL] ${result}`);
+        structuredConsole.error(`❌ [ADMIN-BACKFILL] ${result}`);
         results.push(result);
       }
     }
@@ -93,12 +86,12 @@ export async function POST() {
       message: `Campaign count backfill complete: ${updatedCount} users updated, ${errorCount} errors`
     };
 
-    console.log('🎉 [ADMIN-BACKFILL] Campaign count backfill process completed:', result);
+    structuredConsole.log('🎉 [ADMIN-BACKFILL] Campaign count backfill process completed:', result);
 
     return NextResponse.json(result);
 
   } catch (error) {
-    console.error('💥 [ADMIN-BACKFILL] Campaign count backfill process failed:', error);
+    structuredConsole.error('💥 [ADMIN-BACKFILL] Campaign count backfill process failed:', error);
     return NextResponse.json({ 
       error: 'Campaign count backfill failed',
       details: error instanceof Error ? error.message : 'Unknown error'

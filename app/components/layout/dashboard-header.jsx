@@ -1,25 +1,19 @@
-'use client'
+'use client';
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
-import { Search, PlusCircle, Menu } from 'lucide-react'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
+import { Menu, PlusCircle, Search } from 'lucide-react'
+
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { useBilling } from '@/lib/hooks/use-billing'
+import { cn } from '@/lib/utils'
 
 export default function DashboardHeader({ onToggleSidebar, isSidebarOpen }) {
-  const pathname = usePathname()
   const router = useRouter()
   const [q, setQ] = useState('')
   const inputRef = useRef(null)
-
-  const tabs = [
-    { name: 'Dashboard', href: '/dashboard' },
-    { name: 'Campaigns', href: '/' },
-    // Removed "Influencers" tab to avoid clutter in navbar
-  ]
 
   // Gate: whether user can create more campaigns (use billing hook to avoid duplicate fetch)
   const { isLoaded: billingLoaded, usageInfo } = useBilling()
@@ -60,39 +54,26 @@ export default function DashboardHeader({ onToggleSidebar, isSidebarOpen }) {
 
   return (
     <div className="sticky top-0 z-50 border-b border-zinc-700/50 bg-zinc-900/90 backdrop-blur supports-[backdrop-filter]:bg-zinc-900/70">
-      <div className="px-4 sm:px-6 md:px-8 py-2">
-        <div className="flex items-center justify-between">
+      <div className="px-4 py-2 sm:px-6 md:px-8">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            {/* Mobile: sidebar toggle */}
+            {/* Global sidebar toggle */}
             <button
               type="button"
               aria-label="Toggle sidebar"
+              aria-pressed={isSidebarOpen}
               onClick={onToggleSidebar}
-              className="mr-1 inline-flex items-center justify-center rounded-md p-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 focus:outline-none focus:ring-2 focus:ring-pink-500/30 lg:hidden"
+              className={cn(
+                'mr-1 inline-flex items-center justify-center rounded-md p-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/50 focus:outline-none focus:ring-2 focus:ring-pink-500/30 lg:hidden',
+                isSidebarOpen && 'bg-zinc-800/60 text-zinc-100'
+              )}
             >
               <Menu className="h-5 w-5" />
             </button>
-            {tabs.map((t) => {
-              const isActive = pathname === t.href
-              return (
-                <Link
-                  key={t.name}
-                  href={t.href}
-                  className={cn(
-                    'text-sm font-medium px-3 pb-2 transition-colors border-b-2',
-                    isActive
-                      ? 'text-zinc-100 border-pink-400'
-                      : 'text-zinc-400 border-transparent hover:text-zinc-200 hover:border-pink-400/50'
-                  )}
-                >
-                  {t.name}
-                </Link>
-              )
-            })}
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="relative">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end sm:gap-3">
+            <div className="relative w-full sm:w-auto">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
               <Input
                 ref={inputRef}
@@ -100,20 +81,24 @@ export default function DashboardHeader({ onToggleSidebar, isSidebarOpen }) {
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 onKeyDown={onKeyDown}
-                className="h-9 pl-10 bg-zinc-800/60 border-zinc-700/50 focus:border-pink-400/60 focus:ring-2 focus:ring-pink-500/20 placeholder:text-zinc-500 transition-all w-44 sm:w-60 md:w-72 max-w-[60vw]"
+                className="h-9 w-full max-w-full border-zinc-700/50 bg-zinc-800/60 pl-10 placeholder:text-zinc-500 focus:border-pink-400/60 focus:ring-2 focus:ring-pink-500/20 sm:w-60 md:w-72 lg:w-80"
               />
             </div>
             {/* Single global CTA with plan gating */}
             {canCreateCampaign ? (
-              <Link href="/campaigns/new">
-                <Button size="sm" className="bg-pink-600 hover:bg-pink-500 text-white" disabled={loadingGate}>
-                  <PlusCircle className="h-4 w-4 mr-2" />
+              <Link href="/campaigns/new" className="w-full sm:w-auto">
+                <Button
+                  size="sm"
+                  className="w-full bg-pink-600 text-white hover:bg-pink-500"
+                  disabled={loadingGate}
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" />
                   Create Campaign
                 </Button>
               </Link>
             ) : (
-              <Link href="/billing">
-                <Button size="sm" className="bg-pink-600 hover:bg-pink-500 text-white">
+              <Link href="/billing" className="w-full sm:w-auto">
+                <Button size="sm" className="w-full bg-pink-600 text-white hover:bg-pink-500">
                   Upgrade
                 </Button>
               </Link>

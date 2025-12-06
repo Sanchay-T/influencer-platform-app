@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 export const saveCampaign = (campaign) => {
   const campaigns = JSON.parse(localStorage.getItem('campaigns') || '[]');

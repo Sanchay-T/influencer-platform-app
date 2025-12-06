@@ -1,7 +1,10 @@
+import { headers } from 'next/headers';
 import { db } from '@/lib/db';
-import { userProfiles, campaigns, scrapingJobs } from '@/lib/db/schema';
+import { campaigns, scrapingJobs, subscriptionPlans, users, userUsage } from '@/lib/db/schema';
+import { getUserProfile, incrementUsage } from '@/lib/db/queries/user-queries';
 import { eq, count, and, gte, sql } from 'drizzle-orm';
 import BillingLogger from '@/lib/loggers/billing-logger';
+import { logger, LogCategory } from '@/lib/logging';
 
 // Plan configuration with all limits and features
 export interface PlanConfig {
@@ -18,12 +21,15 @@ export interface PlanConfig {
   };
 }
 
+// Plan configurations - limits come from DB subscription_plans, these are fallback defaults
+// Note: 'free' is NOT an actual plan - it's a fallback config for users with NULL currentPlan
+// (i.e., users who haven't completed onboarding/payment yet). It has 0 limits to block all actions.
 export const PLAN_CONFIGS: Record<string, PlanConfig> = {
   'free': {
     id: 'free',
-    name: 'Free Plan',
-    campaignsLimit: 0,
-    creatorsLimit: 0,
+    name: 'No Plan (Onboarding Incomplete)', // Clarify this is not a real plan
+    campaignsLimit: 0,  // Block all campaigns
+    creatorsLimit: 0,   // Block all searches
     features: {
       analytics: 'basic',
       support: 'email',
@@ -116,10 +122,8 @@ export class PlanValidator {
         logRequestId
       );
 
-      // Get user profile
-      const userProfile = await db.query.userProfiles.findFirst({
-        where: eq(userProfiles.userId, userId)
-      });
+      // Get user profile using normalized tables
+      const userProfile = await getUserProfile(userId);
 
       if (!userProfile) {
         await BillingLogger.logError(
@@ -132,9 +136,40 @@ export class PlanValidator {
         return null;
       }
 
-      // Get plan config
+      // Get plan config: resolve limits from subscription_plans (DB), fallback features from legacy map
       const currentPlan = userProfile.currentPlan || 'free';
-      const planConfig = PLAN_CONFIGS[currentPlan];
+      const planDefaults = PLAN_CONFIGS[currentPlan] || PLAN_CONFIGS['free'];
+
+      let campaignsLimit = planDefaults.campaignsLimit;
+      let creatorsLimit = planDefaults.creatorsLimit;
+      try {
+        const planRow = await db.query.subscriptionPlans.findFirst({
+          where: eq(subscriptionPlans.planKey, currentPlan)
+        });
+        if (planRow) {
+          campaignsLimit = planRow.campaignsLimit ?? campaignsLimit;
+          creatorsLimit = planRow.creatorsLimit ?? creatorsLimit;
+        }
+      } catch (e) {
+        // Database lookup failed - log the error and fall back to hardcoded defaults
+        logger.error('Plan config database lookup failed, using fallback defaults', e instanceof Error ? e : new Error(String(e)), {
+          currentPlan,
+          fallbackLimits: {
+            campaignsLimit: planDefaults.campaignsLimit,
+            creatorsLimit: planDefaults.creatorsLimit
+          },
+          errorType: e instanceof Error ? e.constructor.name : typeof e,
+          message: e instanceof Error ? e.message : String(e)
+        }, LogCategory.BILLING);
+      }
+
+      const planConfig: PlanConfig = {
+        id: currentPlan,
+        name: planDefaults.name,
+        campaignsLimit,
+        creatorsLimit,
+        features: planDefaults.features
+      };
       
       if (!planConfig) {
         await BillingLogger.logError(
@@ -225,6 +260,18 @@ export class PlanValidator {
    */
   static async validateCampaignCreation(userId: string, requestId?: string): Promise<ValidationResult> {
     const logRequestId = requestId || BillingLogger.generateRequestId();
+
+    const bypass = await this.getPlanBypassResult('campaigns');
+    if (bypass) {
+      await BillingLogger.logAccess(
+        'GRANTED',
+        'Campaign creation allowed via plan validation bypass (testing)',
+        userId,
+        { resource: 'campaign_creation', bypass: true },
+        logRequestId
+      );
+      return bypass;
+    }
     
     await BillingLogger.logUsage(
       'LIMIT_CHECK',
@@ -246,8 +293,8 @@ export class PlanValidator {
     // Check if subscription/trial is active
     if (!planStatus.isActive) {
       // 🔒 SECURITY: Special handling for paid plans without completed onboarding
-      const userProfile = await db.query.userProfiles.findFirst({
-        where: eq(userProfiles.userId, userId)
+      const userProfile = await db.query.users.findFirst({
+        where: eq(users.userId, userId)
       });
       
       const isPaidPlan = planStatus.currentPlan !== 'free';
@@ -369,6 +416,23 @@ export class PlanValidator {
    */
   static async validateCreatorSearch(userId: string, estimatedResults: number = 100, searchType?: string, requestId?: string): Promise<ValidationResult> {
     const logRequestId = requestId || BillingLogger.generateRequestId();
+
+    const bypass = await this.getPlanBypassResult('creators');
+    if (bypass) {
+      await BillingLogger.logAccess(
+        'GRANTED',
+        'Creator search allowed via plan validation bypass (testing)',
+        userId,
+        {
+          resource: 'creator_search',
+          searchType,
+          estimatedResults,
+          bypass: true
+        },
+        logRequestId
+      );
+      return bypass;
+    }
     
     await BillingLogger.logUsage(
       'LIMIT_CHECK',
@@ -537,6 +601,45 @@ export class PlanValidator {
     return { allowed: true };
   }
 
+  private static async getPlanBypassResult(scope: 'campaigns' | 'creators'): Promise<ValidationResult | null> {
+    if (process.env.NODE_ENV === 'production') return null;
+
+    const normalize = (value?: string | null) =>
+      value
+        ?.split(',')
+        .map((entry) => entry.trim().toLowerCase())
+        .filter(Boolean) ?? [];
+
+    const envBypass = normalize(process.env.PLAN_VALIDATION_BYPASS);
+    if (envBypass.includes('all') || envBypass.includes(scope)) {
+      return {
+        allowed: true,
+        reason: 'Plan validation bypassed for testing',
+        currentUsage: 0,
+        limit: -1,
+        usagePercentage: 0,
+      };
+    }
+
+    try {
+      const headerStore = await headers();
+      const headerBypass = normalize(headerStore.get('x-plan-bypass'));
+      if (headerBypass.includes('all') || headerBypass.includes(scope)) {
+        return {
+          allowed: true,
+          reason: 'Plan validation bypassed for testing',
+          currentUsage: 0,
+          limit: -1,
+          usagePercentage: 0,
+        };
+      }
+    } catch {
+      // headers() unavailable outside request context; ignore.
+    }
+
+    return null;
+  }
+
   /**
    * Increment usage counters after successful operations
    */
@@ -556,21 +659,8 @@ export class PlanValidator {
         logRequestId
       );
 
-      if (type === 'campaigns') {
-        await db.update(userProfiles)
-          .set({
-            usageCampaignsCurrent: sql`${userProfiles.usageCampaignsCurrent} + ${amount}`,
-            updatedAt: new Date()
-          })
-          .where(eq(userProfiles.userId, userId));
-      } else if (type === 'creators') {
-        await db.update(userProfiles)
-          .set({
-            usageCreatorsCurrentMonth: sql`${userProfiles.usageCreatorsCurrentMonth} + ${amount}`,
-            updatedAt: new Date()
-          })
-          .where(eq(userProfiles.userId, userId));
-      }
+      // Use the new helper function for normalized tables
+      await incrementUsage(userId, type, amount);
 
       await BillingLogger.logDatabase(
         'UPDATE',
@@ -685,13 +775,13 @@ export class PlanValidator {
         logRequestId
       );
 
-      await db.update(userProfiles)
+      await db.update(userUsage)
         .set({
           usageCreatorsCurrentMonth: 0,
           usageResetDate: new Date(),
           updatedAt: new Date()
         })
-        .where(eq(userProfiles.userId, userId));
+        .where(eq(userUsage.userId, userId as any));
 
     } catch (error) {
       await BillingLogger.logError(

@@ -1,4 +1,5 @@
-import { auth } from '@clerk/nextjs/server'
+import { structuredConsole } from '@/lib/logging/console-proxy';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test'
 import { db } from '@/lib/db'
 import { campaigns, scrapingJobs } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
       requestId
     );
 
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
     
     if (!userId) {
       await BillingLogger.logAPI(
@@ -107,6 +108,25 @@ export async function POST(req: Request) {
     // Parse request body
     const body = await req.json();
     const { name, description, searchType } = body;
+    const normalizedSearchType =
+      searchType === 'similar'
+        ? 'similar'
+        : searchType === 'keyword'
+          ? 'keyword'
+          : 'keyword';
+
+    if (!searchType || !['keyword', 'similar'].includes(searchType)) {
+      await BillingLogger.logAPI(
+        'RESPONSE',
+        'Campaign search type defaulted to keyword',
+        userId,
+        {
+          providedType: searchType,
+          requestId
+        },
+        requestId
+      );
+    }
 
     await BillingLogger.logAPI(
       'RESPONSE',
@@ -128,7 +148,7 @@ export async function POST(req: Request) {
       {
         table: 'campaigns',
         operation: 'insert',
-        data: { name, searchType, status: 'draft' }
+        data: { name, searchType: normalizedSearchType, status: 'draft' }
       },
       requestId
     );
@@ -137,7 +157,7 @@ export async function POST(req: Request) {
       userId: userId,
       name,
       description,
-      searchType,
+      searchType: normalizedSearchType,
       status: 'draft'
     }).returning();
 
@@ -149,7 +169,7 @@ export async function POST(req: Request) {
         table: 'campaigns',
         recordId: campaign.id,
         campaignName: campaign.name,
-        searchType: campaign.searchType
+        searchType: normalizedSearchType
       },
       requestId
     );
@@ -162,7 +182,7 @@ export async function POST(req: Request) {
       {
         campaignId: campaign.id,
         campaignName: campaign.name,
-        searchType: campaign.searchType,
+        searchType: normalizedSearchType,
         usageType: 'campaigns'
       },
       requestId
@@ -187,7 +207,7 @@ export async function POST(req: Request) {
       {
         campaignId: campaign.id,
         campaignName: campaign.name,
-        searchType: campaign.searchType,
+        searchType: normalizedSearchType,
         executionTime: Date.now(),
         requestId
       },
@@ -231,27 +251,27 @@ export async function POST(req: Request) {
 }
 
 export async function GET(request: Request) {
-  console.log('\n\n====== CAMPAIGNS API GET CALLED ======');
-  console.log('🔍 [CAMPAIGNS-API] GET request received at:', new Date().toISOString());
+  structuredConsole.log('\n\n====== CAMPAIGNS API GET CALLED ======');
+  structuredConsole.log('🔍 [CAMPAIGNS-API] GET request received at:', new Date().toISOString());
   try {
-    console.log('🔐 [CAMPAIGNS-API] Getting authenticated user from Clerk');
-    const { userId } = await auth()
+    structuredConsole.log('🔐 [CAMPAIGNS-API] Getting authenticated user from Clerk');
+    const { userId } = await getAuthOrTest()
     
     if (!userId) {
-      console.error('❌ [CAMPAIGNS-API] Unauthorized - No valid user session');
+      structuredConsole.error('❌ [CAMPAIGNS-API] Unauthorized - No valid user session');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    console.log('✅ [CAMPAIGNS-API] User authenticated', { userId });
+    structuredConsole.log('✅ [CAMPAIGNS-API] User authenticated', { userId });
 
     const url = new URL(request.url)
     const page = parseInt(url.searchParams.get('page') || '1')
     const limit = parseInt(url.searchParams.get('limit') || '10')
     const offset = (page - 1) * limit
     
-    console.log('🔍 [CAMPAIGNS-API] Fetching campaigns with pagination', { page, limit, offset });
+    structuredConsole.log('🔍 [CAMPAIGNS-API] Fetching campaigns with pagination', { page, limit, offset });
 
     // Realizar ambas consultas en paralelo
-    console.log('🔄 [CAMPAIGNS-API] Executing parallel database queries');
+    structuredConsole.log('🔄 [CAMPAIGNS-API] Executing parallel database queries');
     const [totalCount, userCampaigns] = await Promise.all([
       // Consulta optimizada para contar
       db.select({ count: count() }).from(campaigns)
@@ -287,7 +307,7 @@ export async function GET(request: Request) {
       })
     ]);
 
-    console.log('✅ [CAMPAIGNS-API] Campaigns fetched successfully', { 
+    structuredConsole.log('✅ [CAMPAIGNS-API] Campaigns fetched successfully', { 
       totalCount, 
       fetchedCount: userCampaigns.length,
       pagination: {
@@ -313,7 +333,7 @@ export async function GET(request: Request) {
     }, { headers });
 
   } catch (error: any) {
-    console.error('💥 [CAMPAIGNS-API] Error fetching campaigns:', error);
+    structuredConsole.error('💥 [CAMPAIGNS-API] Error fetching campaigns:', error);
     return NextResponse.json(
       { error: 'Error al cargar campañas', details: error?.message || 'Unknown error' },
       { status: 500 }

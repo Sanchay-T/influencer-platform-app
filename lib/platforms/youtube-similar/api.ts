@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 /**
  * YouTube Similar Creator Search - API Integration with ScrapeCreators
  */
@@ -11,7 +12,7 @@ const YOUTUBE_BASE_URL = 'https://api.scrapecreators.com/v1/youtube';
  * Get YouTube channel profile data
  */
 export async function getYouTubeChannelProfile(handle: string): Promise<YouTubeChannelProfile> {
-  console.log('🔍 [YOUTUBE-API] Fetching channel profile for:', handle);
+  structuredConsole.log('🔍 [YOUTUBE-API] Fetching channel profile for:', handle);
   
   const url = `${YOUTUBE_BASE_URL}/channel?handle=${encodeURIComponent(handle)}`;
   
@@ -23,12 +24,12 @@ export async function getYouTubeChannelProfile(handle: string): Promise<YouTubeC
   
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('❌ [YOUTUBE-API] Channel profile fetch failed:', response.status, errorText);
+    structuredConsole.error('❌ [YOUTUBE-API] Channel profile fetch failed:', response.status, errorText);
     throw new Error(`YouTube Channel API error: ${response.status} - ${errorText}`);
   }
   
   const data = await response.json();
-  console.log('✅ [YOUTUBE-API] Channel profile fetched successfully:', data.name);
+  structuredConsole.log('✅ [YOUTUBE-API] Channel profile fetched successfully:', data.name);
   
   return {
     id: data.id || handle,
@@ -47,7 +48,7 @@ export async function getYouTubeChannelProfile(handle: string): Promise<YouTubeC
  */
 export async function searchYouTubeWithKeywords(keywords: string[]): Promise<YouTubeSearchResponse> {
   const searchQuery = keywords.slice(0, 3).join(' '); // Use top 3 keywords
-  console.log('🔍 [YOUTUBE-API] Searching with keywords:', searchQuery);
+  structuredConsole.log('🔍 [YOUTUBE-API] Searching with keywords:', searchQuery);
   
   const url = `${YOUTUBE_BASE_URL}/search?query=${encodeURIComponent(searchQuery)}`;
   
@@ -59,12 +60,12 @@ export async function searchYouTubeWithKeywords(keywords: string[]): Promise<You
   
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('❌ [YOUTUBE-API] Search failed:', response.status, errorText);
+    structuredConsole.error('❌ [YOUTUBE-API] Search failed:', response.status, errorText);
     throw new Error(`YouTube Search API error: ${response.status} - ${errorText}`);
   }
   
   const data = await response.json();
-  console.log('✅ [YOUTUBE-API] Search completed:', {
+  structuredConsole.log('✅ [YOUTUBE-API] Search completed:', {
     query: searchQuery,
     videosFound: data.videos?.length || 0
   });

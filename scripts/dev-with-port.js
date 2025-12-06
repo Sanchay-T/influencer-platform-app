@@ -34,7 +34,7 @@ try {
   process.exit(1);
 }
 
-const child = spawn(process.execPath, [nextBin, 'dev', '-p', String(port)], {
+const child = spawn(process.execPath, [nextBin, 'dev', '--turbo', '-p', String(port)], {
   stdio: 'inherit',
   env: { ...process.env, PORT: String(port) },
 });

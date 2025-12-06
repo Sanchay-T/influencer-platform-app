@@ -1,6 +1,7 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { userProfiles, campaigns, scrapingJobs, scrapingResults } from '../lib/db/schema';
+import { campaigns, scrapingJobs, scrapingResults } from '../lib/db/schema';
+import { getUserProfile, updateUserProfile } from '../lib/db/queries/user-queries';
 import { eq, sql } from 'drizzle-orm';
 
 // Database connection
@@ -13,18 +14,17 @@ if (!connectionString) {
 const postgresClient = postgres(connectionString);
 const db = drizzle(postgresClient);
 
-const TARGET_USER_ID = 'user_2zRnraoVNDAegfHnci1xUMWybwz';
+// Use development test user ID from environment
+const TARGET_USER_ID = process.env.TEST_USER_ID || 'b9b65707-10e9-4d2b-85eb-130f513d7c59';
 
 async function resetUserToFreshState() {
   console.log('🔧 [USER-RESET] Starting complete user reset for:', TARGET_USER_ID);
   console.log('⚠️ [USER-RESET] This will delete ALL user data and reset to fresh onboarding state\n');
 
   try {
-    // Step 1: Get current user state
+    // Step 1: Get current user state using NEW normalized tables
     console.log('📊 [USER-RESET] Current user state:');
-    const currentState = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.userId, TARGET_USER_ID)
-    });
+    const currentState = await getUserProfile(TARGET_USER_ID);
 
     if (!currentState) {
       console.log('❌ [USER-RESET] User not found in database');
@@ -76,54 +76,50 @@ async function resetUserToFreshState() {
       console.log(`   ✅ Deleted ${campaignCount.count} campaigns`);
     }
 
-    // Step 6: Reset user profile to fresh state
+    // Step 6: Reset user profile to fresh state using NEW normalized update function
     console.log('🔄 [USER-RESET] Resetting user profile to fresh onboarding state...');
     
     const now = new Date();
     const trialEndDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
 
-    await db.update(userProfiles)
-      .set({
-        // Onboarding reset
-        onboardingStep: 'pending',
-        
-        // Trial system - Fresh 7-day trial
-        trialStartDate: now,
-        trialEndDate: trialEndDate,
-        trialStatus: 'active',
-        
-        // Plan reset to free tier
-        currentPlan: 'free',
-        subscriptionStatus: 'none',
-        
-        // Reset all plan limits
-        planCampaignsLimit: 0,  // Free plan has 0 campaigns
-        planCreatorsLimit: 0,   // Free plan has 0 creators
-        planFeatures: {},
-        
-        // Reset usage tracking
-        usageCampaignsCurrent: 0,
-        usageCreatorsCurrentMonth: 0,
-        usageResetDate: now,
-        
-        // Clear Stripe data
-        stripeCustomerId: null,
-        stripeSubscriptionId: null,
-        paymentMethodId: null,
-        cardBrand: null,
-        cardLast4: null,
-        cardExpMonth: null,
-        cardExpYear: null,
-        lastWebhookEvent: null,
-        lastWebhookTimestamp: null,
-        
-        // Billing sync
-        billingSyncStatus: 'pending',
-        
-        // Timestamps
-        updatedAt: now
-      })
-      .where(eq(userProfiles.userId, TARGET_USER_ID));
+    await updateUserProfile(TARGET_USER_ID, {
+      // Onboarding reset
+      onboardingStep: 'pending',
+      
+      // Trial system - Fresh 7-day trial
+      trialStartDate: now,
+      trialEndDate: trialEndDate,
+      trialStatus: 'active',
+      
+      // Plan reset to free tier
+      currentPlan: 'free',
+      subscriptionStatus: 'none',
+      
+      // Reset all plan limits
+      planCampaignsLimit: 0,  // Free plan has 0 campaigns
+      planCreatorsLimit: 0,   // Free plan has 0 creators
+      planFeatures: {},
+      
+      // Reset usage tracking
+      usageCampaignsCurrent: 0,
+      usageCreatorsCurrentMonth: 0,
+      enrichmentsCurrentMonth: 0,
+      usageResetDate: now,
+      
+      // Clear Stripe data
+      stripeCustomerId: null,
+      stripeSubscriptionId: null,
+      paymentMethodId: null,
+      cardBrand: null,
+      cardLast4: null,
+      cardExpMonth: null,
+      cardExpYear: null,
+      lastWebhookEvent: null,
+      lastWebhookTimestamp: null,
+      
+      // Billing sync
+      billingSyncStatus: 'pending'
+    });
 
     console.log('   ✅ Reset user profile to fresh onboarding state');
     console.log(`   ✅ Started fresh 7-day trial (expires: ${trialEndDate.toLocaleDateString()})`);
@@ -131,11 +127,9 @@ async function resetUserToFreshState() {
     console.log('   ✅ Cleared all Stripe billing data');
     console.log('   ✅ Reset usage counters to 0');
 
-    // Step 7: Verify reset
+    // Step 7: Verify reset using NEW normalized tables
     console.log('\n🔍 [USER-RESET] Verifying reset...');
-    const resetState = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.userId, TARGET_USER_ID)
-    });
+    const resetState = await getUserProfile(TARGET_USER_ID);
 
     console.log('📊 [USER-RESET] New user state:');
     console.log(`   Plan: ${resetState?.currentPlan}`);

@@ -1,5 +1,7 @@
 'use client';
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
 import { useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,11 +27,12 @@ function BillingContent() {
   const upgradeParam = searchParams.get('upgrade');
   const planParam = searchParams.get('plan');
   const successParam = searchParams.get('success');
+  const upgradedParam = searchParams.get('upgraded'); // ★ ADD: Check for upgraded=1 param
 
   // Auto-scroll to pricing table if coming from pricing page
   useEffect(() => {
     if (upgradeParam || planParam) {
-      console.log('🛒 [BILLING] Auto-scrolling to pricing table. Upgrade:', upgradeParam, 'Plan:', planParam, 'Success:', successParam);
+      structuredConsole.log('🛒 [BILLING] Auto-scrolling to pricing table. Upgrade:', upgradeParam, 'Plan:', planParam, 'Success:', successParam);
       setTimeout(() => {
         const pricingSection = document.querySelector('[data-testid="pricing-table"]') || 
                               document.querySelector('.max-w-5xl') ||
@@ -40,9 +43,29 @@ function BillingContent() {
       }, 500);
     }
     
-    // Refresh billing data when returning from successful upgrade
-    if (successParam && typeof window !== 'undefined') {
-      console.log('🎉 [BILLING] Successful upgrade detected, clearing cache and refreshing billing status');
+    // ★★★ CRITICAL FIX: Process upgrade when returning from successful Stripe checkout
+    if ((successParam || upgradedParam) && typeof window !== 'undefined') {
+      const checkoutTestId = `CHECKOUT_SUCCESS_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      structuredConsole.log(`🎯 [BILLING-CHECKOUT-TEST] ${checkoutTestId} - Starting checkout success flow`);
+      structuredConsole.log('🎉 [BILLING] Successful upgrade detected, processing upgrade and refreshing billing status');
+      structuredConsole.log(`🔍 [BILLING-CHECKOUT-TEST] ${checkoutTestId} - URL params:`, {
+        upgrade: upgradeParam,
+        plan: planParam,
+        success: successParam,
+        upgraded: upgradedParam,
+        fullUrl: window.location.href
+      });
+      
+      // ★ NOTE: Upgrade processing now happens on /onboarding/success page via checkout-success API
+      structuredConsole.log(`💡 [BILLING-CHECKOUT-TEST] ${checkoutTestId} - Upgrade should have been processed by success page`);
+      
+      // ★★★ CRITICAL FIX: Prevent reload loop by clearing problematic URL parameters immediately
+      // Keep 'plan' and 'upgrade' params but remove 'upgraded' and 'success' to prevent loop
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.delete('upgraded');
+      currentUrl.searchParams.delete('success');
+      window.history.replaceState({}, '', currentUrl.toString());
+      structuredConsole.log(`🔄 [BILLING-CHECKOUT-TEST] ${checkoutTestId} - Cleared upgraded/success params to prevent reload loop, kept plan param`);
       
       // Clear all billing caches
       try {
@@ -52,17 +75,15 @@ function BillingContent() {
           (globalThis as any).__BILLING_CACHE__.ts = 0;
           (globalThis as any).__BILLING_CACHE__.inflight = null;
         }
-        console.log('🧹 [BILLING] Cache cleared successfully');
+        structuredConsole.log(`✅ [BILLING-CHECKOUT-TEST] ${checkoutTestId} - Cache cleared successfully`);
       } catch (e) {
-        console.log('⚠️ [BILLING] Cache clear failed:', e);
+        structuredConsole.log(`❌ [BILLING-CHECKOUT-TEST] ${checkoutTestId} - Cache clear failed:`, e);
       }
       
-      // Force refresh of useBilling hook data
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
+      // ★ REMOVE: No more automatic reload - let the cleared cache refresh the data naturally
+      structuredConsole.log(`✅ [BILLING-CHECKOUT-TEST] ${checkoutTestId} - Upgrade processing complete, no reload needed`);
     }
-  }, [upgradeParam, planParam, successParam]);
+  }, [upgradeParam, planParam, successParam, upgradedParam]);
 
   const quickActions = [
     { name: 'Account Settings', href: '/profile', icon: Shield, description: 'Manage account details' }
@@ -93,18 +114,22 @@ function BillingContent() {
                 )}
               </div>
               <div>
-                <p className={`font-medium ${successParam ? 'text-green-100' : 'text-zinc-100'}`}>
-                  {successParam 
+                <p className={`font-medium ${(successParam || upgradedParam) ? 'text-green-100' : 'text-zinc-100'}`}>
+                  {(successParam || upgradedParam)
                     ? `🎉 Successfully upgraded${planParam ? ` to ${planParam}` : ''}!` 
-                    : planParam 
+                    : (planParam && currentPlan !== planParam)
                       ? `Ready to upgrade to ${planParam}!` 
-                      : 'Ready to upgrade!'
+                      : (planParam && currentPlan === planParam)
+                        ? `🎯 You're currently on the ${planParam} plan!`
+                        : 'Ready to upgrade!'
                   }
                 </p>
-                <p className={`text-sm ${successParam ? 'text-green-300' : 'text-zinc-300'}`}>
-                  {successParam 
+                <p className={`text-sm ${(successParam || upgradedParam) ? 'text-green-300' : 'text-zinc-300'}`}>
+                  {(successParam || upgradedParam)
                     ? 'Your plan has been updated and is now active. You can start using your new features immediately.'
-                    : 'Select a plan below to upgrade. We\'ll charge the prorated amount and update your account automatically.'
+                    : (planParam && currentPlan === planParam)
+                      ? 'You have full access to all features included in this plan. Explore other plans below if you need more features.'
+                      : 'Select a plan below to upgrade. We\'ll charge the prorated amount and update your account automatically.'
                   }
                 </p>
               </div>

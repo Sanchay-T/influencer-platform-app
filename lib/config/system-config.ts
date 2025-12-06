@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { db } from '@/lib/db';
 import { systemConfigurations, type SystemConfiguration } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -8,10 +9,13 @@ const DEFAULT_CONFIGS = {
   'api_limits.max_api_calls_for_testing': { value: '5', type: 'number' },
   'api_limits.max_api_calls_tiktok': { value: '1', type: 'number' },
   'api_limits.max_api_calls_tiktok_similar': { value: '1', type: 'number' },
+  'api_limits.max_api_calls_instagram_similar': { value: '5', type: 'number' },
   
   // QStash Delays
   'qstash_delays.tiktok_continuation_delay': { value: '2s', type: 'duration' },
   'qstash_delays.instagram_reels_delay': { value: '30s', type: 'duration' },
+  'qstash_delays.instagram_similar_delay': { value: '5s', type: 'duration' },
+  'qstash_delays.youtube_continuation_delay': { value: '5s', type: 'duration' },
   
   // Job Timeouts
   'timeouts.standard_job_timeout': { value: '60m', type: 'duration' },
@@ -36,6 +40,26 @@ const DEFAULT_CONFIGS = {
   'cleanup.error_jobs_retention_days': { value: '7', type: 'number' },
   'cleanup.cancelled_jobs_retention_days': { value: '7', type: 'number' },
   'cleanup.timeout_jobs_retention_days': { value: '7', type: 'number' },
+  
+  // Logging Configuration
+  'logging.min_level_development': { value: 'DEBUG', type: 'string' },
+  'logging.min_level': { value: 'INFO', type: 'string' },
+  'logging.enable_sentry_development': { value: 'true', type: 'boolean' },
+  'logging.enable_sentry': { value: 'true', type: 'boolean' },
+  'logging.sentry_traces_sample_rate_development': { value: '1.0', type: 'number' },
+  'logging.sentry_traces_sample_rate': { value: '0.1', type: 'number' },
+  'logging.sentry_session_sample_rate_development': { value: '1.0', type: 'number' },
+  'logging.sentry_session_sample_rate': { value: '0.1', type: 'number' },
+  'logging.enable_performance_tracking_development': { value: 'true', type: 'boolean' },
+  'logging.enable_performance_tracking': { value: 'true', type: 'boolean' },
+  'logging.slow_operation_threshold_development': { value: '1000', type: 'number' },
+  'logging.slow_operation_threshold': { value: '5000', type: 'number' },
+  'logging.enable_rate_limiting_development': { value: 'false', type: 'boolean' },
+  'logging.enable_rate_limiting': { value: 'true', type: 'boolean' },
+  'logging.rate_limit_per_minute_development': { value: '1000', type: 'number' },
+  'logging.rate_limit_per_minute': { value: '100', type: 'number' },
+  'logging.log_retention_days_development': { value: '7', type: 'number' },
+  'logging.log_retention_days': { value: '30', type: 'number' },
 } as const;
 
 type ConfigKey = keyof typeof DEFAULT_CONFIGS;
@@ -120,6 +144,9 @@ function validateValue(value: string, type: string): any {
       }
       return value === 'true';
     
+    case 'string':
+      return String(value);
+    
     default:
       throw new Error(`Unsupported value type: ${type}`);
   }
@@ -136,11 +163,11 @@ export class SystemConfig {
     // Check cache first
     const cached = cache.get(cacheKey);
     if (cached !== null) {
-      console.log(`🔧 [CONFIG-CACHE] Using cached value for ${cacheKey}:`, cached);
+      structuredConsole.log(`🔧 [CONFIG-CACHE] Using cached value for ${cacheKey}:`, cached);
       return cached;
     }
     
-    console.log(`🔧 [CONFIG-DB] Loading from database: ${cacheKey}`);
+    structuredConsole.log(`🔧 [CONFIG-DB] Loading from database: ${cacheKey}`);
     
     try {
       // Try to load from database
@@ -153,30 +180,42 @@ export class SystemConfig {
       
       if (config) {
         const validatedValue = validateValue(config.value, config.valueType);
-        console.log(`🔧 [CONFIG-DB] Found in database: ${cacheKey} = ${config.value} (type: ${config.valueType})`);
+        structuredConsole.log(`🔧 [CONFIG-DB] Found in database: ${cacheKey} = ${config.value} (type: ${config.valueType})`);
         cache.set(cacheKey, validatedValue);
         return validatedValue;
       }
       
       // Fall back to default if not found in database
-      console.log(`🔧 [CONFIG-DEFAULT] Not found in database, using default for: ${cacheKey}`);
+      structuredConsole.log(`🔧 [CONFIG-DEFAULT] Not found in database, using default for: ${cacheKey}`);
       const defaultConfig = DEFAULT_CONFIGS[cacheKey as ConfigKey];
       if (defaultConfig) {
         const validatedValue = validateValue(defaultConfig.value, defaultConfig.type);
-        console.log(`🔧 [CONFIG-DEFAULT] Using default value: ${cacheKey} = ${defaultConfig.value}`);
+        structuredConsole.log(`🔧 [CONFIG-DEFAULT] Using default value: ${cacheKey} = ${defaultConfig.value}`);
         cache.set(cacheKey, validatedValue);
         return validatedValue;
       }
       
-      throw new Error(`Configuration not found: ${category}.${key}`);
+      // Gracefully fall back to defaults instead of throwing
+      structuredConsole.log(`🔧 [CONFIG-FALLBACK] Configuration not found in database: ${category}.${key}, using defaults`);
+      const fallbackConfig = DEFAULT_CONFIGS[cacheKey as ConfigKey];
+      if (fallbackConfig) {
+        const validatedValue = validateValue(fallbackConfig.value, fallbackConfig.type);
+        structuredConsole.log(`🔧 [CONFIG-DEFAULT] Using default value: ${cacheKey} = ${fallbackConfig.value}`);
+        cache.set(cacheKey, validatedValue);
+        return validatedValue;
+      }
+      
+      // Only throw if no defaults are available
+      throw new Error(`Configuration not found: ${category}.${key} and no defaults available`);
       
     } catch (error) {
-      console.error(`[CONFIG] Error loading config ${category}.${key}:`, error);
+      structuredConsole.error(`[CONFIG] Error loading config ${category}.${key}:`, error);
       
       // Emergency fallback to defaults
-      const defaultConfig = DEFAULT_CONFIGS[cacheKey as ConfigKey];
-      if (defaultConfig) {
-        const validatedValue = validateValue(defaultConfig.value, defaultConfig.type);
+      const emergencyConfig = DEFAULT_CONFIGS[cacheKey as ConfigKey];
+      if (emergencyConfig) {
+        structuredConsole.log(`🔧 [CONFIG-EMERGENCY] Using emergency fallback for: ${cacheKey}`);
+        const validatedValue = validateValue(emergencyConfig.value, emergencyConfig.type);
         return validatedValue;
       }
       
@@ -203,7 +242,7 @@ export class SystemConfig {
       
       return grouped;
     } catch (error) {
-      console.error('[CONFIG] Error loading all configurations:', error);
+      structuredConsole.error('[CONFIG] Error loading all configurations:', error);
       throw error;
     }
   }
@@ -240,9 +279,9 @@ export class SystemConfig {
       // Invalidate cache
       cache.invalidate(`${category}.${key}`);
       
-      console.log(`[CONFIG] Updated configuration: ${category}.${key} = ${value}`);
+      structuredConsole.log(`[CONFIG] Updated configuration: ${category}.${key} = ${value}`);
     } catch (error) {
-      console.error(`[CONFIG] Error setting config ${category}.${key}:`, error);
+      structuredConsole.error(`[CONFIG] Error setting config ${category}.${key}:`, error);
       throw error;
     }
   }
@@ -261,9 +300,9 @@ export class SystemConfig {
       // Invalidate cache
       cache.invalidate(`${category}.${key}`);
       
-      console.log(`[CONFIG] Deleted configuration: ${category}.${key}`);
+      structuredConsole.log(`[CONFIG] Deleted configuration: ${category}.${key}`);
     } catch (error) {
-      console.error(`[CONFIG] Error deleting config ${category}.${key}:`, error);
+      structuredConsole.error(`[CONFIG] Error deleting config ${category}.${key}:`, error);
       throw error;
     }
   }
@@ -292,9 +331,9 @@ export class SystemConfig {
           .onConflictDoNothing();
       }
       
-      console.log('[CONFIG] Default configurations initialized');
+      structuredConsole.log('[CONFIG] Default configurations initialized');
     } catch (error) {
-      console.error('[CONFIG] Error initializing defaults:', error);
+      structuredConsole.error('[CONFIG] Error initializing defaults:', error);
       throw error;
     }
   }
@@ -304,7 +343,7 @@ export class SystemConfig {
    */
   static clearCache(): void {
     cache.clear();
-    console.log('[CONFIG] Configuration cache cleared');
+    structuredConsole.log('[CONFIG] Configuration cache cleared');
   }
   
   /**

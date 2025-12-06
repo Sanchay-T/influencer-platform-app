@@ -1,5 +1,7 @@
 'use client';
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
 import { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useAdmin } from '@/lib/hooks/use-admin';
@@ -55,7 +57,7 @@ export default function ProfileSettingsPage() {
 
       try {
         setLoading(true);
-        console.log('🔍 [PROFILE-PAGE] Fetching user profile for:', user.id);
+        structuredConsole.log('🔍 [PROFILE-PAGE] Fetching user profile for:', user.id);
 
         // Try to fetch user profile data from our API
         const response = await fetch('/api/profile', {
@@ -67,7 +69,7 @@ export default function ProfileSettingsPage() {
 
         if (response.ok) {
           const profileData = await response.json();
-          console.log('✅ [PROFILE-PAGE] Profile data fetched:', profileData);
+          structuredConsole.log('✅ [PROFILE-PAGE] Profile data fetched:', profileData);
           
           setUserProfile({
             name: profileData.name || user.fullName || '',
@@ -80,18 +82,18 @@ export default function ProfileSettingsPage() {
 
           // Log trial information for debugging
           if (profileData.trialData) {
-            console.log('🎯 [PROFILE-PAGE] Trial data found:', {
+            structuredConsole.log('🎯 [PROFILE-PAGE] Trial data found:', {
               status: profileData.trialData.status,
               daysRemaining: profileData.trialData.daysRemaining,
               progressPercentage: profileData.trialData.progressPercentage,
               endDate: profileData.trialData.endDate
             });
           } else {
-            console.log('ℹ️ [PROFILE-PAGE] No trial data found');
+            structuredConsole.log('ℹ️ [PROFILE-PAGE] No trial data found');
           }
         } else {
           // Profile doesn't exist yet, set default values from Clerk
-          console.log('ℹ️ [PROFILE-PAGE] No profile found, using Clerk user data');
+          structuredConsole.log('ℹ️ [PROFILE-PAGE] No profile found, using Clerk user data');
           setUserProfile({
             name: user.fullName || '',
             companyName: '',
@@ -102,7 +104,7 @@ export default function ProfileSettingsPage() {
           });
         }
       } catch (fetchError) {
-        console.error('💥 [PROFILE-PAGE] Error fetching profile:', fetchError);
+        structuredConsole.error('💥 [PROFILE-PAGE] Error fetching profile:', fetchError);
         setError('Error loading profile data');
       } finally {
         setLoading(false);
@@ -153,7 +155,7 @@ export default function ProfileSettingsPage() {
       <div className="py-6 space-y-8 max-w-6xl mx-auto">
         {/* Page Header */}
         <div className="mb-2">
-          <h1 className="text-2xl font-bold text-zinc-100">Profile Settings</h1>
+          <h1 className="text-2xl font-bold text-zinc-100">Account Settings</h1>
           <p className="mt-1 text-sm text-zinc-400">
             Manage your account information{isAdmin ? ', trial status, and email preferences' : ' and trial status'}
           </p>
@@ -324,7 +326,7 @@ function SubscriptionPlanCard() {
           setBillingStatus(data);
         }
       } catch (error) {
-        console.error('Error fetching billing status:', error);
+        structuredConsole.error('Error fetching billing status:', error);
       } finally {
         setLoading(false);
       }

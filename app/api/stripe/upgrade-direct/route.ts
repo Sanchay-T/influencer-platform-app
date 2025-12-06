@@ -1,9 +1,9 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import Stripe from 'stripe';
 import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { getClientUrl } from '@/lib/utils/url-utils';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
   const startedAt = Date.now();
   const reqId = `upgrade_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   try {
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { planId, billing = 'monthly' } = await req.json();
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     const priceId = planPrices?.[billing as keyof typeof planPrices];
     if (!priceId) return NextResponse.json({ error: 'Price ID not configured' }, { status: 400 });
 
-    console.log(`🎯 [UPGRADE-DIRECT-AUDIT] ${reqId}:`, { 
+    structuredConsole.log(`🎯 [UPGRADE-DIRECT-AUDIT] ${reqId}:`, { 
       planId, 
       billing, 
       priceId,
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Load profile
-    const profile = await db.query.userProfiles.findFirst({ where: eq(userProfiles.userId, userId) });
+    const profile = await getUserProfile(userId);
     if (!profile) return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
     if (!profile.stripeCustomerId) return NextResponse.json({ error: 'Stripe customer missing' }, { status: 400 });
     if (!profile.stripeSubscriptionId) {
@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
     // If payment method is missing, create a subscription checkout with the new plan
     let setupUrl: string | null = null;
     if (!paymentIntent || paymentIntent.status === 'requires_payment_method') {
-      console.log(`💳 [UPGRADE-DIRECT] No payment method found, creating subscription checkout with plan details`);
+      structuredConsole.log(`💳 [UPGRADE-DIRECT] No payment method found, creating subscription checkout with plan details`);
       
       // Cancel the existing subscription first
       await stripe.subscriptions.cancel(subscription.id);
@@ -141,7 +141,7 @@ export async function POST(req: NextRequest) {
       });
       setupUrl = subscriptionCheckout.url || null;
       
-      console.log(`🔄 [UPGRADE-DIRECT] Created subscription checkout:`, { 
+      structuredConsole.log(`🔄 [UPGRADE-DIRECT] Created subscription checkout:`, { 
         sessionId: subscriptionCheckout.id,
         planId, 
         priceId,
@@ -176,9 +176,9 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     // If payment method is missing or Stripe rejects, fallback to portal
     try {
-      const { userId } = await auth();
+      const { userId } = await getAuthOrTest();
       if (userId) {
-        const profile = await db.query.userProfiles.findFirst({ where: eq(userProfiles.userId, userId) });
+        const profile = await getUserProfile(userId);
         if (profile?.stripeCustomerId) {
           const portal = await stripe.billingPortal.sessions.create({
             customer: profile.stripeCustomerId,

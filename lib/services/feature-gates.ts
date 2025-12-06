@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
-import { subscriptionPlans, userProfiles } from '@/lib/db/schema';
+import { subscriptionPlans } from '@/lib/db/schema';
+import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { eq } from 'drizzle-orm';
 
 type FeatureMap = Record<string, any> & {
@@ -8,7 +9,7 @@ type FeatureMap = Record<string, any> & {
 
 export class FeatureGateService {
   static async getUserPlan(userId: string) {
-    const profile = await db.query.userProfiles.findFirst({ where: eq(userProfiles.userId, userId) });
+    const profile = await getUserProfile(userId);
     if (!profile) return null;
     const planKey = profile.currentPlan || 'glow_up';
     const plan = await db.query.subscriptionPlans.findFirst({ where: eq(subscriptionPlans.planKey, planKey) });
@@ -23,7 +24,7 @@ export class FeatureGateService {
   }
 
   static async getFeatures(userId: string): Promise<{ currentPlan: string; features: FeatureMap } | null> {
-    const profile = await db.query.userProfiles.findFirst({ where: eq(userProfiles.userId, userId) });
+    const profile = await getUserProfile(userId);
     if (!profile) return null;
     const planKey = profile.currentPlan || 'glow_up';
     const plan = await db.query.subscriptionPlans.findFirst({ where: eq(subscriptionPlans.planKey, planKey) });

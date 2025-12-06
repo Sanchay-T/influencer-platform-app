@@ -1,7 +1,12 @@
 'use client';
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { ErrorBoundary } from '../error-boundary';
+import { useComponentLogger, useUserActionLogger } from '@/lib/logging/react-logger';
+import { paymentLogger } from '@/lib/logging';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -29,7 +34,7 @@ interface UpgradeButtonProps {
   billingDefault?: 'monthly' | 'yearly';
 }
 
-export default function UpgradeButton({ 
+function UpgradeButtonContent({ 
   targetPlan, 
   size = 'md', 
   variant = 'default',
@@ -38,6 +43,8 @@ export default function UpgradeButton({
   allowBillingToggle = true,
   billingDefault = 'monthly'
 }: UpgradeButtonProps) {
+  const componentLogger = useComponentLogger('UpgradeButton', { targetPlan });
+  const userActionLogger = useUserActionLogger();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -90,19 +97,21 @@ export default function UpgradeButton({
     setError('');
 
     try {
-      console.log(`🔍 [UPGRADE-AUDIT] Starting upgrade:`, { 
-        targetPlan, 
-        billingCycle, 
-        hasActiveSubscription, 
+      paymentLogger.info('Starting upgrade process', {
+        targetPlan,
+        billingCycle,
+        currentPlan,
+        hasActiveSubscription,
+        isPaidUser,
         isTrialing,
-        currentPlan 
+        operation: 'upgrade-start'
       });
 
       // Always use checkout for plan upgrades (cleaner UX)
       if (hasActiveSubscription || isTrialing) {
-        console.log('📡 [UPGRADE-AUDIT] Using checkout for existing subscription upgrade');
+        structuredConsole.log('📡 [UPGRADE-AUDIT] Using checkout for existing subscription upgrade');
       } else {
-        console.log('📡 [UPGRADE-AUDIT] Using checkout for new subscription');
+        structuredConsole.log('📡 [UPGRADE-AUDIT] Using checkout for new subscription');
       }
       
       // Use checkout-upgrade for all scenarios (better UX than programmatic updates)
@@ -112,15 +121,40 @@ export default function UpgradeButton({
         body: JSON.stringify({ planId: targetPlan, billing: billingCycle }),
       });
       const data = await response.json();
-      console.log('📊 [UPGRADE-AUDIT] checkout-upgrade response:', data);
+      paymentLogger.info('Checkout upgrade response received', {
+        response: response.ok ? 'success' : 'error',
+        status: response.status,
+        hasUrl: !!data.url,
+        dataKeys: Object.keys(data || {}),
+        data: data, // Full response for debugging
+        targetPlan,
+        operation: 'checkout-response'
+      });
 
-      if (!response.ok) throw new Error('Failed to initiate upgrade');
+      if (!response.ok) {
+        paymentLogger.error('Checkout upgrade API failed', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData: data,
+          operation: 'api-error'
+        });
+        throw new Error(data?.error || `API error: ${response.status}`);
+      }
       
-      if (!data?.url) throw new Error('Invalid checkout session');
+      if (!data?.url) {
+        paymentLogger.error('Invalid checkout session response', {
+          data,
+          hasUrl: !!data?.url,
+          urlValue: data?.url,
+          operation: 'validation-error'
+        });
+        throw new Error('Invalid checkout session - no URL provided');
+      }
       
       try {
+        // All upgrades now go through Stripe checkout for proper payment processing
         if (data.price?.displayAmount && data.price?.interval) {
-          console.log('💰 [UPGRADE-AUDIT] Redirecting to Stripe checkout', { 
+          structuredConsole.log('💰 [UPGRADE-AUDIT] Redirecting to Stripe checkout', { 
             amount: data.price.displayAmount, 
             interval: data.price.interval, 
             portal: !!data.portal,
@@ -131,7 +165,12 @@ export default function UpgradeButton({
       } catch {}
       window.location.href = data.url;
     } catch (err) {
-      console.error('Upgrade error:', err);
+      paymentLogger.error('Upgrade failed', err instanceof Error ? err : new Error(String(err)), {
+        targetPlan,
+        billingCycle,
+        currentPlan,
+        operation: 'upgrade-error'
+      });
       const errorMessage = err instanceof Error ? err.message : 'Upgrade failed';
       setError(errorMessage);
       toast.error(errorMessage);
@@ -307,5 +346,13 @@ export default function UpgradeButton({
         </div>
       )}
     </>
+  );
+}
+
+export default function UpgradeButton(props: UpgradeButtonProps) {
+  return (
+    <ErrorBoundary componentName="UpgradeButton">
+      <UpgradeButtonContent {...props} />
+    </ErrorBoundary>
   );
 }

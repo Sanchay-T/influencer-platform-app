@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server';
 import { SystemConfig } from '@/lib/config/system-config';
 import { isAdminUser } from '@/lib/auth/admin-utils';
@@ -6,13 +7,13 @@ export const maxDuration = 30;
 
 // GET - Retrieve all configurations
 export async function GET(request: Request) {
-  console.log('\n\n====== ADMIN CONFIG API GET CALLED ======');
-  console.log('🔍 [ADMIN-CONFIG] GET request received at:', new Date().toISOString());
+  structuredConsole.log('\n\n====== ADMIN CONFIG API GET CALLED ======');
+  structuredConsole.log('🔍 [ADMIN-CONFIG] GET request received at:', new Date().toISOString());
   
   try {
     // Check admin permissions
     if (!(await isAdminUser())) {
-      console.error('❌ [ADMIN-CONFIG] Unauthorized - Not an admin user');
+      structuredConsole.error('❌ [ADMIN-CONFIG] Unauthorized - Not an admin user');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
@@ -22,16 +23,16 @@ export async function GET(request: Request) {
     
     if (category && key) {
       // Get specific configuration
-      console.log(`🔍 [ADMIN-CONFIG] Getting specific config: ${category}.${key}`);
+      structuredConsole.log(`🔍 [ADMIN-CONFIG] Getting specific config: ${category}.${key}`);
       const value = await SystemConfig.get(category, key);
       return NextResponse.json({ category, key, value });
     } else {
       // Get all configurations
-      console.log('🔍 [ADMIN-CONFIG] Getting all configurations');
+      structuredConsole.log('🔍 [ADMIN-CONFIG] Getting all configurations');
       const configs = await SystemConfig.getAll();
       const categories = SystemConfig.getCategories();
       
-      console.log(`✅ [ADMIN-CONFIG] Retrieved ${Object.keys(configs).length} configuration categories`);
+      structuredConsole.log(`✅ [ADMIN-CONFIG] Retrieved ${Object.keys(configs).length} configuration categories`);
       
       return NextResponse.json({
         configurations: configs,
@@ -40,7 +41,7 @@ export async function GET(request: Request) {
       });
     }
   } catch (error: any) {
-    console.error('💥 [ADMIN-CONFIG] Error in GET:', error);
+    structuredConsole.error('💥 [ADMIN-CONFIG] Error in GET:', error);
     return NextResponse.json(
       { error: 'Internal Server Error', details: error.message },
       { status: 500 }
@@ -50,20 +51,20 @@ export async function GET(request: Request) {
 
 // POST - Create or update configuration
 export async function POST(request: Request) {
-  console.log('\n\n====== ADMIN CONFIG API POST CALLED ======');
-  console.log('📝 [ADMIN-CONFIG] POST request received at:', new Date().toISOString());
+  structuredConsole.log('\n\n====== ADMIN CONFIG API POST CALLED ======');
+  structuredConsole.log('📝 [ADMIN-CONFIG] POST request received at:', new Date().toISOString());
   
   try {
     // Check admin permissions
     if (!(await isAdminUser())) {
-      console.error('❌ [ADMIN-CONFIG] Unauthorized - Not an admin user');
+      structuredConsole.error('❌ [ADMIN-CONFIG] Unauthorized - Not an admin user');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
     const body = await request.json();
     const { category, key, value, valueType, description } = body;
     
-    console.log('📥 [ADMIN-CONFIG] Configuration data received:', {
+    structuredConsole.log('📥 [ADMIN-CONFIG] Configuration data received:', {
       category,
       key,
       value,
@@ -73,7 +74,7 @@ export async function POST(request: Request) {
     
     // Validate required fields
     if (!category || !key || !value || !valueType) {
-      console.error('❌ [ADMIN-CONFIG] Missing required fields');
+      structuredConsole.error('❌ [ADMIN-CONFIG] Missing required fields');
       return NextResponse.json(
         { error: 'Missing required fields: category, key, value, valueType' },
         { status: 400 }
@@ -86,7 +87,7 @@ export async function POST(request: Request) {
     // Clear cache to ensure immediate effect
     SystemConfig.clearCache();
     
-    console.log(`✅ [ADMIN-CONFIG] Configuration updated: ${category}.${key} = ${value}`);
+    structuredConsole.log(`✅ [ADMIN-CONFIG] Configuration updated: ${category}.${key} = ${value}`);
     
     return NextResponse.json({
       success: true,
@@ -97,7 +98,7 @@ export async function POST(request: Request) {
     });
     
   } catch (error: any) {
-    console.error('💥 [ADMIN-CONFIG] Error in POST:', error);
+    structuredConsole.error('💥 [ADMIN-CONFIG] Error in POST:', error);
     return NextResponse.json(
       { error: 'Internal Server Error', details: error.message },
       { status: 500 }
@@ -107,13 +108,13 @@ export async function POST(request: Request) {
 
 // PUT - Bulk update configurations
 export async function PUT(request: Request) {
-  console.log('\n\n====== ADMIN CONFIG API PUT CALLED ======');
-  console.log('🔄 [ADMIN-CONFIG] PUT request received at:', new Date().toISOString());
+  structuredConsole.log('\n\n====== ADMIN CONFIG API PUT CALLED ======');
+  structuredConsole.log('🔄 [ADMIN-CONFIG] PUT request received at:', new Date().toISOString());
   
   try {
     // Check admin permissions
     if (!(await isAdminUser())) {
-      console.error('❌ [ADMIN-CONFIG] Unauthorized - Not an admin user');
+      structuredConsole.error('❌ [ADMIN-CONFIG] Unauthorized - Not an admin user');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
@@ -121,14 +122,14 @@ export async function PUT(request: Request) {
     const { configurations } = body;
     
     if (!Array.isArray(configurations)) {
-      console.error('❌ [ADMIN-CONFIG] Invalid configurations format');
+      structuredConsole.error('❌ [ADMIN-CONFIG] Invalid configurations format');
       return NextResponse.json(
         { error: 'Configurations must be an array' },
         { status: 400 }
       );
     }
     
-    console.log(`🔄 [ADMIN-CONFIG] Bulk updating ${configurations.length} configurations`);
+    structuredConsole.log(`🔄 [ADMIN-CONFIG] Bulk updating ${configurations.length} configurations`);
     
     // Process each configuration
     const results = [];
@@ -143,7 +144,7 @@ export async function PUT(request: Request) {
         );
         results.push({ success: true, key: `${config.category}.${config.key}` });
       } catch (error: any) {
-        console.error(`❌ [ADMIN-CONFIG] Error updating ${config.category}.${config.key}:`, error);
+        structuredConsole.error(`❌ [ADMIN-CONFIG] Error updating ${config.category}.${config.key}:`, error);
         results.push({ 
           success: false, 
           key: `${config.category}.${config.key}`, 
@@ -159,7 +160,7 @@ export async function PUT(request: Request) {
       SystemConfig.clearCache();
     }
     
-    console.log(`✅ [ADMIN-CONFIG] Bulk update completed: ${successCount}/${configurations.length} successful`);
+    structuredConsole.log(`✅ [ADMIN-CONFIG] Bulk update completed: ${successCount}/${configurations.length} successful`);
     
     return NextResponse.json({
       success: true,
@@ -168,7 +169,7 @@ export async function PUT(request: Request) {
     });
     
   } catch (error: any) {
-    console.error('💥 [ADMIN-CONFIG] Error in PUT:', error);
+    structuredConsole.error('💥 [ADMIN-CONFIG] Error in PUT:', error);
     return NextResponse.json(
       { error: 'Internal Server Error', details: error.message },
       { status: 500 }
@@ -178,13 +179,13 @@ export async function PUT(request: Request) {
 
 // DELETE - Delete configuration
 export async function DELETE(request: Request) {
-  console.log('\n\n====== ADMIN CONFIG API DELETE CALLED ======');
-  console.log('🗑️ [ADMIN-CONFIG] DELETE request received at:', new Date().toISOString());
+  structuredConsole.log('\n\n====== ADMIN CONFIG API DELETE CALLED ======');
+  structuredConsole.log('🗑️ [ADMIN-CONFIG] DELETE request received at:', new Date().toISOString());
   
   try {
     // Check admin permissions
     if (!(await isAdminUser())) {
-      console.error('❌ [ADMIN-CONFIG] Unauthorized - Not an admin user');
+      structuredConsole.error('❌ [ADMIN-CONFIG] Unauthorized - Not an admin user');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
@@ -193,18 +194,18 @@ export async function DELETE(request: Request) {
     const key = url.searchParams.get('key');
     
     if (!category || !key) {
-      console.error('❌ [ADMIN-CONFIG] Missing category or key parameters');
+      structuredConsole.error('❌ [ADMIN-CONFIG] Missing category or key parameters');
       return NextResponse.json(
         { error: 'Missing required parameters: category, key' },
         { status: 400 }
       );
     }
     
-    console.log(`🗑️ [ADMIN-CONFIG] Deleting configuration: ${category}.${key}`);
+    structuredConsole.log(`🗑️ [ADMIN-CONFIG] Deleting configuration: ${category}.${key}`);
     
     await SystemConfig.delete(category, key);
     
-    console.log(`✅ [ADMIN-CONFIG] Configuration deleted: ${category}.${key}`);
+    structuredConsole.log(`✅ [ADMIN-CONFIG] Configuration deleted: ${category}.${key}`);
     
     return NextResponse.json({
       success: true,
@@ -214,7 +215,7 @@ export async function DELETE(request: Request) {
     });
     
   } catch (error: any) {
-    console.error('💥 [ADMIN-CONFIG] Error in DELETE:', error);
+    structuredConsole.error('💥 [ADMIN-CONFIG] Error in DELETE:', error);
     return NextResponse.json(
       { error: 'Internal Server Error', details: error.message },
       { status: 500 }

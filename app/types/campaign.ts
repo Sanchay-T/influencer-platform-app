@@ -26,6 +26,9 @@ export interface ScrapingJob {
   results: ScrapingResult[]
   scraperLimit: number | null
   progress?: number
+  // Added for sidebar creator counts
+  processedResults?: number | null
+  targetResults?: number | null
 }
 
 export interface Campaign {

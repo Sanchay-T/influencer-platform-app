@@ -1,114 +1,81 @@
 # Repository Guidelines
 
-Scope: This guide applies to the WT‑2 worktree only. Treat all local instructions as WT‑2 specific.
+[# When you need to call tools from the shell, use this rubric:
+- Find Files: `fd`
+- Find Text: `rg` (ripgrep)
+- Find Code Structure (TS/TSX): `ast-grep`
+  - Default to TypeScript: `*.ts` → `ast-grep --lang ts -p '<pattern>'`
+  - For other languages, set `--lang` appropriately (e.g., `--lang rust`).
+- Select among matches: pipe to `fzf`
+- JSON: `ja`
+- YAML/XML: `yq`
+]
+
+## Development Best Practices
+- Embrace test-driven development (TDD): write failing tests before implementing or refactoring functionality.
+- Keep every source file under 300 lines. Split large implementations into composable, focused modules.
+- Add breadcrumb-style comments that outline linkage and usage, enabling newcomers to trace logic similar to a blockchain ledger.
+- Document how each major function or component is used elsewhere in the codebase and note any coupling or downstream effects.
+- Maintain thorough inline comments that clarify intent, data flow, and integration points.
+- Treat these guidelines as canonical across every branch and worktree; keep documentation synchronized when branching or rebasing.
 
 ## Project Structure & Modules
-- `app/`: Next.js App Router pages and API routes. Auth enforced via `middleware.ts` (Clerk) with admin and webhook exceptions.
-- `lib/`: Core services: `db/` (Drizzle + Postgres), `stripe/`, `queue/qstash.ts`, `events/`, `jobs/`, `platforms/` (TikTok/Instagram/YouTube processors), `utils/`.
-- `drizzle/`: Generated schema/relations and migration metadata.
-- `scripts/`: Operational scripts (includes `dev-with-port.js`).
-- `tests/`, `test-scripts/`: Script‑driven test and research runners.
-- `public/`, `components/`, `types/`: UI assets and shared types.
+- `app/`: Next.js App Router.
+  - `api/`: Backend routes (protected by `middleware.ts`).
+  - `components/`: Feature-specific UI.
+- `lib/`: Core Domain Logic.
+  - `db/`: Drizzle ORM setup. **Schema is normalized** (users, billing, usage, etc.).
+  - `services/`: Business logic (e.g., `PlanValidator`, `ScrapingService`).
+  - `logging/`: Centralized structured logging.
+- `components/`: Shared UI primitives (Shadcn).
+- `drizzle/`: Database migrations.
+- `scripts/`: Ops tools (`validate-deployment.js`, `init-logging-config.js`).
+- `test-scripts/`: TDD scripts.
 
-## Expanded App Tree (WT‑2)
-```
-app/
-  layout.tsx  page.js  globals.css
-  providers/
-    toast-provider.tsx
-  components/
-    auth/  billing/  campaigns/  debug/  layout/  navigation/  onboarding/  trial/
-    search-results.jsx  subscription-status-modern.tsx
-  admin/
-    users/  email-testing/  system-config/  test-users/
-  billing/page.tsx   pricing/page.tsx   profile/page.tsx
-  onboarding/
-    step-1/  step-2/  complete/  success/
-  campaigns/
-    new/  [id]/  search/
-  sign-in/  sign-up/  debug/
-  api/
-    admin/
-      config/route.ts  config/init/route.ts
-      create-test-user/route.ts
-      email-testing/{send,users,users-fast,users-cached}/route.ts
-      test-login/route.ts
-      users/{promote,billing-status}/route.ts
-    billing/{checkout,status}/route.ts
-    campaigns/{route.ts,[id]/route.ts}
-    debug/{job,trial-testing,stripe-prices}/route.ts
-    diagnostics/system-health/route.ts
-    email/send-scheduled/route.ts
-    export/csv/route.ts
-    jobs/{process,cleanup,[id]}/route.ts
-    onboarding/{step-1,step-2,save-plan,complete,status}/route.ts
-    profile/route.ts
-    proxy/image/route.ts
-    qstash/{process-scraping,process-results,test}/route.ts
-    scraping/{tiktok,tiktok-similar,instagram,instagram-hashtag,youtube,youtube-similar}/route.ts
-    stripe/{webhook,create-subscription,setup-intent,save-payment-method,upgrade,create-checkout,customer-portal,session}/route.ts
-    subscription/status/route.ts
-    test-logging/route.ts  test-qstash/route.ts  test/process-job/route.ts
-```
-
-## API Routes — Summaries
-- admin/config: read/update system config; `config/init`: bootstrap defaults.
-- admin/create-test-user: provision test accounts for QA.
-- admin/email-testing/*: send and fetch test email data for debugging.
-- admin/test-login: helper to validate Clerk auth in admin context.
-- admin/users/promote: elevate a user to admin; billing-status: admin billing snapshot.
-- billing/checkout: create Stripe Checkout sessions; status: return user billing/trial status.
-- campaigns (root, [id]): CRUD/read for campaign info and fetch by ID.
-- debug/*: internal diagnostics for jobs, trials, and Stripe price listings.
-- diagnostics/system-health: liveness/config checks across subsystems.
-- email/send-scheduled: enqueue/send scheduled emails (Resend).
-- export/csv: export creators/results as CSV by job or campaign.
-- jobs/process|cleanup|[id]: process a job tick, cleanup stalled jobs, and fetch a job.
-- onboarding/step-1|step-2|save-plan|complete|status: capture onboarding data, plan selection, completion, and status.
-- profile: read/update current user profile.
-- proxy/image: cached image proxy for avatars/thumbnails.
-- qstash/process-scraping: verifies Upstash signature, dispatches platform handlers, logs raw API data, stores results; process-results: consolidate results; test: sanity hook.
-- scraping/*: TikTok/Instagram/YouTube search endpoints that call platform handlers and persist results.
-- stripe/webhook: validate signature and update user plan/events/jobs; create-subscription|setup-intent|save-payment-method|upgrade|create-checkout|customer-portal|session: billing operations.
-- subscription/status: public subscription state for current user.
-- test-logging, test-qstash, test/process-job: lightweight test/debug routes.
-
-## Architecture Overview
-- Frontend: Next.js 15 (App Router), Clerk auth, Tailwind UI components.
-- Data: Drizzle ORM over Postgres (`DATABASE_URL`). Event‑sourced audit trail in `events` table.
-- Billing: Stripe (`STRIPE_SECRET_KEY`, plan price IDs, `STRIPE_WEBHOOK_SECRET`). Webhook drives user profile updates and background jobs.
-- Jobs: Upstash QStash (`QSTASH_TOKEN`, signing keys) triggers `/api/qstash/*` handlers. Platform processors live under `lib/platforms/*`.
-
-## Frontend Overview (WT‑1)
-- Stack: Next.js App Router, React 18, Tailwind, shadcn/ui, lucide-react, react-hot-toast.
-- Layout: `app/layout.tsx` wraps pages with `ClerkProvider`, `ToastProvider`, and optional loggers.
-- Shell: `app/components/layout/dashboard-layout.jsx` and `sidebar.jsx` define the core app frame.
-- Components: Reusable primitives under `components/ui/*` (shadcn), feature blocks under `app/components/*`.
-- Theming: Design tokens in `app/globals.css` (CSS variables) + Tailwind config in `tailwind.config.mjs`.
-- For a UI overhaul without backend changes, see the dedicated guide: [Frontend Guide](frontend.md).
-- Scope UI-only edits to: `app/*`, `components/*`, `public/*`, `app/globals.css`, and `tailwind.config.mjs`.
-
-## Build, Test, and Development
-- Start WT‑2 (preferred for agents): `npm run dev:wt2` (loads `.env.local` then `.env.worktree`, uses `LOCAL_PORT` or `PORT`). Hot reload is enabled; no restart needed for code changes.
-- Start default: `npm run dev`. Build: `npm run build`. Prod: `npm start`. Lint: `npm run lint`.
-- DB: `npm run db:generate`, `npm run db:migrate`, `npm run db:studio`.
-- Examples: `npm run test:tiktok-similar`, `npm run test:tiktok-similar-api` (script‑driven tests).
-
-## Coding Style & Conventions
-- TypeScript first; React components in PascalCase; files kebab‑case.
-- Keep domain logic in `lib/*`; UI in `app/components/*`.
-- ESLint via `eslint-config-next`; use 2‑space indent; keep imports ordered.
+## Key Invariants
+1. **Normalized User Data:** User data is NOT in a single table. It is spread across `users`, `userSubscriptions`, `userBilling`, `userUsage`, and `userSystemData`. Always join or query the specific table needed.
+2. **Event Sourcing:** Major state changes (subscription upgrades, onboarding completion) MUST be recorded in the `events` table.
+3. **Middleware Protection:** All API routes are protected by default unless explicitly listed in `middleware.ts`.
+4. **Structured Logging:** Use `lib/logging` for all logs. Do not use `console.log` in production code.
 
 ## Testing Guidelines
-- No Jest/Vitest; use Node scripts under `tests/` or `test-scripts/`.
-- Prefer deterministic inputs; log outputs to `logs/` when applicable.
-- Name tests descriptively (e.g., `tiktok-similar-search-test.js`).
+- **Script-Based TDD:** Use `test-scripts/` for backend logic.
+- **UI Testing:** Use `app/test/` pages for manual verification.
+- **Smoke Tests:** Run `npm run smoke:test` before major PRs.
 
 ## Commit & PR Guidelines
-- Imperative messages (“Add…”, “Refactor…”, “Fix…”); avoid vague commits.
-- PRs include: summary, repro steps, screenshots for UI, linked issues, and migration notes.
+- Imperative commit messages (“Add…”, “Refactor…”, “Fix…”); avoid vague summaries.
+- PRs must include: summary, repro steps, UI screenshots (when applicable), linked issues, migration notes, and validation evidence (tests or scripts executed).
 
-## Security & Configuration (WT‑2)
-- Never commit secrets. `.env.local`: full set (mirrors main). `.env.worktree`: WT‑2 overrides (e.g., `LOCAL_PORT=3002`).
-- Required keys include: `DATABASE_URL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_ADMIN_EMAILS`, Stripe keys/price IDs, `QSTASH_*` tokens/keys.
-- Start WT‑2: `npm run dev:wt2`. Override port: `PORT=3005 npm run dev:wt2`.
+## Security & Configuration
+- Never commit secrets. `.env.local` holds the baseline configuration; optional `.env.worktree` overrides are respected by `npm run dev:wt2` but apply universally.
+- Required environment keys include (non-exhaustive): `DATABASE_URL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_ADMIN_EMAILS`, `CLERK_SECRET_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_*`, `QSTASH_TOKEN`, `QSTASH_CURRENT_SIGNING_KEY`, `QSTASH_NEXT_SIGNING_KEY`, `SESSION_EXCHANGE_KEY`, `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_ENVIRONMENT`.
+- Run `npm run validate:deployment` (or `npm run config:validate:all`) after touching configuration to catch logging/monitoring drift before deploying.
+
+## Automated API Testing
+
+Headless backend tests (no UI login) are supported via the automation headers. See [`docs/automation-api-testing.md`](docs/automation-api-testing.md) for the required env vars, tunnel options, and sample scripts.
+
+
+DO THIS < THIS IS QUITE IMPORTANT :
+
+ If you need a public endpoint (QStash callbacks, teammates, browsers):
+      1. Launch a tunnel inside the container (LocalTunnel or cloudflared—no manual login needed).
+
+         npx localtunnel --port 3002 --subdomain youralias
+         # or
+         cloudflared tunnel --url http://localhost:3002 --no-autoupdate
+      2. Set both env vars to the generated HTTPS domain:
+
+         NEXT_PUBLIC_SITE_URL=https://youralias.loca.lt
+         AUTOMATION_BASE_URL=https://youralias.loca.lt
+         Every service—including automation scripts—will now hit that public URL.
+         (If you use Codex’s built-in port forwarding, grab the forwarded URL and set the env vars to that.)
+
+  That’s the only real “choice” you have to make in the Codex environment.
+
+## Persistent preferences (Codex)
+- Keep each source file under 300 lines; favor modular, minimal code over inline repetition.
+- Per-user structured logging with PII masking and event sourcing for major state changes.
+- Prefer lean E2E coverage over unit-test clutter; use it to validate onboarding flows.
+- Onboarding is paid-only: card required, no free/no-card trial path.

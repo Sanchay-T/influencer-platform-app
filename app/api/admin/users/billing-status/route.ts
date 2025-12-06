@@ -1,8 +1,8 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server';
 import { isAdminUser } from '@/lib/auth/admin-utils';
 import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { getUserProfile } from '@/lib/db/queries/user-queries';
 
 export async function GET(request: Request) {
   try {
@@ -25,12 +25,10 @@ export async function GET(request: Request) {
       );
     }
 
-    console.log('🔍 [ADMIN-BILLING] Getting billing status for user:', userId);
+    structuredConsole.log('🔍 [ADMIN-BILLING] Getting billing status for user:', userId);
 
     // Get billing status from database
-    const userProfile = await db.query.userProfiles.findFirst({
-      where: eq(userProfiles.userId, userId)
-    });
+    const userProfile = await getUserProfile(userId);
 
     if (!userProfile) {
       return NextResponse.json(
@@ -55,7 +53,7 @@ export async function GET(request: Request) {
       daysRemaining = Math.max(0, Math.ceil(timeDiff / (1000 * 60 * 60 * 24)));
     }
 
-    console.log('✅ [ADMIN-BILLING] Billing status retrieved:', {
+    structuredConsole.log('✅ [ADMIN-BILLING] Billing status retrieved:', {
       userId,
       currentPlan,
       isActive,
@@ -76,7 +74,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('❌ [ADMIN-BILLING] Error getting billing status:', error);
+    structuredConsole.error('❌ [ADMIN-BILLING] Error getting billing status:', error);
     return NextResponse.json(
       { error: 'Failed to get billing status' },
       { status: 500 }

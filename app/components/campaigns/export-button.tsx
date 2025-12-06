@@ -1,6 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { ErrorBoundary } from '../error-boundary';
+import { useComponentLogger, useUserActionLogger } from '@/lib/logging/react-logger';
+import { campaignLogger } from '@/lib/logging';
 
 interface ExportButtonProps {
   jobId?: string;
@@ -10,42 +13,68 @@ interface ExportButtonProps {
   variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
 }
 
-export default function ExportButton({ 
+function ExportButtonContent({ 
   jobId, 
   campaignId,
   disabled = false, 
   className,
   variant = "default" 
 }: ExportButtonProps) {
+  const componentLogger = useComponentLogger('ExportButton', { jobId, campaignId });
+  const userActionLogger = useUserActionLogger();
   const handleExport = async () => {
     try {
       toast.loading('Preparing export...', { id: 'export-loading' });
       let url = '';
       if (campaignId) {
         url = `/api/export/csv?campaignId=${campaignId}`;
-        console.log(`Initiating export for campaign ID: ${campaignId}`);
+        campaignLogger.info('Initiating export for campaign', {
+          campaignId,
+          operation: 'export-start',
+          exportType: 'campaign'
+        });
       } else if (jobId) {
         url = `/api/export/csv?jobId=${jobId}`;
-        console.log(`Initiating export for job ID: ${jobId}`);
+        campaignLogger.info('Initiating export for job', {
+          jobId,
+          operation: 'export-start',
+          exportType: 'job'
+        });
       } else {
         toast.error('No job or campaign selected', { id: 'export-loading' });
         return;
       }
       const response = await fetch(url);
-      console.log(`Export API response status: ${response.status}`);
+      campaignLogger.info('Export API response received', {
+        statusCode: response.status,
+        campaignId,
+        jobId,
+        operation: 'export-api-response'
+      });
       
       if (!response.ok) {
         let errorMessage = 'Error exporting data';
         try {
           const errorData = await response.json();
-          console.error('Export error details:', errorData);
+          campaignLogger.error('Export API error details', new Error(errorMessage), {
+            errorData,
+            statusCode: response.status,
+            campaignId,
+            jobId,
+            operation: 'export-api-error'
+          });
           errorMessage = errorData.error || errorData.details || errorMessage;
           
           if (errorData.details) {
             errorMessage = `${errorMessage}: ${errorData.details}`;
           }
         } catch (parseError) {
-          console.error('Error parsing error response:', parseError);
+          campaignLogger.error('Error parsing export error response', parseError instanceof Error ? parseError : new Error(String(parseError)), {
+            statusCode: response.status,
+            campaignId,
+            jobId,
+            operation: 'export-parse-error'
+          });
           errorMessage = `Export failed with status ${response.status}`;
         }
         throw new Error(errorMessage);
@@ -53,7 +82,12 @@ export default function ExportButton({
 
       // Get CSV blob
       const blob = await response.blob();
-      console.log(`Export blob size: ${blob.size} bytes`);
+      campaignLogger.info('Export blob received', {
+        blobSize: blob.size,
+        campaignId,
+        jobId,
+        operation: 'export-blob-received'
+      });
       
       if (blob.size === 0) {
         throw new Error('Exported file is empty');
@@ -72,15 +106,34 @@ export default function ExportButton({
       document.body.removeChild(a);
 
       toast.success('CSV file exported successfully', { id: 'export-loading' });
+      
+      campaignLogger.info('Export completed successfully', {
+        fileName: `creators-${new Date().toISOString().split('T')[0]}.csv`,
+        blobSize: blob.size,
+        campaignId,
+        jobId,
+        operation: 'export-success'
+      });
     } catch (error) {
-      console.error('Export error:', error);
+      campaignLogger.error('Export failed', error instanceof Error ? error : new Error(String(error)), {
+        campaignId,
+        jobId,
+        operation: 'export-failure'
+      });
       toast.error(error instanceof Error ? error.message : 'Error exporting CSV', { id: 'export-loading' });
     }
   };
 
   return (
     <Button
-      onClick={handleExport}
+      onClick={() => {
+        userActionLogger.logClick('export-csv-button', {
+          campaignId,
+          jobId,
+          operation: 'export-csv-clicked'
+        });
+        handleExport();
+      }}
       disabled={disabled}
       className={className}
       variant={variant}
@@ -88,5 +141,13 @@ export default function ExportButton({
       <Download className="mr-2 h-4 w-4" />
       Export CSV
     </Button>
+  );
+}
+
+export default function ExportButton(props: ExportButtonProps) {
+  return (
+    <ErrorBoundary componentName="ExportButton">
+      <ExportButtonContent {...props} />
+    </ErrorBoundary>
   );
 } 

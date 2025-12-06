@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { useState, useEffect, useCallback } from 'react';
 
 export interface TrialCountdownData {
@@ -112,7 +113,7 @@ export function useTrialCountdown(initialTrialData?: TrialData | null) {
         error: null
       };
     } catch (error) {
-      console.error('❌ [TRIAL-COUNTDOWN] Error calculating countdown:', error);
+      structuredConsole.error('❌ [TRIAL-COUNTDOWN] Error calculating countdown:', error);
       return {
         daysRemaining: 0,
         hoursRemaining: 0,
@@ -129,7 +130,7 @@ export function useTrialCountdown(initialTrialData?: TrialData | null) {
   // Fetch fresh trial data from API
   const refreshTrialData = useCallback(async () => {
     try {
-      console.log('🔄 [TRIAL-COUNTDOWN] Refreshing trial data from API');
+      structuredConsole.log('🔄 [TRIAL-COUNTDOWN] Refreshing trial data from API');
       
       const response = await fetch('/api/profile');
       if (!response.ok) {
@@ -139,7 +140,7 @@ export function useTrialCountdown(initialTrialData?: TrialData | null) {
       const profileData = await response.json();
       
       if (profileData.trialData) {
-        console.log('✅ [TRIAL-COUNTDOWN] Trial data refreshed:', {
+        structuredConsole.log('✅ [TRIAL-COUNTDOWN] Trial data refreshed:', {
           status: profileData.trialData.status,   
           endDate: profileData.trialData.endDate,
           daysRemaining: profileData.trialData.daysRemaining
@@ -153,7 +154,7 @@ export function useTrialCountdown(initialTrialData?: TrialData | null) {
           setCountdownData(newCountdown);
         }
       } else {
-        console.log('ℹ️ [TRIAL-COUNTDOWN] No trial data found');
+        structuredConsole.log('ℹ️ [TRIAL-COUNTDOWN] No trial data found');
         setCountdownData(prev => ({
           ...prev,
           isLoading: false,
@@ -161,7 +162,7 @@ export function useTrialCountdown(initialTrialData?: TrialData | null) {
         }));
       }
     } catch (error) {
-      console.error('❌ [TRIAL-COUNTDOWN] Error refreshing trial data:', error);
+      structuredConsole.error('❌ [TRIAL-COUNTDOWN] Error refreshing trial data:', error);
       setCountdownData(prev => ({
         ...prev,
         isLoading: false,
@@ -178,7 +179,7 @@ export function useTrialCountdown(initialTrialData?: TrialData | null) {
       
       // If countdown shows expired but trial data doesn't, refresh from server
       if (newCountdown.isExpired && trialData.status === 'active') {
-        console.log('⚠️ [TRIAL-COUNTDOWN] Countdown expired, refreshing server data');
+        structuredConsole.log('⚠️ [TRIAL-COUNTDOWN] Countdown expired, refreshing server data');
         refreshTrialData();
       }
     }
@@ -196,23 +197,23 @@ export function useTrialCountdown(initialTrialData?: TrialData | null) {
 
   // Set up interval for real-time updates (every 60 seconds)
   useEffect(() => {
-    console.log('⏰ [TRIAL-COUNTDOWN] Setting up 60-second countdown interval');
+    structuredConsole.log('⏰ [TRIAL-COUNTDOWN] Setting up 60-second countdown interval');
     
     const interval = setInterval(() => {
-      console.log('🔄 [TRIAL-COUNTDOWN] Updating countdown (60-second interval)');
+      structuredConsole.log('🔄 [TRIAL-COUNTDOWN] Updating countdown (60-second interval)');
       updateCountdown();
     }, 60 * 1000); // Update every 60 seconds
 
     // Cleanup interval on unmount
     return () => {
-      console.log('🧹 [TRIAL-COUNTDOWN] Cleaning up countdown interval');
+      structuredConsole.log('🧹 [TRIAL-COUNTDOWN] Cleaning up countdown interval');
       clearInterval(interval);
     };
   }, [updateCountdown]);
 
   // Provide manual refresh function
   const refresh = useCallback(() => {
-    console.log('🔄 [TRIAL-COUNTDOWN] Manual refresh triggered');
+    structuredConsole.log('🔄 [TRIAL-COUNTDOWN] Manual refresh triggered');
     refreshTrialData();
   }, [refreshTrialData]);
 

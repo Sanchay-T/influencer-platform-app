@@ -55,8 +55,16 @@ CREATE TABLE "user_profiles" (
 	CONSTRAINT "user_profiles_user_id_unique" UNIQUE("user_id")
 );
 --> statement-breakpoint
-ALTER TABLE "notifications" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
-DROP TABLE "notifications" CASCADE;--> statement-breakpoint
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'notifications'
+  ) THEN
+    EXECUTE 'ALTER TABLE "notifications" DISABLE ROW LEVEL SECURITY';
+  END IF;
+END $$;--> statement-breakpoint
+DROP TABLE IF EXISTS "notifications" CASCADE;--> statement-breakpoint
 ALTER TABLE "campaigns" ALTER COLUMN "user_id" SET DATA TYPE text;--> statement-breakpoint
 ALTER TABLE "scraping_jobs" ALTER COLUMN "target_results" SET DEFAULT 1000;--> statement-breakpoint
 ALTER TABLE "search_jobs" ADD CONSTRAINT "search_jobs_campaign_id_campaigns_id_fk" FOREIGN KEY ("campaign_id") REFERENCES "public"."campaigns"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint

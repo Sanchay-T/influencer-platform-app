@@ -1,5 +1,7 @@
 'use client';
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -61,7 +63,7 @@ export function DevEmailControls({ userId, userEmail, fullName, businessName }: 
     setIsLoading(true);
     
     try {
-      console.log('🚀 [DEV-EMAIL] Scheduling test email:', {
+      structuredConsole.log('🚀 [DEV-EMAIL] Scheduling test email:', {
         userId,
         emailType: selectedEmailType,
         delay: customDelay,
@@ -98,13 +100,13 @@ export function DevEmailControls({ userId, userEmail, fullName, businessName }: 
       setResults(prev => [result, ...prev].slice(0, 5)); // Keep last 5 results
 
       if (response.ok) {
-        console.log('✅ [DEV-EMAIL] Email scheduled successfully:', data);
+        structuredConsole.log('✅ [DEV-EMAIL] Email scheduled successfully:', data);
       } else {
-        console.error('❌ [DEV-EMAIL] Failed to schedule:', data);
+        structuredConsole.error('❌ [DEV-EMAIL] Failed to schedule:', data);
       }
 
     } catch (error) {
-      console.error('❌ [DEV-EMAIL] Error scheduling email:', error);
+      structuredConsole.error('❌ [DEV-EMAIL] Error scheduling email:', error);
       
       setResults(prev => [{
         type: selectedEmailType,

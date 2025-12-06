@@ -1,5 +1,7 @@
 'use client';
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
 import { useState, useEffect } from 'react';
 import { useSubscription } from '@/lib/hooks/use-subscription';
 
@@ -12,7 +14,7 @@ export default function TestComparisonPage() {
     fetch('/api/billing/status')
       .then(res => res.json())
       .then(data => setOldData(data))
-      .catch(err => console.error('Error fetching old data:', err));
+      .catch(err => structuredConsole.error('Error fetching old data:', err));
   }, []);
 
   return (
@@ -79,7 +81,7 @@ export default function TestComparisonPage() {
           
           <button
             onClick={() => {
-              console.log('Modern subscription data:', {
+              structuredConsole.log('Modern subscription data:', {
                 raw: modernData.subscription,
                 computed: {
                   isTrialing: modernData.isTrialing,

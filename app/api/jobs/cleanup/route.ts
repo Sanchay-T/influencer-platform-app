@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { scrapingJobs, scrapingResults } from '@/lib/db/schema'
@@ -77,7 +78,7 @@ export async function POST() {
       deletedJobs
     })
   } catch (error) {
-    console.error('Error during cleanup:', error)
+    structuredConsole.error('Error during cleanup:', error)
     return NextResponse.json(
       { error: 'Error during cleanup process' },
       { status: 500 }

@@ -1,14 +1,24 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
+import '@/lib/config/load-env';
 import { NextRequest, NextResponse } from 'next/server';
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { clerkBackendClient } from '@/lib/auth/backend-auth';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
+import { users } from '@/lib/db/schema';
 import { ilike, or, asc, desc } from 'drizzle-orm';
 import { isAdminUser } from '@/lib/auth/admin-utils';
 
 export async function GET(req: NextRequest) {
   try {
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      return NextResponse.json({ users: [], query: null, count: 0, searchMethod: 'skipped' });
+    }
     // Authentication check
-    const { userId } = await auth();
+    if (!process.env.CLERK_SECRET_KEY) {
+      return NextResponse.json({ users: [], query: null, count: 0, searchMethod: 'skipped' });
+    }
+
+    const { userId } = await getAuthOrTest();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -26,65 +36,47 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ users: [] });
     }
 
-    console.log('🔍 [ADMIN-SEARCH] Searching users with query:', query);
+    structuredConsole.log('🔍 [ADMIN-SEARCH] Searching users with query:', query);
 
     try {
       const startTime = Date.now();
       
       // Optimized search - only select essential fields and prioritize exact matches
-      const users = await db
+      const userResults = await db
         .select({
-          user_id: userProfiles.userId,
-          full_name: userProfiles.fullName,
-          business_name: userProfiles.businessName,
-          trial_start_date: userProfiles.trialStartDate,
-          trial_end_date: userProfiles.trialEndDate,
-          trial_status: userProfiles.trialStatus,
-          onboarding_step: userProfiles.onboardingStep,
-          stripe_customer_id: userProfiles.stripeCustomerId,
+          user_id: users.userId,
+          full_name: users.fullName,
+          business_name: users.businessName,
+          onboarding_step: users.onboardingStep,
         })
-        .from(userProfiles)
+        .from(users)
         .where(
           or(
             // Start-of-string matches (fastest with indexes)
-            ilike(userProfiles.userId, `${query}%`),
-            ilike(userProfiles.fullName, `${query}%`),
+            ilike(users.userId, `${query}%`),
+            ilike(users.fullName, `${query}%`),
             // Contains matches (slower but necessary)
-            ilike(userProfiles.fullName, `%${query}%`),
-            ilike(userProfiles.businessName, `%${query}%`)
+            ilike(users.fullName, `%${query}%`),
+            ilike(users.businessName, `%${query}%`)
           )
         )
-        .orderBy(desc(userProfiles.createdAt))
+        .orderBy(desc(users.createdAt))
         .limit(8);
 
       const queryTime = Date.now() - startTime;
-      console.log(`✅ [ADMIN-SEARCH] Found ${users.length} users matching "${query}" (DB query: ${queryTime}ms)`);
+      structuredConsole.log(`✅ [ADMIN-SEARCH] Found ${userResults.length} users matching "${query}" (DB query: ${queryTime}ms)`);
 
       // Add computed trial status
-      const usersWithStatus = users.map(user => {
-        let trialStatus = 'No Trial';
-        let timeRemaining = 'N/A';
-        
-        if (user.trial_start_date && user.trial_end_date) {
-          const now = new Date();
-          const endDate = new Date(user.trial_end_date);
-          const timeDiff = endDate.getTime() - now.getTime();
-          
-          if (timeDiff > 0) {
-            const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            trialStatus = 'Active';
-            timeRemaining = `${days}d ${hours}h`;
-          } else {
-            trialStatus = 'Expired';
-            timeRemaining = 'Expired';
-          }
-        }
-
+      const usersWithStatus = userResults.map(user => {
+        // Simplified status for normalized schema
         return {
           ...user,
-          computed_trial_status: trialStatus,
-          time_remaining: timeRemaining
+          trial_start_date: null,
+          trial_end_date: null,
+          trial_status: null,
+          stripe_customer_id: null,
+          computed_trial_status: 'Profile Only',
+          time_remaining: 'N/A'
         };
       });
 
@@ -93,22 +85,21 @@ export async function GET(req: NextRequest) {
       let searchMethod = 'database';
       
       if (usersWithStatus.length === 0) {
-        console.log('🔍 [ADMIN-SEARCH] No database results, searching Clerk...');
+        structuredConsole.log('🔍 [ADMIN-SEARCH] No database results, searching Clerk...');
         try {
-          const client = await clerkClient();
-          console.log('🔍 [CLERK-SEARCH] Searching Clerk with query:', query);
+          structuredConsole.log('🔍 [CLERK-SEARCH] Searching Clerk with query:', query);
           
           // Try different search approaches
           let clerkUsers;
           if (query.includes('@')) {
             // Email search
-            clerkUsers = await client.users.getUserList({
+            clerkUsers = await clerkBackendClient.users.getUserList({
               emailAddress: [query],
               limit: 10
             });
           } else {
             // Name search - get recent users and filter
-            clerkUsers = await client.users.getUserList({
+            clerkUsers = await clerkBackendClient.users.getUserList({
               limit: 50,
               orderBy: '-created_at'
             });
@@ -122,7 +113,7 @@ export async function GET(req: NextRequest) {
             });
           }
           
-          console.log(`🔍 [CLERK-SEARCH] Found ${clerkUsers.data.length} Clerk users`);
+          structuredConsole.log(`🔍 [CLERK-SEARCH] Found ${clerkUsers.data.length} Clerk users`);
           
           const clerkResults = clerkUsers.data.map(user => ({
             user_id: user.id,
@@ -141,14 +132,14 @@ export async function GET(req: NextRequest) {
           
           allUsers = clerkResults;
           searchMethod = 'clerk';
-          console.log(`✅ [ADMIN-SEARCH] Found ${clerkResults.length} Clerk users`);
+          structuredConsole.log(`✅ [ADMIN-SEARCH] Found ${clerkResults.length} Clerk users`);
         } catch (clerkError) {
-          console.error('❌ [ADMIN-SEARCH] Clerk search error:', clerkError);
+          structuredConsole.error('❌ [ADMIN-SEARCH] Clerk search error:', clerkError);
         }
       }
 
       const totalTime = Date.now() - startTime;
-      console.log(`⏱️ [ADMIN-SEARCH] Total request time: ${totalTime}ms (DB: ${queryTime}ms, Processing: ${totalTime - queryTime}ms)`);
+      structuredConsole.log(`⏱️ [ADMIN-SEARCH] Total request time: ${totalTime}ms (DB: ${queryTime}ms, Processing: ${totalTime - queryTime}ms)`);
 
       return NextResponse.json({
         users: allUsers,
@@ -158,12 +149,12 @@ export async function GET(req: NextRequest) {
       });
 
     } catch (dbError) {
-      console.error('❌ [ADMIN-SEARCH] Database query error:', dbError);
+      structuredConsole.error('❌ [ADMIN-SEARCH] Database query error:', dbError);
       throw dbError;
     }
 
   } catch (error) {
-    console.error('❌ [ADMIN-SEARCH] Error searching users:', error);
+    structuredConsole.error('❌ [ADMIN-SEARCH] Error searching users:', error);
     return NextResponse.json(
       { error: 'Failed to search users', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

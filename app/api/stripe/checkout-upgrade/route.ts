@@ -1,9 +1,9 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import Stripe from 'stripe';
 import { db } from '@/lib/db';
-import { userProfiles } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
 import { getClientUrl } from '@/lib/utils/url-utils';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -16,7 +16,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
  */
 export async function POST(req: NextRequest) {
   try {
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { planId, billing = 'monthly' } = await req.json();
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     const priceId = planPrices?.[billing as keyof typeof planPrices];
     if (!priceId) return NextResponse.json({ error: 'Invalid plan or price not configured' }, { status: 400 });
 
-    console.log(`🛒 [CHECKOUT-UPGRADE-AUDIT] Starting checkout upgrade:`, { 
+    structuredConsole.log(`🛒 [CHECKOUT-UPGRADE-AUDIT] Starting checkout upgrade:`, { 
       planId, 
       billing, 
       priceId,
@@ -50,56 +50,65 @@ export async function POST(req: NextRequest) {
     });
 
     // Load user profile
-    const profile = await db.query.userProfiles.findFirst({ where: eq(userProfiles.userId, userId) });
+    const profile = await getUserProfile(userId);
     if (!profile) return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
     if (!profile.stripeCustomerId) return NextResponse.json({ error: 'Stripe customer missing' }, { status: 400 });
 
-    const successUrl = `${getClientUrl()}/billing?upgrade=1&plan=${planId}`;
+    // ★★★ CRITICAL FIX: Redirect to success page that processes the upgrade
+    const successUrl = `${getClientUrl()}/onboarding/success`;
     const cancelUrl = `${getClientUrl()}/billing`;
 
-    // If user already has a subscription, create an upgrade checkout session
+    // For existing subscriptions, ALWAYS use checkout sessions for proper payment flow
+    // This ensures proper proration, payment confirmation, and audit trail
     if (profile.stripeSubscriptionId) {
-      console.log(`🛒 [CHECKOUT-UPGRADE-FIX] Creating upgrade checkout for existing subscription:`, {
+      structuredConsole.log(`🛒 [CHECKOUT-UPGRADE] Existing subscription detected - using checkout session for proper payment flow`, {
         hasExistingSubscription: !!profile.stripeSubscriptionId,
         subscriptionId: profile.stripeSubscriptionId?.slice(0, 8) + '...',
         planId, 
         billing, 
-        priceId
+        priceId,
+        reason: 'payment_required_for_upgrade'
       });
+      
+      // Note: Direct subscription updates without checkout sessions skip payment collection
+      // This would allow users to upgrade without paying, which is incorrect for SaaS billing
+      // Always use checkout sessions for upgrades to ensure proper payment flow
+    }
 
-      // Cancel existing subscription and create new one (cleaner than updates)
-      try {
-        await stripe.subscriptions.cancel(profile.stripeSubscriptionId);
-        console.log('🗑️ [CHECKOUT-UPGRADE] Cancelled existing subscription for clean upgrade');
-      } catch (cancelError) {
-        console.log('⚠️ [CHECKOUT-UPGRADE] Could not cancel existing subscription, continuing...');
-      }
-
-      // Create new subscription checkout (will replace the old one)
-      const session = await stripe.checkout.sessions.create({
+    // Create checkout session for new subscription or if no existing subscription
+    const sessionSource = profile.stripeSubscriptionId 
+      ? 'upgrade_existing_subscription_fallback' 
+      : 'upgrade_no_existing_subscription';
+    const sessionType = profile.stripeSubscriptionId 
+      ? 'upgrade_subscription' 
+      : 'new_paid_subscription';
+      
+    structuredConsole.log(`🛒 [CHECKOUT-UPGRADE] Creating checkout session - source: ${sessionSource}`);
+    
+    const session = await stripe.checkout.sessions.create({
         mode: 'subscription',
         customer: profile.stripeCustomerId,
         line_items: [{ price: priceId, quantity: 1 }],
         payment_method_types: ['card'],
         subscription_data: {
-          trial_period_days: undefined, // No trial for upgrades
+          trial_period_days: undefined,
           metadata: { 
             userId, 
             plan: planId,
             planId,
             billing,
-            source: 'upgrade_existing_subscription',
-            replacedSubscription: profile.stripeSubscriptionId
+            source: sessionSource,
+            ...(profile.stripeSubscriptionId && { replacedSubscription: profile.stripeSubscriptionId })
           },
         },
-        success_url: `${successUrl}&upgraded=1`,
+        success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: cancelUrl,
         metadata: { 
           userId, 
           plan: planId,
           planId,
-          type: 'upgrade_subscription',
-          replacedSubscription: profile.stripeSubscriptionId
+          type: sessionType,
+          ...(profile.stripeSubscriptionId && { replacedSubscription: profile.stripeSubscriptionId })
         },
         allow_promotion_codes: true,
         billing_address_collection: 'auto',
@@ -123,51 +132,10 @@ export async function POST(req: NextRequest) {
         price: priceMeta, 
         planId, 
         billing,
-        isUpgrade: true 
+        isUpgrade: !!profile.stripeSubscriptionId
       });
-    }
-
-    // Otherwise, create a new paid subscription via Checkout (no trial)
-    // Fetch price metadata for UI clarity
-    let priceMeta: any = null;
-    try {
-      const price = await stripe.prices.retrieve(priceId);
-      priceMeta = {
-        id: price.id,
-        interval: price.recurring?.interval,
-        unitAmount: price.unit_amount,
-        currency: price.currency,
-        displayAmount: price.unit_amount ? `$${(price.unit_amount/100).toFixed(2)}` : null
-      };
-    } catch {}
-
-    const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
-      customer: profile.stripeCustomerId,
-      line_items: [{ price: priceId, quantity: 1 }],
-      payment_method_types: ['card'],
-      subscription_data: {
-        trial_period_days: undefined,
-        metadata: { 
-          userId, 
-          plan: planId,        // ✅ Consistent with webhook
-          planId,             // ✅ Backup for compatibility
-          source: 'upgrade_no_existing_subscription' 
-        },
-      },
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-      metadata: { 
-        userId, 
-        plan: planId,        // ✅ Consistent with webhook
-        planId,             // ✅ Backup for compatibility
-        type: 'new_paid_subscription' 
-      },
-    });
-
-    return NextResponse.json({ url: session.url, price: priceMeta, planId, billing });
   } catch (error) {
-    console.error('❌ [CHECKOUT-UPGRADE] Error:', error);
+    structuredConsole.error('❌ [CHECKOUT-UPGRADE] Error:', error);
     return NextResponse.json({ error: 'Failed to create upgrade checkout session' }, { status: 500 });
   }
 }

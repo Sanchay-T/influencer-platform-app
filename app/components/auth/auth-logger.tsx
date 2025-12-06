@@ -1,5 +1,7 @@
 'use client';
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
 import { useEffect } from 'react';
 import { useAuth, useUser } from '@clerk/nextjs';
 import { logAuth, logUserAction, logError } from '@/lib/utils/frontend-logger';
@@ -15,7 +17,7 @@ export function AuthLogger() {
   // Log authentication state changes
   useEffect(() => {
     if (isLoaded) {
-      logAuth('session_check', {
+      const sessionPayload = {
         userId: userId || 'ANONYMOUS',
         userEmail: user?.primaryEmailAddress?.emailAddress || 'NO_EMAIL',
         isLoaded,
@@ -23,10 +25,14 @@ export function AuthLogger() {
         sessionId,
         userIsLoaded,
         hasUserData: !!user
-      });
+      };
+      logAuth('session_check', sessionPayload);
+      if (process.env.NODE_ENV !== 'production') {
+        structuredConsole.log('🔐 [AUTH-CLIENT] session_check', sessionPayload);
+      }
 
       if (isSignedIn && userId) {
-        logUserAction('authentication_success', {
+        const authSuccessPayload = {
           authMethod: 'clerk',
           userId,
           userEmail: user?.primaryEmailAddress?.emailAddress,
@@ -35,10 +41,14 @@ export function AuthLogger() {
           hasProfileImage: !!user?.profileImageUrl,
           accountCreatedAt: user?.createdAt,
           lastSignInAt: user?.lastSignInAt
-        }, {
+        };
+        logUserAction('authentication_success', authSuccessPayload, {
           userId,
           userEmail: user?.primaryEmailAddress?.emailAddress
         });
+        if (process.env.NODE_ENV !== 'production') {
+          structuredConsole.log('🔐 [AUTH-CLIENT] authentication_success', authSuccessPayload);
+        }
       } else if (isLoaded && !isSignedIn) {
         logUserAction('authentication_required', {
           currentPath: window.location.pathname,
@@ -51,7 +61,7 @@ export function AuthLogger() {
   // Log user data loading
   useEffect(() => {
     if (userIsLoaded && user && isSignedIn) {
-      logAuth('user_loaded', {
+      const userLoadedPayload = {
         userId: user.id,
         userEmail: user.primaryEmailAddress?.emailAddress,
         firstName: user.firstName,
@@ -63,8 +73,18 @@ export function AuthLogger() {
         accountCreatedAt: user.createdAt,
         lastSignInAt: user.lastSignInAt,
         publicMetadata: user.publicMetadata,
-        privateMetadata: Object.keys(user.privateMetadata || {}).length > 0 ? 'HAS_DATA' : 'EMPTY'
-      });
+        privateMetadata: Object.keys(user.privateMetadata || {}).length > 0 ? 'HAS_DATA' : 'EMPTY',
+        emailAddresses: user.emailAddresses?.map((address) => ({
+          id: address.id,
+          emailAddress: address.emailAddress,
+          verificationStatus: address.verification?.status ?? 'unverified',
+          isPrimary: address.id === user.primaryEmailAddressId,
+        })),
+      };
+      logAuth('user_loaded', userLoadedPayload);
+      if (process.env.NODE_ENV !== 'production') {
+        structuredConsole.log('🔐 [AUTH-CLIENT] user_loaded', userLoadedPayload);
+      }
     }
   }, [userIsLoaded, user, isSignedIn]);
 

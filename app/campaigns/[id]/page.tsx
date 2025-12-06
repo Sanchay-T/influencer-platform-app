@@ -1,91 +1,98 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { Suspense } from 'react'
 import DashboardLayout from '@/app/components/layout/dashboard-layout'
 import { db } from '@/lib/db'
-import { campaigns, PlatformResult } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { campaigns } from '@/lib/db/schema'
+import { eq, and } from 'drizzle-orm'
 import ClientCampaignPage from '@/app/campaigns/[id]/client-page'
-import { Campaign, ScrapingJob, ScrapingResult } from '@/app/types/campaign'
+import { Campaign } from '@/app/types/campaign'
+import { auth } from '@clerk/nextjs/server'
 
 interface PageProps {
   params: Promise<{ id: string }>
 }
 
 async function getCampaign(id: string) {
-  console.log('Fetching campaign with id:', id)
   try {
+    const { userId } = await auth()
+
+    if (!userId) {
+      return null
+    }
+
+    const debugCampaign = process.env.CAMPAIGN_DEBUG_LOGS === 'true';
+    if (debugCampaign) {
+      structuredConsole.log('Fetching campaign with id:', id);
+    }
     const campaign = await db.query.campaigns.findFirst({
-      where: eq(campaigns.id, id),
+      where: and(eq(campaigns.id, id), eq(campaigns.userId, userId)),
       with: {
         scrapingJobs: {
-          with: {
-            results: {
-              columns: {
-                id: true,
-                jobId: true,
-                creators: true,
-                createdAt: true
-              }
-            }
-          },
           orderBy: (jobs, { desc }) => [desc(jobs.createdAt)]
         }
       }
     })
     
     if (!campaign) {
-      console.log('No campaign found with id:', id)
+      if (debugCampaign) {
+        structuredConsole.log('No campaign found with id:', id);
+      }
       return null
     }
 
-    console.log('📊 [CAMPAIGN-DEBUG] Campaign structure:', JSON.stringify({
-      id: campaign.id,
-      name: campaign.name,
-      status: campaign.status,
-      jobsCount: campaign.scrapingJobs?.length,
-      jobs: campaign.scrapingJobs?.map(job => ({
-        id: job.id,
-        status: job.status,
-        createdAt: job.createdAt,
-        campaignId: job.campaignId,
-        platform: job.platform,
-        keywords: job.keywords,
-        targetUsername: job.targetUsername,
-        resultCount: job.results?.length || 0,
-        results: job.results?.map(result => ({
-          id: result.id,
-          creatorsCount: Array.isArray(result.creators) ? result.creators.length : 0
+    if (debugCampaign) {
+      structuredConsole.log('📊 [CAMPAIGN-DEBUG] Campaign structure:', JSON.stringify({
+        id: campaign.id,
+        name: campaign.name,
+        status: campaign.status,
+        jobsCount: campaign.scrapingJobs?.length,
+        jobs: campaign.scrapingJobs?.map(job => ({
+          id: job.id,
+          status: job.status,
+          createdAt: job.createdAt,
+          campaignId: job.campaignId,
+          platform: job.platform,
+          keywords: job.keywords,
+          targetUsername: job.targetUsername,
+          // Results intentionally omitted during server render to prevent large payloads.
+          resultsLoaded: false
         }))
-      }))
-    }, null, 2))
+      }, null, 2));
 
-    // 🔍 ADDITIONAL LOGGING: Check if multiple jobs exist for this campaign
-    console.log('🔍 [CAMPAIGN-RUNS-DEBUG] Total jobs found for campaign:', campaign.scrapingJobs?.length || 0);
-    campaign.scrapingJobs?.forEach((job, index) => {
-      console.log(`🏃 [RUN-${index + 1}] Job ${job.id}:`, {
-        status: job.status,
-        createdAt: job.createdAt,
-        platform: job.platform,
-        hasResults: (job.results?.length || 0) > 0,
-        resultsCount: job.results?.length || 0
+      // 🔍 ADDITIONAL LOGGING: Check if multiple jobs exist for this campaign
+      structuredConsole.log('🔍 [CAMPAIGN-RUNS-DEBUG] Total jobs found for campaign:', campaign.scrapingJobs?.length || 0);
+      campaign.scrapingJobs?.forEach((job, index) => {
+        structuredConsole.log(`🏃 [RUN-${index + 1}] Job ${job.id}:`, {
+          status: job.status,
+          createdAt: job.createdAt,
+          platform: job.platform,
+          resultsLoadedServer: false
+        });
       });
-    });
 
-    // 🔍 COMPLETED JOBS DEBUG: Check how many completed jobs exist
-    const completedJobs = campaign.scrapingJobs?.filter(job => 
-      job.status === 'completed' && job.results?.length > 0
-    ) || [];
-    console.log('✅ [COMPLETED-JOBS-DEBUG] Found completed jobs:', completedJobs.length);
-    completedJobs.forEach((job, index) => {
-      console.log(`✅ [COMPLETED-${index + 1}] Job ${job.id}:`, {
-        platform: job.platform,
-        createdAt: job.createdAt,
-        resultsCount: job.results?.length || 0
+      // 🔍 COMPLETED JOBS DEBUG: Check how many completed jobs exist
+      const completedJobs = campaign.scrapingJobs?.filter(job => 
+        job.status === 'completed'
+      ) || [];
+      structuredConsole.log('✅ [COMPLETED-JOBS-DEBUG] Found completed jobs:', completedJobs.length);
+      completedJobs.forEach((job, index) => {
+        structuredConsole.log(`✅ [COMPLETED-${index + 1}] Job ${job.id}:`, {
+          platform: job.platform,
+          createdAt: job.createdAt,
+          resultsHydration: 'client-fetch'
+        });
       });
-    });
+    }
 
-    return campaign
+    return {
+      ...campaign,
+      scrapingJobs: campaign.scrapingJobs?.map((job) => ({
+        ...job,
+        results: [],
+      })) ?? []
+    }
   } catch (error) {
-    console.error('Error fetching campaign:', error)
+    structuredConsole.error('Error fetching campaign:', error)
     throw error
   }
 }

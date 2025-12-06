@@ -1,10 +1,11 @@
-'use client'
+'use client';
 
 import { useEffect, useMemo, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { useBilling } from '@/lib/hooks/use-billing'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import { logStepHeader } from '@/lib/utils/frontend-logger'
 
 export default function AccessGuardOverlay({ 
   initialBlocked = false,
@@ -32,20 +33,31 @@ export default function AccessGuardOverlay({
     setBlocked(nextBlocked)
     if (nextBlocked && blockStart === null) setBlockStart(Date.now())
     if (!nextBlocked && blockStart !== null) {
-      try {
-        console.log('[Overlay] Unblocked', { pathname, blockedForMs: Date.now() - blockStart, mountTs })
-      } catch {}
+      logStepHeader('access_guard_unblocked', 'Overlay cleared', {
+        metadata: { pathname, blockedForMs: Date.now() - blockStart, mountTs }
+      })
       setBlockStart(null)
     }
-    try {
-      console.log('[Overlay] Resolve block state', { pathname, isTrialExpired, hasActiveSubscription, isTrialing, trialStatus, isAllowedRoute, blocked: nextBlocked })
-    } catch {}
+
+    logStepHeader('access_guard_state', 'Resolve block state', {
+      metadata: {
+        pathname,
+        isTrialExpired,
+        hasActiveSubscription,
+        isTrialing,
+        trialStatus,
+        isAllowedRoute,
+        blocked: nextBlocked,
+      }
+    })
   }, [isLoaded, isAllowedRoute, isTrialing, trialStatus, hasActiveSubscription, blockStart, pathname, mountTs])
 
   // 🚨 RACE CONDITION FIX: Don't show overlay during onboarding flow
   // Wait for onboarding status to be determined before showing billing overlay
   if (!onboardingStatusLoaded || showOnboarding) {
-    console.log('🛡️ [ACCESS-GUARD] Preventing overlay during onboarding:', { onboardingStatusLoaded, showOnboarding })
+    logStepHeader('access_guard_skip', 'Prevent overlay during onboarding', {
+      metadata: { onboardingStatusLoaded, showOnboarding }
+    })
     return null
   }
 
