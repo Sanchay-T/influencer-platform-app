@@ -210,6 +210,23 @@ const resolveScrapingEndpoint = (platform?: string) => {
   }
 }
 
+/**
+ * Converts internal platform identifiers to user-friendly display names.
+ * e.g., "instagram_scrapecreators" → "Instagram"
+ */
+const formatPlatformDisplay = (platform?: string | null): string => {
+  if (!platform) return '—'
+  const normalized = platform.toLowerCase()
+  
+  if (normalized.startsWith('instagram')) return 'Instagram'
+  if (normalized.startsWith('youtube') || normalized === 'yt') return 'YouTube'
+  if (normalized.startsWith('tiktok') || normalized === 'tt') return 'TikTok'
+  if (normalized.includes('google') || normalized.includes('serp')) return 'Google SERP'
+  
+  // Fallback: capitalize first letter
+  return platform.charAt(0).toUpperCase() + platform.slice(1)
+}
+
 const createJobUpdateFromPayload = (
   job: UiScrapingJob,
   data: any,
@@ -983,7 +1000,7 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-zinc-100 truncate">{runLabel}</p>
                     <p className="text-xs text-zinc-500 truncate">
-                      {formatDate(job.createdAt, true)} · {job.platform}
+                      {formatDate(job.createdAt, true)} · {formatPlatformDisplay(job.platform)}
                       {isLoadingJob && ' · loading results'}
                     </p>
                   </div>
@@ -1047,7 +1064,7 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-zinc-500">Platform</p>
-            <p className="mt-1 text-sm text-zinc-100">{selectedJob?.platform ?? '—'}</p>
+            <p className="mt-1 text-sm text-zinc-100">{formatPlatformDisplay(selectedJob?.platform)}</p>
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-zinc-500">Created</p>

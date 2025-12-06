@@ -4,6 +4,9 @@
  * Creates per-user log files for debugging signup/payment flows.
  * Logs are stored in: logs/users/{email}/
  *
+ * NOTE: In serverless environments (Vercel), file operations are skipped
+ * and logs are only written to console. File logging only works locally.
+ *
  * Usage:
  *   const logger = new UserSessionLogger('user@example.com');
  *   logger.log('CLERK_WEBHOOK', 'User created', { userId: '123' });
@@ -14,6 +17,14 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 const LOGS_BASE_DIR = path.join(process.cwd(), 'logs', 'users');
+
+// Detect serverless environment (Vercel, AWS Lambda, etc.)
+const isServerless = !!(
+  process.env.VERCEL ||
+  process.env.AWS_LAMBDA_FUNCTION_NAME ||
+  process.env.NETLIFY ||
+  process.env.VERCEL_ENV
+);
 
 export interface LogEntry {
   timestamp: string;
@@ -29,22 +40,35 @@ export class UserSessionLogger {
   private userDir: string;
   private sessionFile: string;
   private sessionId: string;
+  private fileLoggingEnabled: boolean;
 
   constructor(email: string, userId?: string) {
     this.email = this.sanitizeEmail(email);
     this.userId = userId;
     this.sessionId = `session_${Date.now()}`;
+    this.fileLoggingEnabled = !isServerless;
 
-    // Create user directory
+    // Create user directory (only in non-serverless environments)
     this.userDir = path.join(LOGS_BASE_DIR, this.email);
-    this.ensureDir(this.userDir);
+    
+    if (this.fileLoggingEnabled) {
+      try {
+        this.ensureDir(this.userDir);
+      } catch (e) {
+        // File system not writable, disable file logging
+        this.fileLoggingEnabled = false;
+        console.warn('[UserSessionLogger] File logging disabled - filesystem not writable');
+      }
+    }
 
     // Session file with timestamp
     const date = new Date().toISOString().split('T')[0];
     this.sessionFile = path.join(this.userDir, `${date}_${this.sessionId}.json`);
 
-    // Initialize session file
-    this.initSession();
+    // Initialize session file (only if file logging is enabled)
+    if (this.fileLoggingEnabled) {
+      this.initSession();
+    }
   }
 
   private sanitizeEmail(email: string): string {
@@ -87,13 +111,13 @@ export class UserSessionLogger {
       source,
     };
 
-    // Append to session file
-    this.appendToSessionFile(entry);
+    // Append to session file (only if file logging is enabled)
+    if (this.fileLoggingEnabled) {
+      this.appendToSessionFile(entry);
+      this.appendToMasterLog(entry);
+    }
 
-    // Append to master log
-    this.appendToMasterLog(entry);
-
-    // Also log to console for real-time visibility
+    // Always log to console for real-time visibility
     console.log(`[${this.email}] [${event}] ${message}`, data ? JSON.stringify(data, null, 2) : '');
   }
 
