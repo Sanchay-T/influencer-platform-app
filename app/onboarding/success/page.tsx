@@ -1,5 +1,7 @@
 'use client';
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,12 +41,12 @@ function OnboardingSuccessContent() {
 
   useEffect(() => {
     const pageLoadTestId = `SUCCESS_PAGE_LOAD_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    console.log(`🚨🚨🚨 [SUCCESS-PAGE-LOAD-TEST] ${pageLoadTestId} - SUCCESS PAGE HAS BEEN LOADED!`);
-    console.log(`🚨🚨🚨 [SUCCESS-PAGE-LOAD-TEST] ${pageLoadTestId} - sessionId from URL: ${sessionId}`);
+    structuredConsole.log(`🚨🚨🚨 [SUCCESS-PAGE-LOAD-TEST] ${pageLoadTestId} - SUCCESS PAGE HAS BEEN LOADED!`);
+    structuredConsole.log(`🚨🚨🚨 [SUCCESS-PAGE-LOAD-TEST] ${pageLoadTestId} - sessionId from URL: ${sessionId}`);
     
     const fetchSessionData = async () => {
       if (!sessionId) {
-        console.log(`❌ [SUCCESS-PAGE-LOAD-TEST] ${pageLoadTestId} - No sessionId found in URL, stopping`);
+        structuredConsole.log(`❌ [SUCCESS-PAGE-LOAD-TEST] ${pageLoadTestId} - No sessionId found in URL, stopping`);
         setLoading(false);
         return;
       }
@@ -54,13 +56,13 @@ function OnboardingSuccessContent() {
         if (response.ok) {
           const data = await response.json();
           setSessionData(data);
-          console.log('✅ [SUCCESS-PAGE] Session data loaded:', data);
+          structuredConsole.log('✅ [SUCCESS-PAGE] Session data loaded:', data);
           
           // 🚀 PROPER SAAS FLOW: Immediate plan update via central billing service
           const upgradeTestId = `SUCCESS_PAGE_UPGRADE_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-          console.log(`🎯 [SUCCESS-PAGE-TEST] ${upgradeTestId} - Starting immediate plan upgrade...`);
-          console.log(`🔍 [SUCCESS-PAGE-TEST] ${upgradeTestId} - sessionId: ${sessionId}`);
-          console.log(`🔍 [SUCCESS-PAGE-TEST] ${upgradeTestId} - About to fetch: /api/stripe/checkout-success`);
+          structuredConsole.log(`🎯 [SUCCESS-PAGE-TEST] ${upgradeTestId} - Starting immediate plan upgrade...`);
+          structuredConsole.log(`🔍 [SUCCESS-PAGE-TEST] ${upgradeTestId} - sessionId: ${sessionId}`);
+          structuredConsole.log(`🔍 [SUCCESS-PAGE-TEST] ${upgradeTestId} - About to fetch: /api/stripe/checkout-success`);
           
           try {
             const upgradeResponse = await fetch('/api/stripe/checkout-success', {
@@ -69,12 +71,12 @@ function OnboardingSuccessContent() {
               body: JSON.stringify({ sessionId })
             });
             
-            console.log(`📡 [SUCCESS-PAGE-TEST] ${upgradeTestId} - Fetch completed. Response status: ${upgradeResponse.status}`);
-            console.log(`📡 [SUCCESS-PAGE-TEST] ${upgradeTestId} - Response ok: ${upgradeResponse.ok}`);
+            structuredConsole.log(`📡 [SUCCESS-PAGE-TEST] ${upgradeTestId} - Fetch completed. Response status: ${upgradeResponse.status}`);
+            structuredConsole.log(`📡 [SUCCESS-PAGE-TEST] ${upgradeTestId} - Response ok: ${upgradeResponse.ok}`);
             
             if (upgradeResponse.ok) {
               const upgradeData = await upgradeResponse.json();
-              console.log(`✅ [SUCCESS-PAGE-TEST] ${upgradeTestId} - Immediate upgrade processed successfully:`, upgradeData);
+              structuredConsole.log(`✅ [SUCCESS-PAGE-TEST] ${upgradeTestId} - Immediate upgrade processed successfully:`, upgradeData);
               
               // Also complete onboarding
               const completeResponse = await fetch('/api/onboarding/complete', {
@@ -84,27 +86,27 @@ function OnboardingSuccessContent() {
               });
               
               if (completeResponse.ok) {
-                console.log('✅ [SUCCESS-PAGE] Onboarding completed successfully');
+                structuredConsole.log('✅ [SUCCESS-PAGE] Onboarding completed successfully');
               }
             } else {
-              console.error(`❌ [SUCCESS-PAGE-TEST] ${upgradeTestId} - Failed to process immediate upgrade:`, upgradeResponse.status);
+              structuredConsole.error(`❌ [SUCCESS-PAGE-TEST] ${upgradeTestId} - Failed to process immediate upgrade:`, upgradeResponse.status);
               try {
                 const errorData = await upgradeResponse.json();
-                console.error(`❌ [SUCCESS-PAGE-TEST] ${upgradeTestId} - Upgrade error details:`, errorData);
+                structuredConsole.error(`❌ [SUCCESS-PAGE-TEST] ${upgradeTestId} - Upgrade error details:`, errorData);
               } catch (jsonError) {
-                console.error(`❌ [SUCCESS-PAGE-TEST] ${upgradeTestId} - Could not parse error response as JSON:`, jsonError);
+                structuredConsole.error(`❌ [SUCCESS-PAGE-TEST] ${upgradeTestId} - Could not parse error response as JSON:`, jsonError);
                 const errorText = await upgradeResponse.text();
-                console.error(`❌ [SUCCESS-PAGE-TEST] ${upgradeTestId} - Raw error response:`, errorText);
+                structuredConsole.error(`❌ [SUCCESS-PAGE-TEST] ${upgradeTestId} - Raw error response:`, errorText);
               }
             }
           } catch (upgradeError) {
-            console.error(`❌ [SUCCESS-PAGE-TEST] ${upgradeTestId} - Error processing immediate upgrade:`, upgradeError);
+            structuredConsole.error(`❌ [SUCCESS-PAGE-TEST] ${upgradeTestId} - Error processing immediate upgrade:`, upgradeError);
           }
         } else {
-          console.error('❌ [SUCCESS-PAGE] Failed to fetch session data:', response.status);
+          structuredConsole.error('❌ [SUCCESS-PAGE] Failed to fetch session data:', response.status);
         }
       } catch (error) {
-        console.error('❌ [SUCCESS-PAGE] Error fetching session data:', error);
+        structuredConsole.error('❌ [SUCCESS-PAGE] Error fetching session data:', error);
       } finally {
         setLoading(false);
       }
@@ -119,8 +121,8 @@ function OnboardingSuccessContent() {
     if (sessionData?.isUpgrade) {
       router.push('/billing?upgraded=1&plan=' + sessionData.planId);
     } else {
-      // Redirect to homepage for initial onboarding
-      router.push('/');
+      // Redirect to dashboard for initial onboarding (onboarding modal will show there)
+      router.push('/dashboard');
     }
   };
 

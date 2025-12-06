@@ -1,12 +1,13 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { StripeService } from '@/lib/stripe/stripe-service';
 import { db } from '@/lib/db';
 import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
     
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest) {
 
     await updateUserProfile(userId, updateData);
 
-    console.log(`✅ [STRIPE-SUBSCRIPTION] ${immediate ? 'Immediate' : 'Trial'} subscription created:`, subscription.id);
+    structuredConsole.log(`✅ [STRIPE-SUBSCRIPTION] ${immediate ? 'Immediate' : 'Trial'} subscription created:`, subscription.id);
 
     // Extract payment intent if exists
     const latestInvoice = subscription.latest_invoice;
@@ -92,7 +93,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ [STRIPE-SUBSCRIPTION] Error:', error);
+    structuredConsole.error('❌ [STRIPE-SUBSCRIPTION] Error:', error);
     return NextResponse.json(
       { error: 'Failed to create subscription' },
       { status: 500 }

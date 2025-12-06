@@ -1,5 +1,6 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { db } from '@/lib/db';
 import { campaigns, scrapingJobs, scrapingResults } from '@/lib/db/schema';
 import { updateUserProfile } from '@/lib/db/queries/user-queries';
@@ -11,19 +12,19 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { userId: adminUserId } = await auth();
+    const { userId: adminUserId } = await getAuthOrTest();
     
     if (!adminUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('⚠️ [ADMIN-RESET] Running user reset as admin:', adminUserId);
+    structuredConsole.log('⚠️ [ADMIN-RESET] Running user reset as admin:', adminUserId);
 
     // Get target user ID from query params or body
     const url = new URL(request.url);
     const targetUserId = url.searchParams.get('userId') || 'user_2zRnraoVNDAegfHnci1xUMWybwz';
 
-    console.log('🔧 [ADMIN-RESET] Resetting user to fresh state:', targetUserId);
+    structuredConsole.log('🔧 [ADMIN-RESET] Resetting user to fresh state:', targetUserId);
 
     const results = [];
     let errorCount = 0;
@@ -94,6 +95,7 @@ export async function POST(request: Request) {
         // Reset usage tracking
         usageCampaignsCurrent: 0,
         usageCreatorsCurrentMonth: 0,
+        enrichmentsCurrentMonth: 0,
         usageResetDate: now,
         
         // Clear Stripe data
@@ -144,12 +146,12 @@ export async function POST(request: Request) {
       ]
     };
 
-    console.log('🎉 [ADMIN-RESET] User reset process completed:', result);
+    structuredConsole.log('🎉 [ADMIN-RESET] User reset process completed:', result);
 
     return NextResponse.json(result);
 
   } catch (error) {
-    console.error('💥 [ADMIN-RESET] User reset process failed:', error);
+    structuredConsole.error('💥 [ADMIN-RESET] User reset process failed:', error);
     return NextResponse.json({ 
       error: 'User reset failed',
       details: error instanceof Error ? error.message : 'Unknown error'

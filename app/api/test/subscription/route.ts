@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server';
 import { SubscriptionTestUtils } from '@/lib/test-utils/subscription-test';
 
@@ -8,7 +9,7 @@ export async function GET(request: Request) {
   const plan = url.searchParams.get('plan') as 'glow_up' | 'viral_surge' | 'fame_flex';
   const count = parseInt(url.searchParams.get('count') || '1');
 
-  console.log(`🧪 [TEST-API] ${action} action requested for user ${userId}`);
+  structuredConsole.log(`🧪 [TEST-API] ${action} action requested for user ${userId}`);
 
   try {
     switch (action) {
@@ -93,7 +94,7 @@ export async function GET(request: Request) {
         }, { status: 400 });
     }
   } catch (error) {
-    console.error(`❌ [TEST-API] Error in ${action}:`, error);
+    structuredConsole.error(`❌ [TEST-API] Error in ${action}:`, error);
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -106,7 +107,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { action, userId, plan, count, creatorCount } = body;
 
-    console.log(`🧪 [TEST-API] POST ${action} for user ${userId}`, body);
+    structuredConsole.log(`🧪 [TEST-API] POST ${action} for user ${userId}`, body);
 
     switch (action) {
       case 'test-campaign-limits':
@@ -180,7 +181,7 @@ export async function POST(request: Request) {
         }, { status: 400 });
     }
   } catch (error) {
-    console.error('❌ [TEST-API] POST error:', error);
+    structuredConsole.error('❌ [TEST-API] POST error:', error);
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'

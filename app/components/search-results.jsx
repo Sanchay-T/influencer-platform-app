@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from 'react';
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +13,19 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { AddToListButton } from '@/components/lists/add-to-list-button';
 import { cn } from '@/lib/utils';
 import { Loader2, RefreshCcw, LayoutGrid, Table2, MailCheck, ExternalLink } from 'lucide-react';
+import { resolveCreatorPreview } from '@/lib/utils/media-preview';
+
+const isDev = process.env.NODE_ENV !== 'production';
+const debugLog = (...args) => {
+  if (isDev) {
+    structuredConsole.log(...args);
+  }
+};
+const debugError = (...args) => {
+  if (isDev) {
+    structuredConsole.error(...args);
+  }
+};
 
 const VIEW_MODES = ['table', 'gallery'];
 const GALLERY_ITEMS_PER_PAGE = 9;
@@ -81,31 +96,6 @@ const extractEmails = (creator) => {
   return Array.from(collected);
 };
 
-const resolveMediaPreview = (creator) => {
-  if (!creator) return null;
-
-  const video = creator.video || creator.latestVideo || creator.content;
-  const sources = [
-    video?.cover,
-    video?.coverUrl,
-    video?.thumbnail,
-    video?.thumbnailUrl,
-    video?.thumbnail_url,
-    video?.image,
-    creator?.thumbnailUrl,
-    creator?.thumbnail,
-    creator?.avatarUrl,
-  ];
-
-  for (const source of sources) {
-    if (typeof source === 'string' && source.trim().length > 0) {
-      return source;
-    }
-  }
-
-  return null;
-};
-
 const hasContactEmail = (creator) => Array.isArray(creator?.emails) && creator.emails.length > 0;
 
 const SearchResults = () => {
@@ -123,33 +113,15 @@ const SearchResults = () => {
   const [selectedCreators, setSelectedCreators] = useState({});
   const [emailOverlayDismissed, setEmailOverlayDismissed] = useState(false);
 
-  useEffect(() => {
-    console.log('=== INICIO DE BÚSQUEDA ===');
-    console.log('Datos iniciales:', {
-      jobId: searchData.jobId,
-      scraperLimit: searchData.scraperLimit,
-      keywords: searchData.keywords
-    });
-
-    if (!searchData.jobId) {
-      console.log('No hay jobId, iniciando búsqueda...');
-      startSearch();
-      return;
-    }
-
-    console.log('Iniciando polling con jobId:', searchData.jobId);
-    pollResults();
-  }, [searchData.jobId]);
-
-  const pollResults = async () => {
+  const pollResults = useCallback(async () => {
     try {
-      console.log('=== POLLING API ===');
-      console.log('Consultando jobId:', searchData.jobId);
+      debugLog('=== POLLING API ===');
+      debugLog('Consultando jobId:', searchData.jobId);
       
       const response = await fetch(`/api/scraping/tiktok?jobId=${searchData.jobId}`);
       const data = await response.json();
       
-      console.log('Respuesta de API:', {
+      debugLog('Respuesta de API:', {
         status: data.status,
         totalRequested: data.totalRequested,
         totalReceived: data.totalReceived,
@@ -157,7 +129,7 @@ const SearchResults = () => {
       });
 
       if (data.status === 'completed') {
-        console.log('Búsqueda completada:', {
+        debugLog('Búsqueda completada:', {
           totalRequested: data.totalRequested,
           totalReceived: data.totalReceived,
           resultsLength: data.results?.length
@@ -168,21 +140,23 @@ const SearchResults = () => {
         setResults(allCreators);
         setLoading(false);
       } else if (data.status === 'error') {
-        console.error('Error en la búsqueda:', data.error);
+        debugError('Error en la búsqueda:', data.error);
         setError(data.error);
         setLoading(false);
       } else {
-        console.log('Búsqueda en progreso:', data.status);
-        setTimeout(pollResults, 30000);
+        debugLog('Búsqueda en progreso:', data.status);
+        setTimeout(() => {
+          pollResults();
+        }, 30000);
       }
     } catch (error) {
-      console.error('Error en polling:', error);
+      debugError('Error en polling:', error);
       setError('Error al obtener resultados');
       setLoading(false);
     }
-  };
+  }, [searchData.jobId]);
 
-  const startSearch = async () => {
+  const startSearch = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -204,11 +178,29 @@ const SearchResults = () => {
         setLoading(false);
       }
     } catch (err) {
-      console.error('Error starting search', err);
+      debugError('Error starting search', err);
       setError('Unable to start search');
       setLoading(false);
     }
-  };
+  }, [searchData.keywords, searchData.scraperLimit]);
+
+  useEffect(() => {
+    debugLog('=== INICIO DE BÚSQUEDA ===');
+    debugLog('Datos iniciales:', {
+      jobId: searchData.jobId,
+      scraperLimit: searchData.scraperLimit,
+      keywords: searchData.keywords
+    });
+
+    if (!searchData.jobId) {
+      debugLog('No hay jobId, iniciando búsqueda...');
+      startSearch();
+      return;
+    }
+
+    debugLog('Iniciando polling con jobId:', searchData.jobId);
+    pollResults();
+  }, [searchData.jobId, searchData.scraperLimit, searchData.keywords, startSearch, pollResults]);
 
   const creators = useMemo(() => {
     const deduped = dedupeCreators(results);
@@ -219,7 +211,8 @@ const SearchResults = () => {
       const externalId = creator.id || creator.externalId || creator.uniqueId || `creator-${index}`;
       const handle = creator.username || creator.uniqueId || creator.handle || `creator-${index}`;
       const emails = extractEmails(creator);
-      const mediaPreview = resolveMediaPreview(creator);
+      // Breadcrumb: raw TikTok result hydrates shared resolver for gallery card imagery.
+      const mediaPreview = resolveCreatorPreview(creator, creator.avatarUrl || null);
 
       return {
         id: `${platform}-${externalId}`,
@@ -487,7 +480,7 @@ const SearchResults = () => {
                       Bio
                     </TableHead>
                     <TableHead className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-400">
-                      Link
+                      Post
                     </TableHead>
                     <TableHead className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-400">
                       Save

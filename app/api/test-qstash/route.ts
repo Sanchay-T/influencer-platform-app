@@ -1,10 +1,11 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server'
 
 export async function GET(req: Request) {
-  console.log('\n🧪 [TEST] QStash connectivity test endpoint called')
-  console.log('📅 [TEST] Timestamp:', new Date().toISOString())
-  console.log('🌐 [TEST] Request URL:', req.url)
-  console.log('📋 [TEST] Request headers:', Object.fromEntries(req.headers.entries()))
+  structuredConsole.log('\n🧪 [TEST] QStash connectivity test endpoint called')
+  structuredConsole.log('📅 [TEST] Timestamp:', new Date().toISOString())
+  structuredConsole.log('🌐 [TEST] Request URL:', req.url)
+  structuredConsole.log('📋 [TEST] Request headers:', Object.fromEntries(req.headers.entries()))
   
   return NextResponse.json({
     success: true,
@@ -16,12 +17,12 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  console.log('\n🧪 [TEST] QStash POST test endpoint called')
-  console.log('📅 [TEST] Timestamp:', new Date().toISOString())
-  console.log('🌐 [TEST] Request URL:', req.url)
+  structuredConsole.log('\n🧪 [TEST] QStash POST test endpoint called')
+  structuredConsole.log('📅 [TEST] Timestamp:', new Date().toISOString())
+  structuredConsole.log('🌐 [TEST] Request URL:', req.url)
   
   const body = await req.text()
-  console.log('📦 [TEST] Request body:', body)
+  structuredConsole.log('📦 [TEST] Request body:', body)
   
   return NextResponse.json({
     success: true,

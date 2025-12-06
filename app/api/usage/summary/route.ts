@@ -1,10 +1,11 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { PlanValidator } from '@/lib/services/plan-validator';
 
 export async function GET() {
   try {
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const planStatus = await PlanValidator.getUserPlanStatus(userId);
@@ -24,7 +25,7 @@ export async function GET() {
       }
     });
   } catch (err) {
-    console.error('[USAGE-SUMMARY][GET] error', err);
+    structuredConsole.error('[USAGE-SUMMARY][GET] error', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

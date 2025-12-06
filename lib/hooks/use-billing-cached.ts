@@ -1,4 +1,6 @@
-'use client'
+'use client';
+
+import { structuredConsole } from '@/lib/logging/console-proxy';
 
 import { useAuth } from '@clerk/nextjs'
 import { useState, useEffect } from 'react'
@@ -56,7 +58,7 @@ export function useBillingCached(): BillingStatus & { isLoading: boolean } {
             dataSource: 'localStorage'
           })
           
-          console.log('✅ [BILLING-CACHE] Using cached billing data', {
+          structuredConsole.log('✅ [BILLING-CACHE] Using cached billing data', {
             cacheAge: `${(cacheAge / 1000).toFixed(1)}s`,
             remainingTime: `${((CACHE_DURATION - cacheAge) / 1000).toFixed(1)}s`
           })
@@ -72,7 +74,7 @@ export function useBillingCached(): BillingStatus & { isLoading: boolean } {
             reason: 'cache_expired_or_different_user',
             dataSource: 'none'
           })
-          console.log('⚠️ [BILLING-CACHE] Cache invalid or expired')
+          structuredConsole.log('⚠️ [BILLING-CACHE] Cache invalid or expired')
         }
       } else {
         perfMonitor.endTimer(cacheTimer, { 
@@ -80,7 +82,7 @@ export function useBillingCached(): BillingStatus & { isLoading: boolean } {
           reason: 'no_cache_found',
           dataSource: 'none'
         })
-        console.log('ℹ️ [BILLING-CACHE] No cache found')
+        structuredConsole.log('ℹ️ [BILLING-CACHE] No cache found')
       }
     } catch (error) {
       perfMonitor.endTimer(cacheTimer, { 
@@ -88,7 +90,7 @@ export function useBillingCached(): BillingStatus & { isLoading: boolean } {
         error: error.message,
         dataSource: 'error'
       })
-      console.error('❌ [BILLING-CACHE] Error loading cache:', error)
+      structuredConsole.error('❌ [BILLING-CACHE] Error loading cache:', error)
     }
   }, [userId])
 
@@ -103,7 +105,7 @@ export function useBillingCached(): BillingStatus & { isLoading: boolean } {
       })
       
       try {
-        console.log('🔄 [BILLING-CACHE] Fetching fresh billing data')
+        structuredConsole.log('🔄 [BILLING-CACHE] Fetching fresh billing data')
         
         const fetchStartTime = performance.now()
         const response = await fetch('/api/billing/status')
@@ -125,7 +127,7 @@ export function useBillingCached(): BillingStatus & { isLoading: boolean } {
           backgroundUpdate: billingStatus.isLoaded
         })
         
-        console.log('✅ [BILLING-CACHE] Fresh billing data received', {
+        structuredConsole.log('✅ [BILLING-CACHE] Fresh billing data received', {
           networkTime: `${(fetchEndTime - fetchStartTime).toFixed(2)}ms`,
           parseTime: `${(parseEndTime - parseStartTime).toFixed(2)}ms`,
           backgroundUpdate: billingStatus.isLoaded
@@ -202,14 +204,14 @@ export function useBillingCached(): BillingStatus & { isLoading: boolean } {
             success: true,
             operation: 'localStorage.setItem'
           })
-          console.log('💾 [BILLING-CACHE] Data cached successfully')
+          structuredConsole.log('💾 [BILLING-CACHE] Data cached successfully')
         } catch (error) {
           perfMonitor.endTimer(cacheWriteTimer, { 
             success: false,
             error: error.message,
             operation: 'localStorage.setItem'
           })
-          console.error('❌ [BILLING-CACHE] Error saving cache:', error)
+          structuredConsole.error('❌ [BILLING-CACHE] Error saving cache:', error)
         }
 
       } catch (error) {
@@ -218,13 +220,13 @@ export function useBillingCached(): BillingStatus & { isLoading: boolean } {
           dataSource: 'api',
           cached: false
         })
-        console.error('❌ [BILLING-CACHE] Error fetching billing status:', error)
+        structuredConsole.error('❌ [BILLING-CACHE] Error fetching billing status:', error)
         setIsLoading(false)
       }
     }
 
     fetchBillingStatus()
-  }, [isLoaded, userId])
+  }, [isLoaded, userId, billingStatus.isLoaded])
 
   return {
     ...billingStatus,
@@ -236,8 +238,8 @@ export function useBillingCached(): BillingStatus & { isLoading: boolean } {
 export function clearBillingCache() {
   try {
     localStorage.removeItem(BILLING_CACHE_KEY)
-    console.log('🗑️ [BILLING-CACHE] Cache cleared')
+    structuredConsole.log('🗑️ [BILLING-CACHE] Cache cleared')
   } catch (error) {
-    console.error('❌ [BILLING-CACHE] Error clearing cache:', error)
+    structuredConsole.error('❌ [BILLING-CACHE] Error clearing cache:', error)
   }
 }

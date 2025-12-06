@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server';
 import { Receiver } from "@upstash/qstash";
 import { sendEmail, updateEmailScheduleStatus, EMAIL_CONFIG } from '@/lib/email/email-service';
@@ -10,6 +11,7 @@ import WelcomeEmail from '@/components/email-templates/welcome-email';
 import TrialAbandonmentEmail from '@/components/email-templates/trial-abandonment-email';
 import TrialDay2Email from '@/components/email-templates/trial-day2-email';
 import TrialDay5Email from '@/components/email-templates/trial-day5-email';
+import SubscriptionWelcomeEmail from '@/components/email-templates/subscription-welcome-email';
 
 // Initialize QStash receiver
 const receiver = new Receiver({
@@ -89,13 +91,25 @@ export async function POST(request: Request) {
         subject = subjectPrefix + 'Your trial ends in 2 days - here\'s what you\'ve accomplished! 🏆';
         break;
 
+      case 'subscription_welcome':
+        emailComponent = SubscriptionWelcomeEmail({
+          fullName: templateProps.fullName,
+          businessName: templateProps.businessName,
+          planName: templateProps.planName || templateProps.plan || 'Gemz',
+          planFeatures: templateProps.planFeatures,
+          dashboardUrl: templateProps.dashboardUrl,
+          billingUrl: templateProps.billingUrl,
+        });
+        subject = subjectPrefix + `You're now live on the ${templateProps.planName || templateProps.plan || 'Gemz'} plan! 🎉`;
+        break;
+
       case 'trial_expiry':
         emailComponent = TrialDay5Email(templateProps); // Reuse day5 template for now
         subject = subjectPrefix + 'Your trial expires tomorrow - Don\'t lose your progress! 🔔';
         break;
       
       default:
-        console.error('❌ [SCHEDULED-EMAIL] Unknown email type:', emailType);
+        structuredConsole.error('❌ [SCHEDULED-EMAIL] Unknown email type:', emailType);
         return NextResponse.json({ error: 'Unknown email type' }, { status: 400 });
     }
 

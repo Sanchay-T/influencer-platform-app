@@ -1,5 +1,6 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import Stripe from 'stripe';
 import { db } from '@/lib/db';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
@@ -7,7 +8,7 @@ import { getClientUrl } from '@/lib/utils/url-utils';
 import OnboardingLogger from '@/lib/utils/onboarding-logger';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
+  apiVersion: '2025-06-30.basil',
 });
 
 export async function POST(req: NextRequest) {
@@ -20,7 +21,7 @@ export async function POST(req: NextRequest) {
       requestId
     });
 
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
     
     if (!userId) {
       await OnboardingLogger.logAPI('AUTH-ERROR', 'Stripe checkout request unauthorized - no user ID', undefined, {
@@ -110,7 +111,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid plan or price not configured' }, { status: 400 });
     }
 
-    console.log('🔍 [STRIPE-CHECKOUT] Creating session with:', {
+    structuredConsole.log('🔍 [STRIPE-CHECKOUT] Creating session with:', {
       planId,
       billing,
       priceId,
@@ -134,7 +135,7 @@ export async function POST(req: NextRequest) {
       });
 
       const price = await stripe.prices.retrieve(priceId);
-      console.log('💰 [STRIPE-PRICE] Price details:', {
+      structuredConsole.log('💰 [STRIPE-PRICE] Price details:', {
         id: price.id,
         type: price.type,
         recurring: price.recurring
@@ -148,7 +149,7 @@ export async function POST(req: NextRequest) {
       });
       
       if (price.type !== 'recurring') {
-        console.error('❌ [STRIPE-PRICE] Price is not recurring:', price.type);
+        structuredConsole.error('❌ [STRIPE-PRICE] Price is not recurring:', price.type);
         await OnboardingLogger.logPayment('STRIPE-PRICE-ERROR', 'Price type is not recurring', userId, {
           priceId,
           actualType: price.type,
@@ -164,7 +165,7 @@ export async function POST(req: NextRequest) {
       const interval = price.recurring?.interval; // 'day' | 'week' | 'month' | 'year'
       const expected = billing === 'monthly' ? 'month' : 'year';
       if (interval !== expected) {
-        console.error('❌ [STRIPE-PRICE] Interval mismatch', { interval, requested: billing, priceId });
+        structuredConsole.error('❌ [STRIPE-PRICE] Interval mismatch', { interval, requested: billing, priceId });
         await OnboardingLogger.logPayment('STRIPE-INTERVAL-MISMATCH', 'Requested billing does not match price interval', userId, {
           priceId,
           requestedBilling: billing,
@@ -178,7 +179,7 @@ export async function POST(req: NextRequest) {
         }, { status: 400 });
       }
     } catch (priceError) {
-      console.error('❌ [STRIPE-PRICE] Error retrieving price:', priceError);
+      structuredConsole.error('❌ [STRIPE-PRICE] Error retrieving price:', priceError);
       const errorMessage = priceError instanceof Error ? priceError.message : 'Unknown error';
       
       await OnboardingLogger.logError('STRIPE-PRICE-LOOKUP-ERROR', 'Failed to retrieve Stripe price', userId, {
@@ -211,6 +212,7 @@ export async function POST(req: NextRequest) {
       ],
       mode: 'subscription',
       customer_email: profile.email || `${userId}@clerk.user`,
+      allow_promotion_codes: true, // Enable promo code field in checkout
       subscription_data: {
         trial_period_days: 7, // 7-day trial
         metadata: {
@@ -250,7 +252,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ [STRIPE-CHECKOUT] Error:', error);
+    structuredConsole.error('❌ [STRIPE-CHECKOUT] Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     
     await OnboardingLogger.logError('STRIPE-CHECKOUT-ERROR', 'Stripe checkout API request failed', undefined, {

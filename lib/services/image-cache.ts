@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { put, list } from '@vercel/blob';
 import { createHash } from 'crypto';
 
@@ -18,15 +19,15 @@ export class ImageCache {
       const { blobs } = await list({ prefix: cacheKey.split('/')[0] + '/', limit: 1000 });
       const existing = blobs.find(blob => blob.pathname === cacheKey);
       if (existing) {
-        console.log(`✅ [CACHE] Found cached: ${cacheKey}`);
+        structuredConsole.log(`✅ [CACHE] Found cached: ${cacheKey}`);
         return existing.url;
       }
     } catch (error) {
-      console.log(`⚠️ [CACHE] Check failed: ${error.message}`);
+      structuredConsole.log(`⚠️ [CACHE] Check failed: ${error.message}`);
     }
 
     // Download and cache
-    console.log(`📥 [CACHE] Downloading: ${originalUrl}`);
+    structuredConsole.log(`📥 [CACHE] Downloading: ${originalUrl}`);
     return await this.downloadAndCache(originalUrl, cacheKey, platform);
   }
 
@@ -50,9 +51,9 @@ export class ImageCache {
         try {
           const convert = require('heic-convert');
           buffer = Buffer.from(await convert({ buffer, format: 'JPEG', quality: 0.85 }));
-          console.log(`✅ [CACHE] Converted HEIC to JPEG`);
+          structuredConsole.log(`✅ [CACHE] Converted HEIC to JPEG`);
         } catch (error) {
-          console.log(`⚠️ [CACHE] HEIC conversion failed: ${error.message}`);
+          structuredConsole.log(`⚠️ [CACHE] HEIC conversion failed: ${error.message}`);
         }
       }
 
@@ -62,11 +63,11 @@ export class ImageCache {
         contentType: 'image/jpeg'
       });
 
-      console.log(`✅ [CACHE] Cached: ${cacheKey} → ${blob.url}`);
+      structuredConsole.log(`✅ [CACHE] Cached: ${cacheKey} → ${blob.url}`);
       return blob.url;
       
     } catch (error) {
-      console.log(`❌ [CACHE] Failed: ${error.message}`);
+      structuredConsole.log(`❌ [CACHE] Failed: ${error.message}`);
       return `/api/proxy/image?url=${encodeURIComponent(url)}`;
     }
   }

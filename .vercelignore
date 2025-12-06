@@ -1,5 +1,5 @@
 # Log files and directories
-logs/
+/logs/
 *.log
 
 # Development files

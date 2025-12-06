@@ -1,5 +1,6 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { db } from '@/lib/db';
 import { updateUserProfile } from '@/lib/db/queries/user-queries';
 import { users } from '@/lib/db/schema';
@@ -12,16 +13,16 @@ export async function GET() {
 
 export async function POST() {
   try {
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
     
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // For now, allow any authenticated user to run this (remove in production)
-    console.log('⚠️ [ADMIN-BACKFILL] Running backfill as user:', userId);
+    structuredConsole.log('⚠️ [ADMIN-BACKFILL] Running backfill as user:', userId);
 
-    console.log('🔧 [ADMIN-BACKFILL] Starting email backfill process');
+    structuredConsole.log('🔧 [ADMIN-BACKFILL] Starting email backfill process');
 
     // Find users with missing emails
     const usersWithoutEmails = await db.query.users.findMany({
@@ -31,7 +32,7 @@ export async function POST() {
       )
     });
 
-    console.log(`📊 [ADMIN-BACKFILL] Found ${usersWithoutEmails.length} users without emails`);
+    structuredConsole.log(`📊 [ADMIN-BACKFILL] Found ${usersWithoutEmails.length} users without emails`);
 
     let updatedCount = 0;
     let errorCount = 0;
@@ -39,7 +40,7 @@ export async function POST() {
 
     for (const user of usersWithoutEmails) {
       try {
-        console.log(`🔍 [ADMIN-BACKFILL] Processing user: ${user.userId}`);
+        structuredConsole.log(`🔍 [ADMIN-BACKFILL] Processing user: ${user.userId}`);
         const email = await getUserEmailFromClerk(user.userId);
         
         if (email) {
@@ -49,17 +50,17 @@ export async function POST() {
           
           updatedCount++;
           const result = `✅ Updated ${user.userId}: ${email}`;
-          console.log(`✅ [ADMIN-BACKFILL] ${result}`);
+          structuredConsole.log(`✅ [ADMIN-BACKFILL] ${result}`);
           results.push(result);
         } else {
           const result = `⚠️ No email found for ${user.userId}`;
-          console.log(`⚠️ [ADMIN-BACKFILL] ${result}`);
+          structuredConsole.log(`⚠️ [ADMIN-BACKFILL] ${result}`);
           results.push(result);
         }
       } catch (error) {
         errorCount++;
         const result = `❌ Failed ${user.userId}: ${error}`;
-        console.error(`❌ [ADMIN-BACKFILL] ${result}`);
+        structuredConsole.error(`❌ [ADMIN-BACKFILL] ${result}`);
         results.push(result);
       }
     }
@@ -72,12 +73,12 @@ export async function POST() {
       message: `Backfill complete: ${updatedCount} emails updated, ${errorCount} errors`
     };
 
-    console.log('🎉 [ADMIN-BACKFILL] Backfill process completed:', result);
+    structuredConsole.log('🎉 [ADMIN-BACKFILL] Backfill process completed:', result);
 
     return NextResponse.json(result);
 
   } catch (error) {
-    console.error('💥 [ADMIN-BACKFILL] Backfill process failed:', error);
+    structuredConsole.error('💥 [ADMIN-BACKFILL] Backfill process failed:', error);
     return NextResponse.json({ 
       error: 'Backfill failed',
       details: error instanceof Error ? error.message : 'Unknown error'

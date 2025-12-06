@@ -1,38 +1,40 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { scrapingResults, scrapingJobs } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import { auth } from '@clerk/nextjs/server';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { FeatureGateService } from '@/lib/services/feature-gates';
+import { dedupeCreators, formatEmailsForCsv } from '@/lib/export/csv-utils';
 
 export async function GET(req: Request) {
   try {
-    console.log('CSV Export: Starting export process');
+    structuredConsole.log('CSV Export: Starting export process');
     const { searchParams } = new URL(req.url);
     const jobId = searchParams.get('jobId');
     const campaignId = searchParams.get('campaignId');
 
     if (!jobId && !campaignId) {
-      console.log('CSV Export: Job ID or campaign ID is missing');
+      structuredConsole.log('CSV Export: Job ID or campaign ID is missing');
       return NextResponse.json({ error: 'Job ID or campaign ID is required' }, { status: 400 });
     }
 
-    console.log(`CSV Export: Processing job ID ${jobId} and campaign ID ${campaignId}`);
+    structuredConsole.log(`CSV Export: Processing job ID ${jobId} and campaign ID ${campaignId}`);
 
     // Verify authentication
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
     
     if (!userId) {
-      console.log('CSV Export: Authentication failed');
+      structuredConsole.log('CSV Export: Authentication failed');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('CSV Export: Authentication successful', { userId });
+    structuredConsole.log('CSV Export: Authentication successful', { userId });
 
     // Feature gate: ensure CSV export is allowed for this plan
     const gate = await FeatureGateService.assertExportFormat(userId, 'CSV');
     if (!gate.allowed) {
-      console.log('CSV Export: blocked by feature gate', gate);
+      structuredConsole.log('CSV Export: blocked by feature gate', gate);
       return NextResponse.json({
         error: 'CSV export not available on your plan',
         upgrade: true,
@@ -43,7 +45,7 @@ export async function GET(req: Request) {
 
     // Si se recibe campaignId, exportar todos los creadores de todos los jobs de la campaña
     if (campaignId) {
-      console.log(`CSV Export: Processing campaign ID ${campaignId}`);
+      structuredConsole.log(`CSV Export: Processing campaign ID ${campaignId}`);
       // Buscar todos los jobs completados de la campaña
       const jobs = await db.query.scrapingJobs.findMany({
         where: (jobs, { eq }) => eq(jobs.campaignId, String(campaignId)),
@@ -51,14 +53,14 @@ export async function GET(req: Request) {
           results: true
         }
       });
-      console.log('Jobs found:', jobs.length);
+      structuredConsole.log('Jobs found:', jobs.length);
       let allCreators: any[] = [];
       let keywords: string[] = [];
       jobs.forEach((job, i) => {
         if (Array.isArray(job.keywords)) {
           keywords = keywords.concat(job.keywords);
         }
-        console.log(`Job ${i} (${job.id}) has ${Array.isArray(job.results) ? job.results.length : 0} results`);
+        structuredConsole.log(`Job ${i} (${job.id}) has ${Array.isArray(job.results) ? job.results.length : 0} results`);
         if (Array.isArray(job.results)) {
           job.results.forEach((result, j) => {
             const creatorsData = result.creators;
@@ -89,7 +91,7 @@ export async function GET(req: Request) {
                 });
               }
             }
-            console.log(`  Result ${j} has ${count} creators (structure: ${structure})`);
+            structuredConsole.log(`  Result ${j} has ${count} creators (structure: ${structure})`);
             if (count > 0) {
               let example = null;
               if (Array.isArray(creatorsData) && creatorsData.length > 0) example = creatorsData[0];
@@ -106,24 +108,30 @@ export async function GET(req: Request) {
                 if (first.creators && Array.isArray(first.creators) && first.creators.length > 0) example = first.creators[0];
               }
               if (example) {
-                console.log(`    Example creator:`, JSON.stringify(example, null, 2));
+                structuredConsole.log(`    Example creator:`, JSON.stringify(example, null, 2));
               }
             }
           });
         }
       });
       keywords = Array.from(new Set(keywords)); // Unificar keywords
-      console.log('Total creators found in campaign:', allCreators.length);
-      if (allCreators.length === 0) {
+      structuredConsole.log('Total creators found in campaign:', allCreators.length);
+      const dedupedCampaignCreators = dedupeCreators(allCreators);
+      structuredConsole.log('CSV Export: Deduped campaign creators', {
+        before: allCreators.length,
+        after: dedupedCampaignCreators.length
+      });
+
+      if (dedupedCampaignCreators.length === 0) {
         return NextResponse.json({ error: 'No creators found in campaign' }, { status: 404 });
       }
       // Generar CSV igual que antes, usando allCreators y keywords
       let csvContent = '';
-      const firstCreator = allCreators[0];
+      const firstCreator = dedupedCampaignCreators[0];
       if (firstCreator.creator && firstCreator.video) {
         // Detect platform mix for campaign export
-        const platforms = [...new Set(allCreators.map(item => item.platform || 'Unknown'))];
-        console.log('CSV Export (Campaign): Detected platforms:', platforms);
+        const platforms = [...new Set(dedupedCampaignCreators.map(item => item.platform || 'Unknown'))];
+        structuredConsole.log('CSV Export (Campaign): Detected platforms:', platforms);
         
         // Use a unified format that works for all platforms
         const headers = [
@@ -131,7 +139,7 @@ export async function GET(req: Request) {
           'Creator/Channel Name',
           'Followers',
           'Video/Content URL',
-          'Title/Description', 
+          'Title/Description',
           'Views',
           'Likes',
           'Comments',
@@ -139,18 +147,20 @@ export async function GET(req: Request) {
           'Duration (seconds)',
           'Hashtags',
           'Date',
-          'Keywords'
+          'Keywords',
+          'Email'
         ];
         
         csvContent = headers.join(',') + '\n';
         
-        allCreators.forEach(item => {
+        dedupedCampaignCreators.forEach(item => {
           const creator = item.creator || {};
           const video = item.video || {};
           const stats = video.statistics || {};
           const hashtags = Array.isArray(item.hashtags) ? item.hashtags.join(';') : '';
           const keywordsStr = keywords.join(';');
           const itemPlatform = item.platform || 'Unknown';
+          const emailCell = formatEmailsForCsv([item, creator]);
           
           // Handle date based on platform
           let dateStr = '';
@@ -173,24 +183,26 @@ export async function GET(req: Request) {
             `"${item.lengthSeconds || 0}"`,
             `"${hashtags}"`,
             `"${dateStr}"`,
-            `"${keywordsStr}"`
+            `"${keywordsStr}"`,
+            `"${emailCell}"`
           ];
           csvContent += row.join(',') + '\n';
         });
       } else if ('profile' in firstCreator) {
         csvContent = 'Profile,Keywords,Platform,Followers,Region,Profile URL,Creator Categories\n';
-        allCreators.forEach(creator => {
+        dedupedCampaignCreators.forEach(creator => {
           csvContent += `"${creator.profile || ''}","${(creator.keywords || []).join(';')}","${creator.platformName || ''}","${creator.followers || ''}","${creator.region || ''}","${creator.profileUrl || ''}","${(creator.creatorCategory || []).join(';')}"\n`;
         });
       } else if ('username' in firstCreator && ('is_private' in firstCreator || 'full_name' in firstCreator)) {
-        csvContent = 'Username,Full Name,Private,Verified,Profile URL\n';
-        allCreators.forEach(creator => {
-          csvContent += `"${creator.username || ''}","${creator.full_name || ''}","${creator.is_private || ''}","${creator.is_verified || ''}","${creator.profile_pic_url || ''}"\n`;
+        csvContent = 'Username,Full Name,Email,Private,Verified,Profile URL\n';
+        dedupedCampaignCreators.forEach(creator => {
+          const emailCell = formatEmailsForCsv(creator);
+          csvContent += `"${creator.username || ''}","${creator.full_name || ''}","${emailCell}","${creator.is_private || ''}","${creator.is_verified || ''}","${creator.profile_pic_url || ''}"\n`;
         });
       } else {
         const fields = Object.keys(firstCreator);
         csvContent = fields.join(',') + '\n';
-        allCreators.forEach(creator => {
+        dedupedCampaignCreators.forEach(creator => {
           const values = fields.map(field => {
             const value = creator[field];
             if (typeof value === 'object' && value !== null) {
@@ -218,18 +230,18 @@ export async function GET(req: Request) {
     });
 
     if (!result) {
-      console.log('CSV Export: No results found in database');
+      structuredConsole.log('CSV Export: No results found in database');
       return NextResponse.json({ error: 'Results not found' }, { status: 404 });
     }
 
-    console.log('CSV Export: Found results in database');
+    structuredConsole.log('CSV Export: Found results in database');
 
     // Get job data to include keywords in export
     const job = await db.query.scrapingJobs.findFirst({
       where: eq(scrapingJobs.id, jobId)
     });
 
-    console.log('CSV Export: Job data retrieved', { 
+    structuredConsole.log('CSV Export: Job data retrieved', { 
       hasKeywords: Boolean(job?.keywords),
       keywordsLength: Array.isArray(job?.keywords) ? job.keywords.length : 0 
     });
@@ -244,12 +256,12 @@ export async function GET(req: Request) {
       const creatorsData = result.creators as any;
       
       if (Array.isArray(creatorsData)) {
-        console.log('CSV Export: Using creators array directly from database');
+        structuredConsole.log('CSV Export: Using creators array directly from database');
         creators = creatorsData;
       } else if (creatorsData && typeof creatorsData === 'object') {
         // Handle possible nested structure
         if (creatorsData.results && Array.isArray(creatorsData.results)) {
-          console.log('CSV Export: Extracting creators from nested results structure');
+          structuredConsole.log('CSV Export: Extracting creators from nested results structure');
           creators = creatorsData.results.reduce((acc: any[], r: any) => {
             if (r.creators && Array.isArray(r.creators)) {
               return [...acc, ...r.creators];
@@ -260,7 +272,7 @@ export async function GET(req: Request) {
       }
       
       if (creators.length === 0) {
-        console.log('CSV Export: No creators found in database, attempting to parse creators from structure:', 
+        structuredConsole.log('CSV Export: No creators found in database, attempting to parse creators from structure:', 
           JSON.stringify(creatorsData).substring(0, 200) + '...');
           
         // Last attempt - try to extract creators
@@ -268,35 +280,45 @@ export async function GET(req: Request) {
           Object.keys(creatorsData).forEach(key => {
             if (Array.isArray(creatorsData[key])) {
               creators = creatorsData[key];
-              console.log(`CSV Export: Found potential creators array under key '${key}'`);
+              structuredConsole.log(`CSV Export: Found potential creators array under key '${key}'`);
             }
           });
         }
       }
 
-      console.log(`CSV Export: Found ${creators.length} creators`);
-      
-      if (creators.length === 0) {
+      structuredConsole.log(`CSV Export: Found ${creators.length} creators`);
+
+      const dedupedCreators = dedupeCreators(creators, {
+        platformHint: job?.platform ?? null
+      });
+
+      structuredConsole.log('CSV Export: Deduped creators for job export', {
+        before: creators.length,
+        after: dedupedCreators.length
+      });
+
+      if (dedupedCreators.length === 0) {
         return NextResponse.json({ error: 'No creators found in data structure' }, { status: 404 });
       }
 
       // Generate CSV content
       let csvContent = '';
-      const firstCreator = creators[0];
+      const firstCreator = dedupedCreators[0];
       
-      console.log('CSV Export: First creator structure sample', 
+      structuredConsole.log('CSV Export: First creator structure sample', 
         JSON.stringify(firstCreator).substring(0, 200) + '...');
 
       // Detect the structure from the creators array
       if (firstCreator.username && (firstCreator.is_verified !== undefined || firstCreator.full_name)) {
         // This is similar search format (Instagram or TikTok similar)
-        console.log('CSV Export: Detected similar search format');
-        
+        structuredConsole.log('CSV Export: Detected similar search format');
+
         const platform = firstCreator.platform || 'Unknown';
         const headers = [
           'Username',
           'Full Name',
           'Followers',
+          'Email',
           'Verified',
           'Private',
           'Platform',
@@ -304,16 +326,18 @@ export async function GET(req: Request) {
         ];
         
         csvContent = headers.join(',') + '\n';
-        
-        creators.forEach(creator => {
-          const profileUrl = creator.platform === 'TikTok' 
+
+        dedupedCreators.forEach(creator => {
+          const emailCell = formatEmailsForCsv(creator);
+          const profileUrl = creator.platform === 'TikTok'
             ? `https://www.tiktok.com/@${creator.username}`
             : `https://instagram.com/${creator.username}`;
-            
+
           const row = [
             `"${creator.username || ''}"`,
             `"${creator.full_name || creator.displayName || ''}"`,
             `"${creator.followerCount || creator.followers || 0}"`,
+            `"${emailCell}"`,
             `"${creator.is_verified || creator.verified ? 'Yes' : 'No'}"`,
             `"${creator.is_private || creator.isPrivate ? 'Yes' : 'No'}"`,
             `"${creator.platform || 'Instagram'}"`,
@@ -325,7 +349,7 @@ export async function GET(req: Request) {
       } else if (firstCreator.creator && firstCreator.video) {
         // Detect platform type to determine appropriate columns
         const platform = firstCreator.platform || 'Unknown';
-        console.log('CSV Export: Detected platform:', platform);
+        structuredConsole.log('CSV Export: Detected platform:', platform);
         
         let headers: string[];
         
@@ -380,45 +404,44 @@ export async function GET(req: Request) {
         
         csvContent = headers.join(',') + '\n';
         
-        creators.forEach(item => {
+        dedupedCreators.forEach(item => {
           const creator = item.creator || {};
           const video = item.video || {};
           const stats = video.statistics || {};
           const hashtags = Array.isArray(item.hashtags) ? item.hashtags.join(';') : '';
           const keywordsStr = keywords.join(';');
           const itemPlatform = item.platform || 'Unknown';
+          const emailCell = formatEmailsForCsv([item, creator]);
           
           let row: string[];
-          
+
           if (itemPlatform === 'YouTube' && job?.targetUsername) {
             // YouTube Similar Search - enhanced with bio/email data
             const bio = (item.bio || '').replace(/"/g, '""'); // Escape quotes for CSV
-            const emails = Array.isArray(item.emails) ? item.emails.join('; ') : '';
             const socialLinks = Array.isArray(item.socialLinks) ? item.socialLinks.join('; ') : '';
-            
+
             row = [
               `"${item.name || ''}"`,
               `"${item.handle || ''}"`,
               `"${item.full_name || item.name || ''}"`,
               `"${bio}"`,
-              `"${emails}"`,
+              `"${emailCell}"`,
               `"${socialLinks}"`,
               `"${item.subscriberCount || 'N/A'}"`,
               `"${job.targetUsername || ''}"`,
               `"${itemPlatform}"`
             ];
           } else if (itemPlatform === 'YouTube') {
-            // YouTube Keyword Search - video-based data  
+            // YouTube Keyword Search - video-based data
             // Extract bio and emails for YouTube export
             const bio = (creator.bio || '').replace(/"/g, '""'); // Escape quotes for CSV
-            const emails = Array.isArray(creator.emails) ? creator.emails.join('; ') : '';
             const socialLinks = Array.isArray(creator.socialLinks) ? creator.socialLinks.join('; ') : '';
-            
+
             row = [
               `"${creator.name || ''}"`,
               `"${creator.followers || 0}"`,
               `"${bio}"`,
-              `"${emails}"`,
+              `"${emailCell}"`,
               `"${socialLinks}"`,
               `"${(video.description || '').replace(/"/g, '""')}"`, // Video title
               `"${video.url || ''}"`,
@@ -430,18 +453,17 @@ export async function GET(req: Request) {
             ];
           } else {
             // TikTok/other platforms data extraction
-            const createdDate = item.createTime ? 
+            const createdDate = item.createTime ?
               new Date(item.createTime * 1000).toISOString().split('T')[0] : '';
-            
+
             // Extract bio and emails for TikTok export
             const bio = (creator.bio || '').replace(/"/g, '""'); // Escape quotes for CSV
-            const emails = Array.isArray(creator.emails) ? creator.emails.join('; ') : '';
-            
+
             row = [
               `"${creator.name || ''}"`,
               `"${creator.followers || 0}"`,
               `"${bio}"`,
-              `"${emails}"`,
+              `"${emailCell}"`,
               `"${video.url || ''}"`,
               `"${(video.description || '').replace(/"/g, '""')}"`,
               `"${stats.likes || 0}"`,
@@ -458,33 +480,33 @@ export async function GET(req: Request) {
           csvContent += row.join(',') + '\n';
         });
 
-        console.log(`CSV Export: Generated CSV with ${platform} structure`);
+        structuredConsole.log(`CSV Export: Generated CSV with ${platform} structure`);
       } else if ('profile' in firstCreator) {
         // Old TikTok format
         csvContent = 'Profile,Keywords,Platform,Followers,Region,Profile URL,Creator Categories\n';
-        creators.forEach(creator => {
+        dedupedCreators.forEach(creator => {
           csvContent += `"${creator.profile || ''}","${(creator.keywords || []).join(';')}","${creator.platformName || ''}","${creator.followers || ''}","${creator.region || ''}","${creator.profileUrl || ''}","${(creator.creatorCategory || []).join(';')}"\n`;
         });
-        console.log('CSV Export: Generated CSV with old TikTok structure');
+        structuredConsole.log('CSV Export: Generated CSV with old TikTok structure');
       } else if ('username' in firstCreator && ('is_private' in firstCreator || 'full_name' in firstCreator)) {
         // Instagram similar search structure - enhanced with bio and email
         csvContent = 'Username,Full Name,Bio,Email,Private,Verified,Profile URL,Platform\n';
-        creators.forEach(creator => {
+        dedupedCreators.forEach(creator => {
+          const emailCell = formatEmailsForCsv(creator);
           // Extract bio and emails for Instagram export
           const bio = (creator.bio || '').replace(/"/g, '""'); // Escape quotes for CSV
-          const emails = Array.isArray(creator.emails) ? creator.emails.join('; ') : '';
           const profileUrl = creator.profileUrl || `https://instagram.com/${creator.username}`;
           const platform = creator.platform || 'Instagram';
-          
-          csvContent += `"${creator.username || ''}","${creator.full_name || ''}","${bio}","${emails}","${creator.is_private ? 'Yes' : 'No'}","${creator.is_verified ? 'Yes' : 'No'}","${profileUrl}","${platform}"\n`;
+
+          csvContent += `"${creator.username || ''}","${creator.full_name || ''}","${bio}","${emailCell}","${creator.is_private ? 'Yes' : 'No'}","${creator.is_verified ? 'Yes' : 'No'}","${profileUrl}","${platform}"\n`;
         });
-        console.log('CSV Export: Generated CSV with enhanced Instagram structure (bio/email included)');
+        structuredConsole.log('CSV Export: Generated CSV with enhanced Instagram structure (bio/email included)');
       } else {
         // Fallback for unknown structure - just try to extract common fields
         const fields = Object.keys(firstCreator);
         csvContent = fields.join(',') + '\n';
-        
-        creators.forEach(creator => {
+
+        dedupedCreators.forEach(creator => {
           const values = fields.map(field => {
             const value = creator[field];
             if (typeof value === 'object' && value !== null) {
@@ -494,7 +516,7 @@ export async function GET(req: Request) {
           });
           csvContent += values.join(',') + '\n';
         });
-        console.log('CSV Export: Generated CSV with unknown structure, using fields:', fields);
+        structuredConsole.log('CSV Export: Generated CSV with unknown structure, using fields:', fields);
       }
 
       // Set headers for CSV download
@@ -502,17 +524,17 @@ export async function GET(req: Request) {
       headers.set('Content-Type', 'text/csv');
       headers.set('Content-Disposition', `attachment; filename=creators-${new Date().toISOString().split('T')[0]}.csv`);
 
-      console.log('CSV Export: Returning CSV file');
+      structuredConsole.log('CSV Export: Returning CSV file');
       return new NextResponse(csvContent, {
         headers,
         status: 200,
       });
     } catch (parseError) {
-      console.error('CSV Export: Error parsing creators data:', parseError);
+      structuredConsole.error('CSV Export: Error parsing creators data:', parseError);
       return NextResponse.json({ error: 'Error parsing creators data' }, { status: 500 });
     }
   } catch (error) {
-    console.error('CSV Export: Error exporting CSV:', error);
+    structuredConsole.error('CSV Export: Error exporting CSV:', error);
     return NextResponse.json({ error: 'Server error', details: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
   }
 } 

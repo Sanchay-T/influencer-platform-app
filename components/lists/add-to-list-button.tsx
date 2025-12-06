@@ -1,5 +1,7 @@
 'use client';
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +36,12 @@ type ListSummary = {
   type: string;
   privacy: string;
   creatorCount: number;
+};
+
+type SkippedCreatorSummary = {
+  externalId: string;
+  handle?: string;
+  platform?: string;
 };
 
 const listTypeOptions = [
@@ -135,7 +143,7 @@ export function AddToListButton({
         const data = await res.json();
         setLists(data.lists ?? []);
       } catch (error) {
-        console.error(error);
+        structuredConsole.error(error);
         toast.error('Unable to load lists');
       } finally {
         setLoadingLists(false);
@@ -199,7 +207,7 @@ export function AddToListButton({
       setNewListName('');
       toast.success(`Created “${data.list.name}”`);
     } catch (error) {
-      console.error(error);
+      structuredConsole.error(error);
       toast.error((error as Error).message);
     } finally {
       setCreating(false);
@@ -236,7 +244,12 @@ export function AddToListButton({
         throw new Error(responseBody?.error ?? 'Unable to add creator');
       }
 
-      const addedCount = Number(responseBody?.added ?? creatorsToAdd.length ?? 0);
+      const addedCount = Number(responseBody?.added ?? 0);
+      const attemptedCount = Number(responseBody?.attempted ?? creatorsToAdd.length ?? 0);
+      const skipped: SkippedCreatorSummary[] = Array.isArray(responseBody?.skipped)
+        ? responseBody.skipped
+        : [];
+      const skippedCount = skipped.length;
 
       setLists((prev) =>
         prev.map((list) =>
@@ -247,33 +260,58 @@ export function AddToListButton({
       );
 
       const successLabel = selectedListSummary?.name;
-      if (addedCount === 0) {
-        toast((successLabel ? `Already saved in “${successLabel}”` : 'Creator already saved'), {
-          icon: 'ℹ️',
-        });
-      } else if (successLabel) {
-        toast.success(
-          addedCount > 1
-            ? `Added ${addedCount} creators to “${successLabel}”`
-            : `Added to “${successLabel}”`
-        );
-      } else {
-        toast.success(
-          addedCount > 1 ? 'Creators saved to list' : 'Creator saved to list'
+      if (addedCount > 0) {
+        if (successLabel) {
+          toast.success(
+            addedCount > 1
+              ? `Added ${addedCount} creators to “${successLabel}”`
+              : `Added to “${successLabel}”`
+          );
+        } else {
+          toast.success(
+            addedCount > 1 ? 'Creators saved to list' : 'Creator saved to list'
+          );
+        }
+      }
+
+      if (skippedCount > 0) {
+        const displayHandles = skipped
+          .map((entry) => entry.handle || entry.externalId)
+          .filter(Boolean)
+          .slice(0, 3)
+          .join(', ');
+
+        toast.custom(
+          () => (
+            <div className="rounded-lg border border-zinc-700/60 bg-zinc-950/90 px-4 py-3 text-sm text-zinc-200 shadow-xl">
+              <p className="font-medium text-zinc-100">
+                {skippedCount === attemptedCount
+                  ? 'All selected creators are already saved in this list.'
+                  : `${skippedCount} creator${skippedCount === 1 ? '' : 's'} already saved`}
+              </p>
+              {displayHandles && (
+                <p className="mt-1 text-xs text-zinc-400">
+                  {displayHandles}
+                  {skippedCount > 3 ? ` +${skippedCount - 3} more` : ''}
+                </p>
+              )}
+            </div>
+          ),
+          { duration: 5000 }
         );
       }
 
-      console.debug('[AddToList] added creators', {
+      structuredConsole.debug('[AddToList] added creators', {
         listId: selectedList,
         added: addedCount,
-        attempted: creatorsToAdd.length,
+        attempted: attemptedCount,
       });
 
       onAdded?.(selectedList);
       setOpen(false);
       resetPanel();
     } catch (error) {
-      console.error('[AddToList] error adding creators', error);
+      structuredConsole.error('[AddToList] error adding creators', error);
       toast.error((error as Error).message);
     } finally {
       setAdding(false);

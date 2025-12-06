@@ -111,7 +111,9 @@ export const users = pgTable('users', {
 export const userSubscriptions = pgTable('user_subscriptions', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  currentPlan: varchar('current_plan', { length: 50 }).default('free').notNull(),
+  // NULL = user hasn't completed onboarding/payment yet
+  // Set by Stripe webhook after successful payment
+  currentPlan: varchar('current_plan', { length: 50 }),
   intendedPlan: varchar('intended_plan', { length: 50 }), // Plan selected before checkout
   subscriptionStatus: varchar('subscription_status', { length: 20 }).default('none').notNull(),
   trialStatus: varchar('trial_status', { length: 20 }).default('pending').notNull(),
@@ -152,6 +154,7 @@ export const userUsage = pgTable('user_usage', {
   planFeatures: jsonb('plan_features').default('{}').notNull(),
   usageCampaignsCurrent: integer('usage_campaigns_current').default(0).notNull(),
   usageCreatorsCurrentMonth: integer('usage_creators_current_month').default(0).notNull(),
+  enrichmentsCurrentMonth: integer('enrichments_current_month').default(0).notNull(),
   usageResetDate: timestamp('usage_reset_date').defaultNow().notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -183,6 +186,26 @@ export const systemConfigurations = pgTable('system_configurations', {
 }, (table) => ({
   uniqueCategoryKey: unique().on(table.category, table.key),
 }));
+
+// Webhook Events table for idempotency and deduplication
+// Tracks all incoming webhooks from external services (Stripe, Clerk)
+export type WebhookStatus = 'processing' | 'completed' | 'failed';
+export type WebhookSource = 'stripe' | 'clerk' | 'qstash';
+
+export const webhookEvents = pgTable('webhook_events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  eventId: text('event_id').notNull().unique(), // External event ID (from Stripe/Clerk)
+  source: varchar('source', { length: 20 }).notNull(), // 'stripe' | 'clerk' | 'qstash'
+  eventType: varchar('event_type', { length: 100 }).notNull(), // e.g., 'customer.subscription.created'
+  status: varchar('status', { length: 20 }).notNull().default('processing'), // 'processing' | 'completed' | 'failed'
+  eventTimestamp: timestamp('event_timestamp'), // When the event was created at source
+  processedAt: timestamp('processed_at'), // When we finished processing
+  createdAt: timestamp('created_at').notNull().defaultNow(), // When we received it
+  errorMessage: text('error_message'), // Error details if failed
+  retryCount: integer('retry_count').notNull().default(0),
+  payload: jsonb('payload'), // Optional: store event payload for debugging
+  metadata: jsonb('metadata'), // Additional context (request ID, etc.)
+});
 
 // Event Sourcing table for tracking all state changes (Industry Standard)
 export const events = pgTable('events', {
@@ -547,6 +570,8 @@ export type SystemConfiguration = typeof systemConfigurations.$inferSelect;
 export type NewSystemConfiguration = typeof systemConfigurations.$inferInsert;
 export type Event = typeof events.$inferSelect;
 export type NewEvent = typeof events.$inferInsert;
+export type WebhookEvent = typeof webhookEvents.$inferSelect;
+export type NewWebhookEvent = typeof webhookEvents.$inferInsert;
 export type BackgroundJob = typeof backgroundJobs.$inferSelect;
 export type NewBackgroundJob = typeof backgroundJobs.$inferInsert;
 export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
@@ -594,7 +619,9 @@ export type UserProfileComplete = {
   isAdmin: boolean;
   
   // Subscription data
-  currentPlan: string;
+  // NOTE: currentPlan is NULL until user completes onboarding/payment
+  // Plan enforcement should check for null and treat as "no plan" (0 limits)
+  currentPlan: string | null;
   intendedPlan?: string | null;
   subscriptionStatus: string;
   trialStatus: string;
@@ -623,6 +650,7 @@ export type UserProfileComplete = {
   planFeatures: any;
   usageCampaignsCurrent: number;
   usageCreatorsCurrentMonth: number;
+  enrichmentsCurrentMonth: number;
   usageResetDate: Date;
   
   // System data

@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
@@ -7,7 +8,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function GET(req: NextRequest) {
   try {
-    console.log('🔍 [STRIPE-DEBUG] Checking all price configurations...');
+    structuredConsole.log('🔍 [STRIPE-DEBUG] Checking all price configurations...');
 
     const priceIds = {
       'glow_up_monthly': process.env.STRIPE_GLOW_UP_MONTHLY_PRICE_ID,
@@ -42,17 +43,17 @@ export async function GET(req: NextRequest) {
           displayInterval: price.recurring ? `per ${price.recurring.interval}` : 'one-time'
         };
         
-        console.log(`✅ [STRIPE-DEBUG] ${planName}: ${priceDetails[planName].displayAmount} ${priceDetails[planName].displayInterval}`);
+        structuredConsole.log(`✅ [STRIPE-DEBUG] ${planName}: ${priceDetails[planName].displayAmount} ${priceDetails[planName].displayInterval}`);
       } catch (error) {
         priceDetails[planName] = { 
           error: error instanceof Error ? error.message : 'Unknown error',
           priceId 
         };
-        console.error(`❌ [STRIPE-DEBUG] ${planName}: ${error}`);
+        structuredConsole.error(`❌ [STRIPE-DEBUG] ${planName}: ${error}`);
       }
     }
 
-    console.log('📊 [STRIPE-DEBUG] Complete price analysis:', JSON.stringify(priceDetails, null, 2));
+    structuredConsole.log('📊 [STRIPE-DEBUG] Complete price analysis:', JSON.stringify(priceDetails, null, 2));
 
     return NextResponse.json({
       success: true,
@@ -65,7 +66,7 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ [STRIPE-DEBUG] Error checking prices:', error);
+    structuredConsole.error('❌ [STRIPE-DEBUG] Error checking prices:', error);
     return NextResponse.json(
       { error: 'Failed to check Stripe prices' },
       { status: 500 }

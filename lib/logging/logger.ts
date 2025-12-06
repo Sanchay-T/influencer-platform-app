@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 /**
  * Core Logger Implementation
  * 
@@ -40,15 +41,21 @@ class Logger {
   private static instance: Logger;
   private config: Partial<LoggerConfig>;
   private minLevel: LogLevel;
+  private categoryOverrides: Partial<Record<LogCategory, LogLevel>>;
   private requestIdMap: Map<string, string> = new Map();
   private performanceTimers: Map<string, PerformanceTimer> = new Map();
+  private serverWriterPromise?: Promise<typeof import('./server-writer')>;
+  private nativeConsole: Console;
+  private consoleCaptureDepth = 0;
 
   /**
    * Private constructor for singleton pattern
    */
   private constructor() {
+    this.nativeConsole = globalThis.console;
     this.config = getLoggerConfig();
     this.minLevel = getMinLogLevel();
+    this.categoryOverrides = this.config.categoryOverrides || {};
     this.initializeLogger();
   }
 
@@ -107,8 +114,13 @@ class Logger {
   /**
    * Check if a log should be processed based on current configuration
    */
-  private shouldLog(level: LogLevel): boolean {
-    return level >= this.minLevel;
+  private shouldLog(level: LogLevel, category?: LogCategory): boolean {
+    const categoryLevel =
+      (category && this.categoryOverrides?.[category]) != null
+        ? this.categoryOverrides?.[category]
+        : undefined;
+    const effectiveLevel = categoryLevel ?? this.minLevel;
+    return level >= effectiveLevel;
   }
 
   /**
@@ -195,19 +207,28 @@ class Logger {
   /**
    * Format log entry for console output
    */
+  private callNativeConsole(method: 'debug' | 'info' | 'warn' | 'error' | 'log', args: any[]): void {
+    const target = (this.nativeConsole as any)?.[method] || this.nativeConsole.log;
+    if (typeof target === 'function') {
+      target.apply(this.nativeConsole, args);
+    }
+  }
+
   private formatConsoleLog(entry: LogEntry): void {
     if (!this.config.enableConsole) return;
+
+    const useStructuredOutput = this.config.prettyConsole === false;
+
+    if (useStructuredOutput) {
+      this.callNativeConsole('log', [JSON.stringify(entry)]);
+      return;
+    }
 
     const level = LogLevel[entry.level];
     const color = CONSOLE_CONFIG.COLORS[entry.level] || '';
     const resetColor = CONSOLE_CONFIG.RESET_COLOR;
     const icon = getCategoryIcon(entry.category);
     const timestamp = new Date(entry.timestamp).toLocaleTimeString();
-
-    if (CONSOLE_CONFIG.USE_JSON_FORMAT) {
-      console.log(JSON.stringify(entry, null, 2));
-      return;
-    }
 
     // Structured console output for development
     const logArgs = [
@@ -235,22 +256,51 @@ class Logger {
     }
 
     // Use appropriate console method based on level
-    switch (entry.level) {
-      case LogLevel.DEBUG:
-        console.debug(...logArgs);
-        break;
-      case LogLevel.INFO:
-        console.info(...logArgs);
-        break;
-      case LogLevel.WARN:
-        console.warn(...logArgs);
-        break;
-      case LogLevel.ERROR:
-      case LogLevel.CRITICAL:
-        console.error(...logArgs);
-        break;
-      default:
-        console.log(...logArgs);
+    if (entry.level === LogLevel.DEBUG) {
+      this.callNativeConsole('debug', logArgs);
+      return;
+    }
+    if (entry.level === LogLevel.INFO) {
+      this.callNativeConsole('info', logArgs);
+      return;
+    }
+    if (entry.level === LogLevel.WARN) {
+      this.callNativeConsole('warn', logArgs);
+      return;
+    }
+    if (entry.level === LogLevel.ERROR || entry.level === LogLevel.CRITICAL) {
+      this.callNativeConsole('error', logArgs);
+      return;
+    }
+
+    this.callNativeConsole('log', logArgs);
+  }
+
+  private async persistLog(entry: LogEntry): Promise<void> {
+    if (!this.config.enableFile) {
+      return;
+    }
+
+    if (typeof window !== 'undefined') {
+      return;
+    }
+
+    try {
+      if (!this.serverWriterPromise) {
+        this.serverWriterPromise = import('./server-writer');
+      }
+
+      const writer = await this.serverWriterPromise;
+      await writer.writeStructuredLog(entry, {
+        environment:
+          this.config.environment ||
+          (process.env.NODE_ENV as 'development' | 'test' | 'production') ||
+          'development',
+      });
+    } catch (error) {
+      if (this.config.enableConsole && process.env.NODE_ENV === 'development') {
+        this.callNativeConsole('warn', ['⚠️ [LOGGER] Failed to persist structured log', error]);
+      }
     }
   }
 
@@ -265,7 +315,7 @@ class Logger {
     error?: Error
   ): Promise<void> {
     // Early return if log level is filtered out (zero overhead)
-    if (!this.shouldLog(level)) {
+    if (!this.shouldLog(level, category)) {
       return;
     }
 
@@ -303,6 +353,8 @@ class Logger {
       // Format for console output
       this.formatConsoleLog(logEntry);
 
+      await this.persistLog(logEntry);
+
       // Send to Sentry (handled by sentry-logger.ts)
       if (this.config.enableSentry && level >= LogLevel.WARN) {
         // Dynamic import to avoid circular dependencies
@@ -316,12 +368,76 @@ class Logger {
       }
 
     } catch (error) {
-      // Fallback to basic console.error if logging system fails
-      console.error('🚨 [LOGGER-ERROR] Failed to process log:', {
+      // Fallback to basic structuredConsole.error if logging system fails
+      this.callNativeConsole('error', ['🚨 [LOGGER-ERROR] Failed to process log:', {
         originalMessage: message,
         originalContext: context,
         error: error instanceof Error ? error.message : error
+      }]);
+    }
+  }
+
+  /**
+   * Capture raw console usage and route through the structured logger.
+   */
+  public captureConsole(level: LogLevel, args: any[], category?: LogCategory): void {
+    if (this.consoleCaptureDepth > 2) {
+      this.callNativeConsole('log', args);
+      return;
+    }
+
+    this.consoleCaptureDepth += 1;
+    try {
+      const [first, ...rest] = args;
+      let message: string;
+      try {
+        message =
+          typeof first === 'string'
+            ? first
+            : first instanceof Error
+              ? first.message
+              : JSON.stringify(first);
+      } catch (_err) {
+        message = String(first);
+      }
+      if (!message || message === 'undefined') {
+        message = 'Console log message';
+      }
+
+      let errorArg: Error | undefined;
+      const contextArgs = rest.filter((arg) => {
+        if (!errorArg && arg instanceof Error) {
+          errorArg = arg;
+          return false;
+        }
+        return true;
       });
+
+      const context =
+        contextArgs.length > 0
+          ? {
+              consoleArgs: contextArgs.map((arg) => {
+                if (typeof arg === 'string' || typeof arg === 'number' || typeof arg === 'boolean') {
+                  return arg;
+                }
+                if (arg instanceof Error) {
+                  return { name: arg.name, message: arg.message, stack: arg.stack };
+                }
+                try {
+                  return JSON.parse(JSON.stringify(arg));
+                } catch (_error) {
+                  return String(arg);
+                }
+              }),
+            }
+          : undefined;
+
+      void this.logEntry(level, message, context, category || LogCategory.SYSTEM, errorArg);
+    } catch (error) {
+      this.callNativeConsole('error', ['🚨 [LOGGER] Failed to capture console usage', error]);
+      this.callNativeConsole('log', args);
+    } finally {
+      this.consoleCaptureDepth -= 1;
     }
   }
 
@@ -495,7 +611,14 @@ class Logger {
    */
   public updateConfig(newConfig: Partial<LoggerConfig>): void {
     this.config = { ...this.config, ...newConfig };
-    this.minLevel = newConfig.minLevel || this.minLevel;
+    if (newConfig.categoryOverrides) {
+      this.categoryOverrides = { ...this.categoryOverrides, ...newConfig.categoryOverrides };
+    }
+    if (newConfig.prettyConsole !== undefined) {
+      this.config.prettyConsole = newConfig.prettyConsole;
+    }
+    this.config.categoryOverrides = this.categoryOverrides;
+    this.minLevel = newConfig.minLevel ?? this.minLevel;
     
     this.info('Logger configuration updated', {
       newConfig: this.sanitizeData(newConfig)
@@ -507,6 +630,13 @@ class Logger {
    */
   public getConfig(): Partial<LoggerConfig> {
     return { ...this.config };
+  }
+
+  /**
+   * Allow console bridge to register the original console implementation.
+   */
+  public setNativeConsole(nativeConsole: Console): void {
+    this.nativeConsole = nativeConsole;
   }
 
   /**

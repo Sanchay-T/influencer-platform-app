@@ -1,7 +1,8 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+node_modules/
+**/node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -10,7 +11,9 @@
 !.yarn/releases
 !.yarn/versions
 project
-logs
+/logs
+*.log
+
 # testing
 /coverage
 
@@ -46,3 +49,12 @@ next-env.d.ts
 # billing logs (sensitive information)
 /billing-check/*.log
 /billing-check/*.json
+.env*.local
+sorzproject-main/
+
+# database dumps (large files)
+*.sql
+data/*.sql
+
+# User session logs (local debugging)
+logs/users/

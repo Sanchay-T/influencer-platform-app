@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
 import { isAdminUser } from '@/lib/auth/admin-utils';
 import { db } from '@/lib/db';
@@ -34,7 +35,7 @@ export async function GET() {
     }));
     return NextResponse.json({ plans: data });
   } catch (err) {
-    console.error('[ADMIN-PLANS][GET] error', err);
+    structuredConsole.error('[ADMIN-PLANS][GET] error', err);
     return NextResponse.json({ error: 'Failed to fetch plans' }, { status: 500 });
   }
 }
@@ -103,14 +104,14 @@ export async function PUT(req: NextRequest) {
     if (Object.keys(userUpdates).length > 0) {
       // Note: This is a bulk update - for production, consider individual updates
       // For now, skip individual user updates to avoid complexity
-      console.log(`[ADMIN-PLANS] Plan updated: ${planKey}, affected user count needs manual sync`);
+      structuredConsole.log(`[ADMIN-PLANS] Plan updated: ${planKey}, affected user count needs manual sync`);
     }
 
     // Return updated plan
     const updated = await db.query.subscriptionPlans.findFirst({ where: eq(subscriptionPlans.planKey, planKey) });
     return NextResponse.json({ success: true, plan: updated });
   } catch (err) {
-    console.error('[ADMIN-PLANS][PUT] error', err);
+    structuredConsole.error('[ADMIN-PLANS][PUT] error', err);
     return NextResponse.json({ error: 'Failed to update plan' }, { status: 500 });
   }
 }

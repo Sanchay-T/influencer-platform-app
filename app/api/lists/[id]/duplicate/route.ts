@@ -1,9 +1,10 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { duplicateList } from '@/lib/db/queries/list-queries';
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  const { userId } = await auth();
+  const { userId } = await getAuthOrTest();
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -19,7 +20,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     if (message === 'LIST_PERMISSION_DENIED') {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
-    console.error('[LIST_DUPLICATE_API]', error);
+    structuredConsole.error('[LIST_DUPLICATE_API]', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

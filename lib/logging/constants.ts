@@ -10,45 +10,110 @@ import { LogLevel, LogCategory, LoggerConfig } from './types';
  * Determines minimum log level for each environment to control verbosity
  */
 export const LOG_LEVEL_CONFIG = {
-  development: LogLevel.DEBUG,  // Show all logs in development
+  development: LogLevel.WARN,   // Default to WARN in dev to avoid noisy consoles
   test: LogLevel.WARN,          // Only warnings and errors in tests
   production: LogLevel.INFO,    // Info and above in production
 } as const;
+
+const LOG_LEVEL_MAP: Record<string, LogLevel> = {
+  TRACE: LogLevel.DEBUG,
+  DEBUG: LogLevel.DEBUG,
+  INFO: LogLevel.INFO,
+  WARN: LogLevel.WARN,
+  WARNING: LogLevel.WARN,
+  ERROR: LogLevel.ERROR,
+  CRITICAL: LogLevel.CRITICAL,
+  FATAL: LogLevel.CRITICAL,
+};
+
+function parseLogLevel(rawLevel: string | undefined): LogLevel | undefined {
+  if (!rawLevel) return undefined;
+  return LOG_LEVEL_MAP[rawLevel.trim().toUpperCase()];
+}
+
+function resolveLogLevel(defaultLevel: LogLevel): LogLevel {
+  const override =
+    parseLogLevel(process.env.SERVER_LOG_LEVEL) ||
+    parseLogLevel(process.env.LOG_LEVEL) ||
+    parseLogLevel(process.env.NEXT_PUBLIC_SERVER_LOG_LEVEL);
+
+  return override ?? defaultLevel;
+}
+
+function parseBooleanFlag(value: string | undefined): boolean | undefined {
+  if (value == null) return undefined;
+  const normalized = value.trim().toLowerCase();
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+  if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+  return undefined;
+}
+
+function resolveCategoryOverrides(): Partial<Record<LogCategory, LogLevel>> {
+  const raw = process.env.SERVER_CATEGORY_LOG_LEVELS;
+  if (!raw) return {};
+
+  return raw.split(',').reduce<Partial<Record<LogCategory, LogLevel>>>((acc, pair) => {
+    const [rawCategory, rawLevel] = pair.split(':').map((value) => value?.trim());
+    if (!rawCategory || !rawLevel) {
+      return acc;
+    }
+
+    const normalizedCategory = rawCategory.toUpperCase();
+    const match = Object.values(LogCategory).find(
+      (category) => category.toUpperCase() === normalizedCategory,
+    );
+
+    if (!match) {
+      return acc;
+    }
+
+    const parsedLevel = parseLogLevel(rawLevel);
+    if (parsedLevel == null) {
+      return acc;
+    }
+
+    acc[match] = parsedLevel;
+    return acc;
+  }, {});
+}
 
 /**
  * Default logger configuration based on environment
  */
 export const DEFAULT_LOGGER_CONFIG: Record<string, Partial<LoggerConfig>> = {
   development: {
-    minLevel: LogLevel.DEBUG,
-    enableConsole: true,
+    minLevel: resolveLogLevel(LogLevel.WARN),
+    enableConsole: parseBooleanFlag(process.env.SERVER_ENABLE_CONSOLE_LOGS) ?? false,
     enableSentry: true,
-    enableFile: false,
+    enableFile: parseBooleanFlag(process.env.SERVER_ENABLE_FILE_LOGS) ?? true,
     environment: 'development',
     enablePerformanceTracking: true,
     slowOperationThreshold: 100, // 100ms threshold in dev
     enableAutoContext: true,
+    prettyConsole: parseBooleanFlag(process.env.SERVER_LOG_PRETTY) ?? true,
   },
   
   test: {
-    minLevel: LogLevel.WARN,
+    minLevel: resolveLogLevel(LogLevel.WARN),
     enableConsole: false,
     enableSentry: false,
     enableFile: false,
     environment: 'test',
     enablePerformanceTracking: false,
     enableAutoContext: false,
+    prettyConsole: false,
   },
   
   production: {
-    minLevel: LogLevel.INFO,
-    enableConsole: false,
+    minLevel: resolveLogLevel(LogLevel.INFO),
+    enableConsole: parseBooleanFlag(process.env.SERVER_ENABLE_CONSOLE_LOGS) ?? false,
     enableSentry: true,
-    enableFile: true,
+    enableFile: parseBooleanFlag(process.env.SERVER_ENABLE_FILE_LOGS) ?? true,
     environment: 'production',
     enablePerformanceTracking: true,
     slowOperationThreshold: 500, // 500ms threshold in prod
     enableAutoContext: true,
+    prettyConsole: parseBooleanFlag(process.env.SERVER_LOG_PRETTY) ?? false,
   }
 } as const;
 
@@ -291,7 +356,29 @@ export const RATE_LIMITING = {
  */
 export function getLoggerConfig(): Partial<LoggerConfig> {
   const env = (process.env.NODE_ENV || 'development') as keyof typeof DEFAULT_LOGGER_CONFIG;
-  return DEFAULT_LOGGER_CONFIG[env] || DEFAULT_LOGGER_CONFIG.development;
+  const base = { ...(DEFAULT_LOGGER_CONFIG[env] || DEFAULT_LOGGER_CONFIG.development) };
+
+  if (parseBooleanFlag(process.env.SERVER_ENABLE_CONSOLE_LOGS) !== undefined) {
+    base.enableConsole = Boolean(parseBooleanFlag(process.env.SERVER_ENABLE_CONSOLE_LOGS));
+  }
+  if (parseBooleanFlag(process.env.SERVER_DISABLE_CONSOLE_LOGS) === true) {
+    base.enableConsole = false;
+  }
+
+  if (parseBooleanFlag(process.env.SERVER_ENABLE_FILE_LOGS) !== undefined) {
+    base.enableFile = Boolean(parseBooleanFlag(process.env.SERVER_ENABLE_FILE_LOGS));
+  }
+  if (parseBooleanFlag(process.env.SERVER_DISABLE_FILE_LOGS) === true) {
+    base.enableFile = false;
+  }
+
+  if (parseBooleanFlag(process.env.SERVER_LOG_PRETTY) !== undefined) {
+    base.prettyConsole = Boolean(parseBooleanFlag(process.env.SERVER_LOG_PRETTY));
+  }
+
+  base.categoryOverrides = resolveCategoryOverrides();
+
+  return base;
 }
 
 /**
@@ -299,7 +386,8 @@ export function getLoggerConfig(): Partial<LoggerConfig> {
  */
 export function getMinLogLevel(): LogLevel {
   const env = (process.env.NODE_ENV || 'development') as keyof typeof LOG_LEVEL_CONFIG;
-  return LOG_LEVEL_CONFIG[env] || LOG_LEVEL_CONFIG.development;
+  const defaultLevel = LOG_LEVEL_CONFIG[env] || LOG_LEVEL_CONFIG.development;
+  return resolveLogLevel(defaultLevel);
 }
 
 /**

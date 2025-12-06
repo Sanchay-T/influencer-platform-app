@@ -1,18 +1,31 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { Resend } from 'resend';
 import { qstash } from '@/lib/queue/qstash';
+import { clerkBackendClient } from '@/lib/auth/backend-auth';
+
+const resendApiKey = process.env.RESEND_API_KEY;
+if (!resendApiKey) {
+  throw new Error('RESEND_API_KEY must be set before sending emails. Add it to your environment configuration.');
+}
 
 // Initialize Resend
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(resendApiKey);
+
+const resolvedSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+if (!resolvedSiteUrl) {
+  throw new Error('NEXT_PUBLIC_SITE_URL must be configured for email scheduling so QStash can reach the application.');
+}
 
 // Email service configuration
 export const EMAIL_CONFIG = {
   fromAddress: process.env.EMAIL_FROM_ADDRESS || 'hello@gemz.io',
-  siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
+  siteUrl: resolvedSiteUrl,
   delays: {
     welcome: '10m',        // 10 minutes after signup
     abandonment: '2h',     // 2 hours if no trial started
-    trialDay2: '2d',       // 2 days after trial starts
-    trialDay5: '5d',       // 5 days after trial starts
+    trial_day2: '2d',       // 2 days after trial starts
+    trial_day5: '5d',       // 5 days after trial starts
+    subscription_welcome: '30s', // Quick confirmation after subscription activation
   }
 };
 
@@ -22,11 +35,15 @@ export interface EmailTemplateProps {
   businessName?: string;
   dashboardUrl: string;
   unsubscribeUrl?: string;
+  billingUrl?: string;
+  plan?: string;
+  planName?: string;
+  planFeatures?: string[];
 }
 
 export interface EmailScheduleParams {
   userId: string;
-  emailType: 'welcome' | 'abandonment' | 'trial_day2' | 'trial_day5';
+  emailType: 'welcome' | 'abandonment' | 'trial_day2' | 'trial_day5' | 'subscription_welcome';
   userEmail: string;
   templateProps: EmailTemplateProps;
   delay?: string;
@@ -42,7 +59,7 @@ export async function sendEmail(
   from?: string
 ) {
   try {
-    console.log('📧 [EMAIL-SERVICE] Sending email:', { to, subject, from: from || EMAIL_CONFIG.fromAddress });
+    structuredConsole.log('📧 [EMAIL-SERVICE] Sending email:', { to, subject, from: from || EMAIL_CONFIG.fromAddress });
 
     const result = await resend.emails.send({
       from: from || EMAIL_CONFIG.fromAddress,
@@ -51,10 +68,10 @@ export async function sendEmail(
       react: reactComponent,
     });
 
-    console.log('✅ [EMAIL-SERVICE] Email sent successfully:', result.id);
+    structuredConsole.log('✅ [EMAIL-SERVICE] Email sent successfully:', result.id);
     return { success: true, id: result.id };
   } catch (error) {
-    console.error('❌ [EMAIL-SERVICE] Failed to send email:', error);
+    structuredConsole.error('❌ [EMAIL-SERVICE] Failed to send email:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
@@ -67,7 +84,7 @@ export async function scheduleEmail(params: EmailScheduleParams) {
     const { userId, emailType, userEmail, templateProps, delay } = params;
     const emailDelay = delay || EMAIL_CONFIG.delays[emailType];
     
-    console.log('📅 [EMAIL-SCHEDULER] Scheduling email:', {
+    structuredConsole.log('📅 [EMAIL-SCHEDULER] Scheduling email:', {
       userId,
       emailType,
       userEmail,
@@ -92,7 +109,7 @@ export async function scheduleEmail(params: EmailScheduleParams) {
       delay: emailDelay,
     });
 
-    console.log('✅ [EMAIL-SCHEDULER] Email scheduled successfully:', {
+    structuredConsole.log('✅ [EMAIL-SCHEDULER] Email scheduled successfully:', {
       messageId: result.messageId,
       emailType,
       delay: emailDelay
@@ -100,7 +117,7 @@ export async function scheduleEmail(params: EmailScheduleParams) {
 
     return { success: true, messageId: result.messageId };
   } catch (error) {
-    console.error('❌ [EMAIL-SCHEDULER] Failed to schedule email:', error);
+    structuredConsole.error('❌ [EMAIL-SCHEDULER] Failed to schedule email:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
@@ -141,7 +158,7 @@ export async function updateEmailScheduleStatus(
       emailScheduleStatus: updatedStatus,
     });
 
-    console.log('✅ [EMAIL-STATUS] Updated email schedule status:', {
+    structuredConsole.log('✅ [EMAIL-STATUS] Updated email schedule status:', {
       userId,
       emailType,
       status,
@@ -150,7 +167,7 @@ export async function updateEmailScheduleStatus(
 
     return { success: true };
   } catch (error) {
-    console.error('❌ [EMAIL-STATUS] Failed to update email schedule status:', error);
+    structuredConsole.error('❌ [EMAIL-STATUS] Failed to update email schedule status:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
@@ -160,45 +177,36 @@ export async function updateEmailScheduleStatus(
  */
 export async function getUserEmailFromClerk(userId: string): Promise<string | null> {
   try {
-    console.log('🔍 [CLERK-EMAIL] Starting Clerk email retrieval for userId:', userId);
-    
-    // Import Clerk server functions with the modern pattern
-    const { clerkClient } = await import('@clerk/nextjs/server');
-    
-    if (!clerkClient) {
-      console.error('❌ [CLERK-EMAIL] clerkClient is undefined');
-      return null;
-    }
-
-    // Modern Clerk pattern: clerkClient is now an async function that must be called
-    console.log('🔄 [CLERK-EMAIL] Initializing Clerk client...');
-    const client = await clerkClient();
-    
-    if (!client || !client.users) {
-      console.error('❌ [CLERK-EMAIL] Clerk client initialization failed or users API unavailable');
-      return null;
-    }
-
-    console.log('✅ [CLERK-EMAIL] Clerk client initialized successfully');
-    const user = await client.users.getUser(userId);
+    structuredConsole.log('🔍 [CLERK-EMAIL] Starting Clerk email retrieval for userId:', userId);
+    const user = await clerkBackendClient.users.getUser(userId);
     
     if (!user) {
-      console.error('❌ [CLERK-EMAIL] User not found:', userId);
+      structuredConsole.error('❌ [CLERK-EMAIL] User not found:', userId);
       return null;
     }
     
     const primaryEmail = user.emailAddresses.find(email => email.id === user.primaryEmailAddressId);
-    
-    if (!primaryEmail) {
-      console.error('❌ [CLERK-EMAIL] No primary email found for user:', userId);
-      console.log('🔍 [CLERK-EMAIL] Available emails:', user.emailAddresses?.map(e => ({ id: e.id, email: e.emailAddress })));
+
+    // Fallback: pick the first verified address, or the first address if none are verified.
+    const fallbackEmail = user.emailAddresses.find(email => email.verification?.status === 'verified')
+      || user.emailAddresses[0];
+
+    const resolvedEmail = primaryEmail?.emailAddress || fallbackEmail?.emailAddress || null;
+
+    if (!resolvedEmail) {
+      structuredConsole.error('❌ [CLERK-EMAIL] No email found for user:', userId);
+      structuredConsole.log('🔍 [CLERK-EMAIL] Available emails:', user.emailAddresses?.map(e => ({ id: e.id, email: e.emailAddress, verified: e.verification?.status })));
       return null;
     }
 
-    console.log('✅ [CLERK-EMAIL] Retrieved user email:', primaryEmail.emailAddress);
-    return primaryEmail.emailAddress;
+    if (!primaryEmail) {
+      structuredConsole.warn('⚠️ [CLERK-EMAIL] No primary email set; using fallback email:', resolvedEmail);
+    }
+
+    structuredConsole.log('✅ [CLERK-EMAIL] Retrieved user email:', resolvedEmail);
+    return resolvedEmail;
   } catch (error) {
-    console.error('❌ [CLERK-EMAIL] Failed to get user email from Clerk:', error);
+    structuredConsole.error('❌ [CLERK-EMAIL] Failed to get user email from Clerk:', error);
     return null;
   }
 }
@@ -221,13 +229,13 @@ export async function shouldSendEmail(userId: string, emailType: string): Promis
 
     // Don't send if already sent or scheduled
     if (emailInfo && (emailInfo.status === 'sent' || emailInfo.status === 'scheduled')) {
-      console.log(`⏭️ [EMAIL-CHECK] Email ${emailType} already ${emailInfo.status} for user ${userId}`);
+      structuredConsole.log(`⏭️ [EMAIL-CHECK] Email ${emailType} already ${emailInfo.status} for user ${userId}`);
       return false;
     }
 
     return true;
   } catch (error) {
-    console.error('❌ [EMAIL-CHECK] Error checking email status:', error);
+    structuredConsole.error('❌ [EMAIL-CHECK] Error checking email status:', error);
     return false;
   }
 }

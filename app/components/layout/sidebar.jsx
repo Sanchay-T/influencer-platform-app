@@ -1,15 +1,21 @@
-'use client'
+'use client';
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
+import React, { useEffect, useState } from 'react'
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { LayoutDashboard, LogOut, UserRoundCog, Settings, Mail, CreditCard, TrendingUp, ListTree, Pin, PinOff } from "lucide-react";
+import Image from "next/image";
+import { LayoutDashboard, LogOut, UserRoundCog, Settings, Mail, CreditCard, ListTree, Pin, PinOff, Megaphone } from "lucide-react";
 import { useRouter, usePathname } from 'next/navigation'
 import { useClerk, useUser } from '@clerk/nextjs'
 import { useAdmin } from '@/lib/hooks/use-admin'
 import TrialSidebarCompact from '@/app/components/trial/trial-sidebar-compact'
 import { cn } from '@/lib/utils'
 
-export default function Sidebar({ onNavigate, onTogglePin, isPinned = false, showAutoHideHint = false }) {
+// Sidebar is shared across dashboard shells; default to pinned to keep navigation visible until the user explicitly unpins.
+export default function Sidebar({ onNavigate, onTogglePin, isPinned = true, showAutoHideHint = false }) {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
   const router = useRouter()
   const pathname = usePathname()
   const { signOut } = useClerk()
@@ -18,8 +24,9 @@ export default function Sidebar({ onNavigate, onTogglePin, isPinned = false, sho
 
   const nav = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Campaigns', href: '/campaigns', icon: Megaphone },
     { name: 'Lists', href: '/lists', icon: ListTree },
-    { name: 'Profile Settings', href: '/profile', icon: UserRoundCog },
+    { name: 'Account Settings', href: '/profile', icon: UserRoundCog },
     { name: 'Billing & Plans', href: '/billing', icon: CreditCard },
   ]
   const adminNav = [
@@ -32,18 +39,23 @@ export default function Sidebar({ onNavigate, onTogglePin, isPinned = false, sho
       await signOut()
       router.push('/sign-in')
     } catch (err) {
-      console.error('Error signing out:', err)
+      structuredConsole.error('Error signing out:', err)
     }
   }
 
   return (
-    <div className="flex h-full w-64 flex-col bg-zinc-900 border-r border-zinc-700/50">
+    <div className="flex h-full w-full max-w-xs sm:max-w-sm lg:w-64 lg:max-w-none flex-col bg-zinc-900 border-r border-zinc-700/50">
       <div className="flex h-16 items-center px-6 border-b border-zinc-800/50">
         <div className="flex w-full items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-lg flex items-center justify-center">
-              <TrendingUp className="h-5 w-5 text-white" />
-            </div>
+            <Image
+              src="/logo.png"
+              alt="Gemz Logo"
+              width={40}
+              height={40}
+              className="object-contain"
+              priority
+            />
             <span className="text-xl font-bold text-zinc-100">Gemz</span>
           </div>
           {onTogglePin && (
@@ -53,9 +65,9 @@ export default function Sidebar({ onNavigate, onTogglePin, isPinned = false, sho
               variant="ghost"
               className="text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60"
               onClick={onTogglePin}
-              aria-label={isPinned ? 'Unpin sidebar' : 'Pin sidebar'}
+              aria-label={mounted ? (isPinned ? 'Unpin sidebar' : 'Pin sidebar') : undefined}
             >
-              {isPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+              {mounted ? (isPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />) : null}
             </Button>
           )}
         </div>

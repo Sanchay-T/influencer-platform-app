@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 /**
  * YouTube Similar Creator Search Background Processing Handler
  */
@@ -17,7 +18,7 @@ const MAX_API_CALLS_FOR_TESTING = 10;
  * Process YouTube similar creator search job
  */
 export async function processYouTubeSimilarJob(job: any, jobId: string): Promise<YouTubeSimilarJobResult> {
-  console.log('🎬 [YOUTUBE-SIMILAR] Processing YouTube similar job for username:', job.targetUsername);
+  structuredConsole.log('🎬 [YOUTUBE-SIMILAR] Processing YouTube similar job for username:', job.targetUsername);
   
   // For YouTube similar, we do all searches in one job run
   // No need to check processedRuns since we complete in one go
@@ -30,20 +31,20 @@ export async function processYouTubeSimilarJob(job: any, jobId: string): Promise
       updatedAt: new Date(),
       progress: '20'
     }).where(eq(scrapingJobs.id, jobId));
-    console.log('✅ [YOUTUBE-SIMILAR] Job status updated to processing (20%)');
+    structuredConsole.log('✅ [YOUTUBE-SIMILAR] Job status updated to processing (20%)');
 
     // Step 1: Get target channel profile (20% → 40%)
-    console.log('🔍 [YOUTUBE-SIMILAR] Step 1: Getting YouTube channel profile');
+    structuredConsole.log('🔍 [YOUTUBE-SIMILAR] Step 1: Getting YouTube channel profile');
     const targetProfile = await getYouTubeChannelProfile(job.targetUsername);
     
     await db.update(scrapingJobs).set({ 
       progress: '40',
       updatedAt: new Date()
     }).where(eq(scrapingJobs.id, jobId));
-    console.log('✅ [YOUTUBE-SIMILAR] Step 1 completed: Target profile retrieved (40%)');
+    structuredConsole.log('✅ [YOUTUBE-SIMILAR] Step 1 completed: Target profile retrieved (40%)');
 
     // Step 2: Extract content-based keywords (40% → 50%)
-    console.log('🔍 [YOUTUBE-SIMILAR] Step 2: Extracting content-based keywords');
+    structuredConsole.log('🔍 [YOUTUBE-SIMILAR] Step 2: Extracting content-based keywords');
     const searchKeywords = extractSearchKeywords(targetProfile);
     
     await db.update(scrapingJobs).set({ 
@@ -52,7 +53,7 @@ export async function processYouTubeSimilarJob(job: any, jobId: string): Promise
     }).where(eq(scrapingJobs.id, jobId));
     
     // Step 3: Comprehensive search strategy (50% → 80%)
-    console.log('🔍 [YOUTUBE-SIMILAR] Step 3: Executing comprehensive search strategy');
+    structuredConsole.log('🔍 [YOUTUBE-SIMILAR] Step 3: Executing comprehensive search strategy');
     
     // Collect all channels from multiple searches
     const allExtractedChannels: any[] = [];
@@ -63,7 +64,7 @@ export async function processYouTubeSimilarJob(job: any, jobId: string): Promise
     for (let i = 0; i < Math.min(searchKeywords.length, MAX_API_CALLS_FOR_TESTING); i++) {
       try {
         const searchQuery = searchKeywords[i];
-        console.log(`🔍 [YOUTUBE-SIMILAR] Search ${i + 1}/${searchKeywords.length}: "${searchQuery}"`);
+        structuredConsole.log(`🔍 [YOUTUBE-SIMILAR] Search ${i + 1}/${searchKeywords.length}: "${searchQuery}"`);
         
         const searchResults = await searchYouTubeWithKeywords([searchQuery]);
         searchesMade++;
@@ -72,7 +73,7 @@ export async function processYouTubeSimilarJob(job: any, jobId: string): Promise
           totalVideosFound += searchResults.videos.length;
           const channels = extractChannelsFromVideos(searchResults.videos, job.targetUsername);
           allExtractedChannels.push(...channels);
-          console.log(`✅ [YOUTUBE-SIMILAR] Search ${i + 1} found ${channels.length} unique channels from ${searchResults.videos.length} videos`);
+          structuredConsole.log(`✅ [YOUTUBE-SIMILAR] Search ${i + 1} found ${channels.length} unique channels from ${searchResults.videos.length} videos`);
           
           // ✅ SAVE INTERMEDIATE RESULTS for partial display
           if (allExtractedChannels.length > 0 && (i + 1) % 2 === 0) { // Save every 2 searches
@@ -131,7 +132,7 @@ export async function processYouTubeSimilarJob(job: any, jobId: string): Promise
                 })
                 .where(eq(scrapingResults.jobId, jobId));
                 
-              console.log(`💾 [YOUTUBE-SIMILAR] APPENDED ${transformedIntermediateChannels.length} new channels to existing ${existingCreators.length} results (total: ${updatedCreators.length})`);
+              structuredConsole.log(`💾 [YOUTUBE-SIMILAR] APPENDED ${transformedIntermediateChannels.length} new channels to existing ${existingCreators.length} results (total: ${updatedCreators.length})`);
             } else {
               // Create first result entry
               await db.insert(scrapingResults).values({
@@ -140,12 +141,12 @@ export async function processYouTubeSimilarJob(job: any, jobId: string): Promise
                 createdAt: new Date()
               });
               
-              console.log(`💾 [YOUTUBE-SIMILAR] Created first result entry with ${transformedIntermediateChannels.length} channels after search ${i + 1}`);
+              structuredConsole.log(`💾 [YOUTUBE-SIMILAR] Created first result entry with ${transformedIntermediateChannels.length} channels after search ${i + 1}`);
             }
           }
           
         } else {
-          console.log(`⚠️ [YOUTUBE-SIMILAR] Search ${i + 1} returned no videos`);
+          structuredConsole.log(`⚠️ [YOUTUBE-SIMILAR] Search ${i + 1} returned no videos`);
         }
         
         // Update progress incrementally
@@ -162,13 +163,13 @@ export async function processYouTubeSimilarJob(job: any, jobId: string): Promise
         }
         
       } catch (searchError) {
-        console.error(`❌ [YOUTUBE-SIMILAR] Error in search ${i + 1}:`, searchError);
+        structuredConsole.error(`❌ [YOUTUBE-SIMILAR] Error in search ${i + 1}:`, searchError);
         // Continue with other searches even if one fails
       }
     }
     
     if (allExtractedChannels.length === 0) {
-      console.error('❌ [YOUTUBE-SIMILAR] No channels found across all searches');
+      structuredConsole.error('❌ [YOUTUBE-SIMILAR] No channels found across all searches');
       await db.update(scrapingJobs).set({
         status: 'error',
         error: 'No channels found in any search results',
@@ -177,10 +178,10 @@ export async function processYouTubeSimilarJob(job: any, jobId: string): Promise
       return { status: 'error', error: 'No channels found' };
     }
     
-    console.log(`📊 [YOUTUBE-SIMILAR] Total channels before deduplication: ${allExtractedChannels.length}`);
+    structuredConsole.log(`📊 [YOUTUBE-SIMILAR] Total channels before deduplication: ${allExtractedChannels.length}`);
     
     // Step 4: Deduplicate and enhance channels (80% → 90%)
-    console.log('🔍 [YOUTUBE-SIMILAR] Step 4: Deduplicating and enhancing channels');
+    structuredConsole.log('🔍 [YOUTUBE-SIMILAR] Step 4: Deduplicating and enhancing channels');
     
     // Deduplicate channels by ID
     const channelMap = new Map();
@@ -195,10 +196,10 @@ export async function processYouTubeSimilarJob(job: any, jobId: string): Promise
     });
     
     const extractedChannels = Array.from(channelMap.values());
-    console.log(`✅ [YOUTUBE-SIMILAR] Unique channels after deduplication: ${extractedChannels.length}`);
+    structuredConsole.log(`✅ [YOUTUBE-SIMILAR] Unique channels after deduplication: ${extractedChannels.length}`);
     
     if (extractedChannels.length === 0) {
-      console.error('❌ [YOUTUBE-SIMILAR] No channels extracted from search results');
+      structuredConsole.error('❌ [YOUTUBE-SIMILAR] No channels extracted from search results');
       await db.update(scrapingJobs).set({
         status: 'error',
         error: 'No channels found in search results',
@@ -208,13 +209,13 @@ export async function processYouTubeSimilarJob(job: any, jobId: string): Promise
     }
 
     // Step 5: Enhanced profile fetching for bio and email extraction (90% → 95%)
-    console.log('🔍 [YOUTUBE-SIMILAR] Step 5: Fetching enhanced profile data for top channels');
+    structuredConsole.log('🔍 [YOUTUBE-SIMILAR] Step 5: Fetching enhanced profile data for top channels');
     
     // Limit to top 30 channels and enhance first 10 with full profile data
     const topChannels = extractedChannels.slice(0, 30);
     const maxEnhancedProfiles = Math.min(10, topChannels.length);
     
-    console.log(`📊 [YOUTUBE-SIMILAR] Enhancing ${maxEnhancedProfiles} of ${topChannels.length} channels with bio/email data`);
+    structuredConsole.log(`📊 [YOUTUBE-SIMILAR] Enhancing ${maxEnhancedProfiles} of ${topChannels.length} channels with bio/email data`);
     
     const enhancedChannels = [];
     
@@ -225,17 +226,17 @@ export async function processYouTubeSimilarJob(job: any, jobId: string): Promise
       // Fetch full profile data for first 10 channels
       if (i < maxEnhancedProfiles && channel.handle) {
         try {
-          console.log(`🔍 [YOUTUBE-ENHANCED] Fetching profile ${i + 1}/${maxEnhancedProfiles}: ${channel.handle}`);
+          structuredConsole.log(`🔍 [YOUTUBE-ENHANCED] Fetching profile ${i + 1}/${maxEnhancedProfiles}: ${channel.handle}`);
           enhancedData = await getYouTubeChannelProfile(channel.handle);
           
-          console.log(`✅ [YOUTUBE-ENHANCED] Enhanced data for ${channel.handle}:`, {
+          structuredConsole.log(`✅ [YOUTUBE-ENHANCED] Enhanced data for ${channel.handle}:`, {
             email: enhancedData.email || 'None',
             bioLength: enhancedData.description?.length || 0,
             linksCount: enhancedData.links?.length || 0
           });
           
         } catch (enhanceError) {
-          console.error(`❌ [YOUTUBE-ENHANCED] Failed to enhance ${channel.handle}:`, enhanceError.message);
+          structuredConsole.error(`❌ [YOUTUBE-ENHANCED] Failed to enhance ${channel.handle}:`, enhanceError.message);
         }
         
         // Small delay between enhanced fetches
@@ -279,7 +280,7 @@ export async function processYouTubeSimilarJob(job: any, jobId: string): Promise
       enhancedChannels.push(transformedChannel);
     }
     
-    console.log('✅ [YOUTUBE-SIMILAR] Enhanced profile fetching complete:', {
+    structuredConsole.log('✅ [YOUTUBE-SIMILAR] Enhanced profile fetching complete:', {
       totalChannels: enhancedChannels.length,
       enhancedProfiles: maxEnhancedProfiles,
       channelsWithBio: enhancedChannels.filter(c => c.bio && c.bio.length > 0).length,
@@ -313,8 +314,8 @@ export async function processYouTubeSimilarJob(job: any, jobId: string): Promise
       }
     };
 
-    console.log('📊 [YOUTUBE-SIMILAR] Final results stats:', resultData.stats);
-    console.log('🔍 [YOUTUBE-SIMILAR] Search keywords used:', searchKeywords);
+    structuredConsole.log('📊 [YOUTUBE-SIMILAR] Final results stats:', resultData.stats);
+    structuredConsole.log('🔍 [YOUTUBE-SIMILAR] Search keywords used:', searchKeywords);
 
     // Update processed runs and results count
     await db.update(scrapingJobs).set({
@@ -337,7 +338,7 @@ export async function processYouTubeSimilarJob(job: any, jobId: string): Promise
           createdAt: new Date()
         })
         .where(eq(scrapingResults.jobId, jobId));
-      console.log('✅ [YOUTUBE-SIMILAR] Updated results with final enhanced data');
+      structuredConsole.log('✅ [YOUTUBE-SIMILAR] Updated results with final enhanced data');
     } else {
       // Fallback: create new results if none exist
       await db.insert(scrapingResults).values({
@@ -345,7 +346,7 @@ export async function processYouTubeSimilarJob(job: any, jobId: string): Promise
         creators: enhancedChannels,
         createdAt: new Date()
       });
-      console.log('✅ [YOUTUBE-SIMILAR] Created final enhanced results');
+      structuredConsole.log('✅ [YOUTUBE-SIMILAR] Created final enhanced results');
     }
 
     // Mark job as completed
@@ -355,7 +356,7 @@ export async function processYouTubeSimilarJob(job: any, jobId: string): Promise
       completedAt: new Date(),
       updatedAt: new Date()
     }).where(eq(scrapingJobs.id, jobId));
-    console.log('✅ [YOUTUBE-SIMILAR] Job completed successfully (100%)');
+    structuredConsole.log('✅ [YOUTUBE-SIMILAR] Job completed successfully (100%)');
 
     return { 
       status: 'completed', 
@@ -363,7 +364,7 @@ export async function processYouTubeSimilarJob(job: any, jobId: string): Promise
     };
 
   } catch (error) {
-    console.error('❌ [YOUTUBE-SIMILAR] Error during processing:', error);
+    structuredConsole.error('❌ [YOUTUBE-SIMILAR] Error during processing:', error);
     
     // Update job with error status
     await db.update(scrapingJobs).set({

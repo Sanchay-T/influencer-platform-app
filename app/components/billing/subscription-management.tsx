@@ -66,9 +66,15 @@ function SubscriptionManagementContent() {
 
       // Fetch billing status
       const fetchTestId = `SUBSCRIPTION_FETCH_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      console.log(`🎯 [SUBSCRIPTION-TEST] ${fetchTestId} - Fetching billing status from API`);
+      componentLogger.logInfo('Fetching billing status from API', {
+        operation: 'fetch-subscription-data',
+        fetchTestId
+      });
       
-      const billingResponse = await fetch('/api/billing/status');
+      const [billingResponse, portalResponse] = await Promise.all([
+        fetch('/api/billing/status'),
+        fetch('/api/stripe/customer-portal', { method: 'GET' }).catch(() => null),
+      ]);
       if (!billingResponse.ok) {
         throw new Error('Failed to fetch billing status');
       }
@@ -76,20 +82,19 @@ function SubscriptionManagementContent() {
       const ttlHeader = billingResponse.headers.get('x-cache-ttl-ms');
       setCacheTtlMs(ttlHeader ? Number(ttlHeader) : null);
       
-      console.log(`📊 [SUBSCRIPTION-TEST] ${fetchTestId} - Billing data received:`, {
+      componentLogger.logInfo('Billing data received', {
+        operation: 'fetch-subscription-data',
+        fetchTestId,
         currentPlan: billingData.currentPlan,
         subscriptionStatus: billingData.subscriptionStatus,
         isTrialing: billingData.isTrialing,
-        hasActiveSubscription: billingData.hasActiveSubscription,
-        stripeCustomerId: billingData.stripeCustomerId,
-        stripeSubscriptionId: billingData.stripeSubscriptionId
+        hasActiveSubscription: billingData.hasActiveSubscription
       });
 
       // Check portal access
-      const portalResponse = await fetch('/api/stripe/customer-portal', {
-        method: 'GET',
-      });
-      const portalData = portalResponse.ok ? await portalResponse.json() : { canAccessPortal: false };
+      const portalData = portalResponse && portalResponse.ok
+        ? await portalResponse.json()
+        : { canAccessPortal: false };
 
       // Combine data
       const combinedData: SubscriptionData = {
@@ -119,7 +124,7 @@ function SubscriptionManagementContent() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [componentLogger]);
 
   // Removed manual sync - should be automatic via checkout success
 

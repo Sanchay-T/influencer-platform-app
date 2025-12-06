@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 /**
  * Deployment Validation Endpoint for Phase 5
  * Comprehensive pre-deployment and post-deployment validation
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       skipSlowChecks = false 
     } = body;
     
-    console.log(`🚀 [DEPLOYMENT-VALIDATION] Starting ${type} validation...`);
+    structuredConsole.log(`🚀 [DEPLOYMENT-VALIDATION] Starting ${type} validation...`);
     
     // Run comprehensive validation
     const results = await runDeploymentValidation({
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       try {
         report = await generateValidationReport();
       } catch (error) {
-        console.warn('[DEPLOYMENT-VALIDATION] Failed to generate report:', error);
+        structuredConsole.warn('[DEPLOYMENT-VALIDATION] Failed to generate report:', error);
       }
     }
     
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     
     // Log results
     if (!results.deploymentReady) {
-      console.error(`❌ [DEPLOYMENT-VALIDATION] Deployment validation failed:`, {
+      structuredConsole.error(`❌ [DEPLOYMENT-VALIDATION] Deployment validation failed:`, {
         criticalIssues: results.criticalIssues,
         environment: results.environment
       });
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         }
       });
     } else {
-      console.log(`✅ [DEPLOYMENT-VALIDATION] Deployment validation passed for ${results.environment}`);
+      structuredConsole.log(`✅ [DEPLOYMENT-VALIDATION] Deployment validation passed for ${results.environment}`);
     }
     
     return NextResponse.json(response, {
@@ -83,7 +84,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
     
   } catch (error) {
-    console.error('[DEPLOYMENT-VALIDATION] Validation failed:', error);
+    structuredConsole.error('[DEPLOYMENT-VALIDATION] Validation failed:', error);
     
     Sentry.captureException(error, {
       tags: {
@@ -143,7 +144,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     });
     
   } catch (error) {
-    console.error('[DEPLOYMENT-VALIDATION] Status check failed:', error);
+    structuredConsole.error('[DEPLOYMENT-VALIDATION] Status check failed:', error);
     
     return NextResponse.json({
       deploymentReady: false,
@@ -193,7 +194,7 @@ interface ValidationCategoryResult {
 async function runDeploymentValidation(options: ValidationOptions): Promise<DeploymentValidationResult> {
   const { type, environment, skipSlowChecks } = options;
   
-  console.log(`🔍 [DEPLOYMENT-VALIDATION] Running ${type} validation (skipSlow: ${skipSlowChecks})`);
+  structuredConsole.log(`🔍 [DEPLOYMENT-VALIDATION] Running ${type} validation (skipSlow: ${skipSlowChecks})`);
   
   const criticalIssues: string[] = [];
   const warnings: string[] = [];

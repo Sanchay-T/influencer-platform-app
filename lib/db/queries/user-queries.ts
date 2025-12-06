@@ -5,6 +5,7 @@
  * =====================================================
  */
 
+import { clerkBackendClient } from '@/lib/auth/backend-auth';
 import { db } from '../index';
 import { 
   users, 
@@ -20,14 +21,45 @@ import {
   type UserSystemData
 } from '../schema';
 import { eq, and, sql } from 'drizzle-orm';
+import { createCategoryLogger, LogCategory } from '@/lib/logging';
+
+const userQueryLogger = createCategoryLogger(LogCategory.DATABASE);
+
+const toContext = (extra?: Record<string, unknown>) => {
+  if (!extra) return undefined;
+  const context: { userId?: string; metadata: Record<string, unknown> } = {
+    metadata: extra,
+  };
+  if (typeof extra.userId === 'string') {
+    context.userId = extra.userId;
+  }
+  return context;
+};
+
+const debug = (message: string, extra?: Record<string, unknown>) => {
+  userQueryLogger.debug(message, toContext(extra));
+};
+
+const info = (message: string, extra?: Record<string, unknown>) => {
+  userQueryLogger.info(message, toContext(extra));
+};
+
+const warn = (message: string, extra?: Record<string, unknown>) => {
+  userQueryLogger.warn(message, toContext(extra));
+};
+
+const logError = (message: string, err: unknown, extra?: Record<string, unknown>) => {
+  const normalized = err instanceof Error ? err : new Error(String(err));
+  userQueryLogger.error(message, normalized, toContext(extra));
+};
 
 /**
  * Get complete user profile (replaces old userProfiles queries)
  * This function provides backward compatibility by joining all normalized tables
  */
 export async function getUserProfile(userId: string): Promise<UserProfileComplete | null> {
-  console.log(`🔍 [USER-QUERIES] getUserProfile called for userId: ${userId}`);
-  console.log(`🔍 [USER-QUERIES] Starting normalized database query with JOIN across 5 tables`);
+  debug('getUserProfile invoked', { userId });
+  debug('Executing normalized user profile query');
   
   const result = await db
     .select({
@@ -74,6 +106,7 @@ export async function getUserProfile(userId: string): Promise<UserProfileComplet
       planFeatures: userUsage.planFeatures,
       usageCampaignsCurrent: userUsage.usageCampaignsCurrent,
       usageCreatorsCurrentMonth: userUsage.usageCreatorsCurrentMonth,
+      enrichmentsCurrentMonth: userUsage.enrichmentsCurrentMonth,
       usageResetDate: userUsage.usageResetDate,
       
       // System data
@@ -89,23 +122,21 @@ export async function getUserProfile(userId: string): Promise<UserProfileComplet
     .leftJoin(userSystemData, eq(users.id, userSystemData.userId))
     .where(eq(users.userId, userId));
     
-  console.log(`🔍 [USER-QUERIES] Database query completed. Result count: ${result.length}`);
+  debug('User profile query completed', { resultCount: result.length, userId });
   
   const userRecord = result[0];
   
   if (!userRecord) {
-    console.log(`❌ [USER-QUERIES] No user record found - user does not exist in normalized database`);
-    console.log(`❌ [USER-QUERIES] This means: user needs to be created via Clerk webhook or signup process`);
+    warn('No normalized user record found', { userId });
     return null;
   }
   
   if (!userRecord.id) {
-    console.log(`❌ [USER-QUERIES] User record found but missing ID - data integrity issue`);
-    console.log(`❌ [USER-QUERIES] User record:`, userRecord);
+    warn('User record missing internal id', { userId, record: userRecord });
     return null;
   }
   
-  console.log(`✅ [USER-QUERIES] User found in normalized database:`, {
+  info('Normalized user record resolved', {
     id: userRecord.id,
     userId: userRecord.userId,
     email: userRecord.email,
@@ -118,13 +149,14 @@ export async function getUserProfile(userId: string): Promise<UserProfileComplet
   return {
     ...userRecord,
     // Ensure required fields have defaults
-    currentPlan: userRecord.currentPlan || 'free',
+    currentPlan: userRecord.currentPlan, // NULL = not onboarded yet
     subscriptionStatus: userRecord.subscriptionStatus || 'none',
     trialStatus: userRecord.trialStatus || 'pending',
     billingSyncStatus: userRecord.billingSyncStatus || 'pending',
     planFeatures: userRecord.planFeatures || {},
     usageCampaignsCurrent: userRecord.usageCampaignsCurrent || 0,
     usageCreatorsCurrentMonth: userRecord.usageCreatorsCurrentMonth || 0,
+    enrichmentsCurrentMonth: userRecord.enrichmentsCurrentMonth || 0,
     usageResetDate: userRecord.usageResetDate || new Date(),
     signupTimestamp: userRecord.signupTimestamp || userRecord.createdAt,
     emailScheduleStatus: userRecord.emailScheduleStatus || {},
@@ -148,20 +180,19 @@ export async function createUser(userData: {
   currentPlan?: string;
   intendedPlan?: string;
 }): Promise<UserProfileComplete> {
-  console.log(`🏗️ [USER-QUERIES] createUser called for userId: ${userData.userId}`);
-  console.log(`🏗️ [USER-QUERIES] Creating user across normalized tables with data:`, {
+  info('createUser invoked', {
     userId: userData.userId,
     email: userData.email,
     fullName: userData.fullName,
     onboardingStep: userData.onboardingStep || 'pending',
-    currentPlan: userData.currentPlan || 'free',
+    currentPlan: userData.currentPlan || null, // NULL until Stripe confirms payment
     hasTrialStart: !!userData.trialStartDate,
-    hasTrialEnd: !!userData.trialEndDate
+    hasTrialEnd: !!userData.trialEndDate,
   });
-  
+
   return db.transaction(async (tx) => {
-    console.log(`🏗️ [USER-QUERIES] Starting database transaction for user creation`);
-    
+    debug('Starting database transaction for user creation', { userId: userData.userId });
+
     try {
     // 1. Insert core user data
     const [newUser] = await tx.insert(users).values({
@@ -175,9 +206,10 @@ export async function createUser(userData: {
     }).returning();
 
     // 2. Insert subscription data
+    // Note: currentPlan is NULL until user completes onboarding and Stripe confirms payment
     const [newSubscription] = await tx.insert(userSubscriptions).values({
       userId: newUser.id,
-      currentPlan: userData.currentPlan || 'free',
+      currentPlan: userData.currentPlan || null, // NULL = hasn't completed onboarding
       intendedPlan: userData.intendedPlan,
       trialStatus: userData.trialStartDate ? 'active' : 'pending',
       trialStartDate: userData.trialStartDate,
@@ -190,6 +222,7 @@ export async function createUser(userData: {
       planFeatures: {},
       usageCampaignsCurrent: 0,
       usageCreatorsCurrentMonth: 0,
+      enrichmentsCurrentMonth: 0,
     }).returning();
 
     // 4. Insert system data
@@ -243,6 +276,7 @@ export async function createUser(userData: {
       planFeatures: newUsage.planFeatures,
       usageCampaignsCurrent: newUsage.usageCampaignsCurrent,
       usageCreatorsCurrentMonth: newUsage.usageCreatorsCurrentMonth,
+      enrichmentsCurrentMonth: newUsage.enrichmentsCurrentMonth,
       usageResetDate: newUsage.usageResetDate,
       
       // System data
@@ -252,7 +286,7 @@ export async function createUser(userData: {
       lastWebhookTimestamp: newSystemData.lastWebhookTimestamp,
     } as UserProfileComplete;
     
-    console.log(`✅ [USER-QUERIES] User created successfully across all 5 normalized tables:`, {
+    info('User created successfully across normalized tables', {
       userId: newUser.userId,
       internalId: newUser.id,
       email: userData.email,
@@ -261,12 +295,67 @@ export async function createUser(userData: {
       onboardingStep: newUser.onboardingStep
     });
     
-    } catch (error) {
-      console.error(`❌ [USER-QUERIES] Database transaction failed during user creation:`, error);
-      console.error(`❌ [USER-QUERIES] Failed for userId: ${userData.userId}`);
-      throw error;
+    } catch (transactionError) {
+      logError('User creation transaction failed', transactionError, { userId: userData.userId });
+      throw transactionError;
     }
   });
+}
+
+export async function ensureUserProfile(userId: string): Promise<UserProfileComplete> {
+  const existingProfile = await getUserProfile(userId);
+  if (existingProfile) {
+    debug('ensureUserProfile resolved existing record', { userId });
+    return existingProfile;
+  }
+
+  info('ensureUserProfile creating normalized profile', { userId });
+
+  let email: string | undefined;
+  let fullName: string | undefined;
+
+  try {
+    const clerkUser = await clerkBackendClient.users.getUser(userId);
+    email = clerkUser.emailAddresses?.[0]?.emailAddress ?? undefined;
+    const clerkFullName = `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim();
+    fullName = clerkFullName || undefined;
+  } catch (clerkError) {
+    warn('Failed to fetch Clerk metadata during ensureUserProfile', {
+      userId,
+      errorMessage: clerkError instanceof Error ? clerkError.message : String(clerkError)
+    });
+  }
+
+  const fallbackEmail = `user-${userId}@example.com`;
+
+  try {
+    // Note: currentPlan is intentionally not set here
+    // It will be set by Stripe webhook after user completes payment
+    const createdProfile = await createUser({
+      userId,
+      email: email || fallbackEmail,
+      fullName: fullName || 'User',
+      onboardingStep: 'pending',
+      // currentPlan: null - not set until Stripe confirms payment
+    });
+
+    info('ensureUserProfile created new record', { userId });
+    return createdProfile;
+  } catch (createError: any) {
+    const message = createError?.message?.toLowerCase?.() ?? '';
+    const duplicate = message.includes('duplicate') || message.includes('unique') || createError?.code === '23505';
+
+    if (duplicate) {
+      warn('ensureUserProfile detected concurrent creation, refetching', { userId });
+      const profile = await getUserProfile(userId);
+      if (profile) {
+        return profile;
+      }
+    }
+
+    logError('ensureUserProfile failed to create user', createError, { userId });
+    throw createError;
+  }
 }
 
 /**
@@ -315,6 +404,7 @@ export async function updateUserProfile(
     planFeatures?: any;
     usageCampaignsCurrent?: number;
     usageCreatorsCurrentMonth?: number;
+    enrichmentsCurrentMonth?: number;
     usageResetDate?: Date;
     
     // System updates
@@ -378,6 +468,7 @@ export async function updateUserProfile(
       planFeatures: updates.planFeatures,
       usageCampaignsCurrent: updates.usageCampaignsCurrent,
       usageCreatorsCurrentMonth: updates.usageCreatorsCurrentMonth,
+      enrichmentsCurrentMonth: updates.enrichmentsCurrentMonth,
       usageResetDate: updates.usageResetDate,
     };
     
@@ -521,7 +612,7 @@ export async function getUserUsage(userId: string): Promise<UserUsage | null> {
  */
 export async function incrementUsage(
   userId: string, 
-  type: 'campaigns' | 'creators', 
+  type: 'campaigns' | 'creators' | 'enrichments', 
   amount: number = 1
 ): Promise<void> {
   await db
@@ -529,7 +620,9 @@ export async function incrementUsage(
     .set({
       ...(type === 'campaigns' 
         ? { usageCampaignsCurrent: sql`usage_campaigns_current + ${amount}` }
-        : { usageCreatorsCurrentMonth: sql`usage_creators_current_month + ${amount}` }
+        : type === 'creators'
+          ? { usageCreatorsCurrentMonth: sql`usage_creators_current_month + ${amount}` }
+          : { enrichmentsCurrentMonth: sql`enrichments_current_month + ${amount}` }
       ),
       updatedAt: new Date(),
     })
@@ -590,6 +683,7 @@ export async function getUserByStripeCustomerId(stripeCustomerId: string): Promi
       planFeatures: userUsage.planFeatures,
       usageCampaignsCurrent: userUsage.usageCampaignsCurrent,
       usageCreatorsCurrentMonth: userUsage.usageCreatorsCurrentMonth,
+      enrichmentsCurrentMonth: userUsage.enrichmentsCurrentMonth,
       usageResetDate: userUsage.usageResetDate,
       
       // System data
@@ -615,13 +709,14 @@ export async function getUserByStripeCustomerId(stripeCustomerId: string): Promi
   return {
     ...userRecord,
     // Ensure required fields have defaults
-    currentPlan: userRecord.currentPlan || 'free',
+    currentPlan: userRecord.currentPlan, // NULL = not onboarded yet
     subscriptionStatus: userRecord.subscriptionStatus || 'none',
     trialStatus: userRecord.trialStatus || 'pending',
     billingSyncStatus: userRecord.billingSyncStatus || 'pending',
     planFeatures: userRecord.planFeatures || {},
     usageCampaignsCurrent: userRecord.usageCampaignsCurrent || 0,
     usageCreatorsCurrentMonth: userRecord.usageCreatorsCurrentMonth || 0,
+    enrichmentsCurrentMonth: userRecord.enrichmentsCurrentMonth || 0,
     usageResetDate: userRecord.usageResetDate || new Date(),
     signupTimestamp: userRecord.signupTimestamp || userRecord.createdAt,
     emailScheduleStatus: userRecord.emailScheduleStatus || {},

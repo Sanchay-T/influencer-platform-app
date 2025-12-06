@@ -1,5 +1,6 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { BillingService } from '@/lib/services/billing-service';
 
 /**
@@ -20,10 +21,10 @@ export async function POST(request: NextRequest) {
   try {
     const startedAt = Date.now();
     const reqId = `sync_${startedAt}_${Math.random().toString(36).slice(2, 8)}`;
-    console.log(`🔄 [BILLING-SYNC:${reqId}] Using central billing service for reconciliation`);
+    structuredConsole.log(`🔄 [BILLING-SYNC:${reqId}] Using central billing service for reconciliation`);
 
     // Get current user
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
     // ★★★ CENTRAL BILLING SERVICE - Reconciliation ★★★
     const result = await BillingService.reconcileWithStripe(userId);
     
-    console.log(`✅ [BILLING-SYNC:${reqId}] Central service result:`, {
+    structuredConsole.log(`✅ [BILLING-SYNC:${reqId}] Central service result:`, {
       updated: result.updated,
       changes: result.changes,
       currentPlan: result.finalState.currentPlan,
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error(`❌ [BILLING-SYNC] Error syncing with Stripe:`, error);
+    structuredConsole.error(`❌ [BILLING-SYNC] Error syncing with Stripe:`, error);
     return NextResponse.json({
       error: 'Failed to sync billing status',
       details: error instanceof Error ? error.message : 'Unknown error'

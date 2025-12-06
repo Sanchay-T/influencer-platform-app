@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
 import { isAdminUser } from '@/lib/auth/admin-utils';
 import { db } from '@/lib/db';
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest) {
     const updated = await getUserProfile(userId);
     return NextResponse.json({ success: true, user: updated });
   } catch (err) {
-    console.error('[ADMIN-SET-PLAN] error', err);
+    structuredConsole.error('[ADMIN-SET-PLAN] error', err);
     return NextResponse.json({ error: 'Failed to set user plan' }, { status: 500 });
   }
 }

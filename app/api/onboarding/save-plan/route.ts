@@ -1,7 +1,9 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import { updateUserProfile } from '@/lib/db/queries/user-queries';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
+import { updateUserProfile, getUserProfile } from '@/lib/db/queries/user-queries';
 import OnboardingLogger from '@/lib/utils/onboarding-logger';
+import { UserSessionLogger } from '@/lib/logging/user-session-logger';
 
 export async function POST(req: NextRequest) {
   const requestId = `save-plan_${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -13,7 +15,7 @@ export async function POST(req: NextRequest) {
       requestId
     });
 
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
     
     if (!userId) {
       await OnboardingLogger.logAPI('AUTH-ERROR', 'Save plan request unauthorized - no user ID', undefined, {
@@ -47,10 +49,25 @@ export async function POST(req: NextRequest) {
       requestId
     });
 
+    // Get user email for logging
+    const userProfile = await getUserProfile(userId);
+    const userLogger = userProfile?.email ? UserSessionLogger.forUser(userProfile.email, userId) : null;
+
+    userLogger?.log('PLAN_SELECTED', `User selected plan: ${selectedPlan}`, {
+      selectedPlan,
+      previousIntendedPlan: userProfile?.intendedPlan,
+      requestId,
+    });
+
     // Update user profile with intended plan (do not change currentPlan here)
     await updateUserProfile(userId, {
       intendedPlan: selectedPlan,
       billingSyncStatus: 'plan_selected', // will be confirmed by Stripe webhook
+    });
+
+    userLogger?.log('PLAN_SAVED', 'Plan selection saved to database', {
+      intendedPlan: selectedPlan,
+      nextStep: 'User will proceed to Stripe checkout',
     });
 
     await OnboardingLogger.logPayment('DB-UPDATE-SUCCESS', 'Database updated successfully with intended plan selection', userId, {
@@ -67,7 +84,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true });
 
   } catch (error) {
-    console.error('❌ [SAVE-PLAN] Error:', error);
+    structuredConsole.error('❌ [SAVE-PLAN] Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     
     await OnboardingLogger.logError('API-ERROR', 'Save plan API request failed', undefined, {

@@ -1,5 +1,7 @@
 'use client';
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
 import { useState, useEffect } from 'react';
 
 /**
@@ -36,7 +38,7 @@ export default function CampaignCounter({
         limit: data?.usageInfo?.campaignsLimit || 0
       });
     } catch (error) {
-      console.error('Failed to fetch campaign usage:', error);
+      structuredConsole.error('Failed to fetch campaign usage:', error);
     } finally {
       setIsLoading(false);
     }

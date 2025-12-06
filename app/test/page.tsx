@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { structuredConsole } from '@/lib/logging/console-proxy';
+
+import { useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -24,7 +26,7 @@ export default function TestPage() {
         setLoading(false);
       })
       .catch(err => {
-        console.error('Error:', err);
+        structuredConsole.error('Error:', err);
         setLoading(false);
       });
   }, []);
@@ -107,7 +109,7 @@ export default function TestPage() {
     setTestLoading(false);
   };
 
-  const refreshUserStatus = async () => {
+  const refreshUserStatus = useCallback(async () => {
     try {
       const res = await fetch(`/api/test/subscription?action=get-status&userId=${selectedUser}`);
       const data = await res.json();
@@ -115,9 +117,9 @@ export default function TestPage() {
         setUserStatus(data.status);
       }
     } catch (error) {
-      console.error('Error refreshing user status:', error);
+      structuredConsole.error('Error refreshing user status:', error);
     }
-  };
+  }, [selectedUser]);
 
   const cleanupTestData = async () => {
     if (confirm('Are you sure you want to cleanup test data?')) {
@@ -138,7 +140,7 @@ export default function TestPage() {
     if (selectedUser) {
       refreshUserStatus();
     }
-  }, [selectedUser]);
+  }, [selectedUser, refreshUserStatus]);
 
   if (loading) {
     return (

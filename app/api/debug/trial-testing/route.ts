@@ -1,12 +1,13 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { db } from '@/lib/db';
 import { updateUserProfile } from '@/lib/db/queries/user-queries';
 import { getTrialStatus } from '@/lib/trial/trial-service';
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
     
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
 
     const { action, testDate } = await req.json();
     
-    console.log('🧪 [TRIAL-TESTING] Action:', action, 'Test Date:', testDate);
+    structuredConsole.log('🧪 [TRIAL-TESTING] Action:', action, 'Test Date:', testDate);
 
     switch (action) {
       case 'set_trial_near_expiry':
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
           subscriptionStatus: 'trialing'
         });
           
-        console.log('🧪 [TRIAL-TESTING] Set trial to expire in 1 hour');
+        structuredConsole.log('🧪 [TRIAL-TESTING] Set trial to expire in 1 hour');
         break;
 
       case 'set_trial_expired':
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest) {
           subscriptionStatus: 'canceled'
         });
           
-        console.log('🧪 [TRIAL-TESTING] Set trial as expired 1 hour ago');
+        structuredConsole.log('🧪 [TRIAL-TESTING] Set trial as expired 1 hour ago');
         break;
 
       case 'simulate_day':
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest) {
           subscriptionStatus: 'trialing'
         });
           
-        console.log(`🧪 [TRIAL-TESTING] Simulated day ${day} of trial`);
+        structuredConsole.log(`🧪 [TRIAL-TESTING] Simulated day ${day} of trial`);
         break;
 
       case 'reset_trial':
@@ -75,7 +76,7 @@ export async function POST(req: NextRequest) {
           subscriptionStatus: 'trialing'
         });
           
-        console.log('🧪 [TRIAL-TESTING] Reset to fresh 7-day trial');
+        structuredConsole.log('🧪 [TRIAL-TESTING] Reset to fresh 7-day trial');
         break;
 
       default:
@@ -101,7 +102,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ [TRIAL-TESTING] Error:', error);
+    structuredConsole.error('❌ [TRIAL-TESTING] Error:', error);
     return NextResponse.json(
       { error: 'Failed to execute trial testing action' },
       { status: 500 }
@@ -111,7 +112,7 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
     
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -144,7 +145,7 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ [TRIAL-TESTING] Error getting status:', error);
+    structuredConsole.error('❌ [TRIAL-TESTING] Error getting status:', error);
     return NextResponse.json(
       { error: 'Failed to get trial testing status' },
       { status: 500 }

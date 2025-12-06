@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -61,43 +61,73 @@ export default function SimilarResults({ data }) {
       </div>
 
       <div className="rounded-lg border border-zinc-800 bg-zinc-900/30">
-        <div className="overflow-x-auto">
-          <div className="min-w-[1500px]">
-            <div className="max-h-[600px] overflow-y-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-b border-zinc-800">
-                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">Profile</TableHead>
-                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">Categories</TableHead>
-                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">Platform</TableHead>
-                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">Followers</TableHead>
-                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">Engagement</TableHead>
-                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">Location</TableHead>
-                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-zinc-400 uppercase tracking-wider">Similarity Score</TableHead>
-                  </TableRow>
-                </TableHeader>
+        <div className="max-h-[600px] overflow-y-auto">
+          <Table className="w-full">
+            <TableHeader>
+              <TableRow className="border-b border-zinc-800">
+                <TableHead className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">Profile</TableHead>
+                <TableHead className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">Categories</TableHead>
+                <TableHead className="hidden sm:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">Platform</TableHead>
+                <TableHead className="hidden md:table-cell px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-zinc-400">Followers</TableHead>
+                <TableHead className="hidden xl:table-cell px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-zinc-400">Engagement</TableHead>
+                <TableHead className="hidden lg:table-cell px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-400">Location</TableHead>
+                <TableHead className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-zinc-400">Similarity</TableHead>
+              </TableRow>
+            </TableHeader>
                 <TableBody className="divide-y divide-zinc-800">
                   {getCurrentPageData().map((creator) => (
-                    <TableRow key={creator.username} className="table-row">
-                      <TableCell className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <Avatar>
+                    <TableRow key={creator.username} className="table-row align-top">
+                      <TableCell className="px-4 py-4 align-top">
+                        <div className="flex items-start gap-3">
+                          <Avatar className="h-10 w-10 flex-shrink-0">
                             <AvatarFallback>{creator.name.charAt(0)}</AvatarFallback>
                           </Avatar>
-                          <div>
-                            <div className="font-semibold text-zinc-100">{creator.name}</div>
-                            <div className="text-sm text-zinc-500">@{creator.username}</div>
+                          <div className="space-y-2 min-w-0">
+                            <div className="font-semibold text-zinc-100 leading-tight">{creator.name}</div>
+                            <div className="text-xs text-zinc-400">@{creator.username}</div>
+                            <div className="space-y-1 text-xs text-zinc-400 md:hidden">
+                              <div>
+                                <span className="font-medium text-zinc-300">Followers:</span>{' '}
+                                {creator.followers}
+                              </div>
+                              <div>
+                                <span className="font-medium text-zinc-300">Platform:</span>{' '}
+                                {creator.platform}
+                              </div>
+                              <div>
+                                <span className="font-medium text-zinc-300">Location:</span>{' '}
+                                {creator.location || '—'}
+                              </div>
+                              <div>
+                                <span className="font-medium text-zinc-300">Engagement:</span>{' '}
+                                {creator.engagement}
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap gap-1 lg:hidden">
+                              {creator.categories.map((category) => (
+                                <Badge
+                                  key={`${creator.username}-${category.name}`}
+                                  style={{
+                                    backgroundColor: category.color,
+                                    color: '#000',
+                                    opacity: 0.8
+                                  }}
+                                >
+                                  {category.name}
+                                </Badge>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="px-6 py-4">
-                        <div className="flex gap-1 flex-wrap">
+                      <TableCell className="hidden lg:table-cell px-4 py-4">
+                        <div className="flex flex-wrap gap-1">
                           {creator.categories.map((category) => (
-                            <Badge 
+                            <Badge
                               key={`${creator.username}-${category.name}`}
-                              style={{ 
+                              style={{
                                 backgroundColor: category.color,
-                                color: '#000000',
+                                color: '#000',
                                 opacity: 0.8
                               }}
                             >
@@ -106,11 +136,11 @@ export default function SimilarResults({ data }) {
                           ))}
                         </div>
                       </TableCell>
-                      <TableCell className="px-6 py-4 text-zinc-300">{creator.platform}</TableCell>
-                      <TableCell className="px-6 py-4 text-zinc-300">{creator.followers}</TableCell>
-                      <TableCell className="px-6 py-4 text-zinc-300">{creator.engagement}</TableCell>
-                      <TableCell className="px-6 py-4 text-zinc-300">{creator.location}</TableCell>
-                      <TableCell className="px-6 py-4">
+                      <TableCell className="hidden sm:table-cell px-4 py-4 text-sm text-zinc-300">{creator.platform}</TableCell>
+                      <TableCell className="hidden md:table-cell px-4 py-4 text-right text-sm text-zinc-300">{creator.followers}</TableCell>
+                      <TableCell className="hidden xl:table-cell px-4 py-4 text-right text-sm text-zinc-300">{creator.engagement}</TableCell>
+                      <TableCell className="hidden lg:table-cell px-4 py-4 text-sm text-zinc-300">{creator.location}</TableCell>
+                      <TableCell className="px-4 py-4 text-right">
                         <Badge className="bg-emerald-600/20 text-emerald-400 border border-emerald-600/30">
                           {creator.similarityScore}
                         </Badge>
@@ -118,9 +148,7 @@ export default function SimilarResults({ data }) {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
-            </div>
-          </div>
+          </Table>
         </div>
       </div>
 

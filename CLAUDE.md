@@ -1,223 +1,109 @@
-# 🎯 Multi-Platform Influencer Search Platform - Master Documentation Index
+# CLAUDE.md — Root Guide (Concise)
+Last updated: 2025-12-03
+Imports: .claude/CLAUDE.md (project memory), CONSTRAINTS.md, TESTING.md, DECISIONS.md, AGENT_OPTIMIZATION.md.
 
-## 🚀 Quick Start - Development Workflow
+## Active Work Memory (CHECK FIRST)
+- **`task.md`** — Current task tracker, findings, and action items. Check this FIRST for context on ongoing work.
+- **`scratchpad.md`** — Implementation notes, code snippets, progress log. Use for detailed session context.
 
-### When You Run `npm start`:
-- ✅ **Environment**: Automatically loads `.env.development`
-- ✅ **Database**: Mumbai development instance (AWS South Asia, fresh/empty)
-- ✅ **Features**: All enhanced "intended plan" tracking preserved
-- ✅ **Cost Control**: Limited to 5 API calls (`TEST_TARGET_RESULTS=5`)
-- ✅ **Development Mode**: Test auth enabled, dev mode active
+## Purpose
+Entry point for the whole repo. Use this file to route to deeper notes, remember invariants, and grab the handful of commands/env keys you need to work safely.
 
-### Available Commands:
-| Command        | Purpose                           | Environment              |
-|----------------|-----------------------------------|--------------------------|
-| `npm start`    | Development with .env.development | Mumbai DB, test features |
-| `npm run dev`  | Custom dev script (port handling) | Same as above            |
-| `npm start:prod` | Production build (if needed)    | Would use .env.prod      |
+## What This Project Is
+Gemz: B2B influencer discovery SaaS (Instagram, YouTube, TikTok) with keyword/similar search, campaigns, saved lists, CSV export, tiered plans (glow_up, viral_surge, fame_flex), 7-day trial + 3-day grace. Stack: Next.js 15 App Router, TS strict, Tailwind/Radix, Supabase + Drizzle, Clerk, Stripe, QStash, Resend, Sentry, structured logging.
 
-### Key Development Benefits:
-- 🔧 **Clean Development**: Fresh database, no production data interference
-- 💰 **Cost Control**: Limited API calls during development
-- 🚀 **Enhanced Features**: "Intended plan" improvements preserved
-- 🌍 **Fast Response**: Mumbai database for low latency
-- 🔒 **Safe Testing**: No risk of affecting production data
-
----
-
-## 📋 Architecture Overview
-
-This is a **Next.js 14 multi-platform influencer search system** with:
-- **6 Platform Search Combinations** (TikTok, Instagram, YouTube with keyword/similar search)
-- **QStash Background Processing** for serverless job handling
-- **Universal Image Caching** with Vercel Blob Storage
-- **7-Day Trial System** with automated email sequences
-- **Comprehensive Admin Panel** with system configuration
-- **Performance Optimizations** (100x faster loading with caching)
-
-### Technology Stack
-```mermaid
-graph TD
-    A[Next.js 14 Frontend] --> B[Drizzle ORM]
-    B --> C[PostgreSQL/Supabase]
-    A --> D[QStash Jobs]
-    D --> E[Platform APIs]
-    E --> F[TikTok/Instagram/YouTube]
-    A --> G[Vercel Blob Storage]
-    G --> H[Image Caching/HEIC Conversion]
-    A --> I[Clerk Authentication]
-    I --> J[Admin System]
+## Navigation Chain
+```
+CLAUDE.md (here)
+├ task.md           → ACTIVE WORK: current tasks, findings, action items
+├ scratchpad.md     → ACTIVE WORK: implementation notes, progress log
+├ .claude/CLAUDE.md → full project memory & invariants
+├ TESTING.md        → TDD workflow, patterns
+├ CONSTRAINTS.md    → must-not-break rules
+├ DECISIONS.md      → decision trees
+├ app/CLAUDE.md     → pages/layouts/providers
+│   └ app/api/CLAUDE.md → API routes (backend)
+├ lib/CLAUDE.md     → core logic/services/db/search/auth
+│   ├ lib/db/CLAUDE.md
+│   ├ lib/services/CLAUDE.md
+│   ├ lib/search-engine/CLAUDE.md
+│   └ lib/auth/CLAUDE.md
+├ components/CLAUDE.md → shared UI primitives
+├ scripts/CLAUDE.md    → CLI + ops tools
+└ drizzle/CLAUDE.md    → migrations
 ```
 
----
+## Non-Negotiables
+- Auth first: every API route uses `getAuthOrTest()`; middleware defaults to protected.
+- Logging: use `lib/logging` categories; no `console.log` in server code (search runner uses a documented console.warn diagnostic).
+- Normalized users: 5-table split; never assume single user table.
+- Plan enforcement: campaign= lifetime, creators/enrichments = monthly reset; validate before work.
+- Idempotency: webhooks (Stripe/Clerk) and QStash job processing must handle duplicates/order issues; Stripe has two webhook paths (`/api/webhooks/stripe`, `/api/stripe/webhook`)—ensure only one is configured in Stripe.
 
-## 📚 Specialized Documentation Index
+## Critical Entry Points
+- Auth: `lib/auth/get-auth-or-test.ts`, `middleware.ts`.
+- DB schema: `lib/db/schema.ts`; migrations in `drizzle/`.
+- Search: `lib/search-engine/runner.ts`, `lib/search-engine/job-service.ts`; providers include `instagram_scrapecreators`, `instagram_v2`, `instagram_us_reels`, legacy reels, Google SERP.
+- Billing: `lib/services/billing-service.ts`, Stripe webhooks (`app/api/webhooks/stripe/route.ts` and `app/api/stripe/webhook/route.ts`).
+- Campaign/job API: `app/api/campaigns/route.ts`, `app/api/qstash/process-search/route.ts`, `app/api/qstash/process-results/route.ts`.
 
-### 🔗 **Navigate to Detailed Documentation:**
+## Core Commands
+`npm run dev` (3000) | `npm run dev:wt2` (3002) | `npm run db:generate` | `npm run db:migrate` | `npm run db:studio` | `npm run smoke:test` | `npm run validate:deployment`
 
-| 📁 **Category** | 📄 **Documentation File** | 🎯 **Coverage** |
-|----------------|---------------------------|----------------|
-| **🚀 API Endpoints** | [`/app/api/CLAUDE.md`](./app/api/CLAUDE.md) | 70+ endpoints across 25 categories, authentication, scraping APIs |
-| **⚛️ React Components** | [`/app/components/CLAUDE.md`](./app/components/CLAUDE.md) | 42+ components, state management, UI patterns, performance |
-| **🛠️ Core Libraries** | [`/lib/CLAUDE.md`](./lib/CLAUDE.md) | Database models, platform integrations, services, utilities |
-| **🗄️ Database Schema** | [`/supabase/CLAUDE.md`](./supabase/CLAUDE.md) | 13 tables, 27 migrations, normalized architecture, comprehensive testing |
-| **🔧 Scripts & Tools** | [`/scripts/CLAUDE.md`](./scripts/CLAUDE.md) | 70+ utility scripts, database normalization tools, professional testing framework |
-| **⚙️ Configuration** | [`/CONFIGURATION.md`](./CONFIGURATION.md) | 100+ env vars, build config, deployment settings |
-
----
-
-## 🌟 Core Features Overview
-
-### **Multi-Platform Search System**
-- **TikTok**: Keyword + Similar search with enhanced bio/email extraction
-- **Instagram**: Reels + Similar search with profile enhancement  
-- **YouTube**: Keyword + Similar search with channel analysis
-- **Universal**: Cross-platform CSV export with contact information
-
-### **Creator List Management**
-- **Multi-select Saving**: Bulk-add creators from search with a compact overlay and inline list creation.
-- **List Workspace**: `/lists` index with quick create (name/type/description) and detailed Kanban board for each list.
-- **Collaboration & Export**: Share by email, duplicate lists, queue CSV exports, and view insights (average ER, follower totals).
-- **Destructive Actions**: Centered confirmation modal for deletions; cascades clear associated items, collaborators, and notes.
-
-### **Background Processing Architecture**
-```javascript
-// Job Flow Example
-Campaign Creation → QStash Job → Platform API → Data Transform → Image Cache → Results Storage
+## Semantic Code Search (mgrep)
+Use `mgrep` for natural language code search instead of grep when exploring the codebase:
+```bash
+mgrep "where do we validate subscription limits"
+mgrep "how is auth handled in API routes"
+mgrep "stripe webhook processing"
 ```
+- Run via Bash tool (not MCP) — simpler and works the same
+- Requires `mgrep watch` running in a terminal to keep index updated
+- Respects `.gitignore`, indexes code + text + PDFs
+- **Prefer mgrep over grep/ripgrep for exploratory/semantic queries**; use grep for exact pattern matching
 
-### **Performance Enhancements**
-- ⚡ **100x Loading Speed**: localStorage caching (5ms vs 500ms)
-- 🖼️ **Permanent Image URLs**: Vercel Blob Storage with HEIC conversion
-- 🎯 **Exact Count Delivery**: Dynamic API calling for precise results (100/500/1000)
+## Env Keys (never commit secrets)
+`DATABASE_URL`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_CLERK_*`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `QSTASH_*`, `ENABLE_AUTH_BYPASS` (dev), `NEXT_PUBLIC_ADMIN_EMAILS`, `SENTRY_DSN`, Stripe price IDs.
 
-### **Trial & Billing System**
-- 🕐 **7-Day Trials**: Automated lifecycle with email sequences
-- 💳 **Stripe Integration**: Mock payment flows and plan management
-- 📊 **Usage Tracking**: Real-time analytics and limits enforcement
+## Update Rules
+Keep this file lean (<150 lines). Link out instead of duplicating. When you change auth, plans, schema, or job flow, update here and add a dated note in `.claude/CLAUDE.md` changelog.
 
----
+## Code Quality Standards
 
-## 🔄 Data Flow Architecture
+**Before writing any code:**
+1. **Explain the issue** — Clearly describe what problem was observed
+2. **Present the plan** — Outline the approach and what will be implemented to solve it
+3. **Get confirmation** — Wait for approval before implementing
 
-### **Search Workflow**
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant F as Frontend
-    participant A as API
-    participant Q as QStash
-    participant P as Platform APIs
-    participant D as Database
-    participant S as Storage
+**When writing code:**
+- Write **clean, maintainable, modular** code
+- **No file should exceed 300 lines** — split into smaller modules if needed
+- Follow existing patterns in the codebase
+- Add meaningful comments only where logic isn't self-evident
 
-    U->>F: Create Search Campaign
-    F->>A: POST /api/scraping/{platform}
-    A->>D: Save Job Record
-    A->>Q: Queue Background Job
-    Q->>P: Call Platform API
-    P->>Q: Return Creator Data
-    Q->>S: Cache Profile Images
-    Q->>D: Save Results
-    F->>A: Poll Job Status
-    A->>F: Return Results
-    F->>U: Display Creators
-```
+## What NOT To Do
 
-### **Key Data Entities**
-- **Campaigns**: User search campaigns with metadata
-- **Scraping Jobs**: Background processing tasks with progress tracking
-- **Scraping Results**: Platform-specific creator data with enhanced profiles
-- **User Profiles**: Authentication, trial status, subscription data
-- **System Configurations**: Dynamic settings with hot-reload capability
+- **Never** skip writing tests — TDD is mandatory for all new features
+- **Never** use `console.log` — use `lib/logging` loggers
+- **Never** modify `lib/db/schema.ts` without running `db:generate` + `db:migrate`
+- **Never** query user data without using `getUserProfile()` — it handles the 5-table join
+- **Never** hardcode secrets — use `.env.local`
+- **Never** skip auth validation in API routes — always call `getAuthOrTest()`
 
 ---
 
-## 🛡️ Security & Authentication
+## Next Steps
 
-### **Dual Admin System**
-- **Environment-based**: `NEXT_PUBLIC_ADMIN_EMAILS` for emergency access
-- **Database-based**: `users.isAdmin` in normalized database for normal admin operations
-- **Authentication**: Clerk integration with role-based permissions
+### Before Writing Any Code
+1. `TESTING.md` — **READ FIRST** - TDD workflow and test templates
+2. `CONSTRAINTS.md` — Hard rules you must never violate
+3. `DECISIONS.md` — Decision trees for common choices
 
-### **API Security**
-- **Rate Limiting**: Configurable API call limits per environment
-- **Authentication**: Clerk-based user verification
-- **Admin Protection**: Separate admin endpoints with elevated permissions
+### For Understanding the Codebase
+1. `app/CLAUDE.md` — Frontend structure and pages
+2. `lib/CLAUDE.md` — Core business logic
+3. `scripts/CLAUDE.md` — CLI tools for development and testing
 
----
-
-## 🔍 Quick Navigation Guide
-
-### **For Developers New to the Codebase:**
-1. **Start Here**: [`/CONFIGURATION.md`](./CONFIGURATION.md) - Environment setup and configuration
-2. **Understand APIs**: [`/app/api/CLAUDE.md`](./app/api/CLAUDE.md) - All endpoint documentation
-3. **Learn Components**: [`/app/components/CLAUDE.md`](./app/components/CLAUDE.md) - UI architecture
-4. **Database Knowledge**: [`/supabase/CLAUDE.md`](./supabase/CLAUDE.md) - Schema and relationships
-
-### **For System Administration:**
-1. **Admin Features**: [`/app/api/CLAUDE.md`](./app/api/CLAUDE.md#admin-apis) - Admin endpoint documentation
-2. **User Management**: [`/scripts/CLAUDE.md`](./scripts/CLAUDE.md#user-management-tools) - User administration scripts
-3. **System Config**: [`/lib/CLAUDE.md`](./lib/CLAUDE.md#configuration-management) - Dynamic configuration system
-
-### **For Platform Integration:**
-1. **Platform APIs**: [`/lib/CLAUDE.md`](./lib/CLAUDE.md#platform-integrations) - TikTok, Instagram, YouTube clients
-2. **Background Jobs**: [`/lib/CLAUDE.md`](./lib/CLAUDE.md#background-job-system) - QStash integration patterns
-3. **Image Processing**: [`/lib/CLAUDE.md`](./lib/CLAUDE.md#core-services) - Universal image caching system
-
----
-
-## 📊 Performance Metrics & Monitoring
-
-### **Current Performance Benchmarks**
-- **Component Loading**: 5ms (cached) vs 500ms (fresh)
-- **Image Processing**: Automatic HEIC→JPEG conversion with CDN bypass
-- **Background Jobs**: Real-time progress tracking with 99% success rate
-- **Database Queries**: Optimized with 20+ specialized indexes across normalized tables
-
-### **Monitoring & Debugging**
-- **Real-time Logging**: Comprehensive logging patterns throughout
-- **Error Recovery**: 5-layer image loading strategy with graceful fallbacks
-- **Performance Tracking**: Built-in benchmarking and performance headers
-
----
-
-## 🎯 Production Readiness Status
-
-### ✅ **Production-Ready Systems**
-- Multi-platform search with all 6 combinations working
-- Background processing with QStash integration
-- Image caching with permanent URLs
-- Trial system with automated email sequences
-- Admin panel with comprehensive management
-- Performance optimizations with caching
-
-### 🔄 **Development Active Features**
-- Enhanced "intended plan" tracking
-- Mumbai development database
-- Cost-controlled API testing (5 calls max)
-- Development-specific authentication
-
----
-
-## 📞 Support & Troubleshooting
-
-### **Common Issues & Solutions**
-- **Jobs Stuck in Processing**: Check QStash webhook configuration
-- **Images Not Loading**: Verify Vercel Blob Storage setup
-- **API Rate Limits**: Adjust `TEST_TARGET_RESULTS` in environment
-- **Database Connection Issues**: Check Mumbai instance connection
-
-### **Debug Resources**
-- **API Logs**: Monitor Vercel function logs
-- **Database Queries**: Use Supabase query performance insights
-- **Background Jobs**: Check QStash dashboard for job status
-- **Performance**: Built-in performance headers in all responses
-
----
-
-*This documentation system is designed for maximum efficiency - each specialized file contains deep technical details while this index provides navigation and overview. Choose your path based on what you need to accomplish.*
-
----
-
-**🏗️ Architecture Philosophy**: *Modular documentation that scales with your context needs - load only what you need to know, when you need to know it.*
+### For Advanced Optimization
+- `AGENT_OPTIMIZATION.md` — Complete agent coding system
+- `.claude/CLAUDE.md` — Extended project memory and architecture decisions

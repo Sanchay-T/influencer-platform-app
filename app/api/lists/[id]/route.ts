@@ -1,9 +1,10 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { deleteList, getListDetail, updateList } from '@/lib/db/queries/list-queries';
 
 function handleError(error: unknown) {
-  console.error('[LIST_DETAIL_API]', error);
+  structuredConsole.error('[LIST_DETAIL_API]', error);
   const message = (error as Error).message;
   if (message === 'USER_NOT_FOUND') {
     return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
@@ -18,7 +19,7 @@ function handleError(error: unknown) {
 }
 
 export async function GET(_: Request, context: { params: Promise<{ id: string }> }) {
-  const { userId } = await auth();
+  const { userId } = await getAuthOrTest();
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -32,7 +33,7 @@ export async function GET(_: Request, context: { params: Promise<{ id: string }>
 }
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
-  const { userId } = await auth();
+  const { userId } = await getAuthOrTest();
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -48,15 +49,15 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 }
 
 export async function DELETE(_: Request, context: { params: Promise<{ id: string }> }) {
-  const { userId } = await auth();
+  const { userId } = await getAuthOrTest();
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   try {
     const { id } = await context.params;
-    console.debug('[LIST-DELETE-API] Request received', { listId: id, userId });
+    structuredConsole.debug('[LIST-DELETE-API] Request received', { listId: id, userId });
     await deleteList(userId, id);
-    console.debug('[LIST-DELETE-API] Completed', { listId: id, userId });
+    structuredConsole.debug('[LIST-DELETE-API] Completed', { listId: id, userId });
     return NextResponse.json({ ok: true });
   } catch (error) {
     return handleError(error);

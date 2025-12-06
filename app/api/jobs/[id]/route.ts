@@ -1,3 +1,4 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { scrapingJobs, scrapingResults } from '@/lib/db/schema'
@@ -42,7 +43,7 @@ export async function GET(
       results: job.results || []
     })
   } catch (error) {
-    console.error('Error fetching job:', error)
+    structuredConsole.error('Error fetching job:', error)
     return NextResponse.json(
       { error: 'Error fetching job status' },
       { status: 500 }
@@ -90,7 +91,7 @@ export async function DELETE(
       message: 'Job cancelled successfully'
     })
   } catch (error) {
-    console.error('Error cancelling job:', error)
+    structuredConsole.error('Error cancelling job:', error)
     return NextResponse.json(
       { error: 'Error cancelling job' },
       { status: 500 }

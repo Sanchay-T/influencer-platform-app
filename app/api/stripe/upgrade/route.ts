@@ -1,12 +1,13 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { StripeService } from '@/lib/stripe/stripe-service';
 import { db } from '@/lib/db';
 import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId } = await auth();
+    const { userId } = await getAuthOrTest();
     
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -118,7 +119,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ [STRIPE-UPGRADE] Error:', error);
+    structuredConsole.error('❌ [STRIPE-UPGRADE] Error:', error);
     return NextResponse.json(
       { error: 'Failed to process upgrade' },
       { status: 500 }

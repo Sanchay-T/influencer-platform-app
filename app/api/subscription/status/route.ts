@@ -1,5 +1,6 @@
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { db } from '@/lib/db';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
 import Stripe from 'stripe';
@@ -44,8 +45,8 @@ export async function GET(req: NextRequest) {
     const startedAt = Date.now();
     const reqId = `sub_${startedAt}_${Math.random().toString(36).slice(2, 8)}`;
     const ts = new Date().toISOString();
-    console.log(`🟢 [SUBSCRIPTION-STATUS:${reqId}] START ${ts}`);
-    const { userId } = await auth();
+    structuredConsole.log(`🟢 [SUBSCRIPTION-STATUS:${reqId}] START ${ts}`);
+    const { userId } = await getAuthOrTest();
     
     if (!userId) {
       const res = NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -58,7 +59,7 @@ export async function GET(req: NextRequest) {
     // Get user's Stripe IDs from database
     const profileStart = Date.now();
     const profile = await getUserProfile(userId);
-    console.log(`⏱️ [SUBSCRIPTION-STATUS:${reqId}] DB profile query: ${Date.now() - profileStart}ms`);
+    structuredConsole.log(`⏱️ [SUBSCRIPTION-STATUS:${reqId}] DB profile query: ${Date.now() - profileStart}ms`);
 
     if (!profile?.stripeSubscriptionId) {
       return NextResponse.json({
@@ -83,11 +84,11 @@ export async function GET(req: NextRequest) {
           expand: ['latest_invoice', 'default_payment_method']
         }
       );
-      console.log(`⏱️ [SUBSCRIPTION-STATUS:${reqId}] Stripe retrieve: ${Date.now() - stripeStart}ms`);
+      structuredConsole.log(`⏱️ [SUBSCRIPTION-STATUS:${reqId}] Stripe retrieve: ${Date.now() - stripeStart}ms`);
       setCache(userId, subscription);
     } else {
       cacheHit = true;
-      console.log(`⏱️ [SUBSCRIPTION-STATUS:${reqId}] Stripe cache hit`);
+      structuredConsole.log(`⏱️ [SUBSCRIPTION-STATUS:${reqId}] Stripe cache hit`);
     }
 
     // Calculate derived states from Stripe data
@@ -134,12 +135,12 @@ export async function GET(req: NextRequest) {
     res.headers.set('x-duration-ms', String(duration));
     res.headers.set('x-cache-hit', cacheHit ? 'true' : 'false');
     res.headers.set('x-cache-ttl-ms', String(CACHE_TTL_MS));
-    console.log(`🟣 [SUBSCRIPTION-STATUS:${reqId}] END duration=${duration}ms cacheHit=${cacheHit}`);
+    structuredConsole.log(`🟣 [SUBSCRIPTION-STATUS:${reqId}] END duration=${duration}ms cacheHit=${cacheHit}`);
     return res;
 
   } catch (error) {
     const reqId = `sub_err_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    console.error(`❌ [SUBSCRIPTION-STATUS:${reqId}] Error fetching subscription status:`, error);
+    structuredConsole.error(`❌ [SUBSCRIPTION-STATUS:${reqId}] Error fetching subscription status:`, error);
     const res = NextResponse.json(
       { error: 'Failed to fetch subscription status' },
       { status: 500 }
