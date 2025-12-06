@@ -1,11 +1,11 @@
-import { structuredConsole } from '@/lib/logging/console-proxy';
-import 'server-only';
+import { structuredConsole } from "@/lib/logging/console-proxy";
+import "server-only";
 
-const API_BASE = 'https://api-dashboard.influencers.club/public/v1';
+const API_BASE = "https://api-dashboard.influencers.club/public/v1";
 const API_KEY = process.env.INFLUENCERS_CLUB_API_KEY;
 
 if (!API_KEY) {
-	throw new Error('INFLUENCERS_CLUB_API_KEY is not configured');
+	throw new Error("INFLUENCERS_CLUB_API_KEY is not configured");
 }
 
 export interface DiscoveryProfile {
@@ -31,18 +31,18 @@ export async function searchCreators(params: {
 	limit?: number;
 }): Promise<DiscoveryAccount[]> {
 	const body = {
-		platform: 'instagram',
+		platform: "instagram",
 		paging: {
 			limit: params.limit ?? 50,
 			page: params.page ?? 0,
 		},
 		sort: {
-			sort_by: 'relevancy',
-			sort_order: 'desc',
+			sort_by: "relevancy",
+			sort_order: "desc",
 		},
 		filters: {
 			ai_search: params.keyword,
-			location: ['United States'],
+			location: ["United States"],
 			exclude_private_profile: true,
 			has_videos: true,
 			reels_percent: { min: 50 },
@@ -53,27 +53,95 @@ export async function searchCreators(params: {
 	};
 
 	const res = await fetch(`${API_BASE}/discovery/`, {
-		method: 'POST',
+		method: "POST",
 		headers: {
-			'Content-Type': 'application/json',
+			"Content-Type": "application/json",
 			Authorization: `Bearer ${API_KEY}`,
 		},
 		body: JSON.stringify(body),
 	});
 
 	if (!res.ok) {
-		let details = '';
+		let details = "";
 		try {
 			details = await res.text();
 		} catch (readError) {
-			structuredConsole.warn('[influencers-club] failed to read discovery error body', readError);
+			structuredConsole.warn(
+				"[influencers-club] failed to read discovery error body",
+				readError,
+			);
 		}
 		const hint = extractErrorHint(details);
-		throw new Error(`Discovery request failed (${res.status})${hint ? ` – ${hint}` : ''}`);
+		throw new Error(
+			`Discovery request failed (${res.status})${hint ? ` – ${hint}` : ""}`,
+		);
 	}
 
 	const data = (await res.json()) as DiscoveryResponse;
 	return data.accounts ?? [];
+}
+
+interface DiscoverySimilarResponse {
+	accounts?: DiscoveryAccount[];
+	total?: number;
+	credits_used?: number;
+}
+
+export async function discoverySearchSimilar(params: {
+	similarTo: string[];
+	platform: "instagram" | "tiktok";
+	page?: number;
+	limit?: number;
+}): Promise<{ accounts: DiscoveryAccount[]; total: number; creditsUsed: number }> {
+	const body = {
+		platform: params.platform,
+		paging: {
+			limit: params.limit ?? 50,
+			page: params.page ?? 0,
+		},
+		sort: {
+			sort_by: "relevancy",
+			sort_order: "desc",
+		},
+		filters: {
+			similar_to: params.similarTo,
+			location: ["United States"],
+			exclude_private_profile: true,
+			has_videos: true,
+		},
+	};
+
+	const res = await fetch(`${API_BASE}/discovery/`, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			Authorization: `Bearer ${API_KEY}`,
+		},
+		body: JSON.stringify(body),
+	});
+
+	if (!res.ok) {
+		let details = "";
+		try {
+			details = await res.text();
+		} catch (readError) {
+			structuredConsole.warn(
+				"[influencers-club] failed to read discovery similar error body",
+				readError,
+			);
+		}
+		const hint = extractErrorHint(details);
+		throw new Error(
+			`Discovery similar request failed (${res.status})${hint ? ` – ${hint}` : ""}`,
+		);
+	}
+
+	const data = (await res.json()) as DiscoverySimilarResponse;
+	return {
+		accounts: data.accounts ?? [],
+		total: data.total ?? 0,
+		creditsUsed: data.credits_used ?? 1,
+	};
 }
 
 export interface EnrichPostMedia {
@@ -116,14 +184,16 @@ interface EnrichResponse {
 	};
 }
 
-export async function enrichCreator(handle: string): Promise<EnrichCreator | null> {
+export async function enrichCreator(
+	handle: string,
+): Promise<EnrichCreator | null> {
 	const res = await fetch(`${API_BASE}/creators/enrich/handle/full/`, {
-		method: 'POST',
+		method: "POST",
 		headers: {
-			'Content-Type': 'application/json',
+			"Content-Type": "application/json",
 			Authorization: `Bearer ${API_KEY}`,
 		},
-		body: JSON.stringify({ handle, platform: 'instagram' }),
+		body: JSON.stringify({ handle, platform: "instagram" }),
 	});
 
 	if (!res.ok) {
@@ -158,14 +228,20 @@ interface PostDetailsResponse {
 	result?: PostDetailsResult;
 }
 
-export async function fetchPostDetails(postId: string): Promise<PostDetailsResult | null> {
+export async function fetchPostDetails(
+	postId: string,
+): Promise<PostDetailsResult | null> {
 	const res = await fetch(`${API_BASE}/creators/content/details/`, {
-		method: 'POST',
+		method: "POST",
 		headers: {
-			'Content-Type': 'application/json',
+			"Content-Type": "application/json",
 			Authorization: `Bearer ${API_KEY}`,
 		},
-		body: JSON.stringify({ platform: 'instagram', content_type: 'data', post_id: postId }),
+		body: JSON.stringify({
+			platform: "instagram",
+			content_type: "data",
+			post_id: postId,
+		}),
 	});
 
 	if (!res.ok) {
@@ -184,15 +260,19 @@ interface TranscriptResponse {
 }
 
 export async function fetchPostTranscript(
-	postId: string
+	postId: string,
 ): Promise<{ transcript?: string; audioUrl?: string }> {
 	const transcriptRes = await fetch(`${API_BASE}/creators/content/details/`, {
-		method: 'POST',
+		method: "POST",
 		headers: {
-			'Content-Type': 'application/json',
+			"Content-Type": "application/json",
 			Authorization: `Bearer ${API_KEY}`,
 		},
-		body: JSON.stringify({ platform: 'instagram', content_type: 'transcript', post_id: postId }),
+		body: JSON.stringify({
+			platform: "instagram",
+			content_type: "transcript",
+			post_id: postId,
+		}),
 	});
 
 	if (transcriptRes.ok) {
@@ -203,12 +283,16 @@ export async function fetchPostTranscript(
 	}
 
 	const audioRes = await fetch(`${API_BASE}/creators/content/details/`, {
-		method: 'POST',
+		method: "POST",
 		headers: {
-			'Content-Type': 'application/json',
+			"Content-Type": "application/json",
 			Authorization: `Bearer ${API_KEY}`,
 		},
-		body: JSON.stringify({ platform: 'instagram', content_type: 'audio', post_id: postId }),
+		body: JSON.stringify({
+			platform: "instagram",
+			content_type: "audio",
+			post_id: postId,
+		}),
 	});
 
 	if (!audioRes.ok) {

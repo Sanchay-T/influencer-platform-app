@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { clearBillingCache } from '@/lib/hooks/use-billing';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { type SessionData, SuccessCard } from './success-card';
@@ -84,5 +84,9 @@ function OnboardingSuccessContent() {
 }
 
 export default function OnboardingSuccess() {
-	return <OnboardingSuccessContent />;
+	return (
+		<Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+			<OnboardingSuccessContent />
+		</Suspense>
+	);
 }
