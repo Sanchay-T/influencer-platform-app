@@ -208,15 +208,15 @@ export default function OnboardingComplete() {
       
       toast.error(`Error starting trial: ${error instanceof Error ? error.message : 'Unknown error'}`);
       
-      logNavigation('/onboarding/complete', '/', 'trial_error_fallback', {
+      logNavigation('/onboarding/complete', '/dashboard', 'trial_error_fallback', {
         userId,
         userEmail: user?.primaryEmailAddress?.emailAddress,
         step: 'trial-activation',
         error: true
       });
-      
-      // Redirect to homepage on error
-      router.push('/');
+
+      // Redirect to dashboard on error (user can retry from there)
+      router.push('/dashboard');
     } finally {
       setIsLoading(false);
       

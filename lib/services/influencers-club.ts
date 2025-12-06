@@ -76,6 +76,65 @@ export async function searchCreators(params: {
   return data.accounts ?? [];
 }
 
+// Similar creator discovery - finds creators similar to given usernames
+export interface DiscoverySimilarResponse {
+  accounts: DiscoveryAccount[];
+  total: number;
+  creditsUsed: number;
+}
+
+export async function discoverySearchSimilar(params: {
+  similarTo: string[];
+  platform: string;
+  page?: number;
+  limit?: number;
+}): Promise<DiscoverySimilarResponse> {
+  const body = {
+    platform: params.platform,
+    paging: {
+      limit: params.limit ?? 50,
+      page: params.page ?? 0,
+    },
+    sort: {
+      sort_by: "relevancy",
+      sort_order: "desc",
+    },
+    filters: {
+      similar_to: params.similarTo,
+      location: ["United States"],
+      exclude_private_profile: true,
+      has_videos: true,
+    },
+  };
+
+  const res = await fetch(`${API_BASE}/discovery/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${API_KEY}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    let details = '';
+    try {
+      details = await res.text();
+    } catch (readError) {
+      structuredConsole.warn('[influencers-club] failed to read similar discovery error body', readError);
+    }
+    const hint = extractErrorHint(details);
+    throw new Error(`Similar discovery request failed (${res.status})${hint ? ` – ${hint}` : ''}`);
+  }
+
+  const data = (await res.json()) as DiscoveryResponse & { total?: number; credits_used?: number };
+  return {
+    accounts: data.accounts ?? [],
+    total: data.total ?? (data.accounts?.length ?? 0),
+    creditsUsed: data.credits_used ?? 1,
+  };
+}
+
 export interface EnrichPostMedia {
   media_id: string;
   type: string;

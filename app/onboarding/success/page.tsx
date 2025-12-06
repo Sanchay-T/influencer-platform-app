@@ -121,8 +121,8 @@ function OnboardingSuccessContent() {
     if (sessionData?.isUpgrade) {
       router.push('/billing?upgraded=1&plan=' + sessionData.planId);
     } else {
-      // Redirect to homepage for initial onboarding
-      router.push('/');
+      // Redirect to dashboard for initial onboarding (onboarding modal will show there)
+      router.push('/dashboard');
     }
   };
 

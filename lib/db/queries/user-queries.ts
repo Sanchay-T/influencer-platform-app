@@ -206,7 +206,7 @@ export async function createUser(userData: {
     }).returning();
 
     // 2. Insert subscription data
-    // Note: currentPlan is NULL until Stripe webhook confirms payment
+    // Note: currentPlan is NULL until user completes onboarding and Stripe confirms payment
     const [newSubscription] = await tx.insert(userSubscriptions).values({
       userId: newUser.id,
       currentPlan: userData.currentPlan || null, // NULL = hasn't completed onboarding
