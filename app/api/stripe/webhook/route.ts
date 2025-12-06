@@ -388,6 +388,12 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
 
     // Update subscription info immediately using normalized tables
     structuredConsole.log(`🔄 [WEBHOOK-TEST] ${webhookTestId} - Updating user profile with plan: ${planId}`);
+    
+    // Compute trial dates if subscription has trial
+    const hasTrialPeriod = subscription.trial_end && subscription.status === 'trialing';
+    const trialStartDate = hasTrialPeriod ? new Date() : undefined;
+    const trialEndDate = hasTrialPeriod ? new Date(subscription.trial_end * 1000) : undefined;
+    
     const updateData = {
       stripeSubscriptionId: subscription.id,
       currentPlan: planId,
@@ -396,6 +402,15 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
       planCampaignsLimit: planDetails?.campaignsLimit || 0,
       planCreatorsLimit: planDetails?.creatorsLimit || 0,
       planFeatures: planDetails?.features || {},
+      // 🔧 PERMANENT FIX: Set onboarding as completed when subscription is created
+      // This was previously only done via background job which was unreliable
+      onboardingStep: 'completed',
+      // 🔧 PERMANENT FIX: Set trial status and dates directly
+      ...(hasTrialPeriod && {
+        trialStatus: 'active',
+        trialStartDate,
+        trialEndDate,
+      }),
       billingSyncStatus: 'webhook_subscription_created',
       lastWebhookEvent: 'customer.subscription.created',
       lastWebhookTimestamp: new Date(),
