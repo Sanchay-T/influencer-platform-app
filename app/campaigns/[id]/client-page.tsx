@@ -137,6 +137,26 @@ const STATUS_VARIANTS: Record<string, StatusVariant> = {
   }
 }
 
+// Pretty platform labels for display
+const PLATFORM_LABELS: Record<string, string> = {
+  instagram: 'Instagram',
+  instagram_scrapecreators: 'Instagram',
+  instagram_v2: 'Instagram',
+  instagram_us_reels: 'Instagram',
+  tiktok: 'TikTok',
+  youtube: 'YouTube',
+  google_serp: 'Google SERP',
+  'google-serp': 'Google SERP',
+}
+
+const prettyPlatform = (value?: string | null) => {
+  if (!value) return '—'
+  if (PLATFORM_LABELS[value]) return PLATFORM_LABELS[value]
+  // Fallback: replace underscores/hyphens and capitalize first letter
+  const cleaned = value.replace(/[_-]+/g, ' ')
+  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1)
+}
+
 const extractCreatorsArray = (result: { creators?: PlatformResult } | undefined): unknown[] => {
   if (!result) return []
   const creators = result.creators
@@ -1047,7 +1067,7 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-zinc-500">Platform</p>
-            <p className="mt-1 text-sm text-zinc-100">{selectedJob?.platform ?? '—'}</p>
+            <p className="mt-1 text-sm text-zinc-100">{prettyPlatform(selectedJob?.platform)}</p>
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-zinc-500">Created</p>
