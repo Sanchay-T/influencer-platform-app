@@ -3,6 +3,9 @@ import { NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
+import { createCategoryLogger, LogCategory } from '@/lib/logging';
+
+const logger = createCategoryLogger(LogCategory.ONBOARDING);
 
 export async function PATCH(req: Request) {
 	try {
@@ -30,7 +33,7 @@ export async function PATCH(req: Request) {
 			message: 'Step 2 completed',
 		});
 	} catch (error) {
-		console.error('Onboarding step 2 error:', error);
+		logger.error('Onboarding step 2 error', error instanceof Error ? error : new Error(String(error)));
 		return NextResponse.json(
 			{ error: error instanceof Error ? error.message : 'Internal server error' },
 			{ status: 500 }

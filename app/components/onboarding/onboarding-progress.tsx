@@ -1,8 +1,15 @@
 'use client';
 
+import { Fragment } from 'react';
+
 /**
  * Progress indicator for onboarding steps.
  * Shows step numbers with checkmarks for completed steps.
+ * 
+ * Steps:
+ * 1. Tell us about yourself (info)
+ * 2. Tell us about your brand (intent)
+ * 3. Choose your plan (checkout → redirects to Stripe)
  */
 
 interface OnboardingProgressProps {
@@ -14,12 +21,11 @@ const stepLabels = [
 	'Tell us about yourself',
 	'Tell us about your brand',
 	'Choose your plan',
-	'Ready to start!',
 ];
 
 export default function OnboardingProgress({
 	currentStep,
-	totalSteps = 4,
+	totalSteps = 3,
 }: OnboardingProgressProps) {
 	return (
 		<div className="mb-6">
@@ -30,10 +36,9 @@ export default function OnboardingProgress({
 					const isCurrent = currentStep >= stepNumber;
 
 					return (
-						<>
+						<Fragment key={`progress-step-${stepNumber}`}>
 							{/* Step circle */}
 							<div
-								key={`step-${stepNumber}`}
 								className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
 									isCurrent ? 'bg-primary text-primary-foreground' : 'bg-zinc-700/50 text-zinc-400'
 								}`}
@@ -44,13 +49,12 @@ export default function OnboardingProgress({
 							{/* Connector line (not after last step) */}
 							{stepNumber < totalSteps && (
 								<div
-									key={`line-${stepNumber}`}
 									className={`w-16 h-1 rounded ${
 										currentStep > stepNumber ? 'bg-primary' : 'bg-zinc-700/50'
 									}`}
 								/>
 							)}
-						</>
+						</Fragment>
 					);
 				})}
 			</div>

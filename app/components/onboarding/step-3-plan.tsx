@@ -5,12 +5,11 @@ import { CardContent, CardDescription, CardHeader, CardTitle } from '@/component
 import PaymentStep from './payment-step';
 
 interface Step3PlanProps {
-	onComplete: () => void;
 	sessionId: string;
 	userId?: string;
 }
 
-export default function Step3Plan({ onComplete, sessionId, userId }: Step3PlanProps) {
+export default function Step3Plan({ sessionId, userId }: Step3PlanProps) {
 	return (
 		<>
 			<CardHeader>
@@ -26,7 +25,7 @@ export default function Step3Plan({ onComplete, sessionId, userId }: Step3PlanPr
 			</CardHeader>
 
 			<CardContent>
-				<PaymentStep onComplete={onComplete} sessionId={sessionId} userId={userId} />
+				<PaymentStep sessionId={sessionId} userId={userId} />
 			</CardContent>
 		</>
 	);

@@ -3,6 +3,9 @@ import { NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { db } from '@/lib/db';
 import { userSubscriptions, users } from '@/lib/db/schema';
+import { createCategoryLogger, LogCategory } from '@/lib/logging';
+
+const logger = createCategoryLogger(LogCategory.ONBOARDING);
 
 export async function POST(req: Request) {
 	try {
@@ -12,7 +15,8 @@ export async function POST(req: Request) {
 		}
 
 		const body = await req.json();
-		const { planId, billingInterval } = body;
+		const { planId } = body;
+		// Note: billingInterval is not stored in DB - Stripe is source of truth for billing
 
 		if (!planId) {
 			return NextResponse.json({ error: 'Plan ID is required' }, { status: 400 });
@@ -48,7 +52,6 @@ export async function POST(req: Request) {
 				.update(userSubscriptions)
 				.set({
 					intendedPlan: planId,
-					billingInterval: billingInterval || 'monthly',
 					updatedAt: new Date(),
 				})
 				.where(eq(userSubscriptions.userId, user.id));
@@ -56,7 +59,6 @@ export async function POST(req: Request) {
 			await db.insert(userSubscriptions).values({
 				userId: user.id,
 				intendedPlan: planId,
-				billingInterval: billingInterval || 'monthly',
 				subscriptionStatus: 'none',
 				createdAt: new Date(),
 				updatedAt: new Date(),
@@ -70,7 +72,7 @@ export async function POST(req: Request) {
 			message: 'Plan saved successfully',
 		});
 	} catch (error) {
-		console.error('Save plan error:', error);
+		logger.error('Save plan error', error instanceof Error ? error : new Error(String(error)));
 		return NextResponse.json(
 			{ error: error instanceof Error ? error.message : 'Internal server error' },
 			{ status: 500 }

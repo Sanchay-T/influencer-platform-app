@@ -1,8 +1,9 @@
 import 'server-only';
 
 import { and, eq } from 'drizzle-orm';
+import { incrementEnrichmentCount } from '@/lib/billing';
 import { db } from '@/lib/db';
-import { getUserProfile, incrementUsage } from '@/lib/db/queries/user-queries';
+import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { creatorProfiles } from '@/lib/db/schema';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
 import { structuredConsole } from '@/lib/logging/console-proxy';
@@ -618,7 +619,7 @@ export class CreatorEnrichmentService {
 
 		await CreatorEnrichmentService.persistEnrichment(creator.id, record, creator.metadata);
 
-		await incrementUsage(options.userId, 'enrichments', 1);
+		await incrementEnrichmentCount(options.userId);
 
 		logger.info('Creator enrichment persisted', {
 			userId: options.userId,

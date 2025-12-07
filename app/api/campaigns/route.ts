@@ -1,9 +1,8 @@
 import { count, desc, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
-import { validateCampaignCreation } from '@/lib/billing';
+import { incrementCampaignCount, validateCampaignCreation } from '@/lib/billing';
 import { db } from '@/lib/db';
-import { incrementUsage } from '@/lib/db/queries/user-queries';
 import { campaigns } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
@@ -50,7 +49,7 @@ export async function POST(req: Request) {
 			.returning();
 
 		// Increment usage counter
-		await incrementUsage(userId, 'campaigns', 1);
+		await incrementCampaignCount(userId);
 
 		return NextResponse.json(campaign);
 	} catch (error) {

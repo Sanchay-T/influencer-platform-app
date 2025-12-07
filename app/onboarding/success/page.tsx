@@ -1,10 +1,13 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { clearBillingCache } from '@/lib/hooks/use-billing';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { type SessionData, SuccessCard } from './success-card';
+
+const POLL_INTERVAL_MS = 2000; // Poll every 2 seconds
+const MAX_POLL_ATTEMPTS = 30; // Max 60 seconds of polling
 
 function OnboardingSuccessContent() {
 	const router = useRouter();
@@ -12,7 +15,56 @@ function OnboardingSuccessContent() {
 	const [sessionData, setSessionData] = useState<SessionData | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [webhookConfirmed, setWebhookConfirmed] = useState(false);
+	const pollCountRef = useRef(0);
+	const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 	const sessionId = searchParams.get('session_id');
+
+	// Poll for webhook completion
+	const pollForWebhook = useCallback(async () => {
+		try {
+			const res = await fetch('/api/onboarding/status', { cache: 'no-store' });
+			if (res.ok) {
+				const data = await res.json();
+				if (data.onboardingStep === 'completed') {
+					setWebhookConfirmed(true);
+					clearBillingCache();
+					// Stop polling
+					if (pollIntervalRef.current) {
+						clearInterval(pollIntervalRef.current);
+						pollIntervalRef.current = null;
+					}
+					return true;
+				}
+			}
+		} catch (err) {
+			structuredConsole.error('Polling error', err);
+		}
+		return false;
+	}, []);
+
+	// Start polling for webhook
+	const startPolling = useCallback(() => {
+		pollCountRef.current = 0;
+
+		pollIntervalRef.current = setInterval(async () => {
+			pollCountRef.current++;
+
+			const confirmed = await pollForWebhook();
+			if (confirmed) return;
+
+			// Stop polling after max attempts
+			if (pollCountRef.current >= MAX_POLL_ATTEMPTS) {
+				if (pollIntervalRef.current) {
+					clearInterval(pollIntervalRef.current);
+					pollIntervalRef.current = null;
+				}
+				// After timeout, allow continue anyway (webhook may have failed but Stripe has the subscription)
+				setWebhookConfirmed(true);
+				structuredConsole.warn('Webhook polling timeout - allowing continue');
+			}
+		}, POLL_INTERVAL_MS);
+	}, [pollForWebhook]);
 
 	useEffect(() => {
 		const load = async () => {
@@ -21,42 +73,20 @@ function OnboardingSuccessContent() {
 				return;
 			}
 			try {
+				// Fetch session details for display
 				const sessionRes = await fetch(`/api/stripe/session?session_id=${sessionId}`);
 				if (sessionRes.ok) {
 					const data = await sessionRes.json();
 					setSessionData(data);
-
-					const upgradeRes = await fetch('/api/stripe/checkout-success', {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({ sessionId }),
-					});
-
-					if (upgradeRes.ok) {
-						clearBillingCache();
-						try {
-							const fresh = await fetch('/api/billing/status', { cache: 'no-store' });
-							if (fresh.ok) {
-								const freshData = await fresh.json();
-								localStorage.setItem(
-									'gemz_entitlements_v1',
-									JSON.stringify({ ts: Date.now(), data: freshData })
-								);
-							}
-						} catch (warmErr) {
-							structuredConsole.error('Billing warm failed', warmErr);
-						}
-
-						await fetch('/api/onboarding/complete', {
-							method: 'PATCH',
-							headers: { 'Content-Type': 'application/json' },
-							body: JSON.stringify({ completed: true, sessionId }),
-						});
-					} else {
-						structuredConsole.error('Upgrade finalize failed', upgradeRes.status);
-					}
 				} else {
 					structuredConsole.error('Failed to fetch session', sessionRes.status);
+				}
+
+				// Check if webhook already completed (fast path)
+				const alreadyCompleted = await pollForWebhook();
+				if (!alreadyCompleted) {
+					// Start polling for webhook completion
+					startPolling();
 				}
 			} catch (err) {
 				structuredConsole.error('Success page error', err);
@@ -65,12 +95,23 @@ function OnboardingSuccessContent() {
 			}
 		};
 		load();
-	}, [sessionId]);
+
+		// Cleanup polling on unmount
+		return () => {
+			if (pollIntervalRef.current) {
+				clearInterval(pollIntervalRef.current);
+			}
+		};
+	}, [sessionId, pollForWebhook, startPolling]);
 
 	const handleContinue = () => {
 		setIsSubmitting(true);
-		if (sessionData?.isUpgrade) router.push(`/billing?upgraded=1&plan=${sessionData.planId}`);
-		else router.push('/dashboard');
+		clearBillingCache();
+		if (sessionData?.isUpgrade) {
+			router.push(`/billing?upgraded=1&plan=${sessionData.planId}`);
+		} else {
+			router.push('/dashboard');
+		}
 	};
 
 	return (
@@ -78,6 +119,7 @@ function OnboardingSuccessContent() {
 			loading={loading}
 			sessionData={sessionData}
 			isSubmitting={isSubmitting}
+			webhookConfirmed={webhookConfirmed}
 			onContinue={handleContinue}
 		/>
 	);

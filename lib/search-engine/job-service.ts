@@ -1,8 +1,8 @@
 // search-engine/job-service.ts — centralized helpers for scraping_jobs state updates
 
 import { eq } from 'drizzle-orm';
+import { incrementCreatorCount } from '@/lib/billing';
 import { db } from '@/lib/db';
-import { incrementUsage } from '@/lib/db/queries/user-queries';
 import { scrapingJobs, scrapingResults } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
 import { dedupeCreators as sharedDedupeCreators } from '@/lib/utils/dedupe-creators';
@@ -585,7 +585,7 @@ export class SearchJobService {
 		}
 
 		try {
-			await incrementUsage(this.job.userId, 'creators', count);
+			await incrementCreatorCount(this.job.userId, count);
 		} catch (error) {
 			logger.error(
 				'Failed to increment creator usage after job update',

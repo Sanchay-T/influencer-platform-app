@@ -641,30 +641,6 @@ export async function getUserUsage(userId: string): Promise<UserUsage | null> {
 }
 
 /**
- * Increment user usage counters
- * Specialized function for usage tracking
- */
-export async function incrementUsage(
-	userId: string,
-	type: 'campaigns' | 'creators' | 'enrichments',
-	amount: number = 1
-): Promise<void> {
-	await db
-		.update(userUsage)
-		.set({
-			...(type === 'campaigns'
-				? { usageCampaignsCurrent: sql`usage_campaigns_current + ${amount}` }
-				: type === 'creators'
-					? { usageCreatorsCurrentMonth: sql`usage_creators_current_month + ${amount}` }
-					: { enrichmentsCurrentMonth: sql`enrichments_current_month + ${amount}` }),
-			updatedAt: new Date(),
-		})
-		.where(
-			eq(userUsage.userId, db.select({ id: users.id }).from(users).where(eq(users.userId, userId)))
-		);
-}
-
-/**
  * Find user by Stripe customer ID
  * Used primarily by Stripe webhooks
  */

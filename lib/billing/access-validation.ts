@@ -7,10 +7,18 @@
  * based on their subscription status and plan limits.
  */
 
-import { getUserProfile } from '@/lib/db/queries/user-queries';
+import { getUserProfile, type UserProfileComplete } from '@/lib/db/queries/user-queries';
 import { getPlanConfig, isValidPlan, type PlanKey } from './plan-config';
 import type { AccessResult } from './subscription-types';
 import { calculateTrialTime } from './trial-utils';
+
+// ═══════════════════════════════════════════════════════════════
+// INTERNAL TYPE FOR PASSING USER THROUGH VALIDATION CHAIN
+// ═══════════════════════════════════════════════════════════════
+
+interface AccessResultWithUser extends AccessResult {
+	user?: UserProfileComplete;
+}
 
 // ═══════════════════════════════════════════════════════════════
 // BASE ACCESS VALIDATION
@@ -18,8 +26,9 @@ import { calculateTrialTime } from './trial-utils';
 
 /**
  * Check if a user has an active subscription or trial.
+ * Returns the user profile when successful to avoid duplicate DB queries.
  */
-export async function validateAccess(userId: string): Promise<AccessResult> {
+async function validateAccessInternal(userId: string): Promise<AccessResultWithUser> {
 	const user = await getUserProfile(userId);
 
 	if (!user) {
@@ -60,7 +69,17 @@ export async function validateAccess(userId: string): Promise<AccessResult> {
 		};
 	}
 
-	return { allowed: true };
+	return { allowed: true, user };
+}
+
+/**
+ * Public validateAccess - returns standard AccessResult without user.
+ */
+export async function validateAccess(userId: string): Promise<AccessResult> {
+	const result = await validateAccessInternal(userId);
+	// Strip user from result for public API
+	const { user: _user, ...accessResult } = result;
+	return accessResult;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -71,16 +90,13 @@ export async function validateAccess(userId: string): Promise<AccessResult> {
  * Check if user can create a campaign.
  */
 export async function validateCampaignCreation(userId: string): Promise<AccessResult> {
-	const accessResult = await validateAccess(userId);
-	if (!accessResult.allowed) {
-		return accessResult;
+	const accessResult = await validateAccessInternal(userId);
+	if (!accessResult.allowed || !accessResult.user) {
+		const { user: _user, ...result } = accessResult;
+		return result;
 	}
 
-	const user = await getUserProfile(userId);
-	if (!user) {
-		return { allowed: false, reason: 'User not found', upgradeRequired: true };
-	}
-
+	const user = accessResult.user;
 	const currentPlan = user.currentPlan as PlanKey | null;
 	if (!(currentPlan && isValidPlan(currentPlan))) {
 		return {
@@ -121,16 +137,13 @@ export async function validateCreatorSearch(
 	userId: string,
 	estimatedResults: number = 100
 ): Promise<AccessResult> {
-	const accessResult = await validateAccess(userId);
-	if (!accessResult.allowed) {
-		return accessResult;
+	const accessResult = await validateAccessInternal(userId);
+	if (!accessResult.allowed || !accessResult.user) {
+		const { user: _user, ...result } = accessResult;
+		return result;
 	}
 
-	const user = await getUserProfile(userId);
-	if (!user) {
-		return { allowed: false, reason: 'User not found', upgradeRequired: true };
-	}
-
+	const user = accessResult.user;
 	const currentPlan = user.currentPlan as PlanKey | null;
 	if (!(currentPlan && isValidPlan(currentPlan))) {
 		return {

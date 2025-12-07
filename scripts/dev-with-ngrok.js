@@ -6,7 +6,7 @@
  * Uses permanent domain: usegemz.ngrok.app (paid ngrok plan)
  *
  * This script:
- * 1. Checks if ngrok is already running on port 3001
+ * 1. Checks if ngrok is already running on port 3002
  * 2. If not, starts ngrok with the permanent domain
  * 3. Starts the Next.js dev server
  *
@@ -17,7 +17,7 @@ const http = require('http');
 const { spawn } = require('child_process');
 
 const NGROK_API_URL = 'http://localhost:4040/api/tunnels';
-const TARGET_PORT = 3001;
+const TARGET_PORT = 3002;
 const POLL_INTERVAL = 500; // ms
 const MAX_POLL_ATTEMPTS = 40; // 20 seconds total
 
@@ -95,7 +95,7 @@ async function startNgrok() {
 }
 
 function startDevServer() {
-  logStep('DEV SERVER', 'Starting Next.js development server on port 3001...');
+  logStep('DEV SERVER', 'Starting Next.js development server on port 3002...');
 
   const devProcess = spawn('npm', ['run', 'dev'], {
     stdio: 'inherit',
@@ -147,7 +147,7 @@ async function main() {
     log(`\n${colors.red}✗ Error: ${error.message}${colors.reset}`, colors.red);
     log('\nTroubleshooting tips:', colors.yellow);
     log('  1. Make sure ngrok is installed and in your PATH');
-    log('  2. Check if port 3001 is available');
+    log('  2. Check if port 3002 is available');
     log('  3. Verify ngrok auth token is configured');
     log('  4. Run: ngrok config add-authtoken <your-token>');
     process.exit(1);

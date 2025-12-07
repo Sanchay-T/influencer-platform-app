@@ -10,7 +10,6 @@ import OnboardingProgress from './onboarding-progress';
 import Step1Info from './step-1-info';
 import Step2Brand from './step-2-brand';
 import Step3Plan from './step-3-plan';
-import Step4Complete from './step-4-complete';
 
 interface OnboardingModalProps {
 	isOpen: boolean;
@@ -211,58 +210,11 @@ export default function OnboardingModal({
 
 	// ─────────────────────────────────────────────────────────────
 	// STEP 3 HANDLER (Plan Selection)
+	// Note: PaymentStep handles Stripe redirect directly.
+	// After Stripe checkout, user lands on /onboarding/success page.
 	// ─────────────────────────────────────────────────────────────
 
-	const handleStep3Submit = async () => {
-		await OnboardingLogger.logStep3(
-			'PLAN-SELECTED',
-			'User completed plan selection in step 3',
-			user?.id,
-			{ action: 'PAYMENT_STEP_COMPLETED' },
-			sessionId
-		);
-		setStep(4);
-	};
-
-	// ─────────────────────────────────────────────────────────────
-	// STEP 4 HANDLER (Completion)
-	// ─────────────────────────────────────────────────────────────
-
-	const handleComplete = async () => {
-		setIsLoading(true);
-
-		try {
-			await OnboardingLogger.logAPI(
-				'API-CALL-START',
-				'Making API call to /api/onboarding/complete',
-				user?.id,
-				{ endpoint: '/api/onboarding/complete', method: 'PATCH' },
-				sessionId
-			);
-
-			const response = await fetch('/api/onboarding/complete', {
-				method: 'PATCH',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ completed: true }),
-			});
-
-			await response.json();
-
-			if (!response.ok) {
-				throw new Error('Failed to complete onboarding');
-			}
-
-			toast.success('Welcome to Gemz! 🎉');
-			onComplete();
-		} catch (err) {
-			structuredConsole.error('❌ Error completing onboarding:', err);
-			const errorMessage = err instanceof Error ? err.message : 'Something went wrong';
-			setError(errorMessage);
-			toast.error('We hit a snag finishing onboarding. Please try again.');
-		} finally {
-			setIsLoading(false);
-		}
-	};
+	// No handler needed - PaymentStep redirects to Stripe checkout
 
 	// ─────────────────────────────────────────────────────────────
 	// INPUT CHANGE HANDLERS WITH LOGGING
@@ -328,10 +280,8 @@ export default function OnboardingModal({
 					)}
 
 					{step === 3 && (
-						<Step3Plan onComplete={handleStep3Submit} sessionId={sessionId} userId={user?.id} />
+						<Step3Plan sessionId={sessionId} userId={user?.id} />
 					)}
-
-					{step === 4 && <Step4Complete onComplete={handleComplete} isLoading={isLoading} />}
 				</Card>
 			</div>
 		</div>

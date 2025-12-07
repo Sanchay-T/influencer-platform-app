@@ -12,8 +12,6 @@ import { PaymentSecurityCard, TrialInfoCard } from './payment-info-cards';
 import PlanCard from './plan-card';
 
 interface PaymentStepProps {
-	onComplete: () => void;
-	existingPlan?: string;
 	sessionId?: string;
 	userId?: string;
 }
@@ -83,9 +81,7 @@ export default function PaymentStep({ sessionId, userId }: PaymentStepProps) {
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					planId: selectedPlan,
-					interval: billingCycle,
-					selectedPlan,
-					billing: billingCycle,
+					billingInterval: billingCycle,
 				}),
 			});
 

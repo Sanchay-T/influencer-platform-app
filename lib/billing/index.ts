@@ -160,12 +160,13 @@ export {
 export {
 	// Functions
 	getUsageSummary,
-	// Types
-	type IncrementResult,
 	incrementCampaignCount,
 	incrementCreatorCount,
+	incrementEnrichmentCount,
 	resetAllMonthlyUsage,
 	resetMonthlyUsage,
 	shouldResetUsage,
+	// Types
+	type IncrementResult,
 	type UsageSummary,
 } from './usage-tracking';

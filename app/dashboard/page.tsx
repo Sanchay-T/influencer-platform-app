@@ -17,19 +17,25 @@ export default async function DashboardPage() {
 	// Ensure user exists FIRST (fixes race condition with Clerk webhook)
 	const userProfile = await ensureUserProfile(userId);
 
+	const onboardingStep = userProfile.onboardingStep;
+
+	// If user has selected a plan but webhook hasn't fired yet,
+	// redirect to success page which will poll for webhook completion.
+	// This prevents the modal from showing again after Stripe checkout.
+	if (onboardingStep === 'plan_selected') {
+		redirect('/onboarding/success');
+	}
+
 	// Now safe to fetch dashboard data
 	const { favorites, recentLists, metrics } = await getDashboardOverview(userId);
 
-	const onboardingStep = userProfile.onboardingStep;
 	const showOnboarding = onboardingStep !== 'completed';
 	const onboardingInitialStep =
 		onboardingStep === 'info_captured'
 			? 2
-			: onboardingStep === 'intent_captured' || onboardingStep === 'plan_selected'
+			: onboardingStep === 'intent_captured'
 				? 3
-				: onboardingStep === 'completed'
-					? 3
-					: 1;
+				: 1;
 	const onboardingData = {
 		fullName: userProfile.fullName ?? '',
 		businessName: userProfile.businessName ?? '',

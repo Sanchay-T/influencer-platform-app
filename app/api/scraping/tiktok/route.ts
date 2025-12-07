@@ -277,12 +277,7 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
 			billingRequestId
 		);
 
-		const validation = await validateCreatorSearch(
-			userId,
-			desiredTotalResults,
-			'tiktok_keyword',
-			billingRequestId
-		);
+		const validation = await validateCreatorSearch(userId, desiredTotalResults);
 
 		if (!validation.allowed) {
 			await BillingLogger.logAccess(

@@ -3,7 +3,10 @@ import { NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
+import { createCategoryLogger, LogCategory } from '@/lib/logging';
 import { createPerfLogger } from '@/lib/utils/perf-logger';
+
+const logger = createCategoryLogger(LogCategory.ONBOARDING);
 
 export async function PATCH(req: Request) {
 	const perf = createPerfLogger('onboarding/step-1');
@@ -47,7 +50,7 @@ export async function PATCH(req: Request) {
 		});
 	} catch (error) {
 		perf.end();
-		console.error('Onboarding step 1 error:', error);
+		logger.error('Onboarding step 1 error', error instanceof Error ? error : new Error(String(error)));
 		return NextResponse.json(
 			{ error: error instanceof Error ? error.message : 'Internal server error' },
 			{ status: 500 }

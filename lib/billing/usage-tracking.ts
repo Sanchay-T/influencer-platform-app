@@ -15,11 +15,11 @@ import { eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { userUsage } from '@/lib/db/schema';
-import { createCategoryLogger } from '@/lib/logging';
+import { createCategoryLogger, LogCategory } from '@/lib/logging';
 import type { PlanKey } from './plan-config';
 import { getPlanConfig, isValidPlan } from './plan-config';
 
-const logger = createCategoryLogger('usage-tracking');
+const logger = createCategoryLogger(LogCategory.BILLING);
 
 // ═══════════════════════════════════════════════════════════════
 // TYPES
@@ -91,7 +91,7 @@ export async function getUsageSummary(userId: string): Promise<UsageSummary | nu
 			percentUsed: creatorsUnlimited ? 0 : Math.round((creatorsUsed / creatorLimit) * 100),
 		},
 		currentPlan,
-		lastResetDate: profile.usageLastResetDate ? new Date(profile.usageLastResetDate) : null,
+		lastResetDate: profile.usageResetDate ? new Date(profile.usageResetDate) : null,
 	};
 }
 
@@ -122,18 +122,18 @@ export async function incrementCampaignCount(userId: string): Promise<IncrementR
 					userId,
 					usageCampaignsCurrent: 1,
 					usageCreatorsCurrentMonth: 0,
-					usageLastResetDate: new Date(),
+					usageResetDate: new Date(),
 				})
 				.returning({ newCount: userUsage.usageCampaignsCurrent });
 
-			logger.info('Created new usage record for user', { userId, campaigns: 1 });
+			logger.info('Created new usage record for user', { userId, metadata: { campaigns: 1 } });
 			return { success: true, newCount: inserted[0]?.newCount || 1 };
 		}
 
-		logger.info('Incremented campaign count', { userId, newCount: result[0].newCount });
+		logger.info('Incremented campaign count', { userId, metadata: { newCount: result[0].newCount } });
 		return { success: true, newCount: result[0].newCount || 1 };
 	} catch (error) {
-		logger.error('Failed to increment campaign count', { userId, error });
+		logger.error('Failed to increment campaign count', error instanceof Error ? error : new Error(String(error)), { userId });
 		return {
 			success: false,
 			newCount: 0,
@@ -175,22 +175,72 @@ export async function incrementCreatorCount(
 					userId,
 					usageCampaignsCurrent: 0,
 					usageCreatorsCurrentMonth: count,
-					usageLastResetDate: new Date(),
+					usageResetDate: new Date(),
 				})
 				.returning({ newCount: userUsage.usageCreatorsCurrentMonth });
 
-			logger.info('Created new usage record for user', { userId, creators: count });
+			logger.info('Created new usage record for user', { userId, metadata: { creators: count } });
 			return { success: true, newCount: inserted[0]?.newCount || count };
 		}
 
-		logger.info('Incremented creator count', {
-			userId,
-			added: count,
-			newCount: result[0].newCount,
-		});
+		logger.info('Incremented creator count', { userId, metadata: { added: count, newCount: result[0].newCount } });
 		return { success: true, newCount: result[0].newCount || count };
 	} catch (error) {
-		logger.error('Failed to increment creator count', { userId, count, error });
+		logger.error('Failed to increment creator count', error instanceof Error ? error : new Error(String(error)), { userId, metadata: { count } });
+		return {
+			success: false,
+			newCount: 0,
+			error: error instanceof Error ? error.message : 'Unknown error',
+		};
+	}
+}
+
+/**
+ * Increment the enrichment count for a user.
+ * Call this AFTER successfully enriching a creator profile.
+ *
+ * @param userId - The user ID
+ * @param count - Number of enrichments to add (default: 1)
+ */
+export async function incrementEnrichmentCount(
+	userId: string,
+	count: number = 1
+): Promise<IncrementResult> {
+	if (count <= 0) {
+		return { success: true, newCount: 0 };
+	}
+
+	try {
+		const result = await db
+			.update(userUsage)
+			.set({
+				enrichmentsCurrentMonth: sql`COALESCE(${userUsage.enrichmentsCurrentMonth}, 0) + ${count}`,
+				updatedAt: new Date(),
+			})
+			.where(eq(userUsage.userId, userId))
+			.returning({ newCount: userUsage.enrichmentsCurrentMonth });
+
+		if (result.length === 0) {
+			// User usage record doesn't exist, create it
+			const inserted = await db
+				.insert(userUsage)
+				.values({
+					userId,
+					usageCampaignsCurrent: 0,
+					usageCreatorsCurrentMonth: 0,
+					enrichmentsCurrentMonth: count,
+					usageResetDate: new Date(),
+				})
+				.returning({ newCount: userUsage.enrichmentsCurrentMonth });
+
+			logger.info('Created new usage record for user', { userId, metadata: { enrichments: count } });
+			return { success: true, newCount: inserted[0]?.newCount || count };
+		}
+
+		logger.info('Incremented enrichment count', { userId, metadata: { added: count, newCount: result[0].newCount } });
+		return { success: true, newCount: result[0].newCount || count };
+	} catch (error) {
+		logger.error('Failed to increment enrichment count', error instanceof Error ? error : new Error(String(error)), { userId, metadata: { count } });
 		return {
 			success: false,
 			newCount: 0,
@@ -213,7 +263,7 @@ export async function resetMonthlyUsage(userId: string): Promise<boolean> {
 			.update(userUsage)
 			.set({
 				usageCreatorsCurrentMonth: 0,
-				usageLastResetDate: new Date(),
+				usageResetDate: new Date(),
 				updatedAt: new Date(),
 			})
 			.where(eq(userUsage.userId, userId));
@@ -221,7 +271,7 @@ export async function resetMonthlyUsage(userId: string): Promise<boolean> {
 		logger.info('Reset monthly usage for user', { userId });
 		return true;
 	} catch (error) {
-		logger.error('Failed to reset monthly usage', { userId, error });
+		logger.error('Failed to reset monthly usage', error instanceof Error ? error : new Error(String(error)), { userId });
 		return false;
 	}
 }
@@ -238,16 +288,16 @@ export async function resetAllMonthlyUsage(): Promise<number> {
 			.update(userUsage)
 			.set({
 				usageCreatorsCurrentMonth: 0,
-				usageLastResetDate: new Date(),
+				usageResetDate: new Date(),
 				updatedAt: new Date(),
 			})
 			.returning({ userId: userUsage.userId });
 
 		const count = result.length;
-		logger.info('Reset monthly usage for all users', { usersReset: count });
+		logger.info('Reset monthly usage for all users', { metadata: { usersReset: count } });
 		return count;
 	} catch (error) {
-		logger.error('Failed to reset all monthly usage', { error });
+		logger.error('Failed to reset all monthly usage', error instanceof Error ? error : new Error(String(error)));
 		return 0;
 	}
 }

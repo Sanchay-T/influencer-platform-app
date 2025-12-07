@@ -21,7 +21,6 @@ import { useBilling } from '@/lib/hooks/use-billing';
 import { paymentLogger } from '@/lib/logging';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { useComponentLogger, useUserActionLogger } from '@/lib/logging/react-logger';
-import getStripe from '@/lib/stripe/stripe-client';
 import { ErrorBoundary } from '../error-boundary';
 
 interface UpgradeButtonProps {

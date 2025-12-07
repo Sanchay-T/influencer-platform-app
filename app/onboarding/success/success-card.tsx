@@ -30,6 +30,7 @@ interface Props {
 	loading: boolean;
 	sessionData: SessionData | null;
 	isSubmitting: boolean;
+	webhookConfirmed: boolean;
 	onContinue: () => void;
 }
 
@@ -40,7 +41,7 @@ const formatDate = (timestamp: number) =>
 		day: 'numeric',
 	});
 
-export function SuccessCard({ loading, sessionData, isSubmitting, onContinue }: Props) {
+export function SuccessCard({ loading, sessionData, isSubmitting, webhookConfirmed, onContinue }: Props) {
 	if (loading) {
 		return (
 			<div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -51,6 +52,13 @@ export function SuccessCard({ loading, sessionData, isSubmitting, onContinue }: 
 			</div>
 		);
 	}
+
+	const buttonDisabled = isSubmitting || !webhookConfirmed;
+	const buttonText = isSubmitting 
+		? 'Finishing…' 
+		: !webhookConfirmed 
+			? 'Activating your plan…' 
+			: 'Go to dashboard';
 
 	return (
 		<div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -148,9 +156,12 @@ export function SuccessCard({ loading, sessionData, isSubmitting, onContinue }: 
 							onClick={onContinue}
 							size="lg"
 							className="w-full h-14 text-lg font-semibold"
-							disabled={isSubmitting}
+							disabled={buttonDisabled}
 						>
-							{isSubmitting ? 'Finishing…' : 'Go to dashboard'}
+							{!webhookConfirmed && (
+								<div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+							)}
+							{buttonText}
 						</Button>
 
 						<div className="bg-zinc-800/40 border border-zinc-700/50 rounded-lg p-4 text-sm text-muted-foreground flex items-start gap-2">
