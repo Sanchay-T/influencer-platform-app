@@ -166,11 +166,15 @@ export const userUsage = pgTable('user_usage', {
 	userId: uuid('user_id')
 		.notNull()
 		.references(() => users.id, { onDelete: 'cascade' }),
+	// DEPRECATED: These columns are set but never read. Limits come from PLANS config in plan-config.ts
+	// TODO: Remove in future migration
 	planCampaignsLimit: integer('plan_campaigns_limit'),
 	planCreatorsLimit: integer('plan_creators_limit'),
 	planFeatures: jsonb('plan_features').default('{}').notNull(),
+	// Active usage tracking
 	usageCampaignsCurrent: integer('usage_campaigns_current').default(0).notNull(),
 	usageCreatorsCurrentMonth: integer('usage_creators_current_month').default(0).notNull(),
+	// DEPRECATED: Never incremented - enrichment feature not implemented
 	enrichmentsCurrentMonth: integer('enrichments_current_month').default(0).notNull(),
 	usageResetDate: timestamp('usage_reset_date').defaultNow().notNull(),
 	createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -410,7 +414,10 @@ export const backgroundJobs = pgTable('background_jobs', {
 	updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
-// Subscription Plans table - Plan configuration and limits
+// DEPRECATED: subscription_plans table - Plan configuration is now in lib/billing/plan-config.ts
+// This table is only used by admin API (/api/admin/plans/) and seed scripts.
+// Source of truth for billing logic is the static PLANS config.
+// TODO: Consider removing this table and migrating admin API to use static config
 export const subscriptionPlans = pgTable('subscription_plans', {
 	id: uuid('id').primaryKey().defaultRandom(),
 	planKey: varchar('plan_key', { length: 50 }).notNull().unique(), // 'glow_up', 'viral_surge', 'fame_flex'
@@ -420,7 +427,7 @@ export const subscriptionPlans = pgTable('subscription_plans', {
 	monthlyPrice: integer('monthly_price').notNull(), // Price in cents (9900 = $99.00)
 	yearlyPrice: integer('yearly_price'), // Yearly price in cents (optional)
 	// Stripe Price IDs
-	stripeMonthlaPriceId: text('stripe_monthly_price_id').notNull(),
+	stripeMonthlyPriceId: text('stripe_monthly_price_id').notNull(),
 	stripeYearlyPriceId: text('stripe_yearly_price_id'),
 	// Plan Limits
 	campaignsLimit: integer('campaigns_limit').notNull(), // Max active campaigns

@@ -1,6 +1,10 @@
-export type PlanKey = 'free' | 'glow_up' | 'viral_surge' | 'fame_flex';
+import { PLAN_ORDER, type PlanKey as BillingPlanKey } from '@/lib/billing/plan-config';
 
-const planHierarchy: PlanKey[] = ['free', 'glow_up', 'viral_surge', 'fame_flex'];
+// Client-side PlanKey includes 'free' for non-subscribers
+export type PlanKey = 'free' | BillingPlanKey;
+
+// Plan hierarchy with 'free' prepended for client-side comparison logic
+const planHierarchy: PlanKey[] = ['free', ...PLAN_ORDER];
 
 const featureMinimumPlans: Record<string, number> = {
 	csv_export: 1,

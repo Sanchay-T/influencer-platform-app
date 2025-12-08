@@ -226,67 +226,6 @@ export async function incrementCreatorCount(
 	}
 }
 
-/**
- * Increment the enrichment count for a user.
- * Call this AFTER successfully enriching a creator profile.
- *
- * @param clerkUserId - The Clerk user ID (not internal UUID)
- * @param count - Number of enrichments to add (default: 1)
- */
-export async function incrementEnrichmentCount(
-	clerkUserId: string,
-	count: number = 1
-): Promise<IncrementResult> {
-	if (count <= 0) {
-		return { success: true, newCount: 0 };
-	}
-
-	try {
-		// Resolve Clerk ID to internal UUID
-		const internalUserId = await getInternalUserId(clerkUserId);
-		if (!internalUserId) {
-			logger.warn('User not found for enrichment increment', { userId: clerkUserId, metadata: { count } });
-			return { success: false, newCount: 0, error: 'User not found' };
-		}
-
-		const result = await db
-			.update(userUsage)
-			.set({
-				enrichmentsCurrentMonth: sql`COALESCE(${userUsage.enrichmentsCurrentMonth}, 0) + ${count}`,
-				updatedAt: new Date(),
-			})
-			.where(eq(userUsage.userId, internalUserId))
-			.returning({ newCount: userUsage.enrichmentsCurrentMonth });
-
-		if (result.length === 0) {
-			// User usage record doesn't exist, create it
-			const inserted = await db
-				.insert(userUsage)
-				.values({
-					userId: internalUserId,
-					usageCampaignsCurrent: 0,
-					usageCreatorsCurrentMonth: 0,
-					enrichmentsCurrentMonth: count,
-					usageResetDate: new Date(),
-				})
-				.returning({ newCount: userUsage.enrichmentsCurrentMonth });
-
-			logger.info('Created new usage record for user', { userId: clerkUserId, metadata: { enrichments: count } });
-			return { success: true, newCount: inserted[0]?.newCount || count };
-		}
-
-		logger.info('Incremented enrichment count', { userId: clerkUserId, metadata: { added: count, newCount: result[0].newCount } });
-		return { success: true, newCount: result[0].newCount || count };
-	} catch (error) {
-		logger.error('Failed to increment enrichment count', error instanceof Error ? error : new Error(String(error)), { userId: clerkUserId, metadata: { count } });
-		return {
-			success: false,
-			newCount: 0,
-			error: error instanceof Error ? error.message : 'Unknown error',
-		};
-	}
-}
-
 // ═══════════════════════════════════════════════════════════════
 // USAGE RESET FUNCTIONS
 // ═══════════════════════════════════════════════════════════════

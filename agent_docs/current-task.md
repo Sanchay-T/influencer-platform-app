@@ -5,112 +5,109 @@
 
 ---
 
-**Task:** Plan Enforcement Cleanup
+**Task:** Plan Enforcement Cleanup + Bug Fixes + Tech Debt
 **Branch:** `feat/plan-enforcement-cleanup`
-**Status:** Done
+**Status:** Ready for review
 **Started:** Dec 5, 2025
+**Updated:** Dec 8, 2025
 
-## What You Did (This Session)
+## What You Did (This Session - Dec 8)
 
-### Phase 1: Feature Gates Consolidation ✅
+### Critical Bug Fix: Usage Tracking Not Working ✅
 
-**Created `lib/billing/feature-gates.ts`:**
-- Moved from `lib/services/feature-gates.ts`
-- Uses `PLANS` from plan-config.ts (no DB queries)
-- Functions: `getUserPlanKey`, `getUserFeatures`, `hasFeature`, `canExportFormat`, `hasAdvancedAnalytics`, `hasApiAccess`, `hasPrioritySupport`
-- Legacy `FeatureGateService` class for backward compatibility
+**Problem:** Billing page showed "0 / ∞ creators" despite users having campaigns and searches.
 
-**Updated files:**
-- `lib/billing/index.ts` - Added feature gates exports
-- `app/api/export/csv/route.ts` - Changed import to `@/lib/billing`
-- Deleted `lib/services/feature-gates.ts`
+**Root Cause:** The `incrementCampaignCount()`, `incrementCreatorCount()`, and `incrementEnrichmentCount()` functions in `lib/billing/usage-tracking.ts` were using Clerk user IDs to query the `user_usage` table. However, `userUsage.userId` references `users.id` (internal UUID), not the Clerk ID. No rows matched, so usage was never updated.
 
-### Phase 2: Usage Tracking Module ✅
+**Fix Applied:**
+- Added `getInternalUserId(clerkUserId)` helper function that resolves Clerk ID → internal UUID
+- Updated all increment functions to use this helper before querying
 
-**Created `lib/billing/usage-tracking.ts`:**
-- `getUsageSummary(userId)` - Current usage vs plan limits
-- `incrementCampaignCount(userId)` - After campaign creation
-- `incrementCreatorCount(userId, count)` - After search results
-- `resetMonthlyUsage(userId)` - For single user
-- `resetAllMonthlyUsage()` - For cron job
+**File:** `lib/billing/usage-tracking.ts` (lines 28-38, 126-130, 186-190)
 
-**Updated `lib/billing/index.ts`** with usage tracking exports.
+### Tech Debt Cleanup ✅
 
-### Phase 3: Monthly Reset Cron Job ✅
+1. **Fixed typo in schema:** `stripeMonthlaPriceId` → `stripeMonthlyPriceId`
+   - Files: `lib/db/schema.ts`, `scripts/seed-subscription-plans.js`
 
-**Created `app/api/cron/reset-monthly-usage/route.ts`:**
-- Vercel cron-compatible endpoint
-- Verifies CRON_SECRET in production
-- Resets `usageCreatorsCurrentMonth` for all users
+2. **Added deprecation comments to dead columns in `user_usage`:**
+   - `planCampaignsLimit`, `planCreatorsLimit` - Set but never read (limits come from PLANS config)
+   - `planEnrichmentsLimit` - Never used
+   - `enrichmentsCurrentMonth` - Never incremented (feature not implemented)
 
-**Updated `vercel.json`:**
-- Added cron config: `"0 0 1 * *"` (midnight UTC, 1st of month)
+3. **Added deprecation comment to `subscription_plans` table:**
+   - Source of truth is now static `PLANS` config in `lib/billing/plan-config.ts`
+   - Table only used by admin API and seed scripts
 
-## Current File Structure
+4. **Removed unused `incrementEnrichmentCount()` function:**
+   - Feature not implemented, column deprecated
+   - Files: `lib/billing/usage-tracking.ts`, `lib/billing/index.ts`
 
-### lib/billing/ (Complete)
-```
-lib/billing/
-├── index.ts              # Barrel export (all billing)
-├── plan-config.ts        # Plan definitions, limits, price IDs
-├── stripe-client.ts      # Server-side Stripe SDK wrapper
-├── subscription-service.ts    # Re-exports from split modules
-├── subscription-types.ts      # Type definitions
-├── trial-utils.ts             # Trial time calculations
-├── webhook-handlers.ts        # Webhook event processing
-├── billing-status.ts          # Read-only billing queries
-├── access-validation.ts       # validateAccess, validateCampaignCreation, validateCreatorSearch
-├── checkout-service.ts        # Checkout session creation
-├── onboarding-service.ts      # Step validation, emails
-├── feature-gates.ts           # Plan-based feature access (NEW)
-├── usage-tracking.ts          # Usage increment/reset (NEW)
-└── plan-display-config.ts     # UI configuration
-```
+5. **Consolidated plan order to single `PLAN_ORDER` constant:**
+   - Added `export const PLAN_ORDER: PlanKey[] = ['glow_up', 'viral_surge', 'fame_flex']` to `plan-config.ts`
+   - Updated `getRecommendedPlan()` and `comparePlans()` to use it
+   - Updated `lib/hooks/billing-plan.ts` to import and derive `['free', ...PLAN_ORDER]`
+   - Updated `lib/hooks/use-billing-cached.ts` to import and use `PLAN_HIERARCHY_WITH_FREE`
 
-### Cron Jobs
-```
-app/api/cron/
-├── trial-reminders/route.ts   # Daily trial reminders (existing)
-└── reset-monthly-usage/route.ts  # Monthly usage reset (NEW)
-```
-
-## Files Changed Summary
-
-### New Files
-- `lib/billing/feature-gates.ts` (~245 lines)
-- `lib/billing/usage-tracking.ts` (~230 lines)
-- `app/api/cron/reset-monthly-usage/route.ts` (~75 lines)
+## Files Changed (This Session)
 
 ### Modified Files
-- `lib/billing/index.ts` (added exports)
-- `app/api/export/csv/route.ts` (import change)
-- `vercel.json` (added cron config)
+- `lib/billing/usage-tracking.ts` - Added getInternalUserId helper, removed incrementEnrichmentCount
+- `lib/billing/plan-config.ts` - Added PLAN_ORDER constant, updated functions
+- `lib/billing/index.ts` - Updated exports
+- `lib/db/schema.ts` - Fixed typo, added deprecation comments
+- `lib/hooks/billing-plan.ts` - Import PLAN_ORDER instead of hardcoded array
+- `lib/hooks/use-billing-cached.ts` - Import PLAN_ORDER instead of inline arrays
+- `scripts/seed-subscription-plans.js` - Fixed typo
 
-### Deleted Files
-- `lib/services/feature-gates.ts` (moved to lib/billing)
+### Legacy Files Deleted (Previous Commit)
+- `drizzle/relations.ts` - Empty file
+- `drizzle/schema.ts` - Old auto-generated schema
+- `scripts/reset-user-onboarding.js` - Used legacy table
+- `scripts/reset-user-onboarding.ts` - Used legacy table
+- `scripts/reset-user-simple.js` - Used legacy table
+- `scripts/test-local-db.js` - Used legacy table
 
-## Key Architecture
+## Key Architecture Notes
 
-1. **All billing logic in `lib/billing/`** - Single source of truth
-2. **Feature gates use static PLANS config** - No DB queries for features
-3. **Usage tracking module** - Centralized increment/reset logic
-4. **Monthly cron job** - Resets creator usage on 1st of each month
-5. **Backward compatible** - FeatureGateService class maintained
+### User ID Types
+```
+Clerk ID (string): "user_xxxxx" - External auth provider ID
+Internal UUID (uuid): "550e8400-e29b-..." - Database primary key
+
+scrapingJobs.userId → Clerk ID (text)
+userUsage.userId → Internal UUID (references users.id)
+```
+
+Always use `getInternalUserId()` when updating `user_usage` table.
+
+### Plan Configuration Source of Truth
+```
+PLANS constant in lib/billing/plan-config.ts
+├── Plan limits (campaigns, creators)
+├── Plan features (csvExport, analytics, etc.)
+├── Stripe price IDs
+└── Plan order (PLAN_ORDER)
+
+subscription_plans table → DEPRECATED for billing logic
+```
+
+## Testing Status
+
+- [x] Linting passed (Biome)
+- [x] Type check passed (pre-existing errors in unrelated files)
+- [x] Usage tracking fix verified - manual data correction applied
+- [x] Plan order consolidation working
 
 ## What's Left
 
-### Not Implemented (Future Work):
+### Not Changed (Future Work):
 1. **API routes using incrementCreatorCount** - Scraping routes should call this after saving results
 2. **Trial expiration cron** - Could add a job to handle expired trials
+3. **Remove deprecated columns** - Need migration after confirming no production usage
 
-### Testing Done:
-- Linting passed (only intentional warnings for Next.js conventions)
-- Type check passed (pre-existing issues in unrelated files)
-- Feature gates consolidated successfully
-- Usage tracking module created
+## Next Steps
 
-## Next Session
-
-1. Merge to main after user testing
-2. Consider adding usage increment calls to scraping routes
-3. Monitor cron job execution in Vercel dashboard
+1. Commit and push current changes
+2. User should test billing page shows correct usage
+3. Consider merging to main after verification

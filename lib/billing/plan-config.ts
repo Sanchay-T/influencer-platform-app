@@ -61,6 +61,13 @@ export interface PlanConfig {
 // PLAN DEFINITIONS
 // ═══════════════════════════════════════════════════════════════
 
+/**
+ * Plan order from lowest to highest tier.
+ * Used for comparisons, recommendations, and hierarchy checks.
+ * Note: Does not include 'free' since all users must have a paid subscription.
+ */
+export const PLAN_ORDER: PlanKey[] = ['glow_up', 'viral_surge', 'fame_flex'];
+
 export const PLANS: Record<PlanKey, PlanConfig> = {
 	glow_up: {
 		key: 'glow_up',
@@ -231,9 +238,7 @@ export function getRecommendedPlan(
 	requirement: 'campaigns' | 'creatorsPerMonth',
 	amount: number
 ): PlanKey {
-	const planOrder: PlanKey[] = ['glow_up', 'viral_surge', 'fame_flex'];
-
-	for (const planKey of planOrder) {
+	for (const planKey of PLAN_ORDER) {
 		const limit = PLANS[planKey].limits[requirement];
 		if (limit === -1 || amount <= limit) {
 			return planKey;
@@ -244,15 +249,12 @@ export function getRecommendedPlan(
 }
 
 /**
- * Compare two plans. Returns 1 if planA > planB, -1 if planA < planB, 0 if equal.
+ * Compare two plans. Returns positive if planA > planB, negative if planA < planB, 0 if equal.
  */
 export function comparePlans(planA: PlanKey, planB: PlanKey): number {
-	const order: Record<PlanKey, number> = {
-		glow_up: 1,
-		viral_surge: 2,
-		fame_flex: 3,
-	};
-	return order[planA] - order[planB];
+	const indexA = PLAN_ORDER.indexOf(planA);
+	const indexB = PLAN_ORDER.indexOf(planB);
+	return indexA - indexB;
 }
 
 /**

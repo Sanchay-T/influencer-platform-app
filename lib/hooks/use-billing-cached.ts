@@ -2,9 +2,13 @@
 
 import { useAuth } from '@clerk/nextjs';
 import { useEffect, useState } from 'react';
+import { PLAN_ORDER } from '@/lib/billing/plan-config';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { perfMonitor } from '@/lib/utils/performance-monitor';
 import type { BillingStatus } from './use-billing';
+
+// Plan hierarchy with 'free' prepended for client-side comparison logic
+const PLAN_HIERARCHY_WITH_FREE = ['free', ...PLAN_ORDER];
 
 // Cache key for localStorage
 const BILLING_CACHE_KEY = 'gemz_billing_cache';
@@ -133,8 +137,7 @@ export function useBillingCached(): BillingStatus & { isLoading: boolean } {
 
 				// Create feature checking functions
 				const hasFeature = (feature: string): boolean => {
-					const planHierarchy = ['free', 'glow_up', 'viral_surge', 'fame_flex'];
-					const currentPlanIndex = planHierarchy.indexOf(data.currentPlan);
+					const currentPlanIndex = PLAN_HIERARCHY_WITH_FREE.indexOf(data.currentPlan);
 
 					const featureMinimumPlans = {
 						csv_export: 1,
@@ -151,9 +154,8 @@ export function useBillingCached(): BillingStatus & { isLoading: boolean } {
 				};
 
 				const hasPlan = (plan: string): boolean => {
-					const planHierarchy = ['free', 'glow_up', 'viral_surge', 'fame_flex'];
-					const currentPlanIndex = planHierarchy.indexOf(data.currentPlan);
-					const requiredPlanIndex = planHierarchy.indexOf(plan);
+					const currentPlanIndex = PLAN_HIERARCHY_WITH_FREE.indexOf(data.currentPlan);
+					const requiredPlanIndex = PLAN_HIERARCHY_WITH_FREE.indexOf(plan);
 					return currentPlanIndex >= requiredPlanIndex;
 				};
 

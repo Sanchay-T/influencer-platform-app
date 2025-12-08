@@ -39,6 +39,7 @@ export {
 	isValidPlan,
 	type LimitCheckResult,
 	// Constants
+	PLAN_ORDER,
 	PLANS,
 	type PlanConfig,
 	type PlanFeatures,
@@ -162,7 +163,6 @@ export {
 	getUsageSummary,
 	incrementCampaignCount,
 	incrementCreatorCount,
-	incrementEnrichmentCount,
 	resetAllMonthlyUsage,
 	resetMonthlyUsage,
 	shouldResetUsage,

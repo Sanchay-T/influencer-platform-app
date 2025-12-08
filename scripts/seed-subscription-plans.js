@@ -25,7 +25,7 @@ async function seedPlans() {
         description: 'Perfect for growing creators and small businesses',
         monthlyPrice: 9900, // $99.00 in cents
         yearlyPrice: 9480, // $79/month * 12 = $948.00 in cents (20% discount)
-        stripeMonthlaPriceId: process.env.STRIPE_GLOW_UP_MONTHLY_PRICE_ID,
+        stripeMonthlyPriceId: process.env.STRIPE_GLOW_UP_MONTHLY_PRICE_ID,
         stripeYearlyPriceId: process.env.STRIPE_GLOW_UP_YEARLY_PRICE_ID,
         campaignsLimit: 3,
         creatorsLimit: 1000,
@@ -45,7 +45,7 @@ async function seedPlans() {
         description: 'For agencies and serious marketers',
         monthlyPrice: 24900, // $249.00 in cents
         yearlyPrice: 23880, // $199/month * 12 = $2,388.00 in cents (20% discount)
-        stripeMonthlaPriceId: process.env.STRIPE_VIRAL_SURGE_MONTHLY_PRICE_ID,
+        stripeMonthlyPriceId: process.env.STRIPE_VIRAL_SURGE_MONTHLY_PRICE_ID,
         stripeYearlyPriceId: process.env.STRIPE_VIRAL_SURGE_YEARLY_PRICE_ID,
         campaignsLimit: 10,
         creatorsLimit: 10000,
@@ -67,7 +67,7 @@ async function seedPlans() {
         description: 'Unlimited power for enterprise users',
         monthlyPrice: 49900, // $499.00 in cents
         yearlyPrice: 47880, // $399/month * 12 = $4,788.00 in cents (20% discount)
-        stripeMonthlaPriceId: process.env.STRIPE_FAME_FLEX_MONTHLY_PRICE_ID,
+        stripeMonthlyPriceId: process.env.STRIPE_FAME_FLEX_MONTHLY_PRICE_ID,
         stripeYearlyPriceId: process.env.STRIPE_FAME_FLEX_YEARLY_PRICE_ID,
         campaignsLimit: -1, // -1 indicates unlimited
         creatorsLimit: -1, // -1 indicates unlimited  
