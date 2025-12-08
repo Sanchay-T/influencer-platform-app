@@ -504,14 +504,20 @@ const BioLinksCell = ({ bio, bioLinks = [], externalUrl, isLoading = false }) =>
 const creatorNeedsEnrichment = (creator, isInstagram, isTikTok) => {
 	if (isInstagram) {
 		const ownerId = creator?.owner?.id;
-		const hasBio =
-			creator?.owner?.biography || creator?.creator?.bio || creator?.bio_enriched?.biography;
-		return ownerId && !hasBio;
+		// Check for fetched_at to know if we already tried enrichment (bio may be empty/null)
+		const hasEnrichmentData =
+			creator?.owner?.biography ||
+			creator?.creator?.bio ||
+			creator?.bio_enriched?.biography ||
+			creator?.bio_enriched?.fetched_at;
+		return ownerId && !hasEnrichmentData;
 	}
 	if (isTikTok) {
 		const handle = creator?.creator?.uniqueId || creator?.creator?.username;
-		const hasEnrichedBio = creator?.bio_enriched?.biography;
-		return handle && !hasEnrichedBio;
+		// Check for fetched_at to know if we already tried enrichment
+		const hasEnrichmentData =
+			creator?.bio_enriched?.biography || creator?.bio_enriched?.fetched_at;
+		return handle && !hasEnrichmentData;
 	}
 	return false;
 };
