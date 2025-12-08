@@ -19,7 +19,6 @@ export type AdminUserSummary = {
 	currentPlan: string;
 	subscriptionStatus: string;
 	trialStatus: string;
-	subscriptionRenewalDate: Date | null;
 	planCampaignsLimit: number | null;
 	planCreatorsLimit: number | null;
 	createdAt: Date;
@@ -39,7 +38,6 @@ export async function searchUsersByEmail(query: string, limit = 10): Promise<Adm
 			currentPlan: userSubscriptions.currentPlan,
 			subscriptionStatus: userSubscriptions.subscriptionStatus,
 			trialStatus: userSubscriptions.trialStatus,
-			subscriptionRenewalDate: userSubscriptions.subscriptionRenewalDate,
 			planCampaignsLimit: userUsage.planCampaignsLimit,
 			planCreatorsLimit: userUsage.planCreatorsLimit,
 			createdAt: users.createdAt,
@@ -96,8 +94,6 @@ export async function grantPlanToUserByEmail(
 
 	await db.transaction(async (tx) => {
 		const now = new Date();
-		const renewalDate = new Date(now.getTime());
-		renewalDate.setFullYear(renewalDate.getFullYear() + 1);
 
 		await tx
 			.update(users)
@@ -112,8 +108,6 @@ export async function grantPlanToUserByEmail(
 			intendedPlan: planKey,
 			subscriptionStatus: 'active',
 			trialStatus: 'converted',
-			trialConversionDate: now,
-			subscriptionRenewalDate: renewalDate,
 			billingSyncStatus: 'synced',
 			updatedAt: now,
 		};

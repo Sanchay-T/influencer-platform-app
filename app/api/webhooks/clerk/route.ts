@@ -262,7 +262,7 @@ async function handleUserCreated(userData: any, requestId: string) {
 		'Creating new user profile after Clerk user creation',
 		userId,
 		{
-			table: 'userProfiles',
+			table: 'users',
 			operation: 'user_created_webhook',
 			email,
 			fullName,
@@ -280,7 +280,7 @@ async function handleUserCreated(userData: any, requestId: string) {
 				'User profile already exists - skipping creation',
 				userId,
 				{
-					table: 'userProfiles',
+					table: 'users',
 					existingProfile: !!existingProfile,
 					currentPlan: existingProfile.currentPlan,
 				},
@@ -325,7 +325,7 @@ async function handleUserCreated(userData: any, requestId: string) {
 					'User profile created by concurrent process (race condition handled)',
 					userId,
 					{
-						table: 'userProfiles',
+						table: 'users',
 						raceCondition: true,
 						note: 'Dashboard SSR likely created the user via ensureUserProfile()',
 					},
@@ -347,7 +347,7 @@ async function handleUserCreated(userData: any, requestId: string) {
 			'User profile created successfully',
 			userId,
 			{
-				table: 'userProfiles',
+				table: 'users',
 				recordId: userId,
 				currentPlan: null, // NULL until Stripe confirms payment
 				trialStatus: 'pending', // Trial NOT activated yet
@@ -418,7 +418,7 @@ async function handleUserUpdated(userData: any, requestId: string) {
 			'Updating user profile after Clerk user update',
 			userId,
 			{
-				table: 'userProfiles',
+				table: 'users',
 				operation: 'user_updated_webhook',
 				email,
 				fullName,
@@ -439,7 +439,7 @@ async function handleUserUpdated(userData: any, requestId: string) {
 			'User profile updated successfully',
 			userId,
 			{
-				table: 'userProfiles',
+				table: 'users',
 				changes: Object.keys(updateData),
 				email,
 				fullName,
@@ -478,7 +478,7 @@ async function handleUserDeleted(userData: any, requestId: string) {
 			'Deleting user profile after Clerk user deletion',
 			userId,
 			{
-				table: 'userProfiles',
+				table: 'users',
 				operation: 'user_deleted_webhook',
 			},
 			requestId
@@ -498,7 +498,7 @@ async function handleUserDeleted(userData: any, requestId: string) {
 			'User profile deleted successfully',
 			userId,
 			{
-				table: 'userProfiles',
+				table: 'users',
 				recordId: userId,
 			},
 			requestId

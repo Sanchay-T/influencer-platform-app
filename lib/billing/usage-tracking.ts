@@ -14,12 +14,28 @@
 import { eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
-import { userUsage } from '@/lib/db/schema';
+import { userUsage, users } from '@/lib/db/schema';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
 import type { PlanKey } from './plan-config';
 import { getPlanConfig, isValidPlan } from './plan-config';
 
 const logger = createCategoryLogger(LogCategory.BILLING);
+
+// ═══════════════════════════════════════════════════════════════
+// HELPER FUNCTIONS
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Get the internal UUID for a user from their Clerk userId.
+ * userUsage.userId references users.id (UUID), not the Clerk ID.
+ */
+async function getInternalUserId(clerkUserId: string): Promise<string | null> {
+	const user = await db.query.users.findFirst({
+		where: eq(users.userId, clerkUserId),
+		columns: { id: true },
+	});
+	return user?.id ?? null;
+}
 
 // ═══════════════════════════════════════════════════════════════
 // TYPES
@@ -102,16 +118,24 @@ export async function getUsageSummary(userId: string): Promise<UsageSummary | nu
 /**
  * Increment the campaign count for a user.
  * Call this AFTER successfully creating a campaign.
+ * @param clerkUserId - The Clerk user ID (not internal UUID)
  */
-export async function incrementCampaignCount(userId: string): Promise<IncrementResult> {
+export async function incrementCampaignCount(clerkUserId: string): Promise<IncrementResult> {
 	try {
+		// Resolve Clerk ID to internal UUID
+		const internalUserId = await getInternalUserId(clerkUserId);
+		if (!internalUserId) {
+			logger.warn('User not found for campaign increment', { userId: clerkUserId });
+			return { success: false, newCount: 0, error: 'User not found' };
+		}
+
 		const result = await db
 			.update(userUsage)
 			.set({
 				usageCampaignsCurrent: sql`COALESCE(${userUsage.usageCampaignsCurrent}, 0) + 1`,
 				updatedAt: new Date(),
 			})
-			.where(eq(userUsage.userId, userId))
+			.where(eq(userUsage.userId, internalUserId))
 			.returning({ newCount: userUsage.usageCampaignsCurrent });
 
 		if (result.length === 0) {
@@ -119,21 +143,21 @@ export async function incrementCampaignCount(userId: string): Promise<IncrementR
 			const inserted = await db
 				.insert(userUsage)
 				.values({
-					userId,
+					userId: internalUserId,
 					usageCampaignsCurrent: 1,
 					usageCreatorsCurrentMonth: 0,
 					usageResetDate: new Date(),
 				})
 				.returning({ newCount: userUsage.usageCampaignsCurrent });
 
-			logger.info('Created new usage record for user', { userId, metadata: { campaigns: 1 } });
+			logger.info('Created new usage record for user', { userId: clerkUserId, metadata: { campaigns: 1 } });
 			return { success: true, newCount: inserted[0]?.newCount || 1 };
 		}
 
-		logger.info('Incremented campaign count', { userId, metadata: { newCount: result[0].newCount } });
+		logger.info('Incremented campaign count', { userId: clerkUserId, metadata: { newCount: result[0].newCount } });
 		return { success: true, newCount: result[0].newCount || 1 };
 	} catch (error) {
-		logger.error('Failed to increment campaign count', error instanceof Error ? error : new Error(String(error)), { userId });
+		logger.error('Failed to increment campaign count', error instanceof Error ? error : new Error(String(error)), { userId: clerkUserId });
 		return {
 			success: false,
 			newCount: 0,
@@ -146,11 +170,11 @@ export async function incrementCampaignCount(userId: string): Promise<IncrementR
  * Increment the creator count for a user.
  * Call this AFTER successfully saving search results.
  *
- * @param userId - The user ID
+ * @param clerkUserId - The Clerk user ID (not internal UUID)
  * @param count - Number of creators to add (default: 1)
  */
 export async function incrementCreatorCount(
-	userId: string,
+	clerkUserId: string,
 	count: number = 1
 ): Promise<IncrementResult> {
 	if (count <= 0) {
@@ -158,13 +182,20 @@ export async function incrementCreatorCount(
 	}
 
 	try {
+		// Resolve Clerk ID to internal UUID
+		const internalUserId = await getInternalUserId(clerkUserId);
+		if (!internalUserId) {
+			logger.warn('User not found for creator increment', { userId: clerkUserId, metadata: { count } });
+			return { success: false, newCount: 0, error: 'User not found' };
+		}
+
 		const result = await db
 			.update(userUsage)
 			.set({
 				usageCreatorsCurrentMonth: sql`COALESCE(${userUsage.usageCreatorsCurrentMonth}, 0) + ${count}`,
 				updatedAt: new Date(),
 			})
-			.where(eq(userUsage.userId, userId))
+			.where(eq(userUsage.userId, internalUserId))
 			.returning({ newCount: userUsage.usageCreatorsCurrentMonth });
 
 		if (result.length === 0) {
@@ -172,21 +203,21 @@ export async function incrementCreatorCount(
 			const inserted = await db
 				.insert(userUsage)
 				.values({
-					userId,
+					userId: internalUserId,
 					usageCampaignsCurrent: 0,
 					usageCreatorsCurrentMonth: count,
 					usageResetDate: new Date(),
 				})
 				.returning({ newCount: userUsage.usageCreatorsCurrentMonth });
 
-			logger.info('Created new usage record for user', { userId, metadata: { creators: count } });
+			logger.info('Created new usage record for user', { userId: clerkUserId, metadata: { creators: count } });
 			return { success: true, newCount: inserted[0]?.newCount || count };
 		}
 
-		logger.info('Incremented creator count', { userId, metadata: { added: count, newCount: result[0].newCount } });
+		logger.info('Incremented creator count', { userId: clerkUserId, metadata: { added: count, newCount: result[0].newCount } });
 		return { success: true, newCount: result[0].newCount || count };
 	} catch (error) {
-		logger.error('Failed to increment creator count', error instanceof Error ? error : new Error(String(error)), { userId, metadata: { count } });
+		logger.error('Failed to increment creator count', error instanceof Error ? error : new Error(String(error)), { userId: clerkUserId, metadata: { count } });
 		return {
 			success: false,
 			newCount: 0,
@@ -199,11 +230,11 @@ export async function incrementCreatorCount(
  * Increment the enrichment count for a user.
  * Call this AFTER successfully enriching a creator profile.
  *
- * @param userId - The user ID
+ * @param clerkUserId - The Clerk user ID (not internal UUID)
  * @param count - Number of enrichments to add (default: 1)
  */
 export async function incrementEnrichmentCount(
-	userId: string,
+	clerkUserId: string,
 	count: number = 1
 ): Promise<IncrementResult> {
 	if (count <= 0) {
@@ -211,13 +242,20 @@ export async function incrementEnrichmentCount(
 	}
 
 	try {
+		// Resolve Clerk ID to internal UUID
+		const internalUserId = await getInternalUserId(clerkUserId);
+		if (!internalUserId) {
+			logger.warn('User not found for enrichment increment', { userId: clerkUserId, metadata: { count } });
+			return { success: false, newCount: 0, error: 'User not found' };
+		}
+
 		const result = await db
 			.update(userUsage)
 			.set({
 				enrichmentsCurrentMonth: sql`COALESCE(${userUsage.enrichmentsCurrentMonth}, 0) + ${count}`,
 				updatedAt: new Date(),
 			})
-			.where(eq(userUsage.userId, userId))
+			.where(eq(userUsage.userId, internalUserId))
 			.returning({ newCount: userUsage.enrichmentsCurrentMonth });
 
 		if (result.length === 0) {
@@ -225,7 +263,7 @@ export async function incrementEnrichmentCount(
 			const inserted = await db
 				.insert(userUsage)
 				.values({
-					userId,
+					userId: internalUserId,
 					usageCampaignsCurrent: 0,
 					usageCreatorsCurrentMonth: 0,
 					enrichmentsCurrentMonth: count,
@@ -233,14 +271,14 @@ export async function incrementEnrichmentCount(
 				})
 				.returning({ newCount: userUsage.enrichmentsCurrentMonth });
 
-			logger.info('Created new usage record for user', { userId, metadata: { enrichments: count } });
+			logger.info('Created new usage record for user', { userId: clerkUserId, metadata: { enrichments: count } });
 			return { success: true, newCount: inserted[0]?.newCount || count };
 		}
 
-		logger.info('Incremented enrichment count', { userId, metadata: { added: count, newCount: result[0].newCount } });
+		logger.info('Incremented enrichment count', { userId: clerkUserId, metadata: { added: count, newCount: result[0].newCount } });
 		return { success: true, newCount: result[0].newCount || count };
 	} catch (error) {
-		logger.error('Failed to increment enrichment count', error instanceof Error ? error : new Error(String(error)), { userId, metadata: { count } });
+		logger.error('Failed to increment enrichment count', error instanceof Error ? error : new Error(String(error)), { userId: clerkUserId, metadata: { count } });
 		return {
 			success: false,
 			newCount: 0,

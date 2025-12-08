@@ -103,11 +103,6 @@ export async function POST(request: Request) {
 				// Clear Stripe data
 				stripeCustomerId: null,
 				stripeSubscriptionId: null,
-				paymentMethodId: null,
-				cardBrand: null,
-				cardLast4: null,
-				cardExpMonth: null,
-				cardExpYear: null,
 				lastWebhookEvent: null,
 				lastWebhookTimestamp: null,
 

@@ -31,7 +31,7 @@ User billing data is split across normalized tables:
 | Table | Key Fields |
 |-------|------------|
 | `user_subscriptions` | currentPlan, trialStatus, trialEndDate, subscriptionStatus |
-| `user_billing` | stripeCustomerId, stripeSubscriptionId, cardLast4 |
+| `user_billing` | stripeCustomerId, stripeSubscriptionId |
 | `user_usage` | usageCampaignsCurrent, usageCreatorsCurrentMonth |
 
 See `lib/db/schema.ts` for full schema.

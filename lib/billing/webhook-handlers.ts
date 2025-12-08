@@ -143,14 +143,7 @@ export async function handleSubscriptionChange(
 			updateData.subscriptionCancelDate = new Date(subscription.cancel_at * 1000);
 		}
 
-		// Handle trial conversion
-		if (
-			subscription.status === 'active' &&
-			user.trialStatus === 'active' &&
-			trialStatus === 'converted'
-		) {
-			updateData.trialConversionDate = new Date();
-		}
+		// Note: trialConversionDate removed - not tracked in normalized schema
 
 		// 6. Apply update
 		await updateUserProfile(user.userId, updateData);

@@ -12,3 +12,4 @@ if [ -n "$STAGED_FILES" ]; then
 fi
 
 
+

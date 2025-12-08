@@ -83,22 +83,12 @@ export async function getUserProfile(userId: string): Promise<UserProfileComplet
 			trialStatus: userSubscriptions.trialStatus,
 			trialStartDate: userSubscriptions.trialStartDate,
 			trialEndDate: userSubscriptions.trialEndDate,
-			trialConversionDate: userSubscriptions.trialConversionDate,
 			subscriptionCancelDate: userSubscriptions.subscriptionCancelDate,
-			subscriptionRenewalDate: userSubscriptions.subscriptionRenewalDate,
 			billingSyncStatus: userSubscriptions.billingSyncStatus,
 
-			// Billing data
+			// Billing data (minimal - Stripe Portal handles card/address)
 			stripeCustomerId: userBilling.stripeCustomerId,
 			stripeSubscriptionId: userBilling.stripeSubscriptionId,
-			paymentMethodId: userBilling.paymentMethodId,
-			cardLast4: userBilling.cardLast4,
-			cardBrand: userBilling.cardBrand,
-			cardExpMonth: userBilling.cardExpMonth,
-			cardExpYear: userBilling.cardExpYear,
-			billingAddressCity: userBilling.billingAddressCity,
-			billingAddressCountry: userBilling.billingAddressCountry,
-			billingAddressPostalCode: userBilling.billingAddressPostalCode,
 
 			// Usage data
 			planCampaignsLimit: userUsage.planCampaignsLimit,
@@ -265,22 +255,12 @@ export async function createUser(userData: {
 				trialStatus: newSubscription.trialStatus,
 				trialStartDate: newSubscription.trialStartDate,
 				trialEndDate: newSubscription.trialEndDate,
-				trialConversionDate: newSubscription.trialConversionDate,
 				subscriptionCancelDate: newSubscription.subscriptionCancelDate,
-				subscriptionRenewalDate: newSubscription.subscriptionRenewalDate,
 				billingSyncStatus: newSubscription.billingSyncStatus,
 
 				// Billing data (initially empty)
 				stripeCustomerId: null,
 				stripeSubscriptionId: null,
-				paymentMethodId: null,
-				cardLast4: null,
-				cardBrand: null,
-				cardExpMonth: null,
-				cardExpYear: null,
-				billingAddressCity: null,
-				billingAddressCountry: null,
-				billingAddressPostalCode: null,
 
 				// Usage data
 				planCampaignsLimit: newUsage.planCampaignsLimit,
@@ -407,22 +387,12 @@ export async function updateUserProfile(
 		trialStatus?: string;
 		trialStartDate?: Date;
 		trialEndDate?: Date;
-		trialConversionDate?: Date;
 		subscriptionCancelDate?: Date;
-		subscriptionRenewalDate?: Date;
 		billingSyncStatus?: string;
 
-		// Billing updates
+		// Billing updates (minimal - Stripe Portal handles card/address)
 		stripeCustomerId?: string;
 		stripeSubscriptionId?: string;
-		paymentMethodId?: string;
-		cardLast4?: string;
-		cardBrand?: string;
-		cardExpMonth?: number;
-		cardExpYear?: number;
-		billingAddressCity?: string;
-		billingAddressCountry?: string;
-		billingAddressPostalCode?: string;
 
 		// Usage updates
 		planCampaignsLimit?: number;
@@ -470,23 +440,13 @@ export async function updateUserProfile(
 			trialStatus: updates.trialStatus,
 			trialStartDate: updates.trialStartDate,
 			trialEndDate: updates.trialEndDate,
-			trialConversionDate: updates.trialConversionDate,
 			subscriptionCancelDate: updates.subscriptionCancelDate,
-			subscriptionRenewalDate: updates.subscriptionRenewalDate,
 			billingSyncStatus: updates.billingSyncStatus,
 		};
 
 		const billingUpdates = {
 			stripeCustomerId: updates.stripeCustomerId,
 			stripeSubscriptionId: updates.stripeSubscriptionId,
-			paymentMethodId: updates.paymentMethodId,
-			cardLast4: updates.cardLast4,
-			cardBrand: updates.cardBrand,
-			cardExpMonth: updates.cardExpMonth,
-			cardExpYear: updates.cardExpYear,
-			billingAddressCity: updates.billingAddressCity,
-			billingAddressCountry: updates.billingAddressCountry,
-			billingAddressPostalCode: updates.billingAddressPostalCode,
 		};
 
 		const usageUpdates = {
@@ -602,14 +562,6 @@ export async function getUserBilling(
 			userId: userBilling.userId,
 			stripeCustomerId: userBilling.stripeCustomerId,
 			stripeSubscriptionId: userBilling.stripeSubscriptionId,
-			paymentMethodId: userBilling.paymentMethodId,
-			cardLast4: userBilling.cardLast4,
-			cardBrand: userBilling.cardBrand,
-			cardExpMonth: userBilling.cardExpMonth,
-			cardExpYear: userBilling.cardExpYear,
-			billingAddressCity: userBilling.billingAddressCity,
-			billingAddressCountry: userBilling.billingAddressCountry,
-			billingAddressPostalCode: userBilling.billingAddressPostalCode,
 			createdAt: userBilling.createdAt,
 			updatedAt: userBilling.updatedAt,
 		})
@@ -669,22 +621,12 @@ export async function getUserByStripeCustomerId(
 			trialStatus: userSubscriptions.trialStatus,
 			trialStartDate: userSubscriptions.trialStartDate,
 			trialEndDate: userSubscriptions.trialEndDate,
-			trialConversionDate: userSubscriptions.trialConversionDate,
 			subscriptionCancelDate: userSubscriptions.subscriptionCancelDate,
-			subscriptionRenewalDate: userSubscriptions.subscriptionRenewalDate,
 			billingSyncStatus: userSubscriptions.billingSyncStatus,
 
-			// Billing data
+			// Billing data (minimal - Stripe Portal handles card/address)
 			stripeCustomerId: userBilling.stripeCustomerId,
 			stripeSubscriptionId: userBilling.stripeSubscriptionId,
-			paymentMethodId: userBilling.paymentMethodId,
-			cardLast4: userBilling.cardLast4,
-			cardBrand: userBilling.cardBrand,
-			cardExpMonth: userBilling.cardExpMonth,
-			cardExpYear: userBilling.cardExpYear,
-			billingAddressCity: userBilling.billingAddressCity,
-			billingAddressCountry: userBilling.billingAddressCountry,
-			billingAddressPostalCode: userBilling.billingAddressPostalCode,
 
 			// Usage data
 			planCampaignsLimit: userUsage.planCampaignsLimit,

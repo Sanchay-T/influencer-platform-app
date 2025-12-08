@@ -140,15 +140,14 @@ export const userSubscriptions = pgTable('user_subscriptions', {
 	trialStatus: varchar('trial_status', { length: 20 }).default('pending').notNull(),
 	trialStartDate: timestamp('trial_start_date'),
 	trialEndDate: timestamp('trial_end_date'),
-	trialConversionDate: timestamp('trial_conversion_date'),
 	subscriptionCancelDate: timestamp('subscription_cancel_date'),
-	subscriptionRenewalDate: timestamp('subscription_renewal_date'),
+	// Removed: trialConversionDate, subscriptionRenewalDate (never used)
 	billingSyncStatus: varchar('billing_sync_status', { length: 20 }).default('pending').notNull(),
 	createdAt: timestamp('created_at').defaultNow().notNull(),
 	updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-// 3. USER_BILLING - Stripe payment data (Clerk artifacts removed)
+// 3. USER_BILLING - Stripe payment data (minimal - Stripe is source of truth)
 export const userBilling = pgTable('user_billing', {
 	id: uuid('id').primaryKey().defaultRandom(),
 	userId: uuid('user_id')
@@ -156,14 +155,7 @@ export const userBilling = pgTable('user_billing', {
 		.references(() => users.id, { onDelete: 'cascade' }),
 	stripeCustomerId: text('stripe_customer_id').unique(),
 	stripeSubscriptionId: text('stripe_subscription_id'),
-	paymentMethodId: text('payment_method_id'),
-	cardLast4: varchar('card_last_4', { length: 4 }),
-	cardBrand: varchar('card_brand', { length: 20 }),
-	cardExpMonth: integer('card_exp_month'),
-	cardExpYear: integer('card_exp_year'),
-	billingAddressCity: text('billing_address_city'),
-	billingAddressCountry: varchar('billing_address_country', { length: 2 }),
-	billingAddressPostalCode: varchar('billing_address_postal_code', { length: 20 }),
+	// Removed: paymentMethodId, card*, billingAddress* (Stripe Portal handles this)
 	createdAt: timestamp('created_at').defaultNow().notNull(),
 	updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -696,22 +688,12 @@ export type UserProfileComplete = {
 	trialStatus: string;
 	trialStartDate?: Date | null;
 	trialEndDate?: Date | null;
-	trialConversionDate?: Date | null;
 	subscriptionCancelDate?: Date | null;
-	subscriptionRenewalDate?: Date | null;
 	billingSyncStatus: string;
 
-	// Billing data
+	// Billing data (minimal - Stripe Portal handles card/address)
 	stripeCustomerId?: string | null;
 	stripeSubscriptionId?: string | null;
-	paymentMethodId?: string | null;
-	cardLast4?: string | null;
-	cardBrand?: string | null;
-	cardExpMonth?: number | null;
-	cardExpYear?: number | null;
-	billingAddressCity?: string | null;
-	billingAddressCountry?: string | null;
-	billingAddressPostalCode?: string | null;
 
 	// Usage data
 	planCampaignsLimit?: number | null;
