@@ -2232,6 +2232,7 @@ const SearchResults = ({ searchData }) => {
 														<AvatarImage
 															src={imageUrl}
 															alt={creator.creator?.name || snapshot.handle}
+															loading="lazy"
 															onLoad={(e) => handleImageLoad(e, creator.creator?.name)}
 															onError={(e) =>
 																handleImageError(
@@ -2647,6 +2648,7 @@ const SearchResults = ({ searchData }) => {
 											<img
 												src={previewUrl}
 												alt={snapshot.displayName || snapshot.handle}
+												loading="lazy"
 												className="h-full w-full object-cover"
 												onLoad={(event) => handleImageLoad(event, snapshot.handle)}
 												onError={(event) => handleImageError(event, snapshot.handle, preview)}
