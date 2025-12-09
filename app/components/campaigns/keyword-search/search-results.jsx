@@ -533,6 +533,38 @@ const useBioEnrichment = (creators, jobStatus, jobId, platformNormalized) => {
 	const [hasFetchedComplete, setHasFetchedComplete] = useState(false);
 	const hasFetched = useRef(false);
 	const lastJobId = useRef(null);
+	const hasHydrated = useRef(false);
+
+	// Hydrate bioData from existing bio_enriched on mount (for page reloads)
+	// This ensures persisted bio data displays immediately without re-fetching
+	useEffect(() => {
+		if (hasHydrated.current || !creators?.length) return;
+
+		const hydrated = {};
+		for (const creator of creators) {
+			if (creator?.bio_enriched?.fetched_at) {
+				// Use same key logic as the rest of the hook
+				const key =
+					creator?.owner?.id || creator?.creator?.uniqueId || creator?.creator?.username;
+				if (key) {
+					hydrated[key] = {
+						biography: creator.bio_enriched.biography,
+						bio_links: creator.bio_enriched.bio_links || [],
+						external_url: creator.bio_enriched.external_url,
+						extracted_email: creator.bio_enriched.extracted_email,
+					};
+				}
+			}
+		}
+
+		// Only mark as hydrated if we actually found bio_enriched data
+		// This allows retry if first batch didn't have it but later batches do
+		if (Object.keys(hydrated).length > 0) {
+			hasHydrated.current = true;
+			setBioData(hydrated);
+			setHasFetchedComplete(true); // Mark as complete since we have data
+		}
+	}, [creators]);
 
 	// Platform detection - both Instagram and TikTok use post-search bio enrichment
 	const isScrapecreatorsPlatform = platformNormalized === 'instagram_scrapecreators';
@@ -556,6 +588,7 @@ const useBioEnrichment = (creators, jobStatus, jobId, platformNormalized) => {
 		if (jobId !== lastJobId.current) {
 			lastJobId.current = jobId;
 			hasFetched.current = false;
+			hasHydrated.current = false; // Reset hydration flag so new job can hydrate
 			setHasFetchedComplete(false);
 			setBioData({});
 		}
@@ -1065,6 +1098,7 @@ const SearchResults = ({ searchData }) => {
 
 	// Helper to get full bio data for a creator
 	// Supports both Instagram (by owner.id) and TikTok (by handle) from enrichment hook
+	// Note: bioData is hydrated from bio_enriched on mount, so this covers both fresh fetches and reloads
 	const getBioDataForCreator = useCallback(
 		(creator) => {
 			// 1. Check Instagram enrichment (by owner.id)
