@@ -96,7 +96,6 @@
 		"@stripe/stripe-js": "^7.4.0",
 		"@supabase/ssr": "^0.5.2",
 		"@supabase/supabase-js": "^2.49.1",
-		"@tanstack/react-virtual": "^3.13.13",
 		"@upstash/qstash": "^2.7.22",
 		"@vercel/blob": "^1.1.1",
 		"apify-client": "^2.12.0",
