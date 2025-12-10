@@ -4,6 +4,24 @@ You're working on an influencer discovery platform for businesses to find, organ
 
 **Deployment**: Vercel → usegems.io
 
+## Session Continuity
+
+**If you just started or your context was cleared:**
+
+Your memory persists in files. Before doing anything:
+
+1. **Read `@agent_docs/monologue.md`** — Your previous self's narrative: what was happening, why, key decisions
+2. **Read `@agent_docs/current-task.md`** — Tactical next steps: exactly what to do next
+3. **Check for compaction markers** — If monologue.md has "Context Compacted" entries, you're continuing interrupted work
+
+**During your session:**
+
+- Update `monologue.md` at key milestones (completed phases, major decisions)
+- Update `current-task.md` when tasks complete
+- The PreCompact hook will timestamp when context clears
+
+**The goal:** Seamless continuity. The next agent instance should feel like it's reading a handoff note from itself.
+
 ## Tech Stack
 
 Next.js 15 (App Router) · Clerk · Drizzle + PostgreSQL (Supabase) · Stripe · QStash · Resend · Sentry

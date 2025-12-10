@@ -61,6 +61,12 @@ export const scrapingJobs = pgTable('scraping_jobs', {
 	updatedAt: timestamp('updated_at').notNull().defaultNow(),
 	cursor: integer('cursor').default(0),
 	progress: numeric('progress').default('0'),
+	// V2 Fan-Out Worker Coordination
+	keywordsDispatched: integer('keywords_dispatched').default(0),
+	keywordsCompleted: integer('keywords_completed').default(0),
+	creatorsFound: integer('creators_found').default(0),
+	creatorsEnriched: integer('creators_enriched').default(0),
+	enrichmentStatus: varchar('enrichment_status', { length: 20 }).default('pending'),
 });
 
 // Scraping Results table

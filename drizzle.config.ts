@@ -3,7 +3,7 @@ import * as dotenv from 'dotenv';
 import path from 'path';
 
 // Environment-aware config loading
-const envFile = '.env.development';
+const envFile = '.env.local';
 dotenv.config({ path: path.resolve(process.cwd(), envFile) });
 
 console.log(`🔧 [DRIZZLE CONFIG] Loading environment from: ${envFile}`);

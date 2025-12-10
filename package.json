@@ -132,6 +132,7 @@
 		"zod": "^3.25.76"
 	},
 	"devDependencies": {
+		"@biomejs/biome": "^2.3.8",
 		"@clerk/clerk-sdk-node": "^4.13.23",
 		"@eslint/eslintrc": "^3",
 		"@types/node": "^22.13.9",

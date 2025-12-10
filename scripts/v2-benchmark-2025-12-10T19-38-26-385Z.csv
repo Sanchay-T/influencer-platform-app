@@ -1,0 +1,4 @@
+Target,Keyword,Job ID,Status,Keywords Expanded,Creators Found,Creators Enriched,Total Duration (s),Dispatch Duration (s),Search Duration (s),Enrich Duration (s),Accuracy (%),Error
+100,fitness tips,80b0375d-4f83-4324-ae03-cf8dc2482c3c,completed,5,100,100,22.58,3.71,16.82,2.04,100.0,
+500,beauty tutorial,266e6111-d6fc-4286-beb9-1e4470ddc6ec,completed,24,500,500,30.52,5.84,22.63,2.06,100.0,
+1000,tech review,7f0b5617-5b29-495d-b994-30beb14248c3,completed,48,1186,1132,172.79,12.26,31.28,129.24,118.6,

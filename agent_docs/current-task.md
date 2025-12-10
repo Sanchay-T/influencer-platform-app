@@ -5,54 +5,57 @@
 
 ---
 
-**Task:** V2 Fan-Out Worker Architecture
+**Task:** V2 Fan-Out Worker Architecture — Add Instagram & YouTube Adapters
 **Branch:** `UAT`
-**Status:** Phases 1-4 COMPLETE, Phase 5 (Adapters) PENDING, Phase 6 (E2E) VERIFIED ✅
+**Status:** TikTok COMPLETE ✅, Instagram & YouTube PENDING
 **Started:** Dec 8, 2025 (original v2 pipeline)
-**Updated:** Dec 10, 2025
+**Updated:** Dec 11, 2025
 
 ---
 
 ## Quick Context
 
-We're building a **scalable fan-out worker system** that replaces the current monolithic search pipeline. This enables:
-- Multiple users searching simultaneously
-- Keywords processed in parallel via QStash
-- Results shown progressively (not all-at-once)
-- Platform-agnostic design (one adapter file per platform)
+The V2 fan-out search system is **COMPLETE for TikTok** with verified benchmarks:
+
+| Target | Found | Accuracy | Duration |
+|--------|-------|----------|----------|
+| 100    | 100   | 100.0% ✅ | 22.6s   |
+| 500    | 500   | 100.0% ✅ | 30.5s   |
+| 1000   | 1186  | 118.6%   | 172.8s  |
+
+**Key features working:**
+- QStash fan-out with parallel workers
+- Two-checkpoint target capping (no overshoot for 100/500)
+- PostgreSQL row-level locking (`SELECT ... FOR UPDATE`)
+- Progressive results (users see data immediately)
+- Bio enrichment in parallel batches
 
 **Full architecture spec:** `@agent_docs/v2-fan-out-architecture.md`
 
 ---
 
-## Current Phase: Phase 5 - Platform Adapters
-
-### What Was Just Verified
-
-The v2 fan-out architecture is **FULLY WORKING** for TikTok:
-- ✅ Keyword expansion (1 keyword → 5 via AI)
-- ✅ Parallel search workers (5 concurrent QStash workers)
-- ✅ Progressive results (status updates in real-time)
-- ✅ Bio enrichment in parallel batches
-- ✅ Job completion detection
-- ✅ Found 230 creators from 100 target (exceeded!)
-- ✅ 100% enrichment rate
+## Current Phase: Add Instagram & YouTube Support
 
 ### What to Do Next
 
-1. **Create Instagram adapter**:
-   `lib/search-engine/v2/adapters/instagram.ts`
-   - Uses ScrapeCreators `/v1/instagram/reels/search`
-   - Bio comes with search results (no enrichment needed)
-   - ~200 lines
+1. **Create Instagram adapter** (~200 lines):
+   - File: `lib/search-engine/v2/adapters/instagram.ts`
+   - API: ScrapeCreators `/v1/instagram/reels/search`
+   - Key: Bio comes with search results (NO enrichment needed)
+   - Dedupe key: `owner.username`
 
-2. **Create YouTube adapter**:
-   `lib/search-engine/v2/adapters/youtube.ts`
-   - Uses ScrapeCreators `/v1/youtube/search` and `/v1/youtube/channel`
-   - REQUIRES enrichment for followers + bio
-   - ~250 lines
+2. **Create YouTube adapter** (~250 lines):
+   - File: `lib/search-engine/v2/adapters/youtube.ts`
+   - Search API: `/v1/youtube/search`
+   - Channel API: `/v1/youtube/channel`
+   - Key: REQUIRES enrichment for followers + bio
+   - Dedupe key: `channel.id`
 
-3. **Continue to Phase 6** (E2E Testing)
+3. **Update UI with radio buttons**:
+   - File: `app/components/campaigns/keyword-search/keyword-search-form.jsx`
+   - Wire to `/api/v2/dispatch` instead of legacy routes
+
+4. **Test all platforms** with benchmark script
 
 ---
 
@@ -64,42 +67,44 @@ The v2 fan-out architecture is **FULLY WORKING** for TikTok:
 | 2. Core Infrastructure | ✅ DONE | `job-tracker.ts`, `workers/types.ts` |
 | 3. Workers | ✅ DONE | `dispatch.ts`, `search-worker.ts`, `enrich-worker.ts` |
 | 4. API Routes | ✅ DONE | `/api/v2/dispatch`, `/api/v2/worker/*`, `/api/v2/status` |
-| 5. Adapters | ⬜ PENDING | `instagram.ts`, `youtube.ts` |
-| 6. E2E Testing | ⬜ PENDING | `scripts/test-v2-e2e.ts` |
-| 7. Cleanup | ⬜ PENDING | Delete old providers/routes |
+| 5. TikTok Adapter | ✅ DONE | `adapters/tiktok.ts` |
+| 6. Target Capping | ✅ DONE | Two-checkpoint system in `search-worker.ts` |
+| 7. Benchmarks | ✅ DONE | `scripts/test-v2-benchmark.ts` |
+| 8. Instagram Adapter | ⬜ PENDING | `adapters/instagram.ts` |
+| 9. YouTube Adapter | ⬜ PENDING | `adapters/youtube.ts` |
+| 10. UI Radio Buttons | ⬜ PENDING | `keyword-search-form.jsx` |
 
 ---
 
-## Key Architecture Decisions (FINAL)
+## Target Capping Implementation (For Reference)
 
-1. **Full replacement** - Old code deleted, not kept alongside
-2. **Platform = parameter** - Workers receive platform as string
-3. **Adapter = only difference** - One file per platform (~200 lines)
-4. **Billing preserved** - Same `validateCreatorSearch()`, `incrementCreatorCount()`
-5. **Skip truncated bio emails** - Only extract from enriched bios
+The two-checkpoint system that prevents overshooting:
+
+**Checkpoint 1** (Before API call):
+```typescript
+// In search-worker.ts:75-101
+const currentProgress = await tracker.getProgress();
+if (currentProgress.creatorsFound >= targetResults) {
+  return { skipped: true }; // Skip API call entirely
+}
+```
+
+**Checkpoint 2** (At DB save time):
+```typescript
+// In search-worker.ts:337-458
+const lockResult = await tx.execute(sql`
+  SELECT id, creators FROM scraping_results
+  WHERE job_id = ${jobId} FOR UPDATE
+`);
+const slotsLeft = targetResults - existingCreators.length;
+// Cap at slotsLeft when saving
+```
+
+**Key insight:** `FOR UPDATE` only locks existing rows, so we pre-create the `scraping_results` row during dispatch.
 
 ---
 
-## Files Changed (This Session - Dec 10)
-
-### New Files Created
-- `lib/search-engine/v2/core/job-tracker.ts` - Atomic counter updates, job status transitions
-- `lib/search-engine/v2/workers/types.ts` - QStash message types, validation helpers
-- `lib/search-engine/v2/workers/dispatch.ts` - Fan-out logic, keyword expansion
-- `lib/search-engine/v2/workers/search-worker.ts` - Single keyword processing
-- `lib/search-engine/v2/workers/enrich-worker.ts` - Batch bio enrichment
-- `lib/search-engine/v2/workers/index.ts` - Worker exports
-- `app/api/v2/dispatch/route.ts` - User-facing dispatch endpoint
-- `app/api/v2/worker/search/route.ts` - QStash search webhook
-- `app/api/v2/worker/enrich/route.ts` - QStash enrich webhook
-- `app/api/v2/status/route.ts` - Job status + results endpoint
-
-### Modified Files
-- `lib/search-engine/v2/index.ts` - Added job-tracker and workers exports
-
----
-
-## V2 API Endpoints Summary
+## API Endpoints Summary
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
@@ -110,42 +115,31 @@ The v2 fan-out architecture is **FULLY WORKING** for TikTok:
 
 ---
 
-## Previous Work (Dec 8-10)
+## Test Scripts
 
-Before the fan-out architecture, we built the v2 parallel pipeline:
+```bash
+# Run benchmark for all targets
+npx tsx scripts/test-v2-benchmark.ts
 
-- `lib/search-engine/v2/core/parallel-pipeline.ts` - Parallel enrichment (KEEP)
-- `lib/search-engine/v2/core/keyword-expander.ts` - AI expansion (KEEP)
-- `lib/search-engine/v2/adapters/tiktok.ts` - TikTok adapter (KEEP)
-
-This code is reused by the new worker system.
-
----
-
-## What NOT to Do
-
-- Don't modify old routes in `app/api/scraping/` - they'll be deleted
-- Don't add new providers to `lib/search-engine/providers/` - deprecated
-- Don't change billing logic in `lib/services/plan-validator.ts` - works as-is
+# Test single dispatch
+npx tsx scripts/test-v2-dispatch.ts --target=100 --keyword="fitness"
+```
 
 ---
 
-## Reference Documents
+## Benchmark Results (CSV)
 
-| Document | Purpose |
-|----------|---------|
-| `@agent_docs/v2-fan-out-architecture.md` | Full architecture spec, flow diagrams |
-| `@agent_docs/search-engine.md` | Current search system (for reference) |
-| `@agent_docs/billing-stripe.md` | Billing integration points |
-| `@agent_docs/database.md` | DB operations guide |
+Saved to: `scripts/v2-benchmark-2025-12-10T19-38-26-385Z.csv`
 
 ---
 
 ## Session Handoff Notes
 
-**For next session:**
-1. Read `@agent_docs/v2-fan-out-architecture.md` for adapter specs
-2. Create Instagram adapter (see "Instagram Adapter" section in spec)
-3. Create YouTube adapter (see "YouTube Adapter" section in spec)
-4. Test with TikTok first to verify the full flow works
-5. Update this file after each phase completion
+**For Claude Web session (next):**
+1. Create Instagram adapter following TikTok pattern
+2. Create YouTube adapter with enrichment method
+3. Update UI to use radio buttons + V2 dispatch
+4. Run benchmarks for all platforms
+5. Handoff prompt prepared in previous conversation
+
+**Reference the TikTok adapter** at `lib/search-engine/v2/adapters/tiktok.ts` as the template.

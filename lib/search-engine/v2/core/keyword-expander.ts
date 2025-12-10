@@ -19,8 +19,8 @@ import { LOG_PREFIX } from './config';
 // Constants
 // ============================================================================
 
-// Average unique creators per keyword (based on test data)
-const CREATORS_PER_KEYWORD = 25;
+// Average unique creators per keyword (based on test data: ~40-50 per keyword)
+const CREATORS_PER_KEYWORD = 45;
 
 // AI expansion settings
 const DEFAULT_EXPANSION_COUNT = 5;
@@ -100,25 +100,27 @@ export async function expandKeywordWithAI(
 			},
 			body: JSON.stringify({
 				model: 'deepseek/deepseek-chat',
-				temperature: 0.7,
-				max_tokens: 300,
+				temperature: 0.8,
+				max_tokens: 1000, // Increased for more keywords
 				messages: [
 					{
 						role: 'system',
-						content: `You are a TikTok marketing expert. Generate strategic TikTok search keywords to find creators in a niche. Return ONLY a JSON array of strings, no explanation.`,
+						content: `You are a TikTok marketing expert. Generate MANY strategic TikTok search keywords to find creators. Return ONLY a JSON array of strings with exactly the number requested.`,
 					},
 					{
 						role: 'user',
-						content: `Generate ${requestCount} TikTok search keywords for finding creators related to "${keyword}".
+						content: `Generate EXACTLY ${requestCount} unique TikTok search keywords for finding creators related to "${keyword}".
 
-Include:
-- The original keyword
-- Related niche terms
-- Trending hashtag variations
-- Specific sub-niches within the topic
-- Action phrases ("how to...", "best...", "top...")
+IMPORTANT: You MUST generate ${requestCount} different keywords. Include:
+- The original keyword "${keyword}"
+- Related niche terms (fitness -> gym, workout, exercise)
+- Sub-niches (fitness -> yoga, crossfit, weightlifting, pilates)
+- Trending hashtag variations (#fitnesstips, #gymlife)
+- Action phrases ("how to workout", "best fitness tips")
+- Audience-specific ("fitness for beginners", "home workout")
+- Platform-specific ("tiktok fitness", "viral workout")
 
-Return as JSON array: ["${keyword}", "variation1", "variation2", ...]`,
+Return as JSON array with ${requestCount} items: ["keyword1", "keyword2", ...]`,
 					},
 				],
 			}),
@@ -189,15 +191,16 @@ export async function generateContinuationKeywords(
 			},
 			body: JSON.stringify({
 				model: 'deepseek/deepseek-chat',
-				temperature: 0.7 + runNumber * 0.05, // Increase randomness each run
-				max_tokens: 300,
+				temperature: 0.8 + runNumber * 0.05, // Increase randomness each run
+				max_tokens: 800, // Increased for more keywords
 				messages: [
 					{
 						role: 'user',
-						content: `Generate ${count} NEW TikTok search keywords related to: "${originalKeywords.join(', ')}"
+						content: `Generate EXACTLY ${count} NEW TikTok search keywords related to: "${originalKeywords.join(', ')}"
 
-IMPORTANT: Do NOT include any of these already-tried keywords:
-${processedKeywords.slice(0, 30).join(', ')}
+IMPORTANT:
+1. Generate exactly ${count} keywords
+2. Do NOT include these already-tried keywords: ${processedKeywords.slice(0, 20).join(', ')}
 
 Generate DIFFERENT variations like:
 - Synonyms and related terms
@@ -205,8 +208,10 @@ Generate DIFFERENT variations like:
 - Popular hashtag variations
 - Trending phrases in this space
 - Action-oriented phrases ("how to...", "best...", "tips")
+- Audience segments ("for beginners", "advanced")
+- Time-based ("2024", "2025", "new")
 
-Return ONLY the keywords, one per line, no numbering or explanation.`,
+Return ONLY ${count} keywords, one per line, no numbering or explanation.`,
 					},
 				],
 			}),
@@ -224,7 +229,7 @@ Return ONLY the keywords, one per line, no numbering or explanation.`,
 			.split('\n')
 			.map((line: string) => line.trim())
 			.filter((line: string) => line.length > 2 && line.length < 100)
-			.filter((line: string) => !line.match(/^\d+[\.\)]/)) // Remove numbering
+			.filter((line: string) => !line.match(/^\d+[.)]/)) // Remove numbering
 			.filter((line: string) => !excludeSet.has(line.toLowerCase().trim()));
 
 		console.log(
@@ -315,7 +320,9 @@ export async function expandKeywordsForTarget(
 	const processedSet = new Set<string>();
 	const expandedKeywords: string[] = [];
 
-	console.log(`${LOG_PREFIX} Expanding keywords for target ${targetCreators} (need ~${keywordsNeeded} keywords)`);
+	console.log(
+		`${LOG_PREFIX} Expanding keywords for target ${targetCreators} (need ~${keywordsNeeded} keywords)`
+	);
 
 	// Start with original keywords
 	for (const kw of originalKeywords) {
@@ -325,15 +332,16 @@ export async function expandKeywordsForTarget(
 		}
 	}
 
-	// Expand each original keyword
+	// Expand each original keyword - request enough to meet target
 	for (const kw of originalKeywords) {
 		if (expandedKeywords.length >= keywordsNeeded) break;
 
-		const expanded = await expandKeywordWithAI(
-			kw,
-			config.keywordsPerExpansion,
-			Array.from(processedSet)
-		);
+		// Calculate how many more keywords we need
+		const remainingNeeded = keywordsNeeded - expandedKeywords.length;
+		// Request more than needed to account for duplicates/filtering
+		const requestCount = Math.min(Math.ceil(remainingNeeded * 1.5), 30);
+
+		const expanded = await expandKeywordWithAI(kw, requestCount, Array.from(processedSet));
 
 		for (const expKw of expanded) {
 			const normalized = expKw.toLowerCase().trim();
@@ -343,6 +351,37 @@ export async function expandKeywordsForTarget(
 			}
 			if (expandedKeywords.length >= keywordsNeeded) break;
 		}
+	}
+
+	// If still not enough, do additional expansion rounds
+	let expansionRun = 0;
+	while (expandedKeywords.length < keywordsNeeded && expansionRun < config.maxExpansionRuns) {
+		expansionRun++;
+		const remainingNeeded = keywordsNeeded - expandedKeywords.length;
+		const requestCount = Math.min(Math.ceil(remainingNeeded * 1.5), 20);
+
+		console.log(
+			`${LOG_PREFIX} Additional expansion run ${expansionRun}, need ${remainingNeeded} more keywords`
+		);
+
+		const moreKeywords = await generateContinuationKeywords(
+			originalKeywords,
+			Array.from(processedSet),
+			expansionRun,
+			requestCount
+		);
+
+		for (const kw of moreKeywords) {
+			const normalized = kw.toLowerCase().trim();
+			if (!processedSet.has(normalized)) {
+				expandedKeywords.push(kw);
+				processedSet.add(normalized);
+			}
+			if (expandedKeywords.length >= keywordsNeeded) break;
+		}
+
+		// Break if no new keywords generated
+		if (moreKeywords.length === 0) break;
 	}
 
 	console.log(
