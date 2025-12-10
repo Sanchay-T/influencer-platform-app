@@ -74,9 +74,10 @@ export default function KeywordSearchForm({ onSubmit }) {
 
   const getCreditsUsed = (count) => count / 100; // 1000 creators = 10 credits, etc.
 
+  // V2 API uses lowercase platform names
   const platformOptions = [
     { value: "tiktok", label: "TikTok" },
-    { value: "instagram_scrapecreators", label: "Instagram" },
+    { value: "instagram", label: "Instagram" },
     { value: "youtube", label: "YouTube" },
   ];
   const sliderMin = 100;
@@ -101,23 +102,22 @@ export default function KeywordSearchForm({ onSubmit }) {
                   <div key={platform.value} className="flex items-center">
                     <button
                       type="button"
-                      role="checkbox"
+                      role="radio"
                       aria-checked={isActive}
                       data-state={isActive ? 'checked' : 'unchecked'}
-                      value="on"
                       onClick={() => setSelectedPlatform(platform.value)}
-                      className="peer h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                      className="peer h-4 w-4 shrink-0 rounded-full border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center"
                     >
                       {isActive && (
-                        <span data-state="checked" className="flex items-center justify-center text-current pointer-events-none">
-                          <Check className="h-4 w-4" />
-                        </span>
+                        <span className="h-2.5 w-2.5 rounded-full bg-primary" />
                       )}
                     </button>
                     <input
                       aria-hidden="true"
                       tabIndex={-1}
-                      type="checkbox"
+                      type="radio"
+                      name="platform"
+                      value={platform.value}
                       className="sr-only"
                       checked={isActive}
                       readOnly
