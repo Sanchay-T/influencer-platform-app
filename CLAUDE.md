@@ -253,9 +253,10 @@ Commit prefixes: `fix:`, `feat:`, `refactor:`, `chore:`
 
 **Domain docs (read when relevant):**
 - @agent_docs/architecture.md — System overview, domain boundaries
+- @agent_docs/v2-fan-out-architecture.md — V2 search system (fan-out workers, QStash)
 - @agent_docs/onboarding-flow.md — 4-step onboarding, Stripe checkout
 - @agent_docs/billing-stripe.md — Plans, trials, webhooks
-- @agent_docs/search-engine.md — Keyword/Similar search providers
+- @agent_docs/search-engine.md — Keyword/Similar search providers (LEGACY - being replaced by v2)
 - @agent_docs/campaigns-lists.md — Campaign CRUD, List management
 - @agent_docs/database.md — Drizzle schema, query patterns
 - @agent_docs/api-patterns.md — Route conventions, auth guards
