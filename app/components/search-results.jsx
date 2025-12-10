@@ -19,6 +19,7 @@ import {
 	TableRow,
 } from '@/components/ui/table';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { extractViews } from '@/lib/search-engine/utils/filter-creators';
 import { cn } from '@/lib/utils';
 import { resolveCreatorPreview } from '@/lib/utils/media-preview';
 
@@ -625,20 +626,8 @@ const SearchResults = () => {
 									const engagementLabel =
 										creator.engagementRate != null ? `${creator.engagementRate}% ER` : null;
 									const raw = creator.raw ?? null;
-									const rawViewCount =
-										raw?.video?.stats?.playCount ??
-										raw?.video?.stats?.viewCount ??
-										raw?.video?.playCount ??
-										raw?.video?.views ??
-										raw?.stats?.playCount ??
-										raw?.stats?.viewCount ??
-										null;
-									const viewCountNumber =
-										typeof rawViewCount === 'number'
-											? rawViewCount
-											: Number.isFinite(Number(rawViewCount))
-												? Number(rawViewCount)
-												: null;
+									// Use shared extractViews utility to handle all platform data shapes
+									const viewCountNumber = extractViews(raw);
 									const viewCountLabel =
 										viewCountNumber != null ? Math.round(viewCountNumber).toLocaleString() : null;
 									const profileUrl =

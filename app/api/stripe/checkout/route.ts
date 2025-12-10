@@ -77,10 +77,24 @@ export async function POST(request: NextRequest) {
 		// CREATE CHECKOUT SESSION
 		// ─────────────────────────────────────────────────────────────
 
-		// Use request origin for redirects (so localhost stays on localhost)
-		const origin =
-			request.headers.get('origin') ||
-			request.headers.get('referer')?.split('/').slice(0, 3).join('/');
+		// Build origin URL for redirects with proper https:// scheme
+		// Priority: origin header > construct from host header > env var
+		let origin = request.headers.get('origin');
+		
+		if (!origin) {
+			// Fallback: construct from host header (Vercel provides x-forwarded-host)
+			const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
+			if (host) {
+				// Always use https for non-localhost
+				const protocol = host.includes('localhost') ? 'http' : 'https';
+				origin = `${protocol}://${host}`;
+			}
+		}
+		
+		// Ensure origin has a scheme (some edge cases may strip it)
+		if (origin && !origin.startsWith('http://') && !origin.startsWith('https://')) {
+			origin = `https://${origin}`;
+		}
 
 		const result = await CheckoutService.createCheckout({
 			userId,
