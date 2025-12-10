@@ -18,7 +18,8 @@ import {
 	Users,
 	X,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -27,6 +28,14 @@ import { structuredConsole } from '@/lib/logging/console-proxy';
 export default function MarketingLanding() {
 	const [activeStep, setActiveStep] = useState(1);
 	const { isSignedIn, isLoaded } = useAuth();
+	const router = useRouter();
+
+	// Auto-redirect to dashboard when user signs in via modal
+	useEffect(() => {
+		if (isLoaded && isSignedIn) {
+			router.push('/dashboard');
+		}
+	}, [isLoaded, isSignedIn, router]);
 
 	// Debug logging for auth state on landing page
 	if (process.env.NODE_ENV !== 'production') {
