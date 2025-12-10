@@ -466,15 +466,16 @@ scripts/
 
 ## Implementation Phases
 
-### Phase 1: Database Schema ⬜ NOT STARTED
+### Phase 1: Database Schema ✅ COMPLETE
 **Goal:** Add coordination columns to scraping_jobs
 
 **Files:**
-- [ ] `lib/db/schema.ts` - Add new columns
+- [x] `lib/db/schema.ts` - New columns added
+- [x] `supabase/migrations/0205_v2_fan_out_columns.sql` - Migration created
 
-**Schema Changes:**
+**Schema Changes (DONE):**
 ```typescript
-// Add to scrapingJobs table definition
+// Added to scrapingJobs table definition
 keywordsDispatched: integer('keywords_dispatched').default(0),
 keywordsCompleted: integer('keywords_completed').default(0),
 creatorsFound: integer('creators_found').default(0),
@@ -482,7 +483,7 @@ creatorsEnriched: integer('creators_enriched').default(0),
 enrichmentStatus: varchar('enrichment_status', { length: 20 }).default('pending'),
 ```
 
-**Human Action Required:** Run `npx drizzle-kit generate` and answer migration prompts
+**To Apply Migration:** Run `npx drizzle-kit migrate` (no prompts, fully automated)
 
 ---
 
