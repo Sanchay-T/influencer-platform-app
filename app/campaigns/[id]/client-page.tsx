@@ -199,7 +199,7 @@ const resolveScrapingEndpoint = (platform?: string) => {
       return '/api/scraping/instagram-v2'
     case 'instagram-similar':
     case 'instagram_similar':
-      return '/api/scraping/instagram'
+      return '/api/scraping/similar-discovery'
     case 'instagram':
       return '/api/scraping/instagram'
     case 'google-serp':
@@ -207,7 +207,7 @@ const resolveScrapingEndpoint = (platform?: string) => {
       return '/api/scraping/google-serp'
     case 'youtube-similar':
     case 'youtube_similar':
-      return '/api/scraping/youtube-similar'
+      return '/api/scraping/similar-discovery'
     case 'youtube':
       return '/api/scraping/youtube'
     default:

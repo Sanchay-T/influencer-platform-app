@@ -64,10 +64,9 @@ export function buildEndpoint(platformNormalized: string, hasTargetUsername: boo
   }
 
   if (hasTargetUsername) {
-    // Instagram similar now routes to v2 similar-discovery endpoint
+    // All similar searches now route to v2 similar-discovery endpoint (Influencers Club Discovery API)
     if (normalized === 'instagram') return `/api/scraping/similar-discovery?jobId=${jobId}`
-    if (normalized === 'youtube') return `/api/scraping/youtube-similar?jobId=${jobId}`
-    // TikTok similar uses v2 similar-discovery endpoint
+    if (normalized === 'youtube') return `/api/scraping/similar-discovery?jobId=${jobId}`
     if (normalized === 'tiktok') return `/api/scraping/similar-discovery?jobId=${jobId}`
     return null
   }
@@ -143,7 +142,7 @@ export function computeStage({
   // Handle similar_discovery platforms (v2)
   if (platformNormalized.startsWith('similar_discovery_')) {
     const targetPlatform = platformNormalized.replace('similar_discovery_', '')
-    const platformLabel = targetPlatform === 'tiktok' ? 'TikTok' : 'Instagram'
+    const platformLabel = targetPlatform === 'tiktok' ? 'TikTok' : targetPlatform === 'youtube' ? 'YouTube' : 'Instagram'
     if (percent < 30) return `Searching ${platformLabel} creator network`
     if (percent < 60) return 'Analysing engagement patterns'
     if (percent < 85) return 'Scoring profile relevance'

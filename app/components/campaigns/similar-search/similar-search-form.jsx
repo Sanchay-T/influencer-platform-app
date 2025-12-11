@@ -63,12 +63,8 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
     setSearchState({ status: 'searching', message: 'Starting search...' });
 
     try {
-      // Determine API endpoint based on platform
-      // YouTube uses dedicated youtube-similar endpoint
-      // Instagram and TikTok use the new v2 similar-discovery endpoint (Influencers Club Discovery API)
-      const apiEndpoint =
-        selectedPlatform === 'youtube' ? '/api/scraping/youtube-similar' :
-        '/api/scraping/similar-discovery';
+      // All platforms use the v2 similar-discovery endpoint (Influencers Club Discovery API)
+      const apiEndpoint = '/api/scraping/similar-discovery';
       structuredConsole.log(`🔄 [SIMILAR-SEARCH-FORM] Making API request to ${apiEndpoint}`);
 
       const response = await fetch(apiEndpoint, {
