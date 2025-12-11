@@ -57,10 +57,17 @@ export function flattenCreators(results: any) {
 export function buildEndpoint(platformNormalized: string, hasTargetUsername: boolean, jobId: string | undefined | null) {
   if (!jobId) return null
   const normalized = (platformNormalized || '').toLowerCase()
+
+  // Handle v2 similar discovery platforms (Influencers Club Discovery API)
+  if (normalized.startsWith('similar_discovery_')) {
+    return `/api/scraping/similar-discovery?jobId=${jobId}`
+  }
+
   if (hasTargetUsername) {
-    if (normalized === 'instagram') return `/api/scraping/instagram?jobId=${jobId}`
-    if (normalized === 'youtube') return `/api/scraping/youtube-similar?jobId=${jobId}`
-    // TikTok Similar removed - not supported
+    // All similar searches now route to v2 similar-discovery endpoint (Influencers Club Discovery API)
+    if (normalized === 'instagram') return `/api/scraping/similar-discovery?jobId=${jobId}`
+    if (normalized === 'youtube') return `/api/scraping/similar-discovery?jobId=${jobId}`
+    if (normalized === 'tiktok') return `/api/scraping/similar-discovery?jobId=${jobId}`
     return null
   }
   switch (normalized) {
@@ -130,6 +137,16 @@ export function computeStage({
     if (percent < 35) return `Finding creators similar to ${keyword}`
     if (percent < 70) return 'Analysing profile graph'
     return 'Finalising similar creator list'
+  }
+
+  // Handle similar_discovery platforms (v2)
+  if (platformNormalized.startsWith('similar_discovery_')) {
+    const targetPlatform = platformNormalized.replace('similar_discovery_', '')
+    const platformLabel = targetPlatform === 'tiktok' ? 'TikTok' : targetPlatform === 'youtube' ? 'YouTube' : 'Instagram'
+    if (percent < 30) return `Searching ${platformLabel} creator network`
+    if (percent < 60) return 'Analysing engagement patterns'
+    if (percent < 85) return 'Scoring profile relevance'
+    return `Packaging ${platformLabel} similar creators`
   }
 
   switch (platformNormalized) {

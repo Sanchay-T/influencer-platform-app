@@ -4,7 +4,7 @@
  * POST: Create a job to find creators similar to a given username
  * GET: Get job status and results
  *
- * Supports Instagram and TikTok platforms via Influencers Club Discovery API.
+ * Supports Instagram, TikTok, and YouTube platforms via Influencers Club Discovery API.
  */
 
 import { structuredConsole } from '@/lib/logging/console-proxy';
@@ -19,7 +19,7 @@ import { getWebhookUrl } from '@/lib/utils/url-utils';
 import { normalizePageParams, paginateCreators } from '@/lib/search-engine/utils/pagination';
 
 const TIMEOUT_MINUTES = 30;
-const VALID_PLATFORMS = ['instagram', 'tiktok'] as const;
+const VALID_PLATFORMS = ['instagram', 'tiktok', 'youtube'] as const;
 type ValidPlatform = (typeof VALID_PLATFORMS)[number];
 
 export async function POST(req: NextRequest) {
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     // Validate platform
     if (!platform || !VALID_PLATFORMS.includes(platform as ValidPlatform)) {
       return NextResponse.json(
-        { error: 'platform must be "instagram" or "tiktok"' },
+        { error: 'platform must be "instagram", "tiktok", or "youtube"' },
         { status: 400 }
       );
     }

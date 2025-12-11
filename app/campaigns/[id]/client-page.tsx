@@ -175,6 +175,11 @@ const buildAggregatedResults = (
 const resolveScrapingEndpoint = (platform?: string) => {
   const normalized = (platform || '').toLowerCase()
 
+  // Handle v2 similar discovery platforms (Influencers Club Discovery API)
+  if (normalized.startsWith('similar_discovery_')) {
+    return '/api/scraping/similar-discovery'
+  }
+
   switch (normalized) {
     case 'instagram_scrapecreators':
       return '/api/scraping/instagram-scrapecreators'
@@ -194,7 +199,7 @@ const resolveScrapingEndpoint = (platform?: string) => {
       return '/api/scraping/instagram-v2'
     case 'instagram-similar':
     case 'instagram_similar':
-      return '/api/scraping/instagram'
+      return '/api/scraping/similar-discovery'
     case 'instagram':
       return '/api/scraping/instagram'
     case 'google-serp':
@@ -202,7 +207,7 @@ const resolveScrapingEndpoint = (platform?: string) => {
       return '/api/scraping/google-serp'
     case 'youtube-similar':
     case 'youtube_similar':
-      return '/api/scraping/youtube-similar'
+      return '/api/scraping/similar-discovery'
     case 'youtube':
       return '/api/scraping/youtube'
     default:
@@ -213,16 +218,25 @@ const resolveScrapingEndpoint = (platform?: string) => {
 /**
  * Converts internal platform identifiers to user-friendly display names.
  * e.g., "instagram_scrapecreators" → "Instagram"
+ * e.g., "similar_discovery_tiktok" → "TikTok"
  */
 const formatPlatformDisplay = (platform?: string | null): string => {
   if (!platform) return '—'
   const normalized = platform.toLowerCase()
-  
+
+  // Handle v2 similar discovery platforms
+  if (normalized.startsWith('similar_discovery_')) {
+    const targetPlatform = normalized.replace('similar_discovery_', '')
+    if (targetPlatform === 'tiktok') return 'TikTok'
+    if (targetPlatform === 'instagram') return 'Instagram'
+    if (targetPlatform === 'youtube') return 'YouTube'
+  }
+
   if (normalized.startsWith('instagram')) return 'Instagram'
   if (normalized.startsWith('youtube') || normalized === 'yt') return 'YouTube'
   if (normalized.startsWith('tiktok') || normalized === 'tt') return 'TikTok'
   if (normalized.includes('google') || normalized.includes('serp')) return 'Google SERP'
-  
+
   // Fallback: capitalize first letter
   return platform.charAt(0).toUpperCase() + platform.slice(1)
 }

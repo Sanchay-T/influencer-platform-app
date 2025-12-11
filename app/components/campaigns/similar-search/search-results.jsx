@@ -31,7 +31,12 @@ const VIEW_MODE_META = {
 
 const normalizePlatform = (value) => {
   if (!value) return '';
-  return value.toString().toLowerCase();
+  const normalized = value.toString().toLowerCase();
+  // Handle similar_discovery_* platforms (v2)
+  if (normalized.startsWith('similar_discovery_')) {
+    return normalized.replace('similar_discovery_', '');
+  }
+  return normalized;
 };
 
 const extractEmails = (creator) => {
