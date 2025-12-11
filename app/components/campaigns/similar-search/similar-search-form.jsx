@@ -64,15 +64,22 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
 
     try {
       // Determine API endpoint based on platform
+      // YouTube uses dedicated youtube-similar endpoint
+      // Instagram and TikTok use the new v2 similar-discovery endpoint (Influencers Club Discovery API)
       const apiEndpoint =
         selectedPlatform === 'youtube' ? '/api/scraping/youtube-similar' :
-        '/api/scraping/instagram';
+        '/api/scraping/similar-discovery';
       structuredConsole.log(`🔄 [SIMILAR-SEARCH-FORM] Making API request to ${apiEndpoint}`);
-      
+
       const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, campaignId })
+        body: JSON.stringify({
+          username,
+          campaignId,
+          platform: selectedPlatform, // Pass platform for similar-discovery endpoint
+          targetResults: 100 // Default target for similar search
+        })
       });
 
       structuredConsole.log('📥 [SIMILAR-SEARCH-FORM] API response status:', response.status);
@@ -97,7 +104,8 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
         });
       }
       
-      toast.success(`${selectedPlatform === 'youtube' ? 'YouTube' : 'Instagram'} similar search started!`);
+      const platformLabel = selectedPlatform === 'youtube' ? 'YouTube' : selectedPlatform === 'tiktok' ? 'TikTok' : 'Instagram';
+      toast.success(`${platformLabel} similar search started!`);
       
     } catch (error) {
       structuredConsole.error('💥 [SIMILAR-SEARCH-FORM] Error during submission:', error);
@@ -131,7 +139,7 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
             <label className="text-sm font-medium">Platform</label>
             <div className="flex flex-wrap gap-4">
               {[
-                { value: 'tiktok', label: 'TikTok', disabled: true, badge: 'Coming Soon' },
+                { value: 'tiktok', label: 'TikTok' },
                 { value: 'instagram', label: 'Instagram' },
                 { value: 'youtube', label: 'YouTube' },
               ].map((platform) => {
@@ -145,14 +153,7 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
                       aria-checked={isActive}
                       data-state={isActive ? 'checked' : 'unchecked'}
                       value="on"
-                      disabled={platform.disabled}
-                      onClick={() => {
-                        if (platform.disabled) {
-                          toast.success('TikTok similar search is coming soon. Stay tuned!');
-                          return;
-                        }
-                        setSelectedPlatform(platform.value);
-                      }}
+                      onClick={() => setSelectedPlatform(platform.value)}
                       className="peer h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                     >
                       {isActive && (
@@ -169,14 +170,7 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
                       checked={isActive}
                       readOnly
                     />
-                    <span className="ml-2">
-                      {platform.label}
-                      {platform.badge && (
-                        <span className="ml-2 rounded-full bg-zinc-700/60 px-2 py-0.5 text-[11px] uppercase tracking-wide text-zinc-200">
-                          {platform.badge}
-                        </span>
-                      )}
-                    </span>
+                    <span className="ml-2">{platform.label}</span>
                   </div>
                 );
               })}
@@ -185,13 +179,14 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
 
           <div className="space-y-4">
             <label className="text-sm font-medium">
-              {selectedPlatform === 'youtube' ? 'YouTube' : 'Instagram'} Username
+              {selectedPlatform === 'youtube' ? 'YouTube' : selectedPlatform === 'tiktok' ? 'TikTok' : 'Instagram'} Username
             </label>
             <Input
               value={username}
               onChange={handleUsernameChange}
               placeholder={
                 selectedPlatform === 'youtube' ? 'e.g. mkbhd' :
+                selectedPlatform === 'tiktok' ? 'e.g. charlidamelio' :
                 'e.g. gainsbybrains'
               }
               required
