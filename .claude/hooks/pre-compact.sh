@@ -1,59 +1,71 @@
 #!/bin/bash
 # ============================================================================
-# PRE-COMPACT HOOK — Agent Memory Persistence
+# PRE-COMPACT — Save State Before Context Clears
 # ============================================================================
-# This hook runs before context compaction (auto or manual /compact).
-# It marks the monologue.md file with a timestamp so the next agent instance
-# knows exactly when context was cleared and can continue seamlessly.
+# Uses SONNET to update:
+# 1. tasks.md — Checklist + exact next action (PRIMARY)
+# 2. monologue.md — Just adds compaction marker (SECONDARY)
+#
+# The agent after compact reads tasks.md to know exactly what to do.
 # ============================================================================
 
-set -e
-
-# Get project root (where .claude folder lives)
 PROJECT_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+TASKS="$PROJECT_ROOT/agent_docs/tasks.md"
 MONOLOGUE="$PROJECT_ROOT/agent_docs/monologue.md"
 CURRENT_TASK="$PROJECT_ROOT/agent_docs/current-task.md"
+NOW=$(date "+%b %d, %Y — %I:%M %p")
 
-# Timestamp for the compaction marker
-TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
-DATE_HEADER=$(date "+%b %d, %Y — %I:%M %p")
+# Parse trigger
+TRIGGER=$(cat | grep -o '"trigger":\s*"[^"]*"' | sed 's/.*: *"//;s/"$//' || echo "unknown")
 
-# Read trigger type from stdin (JSON input from Claude Code)
-if command -v jq &> /dev/null; then
-    INPUT=$(cat)
-    TRIGGER=$(echo "$INPUT" | jq -r '.trigger // "unknown"')
-    CUSTOM_MSG=$(echo "$INPUT" | jq -r '.custom_instructions // ""')
-else
-    TRIGGER="unknown"
-    CUSTOM_MSG=""
+# Gather context
+TASKS_CONTENT=$(cat "$TASKS" 2>/dev/null)
+CURRENT_TASK_CONTENT=$(head -100 "$CURRENT_TASK" 2>/dev/null)
+RECENT_COMMITS=$(cd "$PROJECT_ROOT" && git log --oneline -10 2>/dev/null)
+MODIFIED_FILES=$(cd "$PROJECT_ROOT" && git status --porcelain 2>/dev/null | head -30)
+
+# Use SONNET to update tasks.md
+if command -v claude &> /dev/null; then
+  claude -p "CRITICAL: Context is about to clear. Update the task state so the next agent knows exactly what to do.
+
+## Update this file: $TASKS
+
+## Current State of tasks.md:
+$TASKS_CONTENT
+
+## Recent Context:
+
+### Modified Files (uncommitted work):
+$MODIFIED_FILES
+
+### Recent Commits:
+$RECENT_COMMITS
+
+### Current Task Details:
+$CURRENT_TASK_CONTENT
+
+## Your Job:
+1. Update the **Checklist** — Mark any completed items with [x]
+2. Update **Next Action** — Write the EXACT next step (file to open, function to edit, what to do)
+3. Update **Context** section — Branch, blockers, anything the next agent needs
+4. Update the **Updated:** date to: $NOW
+
+## Rules:
+- Be SPECIFIC in Next Action (file paths, line numbers, function names)
+- The next agent has ZERO memory — tell them exactly what to do
+- Keep the checklist structure intact
+- Use Edit tool to update the file" \
+    --model sonnet --allowedTools "Edit,Read" --max-turns 5 2>/dev/null || true
 fi
 
-# Append compaction marker to monologue
-if [ -f "$MONOLOGUE" ]; then
-    cat >> "$MONOLOGUE" << EOF
+# Add compaction marker to monologue (simple, no AI needed)
+[ -f "$MONOLOGUE" ] && cat >> "$MONOLOGUE" << EOF
 
 ---
-
-### Context Compacted — $DATE_HEADER
-
+### Context Compacted — $NOW
 **Trigger:** $TRIGGER
-**Timestamp:** $TIMESTAMP
+*State saved to tasks.md. Read it to continue.*
+
 EOF
 
-    # Add custom instructions if provided (from /compact "message")
-    if [ -n "$CUSTOM_MSG" ] && [ "$CUSTOM_MSG" != "" ]; then
-        echo "**User note:** $CUSTOM_MSG" >> "$MONOLOGUE"
-    fi
-
-    echo "" >> "$MONOLOGUE"
-    echo "*The session above was interrupted. Next agent: Read 'Active Context' section above, then check current-task.md for immediate next steps.*" >> "$MONOLOGUE"
-    echo "" >> "$MONOLOGUE"
-fi
-
-# Output success message for Claude Code
-cat << 'EOF'
-{
-  "continue": true,
-  "systemMessage": "Context compacting. Monologue updated with timestamp. Next session will read agent_docs/monologue.md for continuity."
-}
-EOF
+echo '{"continue":true,"systemMessage":"✅ State saved to tasks.md"}'

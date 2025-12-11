@@ -6,21 +6,68 @@ You're working on an influencer discovery platform for businesses to find, organ
 
 ## Session Continuity
 
-**If you just started or your context was cleared:**
+**⚠️ CRITICAL — If you don't remember what you were doing, READ THIS:**
 
-Your memory persists in files. Before doing anything:
+```
+┌─────────────────────────────────────────────────┐
+│  YOUR MEMORY LIVES IN: agent_docs/tasks.md      │
+│                                                 │
+│  Read it NOW if you have no context.            │
+│  It has your checklist + exact next action.     │
+└─────────────────────────────────────────────────┘
+```
 
-1. **Read `@agent_docs/monologue.md`** — Your previous self's narrative: what was happening, why, key decisions
-2. **Read `@agent_docs/current-task.md`** — Tactical next steps: exactly what to do next
-3. **Check for compaction markers** — If monologue.md has "Context Compacted" entries, you're continuing interrupted work
+### Memory System
 
-**During your session:**
+| File/Folder | What | When |
+|-------------|------|------|
+| `agent_docs/tasks.md` | **Checklist + Next Action** | Read FIRST after compact |
+| `agent_docs/current-task.md` | Full PRD/spec | When you need details |
+| `agent_docs/templates/` | Reusable patterns | Before starting similar work |
+| `agent_docs/archive/` | Completed tasks | Reference for past approaches |
+| `agent_docs/monologue.md` | Audit trail | Rarely |
 
-- Update `monologue.md` at key milestones (completed phases, major decisions)
-- Update `current-task.md` when tasks complete
-- The PreCompact hook will timestamp when context clears
+### How It Works
 
-**The goal:** Seamless continuity. The next agent instance should feel like it's reading a handoff note from itself.
+1. **PreCompact hook (Sonnet)** saves your state to `tasks.md` before context clears
+2. After compact, you start fresh — no automatic memory
+3. **You MUST read `tasks.md`** to know what to do next
+
+### During Your Session
+
+- Check off items in `tasks.md` as you complete them
+- Update "Next Action" when you finish a step
+- The PreCompact hook will save state automatically
+
+### Task Lifecycle Commands
+
+| Command | What It Does |
+|---------|--------------|
+| `/new [description]` | Generate PRD + task from user request |
+| `/done` | Archive current task, extract template |
+| `/status` | Show current progress |
+
+### Code Annotations
+
+Use these in code to inject context (see `templates/_code-annotations.md`):
+- `@context` — Why this exists
+- `@why` — Non-obvious decisions
+- `@gotcha` — Edge cases, pitfalls
+- `@todo(TASK-X)` — Linked to task
+- `@see` — Reference to docs
+
+### Delegation (Subagents)
+
+**⚠️ Before using Task tool, read:** `agent_docs/delegation.md`
+
+Quick rules:
+- Only delegate tasks marked `*(delegate)*` in tasks.md
+- Always tell subagent: "Read agent_docs/tasks.md first"
+- Subagents report back — YOU update tasks.md
+
+### The Goal
+
+Don't try to "remember." Read `tasks.md` for what to do, check `templates/` for how to do it.
 
 ## Tech Stack
 
@@ -213,6 +260,8 @@ You can test API endpoints without Clerk auth using the test auth system. Use pr
 - "Verify campaign creation after my fix"
 - "Debug why Instagram search returns 403"
 
+**E2E Testing with Real Clerk Auth:** Run `npx tsx testing/api-suite/sandbox/e2e-clerk-sandbox.ts` for true E2E tests using real Clerk JWT tokens (creates user, runs tests, cleans up).
+
 **Before claiming done:** Lint → Type check → Test the feature → Tell the user how to verify in UI.
 
 (Context updates happen automatically with each commit — see Git Workflow below.)
@@ -266,8 +315,9 @@ Commit prefixes: `fix:`, `feat:`, `refactor:`, `chore:`
 ## Key References
 
 **Your memory (read first):**
-- @agent_docs/current-task.md — What you're working on NOW (update every commit)
-- @agent_docs/session-history/YYYY-MM.md — What you did BEFORE (append before merge)
+- @agent_docs/tasks.md — Checklist + next action (PRIMARY)
+- @agent_docs/current-task.md — Full PRD/spec for current task
+- @agent_docs/delegation.md — When/how to use subagents
 
 **Domain docs (read when relevant):**
 - @agent_docs/architecture.md — System overview, domain boundaries
