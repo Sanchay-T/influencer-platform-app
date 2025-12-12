@@ -12,7 +12,7 @@
 **Status:** 🟡 IN PROGRESS
 **Branch:** `UAT`
 **Started:** Dec 12, 2025
-**Updated:** Dec 12, 2025 — 5:45 PM
+**Updated:** Dec 12, 2025 — 7:30 PM
 
 ### Goal
 Systematically reduce tech debt identified in codebase audit. Break up monolithic files, clean up legacy code, improve maintainability.
@@ -20,9 +20,9 @@ Systematically reduce tech debt identified in codebase audit. Break up monolithi
 ### Fact-Checked Audit Results (Dec 12, 2025)
 | File | Lines | Status |
 |------|-------|--------|
-| `client-page.tsx` | 1574 | ❌ Needs refactor (NEXT) |
+| `client-page.tsx` | 417 | ✅ REFACTORED (was 1588, 74% reduction) |
 | `similar-search/search-results.jsx` | 319 | ✅ REFACTORED |
-| `list-detail-client.tsx` | 1123 | ❌ Needs refactor |
+| `list-detail-client.tsx` | 1123 | ❌ Needs refactor (NEXT) |
 | `keyword-search/search-results.jsx` | 480 | ✅ REFACTORED |
 | `marketing-landing.tsx` | 1312 | ⚠️ Low priority |
 | Legacy providers (7 files) | ~900 each | ❌ Can be deleted after V2 verified |
@@ -44,70 +44,61 @@ Systematically reduce tech debt identified in codebase audit. Break up monolithi
   - [x] Fix Instagram similar search calling wrong API (`/api/scraping/instagram` → `/api/scraping/similar-discovery`)
   - [x] Fix campaign detail page showing wrong results view (checked `campaign.searchType` instead of `selectedJob` type)
   - [x] Added `isSimilarSearchJob()` helper to properly detect job type by platform
-- [ ] **Phase 2: client-page.tsx Refactor** ⭐ READY TO START
-  - [ ] Audit state and identify server vs client split
-  - [ ] Extract hooks for data fetching
+- [x] **Phase 2: client-page.tsx Refactor** ✅ COMPLETE
+  - [x] Extract types to `types/campaign-page.ts`
+  - [x] Extract helpers to `utils/campaign-helpers.ts`
+  - [x] Extract state to `hooks/useCampaignJobs.ts`
+  - [x] Extract RunRail, RunSummary, ActivityLog components
+  - [x] Target: 1588 → 417 lines (74% reduction) ✅
+- [ ] **Phase 3: list-detail-client.tsx Refactor** ⭐ READY TO START
+  - [ ] Analyze state and extract hooks
   - [ ] Extract sub-components
-  - [ ] Target: 1574 → ~400 lines
-- [ ] **Phase 3: Legacy Cleanup**
+  - [ ] Target: 1123 → ~400 lines
+- [ ] **Phase 4: Legacy Cleanup**
   - [ ] Verify V2 covers all use cases
   - [ ] Remove legacy providers from runner.ts imports
   - [ ] Delete legacy provider files
-- [ ] **Phase 4: Console.log Cleanup**
+- [ ] **Phase 5: Console.log Cleanup**
   - [ ] Replace 51 console.logs in lib/search-engine/ with structured logging
 
 ### Next Action
 ```
-⚠️ UNCOMMITTED WORK - Commit first, then proceed
+READY: Start list-detail-client.tsx refactor (1123 lines)
 
-You have ~40+ uncommitted files from the similar-search refactor + bug fixes.
-
-STEP 1: Commit the current work
-```bash
-git add -A && git commit -m "refactor: similar-search extraction + bug fixes (742→319 lines)
-
-- Extract useSimilarCreatorSearch hook
-- Extract transform-rows utils
-- Extract SimilarSearchHeader component
-- Fix Instagram similar search API endpoint
-- Fix campaign detail page results view detection
-- Add isSimilarSearchJob() helper" && git push origin UAT
-```
-
-STEP 2: Start client-page.tsx refactor (1574 lines)
-1. Read: app/campaigns/[id]/client-page.tsx
+1. Read: app/lists/[id]/_components/list-detail-client.tsx
 2. Analyze:
-   - What state can move to server components?
-   - What hooks can be extracted?
+   - What state can be extracted to hooks?
    - What UI components can be extracted?
-3. Follow the same pattern as keyword-search/similar-search:
-   - Create hooks/ folder for data fetching
-   - Create components/ folder for UI pieces
+3. Follow the same pattern as client-page.tsx:
+   - Create types/, utils/, hooks/, components/ folders
    - Main file becomes orchestrator (~400 lines)
 ```
 
 ### Key Files
 | Purpose | File |
 |---------|------|
-| Just fixed | `app/components/campaigns/similar-search/similar-search-form.jsx` (API endpoint) |
-| Just fixed | `app/campaigns/[id]/client-page.tsx` (job type detection) |
-| Refactored | `app/components/campaigns/similar-search/search-results.jsx` |
-| Next target | `app/campaigns/[id]/client-page.tsx` |
-| Lists page | `app/lists/[id]/_components/list-detail-client.tsx` |
+| Refactored | `app/campaigns/[id]/client-page.tsx` (417 lines) |
+| Refactored | `app/components/campaigns/similar-search/search-results.jsx` (319 lines) |
+| Refactored | `app/components/campaigns/keyword-search/search-results.jsx` (480 lines) |
+| Next target | `app/lists/[id]/_components/list-detail-client.tsx` (1123 lines) |
 
 ### Context
 - **Session Summary:**
   1. Refactored similar-search (742 → 319 lines)
-  2. Found bug: Instagram similar search called wrong API
-  3. Found bug: Campaign page showed wrong results view for mixed runs
-  4. Fixed both bugs
+  2. Fixed bug: Instagram similar search called wrong API
+  3. Fixed bug: Campaign page showed wrong results view
+  4. Refactored client-page.tsx (1588 → 417 lines, 74% reduction)
 - **Branch:** `UAT`
 - **Files Created This Session:**
-  - `similar-search/hooks/useSimilarCreatorSearch.ts` - state management
-  - `similar-search/utils/transform-rows.ts` - row transformation
-  - `similar-search/components/SimilarSearchHeader.tsx` - header UI
-  - Added `resolveInitials` to shared `keyword-search/utils/creator-utils.ts`
-  - Added `isSimilarSearchJob()` helper to `client-page.tsx`
+  - `similar-search/hooks/useSimilarCreatorSearch.ts`
+  - `similar-search/utils/transform-rows.ts`
+  - `similar-search/components/SimilarSearchHeader.tsx`
+  - `campaigns/[id]/types/campaign-page.ts`
+  - `campaigns/[id]/utils/campaign-helpers.ts`
+  - `campaigns/[id]/hooks/useCampaignJobs.ts`
+  - `campaigns/[id]/components/RunRail.tsx`
+  - `campaigns/[id]/components/RunSummary.tsx`
+  - `campaigns/[id]/components/ActivityLog.tsx`
 
 ---
 
@@ -125,6 +116,7 @@ STEP 2: Start client-page.tsx refactor (1574 lines)
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| — | client-page.tsx Refactor (1588→417 lines) | Dec 12, 2025 |
 | — | Bug: Instagram similar search wrong API | Dec 12, 2025 |
 | — | Bug: Campaign page wrong results view | Dec 12, 2025 |
 | — | Similar-Search Refactor (742→319 lines) | Dec 12, 2025 |
@@ -137,4 +129,4 @@ STEP 2: Start client-page.tsx refactor (1574 lines)
 
 ---
 
-*Last updated: Dec 12, 2025 4:30 PM*
+*Last updated: Dec 12, 2025 7:30 PM*
