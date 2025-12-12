@@ -67,13 +67,17 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
 			const apiEndpoint =
 				selectedPlatform === 'youtube'
 					? '/api/scraping/youtube-similar'
-					: '/api/scraping/instagram';
+					: '/api/scraping/similar-discovery';
 			structuredConsole.log(`🔄 [SIMILAR-SEARCH-FORM] Making API request to ${apiEndpoint}`);
 
 			const response = await fetch(apiEndpoint, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ username, campaignId }),
+				body: JSON.stringify({
+					username,
+					campaignId,
+					platform: selectedPlatform,
+				}),
 			});
 
 			structuredConsole.log('📥 [SIMILAR-SEARCH-FORM] API response status:', response.status);

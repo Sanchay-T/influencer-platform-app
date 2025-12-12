@@ -238,3 +238,26 @@ export const formatFollowers = (value: number | string | null | undefined): stri
 
 	return Math.round(numeric).toLocaleString();
 };
+
+/**
+ * Resolves initials from display name or username.
+ * Used for avatar fallback when no image is available.
+ */
+export const resolveInitials = (
+	displayName: string | null | undefined,
+	username: string | null | undefined
+): string => {
+	const source = displayName || username || '';
+	const trimmed = source.trim();
+	if (!trimmed) {
+		return '??';
+	}
+	const parts = trimmed.split(/[\s_@.-]+/).filter(Boolean);
+	if (parts.length === 0) {
+		return trimmed.slice(0, 2).toUpperCase();
+	}
+	if (parts.length === 1) {
+		return parts[0].slice(0, 2).toUpperCase();
+	}
+	return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+};

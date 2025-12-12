@@ -33,6 +33,7 @@ export {
 	normalizeEmailList,
 	normalizeHandleValue,
 	normalizePlatformValue,
+	resolveInitials,
 } from './creator-utils';
 // Email handlers
 export {

@@ -12,7 +12,7 @@
 **Status:** 🟡 IN PROGRESS
 **Branch:** `UAT`
 **Started:** Dec 12, 2025
-**Updated:** Dec 12, 2025 — 12:30 PM
+**Updated:** Dec 12, 2025 — 5:45 PM
 
 ### Goal
 Systematically reduce tech debt identified in codebase audit. Break up monolithic files, clean up legacy code, improve maintainability.
@@ -20,8 +20,8 @@ Systematically reduce tech debt identified in codebase audit. Break up monolithi
 ### Fact-Checked Audit Results (Dec 12, 2025)
 | File | Lines | Status |
 |------|-------|--------|
-| `client-page.tsx` | 1574 | ❌ Needs refactor |
-| `similar-search/search-results.jsx` | 742 | ❌ Needs refactor |
+| `client-page.tsx` | 1574 | ❌ Needs refactor (NEXT) |
+| `similar-search/search-results.jsx` | 319 | ✅ REFACTORED |
 | `list-detail-client.tsx` | 1123 | ❌ Needs refactor |
 | `keyword-search/search-results.jsx` | 480 | ✅ REFACTORED |
 | `marketing-landing.tsx` | 1312 | ⚠️ Low priority |
@@ -35,12 +35,16 @@ Systematically reduce tech debt identified in codebase audit. Break up monolithi
   - [x] Audit console.log usage (86 raw vs 995 structured - 92% adoption)
   - [x] Audit legacy vs V2 coexistence (all 3 platforms have both)
   - [x] Verify keyword-search refactor status (DONE - 480 lines now)
-- [ ] **Phase 1: similar-search Refactor** ⭐ START HERE
-  - [ ] Extract components (reuse patterns from keyword-search)
-  - [ ] Extract hooks (useCreatorSearch pattern)
-  - [ ] Extract utils
-  - [ ] Target: 742 → ~300 lines
-- [ ] **Phase 2: client-page.tsx Refactor**
+- [x] **Phase 1: similar-search Refactor** ✅ COMPLETE
+  - [x] Extract components (SimilarSearchHeader.tsx)
+  - [x] Extract hooks (useSimilarCreatorSearch.ts)
+  - [x] Extract utils (transform-rows.ts)
+  - [x] Target: 742 → 319 lines ✅
+- [x] **Bug Fixes Found During Testing** ✅ COMPLETE
+  - [x] Fix Instagram similar search calling wrong API (`/api/scraping/instagram` → `/api/scraping/similar-discovery`)
+  - [x] Fix campaign detail page showing wrong results view (checked `campaign.searchType` instead of `selectedJob` type)
+  - [x] Added `isSimilarSearchJob()` helper to properly detect job type by platform
+- [ ] **Phase 2: client-page.tsx Refactor** ⭐ READY TO START
   - [ ] Audit state and identify server vs client split
   - [ ] Extract hooks for data fetching
   - [ ] Extract sub-components
@@ -54,43 +58,56 @@ Systematically reduce tech debt identified in codebase audit. Break up monolithi
 
 ### Next Action
 ```
-START: Refactor similar-search/search-results.jsx
+⚠️ UNCOMMITTED WORK - Commit first, then proceed
 
-This file needs the same treatment keyword-search got.
+You have ~40+ uncommitted files from the similar-search refactor + bug fixes.
 
-1. Read: app/components/campaigns/similar-search/search-results.jsx (742 lines)
+STEP 1: Commit the current work
+```bash
+git add -A && git commit -m "refactor: similar-search extraction + bug fixes (742→319 lines)
 
-2. Compare to keyword-search structure:
-   - keyword-search/components/ (12 extracted components)
-   - keyword-search/hooks/ (6 extracted hooks)
-   - keyword-search/utils/ (7 extracted utilities)
+- Extract useSimilarCreatorSearch hook
+- Extract transform-rows utils
+- Extract SimilarSearchHeader component
+- Fix Instagram similar search API endpoint
+- Fix campaign detail page results view detection
+- Add isSimilarSearchJob() helper" && git push origin UAT
+```
 
-3. Create parallel structure for similar-search:
-   - similar-search/components/
-   - similar-search/hooks/
-   - similar-search/utils/
-
-4. Extract in this order:
-   a. Utils first (pure functions, no React)
-   b. Hooks second (stateful logic)
-   c. Components last (UI pieces)
-
-5. Target: Get similar-search down to ~300 lines orchestrator
+STEP 2: Start client-page.tsx refactor (1574 lines)
+1. Read: app/campaigns/[id]/client-page.tsx
+2. Analyze:
+   - What state can move to server components?
+   - What hooks can be extracted?
+   - What UI components can be extracted?
+3. Follow the same pattern as keyword-search/similar-search:
+   - Create hooks/ folder for data fetching
+   - Create components/ folder for UI pieces
+   - Main file becomes orchestrator (~400 lines)
 ```
 
 ### Key Files
 | Purpose | File |
 |---------|------|
-| Current target | `app/components/campaigns/similar-search/search-results.jsx` |
-| Reference (already refactored) | `app/components/campaigns/keyword-search/search-results.jsx` |
+| Just fixed | `app/components/campaigns/similar-search/similar-search-form.jsx` (API endpoint) |
+| Just fixed | `app/campaigns/[id]/client-page.tsx` (job type detection) |
+| Refactored | `app/components/campaigns/similar-search/search-results.jsx` |
 | Next target | `app/campaigns/[id]/client-page.tsx` |
 | Lists page | `app/lists/[id]/_components/list-detail-client.tsx` |
 
 ### Context
-- **Just Committed:** `76a3cacb6` - keyword-search refactor + pagination scroll UX
+- **Session Summary:**
+  1. Refactored similar-search (742 → 319 lines)
+  2. Found bug: Instagram similar search called wrong API
+  3. Found bug: Campaign page showed wrong results view for mixed runs
+  4. Fixed both bugs
 - **Branch:** `UAT`
-- **Approach:** Follow the keyword-search extraction pattern - it worked well
-- **Reusable Components:** Many keyword-search components may work for similar-search too
+- **Files Created This Session:**
+  - `similar-search/hooks/useSimilarCreatorSearch.ts` - state management
+  - `similar-search/utils/transform-rows.ts` - row transformation
+  - `similar-search/components/SimilarSearchHeader.tsx` - header UI
+  - Added `resolveInitials` to shared `keyword-search/utils/creator-utils.ts`
+  - Added `isSimilarSearchJob()` helper to `client-page.tsx`
 
 ---
 
@@ -108,6 +125,9 @@ This file needs the same treatment keyword-search got.
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| — | Bug: Instagram similar search wrong API | Dec 12, 2025 |
+| — | Bug: Campaign page wrong results view | Dec 12, 2025 |
+| — | Similar-Search Refactor (742→319 lines) | Dec 12, 2025 |
 | TASK-005 | Keyword-Search Refactor | Dec 12, 2025 |
 | — | Pagination scroll UX (all 4 components) | Dec 12, 2025 |
 | — | Auto-fetch pages (replace Load More) | Dec 12, 2025 |
@@ -117,4 +137,4 @@ This file needs the same treatment keyword-search got.
 
 ---
 
-*Last updated: Dec 12, 2025 12:30 PM*
+*Last updated: Dec 12, 2025 4:30 PM*

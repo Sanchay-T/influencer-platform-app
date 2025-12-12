@@ -390,6 +390,17 @@ function isActiveJob(job?: UiScrapingJob | null) {
 	return job.status === 'pending' || job.status === 'processing';
 }
 
+/**
+ * Determines if a job is a similar search (vs keyword search) based on platform.
+ * Similar search platforms: similar_discovery_*, youtube-similar
+ * Keyword search platforms: tiktok, instagram, instagram-us, youtube
+ */
+function isSimilarSearchJob(job?: UiScrapingJob | null): boolean {
+	if (!job?.platform) return false;
+	const platform = job.platform.toLowerCase();
+	return platform.includes('similar') || platform.startsWith('similar_discovery');
+}
+
 function buildKeywords(job?: UiScrapingJob | null) {
 	if (!job) return '—';
 	return job.keywords?.length ? job.keywords.join(', ') : '—';
@@ -1392,7 +1403,36 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
 
 		let resultsView: JSX.Element;
 
-		if (campaign.searchType === 'keyword') {
+		// Determine results view based on selected job type, not campaign type
+		// A campaign can have both keyword and similar search runs
+		if (isSimilarSearchJob(selectedJob)) {
+			const searchData = {
+				jobId: selectedJob.id,
+				platform: selectedJob.platform ?? 'instagram',
+				selectedPlatform: selectedJob.platform ?? 'instagram',
+				targetUsername: selectedJob.targetUsername,
+				creators: processedCreators,
+				campaignId: campaign.id,
+				status: selectedJob.status,
+			};
+
+			resultsView = (
+				<div key={`similar-${selectedJob.id}-${renderKey}`}>
+					<Suspense
+						fallback={
+							<div className="flex items-center justify-center py-16">
+								<Loader2 className="h-6 w-6 animate-spin text-zinc-300" />
+							</div>
+						}
+					>
+						<SimilarSearchResults
+							key={`similar-results-${selectedJob.id}-${renderKey}`}
+							searchData={searchData}
+						/>
+					</Suspense>
+				</div>
+			);
+		} else {
 			const searchData = {
 				jobId: selectedJob.id,
 				campaignId: campaign.id,
@@ -1416,33 +1456,6 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
 					>
 						<KeywordSearchResults
 							key={`keyword-results-${selectedJob.id}-${renderKey}`}
-							searchData={searchData}
-						/>
-					</Suspense>
-				</div>
-			);
-		} else {
-			const searchData = {
-				jobId: selectedJob.id,
-				platform: selectedJob.platform ?? 'instagram',
-				selectedPlatform: selectedJob.platform ?? 'instagram',
-				targetUsername: selectedJob.targetUsername,
-				creators: processedCreators,
-				campaignId: campaign.id,
-				status: selectedJob.status,
-			};
-
-			resultsView = (
-				<div key={`similar-${selectedJob.id}-${renderKey}`}>
-					<Suspense
-						fallback={
-							<div className="flex items-center justify-center py-16">
-								<Loader2 className="h-6 w-6 animate-spin text-zinc-300" />
-							</div>
-						}
-					>
-						<SimilarSearchResults
-							key={`similar-results-${selectedJob.id}-${renderKey}`}
 							searchData={searchData}
 						/>
 					</Suspense>
