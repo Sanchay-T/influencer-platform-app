@@ -12,7 +12,7 @@
 **Status:** 🟡 IN PROGRESS
 **Branch:** `UAT`
 **Started:** Dec 12, 2025
-**Updated:** Dec 12, 2025 — 01:32 PM
+**Updated:** Dec 12, 2025 — 08:15 PM
 
 ### Goal
 Systematically reduce tech debt identified in codebase audit. Break up monolithic files, clean up legacy code, improve maintainability.
@@ -22,7 +22,7 @@ Systematically reduce tech debt identified in codebase audit. Break up monolithi
 |------|-------|--------|
 | `client-page.tsx` | 417 | ✅ REFACTORED (was 1588, 74% reduction) |
 | `similar-search/search-results.jsx` | 319 | ✅ REFACTORED |
-| `list-detail-client.tsx` | 1123 | ❌ Needs refactor (NEXT) |
+| `list-detail-client.tsx` | 357 | ✅ REFACTORED (was 1124, 68% reduction) |
 | `keyword-search/search-results.jsx` | 480 | ✅ REFACTORED |
 | `marketing-landing.tsx` | 1312 | ⚠️ Low priority |
 | Legacy providers (7 files) | ~900 each | ❌ Can be deleted after V2 verified |
@@ -41,20 +41,22 @@ Systematically reduce tech debt identified in codebase audit. Break up monolithi
   - [x] Extract utils (transform-rows.ts)
   - [x] Target: 742 → 319 lines ✅
 - [x] **Bug Fixes Found During Testing** ✅ COMPLETE
-  - [x] Fix Instagram similar search calling wrong API (`/api/scraping/instagram` → `/api/scraping/similar-discovery`)
-  - [x] Fix campaign detail page showing wrong results view (checked `campaign.searchType` instead of `selectedJob` type)
-  - [x] Added `isSimilarSearchJob()` helper to properly detect job type by platform
+  - [x] Fix Instagram similar search calling wrong API
+  - [x] Fix campaign detail page showing wrong results view
+  - [x] Added `isSimilarSearchJob()` helper
 - [x] **Phase 2: client-page.tsx Refactor** ✅ COMPLETE
   - [x] Extract types to `types/campaign-page.ts`
   - [x] Extract helpers to `utils/campaign-helpers.ts`
   - [x] Extract state to `hooks/useCampaignJobs.ts`
   - [x] Extract RunRail, RunSummary, ActivityLog components
   - [x] Target: 1588 → 417 lines (74% reduction) ✅
-- [ ] **Phase 3: list-detail-client.tsx Refactor** ⭐ READY TO START
-  - [ ] Analyze state and extract hooks
-  - [ ] Extract sub-components
-  - [ ] Target: 1123 → ~400 lines
-- [ ] **Phase 4: Legacy Cleanup**
+- [x] **Phase 3: list-detail-client.tsx Refactor** ✅ COMPLETE
+  - [x] Extract types to `types/list-detail.ts`
+  - [x] Extract helpers to `utils/list-helpers.ts`
+  - [x] Extract state to `hooks/useListDetail.ts`
+  - [x] Extract DroppableColumn, CreatorCard, ListView, ListInsights, DeleteModal
+  - [x] Target: 1124 → 357 lines (68% reduction) ✅
+- [ ] **Phase 4: Legacy Cleanup** ⭐ NEXT
   - [ ] Verify V2 covers all use cases
   - [ ] Remove legacy providers from runner.ts imports
   - [ ] Delete legacy provider files
@@ -63,15 +65,14 @@ Systematically reduce tech debt identified in codebase audit. Break up monolithi
 
 ### Next Action
 ```
-READY: Start list-detail-client.tsx refactor (1123 lines)
+READY: Start legacy cleanup verification
 
-1. Read: app/lists/[id]/_components/list-detail-client.tsx
-2. Analyze:
-   - What state can be extracted to hooks?
-   - What UI components can be extracted?
-3. Follow the same pattern as client-page.tsx:
-   - Create types/, utils/, hooks/, components/ folders
-   - Main file becomes orchestrator (~400 lines)
+1. Verify V2 adapter coverage for all platforms:
+   - TikTok: lib/search-engine/v2/adapters/tiktok.ts
+   - Instagram: lib/search-engine/v2/adapters/instagram.ts
+   - YouTube: lib/search-engine/v2/adapters/youtube.ts
+2. Check if legacy providers are still called anywhere
+3. Plan safe removal of legacy code
 ```
 
 ### Key Files
@@ -80,7 +81,7 @@ READY: Start list-detail-client.tsx refactor (1123 lines)
 | Refactored | `app/campaigns/[id]/client-page.tsx` (417 lines) |
 | Refactored | `app/components/campaigns/similar-search/search-results.jsx` (319 lines) |
 | Refactored | `app/components/campaigns/keyword-search/search-results.jsx` (480 lines) |
-| Next target | `app/lists/[id]/_components/list-detail-client.tsx` (1123 lines) |
+| Refactored | `app/lists/[id]/_components/list-detail-client.tsx` (357 lines) |
 
 ### Context
 - **Session Summary:**
@@ -88,9 +89,9 @@ READY: Start list-detail-client.tsx refactor (1123 lines)
   2. Fixed bug: Instagram similar search called wrong API
   3. Fixed bug: Campaign page showed wrong results view
   4. Refactored client-page.tsx (1588 → 417 lines, 74% reduction)
+  5. Refactored list-detail-client.tsx (1124 → 357 lines, 68% reduction)
 - **Branch:** `UAT`
-- **Uncommitted Work:** Many V2 search engine files modified (lib/search-engine/v2/*, testing files, configs). These are NOT part of current tech debt task - likely from previous V2 work. May need to commit separately or understand what changed.
-- **Files Created This Session:**
+- **Files Created:**
   - `similar-search/hooks/useSimilarCreatorSearch.ts`
   - `similar-search/utils/transform-rows.ts`
   - `similar-search/components/SimilarSearchHeader.tsx`
@@ -100,6 +101,14 @@ READY: Start list-detail-client.tsx refactor (1123 lines)
   - `campaigns/[id]/components/RunRail.tsx`
   - `campaigns/[id]/components/RunSummary.tsx`
   - `campaigns/[id]/components/ActivityLog.tsx`
+  - `lists/[id]/_components/types/list-detail.ts`
+  - `lists/[id]/_components/utils/list-helpers.ts`
+  - `lists/[id]/_components/hooks/useListDetail.ts`
+  - `lists/[id]/_components/components/DroppableColumn.tsx`
+  - `lists/[id]/_components/components/CreatorCard.tsx`
+  - `lists/[id]/_components/components/ListView.tsx`
+  - `lists/[id]/_components/components/ListInsights.tsx`
+  - `lists/[id]/_components/components/DeleteModal.tsx`
 
 ---
 
@@ -117,6 +126,7 @@ READY: Start list-detail-client.tsx refactor (1123 lines)
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| — | list-detail-client.tsx Refactor (1124→357 lines) | Dec 12, 2025 |
 | — | client-page.tsx Refactor (1588→417 lines) | Dec 12, 2025 |
 | — | Bug: Instagram similar search wrong API | Dec 12, 2025 |
 | — | Bug: Campaign page wrong results view | Dec 12, 2025 |
@@ -130,4 +140,4 @@ READY: Start list-detail-client.tsx refactor (1123 lines)
 
 ---
 
-*Last updated: Dec 12, 2025 7:30 PM*
+*Last updated: Dec 12, 2025 8:15 PM*
