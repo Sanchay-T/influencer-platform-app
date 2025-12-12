@@ -2,9 +2,73 @@
 
 This guide covers how you can test features and verify fixes.
 
-## Test Auth System
+## E2E Testing with Real Clerk Auth (Recommended)
 
-You can test API endpoints without Clerk using test auth headers.
+For true end-to-end testing with real Clerk JWT tokens (no auth bypass):
+
+```bash
+npx tsx testing/api-suite/sandbox/e2e-clerk-sandbox.ts --skip-search
+```
+
+### What It Does
+
+1. Creates a **real Clerk user** via Clerk Backend API
+2. Creates a **real session** with JWT tokens (60-second expiry, auto-refresh)
+3. Creates the user in our database (mirrors webhook flow)
+4. Runs tests with **real `Authorization: Bearer <JWT>` headers**
+5. Cleans up both Clerk and database after
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `testing/api-suite/lib/clerk-auth.ts` | Clerk Backend API helper (create user, session, get JWT) |
+| `testing/api-suite/sandbox/e2e-clerk-sandbox.ts` | True E2E test with real auth |
+| `testing/api-suite/sandbox/complete-sandbox.ts` | Comprehensive test (with auth bypass) |
+| `testing/api-suite/sandbox/onboarding-sandbox.ts` | Onboarding-specific tests |
+
+### Tests Included
+
+| Test | What It Verifies |
+|------|------------------|
+| Profile Creation | User profile is returned correctly |
+| Onboarding Flow | Steps 1-3 complete successfully |
+| Campaign Creation | User can create campaigns (requires active plan) |
+| List Creation | User can create creator lists |
+
+### How It Works
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  1. Clerk Backend API: POST /users                          │
+│     → Creates real user: user_36hMH6B7t72JV0Gz7tX5mUKZJA9  │
+├─────────────────────────────────────────────────────────────┤
+│  2. Clerk Backend API: POST /sessions                       │
+│     → Creates session: sess_36hMH5F5p3IF9heZxIoUbCjajgo    │
+├─────────────────────────────────────────────────────────────┤
+│  3. Clerk Backend API: POST /sessions/{id}/tokens           │
+│     → Gets JWT: eyJhbGciOiJSUzI1NiIs...                    │
+├─────────────────────────────────────────────────────────────┤
+│  4. Database: Insert into users, user_subscriptions, etc.   │
+│     → Mirrors webhook flow (Backend API doesn't trigger)   │
+├─────────────────────────────────────────────────────────────┤
+│  5. Run tests with real Authorization headers               │
+│     → Every request validated by Clerk middleware          │
+├─────────────────────────────────────────────────────────────┤
+│  6. Cleanup: Delete from database + Clerk                   │
+│     → No test data left behind                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Token Refresh
+
+Clerk session tokens expire in 60 seconds. The test automatically refreshes tokens every 50 seconds using an interval timer. This is handled in `startTokenRefresh()` and `stopTokenRefresh()`.
+
+---
+
+## Test Auth System (Auth Bypass)
+
+For faster testing without creating real Clerk users, use test auth headers.
 
 ### Key Files
 
@@ -75,6 +139,7 @@ You → API (localhost:3001) → PostgreSQL
 ## To Explore
 
 When testing:
-1. Read `lib/auth/testable-auth.ts` for header generation
-2. Read E2E endpoints in `app/api/admin/e2e/`
-3. Check `lib/tests/agent-auth.js` for example usage
+1. Read `testing/api-suite/lib/clerk-auth.ts` for Clerk Backend API helper
+2. Read `testing/api-suite/sandbox/e2e-clerk-sandbox.ts` for true E2E test
+3. Read `lib/auth/testable-auth.ts` for test header generation
+4. Read E2E endpoints in `app/api/admin/e2e/`

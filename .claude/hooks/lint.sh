@@ -19,3 +19,4 @@ if [[ "$FILE_PATH" =~ \.(ts|tsx|js|jsx)$ ]]; then
 fi
 
 echo '{"continue":true}'
+

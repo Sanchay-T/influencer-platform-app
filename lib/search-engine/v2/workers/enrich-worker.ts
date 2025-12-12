@@ -16,8 +16,10 @@ import { db } from '@/lib/db';
 import { scrapingResults } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
 import { getAdapter } from '../adapters/interface';
-// Side-effect import: registers adapters with the registry
+// Side-effect imports: register adapters with the registry
+import '../adapters/instagram';
 import '../adapters/tiktok';
+import '../adapters/youtube';
 import { buildConfig, EMAIL_REGEX } from '../core/config';
 import { loadJobTracker } from '../core/job-tracker';
 import type { NormalizedCreator, Platform } from '../core/types';

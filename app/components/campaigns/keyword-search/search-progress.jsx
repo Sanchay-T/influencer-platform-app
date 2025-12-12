@@ -190,8 +190,19 @@ export default function SearchProgress({
 				}
 
 				const jobStatus = data?.status ?? data?.job?.status ?? 'processing';
-				const jobProgress = clampProgress(data?.progress ?? data?.job?.progress);
-				const jobProcessed = data?.processedResults ?? data?.job?.processedResults ?? 0;
+				// V2: progressPercent or progress.percentComplete; Legacy: progress (number)
+				const jobProgress = clampProgress(
+					data?.progressPercent ??
+						data?.progress?.percentComplete ??
+						data?.progress ??
+						data?.job?.progress
+				);
+				// V2: processedResults or progress.creatorsFound; Legacy: processedResults
+				const jobProcessed =
+					data?.processedResults ??
+					data?.progress?.creatorsFound ??
+					data?.job?.processedResults ??
+					0;
 				const jobTarget = data?.targetResults ?? data?.job?.targetResults ?? 0;
 
 				setStatus(jobStatus);

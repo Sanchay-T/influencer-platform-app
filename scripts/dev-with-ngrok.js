@@ -6,7 +6,8 @@
  * Uses permanent domain: usegemz.ngrok.app (paid ngrok plan)
  *
  * This script:
- * 1. Checks if ngrok is already running on port 3002
+ * 1. Resolves the local dev port (LOCAL_PORT/PORT, supports .env.local/.env.worktree)
+ * 2. Checks if ngrok is already running for that port
  * 2. If not, starts ngrok with the permanent domain
  * 3. Starts the Next.js dev server
  *
@@ -15,15 +16,31 @@
 
 const http = require('http');
 const { spawn } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+const dotenv = require('dotenv');
 
 const NGROK_API_URL = 'http://localhost:4040/api/tunnels';
-const TARGET_PORT = 3002;
 const POLL_INTERVAL = 500; // ms
 const MAX_POLL_ATTEMPTS = 40; // 20 seconds total
 
 // Permanent ngrok domain (paid plan) - no env file updates needed
 const NGROK_DOMAIN = 'usegemz.ngrok.app';
 const NGROK_URL = `https://${NGROK_DOMAIN}`;
+
+function loadEnv(file) {
+  const full = path.resolve(process.cwd(), file);
+  if (fs.existsSync(full)) {
+    dotenv.config({ path: full });
+  }
+}
+
+// Keep port resolution consistent with scripts/dev-with-port.js
+loadEnv('.env.local');
+loadEnv('.env.worktree');
+
+// Default to 3001 for this repo (matches current dev convention), but allow overrides
+const TARGET_PORT = Number(process.env.LOCAL_PORT || process.env.PORT || '3001');
 
 // Colors for terminal output
 const colors = {
@@ -67,7 +84,7 @@ async function checkNgrokStatus() {
 }
 
 async function startNgrok() {
-  logStep('NGROK', `Starting ngrok with permanent domain: ${NGROK_DOMAIN}...`);
+  logStep('NGROK', `Starting ngrok with permanent domain: ${NGROK_DOMAIN} → localhost:${TARGET_PORT}...`);
 
   const ngrokProcess = spawn('ngrok', ['http', `--url=${NGROK_DOMAIN}`, TARGET_PORT.toString()], {
     detached: true,
@@ -95,11 +112,13 @@ async function startNgrok() {
 }
 
 function startDevServer() {
-  logStep('DEV SERVER', 'Starting Next.js development server on port 3002...');
+  logStep('DEV SERVER', `Starting Next.js development server on port ${TARGET_PORT}...`);
 
   const devProcess = spawn('npm', ['run', 'dev'], {
     stdio: 'inherit',
-    shell: true
+    shell: true,
+    // Ensure Next.js binds to the same port ngrok is forwarding to
+    env: { ...process.env, LOCAL_PORT: String(TARGET_PORT), PORT: String(TARGET_PORT) }
   });
 
   // Handle graceful shutdown

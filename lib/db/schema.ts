@@ -67,6 +67,9 @@ export const scrapingJobs = pgTable('scraping_jobs', {
 	creatorsFound: integer('creators_found').default(0),
 	creatorsEnriched: integer('creators_enriched').default(0),
 	enrichmentStatus: varchar('enrichment_status', { length: 20 }).default('pending'),
+	// Adaptive re-expansion tracking
+	expansionRound: integer('expansion_round').default(1),
+	usedKeywords: jsonb('used_keywords'), // All keywords tried (for deduplication)
 });
 
 // Scraping Results table

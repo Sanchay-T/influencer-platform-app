@@ -55,7 +55,8 @@ export async function GET(req: Request) {
 	const { searchParams } = new URL(req.url);
 	const jobId = searchParams.get('jobId');
 	const offset = Math.max(0, Number.parseInt(searchParams.get('offset') || '0', 10));
-	const limit = Math.min(100, Math.max(1, Number.parseInt(searchParams.get('limit') || '50', 10)));
+	// Increased limit from 100 to 500 for better UX with large result sets
+	const limit = Math.min(500, Math.max(1, Number.parseInt(searchParams.get('limit') || '200', 10)));
 
 	if (!jobId) {
 		return NextResponse.json({ error: 'jobId is required' }, { status: 400 });
@@ -185,6 +186,13 @@ export async function GET(req: Request) {
 			creatorsEnriched,
 			percentComplete: Math.round(percentComplete * 100) / 100,
 		},
+		// === BACKWARD COMPATIBILITY: Frontend expects these at top level ===
+		// Legacy field: progress as a number (frontend reads data?.progress)
+		processedResults: creatorsFound,
+		// Legacy field: status mappings
+		// V2 statuses: dispatching, searching, enriching, completed, error, partial
+		// Legacy statuses: pending, processing, completed, error, timeout
+		// === END BACKWARD COMPATIBILITY ===
 		results: results
 			? [
 					{
@@ -205,6 +213,10 @@ export async function GET(req: Request) {
 		keywords: Array.isArray(job.keywords) ? (job.keywords as string[]) : [],
 		error: job.error ?? undefined,
 	};
+
+	// Backward compatibility fields for legacy frontend polling
+	// Frontend reads: data?.progressPercent or data?.progress?.percentComplete
+	(response as any).progressPercent = Math.round(percentComplete * 100) / 100;
 
 	// Add benchmark data if available
 	const searchParams2 = job.searchParams as Record<string, unknown> | null;

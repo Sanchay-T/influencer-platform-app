@@ -119,40 +119,55 @@ export default function KeywordSearch() {
 				: [];
 			const hasUsernames = submittedUsernames.length > 0;
 
-			// Determine API endpoint based on selected platform
-			// For now, we'll handle one platform at a time - prioritize the first selected platform
-			let apiEndpoint = '/api/scraping/tiktok'; // Default to TikTok
-			if (
-				hasUsernames ||
-				normalizedPlatform === 'instagram-similar' ||
-				normalizedPlatform === 'instagram_similar'
-			) {
-				apiEndpoint = '/api/scraping/instagram';
-			} else if (normalizedPlatform === 'instagram_scrapecreators') {
-				apiEndpoint = '/api/scraping/instagram-scrapecreators';
-			} else if (
-				normalizedPlatform === 'instagram' ||
-				normalizedPlatform === 'instagram_us_reels' ||
-				normalizedPlatform === 'instagram-us-reels' ||
-				normalizedPlatform === 'instagram-1.0' ||
-				normalizedPlatform === 'instagram_1.0'
-			) {
-				apiEndpoint = '/api/scraping/instagram-us-reels';
-			} else if (normalizedPlatform === 'youtube') {
-				apiEndpoint = '/api/scraping/youtube';
-			}
+			// Map UI platform values to v2 API platform values
+			const v2PlatformMap = {
+				tiktok: 'tiktok',
+				instagram: 'instagram',
+				instagram_scrapecreators: 'instagram',
+				youtube: 'youtube',
+			};
 
-			const response = await fetch(apiEndpoint, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({
-					campaignId: campaignId,
-					targetResults: searchData.creatorsCount,
-					...(hasUsernames ? { usernames: submittedUsernames } : { keywords: submittedKeywords }),
-				}),
-			});
+			// Use V2 dispatch API for all keyword searches (not similar/username searches)
+			const useV2 =
+				!hasUsernames &&
+				['tiktok', 'instagram', 'instagram_scrapecreators', 'youtube'].includes(normalizedPlatform);
+
+			let response;
+			if (useV2) {
+				// V2 Fan-Out API - unified endpoint for all platforms
+				const v2Platform = v2PlatformMap[normalizedPlatform] || 'tiktok';
+				response = await fetch('/api/v2/dispatch', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						platform: v2Platform,
+						keywords: submittedKeywords,
+						targetResults: searchData.creatorsCount,
+						campaignId: campaignId,
+						enableExpansion: true,
+					}),
+				});
+			} else {
+				// Legacy API for similar/username searches
+				let apiEndpoint = '/api/scraping/tiktok';
+				if (
+					hasUsernames ||
+					normalizedPlatform === 'instagram-similar' ||
+					normalizedPlatform === 'instagram_similar'
+				) {
+					apiEndpoint = '/api/scraping/instagram';
+				}
+
+				response = await fetch(apiEndpoint, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						campaignId: campaignId,
+						targetResults: searchData.creatorsCount,
+						...(hasUsernames ? { usernames: submittedUsernames } : { keywords: submittedKeywords }),
+					}),
+				});
+			}
 
 			if (!response.ok) {
 				const error = await response.json();
@@ -161,25 +176,12 @@ export default function KeywordSearch() {
 
 			const data = await response.json();
 
+			// Map platform for results display
 			const nextPlatform = (() => {
-				if (hasUsernames) {
-					return 'instagram-similar';
-				}
-				if (normalizedPlatform === 'instagram_scrapecreators') {
-					return 'instagram_scrapecreators';
-				}
-				if (
-					normalizedPlatform === 'instagram' ||
-					normalizedPlatform === 'instagram_us_reels' ||
-					normalizedPlatform === 'instagram-us-reels' ||
-					normalizedPlatform === 'instagram-1.0' ||
-					normalizedPlatform === 'instagram_1.0'
-				) {
+				if (hasUsernames) return 'instagram-similar';
+				if (normalizedPlatform === 'instagram' || normalizedPlatform === 'instagram_scrapecreators')
 					return 'instagram';
-				}
-				if (normalizedPlatform === 'youtube') {
-					return 'youtube';
-				}
+				if (normalizedPlatform === 'youtube') return 'youtube';
 				return 'tiktok';
 			})();
 

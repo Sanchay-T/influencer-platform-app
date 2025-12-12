@@ -93,11 +93,7 @@ export interface SearchAdapter {
 	/**
 	 * Fetch raw results from external API
 	 */
-	fetch(
-		keyword: string,
-		cursor: unknown,
-		config: SearchConfig
-	): Promise<FetchResult>;
+	fetch(keyword: string, cursor: unknown, config: SearchConfig): Promise<FetchResult>;
 
 	/**
 	 * Normalize a single raw item to NormalizedCreator

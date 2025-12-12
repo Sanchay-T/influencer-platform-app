@@ -5,69 +5,11 @@
  * Handles fetching from ScrapeCreators API and normalizing results.
  */
 
-import { ENDPOINTS, EMAIL_REGEX, LOG_PREFIX } from '../core/config';
+import { EMAIL_REGEX, ENDPOINTS, LOG_PREFIX } from '../core/config';
 import type { FetchResult, NormalizedCreator, SearchConfig } from '../core/types';
 import type { SearchAdapter } from './interface';
 import { registerAdapter } from './interface';
-
-// ============================================================================
-// Types for TikTok API Response
-// ============================================================================
-
-interface TikTokAuthor {
-	unique_id?: string;
-	nickname?: string;
-	signature?: string;
-	follower_count?: number;
-	avatar_medium?: { url_list?: string[] };
-	is_verified?: boolean;
-	verified?: boolean;
-}
-
-interface TikTokStatistics {
-	digg_count?: number;
-	comment_count?: number;
-	play_count?: number;
-	share_count?: number;
-}
-
-interface TikTokVideo {
-	cover?: { url_list?: string[] };
-	dynamic_cover?: { url_list?: string[] };
-	origin_cover?: { url_list?: string[] };
-	animated_cover?: { url_list?: string[] };
-	share_cover?: { url_list?: string[] };
-	play_addr?: { url_list?: string[] };
-	download_addr?: { url_list?: string[] };
-	thumbnail?: { url_list?: string[] };
-	thumbnail_url?: string;
-}
-
-interface TikTokTextExtra {
-	type?: number;
-	hashtag_name?: string;
-}
-
-interface TikTokAwemeInfo {
-	author?: TikTokAuthor;
-	desc?: string;
-	share_url?: string;
-	video?: TikTokVideo;
-	statistics?: TikTokStatistics;
-	text_extra?: TikTokTextExtra[];
-	create_time?: number;
-	aweme_id?: string;
-}
-
-interface TikTokSearchItem {
-	aweme_info?: TikTokAwemeInfo;
-}
-
-interface TikTokSearchResponse {
-	search_item_list?: TikTokSearchItem[];
-	has_more?: boolean;
-	cursor?: number;
-}
+import type { TikTokProfileResponse, TikTokSearchItem, TikTokSearchResponse } from './tiktok-types';
 
 // ============================================================================
 // TikTok Adapter Implementation
@@ -79,11 +21,7 @@ class TikTokAdapter implements SearchAdapter {
 	/**
 	 * Fetch results from TikTok search API
 	 */
-	async fetch(
-		keyword: string,
-		cursor: unknown,
-		config: SearchConfig
-	): Promise<FetchResult> {
+	async fetch(keyword: string, cursor: unknown, config: SearchConfig): Promise<FetchResult> {
 		const cursorNum = typeof cursor === 'number' ? cursor : 0;
 		const startTime = Date.now();
 
@@ -200,9 +138,7 @@ class TikTokAdapter implements SearchAdapter {
 					comments: stats.comment_count ?? 0,
 					shares: stats.share_count ?? 0,
 				},
-				postedAt: aweme.create_time
-					? new Date(aweme.create_time * 1000).toISOString()
-					: undefined,
+				postedAt: aweme.create_time ? new Date(aweme.create_time * 1000).toISOString() : undefined,
 			},
 
 			hashtags,
@@ -266,7 +202,7 @@ class TikTokAdapter implements SearchAdapter {
 				return creator;
 			}
 
-			const data = (await response.json()) as { user?: { signature?: string; desc?: string } };
+			const data = (await response.json()) as TikTokProfileResponse;
 			const profileUser = data.user ?? {};
 			const newBio = profileUser.signature || profileUser.desc || '';
 

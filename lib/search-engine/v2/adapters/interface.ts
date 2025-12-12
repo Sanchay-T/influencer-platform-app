@@ -21,11 +21,7 @@ export interface SearchAdapter {
 	 * @param config - Search configuration
 	 * @returns Raw items and pagination info
 	 */
-	fetch(
-		keyword: string,
-		cursor: unknown,
-		config: SearchConfig
-	): Promise<FetchResult>;
+	fetch(keyword: string, cursor: unknown, config: SearchConfig): Promise<FetchResult>;
 
 	/**
 	 * Normalize a single raw API item to standard NormalizedCreator format

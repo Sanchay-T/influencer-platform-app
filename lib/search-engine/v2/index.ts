@@ -5,11 +5,13 @@
  * Import adapters to register them before using the pipeline.
  */
 
+// Platform adapters (importing registers them)
+export { instagramAdapter } from './adapters/instagram';
 export type { AdapterFactory, SearchAdapter } from './adapters/interface';
 // Adapter interface
 export { adapters, getAdapter, registerAdapter } from './adapters/interface';
-// Platform adapters (importing registers them)
 export { tiktokAdapter } from './adapters/tiktok';
+export { youtubeAdapter } from './adapters/youtube';
 // Async queue utilities
 export { AsyncQueue, AtomicCounter } from './core/async-queue';
 export * from './core/config';

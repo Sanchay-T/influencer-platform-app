@@ -53,6 +53,12 @@ export default function KeywordSearchForm({ onSubmit }) {
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
+
+		// Prevent double submission
+		if (isLoading) {
+			return;
+		}
+
 		setIsLoading(true);
 
 		if (!selectedPlatform) {
@@ -61,23 +67,30 @@ export default function KeywordSearchForm({ onSubmit }) {
 			return;
 		}
 
-		// Asegurarnos de que creatorsCount sea un número
-		const numericCreatorsCount = Number(creatorsCount);
-		// Pasar el campaignId si existe
-		onSubmit({
-			platforms: [selectedPlatform],
-			creatorsCount: numericCreatorsCount,
-			scraperLimit: numericCreatorsCount, // Usamos el valor numérico
-			campaignId: campaignId,
-		});
-		setIsLoading(false);
+		try {
+			// Asegurarnos de que creatorsCount sea un número
+			const numericCreatorsCount = Number(creatorsCount);
+			// Pasar el campaignId si existe
+			// Await the onSubmit callback to prevent double submissions
+			await onSubmit({
+				platforms: [selectedPlatform],
+				creatorsCount: numericCreatorsCount,
+				scraperLimit: numericCreatorsCount, // Usamos el valor numérico
+				campaignId: campaignId,
+			});
+		} catch (_error) {
+			// Error is handled by parent, just reset loading state
+			setIsLoading(false);
+		}
+		// Note: Don't reset isLoading on success - page navigates away
 	};
 
 	const getCreditsUsed = (count) => count / 100; // 1000 creators = 10 credits, etc.
 
+	// V2 platform values - these map directly to the v2 dispatch API
 	const platformOptions = [
 		{ value: 'tiktok', label: 'TikTok' },
-		{ value: 'instagram_scrapecreators', label: 'Instagram' },
+		{ value: 'instagram', label: 'Instagram' },
 		{ value: 'youtube', label: 'YouTube' },
 	];
 	const sliderMin = 100;

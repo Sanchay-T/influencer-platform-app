@@ -15,10 +15,14 @@ import { db } from '@/lib/db';
 import { campaigns } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
 import { qstash } from '@/lib/queue/qstash';
+import { PLATFORM_TIMEOUTS } from '../core/config';
 import { createV2Job, loadJobTracker } from '../core/job-tracker';
 import { expandKeywordsForTarget } from '../core/keyword-expander';
 import type { Platform } from '../core/types';
 import type { DispatchRequest, DispatchResponse, SearchWorkerMessage } from './types';
+
+// Re-export enrichment dispatch for backward compatibility
+export { dispatchEnrichmentBatches } from './enrich-dispatch';
 
 // ============================================================================
 // Constants
@@ -213,12 +217,19 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 		};
 
 		// Publish to QStash with retry configuration
+		// Use platform-specific timeout (QStash default is 30s, but Instagram can take 5min)
+		const workerTimeoutSeconds = Math.ceil(
+			(PLATFORM_TIMEOUTS[platform as Platform] || 120_000) / 1000
+		);
+
 		const publishPromise = qstash.publishJSON({
 			url: searchWorkerUrl,
 			body: message,
 			retries: 3,
 			// Add a small delay between messages to prevent thundering herd
 			delay: Math.floor(i / 5) * 1, // 1 second delay every 5 messages
+			// Set worker timeout based on platform (TikTok: 2min, YouTube: 2min, Instagram: 5min)
+			timeout: workerTimeoutSeconds,
 		});
 
 		dispatchPromises.push(publishPromise);
@@ -272,80 +283,4 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 		},
 		statusCode: 200,
 	};
-}
-
-// ============================================================================
-// Helper: Dispatch Enrichment Batches
-// ============================================================================
-
-/**
- * Dispatch enrichment batches for creators found by a search worker
- * Called by search-worker.ts after saving creators
- */
-export async function dispatchEnrichmentBatches(params: {
-	jobId: string;
-	platform: Platform;
-	creatorIds: string[];
-	userId: string;
-}): Promise<{ batchesDispatched: number; failedBatches: number }> {
-	const { jobId, platform, creatorIds, userId } = params;
-
-	if (creatorIds.length === 0) {
-		return { batchesDispatched: 0, failedBatches: 0 };
-	}
-
-	const BATCH_SIZE = 10;
-	const baseUrl = getWorkerBaseUrl();
-	const enrichWorkerUrl = `${baseUrl}/api/v2/worker/enrich`;
-
-	// Split creators into batches
-	const batches: string[][] = [];
-	for (let i = 0; i < creatorIds.length; i += BATCH_SIZE) {
-		batches.push(creatorIds.slice(i, i + BATCH_SIZE));
-	}
-
-	logger.info(
-		`${LOG_PREFIX} Dispatching ${batches.length} enrichment batches`,
-		{
-			jobId,
-			platform,
-			totalCreators: creatorIds.length,
-			batchCount: batches.length,
-		},
-		LogCategory.JOB
-	);
-
-	const dispatchPromises = batches.map((batch, index) =>
-		qstash.publishJSON({
-			url: enrichWorkerUrl,
-			body: {
-				jobId,
-				platform,
-				creatorIds: batch,
-				batchIndex: index,
-				totalBatches: batches.length,
-				userId,
-			},
-			retries: 3,
-		})
-	);
-
-	const results = await Promise.allSettled(dispatchPromises);
-
-	const batchesDispatched = results.filter((r) => r.status === 'fulfilled').length;
-	const failedBatches = results.filter((r) => r.status === 'rejected').length;
-
-	if (failedBatches > 0) {
-		logger.warn(
-			`${LOG_PREFIX} Some enrichment batches failed to dispatch`,
-			{
-				jobId,
-				batchesDispatched,
-				failedBatches,
-			},
-			LogCategory.JOB
-		);
-	}
-
-	return { batchesDispatched, failedBatches };
 }

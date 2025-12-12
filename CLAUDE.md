@@ -190,7 +190,7 @@ npm run lint:biome       # Run Biome linter
 npm run lint:biome:fix   # Auto-fix Biome issues
 ```
 
-**Database operations:** Schema changes require human interaction for migration prompts. See @agent_docs/database.md for the full workflow.
+**Database operations:** Schema changes require human interaction for migration prompts. See `agent_docs/database.md` for the full workflow.
 
 ## Folder Structure
 
@@ -251,7 +251,7 @@ After you edit files, run: `npx biome check --write <files-you-edited>`
 
 ⚠️ **Do NOT run on the entire codebase** — there are 2000+ legacy issues.
 
-See @agent_docs/code-patterns.md for patterns and common fixes.
+See `agent_docs/code-patterns.md` for patterns and common fixes.
 
 ### Testing & Verification
 
@@ -266,7 +266,7 @@ You can test API endpoints without Clerk auth using the test auth system. Use pr
 
 (Context updates happen automatically with each commit — see Git Workflow below.)
 
-See @agent_docs/testing-verification.md for the full testing workflow.
+See `agent_docs/testing-verification.md` for the full testing workflow.
 
 ### Code Quality
 
@@ -275,7 +275,7 @@ See @agent_docs/testing-verification.md for the full testing workflow.
 
 ### Git Workflow + Context Management
 
-**At session start:** Read `@agent_docs/current-task.md` to know where you left off.
+**At session start:** Read `agent_docs/current-task.md` to know where you left off.
 
 **Before starting new work**, create a feature branch:
 ```bash
@@ -315,18 +315,18 @@ Commit prefixes: `fix:`, `feat:`, `refactor:`, `chore:`
 ## Key References
 
 **Your memory (read first):**
-- @agent_docs/tasks.md — Checklist + next action (PRIMARY)
-- @agent_docs/current-task.md — Full PRD/spec for current task
-- @agent_docs/delegation.md — When/how to use subagents
+- `agent_docs/tasks.md` — Checklist + next action (PRIMARY)
+- `agent_docs/current-task.md` — Full PRD/spec for current task
+- `agent_docs/delegation.md` — When/how to use subagents
 
 **Domain docs (read when relevant):**
-- @agent_docs/architecture.md — System overview, domain boundaries
-- @agent_docs/v2-fan-out-architecture.md — V2 search system (fan-out workers, QStash)
-- @agent_docs/onboarding-flow.md — 4-step onboarding, Stripe checkout
-- @agent_docs/billing-stripe.md — Plans, trials, webhooks
-- @agent_docs/search-engine.md — Keyword/Similar search providers (LEGACY - being replaced by v2)
-- @agent_docs/campaigns-lists.md — Campaign CRUD, List management
-- @agent_docs/database.md — Drizzle schema, query patterns
-- @agent_docs/api-patterns.md — Route conventions, auth guards
-- @agent_docs/testing-verification.md — Testing workflow, verification checklist
-- @agent_docs/code-patterns.md — Common code patterns and fixes
+- `agent_docs/architecture.md` — System overview, domain boundaries
+- `agent_docs/v2-fan-out-architecture.md` — V2 search system (fan-out workers, QStash)
+- `agent_docs/onboarding-flow.md` — 4-step onboarding, Stripe checkout
+- `agent_docs/billing-stripe.md` — Plans, trials, webhooks
+- `agent_docs/search-engine.md` — Keyword/Similar search providers (LEGACY - being replaced by v2)
+- `agent_docs/campaigns-lists.md` — Campaign CRUD, List management
+- `agent_docs/database.md` — Drizzle schema, query patterns
+- `agent_docs/api-patterns.md` — Route conventions, auth guards
+- `agent_docs/testing-verification.md` — Testing workflow, verification checklist
+- `agent_docs/code-patterns.md` — Common code patterns and fixes

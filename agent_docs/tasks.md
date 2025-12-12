@@ -12,7 +12,7 @@
 **Status:** 🟡 IN PROGRESS
 **Branch:** `UAT`
 **Started:** Dec 12, 2025
-**Updated:** Dec 12, 2025 — 7:30 PM
+**Updated:** Dec 12, 2025 — 01:32 PM
 
 ### Goal
 Systematically reduce tech debt identified in codebase audit. Break up monolithic files, clean up legacy code, improve maintainability.
@@ -89,6 +89,7 @@ READY: Start list-detail-client.tsx refactor (1123 lines)
   3. Fixed bug: Campaign page showed wrong results view
   4. Refactored client-page.tsx (1588 → 417 lines, 74% reduction)
 - **Branch:** `UAT`
+- **Uncommitted Work:** Many V2 search engine files modified (lib/search-engine/v2/*, testing files, configs). These are NOT part of current tech debt task - likely from previous V2 work. May need to commit separately or understand what changed.
 - **Files Created This Session:**
   - `similar-search/hooks/useSimilarCreatorSearch.ts`
   - `similar-search/utils/transform-rows.ts`

@@ -53,7 +53,7 @@ export function flattenCreators(results: any) {
 	return creators;
 }
 
-// [EndpointDerivation] Mirrors scraping API routing rules used throughout keyword search flows
+// [EndpointDerivation] Routes to V2 status for keyword searches, legacy endpoints for similar/username searches
 export function buildEndpoint(
 	platformNormalized: string,
 	hasTargetUsername: boolean,
@@ -61,20 +61,28 @@ export function buildEndpoint(
 ) {
 	if (!jobId) return null;
 	const normalized = (platformNormalized || '').toLowerCase();
+
+	// Similar/username searches use legacy endpoints
 	if (hasTargetUsername) {
 		if (normalized === 'instagram') return `/api/scraping/instagram?jobId=${jobId}`;
 		if (normalized === 'youtube') return `/api/scraping/youtube-similar?jobId=${jobId}`;
 		// TikTok Similar removed - not supported
 		return null;
 	}
+
+	// V2 keyword searches for standard platforms (tiktok, instagram, youtube)
+	// These are dispatched via /api/v2/dispatch and polled via /api/v2/status
+	const v2Platforms = ['tiktok', 'instagram', 'instagram_scrapecreators', 'youtube'];
+	if (v2Platforms.includes(normalized)) {
+		return `/api/v2/status?jobId=${jobId}`;
+	}
+
+	// Legacy endpoints for other platform variants
 	switch (normalized) {
-		case 'instagram':
 		case 'instagram-1.0':
 		case 'instagram_1.0':
 		case 'instagram_us_reels':
 			return `/api/scraping/instagram-us-reels?jobId=${jobId}`;
-		case 'instagram_scrapecreators':
-			return `/api/scraping/instagram-scrapecreators?jobId=${jobId}`;
 		case 'instagram-2.0':
 		case 'instagram_2.0':
 		case 'instagram-v2':
@@ -83,10 +91,9 @@ export function buildEndpoint(
 		case 'google-serp':
 		case 'google_serp':
 			return `/api/scraping/google-serp?jobId=${jobId}`;
-		case 'youtube':
-			return `/api/scraping/youtube?jobId=${jobId}`;
 		default:
-			return `/api/scraping/tiktok?jobId=${jobId}`;
+			// Unknown platform - try V2 status first
+			return `/api/v2/status?jobId=${jobId}`;
 	}
 }
 

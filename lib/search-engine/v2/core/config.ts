@@ -52,6 +52,18 @@ export const DEFAULT_CONFIG = {
 } as const;
 
 // ============================================================================
+// Platform-Specific Timeout Overrides
+// Instagram API is notably slower (~60-70s response time vs ~5s for others)
+// Being VERY generous with timeouts - better to wait than fail
+// ============================================================================
+
+export const PLATFORM_TIMEOUTS: Record<Platform, number> = {
+	tiktok: 120_000, // 2 min - usually fast but be safe
+	youtube: 120_000, // 2 min - usually fast but be safe
+	instagram: 300_000, // 5 min - notoriously slow, can spike
+};
+
+// ============================================================================
 // Platform-Specific Endpoints
 // ============================================================================
 
@@ -94,16 +106,13 @@ function extractBaseUrl(urlOrBase: string): string {
 
 export function buildConfig(platform: Platform): SearchConfig {
 	const apiKey = getEnvOrThrow('SCRAPECREATORS_API_KEY');
-	const rawUrl = getEnvOrDefault(
-		'SCRAPECREATORS_API_URL',
-		'https://api.scrapecreators.com'
-	);
+	const rawUrl = getEnvOrDefault('SCRAPECREATORS_API_URL', 'https://api.scrapecreators.com');
 	const apiBaseUrl = extractBaseUrl(rawUrl);
 
 	return {
 		apiKey,
 		apiBaseUrl,
-		fetchTimeoutMs: DEFAULT_CONFIG.fetchTimeoutMs,
+		fetchTimeoutMs: PLATFORM_TIMEOUTS[platform] ?? DEFAULT_CONFIG.fetchTimeoutMs,
 		maxContinuationRuns: DEFAULT_CONFIG.maxContinuationRuns,
 		maxConsecutiveEmptyRuns: DEFAULT_CONFIG.maxConsecutiveEmptyRuns,
 		maxParallelEnrichments: DEFAULT_CONFIG.maxParallelEnrichments,

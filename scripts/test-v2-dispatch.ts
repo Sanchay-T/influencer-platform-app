@@ -27,6 +27,7 @@ const getArg = (name: string): string | undefined => {
 };
 
 const KEYWORD = getArg('keyword') || 'fitness influencer';
+const PLATFORM = getArg('platform') || 'tiktok';
 const CAMPAIGN_ID = getArg('campaign-id');
 const TARGET_RESULTS = Number.parseInt(getArg('target') || '100', 10) as 100 | 500 | 1000;
 const POLL_INTERVAL_MS = 2000;
@@ -122,7 +123,7 @@ async function dispatchSearch(
 	campaignId: string
 ): Promise<{ jobId: string; keywords: string[] }> {
 	console.log('\n🚀 Dispatching v2 search...');
-	console.log(`   Platform: tiktok`);
+	console.log(`   Platform: ${PLATFORM}`);
 	console.log(`   Keyword: "${KEYWORD}"`);
 	console.log(`   Target: ${TARGET_RESULTS} creators`);
 
@@ -131,7 +132,7 @@ async function dispatchSearch(
 		method: 'POST',
 		headers,
 		body: JSON.stringify({
-			platform: 'tiktok',
+			platform: PLATFORM,
 			keywords: [KEYWORD],
 			targetResults: TARGET_RESULTS,
 			campaignId,
