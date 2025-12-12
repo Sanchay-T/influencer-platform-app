@@ -5,141 +5,139 @@
 
 ---
 
-**Task:** V2 Fan-Out Worker Architecture — Add Instagram & YouTube Adapters
+**Task:** Tech Debt Cleanup — Monolith Breakup
 **Branch:** `UAT`
-**Status:** TikTok COMPLETE ✅, Instagram & YouTube PENDING
-**Started:** Dec 8, 2025 (original v2 pipeline)
-**Updated:** Dec 11, 2025
+**Status:** 🟡 IN PROGRESS
+**Started:** Dec 12, 2025
+**Updated:** Dec 12, 2025 — 12:30 PM
 
 ---
 
 ## Quick Context
 
-The V2 fan-out search system is **COMPLETE for TikTok** with verified benchmarks:
+We audited and fact-checked the codebase. The keyword-search refactor is DONE (2893 → 480 lines). Now we're applying the same pattern to remaining monoliths.
 
-| Target | Found | Accuracy | Duration |
-|--------|-------|----------|----------|
-| 100    | 100   | 100.0% ✅ | 22.6s   |
-| 500    | 500   | 100.0% ✅ | 30.5s   |
-| 1000   | 1186  | 118.6%   | 172.8s  |
-
-**Key features working:**
-- QStash fan-out with parallel workers
-- Two-checkpoint target capping (no overshoot for 100/500)
-- PostgreSQL row-level locking (`SELECT ... FOR UPDATE`)
-- Progressive results (users see data immediately)
-- Bio enrichment in parallel batches
-
-**Full architecture spec:** `@agent_docs/v2-fan-out-architecture.md`
+**Priority order:**
+1. `similar-search/search-results.jsx` (742 lines) ⭐ START HERE
+2. `client-page.tsx` (1574 lines)
+3. `list-detail-client.tsx` (1123 lines)
+4. Legacy provider cleanup
 
 ---
 
-## Current Phase: Add Instagram & YouTube Support
+## Completed This Session (Dec 12, 2025)
 
-### What to Do Next
+### Major Accomplishments
+1. **Keyword-search refactor** - 2893 → 480 lines
+   - Extracted 12 components, 6 hooks, 7 utils
+   - Commit: `76a3cacb6`
 
-1. **Create Instagram adapter** (~200 lines):
-   - File: `lib/search-engine/v2/adapters/instagram.ts`
-   - API: ScrapeCreators `/v1/instagram/reels/search`
-   - Key: Bio comes with search results (NO enrichment needed)
-   - Dedupe key: `owner.username`
+2. **Pagination scroll UX** - Fixed across all 4 search-results components
+   - Page navigation scrolls to results top (not page top)
+   - Page size change scrolls to results top
 
-2. **Create YouTube adapter** (~250 lines):
-   - File: `lib/search-engine/v2/adapters/youtube.ts`
-   - Search API: `/v1/youtube/search`
-   - Channel API: `/v1/youtube/channel`
-   - Key: REQUIRES enrichment for followers + bio
-   - Dedupe key: `channel.id`
+3. **Auto-fetch pages** - Replaced "Load more" button
+   - New hook: `useAutoFetchAllPages`
+   - Automatically fetches remaining pages in background
 
-3. **Update UI with radio buttons**:
-   - File: `app/components/campaigns/keyword-search/keyword-search-form.jsx`
-   - Wire to `/api/v2/dispatch` instead of legacy routes
-
-4. **Test all platforms** with benchmark script
+4. **Codebase audit** - Fact-checked external analysis
+   - `any` usage: 260 total, mostly in loggers (acceptable)
+   - console.log: 86 raw vs 995 structured (92% adoption)
+   - Legacy vs V2: All 3 platforms have both (need cleanup)
 
 ---
 
-## Implementation Progress
+## Next Phase: similar-search Refactor ⭐
 
-| Phase | Status | Key Files |
-|-------|--------|-----------|
-| 1. Schema Changes | ✅ DONE | `lib/db/schema.ts` |
-| 2. Core Infrastructure | ✅ DONE | `job-tracker.ts`, `workers/types.ts` |
-| 3. Workers | ✅ DONE | `dispatch.ts`, `search-worker.ts`, `enrich-worker.ts` |
-| 4. API Routes | ✅ DONE | `/api/v2/dispatch`, `/api/v2/worker/*`, `/api/v2/status` |
-| 5. TikTok Adapter | ✅ DONE | `adapters/tiktok.ts` |
-| 6. Target Capping | ✅ DONE | Two-checkpoint system in `search-worker.ts` |
-| 7. Benchmarks | ✅ DONE | `scripts/test-v2-benchmark.ts` |
-| 8. Instagram Adapter | ⬜ PENDING | `adapters/instagram.ts` |
-| 9. YouTube Adapter | ⬜ PENDING | `adapters/youtube.ts` |
-| 10. UI Radio Buttons | ⬜ PENDING | `keyword-search-form.jsx` |
+**Why:** It's 742 lines doing the same thing keyword-search did. Same pattern applies.
 
----
-
-## Target Capping Implementation (For Reference)
-
-The two-checkpoint system that prevents overshooting:
-
-**Checkpoint 1** (Before API call):
-```typescript
-// In search-worker.ts:75-101
-const currentProgress = await tracker.getProgress();
-if (currentProgress.creatorsFound >= targetResults) {
-  return { skipped: true }; // Skip API call entirely
-}
+**Reference structure (keyword-search after refactor):**
+```
+keyword-search/
+├── search-results.jsx (480 lines - orchestrator)
+├── components/
+│   ├── CreatorTableRow.tsx
+│   ├── CreatorGalleryCard.tsx
+│   ├── PaginationControls.tsx
+│   └── ... (12 files)
+├── hooks/
+│   ├── useCreatorSearch.ts
+│   ├── useAutoFetchAllPages.ts
+│   └── ... (6 files)
+└── utils/
+    ├── creator-utils.ts
+    ├── enrichment-applier.ts
+    └── ... (7 files)
 ```
 
-**Checkpoint 2** (At DB save time):
-```typescript
-// In search-worker.ts:337-458
-const lockResult = await tx.execute(sql`
-  SELECT id, creators FROM scraping_results
-  WHERE job_id = ${jobId} FOR UPDATE
-`);
-const slotsLeft = targetResults - existingCreators.length;
-// Cap at slotsLeft when saving
+**Target structure for similar-search:**
 ```
-
-**Key insight:** `FOR UPDATE` only locks existing rows, so we pre-create the `scraping_results` row during dispatch.
-
----
-
-## API Endpoints Summary
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/v2/dispatch` | POST | Create job, fan out to workers |
-| `/api/v2/worker/search` | POST | QStash webhook for keyword search |
-| `/api/v2/worker/enrich` | POST | QStash webhook for bio enrichment |
-| `/api/v2/status?jobId=xxx` | GET | Get job progress + paginated results |
-
----
-
-## Test Scripts
-
-```bash
-# Run benchmark for all targets
-npx tsx scripts/test-v2-benchmark.ts
-
-# Test single dispatch
-npx tsx scripts/test-v2-dispatch.ts --target=100 --keyword="fitness"
+similar-search/
+├── search-results.jsx (~300 lines)
+├── components/
+│   ├── SimilarResultsTable.tsx (may reuse keyword-search components)
+│   ├── SimilarResultsGallery.tsx
+│   └── ...
+├── hooks/
+│   ├── useSimilarSearch.ts
+│   └── ...
+└── utils/
+    └── ... (many can be shared with keyword-search)
 ```
 
 ---
 
-## Benchmark Results (CSV)
+## Extraction Plan for similar-search
 
-Saved to: `scripts/v2-benchmark-2025-12-10T19-38-26-385Z.csv`
+### Step 1: Identify what's already extracted
+- `SimilarResultsTable` - exists in `results-table.tsx`
+- `SimilarResultsGallery` - exists in `results-gallery.tsx`
+- `useViewPreferences` - exists
+- `deriveInitialStateFromSearchData` - exists in `utils/initial-state.ts`
+
+### Step 2: What needs extraction
+Looking at the 742-line file:
+- [ ] `normalizePlatform`, `extractEmails`, `hasContactEmail`, `formatFollowers` → utils
+- [ ] `resolveInitials`, `resolvePreviewImage` → utils
+- [ ] `ensureProxiedImage`, `renderProfileLink` → utils (may share with keyword-search)
+- [ ] Pagination logic (`getPageNumbers`, `handlePageChange`) → could use shared PaginationControls
+- [ ] Row mapping (`pageRows` useMemo) → utils
+
+### Step 3: What can be reused from keyword-search
+- `PaginationControls` component
+- `creator-utils.ts` (extractEmails, formatFollowers)
+- `profile-link.ts` (buildProfileLink)
 
 ---
 
-## Session Handoff Notes
+## Fact-Checked Audit Summary
 
-**For Claude Web session (next):**
-1. Create Instagram adapter following TikTok pattern
-2. Create YouTube adapter with enrichment method
-3. Update UI to use radio buttons + V2 dispatch
-4. Run benchmarks for all platforms
-5. Handoff prompt prepared in previous conversation
+| Claim | Verdict | Data |
+|-------|---------|------|
+| Large monolithic files | ✅ TRUE | 3 files over 1000 lines |
+| Widespread `any` | ❌ EXAGGERATED | Mostly in loggers, not business logic |
+| console.log chaos | ⚠️ PARTIAL | 92% using structured logging |
+| Legacy/V2 overlap | ✅ TRUE | All 3 platforms have both |
+| keyword-search monster | ✅ WAS TRUE | Already refactored to 480 lines |
 
-**Reference the TikTok adapter** at `lib/search-engine/v2/adapters/tiktok.ts` as the template.
+---
+
+## Reference Files
+
+| For | Read |
+|-----|------|
+| Current target | `app/components/campaigns/similar-search/search-results.jsx` |
+| Reference pattern | `app/components/campaigns/keyword-search/` |
+| Shared utils | `app/components/campaigns/keyword-search/utils/` |
+| Campaign page (next) | `app/campaigns/[id]/client-page.tsx` |
+
+---
+
+## Previous Task: Keyword-Search Refactor (COMPLETE ✅)
+
+Successfully reduced from 2893 to 480 lines by extracting:
+- 12 components
+- 6 hooks
+- 7 utility files
+
+Commit: `76a3cacb6`
