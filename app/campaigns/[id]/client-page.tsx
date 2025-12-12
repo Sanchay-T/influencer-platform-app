@@ -355,13 +355,13 @@ function formatDuration(ms: number | null | undefined) {
 }
 
 function getCreatorsCount(job?: UiScrapingJob | null): number {
-	// Priority 1: Use creatorBuffer (deduplicated list) - this matches what the table shows
-	if (Array.isArray(job?.creatorBuffer) && job.creatorBuffer.length > 0) {
-		return job.creatorBuffer.length;
-	}
-	// Priority 2: Use totalCreators if set (from loaded results)
+	// Priority 1: Use totalCreators from server (source of truth for consistent UI)
 	if (typeof job?.totalCreators === 'number' && job.totalCreators > 0) {
 		return job.totalCreators;
+	}
+	// Priority 2: Use creatorBuffer (deduplicated list) as fallback
+	if (Array.isArray(job?.creatorBuffer) && job.creatorBuffer.length > 0) {
+		return job.creatorBuffer.length;
 	}
 	// Priority 3: Count from results if loaded
 	const counted = countCreatorsFromResults(job?.results as Array<{ creators?: PlatformResult }>);
@@ -1401,6 +1401,8 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
 				selectedPlatform: selectedJob.platform ?? 'tiktok',
 				status: selectedJob.status,
 				initialCreators: processedCreators,
+				// Source of truth: server's totalCreators
+				totalCreators: selectedJob.totalCreators ?? processedCreators.length,
 			};
 
 			resultsView = (
@@ -1458,22 +1460,6 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
 				{resultsView}
 				{selectedJob.resultsError && (
 					<p className="text-xs text-rose-300 text-center">{selectedJob.resultsError}</p>
-				)}
-				{selectedJob.pagination?.nextOffset != null && (
-					<div className="flex justify-center">
-						<Button
-							type="button"
-							variant="outline"
-							size="sm"
-							className="border-zinc-700/60 text-zinc-100"
-							disabled={isLoadingMore}
-							onClick={() => loadMoreResults(selectedJob)}
-						>
-							{isLoadingMore ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-							Load more results
-							{remainingCreators > 0 && ` (${remainingCreators.toLocaleString()} remaining)`}
-						</Button>
-					</div>
 				)}
 			</div>
 		);

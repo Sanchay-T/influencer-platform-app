@@ -2,7 +2,7 @@
 
 import { ExternalLink, LayoutGrid, Loader2, MailCheck, RefreshCcw, Table2 } from 'lucide-react';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AddToListButton } from '@/components/lists/add-to-list-button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -107,6 +107,7 @@ const extractEmails = (creator) => {
 const hasContactEmail = (creator) => Array.isArray(creator?.emails) && creator.emails.length > 0;
 
 const SearchResults = () => {
+	const resultsContainerRef = useRef(null);
 	const [searchData, setSearchData] = useState({
 		jobId: '',
 		scraperLimit: '',
@@ -331,6 +332,15 @@ const SearchResults = () => {
 		return pages;
 	}, [galleryPage, totalGalleryPages]);
 
+	// Helper to change gallery page with scroll to top of results
+	const handleGalleryPageChange = useCallback((newPage) => {
+		setGalleryPage(newPage);
+		resultsContainerRef.current?.scrollIntoView({
+			behavior: 'smooth',
+			block: 'start',
+		});
+	}, []);
+
 	const handleRefresh = () => {
 		setSearchData({ jobId: '', scraperLimit: '', keywords: '' });
 		setResults([]);
@@ -372,7 +382,7 @@ const SearchResults = () => {
 	const shouldShowEmailOverlay = showFilteredEmpty && !emailOverlayDismissed;
 
 	return (
-		<div className="space-y-6">
+		<div ref={resultsContainerRef} className="space-y-6">
 			{shouldShowEmailOverlay ? (
 				<div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/80 px-4">
 					<div className="w-full max-w-md space-y-4 rounded-2xl border border-zinc-700/60 bg-zinc-900/95 p-6 text-center shadow-xl">
@@ -785,7 +795,7 @@ const SearchResults = () => {
 									<Button
 										variant="outline"
 										size="sm"
-										onClick={() => setGalleryPage(1)}
+										onClick={() => handleGalleryPageChange(1)}
 										disabled={galleryPage === 1}
 									>
 										First
@@ -793,7 +803,7 @@ const SearchResults = () => {
 									<Button
 										variant="outline"
 										size="sm"
-										onClick={() => setGalleryPage((prev) => Math.max(1, prev - 1))}
+										onClick={() => handleGalleryPageChange(Math.max(1, galleryPage - 1))}
 										disabled={galleryPage === 1}
 									>
 										Previous
@@ -807,7 +817,7 @@ const SearchResults = () => {
 														variant={galleryPage === page ? 'default' : 'outline'}
 														size="sm"
 														className="w-10"
-														onClick={() => setGalleryPage(page)}
+														onClick={() => handleGalleryPageChange(page)}
 													>
 														{page}
 													</Button>
@@ -824,7 +834,9 @@ const SearchResults = () => {
 									<Button
 										variant="outline"
 										size="sm"
-										onClick={() => setGalleryPage((prev) => Math.min(totalGalleryPages, prev + 1))}
+										onClick={() =>
+											handleGalleryPageChange(Math.min(totalGalleryPages, galleryPage + 1))
+										}
 										disabled={galleryPage === totalGalleryPages}
 									>
 										Next
@@ -832,7 +844,7 @@ const SearchResults = () => {
 									<Button
 										variant="outline"
 										size="sm"
-										onClick={() => setGalleryPage(totalGalleryPages)}
+										onClick={() => handleGalleryPageChange(totalGalleryPages)}
 										disabled={galleryPage === totalGalleryPages}
 									>
 										Last

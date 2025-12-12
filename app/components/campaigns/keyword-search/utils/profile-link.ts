@@ -6,9 +6,13 @@ const TIKTOK_BASE = 'https://www.tiktok.com/@';
 const INSTAGRAM_BASE = 'https://www.instagram.com/';
 
 function normalizePlatformValue(value: unknown): 'youtube' | 'instagram' | 'tiktok' | null {
-	if (typeof value !== 'string') return null;
+	if (typeof value !== 'string') {
+		return null;
+	}
 	const trimmed = value.trim();
-	if (!trimmed) return null;
+	if (!trimmed) {
+		return null;
+	}
 
 	const lowered = trimmed.toLowerCase();
 	const compact = lowered.replace(/[\s-]+/g, '_');
@@ -113,7 +117,7 @@ function resolvePlatform(
 	creator: any,
 	platformHint: string | null
 ): 'youtube' | 'instagram' | 'tiktok' | null {
-	const candidates: Array<unknown> = [
+	const candidates: unknown[] = [
 		creator?.platform,
 		creator?.creator?.platform,
 		creator?.sourcePlatform,
@@ -137,14 +141,20 @@ function resolvePlatform(
 	// mislabelled platform metadata from upstream scraping jobs. Lean on
 	// canonical creator signals first so a YouTube channel never links out to a
 	// TikTok profile solely because the hint said "tiktok".
-	if (hasYouTubeIndicators(creator)) return 'youtube';
-	if (hasInstagramIndicators(creator)) return 'instagram';
-	if (hasTikTokIndicators(creator)) return 'tiktok';
+	if (hasYouTubeIndicators(creator)) {
+		return 'youtube';
+	}
+	if (hasInstagramIndicators(creator)) {
+		return 'instagram';
+	}
+	if (hasTikTokIndicators(creator)) {
+		return 'tiktok';
+	}
 
 	return normalizedCandidates[0] ?? null;
 }
 
-function firstNonEmpty(values: Array<unknown>): string | null {
+function firstNonEmpty(values: unknown[]): string | null {
 	for (const value of values) {
 		if (typeof value === 'string') {
 			const trimmed = value.trim();
@@ -157,7 +167,9 @@ function firstNonEmpty(values: Array<unknown>): string | null {
 }
 
 function normalizeInstagramHandle(handle: string | null): string | null {
-	if (!handle) return null;
+	if (!handle) {
+		return null;
+	}
 	const sanitized = handle
 		.replace(/\s+/g, '')
 		.toLowerCase()
@@ -166,14 +178,20 @@ function normalizeInstagramHandle(handle: string | null): string | null {
 }
 
 function normalizeTikTokHandle(handle: string | null): string | null {
-	if (!handle) return null;
+	if (!handle) {
+		return null;
+	}
 	return handle.replace(/^@+/, '').trim();
 }
 
 function normalizeYouTubeHandle(handle: string | null): string | null {
-	if (!handle) return null;
+	if (!handle) {
+		return null;
+	}
 	const trimmed = handle.trim();
-	if (!trimmed) return null;
+	if (!trimmed) {
+		return null;
+	}
 	const withoutAt = trimmed.replace(/^@+/, '');
 	return withoutAt ? `@${withoutAt}` : null;
 }

@@ -4,6 +4,7 @@ import { Download, Filter, Instagram, MessageCircle } from 'lucide-react';
 import Image from 'next/image';
 import type { HTMLAttributes } from 'react';
 import * as React from 'react';
+import { useRef } from 'react';
 import { toast } from 'react-hot-toast';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Button } from '@/components/ui/button';
@@ -61,6 +62,7 @@ function SearchResultsContent({
 	const componentLogger = useComponentLogger('SearchResults', { title, jobId });
 	const userActionLogger = useUserActionLogger();
 	const apiLogger = useApiLogger();
+	const resultsContainerRef = useRef<HTMLDivElement>(null);
 	const [currentPage, setCurrentPage] = React.useState(1);
 	const [creators, setCreators] = React.useState<Creator[]>(initialCreators);
 	const [isLoading, setIsLoading] = React.useState(!!jobId);
@@ -124,8 +126,19 @@ function SearchResultsContent({
 		);
 	}
 
+	// Helper to change page and scroll to top of results
+	const handlePageChange = (newPage: number) => {
+		if (newPage !== currentPage) {
+			setCurrentPage(newPage);
+			resultsContainerRef.current?.scrollIntoView({
+				behavior: 'smooth',
+				block: 'start',
+			});
+		}
+	};
+
 	return (
-		<div className="space-y-6">
+		<div ref={resultsContainerRef} className="space-y-6">
 			<div className="flex justify-between items-center">
 				<h2 className="text-2xl font-bold text-zinc-100">{title}</h2>
 				<Button
@@ -309,14 +322,12 @@ function SearchResultsContent({
 							<PaginationPrevious
 								onClick={() => {
 									const newPage = Math.max(1, currentPage - 1);
-									if (newPage !== currentPage) {
-										userActionLogger.logClick('pagination-previous', {
-											fromPage: currentPage,
-											toPage: newPage,
-											operation: 'paginate-results',
-										});
-										setCurrentPage(newPage);
-									}
+									userActionLogger.logClick('pagination-previous', {
+										fromPage: currentPage,
+										toPage: newPage,
+										operation: 'paginate-results',
+									});
+									handlePageChange(newPage);
 								}}
 								disabled={currentPage === 1}
 							/>
@@ -326,14 +337,12 @@ function SearchResultsContent({
 								<PaginationLink
 									onClick={() => {
 										const newPage = i + 1;
-										if (newPage !== currentPage) {
-											userActionLogger.logClick('pagination-page', {
-												fromPage: currentPage,
-												toPage: newPage,
-												operation: 'paginate-results',
-											});
-											setCurrentPage(newPage);
-										}
+										userActionLogger.logClick('pagination-page', {
+											fromPage: currentPage,
+											toPage: newPage,
+											operation: 'paginate-results',
+										});
+										handlePageChange(newPage);
 									}}
 									isActive={currentPage === i + 1}
 								>
@@ -346,14 +355,12 @@ function SearchResultsContent({
 								onClick={() => {
 									const maxPage = Math.ceil(creators.length / itemsPerPage);
 									const newPage = Math.min(maxPage, currentPage + 1);
-									if (newPage !== currentPage) {
-										userActionLogger.logClick('pagination-next', {
-											fromPage: currentPage,
-											toPage: newPage,
-											operation: 'paginate-results',
-										});
-										setCurrentPage(newPage);
-									}
+									userActionLogger.logClick('pagination-next', {
+										fromPage: currentPage,
+										toPage: newPage,
+										operation: 'paginate-results',
+									});
+									handlePageChange(newPage);
 								}}
 								disabled={currentPage === Math.ceil(creators.length / itemsPerPage)}
 							/>

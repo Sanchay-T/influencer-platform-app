@@ -2,7 +2,7 @@
 
 import { LayoutGrid, MailCheck, Table2 } from 'lucide-react';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AddToListButton } from '@/components/lists/add-to-list-button';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -123,6 +123,8 @@ export default function SimilarSearchResults({ searchData }) {
 
 	const [currentPage, setCurrentPage] = useState(1);
 	const [isPageLoading, setIsPageLoading] = useState(false);
+	const resultsContainerRef = useRef(null);
+
 	const initialSeed = useMemo(
 		() =>
 			deriveInitialStateFromSearchData({
@@ -457,6 +459,11 @@ export default function SimilarSearchResults({ searchData }) {
 			await new Promise((resolve) => setTimeout(resolve, 150));
 			setCurrentPage(newPage);
 			setIsPageLoading(false);
+			// Scroll to top of results section for better UX
+			resultsContainerRef.current?.scrollIntoView({
+				behavior: 'smooth',
+				block: 'start',
+			});
 		},
 		[currentPage, totalPages]
 	);
@@ -514,7 +521,7 @@ export default function SimilarSearchResults({ searchData }) {
 	const hasResults = totalResults > 0;
 
 	return (
-		<div className="space-y-4">
+		<div ref={resultsContainerRef} className="space-y-4">
 			<Breadcrumbs
 				items={[
 					{ label: 'Dashboard', href: '/dashboard' },
