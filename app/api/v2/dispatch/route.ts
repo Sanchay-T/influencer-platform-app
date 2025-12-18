@@ -27,87 +27,110 @@ import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { LogCategory, logger } from '@/lib/logging';
 import { dispatch, validateDispatchRequest } from '@/lib/search-engine/v2/workers';
 
+// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function POST(req: Request) {
 	const startTime = Date.now();
+	const vercelId = req.headers.get('x-vercel-id') ?? req.headers.get('x-vercel-trace');
 
-	// ========================================================================
-	// Step 1: Authenticate User
-	// ========================================================================
-
-	const auth = await getAuthOrTest();
-	if (!auth.userId) {
-		return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-	}
-
-	const userId = auth.userId;
-
-	// ========================================================================
-	// Step 2: Parse and Validate Request
-	// ========================================================================
-
-	let body: unknown;
 	try {
-		body = await req.json();
-	} catch {
-		return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-	}
+		// ========================================================================
+		// Step 1: Authenticate User
+		// ========================================================================
 
-	const validation = validateDispatchRequest(body);
-	if (!(validation.valid && validation.data)) {
-		return NextResponse.json({ error: validation.error || 'Invalid request' }, { status: 400 });
-	}
+		const auth = await getAuthOrTest();
+		if (!auth.userId) {
+			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+		}
 
-	// ========================================================================
-	// Step 3: Dispatch to Workers
-	// ========================================================================
+		const userId = auth.userId;
 
-	logger.info(
-		'[v2-dispatch-route] Processing dispatch request',
-		{
-			userId,
-			platform: validation.data.platform,
-			keywordCount: validation.data.keywords.length,
-			targetResults: validation.data.targetResults,
-			campaignId: validation.data.campaignId,
-		},
-		LogCategory.JOB
-	);
+		// ========================================================================
+		// Step 2: Parse and Validate Request
+		// ========================================================================
 
-	const result = await dispatch({
-		userId,
-		request: validation.data,
-	});
+		let body: unknown;
+		try {
+			body = await req.json();
+		} catch {
+			return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+		}
 
-	const durationMs = Date.now() - startTime;
+		const validation = validateDispatchRequest(body);
+		if (!(validation.valid && validation.data)) {
+			return NextResponse.json({ error: validation.error || 'Invalid request' }, { status: 400 });
+		}
 
-	// ========================================================================
-	// Step 4: Return Response
-	// ========================================================================
+		// ========================================================================
+		// Step 3: Dispatch to Workers
+		// ========================================================================
 
-	if (!result.success) {
-		logger.warn(
-			'[v2-dispatch-route] Dispatch failed',
+		logger.info(
+			'[v2-dispatch-route] Processing dispatch request',
 			{
 				userId,
-				error: result.error,
-				durationMs,
+				platform: validation.data.platform,
+				keywordCount: validation.data.keywords.length,
+				targetResults: validation.data.targetResults,
+				campaignId: validation.data.campaignId,
+				vercelId,
 			},
 			LogCategory.JOB
 		);
 
-		return NextResponse.json({ error: result.error }, { status: result.statusCode });
-	}
-
-	logger.info(
-		'[v2-dispatch-route] Dispatch successful',
-		{
+		const result = await dispatch({
 			userId,
-			jobId: result.data?.jobId,
-			workersDispatched: result.data?.workersDispatched,
-			durationMs,
-		},
-		LogCategory.JOB
-	);
+			request: validation.data,
+		});
 
-	return NextResponse.json(result.data);
+		const durationMs = Date.now() - startTime;
+
+		// ========================================================================
+		// Step 4: Return Response
+		// ========================================================================
+
+		if (!result.success) {
+			logger.warn(
+				'[v2-dispatch-route] Dispatch failed',
+				{
+					userId,
+					error: result.error,
+					durationMs,
+					vercelId,
+				},
+				LogCategory.JOB
+			);
+
+			return NextResponse.json({ error: result.error, vercelId }, { status: result.statusCode });
+		}
+
+		logger.info(
+			'[v2-dispatch-route] Dispatch successful',
+			{
+				userId,
+				jobId: result.data?.jobId,
+				workersDispatched: result.data?.workersDispatched,
+				durationMs,
+				vercelId,
+			},
+			LogCategory.JOB
+		);
+
+		return NextResponse.json({ ...result.data, vercelId });
+	} catch (error) {
+		const durationMs = Date.now() - startTime;
+		logger.error(
+			'[v2-dispatch-route] Unhandled error while dispatching',
+			error instanceof Error ? error : new Error(String(error)),
+			{ durationMs, vercelId },
+			LogCategory.JOB
+		);
+		return NextResponse.json(
+			{
+				error: 'DISPATCH_INTERNAL_ERROR',
+				message: error instanceof Error ? error.message : String(error),
+				vercelId,
+			},
+			{ status: 500 }
+		);
+	}
 }

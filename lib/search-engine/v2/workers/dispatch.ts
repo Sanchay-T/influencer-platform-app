@@ -79,6 +79,23 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 
 	const startTime = Date.now();
 
+	// If QStash is not configured, we can't fan-out workers (search + enrichment).
+	// In that case, fail fast with a JSON error so the client doesn't crash on response.json().
+	if (!process.env.QSTASH_TOKEN) {
+		logger.error(
+			`${LOG_PREFIX} Missing QSTASH_TOKEN in environment`,
+			new Error('QSTASH_TOKEN not configured'),
+			{ platform, targetResults, campaignId },
+			LogCategory.JOB
+		);
+
+		return {
+			success: false,
+			error: 'QSTASH_TOKEN is missing in production environment',
+			statusCode: 500,
+		};
+	}
+
 	logger.info(
 		`${LOG_PREFIX} Starting dispatch`,
 		{

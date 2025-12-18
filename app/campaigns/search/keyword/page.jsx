@@ -10,6 +10,18 @@ import KeywordReview from '../../../components/campaigns/keyword-search/keyword-
 import KeywordSearchForm from '../../../components/campaigns/keyword-search/keyword-search-form';
 import DashboardLayout from '../../../components/layout/dashboard-layout';
 
+async function readResponsePayload(response) {
+	const text = await response.text().catch(() => '');
+	if (!text) {
+		return { json: null, text: '' };
+	}
+	try {
+		return { json: JSON.parse(text), text };
+	} catch {
+		return { json: null, text };
+	}
+}
+
 export default function KeywordSearch() {
 	const router = useRouter();
 	const [step, setStep] = useState(1);
@@ -40,7 +52,6 @@ export default function KeywordSearch() {
 					...prev,
 					campaignId: campaignIdFromUrl,
 				}));
-			} else {
 			}
 		} catch (error) {
 			structuredConsole.warn('[KeywordSearch] failed to parse URL params', error);
@@ -57,7 +68,6 @@ export default function KeywordSearch() {
 						campaignId: campaign.id,
 					}));
 					setCampaignName(campaign.name ?? '');
-				} else {
 				}
 			} catch (error) {
 				structuredConsole.warn('[KeywordSearch] failed to parse campaign session storage', error);
@@ -94,6 +104,7 @@ export default function KeywordSearch() {
 	};
 
 	// Manejar el paso 2: Revisión y envío de keywords
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Legacy flow; keep readable while improving error diagnostics.
 	const handleKeywordsSubmit = async (payload) => {
 		try {
 			// Obtener el campaignId de searchData o del sessionStorage
@@ -120,12 +131,12 @@ export default function KeywordSearch() {
 			const hasUsernames = submittedUsernames.length > 0;
 
 			// Map UI platform values to v2 API platform values
-			const v2PlatformMap = {
-				tiktok: 'tiktok',
-				instagram: 'instagram',
-				instagram_scrapecreators: 'instagram',
-				youtube: 'youtube',
-			};
+			const v2PlatformMap = new Map([
+				['tiktok', 'tiktok'],
+				['instagram', 'instagram'],
+				['instagram_scrapecreators', 'instagram'],
+				['youtube', 'youtube'],
+			]);
 
 			// Use V2 dispatch API for all keyword searches (not similar/username searches)
 			const useV2 =
@@ -135,7 +146,7 @@ export default function KeywordSearch() {
 			let response;
 			if (useV2) {
 				// V2 Fan-Out API - unified endpoint for all platforms
-				const v2Platform = v2PlatformMap[normalizedPlatform] || 'tiktok';
+				const v2Platform = v2PlatformMap.get(normalizedPlatform) || 'tiktok';
 				response = await fetch('/api/v2/dispatch', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
@@ -170,18 +181,57 @@ export default function KeywordSearch() {
 			}
 
 			if (!response.ok) {
-				const error = await response.json();
-				throw new Error(error.error || 'Error starting the scraping process');
+				const vercelId =
+					response.headers.get('x-vercel-id') || response.headers.get('x-vercel-trace');
+				const { json, text } = await readResponsePayload(response);
+				const message =
+					(json && (json.error || json.message)) ||
+					(text ? text.slice(0, 200) : null) ||
+					`HTTP ${response.status}`;
+
+				structuredConsole.error('[KeywordSearch] start search failed (non-OK response)', {
+					status: response.status,
+					endpoint: response.url,
+					vercelId,
+					bodySnippet: text ? text.slice(0, 500) : null,
+				});
+
+				throw new Error(vercelId ? `${message} (Vercel: ${vercelId})` : message);
 			}
 
-			const data = await response.json();
+			const vercelId =
+				response.headers.get('x-vercel-id') || response.headers.get('x-vercel-trace');
+			const { json, text } = await readResponsePayload(response);
+			if (!json) {
+				structuredConsole.error('[KeywordSearch] start search returned non-JSON response', {
+					status: response.status,
+					endpoint: response.url,
+					vercelId,
+					bodySnippet: text ? text.slice(0, 500) : null,
+				});
+				throw new Error(
+					vercelId
+						? `Server returned invalid response (Vercel: ${vercelId})`
+						: 'Server returned invalid response'
+				);
+			}
+
+			const data = json;
 
 			// Map platform for results display
 			const nextPlatform = (() => {
-				if (hasUsernames) return 'instagram-similar';
-				if (normalizedPlatform === 'instagram' || normalizedPlatform === 'instagram_scrapecreators')
+				if (hasUsernames) {
+					return 'instagram-similar';
+				}
+				if (
+					normalizedPlatform === 'instagram' ||
+					normalizedPlatform === 'instagram_scrapecreators'
+				) {
 					return 'instagram';
-				if (normalizedPlatform === 'youtube') return 'youtube';
+				}
+				if (normalizedPlatform === 'youtube') {
+					return 'youtube';
+				}
 				return 'tiktok';
 			})();
 
