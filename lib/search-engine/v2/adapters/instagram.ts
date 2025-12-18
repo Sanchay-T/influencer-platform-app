@@ -2,11 +2,15 @@
  * Instagram Search Adapter
  *
  * Implements the SearchAdapter interface for Instagram Reels.
- * Uses ScrapeCreators API - bio comes with search results (no enrichment needed).
+ * Uses ScrapeCreators API.
+ *
+ * Important: The reels search endpoint does NOT include creator bios/links.
+ * We must enrich creators via the Instagram basic-profile endpoint.
  */
 
-import { EMAIL_REGEX, ENDPOINTS } from '../core/config';
+import { ENDPOINTS } from '../core/config';
 import type { FetchResult, NormalizedCreator, SearchConfig } from '../core/types';
+import { enrichInstagramCreator } from './instagram-enrichment';
 import type { SearchAdapter } from './interface';
 import { registerAdapter } from './interface';
 
@@ -15,16 +19,13 @@ import { registerAdapter } from './interface';
 // ============================================================================
 
 interface InstagramOwner {
-	id?: string;
+	id?: string | number;
 	username?: string;
 	full_name?: string;
 	is_verified?: boolean;
 	profile_pic_url?: string;
 	follower_count?: number;
 	post_count?: number;
-	biography?: string;
-	bio_links?: Array<{ title?: string; url?: string; link_type?: string }>;
-	external_url?: string;
 }
 
 interface InstagramReel {
@@ -135,21 +136,13 @@ class InstagramAdapter implements SearchAdapter {
 		}
 
 		const username = owner.username;
-		const bio = owner.biography ?? '';
-		const emails = bio ? (bio.match(EMAIL_REGEX) ?? []) : [];
-
-		// Extract emails from bio_links as well
-		if (Array.isArray(owner.bio_links)) {
-			for (const link of owner.bio_links) {
-				const linkUrl = link.url ?? '';
-				if (linkUrl.includes('mailto:')) {
-					const email = linkUrl.replace('mailto:', '').split('?')[0];
-					if (email && !emails.includes(email)) {
-						emails.push(email);
-					}
-				}
-			}
-		}
+		const instagramUserIdRaw = (owner as InstagramOwner)?.id;
+		const instagramUserId =
+			typeof instagramUserIdRaw === 'string'
+				? instagramUserIdRaw.trim() || undefined
+				: typeof instagramUserIdRaw === 'number'
+					? String(instagramUserIdRaw)
+					: undefined;
 
 		const avatarUrl = owner.profile_pic_url ?? '';
 		const thumbnail = reel.thumbnail_src || reel.display_url || '';
@@ -181,9 +174,10 @@ class InstagramAdapter implements SearchAdapter {
 				name: owner.full_name || username,
 				followers: owner.follower_count ?? 0,
 				avatarUrl,
-				bio,
-				emails,
+				bio: '', // filled by enrich()
+				emails: [],
 				verified: Boolean(owner.is_verified),
+				instagramUserId,
 			},
 
 			content: {
@@ -202,9 +196,8 @@ class InstagramAdapter implements SearchAdapter {
 
 			hashtags: [], // Instagram API doesn't return hashtags separately
 
-			// Instagram provides full bio in search - mark as enriched
-			bioEnriched: true,
-			bioEnrichedAt: new Date().toISOString(),
+			// Enrichment is required for bio + links
+			bioEnriched: false,
 
 			// Legacy compatibility fields
 			preview: thumbnail || undefined,
@@ -237,15 +230,10 @@ class InstagramAdapter implements SearchAdapter {
 	}
 
 	/**
-	 * Enrich creator - Instagram returns full bio in search, so this is a no-op
+	 * Enrich creator with full profile (bio + bio links) via basic-profile endpoint.
 	 */
-	async enrich(creator: NormalizedCreator, _config: SearchConfig): Promise<NormalizedCreator> {
-		// Instagram provides full bio in search results - no enrichment needed
-		return {
-			...creator,
-			bioEnriched: true,
-			bioEnrichedAt: creator.bioEnrichedAt || new Date().toISOString(),
-		};
+	async enrich(creator: NormalizedCreator, config: SearchConfig): Promise<NormalizedCreator> {
+		return enrichInstagramCreator(creator, config);
 	}
 }
 

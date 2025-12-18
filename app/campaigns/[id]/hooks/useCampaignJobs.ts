@@ -18,9 +18,11 @@ import {
 	SHOW_DIAGNOSTICS,
 	toUiJob,
 } from '../utils/campaign-helpers';
+import { readCachedRunSnapshot, writeCachedRunSnapshot } from './run-snapshot-cache';
 
 // Cache for expensive deduplication operations
 const dedupeCache = new Map<string, unknown[]>();
+const RUN_SNAPSHOT_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
 interface UseCampaignJobsResult {
 	// State
@@ -52,9 +54,25 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 	const searchParams = useSearchParams();
 
 	// Core state
-	const [jobs, setJobs] = useState<UiScrapingJob[]>(() =>
-		(campaign?.scrapingJobs ?? []).map(toUiJob)
-	);
+	const [jobs, setJobs] = useState<UiScrapingJob[]>(() => {
+		const baseJobs = (campaign?.scrapingJobs ?? []).map(toUiJob);
+		return baseJobs.map((job) => {
+			const cached = readCachedRunSnapshot(job.id, RUN_SNAPSHOT_CACHE_TTL_MS);
+			if (!cached) {
+				return job;
+			}
+
+			return {
+				...job,
+				resultsLoaded: cached.creatorBuffer.length > 0,
+				creatorBuffer: cached.creatorBuffer,
+				totalCreators:
+					typeof cached.totalCreators === 'number' ? cached.totalCreators : job.totalCreators,
+				pagination: cached.pagination ?? job.pagination,
+				pageLimit: cached.pageLimit ?? job.pageLimit,
+			};
+		});
+	});
 	const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
 	const [activeTab, setActiveTab] = useState<'creators' | 'activity'>('creators');
 	const [isTransitioning, setIsTransitioning] = useState(false);
@@ -157,6 +175,14 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 
 				const jobUpdate = createJobUpdateFromPayload(job, data, false);
 				updateJobState(job.id, jobUpdate);
+
+				writeCachedRunSnapshot(job.id, {
+					cachedAt: new Date().toISOString(),
+					creatorBuffer: jobUpdate.creatorBuffer ?? job.creatorBuffer ?? [],
+					totalCreators: jobUpdate.totalCreators,
+					pagination: jobUpdate.pagination,
+					pageLimit: jobUpdate.pageLimit,
+				});
 			} catch (error) {
 				structuredConsole.error('Error fetching job snapshot:', error);
 				updateJobState(job.id, {
@@ -220,6 +246,14 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 
 				const jobUpdate = createJobUpdateFromPayload(job, data, true);
 				updateJobState(job.id, jobUpdate);
+
+				writeCachedRunSnapshot(job.id, {
+					cachedAt: new Date().toISOString(),
+					creatorBuffer: jobUpdate.creatorBuffer ?? job.creatorBuffer ?? [],
+					totalCreators: jobUpdate.totalCreators,
+					pagination: jobUpdate.pagination,
+					pageLimit: jobUpdate.pageLimit,
+				});
 			} catch (error) {
 				structuredConsole.error('Error loading additional results:', error);
 				updateJobState(job.id, {

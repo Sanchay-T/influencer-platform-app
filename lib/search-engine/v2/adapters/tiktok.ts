@@ -5,7 +5,7 @@
  * Handles fetching from ScrapeCreators API and normalizing results.
  */
 
-import { EMAIL_REGEX, ENDPOINTS, LOG_PREFIX } from '../core/config';
+import { EMAIL_REGEX, ENDPOINTS } from '../core/config';
 import type { FetchResult, NormalizedCreator, SearchConfig } from '../core/types';
 import type { SearchAdapter } from './interface';
 import { registerAdapter } from './interface';
@@ -178,16 +178,34 @@ class TikTokAdapter implements SearchAdapter {
 	 * Enrich creator with full bio from profile API
 	 */
 	async enrich(creator: NormalizedCreator, config: SearchConfig): Promise<NormalizedCreator> {
-		// Skip if bio already exists
-		if (creator.creator.bio && creator.creator.bio.trim().length > 0) {
-			return creator;
+		// Skip if we've already attempted enrichment (prevents repeated work + UI spinners on reload)
+		if (creator.bio_enriched?.fetched_at) {
+			return {
+				...creator,
+				bioEnriched: true,
+				bioEnrichedAt: creator.bioEnrichedAt || creator.bio_enriched.fetched_at,
+			};
 		}
 
 		const handle = creator.creator.uniqueId || creator.creator.username;
 		if (!handle) {
-			return creator;
+			const fetchedAt = new Date().toISOString();
+			return {
+				...creator,
+				bioEnriched: true,
+				bioEnrichedAt: fetchedAt,
+				bio_enriched: {
+					biography: creator.creator.bio?.trim?.() ? creator.creator.bio : null,
+					bio_links: [],
+					external_url: null,
+					extracted_email: null,
+					fetched_at: fetchedAt,
+					error: 'missing_handle',
+				},
+			};
 		}
 
+		const fetchedAt = new Date().toISOString();
 		try {
 			const url = new URL(`${config.apiBaseUrl}${ENDPOINTS.tiktok.profile}`);
 			url.searchParams.set('handle', handle);
@@ -199,35 +217,66 @@ class TikTokAdapter implements SearchAdapter {
 			});
 
 			if (!response.ok) {
-				return creator;
+				return {
+					...creator,
+					bioEnriched: true,
+					bioEnrichedAt: fetchedAt,
+					bio_enriched: {
+						biography: creator.creator.bio?.trim?.() ? creator.creator.bio : null,
+						bio_links: [],
+						external_url: null,
+						extracted_email: null,
+						fetched_at: fetchedAt,
+						error: `tiktok_profile_failed:${response.status}`,
+					},
+				};
 			}
 
 			const data = (await response.json()) as TikTokProfileResponse;
 			const profileUser = data.user ?? {};
-			const newBio = profileUser.signature || profileUser.desc || '';
+			const newBio = profileUser.signature || profileUser.desc || creator.creator.bio || '';
+			const externalUrl =
+				typeof profileUser.bioLink?.link === 'string' && profileUser.bioLink.link.trim().length > 0
+					? profileUser.bioLink.link.trim()
+					: null;
 
-			if (newBio) {
-				const emails = newBio.match(EMAIL_REGEX) ?? [];
-				return {
-					...creator,
-					creator: {
-						...creator.creator,
-						bio: newBio,
-						emails: emails.length > 0 ? emails : creator.creator.emails,
-					},
-					bioEnriched: true,
-					bioEnrichedAt: new Date().toISOString(),
-				};
-			}
+			const emailsFromBio = newBio ? (newBio.match(EMAIL_REGEX) ?? []) : [];
+			const mergedEmails = [...new Set([...(creator.creator.emails ?? []), ...emailsFromBio])];
+			const extractedEmail = mergedEmails.length > 0 ? mergedEmails[0] : null;
+			const bioLinks = externalUrl ? [{ url: externalUrl, title: 'Link in bio' }] : [];
 
 			return {
 				...creator,
+				creator: {
+					...creator.creator,
+					bio: newBio,
+					emails: mergedEmails,
+				},
 				bioEnriched: true,
-				bioEnrichedAt: new Date().toISOString(),
+				bioEnrichedAt: fetchedAt,
+				bio_enriched: {
+					biography: newBio?.trim?.() ? newBio : null,
+					bio_links: bioLinks,
+					external_url: externalUrl,
+					extracted_email: extractedEmail,
+					fetched_at: fetchedAt,
+				},
 			};
 		} catch {
-			// Swallow profile errors - baseline data is still useful
-			return creator;
+			// Swallow profile errors - baseline data is still useful, but mark as attempted
+			return {
+				...creator,
+				bioEnriched: true,
+				bioEnrichedAt: fetchedAt,
+				bio_enriched: {
+					biography: creator.creator.bio?.trim?.() ? creator.creator.bio : null,
+					bio_links: [],
+					external_url: null,
+					extracted_email: null,
+					fetched_at: fetchedAt,
+					error: 'tiktok_profile_exception',
+				},
+			};
 		}
 	}
 }

@@ -26,6 +26,16 @@ export interface CreatorInfo {
 	// Platform-specific IDs
 	uniqueId?: string; // TikTok
 	channelId?: string; // YouTube
+	instagramUserId?: string; // Instagram (ScrapeCreators basic-profile userId)
+}
+
+export interface BioEnrichedInfo {
+	biography: string | null;
+	bio_links: Array<{ url?: string; lynx_url?: string; title?: string }>;
+	external_url: string | null;
+	extracted_email: string | null;
+	fetched_at: string;
+	error?: string;
 }
 
 export interface ContentStatistics {
@@ -57,6 +67,8 @@ export interface NormalizedCreator {
 	// Bio enrichment tracking
 	bioEnriched?: boolean;
 	bioEnrichedAt?: string;
+	// Back-compat with legacy UI "Bio & Links" rendering.
+	bio_enriched?: BioEnrichedInfo;
 
 	// Preserve compatibility with existing frontend
 	// These duplicate some fields but match current API contract

@@ -80,5 +80,8 @@ export interface TikTokProfileResponse {
 	user?: {
 		signature?: string;
 		desc?: string;
+		bioLink?: {
+			link?: string;
+		} | null;
 	};
 }

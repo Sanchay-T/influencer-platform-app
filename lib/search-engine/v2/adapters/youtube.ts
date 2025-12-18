@@ -5,10 +5,11 @@
  * Uses ScrapeCreators API - REQUIRES enrichment for followers and bio.
  */
 
-import { EMAIL_REGEX, ENDPOINTS } from '../core/config';
+import { ENDPOINTS } from '../core/config';
 import type { FetchResult, NormalizedCreator, SearchConfig } from '../core/types';
 import type { SearchAdapter } from './interface';
 import { registerAdapter } from './interface';
+import { enrichYouTubeCreator } from './youtube-enrichment';
 
 // ============================================================================
 // Types for YouTube API Response
@@ -37,18 +38,6 @@ interface YouTubeVideo {
 interface YouTubeSearchResponse {
 	videos?: YouTubeVideo[];
 	continuationToken?: string;
-}
-
-interface YouTubeChannelResponse {
-	name?: string;
-	handle?: string;
-	channelId?: string;
-	description?: string;
-	email?: string;
-	subscriberCount?: string;
-	subscriberCountInt?: number;
-	avatarUrl?: string;
-	links?: Array<{ url?: string; title?: string }>;
 }
 
 // ============================================================================
@@ -205,82 +194,7 @@ class YouTubeAdapter implements SearchAdapter {
 	 * YouTube REQUIRES enrichment - search results don't include follower count or bio
 	 */
 	async enrich(creator: NormalizedCreator, config: SearchConfig): Promise<NormalizedCreator> {
-		// Skip if already enriched
-		if (creator.bioEnriched) {
-			return creator;
-		}
-
-		const handle = creator.creator.channelId || creator.creator.username;
-		if (!handle) {
-			return creator;
-		}
-
-		try {
-			const cleanHandle = handle.startsWith('@') ? handle.slice(1) : handle;
-			const url = new URL(`${config.apiBaseUrl}${ENDPOINTS.youtube.channel}`);
-			url.searchParams.set('handle', cleanHandle);
-
-			const response = await fetch(url.toString(), {
-				headers: { 'x-api-key': config.apiKey },
-				signal: AbortSignal.timeout(config.bioEnrichmentTimeoutMs),
-			});
-
-			if (!response.ok) {
-				return creator;
-			}
-
-			const profile = (await response.json()) as YouTubeChannelResponse;
-
-			// Extract emails from bio and links
-			const bio = profile.description ?? '';
-			const emails: string[] = [];
-
-			// Extract from bio
-			const bioEmails = bio.match(EMAIL_REGEX) ?? [];
-			emails.push(...bioEmails);
-
-			// Extract direct email field
-			if (profile.email && !emails.includes(profile.email)) {
-				emails.push(profile.email);
-			}
-
-			// Extract from links
-			if (Array.isArray(profile.links)) {
-				for (const link of profile.links) {
-					const linkUrl = link.url ?? '';
-					if (linkUrl.includes('mailto:')) {
-						const email = linkUrl.replace('mailto:', '').split('?')[0];
-						if (email && !emails.includes(email)) {
-							emails.push(email);
-						}
-					}
-				}
-			}
-
-			// Parse subscriber count
-			const subscriberCount =
-				profile.subscriberCountInt ??
-				(typeof profile.subscriberCount === 'string'
-					? Number.parseInt(profile.subscriberCount.replace(/[^0-9]/g, ''), 10) || 0
-					: 0);
-
-			return {
-				...creator,
-				creator: {
-					...creator.creator,
-					name: profile.name || creator.creator.name,
-					followers: subscriberCount,
-					avatarUrl: profile.avatarUrl || creator.creator.avatarUrl,
-					bio,
-					emails: emails.length > 0 ? emails : creator.creator.emails,
-				},
-				bioEnriched: true,
-				bioEnrichedAt: new Date().toISOString(),
-			};
-		} catch {
-			// Swallow profile errors - baseline data is still useful
-			return creator;
-		}
+		return enrichYouTubeCreator(creator, config);
 	}
 }
 
