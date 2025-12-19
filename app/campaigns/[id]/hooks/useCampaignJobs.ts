@@ -129,7 +129,7 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 	// Fetch job snapshot
 	const fetchJobSnapshot = useCallback(
 		async (job: UiScrapingJob) => {
-			const endpoint = resolveScrapingEndpoint(job.platform);
+			const endpoint = resolveScrapingEndpoint(job);
 
 			markJobLoading(job.id);
 			try {
@@ -203,7 +203,7 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 				return;
 			}
 
-			const endpoint = resolveScrapingEndpoint(job.platform);
+			const endpoint = resolveScrapingEndpoint(job);
 			const limit = job.pageLimit ?? job.pagination.limit ?? DEFAULT_PAGE_LIMIT;
 
 			markJobLoading(job.id);
@@ -461,7 +461,7 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 					return;
 				}
 
-				const endpoint = resolveScrapingEndpoint(current.platform);
+				const endpoint = resolveScrapingEndpoint(current);
 				const response = await fetch(`${endpoint}?jobId=${current.id}`, { credentials: 'include' });
 
 				const text = await response.text();

@@ -99,8 +99,21 @@ export const buildAggregatedResults = (
 };
 
 // Endpoint resolution
-export const resolveScrapingEndpoint = (platform?: string) => {
-	const normalized = (platform || '').toLowerCase();
+export const resolveScrapingEndpoint = (
+	job?: Pick<UiScrapingJob, 'platform' | 'targetUsername' | 'keywords'>
+) => {
+	const normalized = (job?.platform || '').toLowerCase();
+	const hasTargetUsername =
+		typeof job?.targetUsername === 'string' && job.targetUsername.trim().length > 0;
+	const hasKeywords = Array.isArray(job?.keywords) && job.keywords.length > 0;
+
+	if (
+		!hasTargetUsername &&
+		hasKeywords &&
+		['tiktok', 'instagram', 'youtube'].includes(normalized)
+	) {
+		return '/api/v2/status';
+	}
 
 	switch (normalized) {
 		case 'instagram_scrapecreators':

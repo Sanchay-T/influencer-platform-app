@@ -1,11 +1,10 @@
-import { desc, eq } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { db } from '@/lib/db';
-import { campaigns, scrapingJobs } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
 	try {
 		const { id } = await params;
 		structuredConsole.log('🔍 [CAMPAIGN-DETAIL-API] GET request received for campaign:', id);
@@ -35,6 +34,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 						userId: true,
 						status: true,
 						keywords: true,
+						targetUsername: true,
 						platform: true,
 						searchParams: true,
 						targetResults: true,

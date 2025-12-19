@@ -57,6 +57,8 @@ We audited and fact-checked the codebase. The keyword-search refactor is DONE (2
    - Added `DispatchWorkerMessage` + validation helpers.
 4. **Polling diagnostics**
    - Added optional client-side polling logs for keyword search progress.
+5. **Campaign run polling**
+   - Route keyword runs to `/api/v2/status` to avoid legacy 401s.
 
 ---
 
