@@ -59,6 +59,8 @@ We audited and fact-checked the codebase. The keyword-search refactor is DONE (2
    - Added optional client-side polling logs for keyword search progress.
 5. **Campaign run polling**
    - Route keyword runs to `/api/v2/status` to avoid legacy 401s.
+6. **Local endpoint debug**
+   - Added optional endpoint logging in campaign polling when `gemz_debug_polling` is enabled.
 
 ---
 

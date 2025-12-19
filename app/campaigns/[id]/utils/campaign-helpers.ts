@@ -3,6 +3,7 @@
  * Extracted from client-page.tsx for modularity
  */
 import { dedupeCreators } from '@/app/components/campaigns/utils/dedupe-creators';
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import type {
 	HandleQueueState,
 	PlatformResult,
@@ -106,47 +107,62 @@ export const resolveScrapingEndpoint = (
 	const hasTargetUsername =
 		typeof job?.targetUsername === 'string' && job.targetUsername.trim().length > 0;
 	const hasKeywords = Array.isArray(job?.keywords) && job.keywords.length > 0;
+	const debugPolling =
+		typeof window !== 'undefined' && window.localStorage.getItem('gemz_debug_polling') === 'true';
+
+	const logEndpoint = (endpoint: string) => {
+		if (debugPolling) {
+			structuredConsole.log('[RUN-ENDPOINT] resolve', {
+				jobId: (job as { id?: string })?.id ?? null,
+				platform: job?.platform ?? null,
+				hasTargetUsername,
+				hasKeywords,
+				endpoint,
+			});
+		}
+		return endpoint;
+	};
 
 	if (
 		!hasTargetUsername &&
 		hasKeywords &&
 		['tiktok', 'instagram', 'youtube'].includes(normalized)
 	) {
-		return '/api/v2/status';
+		return logEndpoint('/api/v2/status');
 	}
 
 	switch (normalized) {
 		case 'instagram_scrapecreators':
-			return '/api/scraping/instagram-scrapecreators';
+			return logEndpoint('/api/scraping/instagram-scrapecreators');
 		case 'instagram_us_reels':
 		case 'instagram-us-reels':
 		case 'instagram us reels':
 		case 'instagram-1.0':
 		case 'instagram_1.0':
-			return '/api/scraping/instagram-us-reels';
+			return logEndpoint('/api/scraping/instagram-us-reels');
 		case 'instagram_reels':
 		case 'instagram-reels':
-			return '/api/scraping/instagram-reels';
+			return logEndpoint('/api/scraping/instagram-reels');
 		case 'instagram-2.0':
 		case 'instagram_2.0':
 		case 'instagram-v2':
 		case 'instagram_v2':
-			return '/api/scraping/instagram-v2';
+			return logEndpoint('/api/scraping/instagram-v2');
 		case 'instagram-similar':
 		case 'instagram_similar':
-			return '/api/scraping/instagram';
+			return logEndpoint('/api/scraping/instagram');
 		case 'instagram':
-			return '/api/scraping/instagram';
+			return logEndpoint('/api/scraping/instagram');
 		case 'google-serp':
 		case 'google_serp':
-			return '/api/scraping/google-serp';
+			return logEndpoint('/api/scraping/google-serp');
 		case 'youtube-similar':
 		case 'youtube_similar':
-			return '/api/scraping/youtube-similar';
+			return logEndpoint('/api/scraping/youtube-similar');
 		case 'youtube':
-			return '/api/scraping/youtube';
+			return logEndpoint('/api/scraping/youtube');
 		default:
-			return '/api/scraping/tiktok';
+			return logEndpoint('/api/scraping/tiktok');
 	}
 };
 
