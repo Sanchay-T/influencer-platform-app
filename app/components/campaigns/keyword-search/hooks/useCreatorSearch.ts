@@ -4,6 +4,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { dedupeCreators } from '../../utils/dedupe-creators';
 import { getScrapingEndpoint } from '../utils';
 import { parseJsonSafe } from './useBioEnrichment';
@@ -54,10 +55,16 @@ export interface UseCreatorSearchResult {
 }
 
 export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearchResult {
+	const debugPolling =
+		typeof window !== 'undefined' && window.localStorage.getItem('gemz_debug_polling') === 'true';
 	// Initial creators from props
 	const initialCreators = useMemo(() => {
-		if (Array.isArray(searchData?.initialCreators)) return searchData.initialCreators;
-		if (Array.isArray(searchData?.creators)) return searchData.creators;
+		if (Array.isArray(searchData?.initialCreators)) {
+			return searchData.initialCreators;
+		}
+		if (Array.isArray(searchData?.creators)) {
+			return searchData.creators;
+		}
 		return [];
 	}, [searchData?.initialCreators, searchData?.creators]);
 
@@ -88,6 +95,7 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 		Boolean(searchData?.jobId) && (jobIsActive || stillProcessing || isFetching || isLoading);
 
 	// Reset when switching to a different run OR when initialCreators grows (Load more)
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: explicit branching for cache + props hydration.
 	useEffect(() => {
 		const cacheKey = searchData?.jobId;
 		if (!cacheKey) {
@@ -95,6 +103,9 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 			setIsFetching(false);
 			setStillProcessing(false);
 			setIsLoading(false);
+			if (debugPolling) {
+				structuredConsole.log('[CREATOR-SEARCH] reset: missing jobId');
+			}
 			return;
 		}
 
@@ -108,6 +119,13 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 			setCreators(cached);
 			setIsLoading(false);
 			setIsFetching(true);
+			if (debugPolling) {
+				structuredConsole.log('[CREATOR-SEARCH] use cache', {
+					jobId: cacheKey,
+					cached: cached.length,
+					initial: initialCreators.length,
+				});
+			}
 		} else if (initialCreators.length) {
 			// Use initialCreators from props - this includes "Load more" results
 			const deduped = dedupeCreators(initialCreators, { platformHint: platformNormalized });
@@ -116,12 +134,21 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 			resultsCacheRef.current.set(cacheKey, deduped);
 			setIsLoading(false);
 			setIsFetching(false);
+			if (debugPolling) {
+				structuredConsole.log('[CREATOR-SEARCH] use initial creators', {
+					jobId: cacheKey,
+					initial: initialCreators.length,
+				});
+			}
 		} else {
 			setCreators([]);
 			setIsLoading(true);
 			setIsFetching(true);
+			if (debugPolling) {
+				structuredConsole.log('[CREATOR-SEARCH] start loading', { jobId: cacheKey });
+			}
 		}
-	}, [searchData?.jobId, initialCreators, platformNormalized]);
+	}, [searchData?.jobId, initialCreators, platformNormalized, debugPolling]);
 
 	// Track processing flag separately
 	useEffect(() => {
@@ -137,10 +164,14 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 
 	// Fetch results effect - only runs when we need fresh data from API
 	useEffect(() => {
+		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: legacy flow with multiple skip paths.
 		const fetchResults = async () => {
 			try {
 				if (!searchData?.jobId) {
 					setIsFetching(false);
+					if (debugPolling) {
+						structuredConsole.log('[CREATOR-SEARCH] skip fetch: missing jobId');
+					}
 					return;
 				}
 
@@ -148,6 +179,13 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 				// This prevents overwriting "Load more" results
 				if (initialCreators.length > 0 && !jobIsActive) {
 					setIsFetching(false);
+					if (debugPolling) {
+						structuredConsole.log('[CREATOR-SEARCH] skip fetch: initial creators present', {
+							jobId: searchData.jobId,
+							initial: initialCreators.length,
+							jobIsActive,
+						});
+					}
 					return;
 				}
 
@@ -156,12 +194,28 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 				if (cached && cached.length > 0 && !jobIsActive && !stillProcessing) {
 					setCreators(cached);
 					setIsFetching(false);
+					if (debugPolling) {
+						structuredConsole.log('[CREATOR-SEARCH] skip fetch: cached & inactive', {
+							jobId: searchData.jobId,
+							cached: cached.length,
+							jobIsActive,
+							stillProcessing,
+						});
+					}
 					return;
 				}
 
 				// Only fetch if job is still active or we have no data at all
 				if (!(jobIsActive || stillProcessing) && creators.length > 0) {
 					setIsFetching(false);
+					if (debugPolling) {
+						structuredConsole.log('[CREATOR-SEARCH] skip fetch: already have creators', {
+							jobId: searchData.jobId,
+							creators: creators.length,
+							jobIsActive,
+							stillProcessing,
+						});
+					}
 					return;
 				}
 
@@ -177,11 +231,17 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 					setIsLoading(false);
 					setStillProcessing(false);
 					setIsFetching(false);
+					if (debugPolling) {
+						structuredConsole.warn('[CREATOR-SEARCH] invalid JSON', {
+							jobId: searchData.jobId,
+							endpoint: apiEndpoint,
+						});
+					}
 					return;
 				}
 
 				if (data.error) {
-					console.error('Error fetching results:', data.error);
+					structuredConsole.error('Error fetching results', data.error);
 					return;
 				}
 
@@ -206,6 +266,17 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 					}
 				}
 
+				if (debugPolling) {
+					structuredConsole.log('[CREATOR-SEARCH] fetched results', {
+						jobId: searchData.jobId,
+						endpoint: apiEndpoint,
+						apiCount: dedupedCreators.length,
+						previousCount: creators.length,
+						jobIsActive,
+						stillProcessing,
+					});
+				}
+
 				if (dedupedCreators.length || creators.length) {
 					setIsLoading(false);
 				}
@@ -213,7 +284,7 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 					setStillProcessing(false);
 				}
 			} catch (error) {
-				console.error('Error fetching results:', error);
+				structuredConsole.error('Error fetching results', error);
 			} finally {
 				setIsFetching(false);
 			}
@@ -222,12 +293,12 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 		fetchResults();
 	}, [
 		searchData?.jobId,
-		searchData?.selectedPlatform,
-		searchData?.platform,
 		platformNormalized,
 		jobIsActive,
 		stillProcessing,
 		initialCreators.length,
+		creators.length,
+		debugPolling,
 	]);
 
 	// Simulated progress animation
@@ -261,6 +332,7 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 
 	// Search completion handler
 	const handleSearchComplete = useCallback(
+		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: completion handling + fallback fetch.
 		(data: { status?: string; creators?: unknown[] }) => {
 			if (
 				data &&
@@ -272,6 +344,14 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 				const allCreators = dedupeCreators(data.creators || [], {
 					platformHint: platformNormalized,
 				});
+
+				if (debugPolling) {
+					structuredConsole.log('[CREATOR-SEARCH] complete', {
+						jobId: searchData?.jobId,
+						status: data.status,
+						creators: allCreators.length,
+					});
+				}
 
 				if (allCreators.length > 0) {
 					setCreators(allCreators);
@@ -285,6 +365,7 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 
 					fetch(`${apiEndpoint}?jobId=${searchData?.jobId}`, { credentials: 'include' })
 						.then((response) => parseJsonSafe(response))
+						// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: explicit fallback handling.
 						.then((result) => {
 							if (result?.error === 'invalid_json') {
 								setIsLoading(false);
@@ -304,6 +385,13 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 							if (searchData?.jobId && deduped.length) {
 								resultsCacheRef.current.set(searchData.jobId, deduped);
 							}
+							if (debugPolling) {
+								structuredConsole.log('[CREATOR-SEARCH] complete fallback', {
+									jobId: searchData?.jobId,
+									endpoint: apiEndpoint,
+									creators: deduped.length,
+								});
+							}
 						})
 						.catch(() => {
 							setIsLoading(false);
@@ -311,7 +399,7 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 				}
 			}
 		},
-		[platformNormalized, searchData?.jobId]
+		[platformNormalized, searchData?.jobId, debugPolling]
 	);
 
 	// Intermediate results handler
@@ -319,7 +407,9 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 		(data: { creators?: unknown[] }) => {
 			try {
 				const incoming = Array.isArray(data?.creators) ? data.creators : [];
-				if (incoming.length === 0) return;
+				if (incoming.length === 0) {
+					return;
+				}
 
 				setStillProcessing(true);
 				setIsLoading(false);
@@ -332,13 +422,20 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 					if (searchData?.jobId && merged.length) {
 						resultsCacheRef.current.set(searchData.jobId, merged);
 					}
+					if (debugPolling) {
+						structuredConsole.log('[CREATOR-SEARCH] intermediate', {
+							jobId: searchData?.jobId,
+							incoming: incoming.length,
+							merged: merged.length,
+						});
+					}
 					return merged;
 				});
 			} catch (e) {
-				console.error('Error handling intermediate results:', e);
+				structuredConsole.error('Error handling intermediate results', e);
 			}
 		},
-		[platformNormalized, searchData?.jobId]
+		[platformNormalized, searchData?.jobId, debugPolling]
 	);
 
 	return {

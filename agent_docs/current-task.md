@@ -55,6 +55,8 @@ We audited and fact-checked the codebase. The keyword-search refactor is DONE (2
    - New worker: `/api/v2/worker/dispatch` expands keywords + fans out search workers.
 3. **Types/validation**
    - Added `DispatchWorkerMessage` + validation helpers.
+4. **Polling diagnostics**
+   - Added optional client-side polling logs for keyword search progress.
 
 ---
 

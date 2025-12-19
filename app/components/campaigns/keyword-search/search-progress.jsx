@@ -21,8 +21,8 @@ const parseJsonSafe = async (response) => {
 	const text = await response.text();
 	try {
 		return JSON.parse(text);
-	} catch (err) {
-		console.error('[SEARCH-PROGRESS] Non-JSON response', {
+	} catch (_err) {
+		structuredConsole.error('[SEARCH-PROGRESS] Non-JSON response', {
 			status: response.status,
 			snippet: text?.slice?.(0, 500),
 		});
@@ -31,6 +31,7 @@ const parseJsonSafe = async (response) => {
 };
 
 // [ComponentUsage] Rendered by `search-results.jsx` to drive progress UI and intermediate result hydration
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: legacy progress flow with retries and telemetry.
 export default function SearchProgress({
 	jobId,
 	onComplete,
@@ -43,6 +44,8 @@ export default function SearchProgress({
 	const router = useRouter();
 	const { isLoaded: authLoaded, isSignedIn } = useAuth();
 	const authReady = authLoaded && isSignedIn;
+	const debugPolling =
+		typeof window !== 'undefined' && window.localStorage.getItem('gemz_debug_polling') === 'true';
 
 	const platformOverride = searchData?.selectedPlatform || searchData?.platform || platform;
 	const platformNormalized = useMemo(
@@ -61,7 +64,7 @@ export default function SearchProgress({
 	const campaignId = searchData?.campaignId;
 
 	const [status, setStatus] = useState('processing');
-	const [progress, setProgress] = useState(0);
+	const [_progress, setProgress] = useState(0);
 	const [displayProgress, setDisplayProgress] = useState(0);
 	const [error, setError] = useState(null);
 	const [recovery, setRecovery] = useState(null);
@@ -84,16 +87,25 @@ export default function SearchProgress({
 		}
 	}, []);
 
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: legacy fallback requires explicit guards.
 	const loadCampaignSnapshot = useCallback(async () => {
-		if (!(campaignId && jobId)) return;
+		if (!(campaignId && jobId)) {
+			return;
+		}
 		try {
 			const res = await fetch(`/api/campaigns/${campaignId}`, { credentials: 'include' });
-			if (!res.ok) return;
+			if (!res.ok) {
+				return;
+			}
 			const snapshot = await parseJsonSafe(res);
-			if (snapshot?.error === 'invalid_json') return;
+			if (snapshot?.error === 'invalid_json') {
+				return;
+			}
 			const jobs = Array.isArray(snapshot?.scrapingJobs) ? snapshot.scrapingJobs : [];
 			const job = jobs.find((entry) => entry?.id === jobId);
-			if (!job) return;
+			if (!job) {
+				return;
+			}
 
 			const creators = flattenCreators(job.results);
 			if (creators.length && typeof onIntermediateResults === 'function') {
@@ -117,11 +129,16 @@ export default function SearchProgress({
 		}
 	}, [campaignId, jobId, onIntermediateResults, onProgress]);
 
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: legacy polling flow with retries.
 	const poll = useCallback(async () => {
-		if (!jobId) return;
+		if (!jobId) {
+			return;
+		}
 
 		const endpoint = buildEndpoint(platformNormalized, hasTargetUsername, jobId);
-		if (!endpoint) return;
+		if (!endpoint) {
+			return;
+		}
 
 		const schedule = (delayMs) => {
 			clearPollTimeout();
@@ -136,6 +153,7 @@ export default function SearchProgress({
 		}
 
 		try {
+			const pollStart = Date.now();
 			const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
 			const timeoutId = controller ? setTimeout(() => controller.abort(), 10000) : null;
 			try {
@@ -143,7 +161,9 @@ export default function SearchProgress({
 					credentials: 'include',
 					signal: controller?.signal,
 				});
-				if (timeoutId) clearTimeout(timeoutId);
+				if (timeoutId) {
+					clearTimeout(timeoutId);
+				}
 
 				if (response.status === 401) {
 					authRetryRef.current += 1;
@@ -167,6 +187,15 @@ export default function SearchProgress({
 				if (!response.ok) {
 					generalRetryRef.current += 1;
 					setError(`Temporary issue fetching progress (${response.status})`);
+					if (debugPolling) {
+						structuredConsole.warn('[SEARCH-PROGRESS] Poll non-OK', {
+							jobId,
+							endpoint,
+							status: response.status,
+							durationMs: Date.now() - pollStart,
+							generalRetries: generalRetryRef.current,
+						});
+					}
 					if (generalRetryRef.current >= MAX_GENERAL_RETRIES) {
 						clearPollTimeout();
 						return;
@@ -178,6 +207,14 @@ export default function SearchProgress({
 				const data = await parseJsonSafe(response);
 				if (data?.error === 'invalid_json') {
 					setError('Progress endpoint returned non-JSON');
+					if (debugPolling) {
+						structuredConsole.warn('[SEARCH-PROGRESS] Poll invalid JSON', {
+							jobId,
+							endpoint,
+							status: response.status,
+							durationMs: Date.now() - pollStart,
+						});
+					}
 					clearPollTimeout();
 					return;
 				}
@@ -204,6 +241,23 @@ export default function SearchProgress({
 					data?.job?.processedResults ??
 					0;
 				const jobTarget = data?.targetResults ?? data?.job?.targetResults ?? 0;
+
+				if (debugPolling) {
+					const creatorsCount = Array.isArray(data?.results)
+						? data.results.reduce((acc, r) => acc + (r?.creators?.length ?? 0), 0)
+						: 0;
+					structuredConsole.log('[SEARCH-PROGRESS] Poll ok', {
+						jobId,
+						endpoint,
+						status: response.status,
+						durationMs: Date.now() - pollStart,
+						jobStatus,
+						jobProgress,
+						jobProcessed,
+						jobTarget,
+						creatorsCount,
+					});
+				}
 
 				setStatus(jobStatus);
 				setProgress(jobProgress);
@@ -246,6 +300,15 @@ export default function SearchProgress({
 				// FIX: Handle all terminal states (completed, error, timeout)
 				if (jobStatus === 'completed' || jobStatus === 'error' || jobStatus === 'timeout') {
 					clearPollTimeout();
+					if (debugPolling) {
+						structuredConsole.log('[SEARCH-PROGRESS] Poll terminal', {
+							jobId,
+							jobStatus,
+							jobProgress,
+							jobProcessed,
+							jobTarget,
+						});
+					}
 					if (jobStatus === 'completed') {
 						setDisplayProgress(100);
 						setProgress(100);
@@ -267,13 +330,28 @@ export default function SearchProgress({
 				const nextInterval = jobProgress < 70 ? 1500 : jobProgress < 95 ? 2000 : 3000;
 				schedule(nextInterval);
 			} catch (fetchError) {
-				if (timeoutId) clearTimeout(timeoutId);
+				if (timeoutId) {
+					clearTimeout(timeoutId);
+				}
 				if (fetchError?.name === 'AbortError') {
+					if (debugPolling) {
+						structuredConsole.warn('[SEARCH-PROGRESS] Poll aborted', {
+							jobId,
+							endpoint,
+						});
+					}
 					schedule(2000);
 					return;
 				}
 				generalRetryRef.current += 1;
 				setError('Network error while polling progress');
+				if (debugPolling) {
+					structuredConsole.warn('[SEARCH-PROGRESS] Poll network error', {
+						jobId,
+						endpoint,
+						generalRetries: generalRetryRef.current,
+					});
+				}
 				if (generalRetryRef.current >= MAX_GENERAL_RETRIES) {
 					clearPollTimeout();
 					return;
@@ -295,6 +373,7 @@ export default function SearchProgress({
 		onMeta,
 		onProgress,
 		platformNormalized,
+		debugPolling,
 	]);
 
 	useEffect(() => {
@@ -315,11 +394,18 @@ export default function SearchProgress({
 		setIntermediateCreators([]);
 
 		if (jobId) {
+			if (debugPolling) {
+				structuredConsole.log('[SEARCH-PROGRESS] Poll start', {
+					jobId,
+					platformNormalized,
+					hasTargetUsername,
+				});
+			}
 			poll();
 		}
 
 		return () => clearPollTimeout();
-	}, [jobId, poll, clearPollTimeout]);
+	}, [jobId, poll, clearPollTimeout, debugPolling, hasTargetUsername, platformNormalized]);
 
 	const handleRetry = () => {
 		setError(null);
@@ -333,12 +419,18 @@ export default function SearchProgress({
 	};
 
 	const estimatedTime = useMemo(() => {
-		if (displayProgress <= 0 || displayProgress >= 100) return '';
+		if (displayProgress <= 0 || displayProgress >= 100) {
+			return '';
+		}
 		const elapsedSeconds = (Date.now() - startTimeRef.current) / 1000;
-		if (elapsedSeconds <= 0) return '';
+		if (elapsedSeconds <= 0) {
+			return '';
+		}
 		const totalEstimate = (elapsedSeconds / displayProgress) * 100;
 		const remaining = Math.max(0, totalEstimate - elapsedSeconds);
-		if (remaining < 60) return 'Less than a minute remaining';
+		if (remaining < 60) {
+			return 'Less than a minute remaining';
+		}
 		const minutes = Math.round(remaining / 60);
 		return `About ${minutes} minute${minutes === 1 ? '' : 's'} remaining`;
 	}, [displayProgress]);
