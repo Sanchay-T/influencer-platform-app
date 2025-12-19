@@ -4,22 +4,26 @@
  * Orchestrates the search process:
  * 1. Validates billing (user can afford this search)
  * 2. Creates job in DB
- * 3. Expands keywords with AI (if needed)
- * 4. Fans out N QStash messages (one per keyword)
- * 5. Returns jobId immediately
+ * 3. Queues a dispatch worker to expand keywords + fan out search workers
+ * 4. Returns jobId immediately
  */
 
 import { eq } from 'drizzle-orm';
 import { validateCreatorSearch } from '@/lib/billing';
 import { db } from '@/lib/db';
-import { campaigns } from '@/lib/db/schema';
+import { campaigns, scrapingJobs } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
 import { qstash } from '@/lib/queue/qstash';
 import { PLATFORM_TIMEOUTS } from '../core/config';
 import { createV2Job, loadJobTracker } from '../core/job-tracker';
 import { expandKeywordsForTarget } from '../core/keyword-expander';
 import type { Platform } from '../core/types';
-import type { DispatchRequest, DispatchResponse, SearchWorkerMessage } from './types';
+import type {
+	DispatchRequest,
+	DispatchResponse,
+	DispatchWorkerMessage,
+	SearchWorkerMessage,
+} from './types';
 
 // Re-export enrichment dispatch for backward compatibility
 export { dispatchEnrichmentBatches } from './enrich-dispatch';
@@ -51,6 +55,90 @@ function getWorkerBaseUrl(): string {
 	return process.env.NEXT_PUBLIC_APP_URL || 'https://usegems.io';
 }
 
+async function updateJobKeywords(jobId: string, keywords: string[]): Promise<void> {
+	await db
+		.update(scrapingJobs)
+		.set({
+			keywords,
+			usedKeywords: keywords,
+			updatedAt: new Date(),
+		})
+		.where(eq(scrapingJobs.id, jobId));
+}
+
+async function fanoutSearchWorkers(options: {
+	jobId: string;
+	platform: Platform;
+	keywords: string[];
+	userId: string;
+	targetResults: number;
+}): Promise<{ successCount: number; failCount: number }> {
+	const { jobId, platform, keywords, userId, targetResults } = options;
+	const baseUrl = getWorkerBaseUrl();
+	const searchWorkerUrl = `${baseUrl}/api/v2/worker/search`;
+
+	logger.info(
+		`${LOG_PREFIX} Dispatching ${keywords.length} search workers`,
+		{
+			jobId,
+			workerUrl: searchWorkerUrl,
+		},
+		LogCategory.JOB
+	);
+
+	const dispatchPromises: Promise<unknown>[] = [];
+
+	for (let i = 0; i < keywords.length; i++) {
+		const keyword = keywords[i];
+
+		const message: SearchWorkerMessage = {
+			jobId,
+			platform: platform as Platform,
+			keyword,
+			batchIndex: i,
+			totalKeywords: keywords.length,
+			userId,
+			targetResults,
+		};
+
+		const workerTimeoutSeconds = Math.ceil(
+			(PLATFORM_TIMEOUTS[platform as Platform] || 120_000) / 1000
+		);
+
+		const publishPromise = qstash.publishJSON({
+			url: searchWorkerUrl,
+			body: message,
+			retries: 3,
+			delay: Math.floor(i / 5) * 1,
+			timeout: workerTimeoutSeconds,
+		});
+
+		dispatchPromises.push(publishPromise);
+	}
+
+	const results = await Promise.allSettled(dispatchPromises);
+	const successCount = results.filter((r) => r.status === 'fulfilled').length;
+	const failCount = results.filter((r) => r.status === 'rejected').length;
+
+	if (failCount > 0) {
+		logger.warn(
+			`${LOG_PREFIX} Some QStash publishes failed`,
+			{
+				jobId,
+				successCount,
+				failCount,
+				errors: results
+					.filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+					.map((r) => String(r.reason))
+					.slice(0, 3),
+			},
+			LogCategory.JOB
+		);
+	}
+
+	return { successCount, failCount };
+}
+
 // ============================================================================
 // Dispatch Function
 // ============================================================================
@@ -68,6 +156,13 @@ export interface DispatchResult {
 	data?: DispatchResponse;
 	error?: string;
 	statusCode: number;
+}
+
+export interface DispatchWorkerResult {
+	success: boolean;
+	error?: string;
+	keywordsDispatched?: number;
+	failedDispatches?: number;
 }
 
 /**
@@ -158,8 +253,101 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 	}
 
 	// ============================================================================
-	// Step 3: Expand Keywords (if enabled)
+	// Step 3: Create Job in Database (fast path)
 	// ============================================================================
+
+	const jobId = await createV2Job({
+		userId,
+		campaignId,
+		platform,
+		keywords,
+		targetResults,
+	});
+
+	// ============================================================================
+	// Step 4: Queue Dispatch Worker (fan-out happens async)
+	// ============================================================================
+
+	const baseUrl = getWorkerBaseUrl();
+	const dispatchWorkerUrl = `${baseUrl}/api/v2/worker/dispatch`;
+
+	try {
+		const message: DispatchWorkerMessage = {
+			jobId,
+			platform: platform as Platform,
+			keywords,
+			targetResults,
+			userId,
+			enableExpansion,
+		};
+
+		await qstash.publishJSON({
+			url: dispatchWorkerUrl,
+			body: message,
+			retries: 3,
+			timeout: 60,
+		});
+	} catch (_error) {
+		const tracker = loadJobTracker(jobId);
+		await tracker.markError('Failed to queue dispatch worker');
+		return {
+			success: false,
+			error: 'Failed to queue dispatch worker',
+			statusCode: 500,
+		};
+	}
+
+	const durationMs = Date.now() - startTime;
+
+	logger.info(
+		`${LOG_PREFIX} Dispatch queued`,
+		{
+			jobId,
+			durationMs,
+		},
+		LogCategory.JOB
+	);
+
+	return {
+		success: true,
+		data: {
+			jobId,
+			keywords,
+			workersDispatched: 0,
+			message: 'Queued dispatch worker',
+		},
+		statusCode: 200,
+	};
+}
+
+/**
+ * Dispatch worker - expands keywords and fans out search workers
+ */
+export async function processDispatchWorker(
+	message: DispatchWorkerMessage
+): Promise<DispatchWorkerResult> {
+	const { jobId, platform, keywords, targetResults, userId, enableExpansion = true } = message;
+	const startTime = Date.now();
+
+	if (!process.env.QSTASH_TOKEN) {
+		return { success: false, error: 'QSTASH_TOKEN is missing in production environment' };
+	}
+
+	const job = await db.query.scrapingJobs.findFirst({
+		where: eq(scrapingJobs.id, jobId),
+		columns: {
+			id: true,
+			userId: true,
+		},
+	});
+
+	if (!job) {
+		return { success: false, error: 'Job not found' };
+	}
+
+	if (job.userId !== userId) {
+		return { success: false, error: 'Job does not belong to this user' };
+	}
 
 	let finalKeywords = keywords;
 
@@ -177,7 +365,6 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 				LogCategory.JOB
 			);
 		} catch (error) {
-			// Log but continue with original keywords
 			logger.warn(
 				`${LOG_PREFIX} Keyword expansion failed, using original keywords`,
 				{ error: error instanceof Error ? error.message : String(error) },
@@ -186,101 +373,24 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 		}
 	}
 
-	// ============================================================================
-	// Step 4: Create Job in Database
-	// ============================================================================
+	await updateJobKeywords(jobId, finalKeywords);
 
-	const jobId = await createV2Job({
-		userId,
-		campaignId,
-		platform,
-		keywords: finalKeywords,
-		targetResults,
-	});
-
-	// Mark job as dispatching
 	const tracker = loadJobTracker(jobId);
 	await tracker.markDispatching(finalKeywords.length);
 
-	// ============================================================================
-	// Step 5: Fan-Out to Search Workers via QStash
-	// ============================================================================
+	const { successCount, failCount } = await fanoutSearchWorkers({
+		jobId,
+		platform: platform as Platform,
+		keywords: finalKeywords,
+		userId,
+		targetResults,
+	});
 
-	const baseUrl = getWorkerBaseUrl();
-	const searchWorkerUrl = `${baseUrl}/api/v2/worker/search`;
-
-	logger.info(
-		`${LOG_PREFIX} Dispatching ${finalKeywords.length} search workers`,
-		{
-			jobId,
-			workerUrl: searchWorkerUrl,
-		},
-		LogCategory.JOB
-	);
-
-	const dispatchPromises: Promise<unknown>[] = [];
-
-	for (let i = 0; i < finalKeywords.length; i++) {
-		const keyword = finalKeywords[i];
-
-		const message: SearchWorkerMessage = {
-			jobId,
-			platform: platform as Platform,
-			keyword,
-			batchIndex: i,
-			totalKeywords: finalKeywords.length,
-			userId,
-			targetResults, // Include target for capping
-		};
-
-		// Publish to QStash with retry configuration
-		// Use platform-specific timeout (QStash default is 30s, but Instagram can take 5min)
-		const workerTimeoutSeconds = Math.ceil(
-			(PLATFORM_TIMEOUTS[platform as Platform] || 120_000) / 1000
-		);
-
-		const publishPromise = qstash.publishJSON({
-			url: searchWorkerUrl,
-			body: message,
-			retries: 3,
-			// Add a small delay between messages to prevent thundering herd
-			delay: Math.floor(i / 5) * 1, // 1 second delay every 5 messages
-			// Set worker timeout based on platform (TikTok: 2min, YouTube: 2min, Instagram: 5min)
-			timeout: workerTimeoutSeconds,
-		});
-
-		dispatchPromises.push(publishPromise);
-	}
-
-	// Wait for all QStash publishes to complete
-	const results = await Promise.allSettled(dispatchPromises);
-
-	const successCount = results.filter((r) => r.status === 'fulfilled').length;
-	const failCount = results.filter((r) => r.status === 'rejected').length;
-
-	if (failCount > 0) {
-		logger.warn(
-			`${LOG_PREFIX} Some QStash publishes failed`,
-			{
-				jobId,
-				successCount,
-				failCount,
-				errors: results
-					.filter((r): r is PromiseRejectedResult => r.status === 'rejected')
-					.map((r) => String(r.reason))
-					.slice(0, 3), // Only log first 3 errors
-			},
-			LogCategory.JOB
-		);
-	}
-
-	// Mark job as searching (workers are now processing)
 	await tracker.markSearching();
 
 	const durationMs = Date.now() - startTime;
-
 	logger.info(
-		`${LOG_PREFIX} Dispatch complete`,
+		`${LOG_PREFIX} Dispatch worker complete`,
 		{
 			jobId,
 			keywordsDispatched: successCount,
@@ -292,12 +402,7 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 
 	return {
 		success: true,
-		data: {
-			jobId,
-			keywords: finalKeywords,
-			workersDispatched: successCount,
-			message: `Dispatched ${successCount} search workers for ${finalKeywords.length} keywords`,
-		},
-		statusCode: 200,
+		keywordsDispatched: successCount,
+		failedDispatches: failCount,
 	};
 }

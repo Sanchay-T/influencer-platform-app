@@ -9,7 +9,7 @@
 **Branch:** `UAT`
 **Status:** 🟡 IN PROGRESS
 **Started:** Dec 12, 2025
-**Updated:** Dec 12, 2025 — 12:30 PM
+**Updated:** Dec 19, 2025 — 01:50 AM
 
 ---
 
@@ -44,6 +44,17 @@ We audited and fact-checked the codebase. The keyword-search refactor is DONE (2
    - `any` usage: 260 total, mostly in loggers (acceptable)
    - console.log: 86 raw vs 995 structured (92% adoption)
    - Legacy vs V2: All 3 platforms have both (need cleanup)
+
+---
+
+## Hotfix Notes (Dec 19, 2025)
+
+1. **Fast-return V2 dispatch**
+   - `/api/v2/dispatch` now creates job + queues a QStash dispatch worker immediately.
+2. **Dispatch worker added**
+   - New worker: `/api/v2/worker/dispatch` expands keywords + fans out search workers.
+3. **Types/validation**
+   - Added `DispatchWorkerMessage` + validation helpers.
 
 ---
 

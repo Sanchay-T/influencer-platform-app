@@ -8,10 +8,10 @@
  * - Enrich worker for bio enrichment
  */
 
-export type { DispatchOptions, DispatchResult } from './dispatch';
+export type { DispatchOptions, DispatchResult, DispatchWorkerResult } from './dispatch';
 
 // Dispatch
-export { dispatch, dispatchEnrichmentBatches } from './dispatch';
+export { dispatch, dispatchEnrichmentBatches, processDispatchWorker } from './dispatch';
 export type { ProcessEnrichOptions } from './enrich-worker';
 // Enrich Worker
 export { processEnrich } from './enrich-worker';

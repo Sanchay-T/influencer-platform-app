@@ -6,7 +6,12 @@
  */
 
 import type { Platform } from '../core/types';
-import type { DispatchRequest, EnrichWorkerMessage, SearchWorkerMessage } from './types';
+import type {
+	DispatchRequest,
+	DispatchWorkerMessage,
+	EnrichWorkerMessage,
+	SearchWorkerMessage,
+} from './types';
 
 // ============================================================================
 // Constants
@@ -25,6 +30,7 @@ const MAX_KEYWORD_LENGTH = 100;
 /**
  * Validate and sanitize dispatch request
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: validation is intentionally explicit.
 export function validateDispatchRequest(body: unknown): {
 	valid: boolean;
 	data?: DispatchRequest;
@@ -106,12 +112,90 @@ export function validateDispatchRequest(body: unknown): {
 }
 
 // ============================================================================
+// Dispatch Worker Message Validation
+// ============================================================================
+
+/**
+ * Validate dispatch worker message
+ */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: validation is intentionally explicit.
+export function validateDispatchWorkerMessage(body: unknown): {
+	valid: boolean;
+	data?: DispatchWorkerMessage;
+	error?: string;
+} {
+	if (!body || typeof body !== 'object') {
+		return { valid: false, error: 'Message body must be an object' };
+	}
+
+	const obj = body as Record<string, unknown>;
+
+	if (!obj.jobId || typeof obj.jobId !== 'string') {
+		return { valid: false, error: 'jobId is required' };
+	}
+
+	if (!(obj.platform && VALID_PLATFORMS.includes(obj.platform as Platform))) {
+		return { valid: false, error: 'Invalid platform' };
+	}
+
+	if (!Array.isArray(obj.keywords) || obj.keywords.length === 0) {
+		return { valid: false, error: 'keywords must be a non-empty array' };
+	}
+
+	if (obj.keywords.length > MAX_KEYWORDS) {
+		return { valid: false, error: `Maximum ${MAX_KEYWORDS} keywords allowed` };
+	}
+
+	const sanitizedKeywords: string[] = [];
+	for (const kw of obj.keywords) {
+		if (typeof kw !== 'string') {
+			return { valid: false, error: 'All keywords must be strings' };
+		}
+		const trimmed = kw.trim();
+		if (trimmed.length < MIN_KEYWORD_LENGTH) {
+			return {
+				valid: false,
+				error: `Keywords must be at least ${MIN_KEYWORD_LENGTH} characters`,
+			};
+		}
+		if (trimmed.length > MAX_KEYWORD_LENGTH) {
+			return {
+				valid: false,
+				error: `Keywords must be at most ${MAX_KEYWORD_LENGTH} characters`,
+			};
+		}
+		sanitizedKeywords.push(trimmed);
+	}
+
+	if (typeof obj.targetResults !== 'number' || obj.targetResults <= 0) {
+		return { valid: false, error: 'targetResults must be a positive number' };
+	}
+
+	if (!obj.userId || typeof obj.userId !== 'string') {
+		return { valid: false, error: 'userId is required' };
+	}
+
+	return {
+		valid: true,
+		data: {
+			jobId: obj.jobId,
+			platform: obj.platform as Platform,
+			keywords: sanitizedKeywords,
+			targetResults: obj.targetResults,
+			userId: obj.userId,
+			enableExpansion: obj.enableExpansion !== false,
+		},
+	};
+}
+
+// ============================================================================
 // Search Worker Message Validation
 // ============================================================================
 
 /**
  * Validate search worker message
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: validation is intentionally explicit.
 export function validateSearchWorkerMessage(body: unknown): {
 	valid: boolean;
 	data?: SearchWorkerMessage;
@@ -172,6 +256,7 @@ export function validateSearchWorkerMessage(body: unknown): {
 /**
  * Validate enrich worker message
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: validation is intentionally explicit.
 export function validateEnrichWorkerMessage(body: unknown): {
 	valid: boolean;
 	data?: EnrichWorkerMessage;

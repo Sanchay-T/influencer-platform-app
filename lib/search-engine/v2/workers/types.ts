@@ -10,6 +10,7 @@ import type { Platform } from '../core/types';
 // Re-export validation functions for backward compatibility
 export {
 	validateDispatchRequest,
+	validateDispatchWorkerMessage,
 	validateEnrichWorkerMessage,
 	validateSearchWorkerMessage,
 } from './validation';
@@ -54,6 +55,34 @@ export interface DispatchResponse {
 
 	/** Message for debugging */
 	message: string;
+}
+
+// ============================================================================
+// Dispatch Worker Message (Dispatch → Dispatch Worker)
+// ============================================================================
+
+/**
+ * Message sent to dispatch worker via QStash
+ * Responsible for keyword expansion and fan-out
+ */
+export interface DispatchWorkerMessage {
+	/** Job identifier */
+	jobId: string;
+
+	/** Platform to search */
+	platform: Platform;
+
+	/** Seed keywords for search */
+	keywords: string[];
+
+	/** Target number of creators to find */
+	targetResults: number;
+
+	/** User ID for billing */
+	userId: string;
+
+	/** Enable AI keyword expansion (optional, default true) */
+	enableExpansion?: boolean;
 }
 
 // ============================================================================
