@@ -6,7 +6,8 @@ import { db } from '@/lib/db';
 import { campaigns } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
-export const maxDuration = 10;
+// Increased timeout for cold starts + cross-region DB latency
+export const maxDuration = 30;
 
 export async function POST(req: Request) {
 	try {
@@ -64,80 +65,51 @@ export async function POST(req: Request) {
 }
 
 export async function GET(request: Request) {
-	structuredConsole.log('\n\n====== CAMPAIGNS API GET CALLED ======');
-	structuredConsole.log('🔍 [CAMPAIGNS-API] GET request received at:', new Date().toISOString());
+	const startTime = Date.now();
+	structuredConsole.log('[CAMPAIGNS-API] GET request started');
+
 	try {
-		structuredConsole.log('🔐 [CAMPAIGNS-API] Getting authenticated user from Clerk');
+		const authStart = Date.now();
 		const { userId } = await getAuthOrTest();
+		structuredConsole.log(`[CAMPAIGNS-API] Auth completed in ${Date.now() - authStart}ms`);
 
 		if (!userId) {
-			structuredConsole.error('❌ [CAMPAIGNS-API] Unauthorized - No valid user session');
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
-		structuredConsole.log('✅ [CAMPAIGNS-API] User authenticated', { userId });
 
 		const url = new URL(request.url);
 		const page = parseInt(url.searchParams.get('page') || '1');
 		const limit = parseInt(url.searchParams.get('limit') || '10');
 		const offset = (page - 1) * limit;
 
-		structuredConsole.log('🔍 [CAMPAIGNS-API] Fetching campaigns with pagination', {
-			page,
-			limit,
-			offset,
-		});
+		const dbStart = Date.now();
 
-		// Realizar ambas consultas en paralelo
-		structuredConsole.log('🔄 [CAMPAIGNS-API] Executing parallel database queries');
-		const [totalCount, userCampaigns] = await Promise.all([
-			// Consulta optimizada para contar
+		// Simplified query - removed JOIN to scrapingJobs for faster loading
+		const [totalResult, userCampaigns] = await Promise.all([
+			db.select({ count: count() }).from(campaigns).where(eq(campaigns.userId, userId)),
+
 			db
-				.select({ count: count() })
+				.select({
+					id: campaigns.id,
+					name: campaigns.name,
+					description: campaigns.description,
+					searchType: campaigns.searchType,
+					status: campaigns.status,
+					createdAt: campaigns.createdAt,
+					updatedAt: campaigns.updatedAt,
+				})
 				.from(campaigns)
 				.where(eq(campaigns.userId, userId))
-				.then((result) => result[0].count),
-
-			// Consulta principal optimizada
-			db.query.campaigns.findMany({
-				where: (campaigns, { eq }) => eq(campaigns.userId, userId),
-				limit: limit,
-				offset: offset,
-				columns: {
-					id: true,
-					name: true,
-					description: true,
-					searchType: true,
-					status: true,
-					createdAt: true,
-					updatedAt: true,
-				},
-				with: {
-					scrapingJobs: {
-						limit: 1,
-						orderBy: (jobs, { desc }) => [desc(jobs.createdAt)],
-						columns: {
-							id: true,
-							status: true,
-							createdAt: true,
-						},
-					},
-				},
-				orderBy: (campaigns, { desc }) => [desc(campaigns.createdAt)],
-			}),
+				.orderBy(desc(campaigns.createdAt))
+				.limit(limit)
+				.offset(offset),
 		]);
 
-		structuredConsole.log('✅ [CAMPAIGNS-API] Campaigns fetched successfully', {
-			totalCount,
-			fetchedCount: userCampaigns.length,
-			pagination: {
-				total: totalCount,
-				pages: Math.ceil(totalCount / limit),
-				currentPage: page,
-				limit,
-			},
-		});
+		structuredConsole.log(`[CAMPAIGNS-API] DB queries completed in ${Date.now() - dbStart}ms`);
+		structuredConsole.log(`[CAMPAIGNS-API] Total request time: ${Date.now() - startTime}ms`);
 
-		// Agregar cache-control headers
+		const totalCount = totalResult[0].count;
+
 		const headers = new Headers();
 		headers.set('Cache-Control', 's-maxage=1, stale-while-revalidate=59');
 
@@ -154,9 +126,9 @@ export async function GET(request: Request) {
 			{ headers }
 		);
 	} catch (error: any) {
-		structuredConsole.error('💥 [CAMPAIGNS-API] Error fetching campaigns:', error);
+		structuredConsole.error('[CAMPAIGNS-API] Error:', error);
 		return NextResponse.json(
-			{ error: 'Error al cargar campañas', details: error?.message || 'Unknown error' },
+			{ error: 'Error loading campaigns', details: error?.message || 'Unknown error' },
 			{ status: 500 }
 		);
 	}
