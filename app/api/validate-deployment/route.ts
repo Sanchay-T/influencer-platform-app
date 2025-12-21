@@ -5,7 +5,6 @@ import { structuredConsole } from '@/lib/logging/console-proxy';
  * Comprehensive pre-deployment and post-deployment validation
  */
 
-import * as Sentry from '@sentry/nextjs';
 import { type NextRequest, NextResponse } from 'next/server';
 import { generateValidationReport, validateEnvironment } from '@/lib/config/environment-validator';
 import { validateLoggingConfig } from '@/lib/config/logging-config';
@@ -62,20 +61,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 				criticalIssues: results.criticalIssues,
 				environment: results.environment,
 			});
-
-			// Send critical failures to Sentry
-			Sentry.captureMessage(`Deployment validation failed for ${results.environment}`, {
-				level: 'error',
-				tags: {
-					component: 'deployment-validation',
-					environment: results.environment,
-					type,
-				},
-				extra: {
-					criticalIssues: results.criticalIssues,
-					summary: results.summary,
-				},
-			});
 		}
 
 		return NextResponse.json(response, {
@@ -87,13 +72,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 		});
 	} catch (error) {
 		structuredConsole.error('[DEPLOYMENT-VALIDATION] Validation failed:', error);
-
-		Sentry.captureException(error, {
-			tags: {
-				component: 'deployment-validation',
-				endpoint: '/api/validate-deployment',
-			},
-		});
 
 		return NextResponse.json(
 			{
