@@ -5,6 +5,7 @@ import {
 	jsonb,
 	numeric,
 	pgTable,
+	primaryKey,
 	text,
 	timestamp,
 	unique,
@@ -79,6 +80,23 @@ export const scrapingResults = pgTable('scraping_results', {
 	creators: jsonb('creators').notNull(),
 	createdAt: timestamp('created_at').notNull().defaultNow(),
 });
+
+// Job Creator Keys - Atomic deduplication via unique constraint
+// Used by v2 workers to prevent duplicate creators across parallel workers
+// Works with PgBouncer (no FOR UPDATE locks needed)
+export const jobCreatorKeys = pgTable(
+	'job_creator_keys',
+	{
+		jobId: uuid('job_id')
+			.notNull()
+			.references(() => scrapingJobs.id, { onDelete: 'cascade' }),
+		creatorKey: text('creator_key').notNull(),
+		createdAt: timestamp('created_at').notNull().defaultNow(),
+	},
+	(table) => ({
+		pk: primaryKey({ columns: [table.jobId, table.creatorKey] }),
+	})
+);
 
 // Search Jobs table (legacy/alternative)
 export const searchJobs = pgTable('search_jobs', {

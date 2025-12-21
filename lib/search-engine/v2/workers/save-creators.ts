@@ -1,14 +1,13 @@
 /**
  * Save Creators Helper - Atomic DB Operations
  *
- * Handles saving creators to the database with deduplication
- * and target capping. Uses transactions with row-level locking
- * to prevent race conditions between parallel workers.
+ * Handles saving creators to the database with deduplication.
+ * Uses INSERT ON CONFLICT DO NOTHING for atomic deduplication
+ * that works with PgBouncer (no FOR UPDATE locks needed).
  */
 
-import { eq, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { scrapingResults } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
 import type { NormalizedCreator } from '../core/types';
 
@@ -37,8 +36,9 @@ export interface SaveResult {
 
 /**
  * Save creators to job results with deduplication
- * Uses database transaction to prevent race conditions
- * CHECKPOINT 2: Caps at targetResults to ensure exact target
+ * Uses INSERT ON CONFLICT DO NOTHING for atomic deduplication
+ * that works with PgBouncer (no FOR UPDATE locks needed)
+ * CHECKPOINT 2: Caps at targetResults to ensure approximate target
  */
 export async function saveCreatorsToJob(
 	jobId: string,
@@ -50,118 +50,94 @@ export async function saveCreatorsToJob(
 		return { total: 0, newCount: 0, creatorIds: [] };
 	}
 
-	// Use transaction with row-level locking to prevent race conditions
-	const result = await db.transaction(async (tx) => {
-		// CRITICAL: Use raw SQL for SELECT ... FOR UPDATE
-		// This locks the row until transaction commits, preventing race conditions
-		// postgres-js returns array directly, not { rows: [...] }
-		// Row is guaranteed to exist because createV2Job creates it during dispatch
-		const lockResult = await tx.execute(sql`
-			SELECT id, job_id, creators
-			FROM scraping_results
-			WHERE job_id = ${jobId}
-			LIMIT 1
-			FOR UPDATE
-		`);
+	// Step 1: Check current count from job_creator_keys (fast, indexed)
+	const countResult = await db.execute(sql`
+		SELECT COUNT(*) as count FROM job_creator_keys WHERE job_id = ${jobId}
+	`);
+	const currentCount = Number(countResult[0]?.count || 0);
 
-		// postgres-js returns array directly
-		const existing = lockResult[0] as
-			| { id: string; job_id: string; creators: NormalizedCreator[] }
-			| undefined;
+	// If we already have enough, skip entirely
+	if (currentCount >= targetResults) {
+		logger.info(
+			`${LOG_PREFIX} Target already reached, skipping save`,
+			{ jobId, metadata: { currentCount, targetResults } },
+			LogCategory.JOB
+		);
+		return { total: currentCount, newCount: 0, creatorIds: [] };
+	}
 
-		// This should never happen - row is created during dispatch
-		if (!existing) {
-			logger.error(
-				`${LOG_PREFIX} No scraping_results row found for job - this should not happen`,
-				new Error('Missing results row'),
-				{ jobId },
-				LogCategory.JOB
-			);
-			return { total: 0, newCount: 0, creatorIds: [] };
-		}
+	// Cap the incoming batch to not exceed target too much
+	const slotsLeft = targetResults - currentCount;
+	const creatorsToProcess = creators.slice(0, Math.min(creators.length, slotsLeft + 50)); // Allow slight overflow
 
-		const existingCreators: NormalizedCreator[] = Array.isArray(existing.creators)
-			? (existing.creators as NormalizedCreator[])
-			: [];
+	// Step 2: Prepare values for batch insert
+	const keyValues = creatorsToProcess.map((c) => ({
+		key: getDedupeKey(c).toLowerCase().trim(),
+		creator: c,
+	}));
 
-		// CHECKPOINT 2: Check if we already have enough
-		if (existingCreators.length >= targetResults) {
-			logger.info(
-				`${LOG_PREFIX} Target already reached in DB, skipping save`,
-				{
-					jobId,
-					existingCount: existingCreators.length,
-					targetResults,
-				},
-				LogCategory.JOB
-			);
-			return {
-				total: existingCreators.length,
-				newCount: 0,
-				creatorIds: [],
-			};
-		}
+	// Step 3: Batch insert creator keys - only returns keys that were actually inserted
+	// This is atomic and works with PgBouncer (no FOR UPDATE needed)
+	const insertValues = keyValues.map((kv) => sql`(${jobId}::uuid, ${kv.key})`);
 
-		// Calculate how many slots are left
-		const slotsLeft = targetResults - existingCreators.length;
+	const insertResults = await db.execute(sql`
+		INSERT INTO job_creator_keys (job_id, creator_key)
+		VALUES ${sql.join(insertValues, sql`, `)}
+		ON CONFLICT DO NOTHING
+		RETURNING creator_key
+	`);
 
-		// Build dedupe set from existing creators
-		const existingKeys = new Set(existingCreators.map((c) => getDedupeKey(c).toLowerCase().trim()));
+	// Get set of actually inserted keys
+	const insertedKeys = new Set(
+		(insertResults as unknown as Array<{ creator_key: string }>).map((r) => r.creator_key)
+	);
 
-		// Filter to only new creators
-		const newCreators: NormalizedCreator[] = [];
-		const newCreatorIds: string[] = [];
+	// Step 4: Filter to only truly new creators
+	const newCreators = keyValues.filter((kv) => insertedKeys.has(kv.key)).map((kv) => kv.creator);
 
-		for (const creator of creators) {
-			// Stop if we've filled all slots
-			if (newCreators.length >= slotsLeft) {
-				break;
-			}
+	if (newCreators.length === 0) {
+		logger.info(
+			`${LOG_PREFIX} No new creators to add (all duplicates)`,
+			{ jobId, metadata: { attempted: creatorsToProcess.length } },
+			LogCategory.JOB
+		);
+		return { total: currentCount, newCount: 0, creatorIds: [] };
+	}
 
-			const key = getDedupeKey(creator).toLowerCase().trim();
-			if (!existingKeys.has(key)) {
-				existingKeys.add(key); // Prevent duplicates within same batch
-				newCreators.push(creator);
-				newCreatorIds.push(creator.creator.username || creator.creator.uniqueId || creator.id);
-			}
-		}
+	// Step 5: Append new creators to JSON atomically using || operator
+	// This is atomic and doesn't require FOR UPDATE lock
+	await db.execute(sql`
+		UPDATE scraping_results
+		SET creators = COALESCE(creators, '[]'::jsonb) || ${JSON.stringify(newCreators)}::jsonb
+		WHERE job_id = ${jobId}
+	`);
 
-		if (newCreators.length === 0) {
-			return {
-				total: existingCreators.length,
-				newCount: 0,
-				creatorIds: [],
-			};
-		}
+	// Step 6: Get final count
+	const finalCountResult = await db.execute(sql`
+		SELECT COUNT(*) as count FROM job_creator_keys WHERE job_id = ${jobId}
+	`);
+	const finalCount = Number(finalCountResult[0]?.count || 0);
 
-		// Combine existing + new
-		const allCreators = [...existingCreators, ...newCreators];
-
-		// Update the existing row (never INSERT - row created during dispatch)
-		await tx
-			.update(scrapingResults)
-			.set({ creators: allCreators })
-			.where(eq(scrapingResults.id, existing.id));
-
-		return {
-			total: allCreators.length,
-			newCount: newCreators.length,
-			creatorIds: newCreatorIds,
-		};
-	});
+	const newCreatorIds = newCreators.map((c) => c.creator.username || c.creator.uniqueId || c.id);
 
 	logger.info(
 		`${LOG_PREFIX} Saved creators to DB`,
 		{
 			jobId,
-			totalInDb: result.total,
-			newCreators: result.newCount,
-			duplicatesSkipped: creators.length - result.newCount,
-			targetResults,
-			capped: result.total >= targetResults,
+			metadata: {
+				totalInDb: finalCount,
+				newCreators: newCreators.length,
+				duplicatesSkipped: creatorsToProcess.length - newCreators.length,
+				targetResults,
+				capped: finalCount >= targetResults,
+			},
 		},
 		LogCategory.JOB
 	);
 
-	return result;
+	return {
+		total: finalCount,
+		newCount: newCreators.length,
+		creatorIds: newCreatorIds,
+	};
 }
