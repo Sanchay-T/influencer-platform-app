@@ -23,6 +23,9 @@ import { NextResponse } from 'next/server';
 import { LogCategory, logger } from '@/lib/logging';
 import { processSearch, validateSearchWorkerMessage } from '@/lib/search-engine/v2/workers';
 
+// Vercel Pro: 5 minute timeout for search workers (API calls can be slow)
+export const maxDuration = 300;
+
 // ============================================================================
 // QStash Signature Verification
 // ============================================================================

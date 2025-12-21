@@ -23,6 +23,9 @@ import { NextResponse } from 'next/server';
 import { LogCategory, logger } from '@/lib/logging';
 import { processEnrich, validateEnrichWorkerMessage } from '@/lib/search-engine/v2/workers';
 
+// Vercel Pro: 5 minute timeout for enrichment workers
+export const maxDuration = 300;
+
 // ============================================================================
 // QStash Signature Verification
 // ============================================================================

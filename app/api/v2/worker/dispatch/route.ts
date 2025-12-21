@@ -23,6 +23,9 @@ import {
 	validateDispatchWorkerMessage,
 } from '@/lib/search-engine/v2/workers';
 
+// Vercel Pro: 5 minute timeout for dispatch workers (keyword expansion + fanout)
+export const maxDuration = 300;
+
 // ============================================================================
 // QStash Signature Verification
 // ============================================================================
