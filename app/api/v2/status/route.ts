@@ -32,11 +32,16 @@ import { LogCategory, logger } from '@/lib/logging';
 import { loadJobTracker } from '@/lib/search-engine/v2/core/job-tracker';
 import type { StatusResponse } from '@/lib/search-engine/v2/workers/types';
 
+// Increased timeout for large result sets
+export const maxDuration = 30;
+
 // ============================================================================
 // Route Handler
 // ============================================================================
 
 export async function GET(req: Request) {
+	const startTime = Date.now();
+
 	// ========================================================================
 	// Step 1: Authenticate User
 	// ========================================================================
@@ -47,6 +52,7 @@ export async function GET(req: Request) {
 	}
 
 	const userId = auth.userId;
+	logger.debug(`[v2-status] Auth completed in ${Date.now() - startTime}ms`, {}, LogCategory.JOB);
 
 	// ========================================================================
 	// Step 2: Parse Query Parameters
@@ -66,9 +72,11 @@ export async function GET(req: Request) {
 	// Step 3: Load Job and Verify Ownership
 	// ========================================================================
 
+	const dbStart = Date.now();
 	const job = await db.query.scrapingJobs.findFirst({
 		where: eq(scrapingJobs.id, jobId),
 	});
+	logger.debug(`[v2-status] Job query completed in ${Date.now() - dbStart}ms`, {}, LogCategory.JOB);
 
 	if (!job) {
 		return NextResponse.json({ error: 'Job not found' }, { status: 404 });
@@ -79,29 +87,33 @@ export async function GET(req: Request) {
 	}
 
 	// ========================================================================
-	// Step 3.5: Check for Stale Jobs and Auto-Complete
+	// Step 3.5: Check for Stale Jobs (skip if already completed to save time)
 	// ========================================================================
 
-	// If job is in processing/enriching state, check if it's stale and should be auto-completed
 	if (job.status === 'processing' || job.enrichmentStatus === 'in_progress') {
-		const tracker = loadJobTracker(jobId);
-		const staleResult = await tracker.checkStaleAndComplete();
+		try {
+			const tracker = loadJobTracker(jobId);
+			const staleResult = await tracker.checkStaleAndComplete();
 
-		if (staleResult.completed) {
-			logger.info(
-				'[v2-status-route] Auto-completed stale job',
-				{ jobId, reason: staleResult.reason },
+			if (staleResult.completed) {
+				logger.info(
+					'[v2-status] Auto-completed stale job',
+					{ jobId, reason: staleResult.reason },
+					LogCategory.JOB
+				);
+				const updatedJob = await db.query.scrapingJobs.findFirst({
+					where: eq(scrapingJobs.id, jobId),
+				});
+				if (updatedJob) {
+					Object.assign(job, updatedJob);
+				}
+			}
+		} catch (err) {
+			logger.warn(
+				'[v2-status] Stale check failed, continuing',
+				{ jobId, error: String(err) },
 				LogCategory.JOB
 			);
-
-			// Re-fetch job to get updated status
-			const updatedJob = await db.query.scrapingJobs.findFirst({
-				where: eq(scrapingJobs.id, jobId),
-			});
-			if (updatedJob) {
-				// Use updated job for the rest of the response
-				Object.assign(job, updatedJob);
-			}
 		}
 	}
 
@@ -109,11 +121,17 @@ export async function GET(req: Request) {
 	// Step 4: Load Results
 	// ========================================================================
 
+	const resultsStart = Date.now();
 	const [results] = await db
 		.select()
 		.from(scrapingResults)
 		.where(eq(scrapingResults.jobId, jobId))
 		.limit(1);
+	logger.debug(
+		`[v2-status] Results query completed in ${Date.now() - resultsStart}ms`,
+		{},
+		LogCategory.JOB
+	);
 
 	const allCreators = results && Array.isArray(results.creators) ? results.creators : [];
 	const totalCreators = allCreators.length;
