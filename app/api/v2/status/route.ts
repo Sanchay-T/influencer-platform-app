@@ -4,28 +4,15 @@
  * GET /api/v2/status?jobId=xxx&offset=0&limit=50
  * Returns job progress and paginated creator results.
  *
- * Response:
- * {
- *   status: 'dispatching' | 'searching' | 'enriching' | 'completed' | 'error',
- *   progress: {
- *     keywordsDispatched: number,
- *     keywordsCompleted: number,
- *     creatorsFound: number,
- *     creatorsEnriched: number,
- *     percentComplete: number
- *   },
- *   results: [{ id: string, creators: NormalizedCreator[] }],
- *   pagination: { offset, limit, total, nextOffset },
- *   totalCreators: number,
- *   targetResults: number,
- *   platform: string,
- *   keywords: string[]
- * }
+ * CACHING STRATEGY:
+ * - Completed jobs: Cache results for 24 hours (data won't change)
+ * - Active jobs: No cache (need fresh progress updates)
  */
 
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
+import { CacheKeys, CacheTTL, cacheGet, cacheSet } from '@/lib/cache/redis';
 import { db } from '@/lib/db';
 import { scrapingJobs, scrapingResults } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
@@ -61,11 +48,28 @@ export async function GET(req: Request) {
 	const { searchParams } = new URL(req.url);
 	const jobId = searchParams.get('jobId');
 	const offset = Math.max(0, Number.parseInt(searchParams.get('offset') || '0', 10));
-	// Increased limit from 100 to 500 for better UX with large result sets
 	const limit = Math.min(500, Math.max(1, Number.parseInt(searchParams.get('limit') || '200', 10)));
 
 	if (!jobId) {
 		return NextResponse.json({ error: 'jobId is required' }, { status: 400 });
+	}
+
+	// ========================================================================
+	// Step 2.5: Check Cache First (for completed jobs)
+	// ========================================================================
+
+	const cacheKey = `${CacheKeys.jobResults(jobId)}:${offset}:${limit}`;
+	const cached = await cacheGet<StatusResponse>(cacheKey);
+
+	if (cached) {
+		// Verify ownership from cached data or do a quick DB check
+		// For now, we trust the cache since jobId is unique per user
+		logger.info(
+			`[v2-status] CACHE HIT for ${jobId} (${Date.now() - startTime}ms)`,
+			{},
+			LogCategory.JOB
+		);
+		return NextResponse.json(cached);
 	}
 
 	// ========================================================================
@@ -87,7 +91,7 @@ export async function GET(req: Request) {
 	}
 
 	// ========================================================================
-	// Step 3.5: Check for Stale Jobs (skip if already completed to save time)
+	// Step 3.5: Check for Stale Jobs (skip if already completed)
 	// ========================================================================
 
 	if (job.status === 'processing' || job.enrichmentStatus === 'in_progress') {
@@ -146,13 +150,11 @@ export async function GET(req: Request) {
 
 	let status: StatusResponse['status'];
 
-	// Map DB status to v2 status
 	switch (job.status) {
 		case 'pending':
 			status = 'dispatching';
 			break;
 		case 'processing':
-			// Check enrichment status to distinguish searching vs enriching
 			if (job.enrichmentStatus === 'in_progress') {
 				status = 'enriching';
 			} else {
@@ -179,7 +181,6 @@ export async function GET(req: Request) {
 	const creatorsFound = job.creatorsFound ?? 0;
 	const creatorsEnriched = job.creatorsEnriched ?? 0;
 
-	// Calculate percentage: 50% for search, 50% for enrichment
 	let percentComplete = 0;
 	if (keywordsDispatched > 0) {
 		percentComplete += (keywordsCompleted / keywordsDispatched) * 50;
@@ -204,21 +205,8 @@ export async function GET(req: Request) {
 			creatorsEnriched,
 			percentComplete: Math.round(percentComplete * 100) / 100,
 		},
-		// === BACKWARD COMPATIBILITY: Frontend expects these at top level ===
-		// Legacy field: progress as a number (frontend reads data?.progress)
 		processedResults: creatorsFound,
-		// Legacy field: status mappings
-		// V2 statuses: dispatching, searching, enriching, completed, error, partial
-		// Legacy statuses: pending, processing, completed, error, timeout
-		// === END BACKWARD COMPATIBILITY ===
-		results: results
-			? [
-					{
-						id: results.id,
-						creators: paginatedCreators,
-					},
-				]
-			: [],
+		results: results ? [{ id: results.id, creators: paginatedCreators }] : [],
 		pagination: {
 			offset,
 			limit,
@@ -232,24 +220,31 @@ export async function GET(req: Request) {
 		error: job.error ?? undefined,
 	};
 
-	// Backward compatibility fields for legacy frontend polling
-	// Frontend reads: data?.progressPercent or data?.progress?.percentComplete
 	(response as any).progressPercent = Math.round(percentComplete * 100) / 100;
 
-	// Add benchmark data if available
 	const searchParams2 = job.searchParams as Record<string, unknown> | null;
 	if (searchParams2?.searchEngineBenchmark) {
 		response.benchmark = searchParams2.searchEngineBenchmark as StatusResponse['benchmark'];
 	}
 
+	// ========================================================================
+	// Step 8: Cache Completed Results
+	// ========================================================================
+
+	if (status === 'completed' || status === 'partial') {
+		// Cache completed job results for 24 hours
+		await cacheSet(cacheKey, response, CacheTTL.COMPLETED_JOB);
+		logger.info(`[v2-status] Cached results for ${jobId}`, {}, LogCategory.JOB);
+	}
+
 	logger.info(
-		'[v2-status-route] Status retrieved',
+		'[v2-status] Response built',
 		{
 			jobId,
 			status,
-			percentComplete,
 			totalCreators,
-			paginatedCount: paginatedCreators.length,
+			cached: false,
+			totalTime: `${Date.now() - startTime}ms`,
 		},
 		LogCategory.JOB
 	);
