@@ -95,8 +95,10 @@ export function RunRail({
 								</Badge>
 							</div>
 							<div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-zinc-400">
-								{job.status === 'completed' && <span>{creatorsFound} creators</span>}
-								{job.status !== 'completed' && job.progress != null && (
+								{['completed', 'partial'].includes(job.status ?? '') && (
+									<span>{creatorsFound} creators</span>
+								)}
+								{!['completed', 'partial'].includes(job.status ?? '') && job.progress != null && (
 									<span
 										className={cn(
 											'flex items-center gap-2 text-xs',
