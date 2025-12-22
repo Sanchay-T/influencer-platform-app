@@ -22,10 +22,31 @@ export const STATUS_VARIANTS: Record<string, StatusVariant> = {
 		dot: 'bg-emerald-400',
 		label: 'Completed',
 	},
+	partial: {
+		badge: 'bg-emerald-500/15 text-emerald-200 border border-emerald-500/40',
+		dot: 'bg-emerald-400',
+		label: 'Completed',
+	},
 	processing: {
 		badge: 'bg-indigo-500/15 text-indigo-200 border border-indigo-500/40',
 		dot: 'bg-indigo-400 animate-pulse',
 		label: 'Processing',
+	},
+	// V2 status mappings
+	searching: {
+		badge: 'bg-indigo-500/15 text-indigo-200 border border-indigo-500/40',
+		dot: 'bg-indigo-400 animate-pulse',
+		label: 'Searching',
+	},
+	enriching: {
+		badge: 'bg-indigo-500/15 text-indigo-200 border border-indigo-500/40',
+		dot: 'bg-indigo-400 animate-pulse',
+		label: 'Enriching',
+	},
+	dispatching: {
+		badge: 'bg-indigo-500/15 text-indigo-200 border border-indigo-500/40',
+		dot: 'bg-indigo-400 animate-pulse',
+		label: 'Starting',
 	},
 	pending: {
 		badge: 'bg-indigo-500/15 text-indigo-200 border border-indigo-500/40',
@@ -255,9 +276,27 @@ export const createJobUpdateFromPayload = (
 		data?.queue ?? (data?.job as Record<string, unknown>)?.queue ?? null
 	);
 
+	// Extract progress from v2 API response
+	// V2 returns: { progress: { percentComplete }, progressPercent } or legacy { progress: number }
+	const extractProgress = (): number | undefined => {
+		if (typeof data?.progressPercent === 'number') {
+			return data.progressPercent;
+		}
+		if (typeof data?.progress === 'object' && data.progress !== null) {
+			const progressObj = data.progress as { percentComplete?: number };
+			if (typeof progressObj.percentComplete === 'number') {
+				return progressObj.percentComplete;
+			}
+		}
+		if (typeof data?.progress === 'number') {
+			return data.progress;
+		}
+		return undefined;
+	};
+
 	return {
 		status: (data?.status as UiScrapingJob['status']) ?? job.status,
-		progress: (data?.progress as number) ?? job.progress,
+		progress: extractProgress() ?? job.progress,
 		results: aggregatedResults,
 		resultsLoaded: true,
 		creatorBuffer: dedupedCreators,
