@@ -18,6 +18,7 @@ import { scrapingJobs, scrapingResults } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
 import { loadJobTracker } from '@/lib/search-engine/v2/core/job-tracker';
 import type { StatusResponse } from '@/lib/search-engine/v2/workers/types';
+import { UI_JOB_STATUS } from '@/lib/types/statuses';
 
 // Increased timeout for large result sets
 export const maxDuration = 30;
@@ -152,24 +153,24 @@ export async function GET(req: Request) {
 
 	switch (job.status) {
 		case 'pending':
-			status = 'dispatching';
+			status = UI_JOB_STATUS.DISPATCHING;
 			break;
 		case 'processing':
 			if (job.enrichmentStatus === 'in_progress') {
-				status = 'enriching';
+				status = UI_JOB_STATUS.ENRICHING;
 			} else {
-				status = 'searching';
+				status = UI_JOB_STATUS.SEARCHING;
 			}
 			break;
 		case 'completed':
-			status = job.error ? 'partial' : 'completed';
+			status = job.error ? UI_JOB_STATUS.PARTIAL : UI_JOB_STATUS.COMPLETED;
 			break;
 		case 'error':
 		case 'timeout':
-			status = 'error';
+			status = UI_JOB_STATUS.ERROR;
 			break;
 		default:
-			status = 'searching';
+			status = UI_JOB_STATUS.SEARCHING;
 	}
 
 	// ========================================================================
@@ -231,7 +232,7 @@ export async function GET(req: Request) {
 	// Step 8: Cache Completed Results
 	// ========================================================================
 
-	if (status === 'completed' || status === 'partial') {
+	if (status === UI_JOB_STATUS.COMPLETED || status === UI_JOB_STATUS.PARTIAL) {
 		// Cache completed job results for 24 hours
 		await cacheSet(cacheKey, response, CacheTTL.COMPLETED_JOB);
 		logger.info(`[v2-status] Cached results for ${jobId}`, {}, LogCategory.JOB);

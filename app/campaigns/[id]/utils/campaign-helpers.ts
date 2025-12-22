@@ -4,71 +4,24 @@
  */
 import { dedupeCreators } from '@/app/components/campaigns/utils/dedupe-creators';
 import { structuredConsole } from '@/lib/logging/console-proxy';
-import type {
-	HandleQueueState,
-	PlatformResult,
-	StatusVariant,
-	UiScrapingJob,
-} from '../types/campaign-page';
+import { getStatusDisplay, isSuccessStatus, type JobStatusDisplay } from '@/lib/types/statuses';
+import type { HandleQueueState, PlatformResult, UiScrapingJob } from '../types/campaign-page';
+
+// Re-export StatusVariant as an alias for backwards compatibility
+export type StatusVariant = JobStatusDisplay;
 
 // Constants
 export const SHOW_DIAGNOSTICS = process.env.NEXT_PUBLIC_SHOW_SEARCH_DIAGNOSTICS === 'true';
 export const DEFAULT_PAGE_LIMIT = 200;
 export const HANDLE_QUEUE_PARAM_KEY = 'searchEngineHandleQueue';
 
-export const STATUS_VARIANTS: Record<string, StatusVariant> = {
-	completed: {
-		badge: 'bg-emerald-500/15 text-emerald-200 border border-emerald-500/40',
-		dot: 'bg-emerald-400',
-		label: 'Completed',
-	},
-	partial: {
-		badge: 'bg-emerald-500/15 text-emerald-200 border border-emerald-500/40',
-		dot: 'bg-emerald-400',
-		label: 'Completed',
-	},
-	processing: {
-		badge: 'bg-indigo-500/15 text-indigo-200 border border-indigo-500/40',
-		dot: 'bg-indigo-400 animate-pulse',
-		label: 'Processing',
-	},
-	// V2 status mappings
-	searching: {
-		badge: 'bg-indigo-500/15 text-indigo-200 border border-indigo-500/40',
-		dot: 'bg-indigo-400 animate-pulse',
-		label: 'Searching',
-	},
-	enriching: {
-		badge: 'bg-indigo-500/15 text-indigo-200 border border-indigo-500/40',
-		dot: 'bg-indigo-400 animate-pulse',
-		label: 'Enriching',
-	},
-	dispatching: {
-		badge: 'bg-indigo-500/15 text-indigo-200 border border-indigo-500/40',
-		dot: 'bg-indigo-400 animate-pulse',
-		label: 'Starting',
-	},
-	pending: {
-		badge: 'bg-indigo-500/15 text-indigo-200 border border-indigo-500/40',
-		dot: 'bg-indigo-400 animate-pulse',
-		label: 'Queued',
-	},
-	error: {
-		badge: 'bg-red-500/15 text-red-200 border border-red-500/40',
-		dot: 'bg-red-400',
-		label: 'Failed',
-	},
-	timeout: {
-		badge: 'bg-amber-500/15 text-amber-200 border border-amber-500/40',
-		dot: 'bg-amber-400',
-		label: 'Timed out',
-	},
-	default: {
-		badge: 'bg-zinc-800/60 text-zinc-200 border border-zinc-700/60',
-		dot: 'bg-zinc-500',
-		label: 'Unknown',
-	},
-};
+// Use the shared status display from statuses.ts
+export function getStatusVariant(status?: string): StatusVariant {
+	return getStatusDisplay(status);
+}
+
+// Re-export isSuccessStatus for use in components
+export { isSuccessStatus };
 
 // Creator extraction helpers
 export const extractCreatorsArray = (
@@ -398,13 +351,6 @@ export function getCreatorsCount(job?: UiScrapingJob | null): number {
 
 export function getRunDisplayLabel(index: number) {
 	return `Run #${index}`;
-}
-
-export function getStatusVariant(status?: string): StatusVariant {
-	if (!status) {
-		return STATUS_VARIANTS.default;
-	}
-	return STATUS_VARIANTS[status] ?? STATUS_VARIANTS.default;
 }
 
 export function isActiveJob(job?: UiScrapingJob | null) {

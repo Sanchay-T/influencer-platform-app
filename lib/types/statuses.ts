@@ -14,7 +14,7 @@
  */
 
 // =============================================================================
-// Job Status (scrapingJobs.status)
+// Job Status (scrapingJobs.status) - Database values
 // =============================================================================
 
 export const JOB_STATUS = {
@@ -30,6 +30,149 @@ export type JobStatus = (typeof JOB_STATUS)[keyof typeof JOB_STATUS];
 // Helper to check if a string is a valid job status
 export function isValidJobStatus(status: string): status is JobStatus {
 	return Object.values(JOB_STATUS).includes(status as JobStatus);
+}
+
+// =============================================================================
+// V2 UI Status - What the frontend displays (mapped from DB status)
+// =============================================================================
+
+/**
+ * V2 Search Engine UI Statuses
+ *
+ * The V2 API maps database statuses to more descriptive UI statuses:
+ * - pending → dispatching (job is being set up)
+ * - processing → searching OR enriching (based on enrichmentStatus)
+ * - completed → completed OR partial (based on error presence)
+ * - error → error
+ * - timeout → timeout
+ */
+export const UI_JOB_STATUS = {
+	// Waiting phase
+	PENDING: 'pending',
+	DISPATCHING: 'dispatching',
+
+	// Active phase
+	SEARCHING: 'searching',
+	ENRICHING: 'enriching',
+	PROCESSING: 'processing', // Legacy: maps to searching/enriching in V2
+
+	// Terminal phase - success
+	COMPLETED: 'completed',
+	PARTIAL: 'partial', // Completed with some errors
+
+	// Terminal phase - failure
+	ERROR: 'error',
+	TIMEOUT: 'timeout',
+} as const;
+
+export type UiJobStatus = (typeof UI_JOB_STATUS)[keyof typeof UI_JOB_STATUS];
+
+// Status phase for grouping behavior
+export type StatusPhase = 'waiting' | 'active' | 'done';
+
+// UI display configuration for each status
+export interface JobStatusDisplay {
+	label: string;
+	phase: StatusPhase;
+	badge: string;
+	dot: string;
+}
+
+export const JOB_STATUS_DISPLAY: Record<UiJobStatus, JobStatusDisplay> = {
+	// Waiting phase
+	[UI_JOB_STATUS.PENDING]: {
+		label: 'Queued',
+		phase: 'waiting',
+		badge: 'bg-indigo-500/15 text-indigo-200 border border-indigo-500/40',
+		dot: 'bg-indigo-400 animate-pulse',
+	},
+	[UI_JOB_STATUS.DISPATCHING]: {
+		label: 'Starting',
+		phase: 'waiting',
+		badge: 'bg-indigo-500/15 text-indigo-200 border border-indigo-500/40',
+		dot: 'bg-indigo-400 animate-pulse',
+	},
+
+	// Active phase
+	[UI_JOB_STATUS.SEARCHING]: {
+		label: 'Searching',
+		phase: 'active',
+		badge: 'bg-indigo-500/15 text-indigo-200 border border-indigo-500/40',
+		dot: 'bg-indigo-400 animate-pulse',
+	},
+	[UI_JOB_STATUS.ENRICHING]: {
+		label: 'Enriching',
+		phase: 'active',
+		badge: 'bg-indigo-500/15 text-indigo-200 border border-indigo-500/40',
+		dot: 'bg-indigo-400 animate-pulse',
+	},
+	[UI_JOB_STATUS.PROCESSING]: {
+		label: 'Processing',
+		phase: 'active',
+		badge: 'bg-indigo-500/15 text-indigo-200 border border-indigo-500/40',
+		dot: 'bg-indigo-400 animate-pulse',
+	},
+
+	// Terminal - success
+	[UI_JOB_STATUS.COMPLETED]: {
+		label: 'Completed',
+		phase: 'done',
+		badge: 'bg-emerald-500/15 text-emerald-200 border border-emerald-500/40',
+		dot: 'bg-emerald-400',
+	},
+	[UI_JOB_STATUS.PARTIAL]: {
+		label: 'Completed',
+		phase: 'done',
+		badge: 'bg-emerald-500/15 text-emerald-200 border border-emerald-500/40',
+		dot: 'bg-emerald-400',
+	},
+
+	// Terminal - failure
+	[UI_JOB_STATUS.ERROR]: {
+		label: 'Failed',
+		phase: 'done',
+		badge: 'bg-red-500/15 text-red-200 border border-red-500/40',
+		dot: 'bg-red-400',
+	},
+	[UI_JOB_STATUS.TIMEOUT]: {
+		label: 'Timed out',
+		phase: 'done',
+		badge: 'bg-amber-500/15 text-amber-200 border border-amber-500/40',
+		dot: 'bg-amber-400',
+	},
+};
+
+// Default display for unknown statuses
+export const DEFAULT_STATUS_DISPLAY: JobStatusDisplay = {
+	label: 'Unknown',
+	phase: 'done',
+	badge: 'bg-zinc-800/60 text-zinc-200 border border-zinc-700/60',
+	dot: 'bg-zinc-500',
+};
+
+// Helper functions
+export function isValidUiJobStatus(status: string): status is UiJobStatus {
+	return Object.values(UI_JOB_STATUS).includes(status as UiJobStatus);
+}
+
+export function getStatusDisplay(status: string | undefined | null): JobStatusDisplay {
+	if (!(status && isValidUiJobStatus(status))) {
+		return DEFAULT_STATUS_DISPLAY;
+	}
+	return JOB_STATUS_DISPLAY[status];
+}
+
+export function isActiveStatus(status: string | undefined | null): boolean {
+	const display = getStatusDisplay(status);
+	return display.phase === 'active' || display.phase === 'waiting';
+}
+
+export function isDoneStatus(status: string | undefined | null): boolean {
+	return getStatusDisplay(status).phase === 'done';
+}
+
+export function isSuccessStatus(status: string | undefined | null): boolean {
+	return status === UI_JOB_STATUS.COMPLETED || status === UI_JOB_STATUS.PARTIAL;
 }
 
 // =============================================================================
