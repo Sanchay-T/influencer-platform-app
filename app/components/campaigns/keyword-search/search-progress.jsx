@@ -241,6 +241,22 @@ export default function SearchProgress({
 					data?.job?.processedResults ??
 					0;
 				const jobTarget = data?.targetResults ?? data?.job?.targetResults ?? 0;
+				const jobTotalCreators = data?.totalCreators ?? jobProcessed;
+
+				// Always log poll results for debugging (can be viewed in browser console)
+				console.log('[GEMZ-POLL]', {
+					jobId,
+					status: jobStatus,
+					progress: jobProgress,
+					processed: jobProcessed,
+					totalCreators: jobTotalCreators,
+					target: jobTarget,
+					enriched: data?.progress?.creatorsEnriched ?? 0,
+					keywords: `${data?.progress?.keywordsCompleted ?? 0}/${data?.progress?.keywordsDispatched ?? 0}`,
+					creatorsInResponse: Array.isArray(data?.results)
+						? data.results.reduce((acc, r) => acc + (r?.creators?.length ?? 0), 0)
+						: 0,
+				});
 
 				if (debugPolling) {
 					const creatorsCount = Array.isArray(data?.results)

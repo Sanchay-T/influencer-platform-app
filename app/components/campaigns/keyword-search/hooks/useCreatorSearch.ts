@@ -334,6 +334,14 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 	const handleSearchComplete = useCallback(
 		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: completion handling + fallback fetch.
 		(data: { status?: string; creators?: unknown[] }) => {
+			// Always log completion for debugging
+			console.log('[GEMZ-CREATORS]', {
+				event: 'complete',
+				jobId: searchData?.jobId,
+				status: data?.status,
+				creatorsInPayload: data?.creators?.length ?? 0,
+			});
+
 			if (
 				data &&
 				(data.status === 'completed' || data.status === 'error' || data.status === 'timeout')
@@ -422,13 +430,15 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 					if (searchData?.jobId && merged.length) {
 						resultsCacheRef.current.set(searchData.jobId, merged);
 					}
-					if (debugPolling) {
-						structuredConsole.log('[CREATOR-SEARCH] intermediate', {
-							jobId: searchData?.jobId,
-							incoming: incoming.length,
-							merged: merged.length,
-						});
-					}
+					// Always log intermediate results for debugging
+					console.log('[GEMZ-CREATORS]', {
+						event: 'intermediate',
+						jobId: searchData?.jobId,
+						incoming: incoming.length,
+						previous: prev.length,
+						merged: merged.length,
+						delta: merged.length - prev.length,
+					});
 					return merged;
 				});
 			} catch (e) {
