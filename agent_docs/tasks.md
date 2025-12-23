@@ -12,7 +12,7 @@
 **Status:** 🟡 IN PROGRESS
 **Branch:** `UAT`
 **Started:** Dec 12, 2025
-**Updated:** Dec 12, 2025 — 08:15 PM
+**Updated:** Dec 23, 2025 — 10:13 PM
 
 ### Goal
 Systematically reduce tech debt identified in codebase audit. Break up monolithic files, clean up legacy code, improve maintainability.
@@ -84,14 +84,35 @@ READY: Start legacy cleanup verification
 | Refactored | `app/lists/[id]/_components/list-detail-client.tsx` (357 lines) |
 
 ### Context
-- **Session Summary:**
-  1. Refactored similar-search (742 → 319 lines)
-  2. Fixed bug: Instagram similar search called wrong API
-  3. Fixed bug: Campaign page showed wrong results view
-  4. Refactored client-page.tsx (1588 → 417 lines, 74% reduction)
-  5. Refactored list-detail-client.tsx (1124 → 357 lines, 68% reduction)
+- **Recent Work (Dec 12-23):**
+  1. ✅ All refactoring complete: similar-search, client-page, list-detail-client, keyword-search
+  2. ✅ Shared type contract for job statuses (commit: f6a9ef938)
+  3. ✅ Handle 'partial' status in run sidebar display (commit: e510cea29)
+  4. ✅ Add v2 status mappings and fix progress parsing (commit: 3f409f370)
+  5. ✅ Atomic deduplication for v2 workers using job_creator_keys table (commit: 988f782e3)
+  6. ✅ maxDuration added to v2 worker routes for Vercel Pro timeout (commit: 5d7c8560e)
+  7. ✅ Redis env vars deployed (commit: d748653a6)
+  8. ✅ Redis caching for completed job results (commit: cb53abfcc)
+  9. ✅ Timeout and error handling for v2/status API (commit: 5543ae803)
+  10. ✅ Campaigns API timeout optimization (commit: 5c117483c)
 - **Branch:** `UAT`
-- **Files Created:**
+- **Uncommitted Changes:**
+  - `.claude/hooks/lint.sh` (modified)
+  - `.husky/pre-commit` (modified)
+  - `.vscode/settings.json` (modified)
+  - `agent_docs/monologue.md` (modified)
+  - `agent_docs/tasks.md` (modified - this file)
+  - `app/api/v2/status/route.ts` (modified)
+  - `lib/db/schema.ts` (modified)
+  - `lib/search-engine/v2/workers/save-creators.ts` (modified)
+  - `scripts/remove-env-comments.py` (modified)
+  - `agent_docs/claude-code-power-user-guide.md` (new file, untracked)
+  - `scripts/analyze-jobs.ts` (new analysis script, untracked)
+  - `scripts/analyze-recent.ts` (new analysis script, untracked)
+  - `scripts/analyze-run6.ts` (new analysis script, untracked)
+  - `scripts/check-dedup.ts` (new analysis script, untracked)
+  - `scripts/check-table.ts` (new analysis script, untracked)
+- **Files Created During Refactoring:**
   - `similar-search/hooks/useSimilarCreatorSearch.ts`
   - `similar-search/utils/transform-rows.ts`
   - `similar-search/components/SimilarSearchHeader.tsx`
@@ -140,4 +161,4 @@ READY: Start legacy cleanup verification
 
 ---
 
-*Last updated: Dec 12, 2025 8:15 PM*
+*Last updated: Dec 22, 2025 12:13 AM*

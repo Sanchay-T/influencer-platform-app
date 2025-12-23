@@ -9,12 +9,12 @@
  * - Active jobs: No cache (need fresh progress updates)
  */
 
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { CacheKeys, CacheTTL, cacheGet, cacheSet } from '@/lib/cache/redis';
 import { db } from '@/lib/db';
-import { scrapingJobs, scrapingResults } from '@/lib/db/schema';
+import { jobCreators, scrapingJobs } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
 import { loadJobTracker } from '@/lib/search-engine/v2/core/job-tracker';
 import type { StatusResponse } from '@/lib/search-engine/v2/workers/types';
@@ -123,26 +123,37 @@ export async function GET(req: Request) {
 	}
 
 	// ========================================================================
-	// Step 4: Load Results
+	// Step 4: Load Results from job_creators table (DB-level pagination)
 	// ========================================================================
 
 	const resultsStart = Date.now();
-	const [results] = await db
-		.select()
-		.from(scrapingResults)
-		.where(eq(scrapingResults.jobId, jobId))
-		.limit(1);
+
+	// Get total count (fast, uses index)
+	const countResult = await db
+		.select({ count: sql<number>`count(*)::int` })
+		.from(jobCreators)
+		.where(eq(jobCreators.jobId, jobId));
+
+	const totalCreators = countResult[0]?.count ?? 0;
+
+	// Get paginated creators (DB-level OFFSET/LIMIT)
+	const paginatedRows = await db
+		.select({ creatorData: jobCreators.creatorData })
+		.from(jobCreators)
+		.where(eq(jobCreators.jobId, jobId))
+		.orderBy(jobCreators.createdAt)
+		.limit(limit)
+		.offset(offset);
+
+	// Extract creator data from rows
+	const paginatedCreators = paginatedRows.map((row) => row.creatorData);
+
 	logger.debug(
 		`[v2-status] Results query completed in ${Date.now() - resultsStart}ms`,
 		{},
 		LogCategory.JOB
 	);
 
-	const allCreators = results && Array.isArray(results.creators) ? results.creators : [];
-	const totalCreators = allCreators.length;
-
-	// Paginate creators
-	const paginatedCreators = allCreators.slice(offset, offset + limit);
 	const nextOffset = offset + limit < totalCreators ? offset + limit : null;
 
 	// ========================================================================
@@ -207,7 +218,7 @@ export async function GET(req: Request) {
 			percentComplete: Math.round(percentComplete * 100) / 100,
 		},
 		processedResults: creatorsFound,
-		results: results ? [{ id: results.id, creators: paginatedCreators }] : [],
+		results: totalCreators > 0 ? [{ id: jobId, creators: paginatedCreators }] : [],
 		pagination: {
 			offset,
 			limit,

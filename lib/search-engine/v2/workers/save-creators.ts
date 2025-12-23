@@ -1,13 +1,18 @@
 /**
  * Save Creators Helper - Atomic DB Operations
  *
- * Handles saving creators to the database with deduplication.
- * Uses INSERT ON CONFLICT DO NOTHING for atomic deduplication
- * that works with PgBouncer (no FOR UPDATE locks needed).
+ * Saves creators to the job_creators table with automatic deduplication.
+ * Uses UNIQUE constraint + INSERT ON CONFLICT DO NOTHING for atomic deduplication.
+ * Single INSERT operation = no race conditions, works with PgBouncer.
+ *
+ * @context This replaces the old approach that used two separate operations
+ * (INSERT to job_creator_keys + UPDATE scraping_results JSON), which caused
+ * data loss when the second operation failed or timed out.
  */
 
-import { sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
+import { jobCreators } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
 import type { NormalizedCreator } from '../core/types';
 
@@ -35,10 +40,13 @@ export interface SaveResult {
 // ============================================================================
 
 /**
- * Save creators to job results with deduplication
- * Uses INSERT ON CONFLICT DO NOTHING for atomic deduplication
- * that works with PgBouncer (no FOR UPDATE locks needed)
- * CHECKPOINT 2: Caps at targetResults to ensure approximate target
+ * Save creators to job_creators table with automatic deduplication
+ *
+ * Uses single INSERT with ON CONFLICT DO NOTHING - database handles deduplication
+ * via UNIQUE(job_id, platform, username) constraint.
+ *
+ * @why Single atomic INSERT instead of INSERT + UPDATE prevents race conditions
+ * and data loss when parallel workers save simultaneously.
  */
 export async function saveCreatorsToJob(
 	jobId: string,
@@ -50,11 +58,13 @@ export async function saveCreatorsToJob(
 		return { total: 0, newCount: 0, creatorIds: [] };
 	}
 
-	// Step 1: Check current count from job_creator_keys (fast, indexed)
-	const countResult = await db.execute(sql`
-		SELECT COUNT(*) as count FROM job_creator_keys WHERE job_id = ${jobId}
-	`);
-	const currentCount = Number(countResult[0]?.count || 0);
+	// Step 1: Check current count from job_creators table (indexed)
+	const countResult = await db
+		.select({ count: sql<number>`count(*)::int` })
+		.from(jobCreators)
+		.where(eq(jobCreators.jobId, jobId));
+
+	const currentCount = countResult[0]?.count ?? 0;
 
 	// If we already have enough, skip entirely
 	if (currentCount >= targetResults) {
@@ -66,59 +76,49 @@ export async function saveCreatorsToJob(
 		return { total: currentCount, newCount: 0, creatorIds: [] };
 	}
 
-	// Cap the incoming batch to not exceed target too much
+	// Cap the incoming batch to not exceed target too much (allow 50 overflow)
 	const slotsLeft = targetResults - currentCount;
-	const creatorsToProcess = creators.slice(0, Math.min(creators.length, slotsLeft + 50)); // Allow slight overflow
+	const creatorsToProcess = creators.slice(0, Math.min(creators.length, slotsLeft + 50));
 
-	// Step 2: Prepare values for batch insert
-	const keyValues = creatorsToProcess.map((c) => ({
-		key: getDedupeKey(c).toLowerCase().trim(),
-		creator: c,
+	// Step 2: Prepare rows for batch insert
+	const rows = creatorsToProcess.map((c) => ({
+		jobId,
+		platform: c.creator.platform || 'unknown',
+		username: getDedupeKey(c).toLowerCase().trim(),
+		creatorData: c,
 	}));
 
-	// Step 3: Batch insert creator keys - only returns keys that were actually inserted
-	// This is atomic and works with PgBouncer (no FOR UPDATE needed)
-	const insertValues = keyValues.map((kv) => sql`(${jobId}::uuid, ${kv.key})`);
+	// Step 3: Single atomic INSERT with ON CONFLICT DO NOTHING
+	// Database handles deduplication via UNIQUE constraint
+	// Returns only the rows that were actually inserted (not duplicates)
+	let insertedCount = 0;
+	const insertedUsernames: string[] = [];
 
-	const insertResults = await db.execute(sql`
-		INSERT INTO job_creator_keys (job_id, creator_key)
-		VALUES ${sql.join(insertValues, sql`, `)}
-		ON CONFLICT DO NOTHING
-		RETURNING creator_key
-	`);
+	try {
+		const inserted = await db
+			.insert(jobCreators)
+			.values(rows)
+			.onConflictDoNothing()
+			.returning({ username: jobCreators.username });
 
-	// Get set of actually inserted keys
-	const insertedKeys = new Set(
-		(insertResults as unknown as Array<{ creator_key: string }>).map((r) => r.creator_key)
-	);
-
-	// Step 4: Filter to only truly new creators
-	const newCreators = keyValues.filter((kv) => insertedKeys.has(kv.key)).map((kv) => kv.creator);
-
-	if (newCreators.length === 0) {
-		logger.info(
-			`${LOG_PREFIX} No new creators to add (all duplicates)`,
-			{ jobId, metadata: { attempted: creatorsToProcess.length } },
+		insertedCount = inserted.length;
+		insertedUsernames.push(...inserted.map((r) => r.username));
+	} catch (error) {
+		// Log but don't throw - partial inserts are fine
+		logger.warn(
+			`${LOG_PREFIX} Insert had issues, some creators may have been saved`,
+			{ jobId, metadata: { error: String(error), attempted: rows.length } },
 			LogCategory.JOB
 		);
-		return { total: currentCount, newCount: 0, creatorIds: [] };
 	}
 
-	// Step 5: Append new creators to JSON atomically using || operator
-	// This is atomic and doesn't require FOR UPDATE lock
-	await db.execute(sql`
-		UPDATE scraping_results
-		SET creators = COALESCE(creators, '[]'::jsonb) || ${JSON.stringify(newCreators)}::jsonb
-		WHERE job_id = ${jobId}
-	`);
+	// Step 4: Get final count from DB (source of truth)
+	const finalCountResult = await db
+		.select({ count: sql<number>`count(*)::int` })
+		.from(jobCreators)
+		.where(eq(jobCreators.jobId, jobId));
 
-	// Step 6: Get final count
-	const finalCountResult = await db.execute(sql`
-		SELECT COUNT(*) as count FROM job_creator_keys WHERE job_id = ${jobId}
-	`);
-	const finalCount = Number(finalCountResult[0]?.count || 0);
-
-	const newCreatorIds = newCreators.map((c) => c.creator.username || c.creator.uniqueId || c.id);
+	const finalCount = finalCountResult[0]?.count ?? 0;
 
 	logger.info(
 		`${LOG_PREFIX} Saved creators to DB`,
@@ -126,8 +126,8 @@ export async function saveCreatorsToJob(
 			jobId,
 			metadata: {
 				totalInDb: finalCount,
-				newCreators: newCreators.length,
-				duplicatesSkipped: creatorsToProcess.length - newCreators.length,
+				newCreators: insertedCount,
+				duplicatesSkipped: creatorsToProcess.length - insertedCount,
 				targetResults,
 				capped: finalCount >= targetResults,
 			},
@@ -137,7 +137,7 @@ export async function saveCreatorsToJob(
 
 	return {
 		total: finalCount,
-		newCount: newCreators.length,
-		creatorIds: newCreatorIds,
+		newCount: insertedCount,
+		creatorIds: insertedUsernames,
 	};
 }

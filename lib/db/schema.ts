@@ -1,6 +1,7 @@
 import { relations, sql } from 'drizzle-orm';
 import {
 	boolean,
+	index,
 	integer,
 	jsonb,
 	numeric,
@@ -84,6 +85,7 @@ export const scrapingResults = pgTable('scraping_results', {
 // Job Creator Keys - Atomic deduplication via unique constraint
 // Used by v2 workers to prevent duplicate creators across parallel workers
 // Works with PgBouncer (no FOR UPDATE locks needed)
+// DEPRECATED: Being replaced by jobCreators table which stores full creator data
 export const jobCreatorKeys = pgTable(
 	'job_creator_keys',
 	{
@@ -95,6 +97,29 @@ export const jobCreatorKeys = pgTable(
 	},
 	(table) => ({
 		pk: primaryKey({ columns: [table.jobId, table.creatorKey] }),
+	})
+);
+
+// Job Creators - Stores individual creators with automatic deduplication
+// Replaces both jobCreatorKeys (dedup) and scrapingResults (JSON storage)
+// UNIQUE constraint allows parallel workers to INSERT without race conditions
+export const jobCreators = pgTable(
+	'job_creators',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		jobId: uuid('job_id')
+			.notNull()
+			.references(() => scrapingJobs.id, { onDelete: 'cascade' }),
+		platform: varchar('platform', { length: 50 }).notNull(),
+		username: varchar('username', { length: 255 }).notNull(),
+		creatorData: jsonb('creator_data').notNull(), // Full NormalizedCreator object
+		createdAt: timestamp('created_at').notNull().defaultNow(),
+	},
+	(table) => ({
+		// UNIQUE constraint for automatic deduplication - DB rejects duplicates
+		uniqueCreator: unique('job_creators_unique').on(table.jobId, table.platform, table.username),
+		// Index for fast job lookups and pagination
+		jobIdIdx: index('idx_job_creators_job_id').on(table.jobId),
 	})
 );
 
@@ -481,6 +506,14 @@ export const scrapingJobsRelations = relations(scrapingJobs, ({ one, many }) => 
 		references: [campaigns.id],
 	}),
 	results: many(scrapingResults),
+	creators: many(jobCreators),
+}));
+
+export const jobCreatorsRelations = relations(jobCreators, ({ one }) => ({
+	job: one(scrapingJobs, {
+		fields: [jobCreators.jobId],
+		references: [scrapingJobs.id],
+	}),
 }));
 
 export const scrapingResultsRelations = relations(scrapingResults, ({ one }) => ({
@@ -655,6 +688,8 @@ export type ScrapingJob = typeof scrapingJobs.$inferSelect;
 export type NewScrapingJob = typeof scrapingJobs.$inferInsert;
 export type ScrapingResult = typeof scrapingResults.$inferSelect;
 export type NewScrapingResult = typeof scrapingResults.$inferInsert;
+export type JobCreator = typeof jobCreators.$inferSelect;
+export type NewJobCreator = typeof jobCreators.$inferInsert;
 export type SearchJob = typeof searchJobs.$inferSelect;
 export type NewSearchJob = typeof searchJobs.$inferInsert;
 export type SearchResult = typeof searchResults.$inferSelect;

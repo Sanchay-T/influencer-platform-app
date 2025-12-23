@@ -3,17 +3,17 @@
  *
  * This worker handles bio enrichment for a batch of creators:
  * 1. Receives batch of creator IDs from QStash
- * 2. Loads creators from DB
+ * 2. Loads creators from job_creators table
  * 3. Enriches each with full bio from profile API
  * 4. Extracts emails from enriched bios
- * 5. Updates creators in DB
+ * 5. Updates creator rows in DB
  * 6. Updates job counters atomically
  * 7. Marks job complete when all batches done
  */
 
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { scrapingResults } from '@/lib/db/schema';
+import { jobCreators } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
 import { getAdapter } from '../adapters/interface';
 // Side-effect imports: register adapters with the registry
@@ -94,32 +94,41 @@ export async function processEnrich(options: ProcessEnrichOptions): Promise<Enri
 		}
 
 		// ========================================================================
-		// Step 2: Load Creators from DB
+		// Step 2: Load Creators from job_creators table
 		// ========================================================================
 
-		const [existing] = await db
+		const creatorRows = await db
 			.select()
-			.from(scrapingResults)
-			.where(eq(scrapingResults.jobId, jobId))
-			.limit(1);
+			.from(jobCreators)
+			.where(
+				and(
+					eq(jobCreators.jobId, jobId),
+					inArray(
+						jobCreators.username,
+						creatorIds.map((id) => id.toLowerCase().trim())
+					)
+				)
+			);
 
-		if (!(existing && Array.isArray(existing.creators))) {
-			logger.warn(`${LOG_PREFIX} No results found for job`, { jobId, batchIndex }, LogCategory.JOB);
+		if (creatorRows.length === 0) {
+			logger.warn(
+				`${LOG_PREFIX} No creators found for batch`,
+				{ jobId, batchIndex, creatorIds: creatorIds.slice(0, 5) },
+				LogCategory.JOB
+			);
 
 			return {
 				creatorsEnriched: 0,
 				emailsFound: 0,
 				durationMs: Date.now() - startTime,
-				error: 'No results found for job',
+				error: 'No creators found for batch',
 			};
 		}
 
-		const allCreators = existing.creators as NormalizedCreator[];
-
-		// Find creators that need enrichment from this batch
-		const creatorsToEnrich = allCreators.filter((c) => {
-			const creatorKey = c.creator.username || c.creator.uniqueId || c.id;
-			return creatorIds.includes(creatorKey) && !c.bioEnriched;
+		// Filter to only non-enriched creators
+		const creatorsToEnrich = creatorRows.filter((row) => {
+			const creator = row.creatorData as NormalizedCreator;
+			return !creator.bioEnriched;
 		});
 
 		if (creatorsToEnrich.length === 0) {
@@ -146,14 +155,16 @@ export async function processEnrich(options: ProcessEnrichOptions): Promise<Enri
 		// Step 3: Enrich Creators in Parallel
 		// ========================================================================
 
-		const enrichedCreators: Map<string, NormalizedCreator> = new Map();
+		const enrichedResults: Array<{ row: (typeof creatorRows)[0]; enriched: NormalizedCreator }> =
+			[];
 		let emailsFound = 0;
 
 		// Process in parallel batches
 		for (let i = 0; i < creatorsToEnrich.length; i += MAX_PARALLEL_ENRICHMENTS) {
 			const batch = creatorsToEnrich.slice(i, i + MAX_PARALLEL_ENRICHMENTS);
 
-			const enrichPromises = batch.map(async (creator) => {
+			const enrichPromises = batch.map(async (row) => {
+				const creator = row.creatorData as NormalizedCreator;
 				try {
 					const enriched = await adapter.enrich!(creator, config);
 
@@ -166,7 +177,7 @@ export async function processEnrich(options: ProcessEnrichOptions): Promise<Enri
 						}
 					}
 
-					return enriched;
+					return { row, enriched };
 				} catch (error) {
 					logger.warn(
 						`${LOG_PREFIX} Enrichment failed for creator`,
@@ -179,58 +190,35 @@ export async function processEnrich(options: ProcessEnrichOptions): Promise<Enri
 					);
 					// Mark as enriched even on failure (so we don't retry forever)
 					return {
-						...creator,
-						bioEnriched: true,
-						bioEnrichedAt: new Date().toISOString(),
+						row,
+						enriched: {
+							...creator,
+							bioEnriched: true,
+							bioEnrichedAt: new Date().toISOString(),
+						} as NormalizedCreator,
 					};
 				}
 			});
 
 			const results = await Promise.all(enrichPromises);
-
-			for (const enriched of results) {
-				const key = enriched.creator.username || enriched.creator.uniqueId || enriched.id;
-				enrichedCreators.set(key, enriched);
-			}
+			enrichedResults.push(...results);
 		}
 
 		// ========================================================================
-		// Step 4: Update Creators in DB
+		// Step 4: Update Creator Rows in DB
 		// ========================================================================
 
-		await db.transaction(async (tx) => {
-			// Re-fetch to get latest state (another worker might have updated)
-			const [current] = await tx
-				.select()
-				.from(scrapingResults)
-				.where(eq(scrapingResults.jobId, jobId))
-				.limit(1);
-
-			if (!(current && Array.isArray(current.creators))) {
-				return;
-			}
-
-			const currentCreators = current.creators as NormalizedCreator[];
-
-			// Merge enriched creators back
-			const updatedCreators = currentCreators.map((c) => {
-				const key = c.creator.username || c.creator.uniqueId || c.id;
-				const enriched = enrichedCreators.get(key);
-				return enriched ?? c;
-			});
-
-			await tx
-				.update(scrapingResults)
-				.set({ creators: updatedCreators })
-				.where(eq(scrapingResults.id, current.id));
-		});
+		// Update each row individually (no transaction needed - each is atomic)
+		for (const { row, enriched } of enrichedResults) {
+			await db.update(jobCreators).set({ creatorData: enriched }).where(eq(jobCreators.id, row.id));
+		}
 
 		// ========================================================================
 		// Step 5: Update Job Counters
 		// ========================================================================
 
 		const tracker = loadJobTracker(jobId);
-		const { allDone } = await tracker.addCreatorsEnriched(enrichedCreators.size);
+		const { allDone } = await tracker.addCreatorsEnriched(enrichedResults.length);
 		await tracker.updateProgressPercentage();
 
 		// Check if all enrichment is complete
@@ -245,7 +233,7 @@ export async function processEnrich(options: ProcessEnrichOptions): Promise<Enri
 			{
 				jobId,
 				batchIndex,
-				creatorsEnriched: enrichedCreators.size,
+				creatorsEnriched: enrichedResults.length,
 				emailsFound,
 				allDone,
 				durationMs,
@@ -254,7 +242,7 @@ export async function processEnrich(options: ProcessEnrichOptions): Promise<Enri
 		);
 
 		return {
-			creatorsEnriched: enrichedCreators.size,
+			creatorsEnriched: enrichedResults.length,
 			emailsFound,
 			durationMs,
 		};
