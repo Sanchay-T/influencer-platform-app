@@ -12,7 +12,7 @@
 **Status:** 🟡 IN PROGRESS
 **Branch:** `UAT`
 **Started:** Dec 12, 2025
-**Updated:** Dec 24, 2025 — 12:29 AM
+**Updated:** Dec 24, 2025 — 10:15 AM
 
 ### Goal
 Systematically reduce tech debt identified in codebase audit. Break up monolithic files, clean up legacy code, improve maintainability.
@@ -119,6 +119,9 @@ EXPECTED: All legacy code now unused due to V2 fan-out architecture
       - useCreatorSearch now checks React Query cache first
       - Fixed React hydration mismatch in QueryProvider (commit: 5f78b9263)
       - All completed runs now load instantly without flickering
+      - Fixed pagination bug: Page 3+ showed empty (commit: b356d3d43)
+        - Bug: toUiJob was overwriting server totalCreators with counted=50
+        - Fix: Prefer job.totalCreators from server, enabling auto-fetch
 - **Branch:** `UAT`
 - **Files Created (React Query):**
   - `lib/query/query-client.ts` - QueryClient config

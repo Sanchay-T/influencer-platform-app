@@ -291,7 +291,9 @@ export function CreatorTableRow({
 
 			{/* Views */}
 			<TableCell className="hidden lg:table-cell px-4 py-4 text-right text-sm tabular-nums">
-				{(creator.video?.statistics?.views || 0).toLocaleString()}
+				{creator.video?.statistics?.views && creator.video.statistics.views > 0
+					? creator.video.statistics.views.toLocaleString()
+					: '—'}
 			</TableCell>
 
 			{/* Post Link */}

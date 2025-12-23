@@ -65,8 +65,9 @@ export function CreatorGalleryCard({
 			? (metadata.snippet as string).trim()
 			: null;
 
-	// View count
+	// View count - try multiple paths (TikTok uses stats.playCount, YouTube uses statistics.views)
 	const rawViewCount =
+		raw?.video?.statistics?.views ?? // YouTube path (same as table view)
 		raw?.video?.stats?.playCount ??
 		raw?.video?.stats?.viewCount ??
 		raw?.video?.playCount ??
@@ -80,8 +81,11 @@ export function CreatorGalleryCard({
 			: Number.isFinite(Number(rawViewCount))
 				? Number(rawViewCount)
 				: null;
+	// Only show view count if it's a positive number (hide 0/null)
 	const viewCountLabel =
-		viewCountNumber != null ? Math.round(viewCountNumber).toLocaleString() : null;
+		viewCountNumber != null && viewCountNumber > 0
+			? Math.round(viewCountNumber).toLocaleString()
+			: null;
 
 	// Platform info
 	const platformLabel = (snapshot.platform ?? 'creator').toString().toUpperCase();
