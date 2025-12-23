@@ -129,12 +129,13 @@ export function useCreatorFiltering({
 	const totalResults = filteredCreators.length;
 	const totalPages = Math.max(1, Math.ceil(totalResults / effectiveItemsPerPage));
 
-	// Reset page if out of bounds
+	// Only reset page if truly out of bounds AND we have data
+	// Don't reset just because more data is loading (which temporarily changes length)
 	useEffect(() => {
-		if (currentPage > totalPages) {
-			setCurrentPage(1);
+		if (totalResults > 0 && currentPage > totalPages) {
+			setCurrentPage(totalPages);
 		}
-	}, [filteredCreators.length, currentPage, totalPages]);
+	}, [totalPages]); // Only depend on totalPages, not length or currentPage
 
 	const startIndex = (currentPage - 1) * effectiveItemsPerPage;
 	const endIndex = startIndex + effectiveItemsPerPage;
