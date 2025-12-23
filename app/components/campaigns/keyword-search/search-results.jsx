@@ -340,8 +340,24 @@ const SearchResults = ({ searchData }) => {
 	// Early return for no job
 	if (!searchData?.jobId) return null;
 
+	// Check if job is completed/done (not actively processing)
+	const jobStatusLower = (searchData?.status || '').toLowerCase();
+	const isJobDone = ['completed', 'error', 'timeout', 'partial'].includes(jobStatusLower);
+
 	// Loading state - show spinner while waiting for results
+	// For completed jobs, show simple loading instead of "Discovering creators"
 	if (!(filteredCreators.length || showFilteredEmpty)) {
+		// For completed jobs, show simple loading (data fetch from DB)
+		if (isJobDone) {
+			return (
+				<div className="flex flex-col items-center justify-center min-h-[300px] text-sm text-zinc-400 gap-3">
+					<div className="animate-spin rounded-full h-8 w-8 border-2 border-zinc-200 border-t-transparent" />
+					<p>Loading saved results...</p>
+				</div>
+			);
+		}
+
+		// For active jobs, show full progress UI
 		return (
 			<>
 				{shouldPoll && (
