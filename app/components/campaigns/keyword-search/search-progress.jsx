@@ -336,6 +336,7 @@ export default function SearchProgress({
 							creators,
 							partialCompletion: Boolean(data?.partialCompletion),
 							finalCount: jobProcessed || creators.length,
+							totalCreators: jobTotalCreators, // Pass total for auto-fetch
 							errorRecovered: Boolean(data?.errorRecovered),
 							error: data?.error || null,
 						});

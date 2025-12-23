@@ -364,15 +364,17 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 	}, [progressInfo?.progress, fakeProgress]);
 
 	// Search completion handler
+	// FIX: Merge with existing creators instead of overwriting, then always fetch fresh data
 	const handleSearchComplete = useCallback(
 		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: completion handling + fallback fetch.
-		(data: { status?: string; creators?: unknown[] }) => {
+		(data: { status?: string; creators?: unknown[]; totalCreators?: number }) => {
 			// Always log completion for debugging
 			console.log('[GEMZ-CREATORS]', {
 				event: 'complete',
 				jobId: searchData?.jobId,
 				status: data?.status,
 				creatorsInPayload: data?.creators?.length ?? 0,
+				totalCreators: data?.totalCreators,
 			});
 
 			if (
@@ -381,63 +383,93 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 			) {
 				setStillProcessing(false);
 				setIsFetching(false);
+				setIsLoading(false);
 
-				const allCreators = dedupeCreators(data.creators || [], {
+				// FIX: MERGE with existing creators instead of overwriting
+				// This preserves intermediate results that may have more data than completion payload
+				const incomingCreators = dedupeCreators(data.creators || [], {
 					platformHint: platformNormalized,
+				});
+
+				setCreators((prev) => {
+					// Merge incoming with existing, keeping the larger set
+					const merged = dedupeCreators([...prev, ...incomingCreators], {
+						platformHint: platformNormalized,
+					});
+
+					console.log('[GEMZ-CREATORS]', {
+						event: 'complete-merge',
+						jobId: searchData?.jobId,
+						previous: prev.length,
+						incoming: incomingCreators.length,
+						merged: merged.length,
+					});
+
+					if (searchData?.jobId && merged.length) {
+						resultsCacheRef.current.set(searchData.jobId, merged);
+					}
+					return merged;
 				});
 
 				if (debugPolling) {
 					structuredConsole.log('[CREATOR-SEARCH] complete', {
 						jobId: searchData?.jobId,
 						status: data.status,
-						creators: allCreators.length,
+						incoming: incomingCreators.length,
 					});
 				}
 
-				if (allCreators.length > 0) {
-					setCreators(allCreators);
-					setIsLoading(false);
-					if (searchData?.jobId) {
-						resultsCacheRef.current.set(searchData.jobId, allCreators);
-					}
-				} else {
-					// Fallback: re-fetch from endpoint
-					const apiEndpoint = getScrapingEndpoint(platformNormalized);
+				// FIX: Always fetch fresh data from API on completion to ensure we have everything
+				// This handles the case where polling returned partial data
+				const apiEndpoint = getScrapingEndpoint(platformNormalized);
+				fetch(`${apiEndpoint}?jobId=${searchData?.jobId}&limit=200`, { credentials: 'include' })
+					.then((response) => parseJsonSafe(response))
+					.then((result) => {
+						if (result?.error === 'invalid_json') {
+							return;
+						}
+						const foundCreators =
+							result.results?.reduce(
+								(acc: unknown[], res: { creators?: unknown[] }) => [
+									...acc,
+									...(res.creators || []),
+								],
+								[]
+							) || [];
+						const deduped = dedupeCreators(foundCreators, { platformHint: platformNormalized });
 
-					fetch(`${apiEndpoint}?jobId=${searchData?.jobId}`, { credentials: 'include' })
-						.then((response) => parseJsonSafe(response))
-						// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: explicit fallback handling.
-						.then((result) => {
-							if (result?.error === 'invalid_json') {
-								setIsLoading(false);
-								return;
-							}
-							const foundCreators =
-								result.results?.reduce(
-									(acc: unknown[], res: { creators?: unknown[] }) => [
-										...acc,
-										...(res.creators || []),
-									],
-									[]
-								) || [];
-							const deduped = dedupeCreators(foundCreators, { platformHint: platformNormalized });
-							setCreators(deduped);
-							setIsLoading(false);
-							if (searchData?.jobId && deduped.length) {
-								resultsCacheRef.current.set(searchData.jobId, deduped);
-							}
-							if (debugPolling) {
-								structuredConsole.log('[CREATOR-SEARCH] complete fallback', {
-									jobId: searchData?.jobId,
-									endpoint: apiEndpoint,
-									creators: deduped.length,
+						// Only update if API returned more data than we have
+						setCreators((prev) => {
+							if (deduped.length > prev.length) {
+								const finalMerged = dedupeCreators([...prev, ...deduped], {
+									platformHint: platformNormalized,
 								});
+								if (searchData?.jobId && finalMerged.length) {
+									resultsCacheRef.current.set(searchData.jobId, finalMerged);
+								}
+								console.log('[GEMZ-CREATORS]', {
+									event: 'complete-fetch',
+									jobId: searchData?.jobId,
+									previous: prev.length,
+									fetched: deduped.length,
+									final: finalMerged.length,
+								});
+								return finalMerged;
 							}
-						})
-						.catch(() => {
-							setIsLoading(false);
+							return prev;
 						});
-				}
+
+						if (debugPolling) {
+							structuredConsole.log('[CREATOR-SEARCH] complete-fetch', {
+								jobId: searchData?.jobId,
+								endpoint: apiEndpoint,
+								creators: deduped.length,
+							});
+						}
+					})
+					.catch((err) => {
+						structuredConsole.error('[CREATOR-SEARCH] complete-fetch error', err);
+					});
 			}
 		},
 		[platformNormalized, searchData?.jobId, debugPolling]
