@@ -190,15 +190,15 @@ export async function GET(req: Request) {
 
 	const keywordsDispatched = job.keywordsDispatched ?? 0;
 	const keywordsCompleted = job.keywordsCompleted ?? 0;
-	const creatorsFound = job.creatorsFound ?? 0;
 	const creatorsEnriched = job.creatorsEnriched ?? 0;
 
+	// Use actual DB count for progress calculation, not stale counter
 	let percentComplete = 0;
 	if (keywordsDispatched > 0) {
 		percentComplete += (keywordsCompleted / keywordsDispatched) * 50;
 	}
-	if (creatorsFound > 0) {
-		percentComplete += (creatorsEnriched / creatorsFound) * 50;
+	if (totalCreators > 0) {
+		percentComplete += (creatorsEnriched / totalCreators) * 50;
 	}
 	if (status === 'completed') {
 		percentComplete = 100;
@@ -213,11 +213,11 @@ export async function GET(req: Request) {
 		progress: {
 			keywordsDispatched,
 			keywordsCompleted,
-			creatorsFound,
+			creatorsFound: totalCreators, // Use actual DB count, not stale counter
 			creatorsEnriched,
 			percentComplete: Math.round(percentComplete * 100) / 100,
 		},
-		processedResults: creatorsFound,
+		processedResults: totalCreators, // Use actual DB count, not stale counter
 		results: totalCreators > 0 ? [{ id: jobId, creators: paginatedCreators }] : [],
 		pagination: {
 			offset,
