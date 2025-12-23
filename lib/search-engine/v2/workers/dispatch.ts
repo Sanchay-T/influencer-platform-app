@@ -208,9 +208,11 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 	// Step 1: Validate Campaign Ownership
 	// ============================================================================
 
+	const step1Start = Date.now();
 	const campaign = await db.query.campaigns.findFirst({
 		where: eq(campaigns.id, campaignId),
 	});
+	const step1Ms = Date.now() - step1Start;
 
 	if (!campaign) {
 		return {
@@ -232,7 +234,9 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 	// Step 2: Validate Billing / Plan Limits
 	// ============================================================================
 
+	const step2Start = Date.now();
 	const validation = await validateCreatorSearch(userId, targetResults);
+	const step2Ms = Date.now() - step2Start;
 
 	if (!validation.allowed) {
 		logger.warn(
@@ -256,6 +260,7 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 	// Step 3: Create Job in Database (fast path)
 	// ============================================================================
 
+	const step3Start = Date.now();
 	const jobId = await createV2Job({
 		userId,
 		campaignId,
@@ -263,6 +268,7 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 		keywords,
 		targetResults,
 	});
+	const step3Ms = Date.now() - step3Start;
 
 	// ============================================================================
 	// Step 4: Queue Dispatch Worker (fan-out happens async)
@@ -271,6 +277,7 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 	const baseUrl = getWorkerBaseUrl();
 	const dispatchWorkerUrl = `${baseUrl}/api/v2/worker/dispatch`;
 
+	const step4Start = Date.now();
 	try {
 		const message: DispatchWorkerMessage = {
 			jobId,
@@ -296,14 +303,29 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 			statusCode: 500,
 		};
 	}
+	const step4Ms = Date.now() - step4Start;
 
 	const durationMs = Date.now() - startTime;
+
+	// Detailed timing breakdown for diagnostics
+	console.log(`[GEMZ-DISPATCH] ⏱️ Timing breakdown`, {
+		step1_campaignQuery: step1Ms + 'ms',
+		step2_billingValidation: step2Ms + 'ms',
+		step3_createJob: step3Ms + 'ms',
+		step4_qstashPublish: step4Ms + 'ms',
+		total: durationMs + 'ms',
+		jobId,
+	});
 
 	logger.info(
 		`${LOG_PREFIX} Dispatch queued`,
 		{
 			jobId,
 			durationMs,
+			step1Ms,
+			step2Ms,
+			step3Ms,
+			step4Ms,
 		},
 		LogCategory.JOB
 	);

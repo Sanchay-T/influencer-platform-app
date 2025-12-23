@@ -106,6 +106,11 @@ export default function KeywordSearch() {
 	// Manejar el paso 2: Revisión y envío de keywords
 	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Legacy flow; keep readable while improving error diagnostics.
 	const handleKeywordsSubmit = async (payload) => {
+		const timings = { start: performance.now() };
+		console.log('[GEMZ-SUBMIT] 🚀 Starting submit...', {
+			keywords: payload?.keywords?.length || payload?.usernames?.length,
+		});
+
 		try {
 			// Obtener el campaignId de searchData o del sessionStorage
 			const campaignId =
@@ -147,6 +152,11 @@ export default function KeywordSearch() {
 			if (useV2) {
 				// V2 Fan-Out API - unified endpoint for all platforms
 				const v2Platform = v2PlatformMap.get(normalizedPlatform) || 'tiktok';
+				timings.beforeFetch = performance.now();
+				console.log('[GEMZ-SUBMIT] 📡 Calling /api/v2/dispatch...', {
+					elapsed: Math.round(timings.beforeFetch - timings.start) + 'ms',
+				});
+
 				response = await fetch('/api/v2/dispatch', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
@@ -157,6 +167,13 @@ export default function KeywordSearch() {
 						campaignId: campaignId,
 						enableExpansion: true,
 					}),
+				});
+
+				timings.afterFetch = performance.now();
+				console.log('[GEMZ-SUBMIT] ✅ Dispatch response received', {
+					status: response.status,
+					fetchDuration: Math.round(timings.afterFetch - timings.beforeFetch) + 'ms',
+					totalElapsed: Math.round(timings.afterFetch - timings.start) + 'ms',
 				});
 			} else {
 				// Legacy API for similar/username searches
@@ -244,6 +261,12 @@ export default function KeywordSearch() {
 				jobId: data.jobId,
 				selectedPlatform: nextPlatform,
 			}));
+			timings.beforeNavigate = performance.now();
+			console.log('[GEMZ-SUBMIT] 🎯 Navigating to campaign page', {
+				jobId: data.jobId,
+				totalDuration: Math.round(timings.beforeNavigate - timings.start) + 'ms',
+			});
+
 			toast.success('Campaign started successfully');
 			router.push(`/campaigns/${campaignId}?jobId=${data.jobId}`);
 		} catch (error) {

@@ -122,6 +122,10 @@ EXPECTED: All legacy code now unused due to V2 fan-out architecture
       - Fixed pagination bug: Page 3+ showed empty (commit: b356d3d43)
         - Bug: toUiJob was overwriting server totalCreators with counted=50
         - Fix: Prefer job.totalCreators from server, enabling auto-fetch
+      - Fixed gallery/table showing "0 views" (commit: 88a62e289)
+      - Fixed job completion not updating UI (commit: 1bde9c105)
+        - Bug: handleSearchComplete was overwriting instead of merging
+        - Fix: Merge completion data + always fetch fresh data on complete
 - **Branch:** `UAT`
 - **Files Created (React Query):**
   - `lib/query/query-client.ts` - QueryClient config
