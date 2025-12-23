@@ -14,10 +14,11 @@
  * @see hooks/useCampaignJobs.ts - Job state management
  */
 
+import { useQueryClient } from '@tanstack/react-query';
 import { Loader2, RefreshCw, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { JSX } from 'react';
-import { Suspense, useCallback } from 'react';
+import { Suspense, useCallback, useEffect } from 'react';
 import ExportButton from '@/app/components/campaigns/export-button';
 import KeywordSearchResults from '@/app/components/campaigns/keyword-search/search-results';
 import SimilarSearchResults from '@/app/components/campaigns/similar-search/search-results';
@@ -25,6 +26,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { prefetchJobCreators } from '@/lib/query/hooks';
 
 import { ActivityLog, RunRail, RunSummary } from './components';
 import { useCampaignJobs } from './hooks/useCampaignJobs';
@@ -38,6 +40,22 @@ import {
 
 export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps) {
 	const router = useRouter();
+	const queryClient = useQueryClient();
+
+	// Hydrate React Query cache with server-pre-loaded data
+	useEffect(() => {
+		if (!campaign?.scrapingJobs) {
+			return;
+		}
+
+		for (const job of campaign.scrapingJobs) {
+			// Only hydrate if we have pre-loaded creators
+			const creators = job.results?.[0]?.creators;
+			if (creators?.length > 0 && job.totalCreators != null) {
+				prefetchJobCreators(queryClient, job.id, creators, job.totalCreators);
+			}
+		}
+	}, [campaign, queryClient]);
 
 	const {
 		sortedJobs,

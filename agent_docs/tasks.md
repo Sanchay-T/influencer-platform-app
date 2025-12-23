@@ -12,7 +12,7 @@
 **Status:** 🟡 IN PROGRESS
 **Branch:** `UAT`
 **Started:** Dec 12, 2025
-**Updated:** Dec 23, 2025 — 10:13 PM
+**Updated:** Dec 23, 2025 — 11:22 PM
 
 ### Goal
 Systematically reduce tech debt identified in codebase audit. Break up monolithic files, clean up legacy code, improve maintainability.
@@ -95,23 +95,19 @@ READY: Start legacy cleanup verification
   8. ✅ Redis caching for completed job results (commit: cb53abfcc)
   9. ✅ Timeout and error handling for v2/status API (commit: 5543ae803)
   10. ✅ Campaigns API timeout optimization (commit: 5c117483c)
+  11. ✅ **React Query Integration** (Dec 23) - Fix loading flash on completed runs:
+      - Installed @tanstack/react-query, added QueryProvider
+      - Created useJobStatus, useJobCreators hooks with auto-polling
+      - Server pre-loads first 50 creators for completed jobs from job_creators table
+      - Cache hydration in client-page.tsx for instant loading
+      - useCreatorSearch now checks React Query cache first
 - **Branch:** `UAT`
-- **Uncommitted Changes:**
-  - `.claude/hooks/lint.sh` (modified)
-  - `.husky/pre-commit` (modified)
-  - `.vscode/settings.json` (modified)
-  - `agent_docs/monologue.md` (modified)
-  - `agent_docs/tasks.md` (modified - this file)
-  - `app/api/v2/status/route.ts` (modified)
-  - `lib/db/schema.ts` (modified)
-  - `lib/search-engine/v2/workers/save-creators.ts` (modified)
-  - `scripts/remove-env-comments.py` (modified)
-  - `agent_docs/claude-code-power-user-guide.md` (new file, untracked)
-  - `scripts/analyze-jobs.ts` (new analysis script, untracked)
-  - `scripts/analyze-recent.ts` (new analysis script, untracked)
-  - `scripts/analyze-run6.ts` (new analysis script, untracked)
-  - `scripts/check-dedup.ts` (new analysis script, untracked)
-  - `scripts/check-table.ts` (new analysis script, untracked)
+- **Files Created (React Query):**
+  - `lib/query/query-client.ts` - QueryClient config
+  - `lib/query/hooks/useJobStatus.ts` - Job status + auto-polling
+  - `lib/query/hooks/useJobCreators.ts` - Paginated creators
+  - `lib/query/hooks/index.ts` - Exports
+  - `app/providers/query-provider.tsx` - QueryClientProvider wrapper
 - **Files Created During Refactoring:**
   - `similar-search/hooks/useSimilarCreatorSearch.ts`
   - `similar-search/utils/transform-rows.ts`

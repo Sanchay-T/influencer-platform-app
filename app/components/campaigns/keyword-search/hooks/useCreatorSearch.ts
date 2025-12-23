@@ -1,10 +1,17 @@
 /**
  * useCreatorSearch - Core hook for managing creator search state and data fetching.
  * Handles loading, polling, progress tracking, and intermediate results.
+ *
+ * @context React Query Integration (Dec 2025)
+ * - Checks React Query cache first for completed jobs (server pre-loaded)
+ * - Falls back to existing fetch logic for active jobs or cache miss
+ * - This enables instant loading for completed runs
  */
 
+import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import type { JobCreatorsData } from '@/lib/query/hooks';
 import { dedupeCreators } from '../../utils/dedupe-creators';
 import { getScrapingEndpoint } from '../utils';
 import { parseJsonSafe } from './useBioEnrichment';
@@ -55,10 +62,36 @@ export interface UseCreatorSearchResult {
 }
 
 export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearchResult {
+	const queryClient = useQueryClient();
 	const debugPolling =
 		typeof window !== 'undefined' && window.localStorage.getItem('gemz_debug_polling') === 'true';
-	// Initial creators from props
+	// Check React Query cache for pre-loaded data (from server)
+	const cachedQueryData = useMemo(() => {
+		if (!searchData?.jobId) {
+			return null;
+		}
+		// Try to get data from React Query cache (populated by server pre-loading)
+		const queryKey = ['job-creators', searchData.jobId, 0, 50];
+		const cached = queryClient.getQueryData<JobCreatorsData>(queryKey);
+		if (cached?.creators?.length) {
+			if (debugPolling) {
+				structuredConsole.log('[CREATOR-SEARCH] React Query cache hit', {
+					jobId: searchData.jobId,
+					creators: cached.creators.length,
+					total: cached.total,
+				});
+			}
+			return cached;
+		}
+		return null;
+	}, [searchData?.jobId, queryClient, debugPolling]);
+
+	// Initial creators - prefer React Query cache, then props
 	const initialCreators = useMemo(() => {
+		// React Query cache takes priority (server pre-loaded data)
+		if (cachedQueryData?.creators?.length) {
+			return cachedQueryData.creators;
+		}
 		if (Array.isArray(searchData?.initialCreators)) {
 			return searchData.initialCreators;
 		}
@@ -66,7 +99,7 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 			return searchData.creators;
 		}
 		return [];
-	}, [searchData?.initialCreators, searchData?.creators]);
+	}, [cachedQueryData, searchData?.initialCreators, searchData?.creators]);
 
 	// Core state
 	const [creators, setCreators] = useState<unknown[]>(initialCreators);

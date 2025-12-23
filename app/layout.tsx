@@ -9,6 +9,7 @@ import type { ReactNode } from 'react';
 import { AuthLogger } from './components/auth/auth-logger';
 import { NavigationLogger } from './components/navigation/navigation-logger';
 import { ClientConsoleBridge } from './providers/console-bridge';
+import { QueryProvider } from './providers/query-provider';
 import { ToastProvider } from './providers/toast-provider';
 
 const inter = Inter({
@@ -114,7 +115,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
 					<ClientConsoleBridge />
 					<AuthLogger />
 					<NavigationLogger />
-					{children}
+					<QueryProvider>{children}</QueryProvider>
 					<ToastProvider />
 				</body>
 			</html>

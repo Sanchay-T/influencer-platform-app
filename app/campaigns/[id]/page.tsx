@@ -1,11 +1,11 @@
 import { auth } from '@clerk/nextjs/server';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { Suspense } from 'react';
 import ClientCampaignPage from '@/app/campaigns/[id]/client-page';
 import DashboardLayout from '@/app/components/layout/dashboard-layout';
 import type { Campaign } from '@/app/types/campaign';
 import { db } from '@/lib/db';
-import { campaigns } from '@/lib/db/schema';
+import { campaigns, jobCreators } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
 interface PageProps {
@@ -96,13 +96,55 @@ async function getCampaign(id: string) {
 			});
 		}
 
+		// Pre-load first 50 creators for completed/partial jobs (for instant UI)
+		const jobsWithData = await Promise.all(
+			(campaign.scrapingJobs ?? []).map(async (job) => {
+				// Only pre-load for terminal states that have data
+				const hasData = ['completed', 'partial', 'error', 'timeout'].includes(job.status ?? '');
+
+				if (!hasData) {
+					return { ...job, results: [], totalCreators: 0, preloaded: false };
+				}
+
+				try {
+					// Fetch first 50 creators from job_creators table
+					const creators = await db
+						.select({ creatorData: jobCreators.creatorData })
+						.from(jobCreators)
+						.where(eq(jobCreators.jobId, job.id))
+						.orderBy(jobCreators.createdAt)
+						.limit(50);
+
+					// Get total count
+					const countResult = await db
+						.select({ count: sql<number>`count(*)::int` })
+						.from(jobCreators)
+						.where(eq(jobCreators.jobId, job.id));
+
+					const totalCreators = countResult[0]?.count ?? 0;
+
+					if (debugCampaign) {
+						structuredConsole.log(
+							`✅ [PRE-LOAD] Job ${job.id}: ${creators.length} creators pre-loaded, ${totalCreators} total`
+						);
+					}
+
+					return {
+						...job,
+						results: [{ id: job.id, creators: creators.map((c) => c.creatorData) }],
+						totalCreators,
+						preloaded: true,
+					};
+				} catch (error) {
+					structuredConsole.error(`Failed to pre-load creators for job ${job.id}:`, error);
+					return { ...job, results: [], totalCreators: 0, preloaded: false };
+				}
+			})
+		);
+
 		return {
 			...campaign,
-			scrapingJobs:
-				campaign.scrapingJobs?.map((job) => ({
-					...job,
-					results: [],
-				})) ?? [],
+			scrapingJobs: jobsWithData,
 		};
 	} catch (error) {
 		structuredConsole.error('Error fetching campaign:', error);
