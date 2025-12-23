@@ -280,8 +280,14 @@ export const toUiJob = (job: import('../types/campaign-page').ScrapingJob): UiSc
 	const rawSearchParams = (job.searchParams ?? {}) as Record<string, unknown>;
 	const queueState = parseHandleQueueState(rawSearchParams[HANDLE_QUEUE_PARAM_KEY]);
 
-	// Only use counted creators from loaded results (deduplicated)
-	const totalCreators = countedCreators > 0 ? countedCreators : undefined;
+	// Prefer server-provided totalCreators (from pre-loading), fall back to counted from results
+	// This ensures auto-fetch knows the true total even when only 50 are pre-loaded
+	const totalCreators =
+		typeof job.totalCreators === 'number' && job.totalCreators > 0
+			? job.totalCreators
+			: countedCreators > 0
+				? countedCreators
+				: undefined;
 
 	return {
 		...job,

@@ -12,7 +12,7 @@
 **Status:** 🟡 IN PROGRESS
 **Branch:** `UAT`
 **Started:** Dec 12, 2025
-**Updated:** Dec 23, 2025 — 11:22 PM
+**Updated:** Dec 24, 2025 — 12:29 AM
 
 ### Goal
 Systematically reduce tech debt identified in codebase audit. Break up monolithic files, clean up legacy code, improve maintainability.
@@ -67,12 +67,28 @@ Systematically reduce tech debt identified in codebase audit. Break up monolithi
 ```
 READY: Start legacy cleanup verification
 
-1. Verify V2 adapter coverage for all platforms:
-   - TikTok: lib/search-engine/v2/adapters/tiktok.ts
-   - Instagram: lib/search-engine/v2/adapters/instagram.ts
-   - YouTube: lib/search-engine/v2/adapters/youtube.ts
-2. Check if legacy providers are still called anywhere
-3. Plan safe removal of legacy code
+STEP 1: Check if legacy providers are still imported/used
+Run: grep -r "instagram-provider" lib/ app/
+Run: grep -r "tiktok-provider" lib/ app/
+Run: grep -r "youtube-provider" lib/ app/
+Check: lib/search-engine/runner.ts (does it import legacy providers?)
+
+STEP 2: Verify V2 coverage is complete
+Read: lib/search-engine/v2/adapters/tiktok.ts
+Read: lib/search-engine/v2/adapters/instagram.ts
+Read: lib/search-engine/v2/adapters/youtube.ts
+Verify: All 3 adapters implement keyword + similar search
+
+STEP 3: If no references found, safe to delete:
+- lib/search-engine/providers/tiktok-provider.ts
+- lib/search-engine/providers/instagram-provider.ts
+- lib/search-engine/providers/youtube-provider.ts
+- lib/search-engine/providers/youtube-competitor-provider.ts
+- lib/search-engine/providers/instagram-similar-provider.ts
+- lib/search-engine/providers/tiktok-similar-provider.ts
+- lib/search-engine/providers/youtube-similar-provider.ts
+
+EXPECTED: All legacy code now unused due to V2 fan-out architecture
 ```
 
 ### Key Files
@@ -95,12 +111,14 @@ READY: Start legacy cleanup verification
   8. ✅ Redis caching for completed job results (commit: cb53abfcc)
   9. ✅ Timeout and error handling for v2/status API (commit: 5543ae803)
   10. ✅ Campaigns API timeout optimization (commit: 5c117483c)
-  11. ✅ **React Query Integration** (Dec 23) - Fix loading flash on completed runs:
+  11. ✅ **React Query Integration** (Dec 23-24) - Fix loading flash on completed runs:
       - Installed @tanstack/react-query, added QueryProvider
       - Created useJobStatus, useJobCreators hooks with auto-polling
       - Server pre-loads first 50 creators for completed jobs from job_creators table
       - Cache hydration in client-page.tsx for instant loading
       - useCreatorSearch now checks React Query cache first
+      - Fixed React hydration mismatch in QueryProvider (commit: 5f78b9263)
+      - All completed runs now load instantly without flickering
 - **Branch:** `UAT`
 - **Files Created (React Query):**
   - `lib/query/query-client.ts` - QueryClient config

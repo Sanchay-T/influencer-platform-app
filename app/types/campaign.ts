@@ -29,6 +29,8 @@ export interface ScrapingJob {
 	// Added for sidebar creator counts
 	processedResults?: number | null;
 	targetResults?: number | null;
+	// Server pre-loaded total count (from job_creators table)
+	totalCreators?: number;
 }
 
 export interface Campaign {
