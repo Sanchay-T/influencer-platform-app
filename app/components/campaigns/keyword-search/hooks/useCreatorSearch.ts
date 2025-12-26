@@ -46,6 +46,12 @@ export interface UseCreatorSearchResult {
 	fakeProgress: number;
 	elapsedSeconds: number;
 	displayedProgress: number;
+	/** Server-reported total creators for auto-fetch pagination */
+	serverTotalCreators: number | undefined;
+	// @why Track job status in state for auto-fetch trigger
+	// The searchData.status prop doesn't update when polling detects completion
+	// This state ensures useAutoFetchAllPages sees the 'completed' status
+	completedStatus: string | undefined;
 
 	// Computed
 	waitingForResults: boolean;
@@ -109,6 +115,16 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 	const [progressInfo, setProgressInfo] = useState<ProgressInfo | null>(null);
 	const [fakeProgress, setFakeProgress] = useState(0);
 	const [elapsedSeconds, setElapsedSeconds] = useState(0);
+	// @why Track server total separately from searchData prop to enable auto-fetch
+	// When job completes, polling returns totalCreators but searchData prop doesn't update
+	// This state ensures useAutoFetchAllPages gets the correct serverTotal
+	const [serverTotalCreators, setServerTotalCreators] = useState<number | undefined>(
+		searchData?.totalCreators
+	);
+	// @why Track job status in state for auto-fetch trigger
+	// The searchData.status prop doesn't update when polling detects completion
+	// This state ensures useAutoFetchAllPages sees the 'completed' status
+	const [completedStatus, setCompletedStatus] = useState<string | undefined>(searchData?.status);
 
 	// Cache ref
 	const resultsCacheRef = useRef<Map<string, unknown[]>>(new Map());
@@ -385,6 +401,12 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 				setIsFetching(false);
 				setIsLoading(false);
 
+				// @why Update server total and status to trigger useAutoFetchAllPages
+				if (data?.totalCreators != null) {
+					setServerTotalCreators(data.totalCreators);
+				}
+				setCompletedStatus(data.status);
+
 				// FIX: MERGE with existing creators instead of overwriting
 				// This preserves intermediate results that may have more data than completion payload
 				const incomingCreators = dedupeCreators(data.creators || [], {
@@ -524,6 +546,8 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 		fakeProgress,
 		elapsedSeconds,
 		displayedProgress,
+		serverTotalCreators,
+		completedStatus,
 		waitingForResults,
 		shouldPoll,
 		jobIsActive,

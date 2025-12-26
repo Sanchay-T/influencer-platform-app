@@ -2,15 +2,17 @@
  * V2 Search Pipeline
  *
  * The universal search loop that works with any platform adapter.
- * Handles: fetch → normalize → dedupe → enrich → continue
+ * Handles: fetch → normalize → filter → dedupe → enrich → continue
  *
  * Key design decisions:
  * - No rate limiting (ScrapeCreators has no limits on highest plan)
  * - Parallel bio enrichment for speed
  * - Early termination when target reached
  * - Safety limits to prevent infinite loops
+ * - Filter out low-view content (<1000 views) before counting
  */
 
+import { getCreatorViews, MIN_VIEWS_THRESHOLD } from '../../utils/filter-creators';
 import type { SearchAdapter } from '../adapters/interface';
 import { getAdapter } from '../adapters/interface';
 import { DEFAULT_CONFIG, LOG_PREFIX } from './config';
@@ -38,7 +40,7 @@ async function fetchKeyword(
 	config: SearchConfig,
 	state: PipelineState,
 	targetRemaining: number
-): Promise<{ newCreators: NormalizedCreator[]; hasMore: boolean }> {
+): Promise<{ newCreators: NormalizedCreator[]; hasMore: boolean; filteredCount: number }> {
 	const { keyword, cursor } = keywordState;
 
 	// Fetch from API
@@ -48,15 +50,25 @@ async function fetchKeyword(
 	if (result.error) {
 		console.warn(`${LOG_PREFIX} Fetch error for "${keyword}": ${result.error}`);
 		keywordState.exhausted = true;
-		return { newCreators: [], hasMore: false };
+		return { newCreators: [], hasMore: false, filteredCount: 0 };
 	}
 
-	// Normalize and dedupe
+	// Normalize, filter by views, and dedupe
 	const normalized: NormalizedCreator[] = [];
+	let filteredCount = 0;
 
 	for (const rawItem of result.items) {
 		const creator = adapter.normalize(rawItem);
 		if (!creator) continue;
+
+		// @why Filter out low-view content BEFORE deduplication
+		// This ensures we don't mark a creator as "seen" if their first video
+		// has low views - we want to accept them if they have a higher-view video later
+		const views = getCreatorViews(creator);
+		if (views < MIN_VIEWS_THRESHOLD) {
+			filteredCount++;
+			continue;
+		}
 
 		const key = adapter.getDedupeKey(creator);
 		if (state.seenKeys.has(key)) continue;
@@ -68,7 +80,7 @@ async function fetchKeyword(
 		if (normalized.length >= targetRemaining) break;
 	}
 
-	// Track consecutive empty pages
+	// Track consecutive empty pages (after filtering)
 	if (normalized.length === 0) {
 		keywordState.consecutiveEmpty++;
 		if (keywordState.consecutiveEmpty >= config.maxConsecutiveEmptyRuns) {
@@ -85,7 +97,7 @@ async function fetchKeyword(
 	keywordState.cursor = result.nextCursor;
 	keywordState.exhausted = keywordState.exhausted || !result.hasMore;
 
-	return { newCreators: normalized, hasMore: result.hasMore };
+	return { newCreators: normalized, hasMore: result.hasMore, filteredCount };
 }
 
 // ============================================================================
@@ -173,14 +185,23 @@ export async function runPipeline(
 
 			const batchResults = await Promise.all(batchPromises);
 
-			// Collect new creators from this round
+			// Collect new creators from this round and track filtered count
 			const roundCreators: NormalizedCreator[] = [];
-			for (const { newCreators } of batchResults) {
+			let totalFiltered = 0;
+			for (const { newCreators, filteredCount } of batchResults) {
+				totalFiltered += filteredCount;
 				for (const creator of newCreators) {
 					if (roundCreators.length + state.creators.length < targetResults) {
 						roundCreators.push(creator);
 					}
 				}
+			}
+
+			// Log filtering stats if any were filtered
+			if (totalFiltered > 0) {
+				console.log(
+					`${LOG_PREFIX} Filtered ${totalFiltered} creators with <${MIN_VIEWS_THRESHOLD} views`
+				);
 			}
 
 			if (roundCreators.length === 0) {

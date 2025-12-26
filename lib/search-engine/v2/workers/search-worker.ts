@@ -4,11 +4,12 @@
  * This worker handles a single keyword search:
  * 1. Receives keyword from QStash
  * 2. Fetches creators using platform adapter
- * 3. Normalizes and deduplicates results
- * 4. Saves to DB immediately (progressive results!)
- * 5. Updates job counters atomically
- * 6. Dispatches enrichment batches
- * 7. Triggers adaptive re-expansion if target not reached
+ * 3. Normalizes and filters by views (>=1000 views)
+ * 4. Deduplicates results
+ * 5. Saves to DB immediately (progressive results!)
+ * 6. Updates job counters atomically
+ * 7. Dispatches enrichment batches
+ * 8. Triggers adaptive re-expansion if target not reached
  */
 
 import { incrementCreatorCount } from '@/lib/billing';
@@ -18,6 +19,7 @@ import { getAdapter } from '../adapters/interface';
 import '../adapters/instagram';
 import '../adapters/tiktok';
 import '../adapters/youtube';
+import { getCreatorViews, MIN_VIEWS_THRESHOLD } from '../../utils/filter-creators';
 import { checkAndReexpand } from '../core/adaptive-reexpand';
 import { buildConfig } from '../core/config';
 import { loadJobTracker } from '../core/job-tracker';
@@ -174,25 +176,35 @@ export async function processSearch(options: ProcessSearchOptions): Promise<Sear
 		}
 
 		// ========================================================================
-		// Step 3: Normalize Results
+		// Step 3: Normalize and Filter Results
 		// ========================================================================
 
 		const normalizedCreators: NormalizedCreator[] = [];
+		let filteredCount = 0;
 
 		for (const item of allItems) {
 			const normalized = adapter.normalize(item);
-			if (normalized) {
-				normalizedCreators.push(normalized);
+			if (!normalized) continue;
+
+			// @why Filter out low-view content before saving to DB
+			// Content with < 1000 views should not count toward target
+			const views = getCreatorViews(normalized);
+			if (views < MIN_VIEWS_THRESHOLD) {
+				filteredCount++;
+				continue;
 			}
+
+			normalizedCreators.push(normalized);
 		}
 
 		logger.info(
-			`${LOG_PREFIX} Normalized ${normalizedCreators.length} creators`,
+			`${LOG_PREFIX} Normalized ${normalizedCreators.length} creators (filtered ${filteredCount} with <${MIN_VIEWS_THRESHOLD} views)`,
 			{
 				jobId,
 				keyword,
 				rawItems: allItems.length,
 				normalizedCount: normalizedCreators.length,
+				filteredCount,
 			},
 			LogCategory.JOB
 		);

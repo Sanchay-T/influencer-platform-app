@@ -75,3 +75,15 @@ export function filterCreatorsByViews<T extends Record<string, any>>(
 
 /** Export extractors for frontend use */
 export { extractLikes, extractViews };
+
+/**
+ * Get view count from a NormalizedCreator (V2 search engine type)
+ * @why Views are stored in content.statistics.views for all platforms in V2
+ * This is the canonical helper for view filtering in the search pipeline
+ */
+export function getCreatorViews(creator: {
+	content?: { statistics?: { views?: number } };
+	video?: { statistics?: { views?: number } };
+}): number {
+	return creator.content?.statistics?.views ?? creator.video?.statistics?.views ?? 0;
+}

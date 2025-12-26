@@ -41,6 +41,10 @@ const SearchResults = ({ searchData }) => {
 		setProgressInfo,
 		elapsedSeconds,
 		displayedProgress,
+		serverTotalCreators,
+		// @why Track job status in state for auto-fetch trigger
+		// The searchData.status prop doesn't update when polling detects completion
+		completedStatus,
 		waitingForResults,
 		shouldPoll,
 		jobIsActive,
@@ -68,11 +72,14 @@ const SearchResults = ({ searchData }) => {
 		[platformNormalized, searchData?.jobId, resultsCacheRef, setCreators]
 	);
 
+	// @why Use serverTotalCreators and completedStatus from hook state instead of searchData props
+	// The props don't update when job completes, but hook state does (via handleSearchComplete)
+	// This ensures useAutoFetchAllPages triggers correctly when job status changes to 'completed'
 	const { isFetchingMore } = useAutoFetchAllPages({
 		jobId: searchData?.jobId,
 		platform: platformNormalized,
-		status: searchData?.status,
-		serverTotal: searchData?.totalCreators,
+		status: completedStatus ?? searchData?.status,
+		serverTotal: serverTotalCreators ?? searchData?.totalCreators,
 		loadedCount: creators.length,
 		onNewCreators: handleNewCreators,
 	});
@@ -136,7 +143,6 @@ const SearchResults = ({ searchData }) => {
 	});
 
 	// Use server total if available, otherwise use filtered count
-	const serverTotalCreators = searchData?.totalCreators;
 	const totalResults = showEmailOnly
 		? filteredTotalResults
 		: serverTotalCreators && serverTotalCreators > filteredTotalResults
