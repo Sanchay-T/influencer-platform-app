@@ -7,6 +7,7 @@
 import { LayoutGrid, Loader2, MailCheck, Sparkles, Table2 } from 'lucide-react';
 import { FeatureGate } from '@/app/components/billing/protect';
 import { AddToListButton } from '@/components/lists/add-to-list-button';
+import { AnimatedCounter } from '@/components/ui/animated-counter';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -176,9 +177,13 @@ export function SearchResultsHeader({
 						</Button>
 					</div>
 
-					{/* Results summary */}
+					{/* Results summary - uses AnimatedCounter for smooth transitions */}
 					<div className="flex items-center gap-2 text-sm text-zinc-400 order-3 md:order-none">
-						<span className="font-medium text-zinc-200">{totalResults.toLocaleString()}</span>
+						<AnimatedCounter
+							value={totalResults}
+							duration={400}
+							className="font-medium text-zinc-200"
+						/>
 						<span>creators</span>
 						{typeof emailCount === 'number' && emailCount > 0 && !showEmailOnly && (
 							<span className="text-zinc-500">• {emailCount.toLocaleString()} with email</span>

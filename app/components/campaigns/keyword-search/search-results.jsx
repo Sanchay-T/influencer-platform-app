@@ -142,12 +142,18 @@ const SearchResults = ({ searchData }) => {
 		initialPageSize: 50,
 	});
 
-	// Use server total if available, otherwise use filtered count
+	// @why Use server's processedResults as single source of truth for total count
+	// During processing: progressInfo.processedResults (real-time from polling)
+	// After completion: serverTotalCreators (from handleSearchComplete)
+	// Fallback: filteredTotalResults (locally loaded creators)
+	// This prevents showing different counts in header vs progress banner
 	const totalResults = showEmailOnly
 		? filteredTotalResults
-		: serverTotalCreators && serverTotalCreators > filteredTotalResults
-			? serverTotalCreators
-			: filteredTotalResults;
+		: stillProcessing && progressInfo?.processedResults
+			? progressInfo.processedResults
+			: serverTotalCreators && serverTotalCreators > filteredTotalResults
+				? serverTotalCreators
+				: filteredTotalResults;
 
 	// Recalculate totalPages using server total (not just loaded creators)
 	// This ensures pagination shows correct page count even before all data loads
