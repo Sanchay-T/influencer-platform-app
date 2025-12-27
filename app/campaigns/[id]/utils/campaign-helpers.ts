@@ -4,7 +4,12 @@
  */
 import { dedupeCreators } from '@/app/components/campaigns/utils/dedupe-creators';
 import { structuredConsole } from '@/lib/logging/console-proxy';
-import { getStatusDisplay, isSuccessStatus, type JobStatusDisplay } from '@/lib/types/statuses';
+import {
+	getStatusDisplay,
+	isActiveStatus,
+	isSuccessStatus,
+	type JobStatusDisplay,
+} from '@/lib/types/statuses';
 import type { HandleQueueState, PlatformResult, UiScrapingJob } from '../types/campaign-page';
 
 // Re-export StatusVariant as an alias for backwards compatibility
@@ -359,11 +364,17 @@ export function getRunDisplayLabel(index: number) {
 	return `Run #${index}`;
 }
 
+/**
+ * Check if a job is actively running (should trigger polling)
+ * @why Uses centralized isActiveStatus to support V2 statuses:
+ *   - pending, dispatching (waiting phase)
+ *   - processing, searching, enriching (active phase)
+ */
 export function isActiveJob(job?: UiScrapingJob | null) {
 	if (!job) {
 		return false;
 	}
-	return job.status === 'pending' || job.status === 'processing';
+	return isActiveStatus(job.status);
 }
 
 /**
