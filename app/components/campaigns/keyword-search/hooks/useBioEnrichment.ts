@@ -147,12 +147,26 @@ export function useBioEnrichment(
 			return;
 		}
 
+		// FIX: 'partial' is also a completed state in V2
+		const isJobComplete = jobStatus === 'completed' || jobStatus === 'partial';
+
+		console.log('[GEMZ-BIO] Bio enrichment check', {
+			jobId,
+			jobStatus,
+			isJobComplete,
+			hasFetched: hasFetched.current,
+			creatorsCount: creators.length,
+			creatorsNeedingEnrichment,
+			shouldEnrich,
+		});
+
 		// Only fetch when search is complete and we haven't fetched yet
-		if (jobStatus !== 'completed' || hasFetched.current || creators.length === 0) {
+		if (!isJobComplete || hasFetched.current || creators.length === 0) {
 			return;
 		}
 
 		const fetchBios = async () => {
+			console.log('[GEMZ-BIO] Starting bio fetch', { jobId, jobStatus });
 			hasFetched.current = true;
 			setIsFetching(true);
 
@@ -165,10 +179,16 @@ export function useBioEnrichment(
 				);
 
 				if (creatorsToEnrich.length === 0) {
+					console.log('[GEMZ-BIO] No creators need enrichment', { jobId });
 					setIsFetching(false);
 					setHasFetchedComplete(true);
 					return;
 				}
+				console.log('[GEMZ-BIO] Fetching bios for creators', {
+					jobId,
+					count: creatorsToEnrich.length,
+					platform: isScrapecreatorsPlatform ? 'instagram' : 'tiktok',
+				});
 
 				if (isScrapecreatorsPlatform) {
 					// Instagram: extract owner.id, call fetch-bios
@@ -212,8 +232,13 @@ export function useBioEnrichment(
 					}
 				}
 			} catch (error) {
-				console.error('Error fetching bios:', error);
+				console.error('[GEMZ-BIO] Error fetching bios:', error);
 			} finally {
+				console.log('[GEMZ-BIO] Bio fetch complete', {
+					jobId,
+					isFetching: false,
+					hasFetchedComplete: true,
+				});
 				setIsFetching(false);
 				setHasFetchedComplete(true);
 			}

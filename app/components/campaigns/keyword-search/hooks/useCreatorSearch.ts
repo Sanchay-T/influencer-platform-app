@@ -132,7 +132,9 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 	// Derived values
 	const jobStatusRaw = searchData?.status;
 	const jobStatusNormalized = typeof jobStatusRaw === 'string' ? jobStatusRaw.toLowerCase() : '';
-	const jobIsActive = jobStatusNormalized === 'processing' || jobStatusNormalized === 'pending';
+	// FIX: Include V2 active statuses (dispatching, searching, enriching) in addition to legacy (processing, pending)
+	const activeStatuses = ['processing', 'pending', 'dispatching', 'searching', 'enriching'];
+	const jobIsActive = activeStatuses.includes(jobStatusNormalized);
 
 	const platformNormalized = (searchData?.selectedPlatform || searchData?.platform || 'tiktok')
 		.toString()
@@ -201,8 +203,15 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 
 	// Track processing flag separately
 	useEffect(() => {
+		console.log('[GEMZ-STATE] jobIsActive changed', {
+			jobId: searchData?.jobId,
+			jobStatusRaw,
+			jobStatusNormalized,
+			jobIsActive,
+			settingStillProcessing: jobIsActive,
+		});
 		setStillProcessing(jobIsActive);
-	}, [jobIsActive]);
+	}, [jobIsActive, searchData?.jobId, jobStatusRaw, jobStatusNormalized]);
 
 	// Update cache when creators change
 	useEffect(() => {
@@ -384,19 +393,26 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 	const handleSearchComplete = useCallback(
 		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: completion handling + fallback fetch.
 		(data: { status?: string; creators?: unknown[]; totalCreators?: number }) => {
+			// V2 terminal states include 'partial' in addition to legacy states
+			const terminalStates = ['completed', 'partial', 'error', 'timeout'];
+			const isTerminal = data?.status && terminalStates.includes(data.status);
+
 			// Always log completion for debugging
-			console.log('[GEMZ-CREATORS]', {
+			console.log('[GEMZ-CREATORS] handleSearchComplete called', {
 				event: 'complete',
 				jobId: searchData?.jobId,
 				status: data?.status,
+				isTerminal,
 				creatorsInPayload: data?.creators?.length ?? 0,
 				totalCreators: data?.totalCreators,
+				timestamp: new Date().toISOString(),
 			});
 
-			if (
-				data &&
-				(data.status === 'completed' || data.status === 'error' || data.status === 'timeout')
-			) {
+			if (data && isTerminal) {
+				console.log('[GEMZ-CREATORS] Setting stillProcessing=false', {
+					jobId: searchData?.jobId,
+					status: data.status,
+				});
 				setStillProcessing(false);
 				setIsFetching(false);
 				setIsLoading(false);

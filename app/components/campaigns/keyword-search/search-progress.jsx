@@ -243,10 +243,24 @@ export default function SearchProgress({
 				const jobTarget = data?.targetResults ?? data?.job?.targetResults ?? 0;
 				const jobTotalCreators = data?.totalCreators ?? jobProcessed;
 
+				// V2 terminal states: completed, partial, error, timeout
+				// V2 active states: dispatching, searching, enriching
+				// Legacy states: processing, pending
+				const isTerminalStatus = ['completed', 'partial', 'error', 'timeout'].includes(jobStatus);
+				const isActiveStatus = [
+					'dispatching',
+					'searching',
+					'enriching',
+					'processing',
+					'pending',
+				].includes(jobStatus);
+
 				// Always log poll results for debugging (can be viewed in browser console)
 				console.log('[GEMZ-POLL]', {
 					jobId,
 					status: jobStatus,
+					isTerminal: isTerminalStatus,
+					isActive: isActiveStatus,
 					progress: jobProgress,
 					processed: jobProcessed,
 					totalCreators: jobTotalCreators,
@@ -256,6 +270,7 @@ export default function SearchProgress({
 					creatorsInResponse: Array.isArray(data?.results)
 						? data.results.reduce((acc, r) => acc + (r?.creators?.length ?? 0), 0)
 						: 0,
+					timestamp: new Date().toISOString(),
 				});
 
 				if (debugPolling) {
@@ -308,13 +323,21 @@ export default function SearchProgress({
 							creators,
 							progress: jobProgress,
 							status: jobStatus,
-							isPartial: jobStatus !== 'completed',
+							// FIX: 'partial' is also a completed state in V2
+							isPartial: !isTerminalStatus,
 						});
 					}
 				}
 
-				// FIX: Handle all terminal states (completed, error, timeout)
-				if (jobStatus === 'completed' || jobStatus === 'error' || jobStatus === 'timeout') {
+				// FIX: Handle all V2 terminal states (completed, partial, error, timeout)
+				if (isTerminalStatus) {
+					console.log('[GEMZ-POLL] Terminal state detected!', {
+						jobId,
+						status: jobStatus,
+						totalCreators: jobTotalCreators,
+						processed: jobProcessed,
+						creatorsLoaded: creators.length,
+					});
 					clearPollTimeout();
 					if (debugPolling) {
 						structuredConsole.log('[SEARCH-PROGRESS] Poll terminal', {
@@ -325,7 +348,8 @@ export default function SearchProgress({
 							jobTarget,
 						});
 					}
-					if (jobStatus === 'completed') {
+					// 'completed' and 'partial' are both success states
+					if (jobStatus === 'completed' || jobStatus === 'partial') {
 						setDisplayProgress(100);
 						setProgress(100);
 					}

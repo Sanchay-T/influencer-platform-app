@@ -7,150 +7,140 @@
 
 ## Current Task
 
-**ID:** TASK-006
-**Title:** Tech Debt Cleanup — Monolith Breakup & Code Quality
-**Status:** 🟡 IN PROGRESS
-**Branch:** `UAT`
-**Started:** Dec 12, 2025
-**Updated:** Dec 24, 2025 — 10:15 AM
+**ID:** TASK-008
+**Title:** Fix Search Progress UX — Keyword Search Reliability
+**Status:** Investigation Phase
+**Branch:** `fix/search-progress-ux`
+**Started:** Dec 30, 2025
+**Updated:** Dec 30, 2025
 
 ### Goal
-Systematically reduce tech debt identified in codebase audit. Break up monolithic files, clean up legacy code, improve maintainability.
+Fix the keyword search progress UI that breaks in production. Backend returns 1000 creators correctly, but frontend gets stuck with partial results (200-800), spinners that never stop, and requires full browser refresh to see correct data.
 
-### Fact-Checked Audit Results (Dec 12, 2025)
-| File | Lines | Status |
-|------|-------|--------|
-| `client-page.tsx` | 417 | ✅ REFACTORED (was 1588, 74% reduction) |
-| `similar-search/search-results.jsx` | 319 | ✅ REFACTORED |
-| `list-detail-client.tsx` | 357 | ✅ REFACTORED (was 1124, 68% reduction) |
-| `keyword-search/search-results.jsx` | 480 | ✅ REFACTORED |
-| `marketing-landing.tsx` | 1312 | ⚠️ Low priority |
-| Legacy providers (7 files) | ~900 each | ❌ Can be deleted after V2 verified |
-| console.log in search-engine/ | 51 calls | ⚠️ Should use structured logging |
+### Critical Insight
+**Works perfectly in local development, breaks only in production (usegems.io) and UAT (sorz.ai).**
+
+### Symptoms Summary
+| # | Symptom |
+|---|---------|
+| 1 | Progress freezes at random % |
+| 2 | Spinner keeps spinning forever |
+| 3 | Shows 200-800 instead of 1000 creators |
+| 4 | Only full browser refresh fixes it |
+| 5 | Job status stuck on "Processing" even after refresh |
+| 6 | Bio fetch spinners (row/global/header) all get stuck |
+| 7 | "Finding more creators..." disappears but other spinners remain |
+
+### User Preferences
+- **Logging:** Add console logs for debugging
+- **Priority:** Reliability > Real-time updates
+- **Polling:** Slower (3-5s) acceptable if more reliable
+- **Fallback:** No manual refresh button, fix auto-updates
 
 ### Checklist
-- [x] **Audit & Fact-Check** ✅ COMPLETE
-  - [x] Verify line counts of claimed monoliths
-  - [x] Audit `any` usage (260 total, mostly in loggers - acceptable)
-  - [x] Audit console.log usage (86 raw vs 995 structured - 92% adoption)
-  - [x] Audit legacy vs V2 coexistence (all 3 platforms have both)
-  - [x] Verify keyword-search refactor status (DONE - 480 lines now)
-- [x] **Phase 1: similar-search Refactor** ✅ COMPLETE
-  - [x] Extract components (SimilarSearchHeader.tsx)
-  - [x] Extract hooks (useSimilarCreatorSearch.ts)
-  - [x] Extract utils (transform-rows.ts)
-  - [x] Target: 742 → 319 lines ✅
-- [x] **Bug Fixes Found During Testing** ✅ COMPLETE
-  - [x] Fix Instagram similar search calling wrong API
-  - [x] Fix campaign detail page showing wrong results view
-  - [x] Added `isSimilarSearchJob()` helper
-- [x] **Phase 2: client-page.tsx Refactor** ✅ COMPLETE
-  - [x] Extract types to `types/campaign-page.ts`
-  - [x] Extract helpers to `utils/campaign-helpers.ts`
-  - [x] Extract state to `hooks/useCampaignJobs.ts`
-  - [x] Extract RunRail, RunSummary, ActivityLog components
-  - [x] Target: 1588 → 417 lines (74% reduction) ✅
-- [x] **Phase 3: list-detail-client.tsx Refactor** ✅ COMPLETE
-  - [x] Extract types to `types/list-detail.ts`
-  - [x] Extract helpers to `utils/list-helpers.ts`
-  - [x] Extract state to `hooks/useListDetail.ts`
-  - [x] Extract DroppableColumn, CreatorCard, ListView, ListInsights, DeleteModal
-  - [x] Target: 1124 → 357 lines (68% reduction) ✅
-- [ ] **Phase 4: Legacy Cleanup** ⭐ NEXT
-  - [ ] Verify V2 covers all use cases
-  - [ ] Remove legacy providers from runner.ts imports
-  - [ ] Delete legacy provider files
-- [ ] **Phase 5: Console.log Cleanup**
-  - [ ] Replace 51 console.logs in lib/search-engine/ with structured logging
+- [ ] **Phase 1: Add Debug Logging**
+  - [ ] Add verbose logs to polling loop in search-progress.jsx
+  - [ ] Log state transitions (stillProcessing, isFetching, isLoading)
+  - [ ] Log terminal state detection points
+  - [ ] Log creator merge operations
+  - [ ] Log API response status values
+
+- [ ] **Phase 2: Identify Root Cause**
+  - [ ] Deploy with logging to production
+  - [ ] Run 1000 creator search
+  - [ ] Capture console logs during failure
+  - [ ] Identify exact point where polling/state breaks
+
+- [ ] **Phase 3: Fix Polling Termination**
+  - [ ] Ensure all terminal states detected (completed, error, timeout, partial)
+  - [ ] Verify status string comparison is case-insensitive
+  - [ ] Handle V2 status values (UI_JOB_STATUS enum)
+  - [ ] Add timeout safety net for stuck polls
+
+- [ ] **Phase 4: Fix State Management**
+  - [ ] Ensure `stillProcessing` is set to false on any terminal state
+  - [ ] Clean up all spinner states on terminal state
+  - [ ] Verify creator merge preserves existing data
+  - [ ] Add final "completion fetch" to guarantee all data loaded
+
+- [ ] **Phase 5: Improve Reliability**
+  - [ ] Increase polling interval (3-5s) for production
+  - [ ] Add exponential backoff on network errors
+  - [ ] Add redundant completion check after polling stops
+
+- [ ] **Phase 6: Test & Verify**
+  - [ ] Test in UAT (sorz.ai)
+  - [ ] Test in production (usegems.io)
+  - [ ] Verify all 1000 creators display
+  - [ ] Verify all spinners stop on completion
+  - [ ] Verify no regression in local dev
 
 ### Next Action
 ```
-READY: Start legacy cleanup verification
+STEP 1: Read the UI_JOB_STATUS definitions
+Read: lib/types/statuses.ts
+Purpose: Understand what status values backend sends
 
-STEP 1: Check if legacy providers are still imported/used
-Run: grep -r "instagram-provider" lib/ app/
-Run: grep -r "tiktok-provider" lib/ app/
-Run: grep -r "youtube-provider" lib/ app/
-Check: lib/search-engine/runner.ts (does it import legacy providers?)
+STEP 2: Check if frontend recognizes V2 statuses
+Read: app/components/campaigns/keyword-search/search-progress.jsx (lines 316-345)
+Check: Does it handle 'searching', 'enriching', 'dispatching'?
+Check: Is comparison case-insensitive?
 
-STEP 2: Verify V2 coverage is complete
-Read: lib/search-engine/v2/adapters/tiktok.ts
-Read: lib/search-engine/v2/adapters/instagram.ts
-Read: lib/search-engine/v2/adapters/youtube.ts
-Verify: All 3 adapters implement keyword + similar search
+STEP 3: Add debug logging to polling
+File: app/components/campaigns/keyword-search/search-progress.jsx
+Add: console.log statements at key points:
+- Line 229: Log raw API response status
+- Line 278: Log before setStatus
+- Line 317: Log terminal state detection
+- Line 328-344: Log onComplete call
 
-STEP 3: If no references found, safe to delete:
-- lib/search-engine/providers/tiktok-provider.ts
-- lib/search-engine/providers/instagram-provider.ts
-- lib/search-engine/providers/youtube-provider.ts
-- lib/search-engine/providers/youtube-competitor-provider.ts
-- lib/search-engine/providers/instagram-similar-provider.ts
-- lib/search-engine/providers/tiktok-similar-provider.ts
-- lib/search-engine/providers/youtube-similar-provider.ts
+STEP 4: Add debug logging to state management
+File: app/components/campaigns/keyword-search/hooks/useCreatorSearch.ts
+Add: console.log statements at:
+- handleSearchComplete (line 384)
+- handleIntermediateResults (line 501)
+- State transitions for stillProcessing
 
-EXPECTED: All legacy code now unused due to V2 fan-out architecture
+STEP 5: Commit and deploy for testing
+git add -A
+git commit -m "chore: add debug logging for search progress investigation"
+git push origin fix/search-progress-ux
 ```
 
 ### Key Files
 | Purpose | File |
 |---------|------|
-| Refactored | `app/campaigns/[id]/client-page.tsx` (417 lines) |
-| Refactored | `app/components/campaigns/similar-search/search-results.jsx` (319 lines) |
-| Refactored | `app/components/campaigns/keyword-search/search-results.jsx` (480 lines) |
-| Refactored | `app/lists/[id]/_components/list-detail-client.tsx` (357 lines) |
+| Main polling | `app/components/campaigns/keyword-search/search-progress.jsx` |
+| State management | `app/components/campaigns/keyword-search/hooks/useCreatorSearch.ts` |
+| Loading UI | `app/components/campaigns/keyword-search/components/SearchLoadingStates.tsx` |
+| Results container | `app/components/campaigns/keyword-search/components/ResultsContainer.tsx` |
+| Bio enrichment | `app/components/campaigns/keyword-search/hooks/useBioEnrichment.ts` |
+| V2 status API | `app/api/v2/status/route.ts` |
+| Status types | `lib/types/statuses.ts` |
 
-### Context
-- **Recent Work (Dec 12-23):**
-  1. ✅ All refactoring complete: similar-search, client-page, list-detail-client, keyword-search
-  2. ✅ Shared type contract for job statuses (commit: f6a9ef938)
-  3. ✅ Handle 'partial' status in run sidebar display (commit: e510cea29)
-  4. ✅ Add v2 status mappings and fix progress parsing (commit: 3f409f370)
-  5. ✅ Atomic deduplication for v2 workers using job_creator_keys table (commit: 988f782e3)
-  6. ✅ maxDuration added to v2 worker routes for Vercel Pro timeout (commit: 5d7c8560e)
-  7. ✅ Redis env vars deployed (commit: d748653a6)
-  8. ✅ Redis caching for completed job results (commit: cb53abfcc)
-  9. ✅ Timeout and error handling for v2/status API (commit: 5543ae803)
-  10. ✅ Campaigns API timeout optimization (commit: 5c117483c)
-  11. ✅ **React Query Integration** (Dec 23-24) - Fix loading flash on completed runs:
-      - Installed @tanstack/react-query, added QueryProvider
-      - Created useJobStatus, useJobCreators hooks with auto-polling
-      - Server pre-loads first 50 creators for completed jobs from job_creators table
-      - Cache hydration in client-page.tsx for instant loading
-      - useCreatorSearch now checks React Query cache first
-      - Fixed React hydration mismatch in QueryProvider (commit: 5f78b9263)
-      - All completed runs now load instantly without flickering
-      - Fixed pagination bug: Page 3+ showed empty (commit: b356d3d43)
-        - Bug: toUiJob was overwriting server totalCreators with counted=50
-        - Fix: Prefer job.totalCreators from server, enabling auto-fetch
-      - Fixed gallery/table showing "0 views" (commit: 88a62e289)
-      - Fixed job completion not updating UI (commit: 1bde9c105)
-        - Bug: handleSearchComplete was overwriting instead of merging
-        - Fix: Merge completion data + always fetch fresh data on complete
-- **Branch:** `UAT`
-- **Files Created (React Query):**
-  - `lib/query/query-client.ts` - QueryClient config
-  - `lib/query/hooks/useJobStatus.ts` - Job status + auto-polling
-  - `lib/query/hooks/useJobCreators.ts` - Paginated creators
-  - `lib/query/hooks/index.ts` - Exports
-  - `app/providers/query-provider.tsx` - QueryClientProvider wrapper
-- **Files Created During Refactoring:**
-  - `similar-search/hooks/useSimilarCreatorSearch.ts`
-  - `similar-search/utils/transform-rows.ts`
-  - `similar-search/components/SimilarSearchHeader.tsx`
-  - `campaigns/[id]/types/campaign-page.ts`
-  - `campaigns/[id]/utils/campaign-helpers.ts`
-  - `campaigns/[id]/hooks/useCampaignJobs.ts`
-  - `campaigns/[id]/components/RunRail.tsx`
-  - `campaigns/[id]/components/RunSummary.tsx`
-  - `campaigns/[id]/components/ActivityLog.tsx`
-  - `lists/[id]/_components/types/list-detail.ts`
-  - `lists/[id]/_components/utils/list-helpers.ts`
-  - `lists/[id]/_components/hooks/useListDetail.ts`
-  - `lists/[id]/_components/components/DroppableColumn.tsx`
-  - `lists/[id]/_components/components/CreatorCard.tsx`
-  - `lists/[id]/_components/components/ListView.tsx`
-  - `lists/[id]/_components/components/ListInsights.tsx`
-  - `lists/[id]/_components/components/DeleteModal.tsx`
+### Root Cause Hypotheses
+| Priority | Hypothesis |
+|----------|------------|
+| High | Vercel serverless timing differences |
+| High | Network latency creates race conditions |
+| High | QStash webhook latency |
+| High | Redis cache serving stale data |
+| Medium | Polling terminates prematurely |
+| Medium | Terminal state not detected |
+| Medium | Spinner states not cleaned up |
+
+### Full Spec
+See: `agent_docs/current-task.md`
+
+---
+
+## Paused Task
+
+**ID:** TASK-006
+**Title:** Tech Debt Cleanup — Monolith Breakup & Code Quality
+**Status:** PAUSED (for TASK-008 hotfix)
+**Branch:** `UAT`
+**Waiting on:** Phase 4 (Legacy Cleanup) after current hotfix
 
 ---
 
@@ -182,4 +172,4 @@ EXPECTED: All legacy code now unused due to V2 fan-out architecture
 
 ---
 
-*Last updated: Dec 22, 2025 12:13 AM*
+*Last updated: Dec 30, 2025*
