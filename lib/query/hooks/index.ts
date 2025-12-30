@@ -11,4 +11,18 @@ export {
 	type UseJobCreatorsOptions,
 	useJobCreators,
 } from './useJobCreators';
-export { type JobStatusData, useJobStatus } from './useJobStatus';
+export {
+	type CompletionData,
+	type ProgressData,
+	type UseJobPollingOptions,
+	type UseJobPollingResult,
+	useJobPolling,
+} from './useJobPolling';
+export {
+	type JobStatus,
+	type JobStatusData,
+	jobStatusKeys,
+	type UseJobStatusResult,
+	useInvalidateJobStatus,
+	useJobStatus,
+} from './useJobStatus';

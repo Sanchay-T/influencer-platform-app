@@ -109,7 +109,7 @@ export function RunSummary({ selectedJob, creatorsCount, selectedDiagnostics }: 
 				{isActiveJob(selectedJob) && (
 					<div className="space-y-2">
 						<p className="text-xs uppercase tracking-wide text-zinc-500">Progress</p>
-						<Progress value={selectedJob?.progress ?? 0} className="h-2" />
+						<Progress value={Math.min(100, selectedJob?.progress ?? 0)} className="h-2" />
 						<p className="text-xs text-zinc-500">
 							Updating with live results. This page will refresh when the run completes.
 						</p>

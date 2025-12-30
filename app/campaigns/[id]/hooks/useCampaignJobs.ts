@@ -1,6 +1,10 @@
 /**
  * Hook for managing campaign jobs state, fetching, and polling
- * Extracted from client-page.tsx for modularity
+ *
+ * @context Refactored to use unified React Query polling (Dec 2025)
+ * - Uses useJobPolling for active job status (single source of truth)
+ * - Removed custom polling loop in favor of RQ-based polling
+ * - Job state syncs with RQ cache on updates
  */
 
 import { usePathname, useSearchParams } from 'next/navigation';
@@ -8,6 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dedupeCreators } from '@/app/components/campaigns/utils/dedupe-creators';
 import type { Campaign } from '@/app/types/campaign';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { useJobPolling } from '@/lib/query/hooks';
 import type { CampaignStatus, SearchDiagnostics, UiScrapingJob } from '../types/campaign-page';
 import {
 	createJobUpdateFromPayload,
@@ -77,7 +82,7 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 	const [activeTab, setActiveTab] = useState<'creators' | 'activity'>('creators');
 	const [isTransitioning, setIsTransitioning] = useState(false);
 	const [renderKey, setRenderKey] = useState(0);
-	const [diagnostics, setDiagnostics] = useState<Record<string, SearchDiagnostics>>({});
+	const [diagnostics, _setDiagnostics] = useState<Record<string, SearchDiagnostics>>({});
 	const [loadingJobIds, setLoadingJobIds] = useState<string[]>([]);
 	const [loadingMoreJobId, setLoadingMoreJobId] = useState<string | null>(null);
 
@@ -447,134 +452,62 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 		}
 	}, [activeTab, logUXEvent, selectedJob]);
 
-	// Polling for active jobs
+	// Use unified polling hook for active job (SINGLE SOURCE OF TRUTH)
+	// This replaces the custom setInterval polling loop
+	const activeJobId = activeJob?.id;
+	const { data: polledData } = useJobPolling(activeJobId, {
+		onProgress: useCallback(
+			(progressData) => {
+				if (!activeJobId) {
+					return;
+				}
+
+				// Update job state with progress data from React Query
+				updateJobState(activeJobId, {
+					status: progressData.status as UiScrapingJob['status'],
+					progress: progressData.progress,
+					totalCreators: progressData.totalCreators,
+				});
+			},
+			[activeJobId, updateJobState]
+		),
+		onComplete: useCallback(
+			(completionData) => {
+				if (!activeJobId) {
+					return;
+				}
+
+				// Update job state on completion
+				updateJobState(activeJobId, {
+					status: completionData.status as UiScrapingJob['status'],
+					totalCreators: completionData.totalCreators,
+					progress: 100,
+					resultsLoaded: true,
+				});
+
+				// Refresh the job data to get final creators
+				const currentJob = jobs.find((j) => j.id === activeJobId);
+				if (currentJob) {
+					fetchJobSnapshot(currentJob);
+				}
+			},
+			[activeJobId, updateJobState, jobs, fetchJobSnapshot]
+		),
+	});
+
+	// Sync polled data to job state when it changes
 	useEffect(() => {
-		if (!activeJob) {
+		if (!(activeJobId && polledData)) {
 			return;
 		}
 
-		const interval = setInterval(async () => {
-			try {
-				const current = activeJobRef.current;
-				if (!current) {
-					clearInterval(interval);
-					return;
-				}
-
-				const endpoint = resolveScrapingEndpoint(current);
-				const response = await fetch(`${endpoint}?jobId=${current.id}`, { credentials: 'include' });
-
-				const text = await response.text();
-				let data: Record<string, unknown>;
-				try {
-					data = JSON.parse(text);
-				} catch {
-					structuredConsole.error('Polling received non-JSON response', {
-						jobId: current.id,
-						platform: current.platform,
-						status: response.status,
-						snippet: text?.slice?.(0, 200),
-					});
-					return;
-				}
-
-				// Update diagnostics if enabled
-				if (SHOW_DIAGNOSTICS && data) {
-					const timings =
-						((data?.benchmark as Record<string, unknown>)?.timings as Record<string, unknown>) ??
-						{};
-					const batches = Array.isArray((data?.benchmark as Record<string, unknown>)?.batches)
-						? ((data?.benchmark as Record<string, unknown>)
-								?.batches as SearchDiagnostics['batches'])
-						: [];
-					const startedAt = timings?.startedAt ? new Date(timings.startedAt as string) : null;
-					const finishedAt = timings?.finishedAt ? new Date(timings.finishedAt as string) : null;
-					const jobCreatedAt = current.createdAt ? new Date(current.createdAt) : null;
-					const queueLatencyMs =
-						jobCreatedAt && startedAt ? startedAt.getTime() - jobCreatedAt.getTime() : null;
-					const processingMs =
-						typeof timings?.totalDurationMs === 'number'
-							? timings.totalDurationMs
-							: startedAt && finishedAt
-								? finishedAt.getTime() - startedAt.getTime()
-								: null;
-					const totalMs =
-						queueLatencyMs !== null && processingMs !== null
-							? queueLatencyMs + processingMs
-							: processingMs;
-
-					const handlesSummary = data?.queue
-						? {
-								totalHandles:
-									typeof (data.queue as Record<string, unknown>).totalHandles === 'number'
-										? ((data.queue as Record<string, unknown>).totalHandles as number)
-										: undefined,
-								completedHandles: Array.isArray(
-									(data.queue as Record<string, unknown>).completedHandles
-								)
-									? ((data.queue as Record<string, unknown>).completedHandles as string[])
-									: [],
-								remainingHandles: Array.isArray(
-									(data.queue as Record<string, unknown>).remainingHandles
-								)
-									? ((data.queue as Record<string, unknown>).remainingHandles as string[])
-									: [],
-							}
-						: null;
-
-					setDiagnostics((prev) => ({
-						...prev,
-						[current.id]: {
-							engine: (data.engine as string) ?? 'legacy',
-							queueLatencyMs,
-							processingMs,
-							totalMs,
-							apiCalls:
-								((data?.benchmark as Record<string, unknown>)?.apiCalls as number) ??
-								(Array.isArray(batches) ? batches.length : null),
-							processedCreators:
-								((data?.benchmark as Record<string, unknown>)?.processedCreators as number) ?? null,
-							batches,
-							startedAt: (timings?.startedAt as string) ?? null,
-							finishedAt: (timings?.finishedAt as string) ?? null,
-							lastUpdated: new Date().toISOString(),
-							handles: handlesSummary,
-						},
-					}));
-				}
-
-				if (!response.ok || data.error) {
-					clearInterval(interval);
-					updateJobState(current.id, {
-						status: (data?.status as UiScrapingJob['status']) ?? current.status ?? 'error',
-						progress: (data?.progress as number) ?? current.progress,
-						resultsError: (data?.error as string) ?? 'Failed to load results',
-						resultsLoaded: true,
-					});
-					return;
-				}
-
-				const jobUpdate = createJobUpdateFromPayload(current, data, false);
-				updateJobState(current.id, jobUpdate);
-
-				if (['completed', 'error', 'timeout'].includes(data.status as string)) {
-					clearInterval(interval);
-				}
-			} catch (error) {
-				structuredConsole.error('Error polling job status:', error);
-				clearInterval(interval);
-				const currentJobSnapshot = activeJobRef.current;
-				if (currentJobSnapshot) {
-					updateJobState(currentJobSnapshot.id, {
-						resultsError: error instanceof Error ? error.message : 'Polling error',
-						resultsLoaded: true,
-					});
-				}
-			}
-		}, 3000);
-
-		return () => clearInterval(interval);
-	}, [activeJob, updateJobState]);
+		// Update the active job with latest polled data
+		updateJobState(activeJobId, {
+			status: polledData.status as UiScrapingJob['status'],
+			progress: Math.min(100, polledData.progress?.percentComplete ?? 0),
+			totalCreators: polledData.totalCreators,
+		});
+	}, [activeJobId, polledData, updateJobState]);
 
 	// Handle job selection
 	const handleSelectJob = useCallback(

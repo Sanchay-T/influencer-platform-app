@@ -1,17 +1,16 @@
 /**
  * useCreatorSearch - Core hook for managing creator search state and data fetching.
- * Handles loading, polling, progress tracking, and intermediate results.
  *
- * @context React Query Integration (Dec 2025)
- * - Checks React Query cache first for completed jobs (server pre-loaded)
- * - Falls back to existing fetch logic for active jobs or cache miss
- * - This enables instant loading for completed runs
+ * @context Refactored to use unified React Query hooks (Dec 2025)
+ * - Uses useJobPolling for status/progress (single source of truth)
+ * - Removed duplicate state (stillProcessing, serverTotalCreators, completedStatus)
+ * - These are now derived from React Query cache
  */
 
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { structuredConsole } from '@/lib/logging/console-proxy';
-import type { JobCreatorsData } from '@/lib/query/hooks';
+import { type JobCreatorsData, useJobPolling } from '@/lib/query/hooks';
 import { dedupeCreators } from '../../utils/dedupe-creators';
 import { getScrapingEndpoint } from '../utils';
 import { parseJsonSafe } from './useBioEnrichment';
@@ -46,11 +45,9 @@ export interface UseCreatorSearchResult {
 	fakeProgress: number;
 	elapsedSeconds: number;
 	displayedProgress: number;
-	/** Server-reported total creators for auto-fetch pagination */
+	/** Server-reported total creators from React Query */
 	serverTotalCreators: number | undefined;
-	// @why Track job status in state for auto-fetch trigger
-	// The searchData.status prop doesn't update when polling detects completion
-	// This state ensures useAutoFetchAllPages sees the 'completed' status
+	/** Job status from React Query */
 	completedStatus: string | undefined;
 
 	// Computed
@@ -71,12 +68,20 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 	const queryClient = useQueryClient();
 	const debugPolling =
 		typeof window !== 'undefined' && window.localStorage.getItem('gemz_debug_polling') === 'true';
+
+	// Use unified polling hook for status (SINGLE SOURCE OF TRUTH)
+	const {
+		status: jobStatus,
+		isActive: jobIsActiveFromRQ,
+		totalCreators: serverTotalCreatorsFromRQ,
+		progress: progressFromRQ,
+	} = useJobPolling(searchData?.jobId);
+
 	// Check React Query cache for pre-loaded data (from server)
 	const cachedQueryData = useMemo(() => {
 		if (!searchData?.jobId) {
 			return null;
 		}
-		// Try to get data from React Query cache (populated by server pre-loading)
 		const queryKey = ['job-creators', searchData.jobId, 0, 50];
 		const cached = queryClient.getQueryData<JobCreatorsData>(queryKey);
 		if (cached?.creators?.length) {
@@ -94,7 +99,6 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 
 	// Initial creators - prefer React Query cache, then props
 	const initialCreators = useMemo(() => {
-		// React Query cache takes priority (server pre-loaded data)
 		if (cachedQueryData?.creators?.length) {
 			return cachedQueryData.creators;
 		}
@@ -107,52 +111,38 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 		return [];
 	}, [cachedQueryData, searchData?.initialCreators, searchData?.creators]);
 
-	// Core state
+	// Core state - only local UI state, not duplicating RQ state
 	const [creators, setCreators] = useState<unknown[]>(initialCreators);
 	const [isLoading, setIsLoading] = useState(false);
 	const [isFetching, setIsFetching] = useState(false);
-	const [stillProcessing, setStillProcessing] = useState(false);
 	const [progressInfo, setProgressInfo] = useState<ProgressInfo | null>(null);
 	const [fakeProgress, setFakeProgress] = useState(0);
 	const [elapsedSeconds, setElapsedSeconds] = useState(0);
-	// @why Track server total separately from searchData prop to enable auto-fetch
-	// When job completes, polling returns totalCreators but searchData prop doesn't update
-	// This state ensures useAutoFetchAllPages gets the correct serverTotal
-	const [serverTotalCreators, setServerTotalCreators] = useState<number | undefined>(
-		searchData?.totalCreators
-	);
-	// @why Track job status in state for auto-fetch trigger
-	// The searchData.status prop doesn't update when polling detects completion
-	// This state ensures useAutoFetchAllPages sees the 'completed' status
-	const [completedStatus, setCompletedStatus] = useState<string | undefined>(searchData?.status);
 
 	// Cache ref
 	const resultsCacheRef = useRef<Map<string, unknown[]>>(new Map());
 
-	// Derived values
-	const jobStatusRaw = searchData?.status;
-	const jobStatusNormalized = typeof jobStatusRaw === 'string' ? jobStatusRaw.toLowerCase() : '';
-	// FIX: Include V2 active statuses (dispatching, searching, enriching) in addition to legacy (processing, pending)
-	const activeStatuses = ['processing', 'pending', 'dispatching', 'searching', 'enriching'];
-	const jobIsActive = activeStatuses.includes(jobStatusNormalized);
+	// Derive values from React Query (SINGLE SOURCE OF TRUTH)
+	// @why Previously stored in local state, now derived from RQ to prevent desync
+	const jobIsActive = jobIsActiveFromRQ;
+	const stillProcessing = jobIsActiveFromRQ;
+	const serverTotalCreators = serverTotalCreatorsFromRQ;
+	const completedStatus = jobStatus;
 
 	const platformNormalized = (searchData?.selectedPlatform || searchData?.platform || 'tiktok')
 		.toString()
 		.toLowerCase();
 
-	const waitingForResults =
-		(jobIsActive || stillProcessing || isFetching || isLoading) && creators.length === 0;
-	const shouldPoll =
-		Boolean(searchData?.jobId) && (jobIsActive || stillProcessing || isFetching || isLoading);
+	const waitingForResults = (jobIsActive || isFetching || isLoading) && creators.length === 0;
+	const shouldPoll = Boolean(searchData?.jobId) && (jobIsActive || isFetching || isLoading);
 
 	// Reset when switching to a different run OR when initialCreators grows (Load more)
-	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: explicit branching for cache + props hydration.
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Cache hydration requires multiple branches
 	useEffect(() => {
 		const cacheKey = searchData?.jobId;
 		if (!cacheKey) {
 			setCreators([]);
 			setIsFetching(false);
-			setStillProcessing(false);
 			setIsLoading(false);
 			if (debugPolling) {
 				structuredConsole.log('[CREATOR-SEARCH] reset: missing jobId');
@@ -164,8 +154,6 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 
 		const cached = resultsCacheRef.current.get(cacheKey);
 
-		// Only use cache if it has MORE creators than initialCreators
-		// This ensures "Load more" results (in initialCreators) take precedence
 		if (cached?.length && cached.length >= initialCreators.length) {
 			setCreators(cached);
 			setIsLoading(false);
@@ -178,10 +166,8 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 				});
 			}
 		} else if (initialCreators.length) {
-			// Use initialCreators from props - this includes "Load more" results
 			const deduped = dedupeCreators(initialCreators, { platformHint: platformNormalized });
 			setCreators(deduped);
-			// Update cache with the larger dataset
 			resultsCacheRef.current.set(cacheKey, deduped);
 			setIsLoading(false);
 			setIsFetching(false);
@@ -201,18 +187,6 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 		}
 	}, [searchData?.jobId, initialCreators, platformNormalized, debugPolling]);
 
-	// Track processing flag separately
-	useEffect(() => {
-		console.log('[GEMZ-STATE] jobIsActive changed', {
-			jobId: searchData?.jobId,
-			jobStatusRaw,
-			jobStatusNormalized,
-			jobIsActive,
-			settingStillProcessing: jobIsActive,
-		});
-		setStillProcessing(jobIsActive);
-	}, [jobIsActive, searchData?.jobId, jobStatusRaw, jobStatusNormalized]);
-
 	// Update cache when creators change
 	useEffect(() => {
 		if (searchData?.jobId && creators.length) {
@@ -222,58 +196,31 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 
 	// Fetch results effect - only runs when we need fresh data from API
 	useEffect(() => {
-		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: legacy flow with multiple skip paths.
+		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Fetch logic with multiple skip conditions
 		const fetchResults = async () => {
 			try {
 				if (!searchData?.jobId) {
 					setIsFetching(false);
-					if (debugPolling) {
-						structuredConsole.log('[CREATOR-SEARCH] skip fetch: missing jobId');
-					}
 					return;
 				}
 
-				// Skip fetch if we have initialCreators from props (client-page already fetched)
-				// This prevents overwriting "Load more" results
+				// Skip fetch if we have initialCreators from props and job is done
 				if (initialCreators.length > 0 && !jobIsActive) {
 					setIsFetching(false);
-					if (debugPolling) {
-						structuredConsole.log('[CREATOR-SEARCH] skip fetch: initial creators present', {
-							jobId: searchData.jobId,
-							initial: initialCreators.length,
-							jobIsActive,
-						});
-					}
 					return;
 				}
 
 				// Skip if we have cached data and job is done
 				const cached = resultsCacheRef.current.get(searchData.jobId);
-				if (cached && cached.length > 0 && !jobIsActive && !stillProcessing) {
+				if (cached && cached.length > 0 && !jobIsActive) {
 					setCreators(cached);
 					setIsFetching(false);
-					if (debugPolling) {
-						structuredConsole.log('[CREATOR-SEARCH] skip fetch: cached & inactive', {
-							jobId: searchData.jobId,
-							cached: cached.length,
-							jobIsActive,
-							stillProcessing,
-						});
-					}
 					return;
 				}
 
 				// Only fetch if job is still active or we have no data at all
-				if (!(jobIsActive || stillProcessing) && creators.length > 0) {
+				if (!jobIsActive && creators.length > 0) {
 					setIsFetching(false);
-					if (debugPolling) {
-						structuredConsole.log('[CREATOR-SEARCH] skip fetch: already have creators', {
-							jobId: searchData.jobId,
-							creators: creators.length,
-							jobIsActive,
-							stillProcessing,
-						});
-					}
 					return;
 				}
 
@@ -287,14 +234,7 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 
 				if (data?.error === 'invalid_json') {
 					setIsLoading(false);
-					setStillProcessing(false);
 					setIsFetching(false);
-					if (debugPolling) {
-						structuredConsole.warn('[CREATOR-SEARCH] invalid JSON', {
-							jobId: searchData.jobId,
-							endpoint: apiEndpoint,
-						});
-					}
 					return;
 				}
 
@@ -303,19 +243,16 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 					return;
 				}
 
-				const allCreators =
-					data.results?.reduce(
-						(acc: unknown[], result: { creators?: unknown[] }) => [
-							...acc,
-							...(result.creators || []),
-						],
-						[]
-					) || [];
+				// Use push-based flattening instead of spread accumulator
+				const allCreators: unknown[] = [];
+				for (const result of data.results ?? []) {
+					if (Array.isArray(result?.creators)) {
+						allCreators.push(...result.creators);
+					}
+				}
 
 				const dedupedCreators = dedupeCreators(allCreators, { platformHint: platformNormalized });
 
-				// Only update if API returned more creators than we have
-				// This prevents "Load more" results from being overwritten
 				if (dedupedCreators.length >= creators.length) {
 					setCreators(dedupedCreators);
 
@@ -324,22 +261,8 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 					}
 				}
 
-				if (debugPolling) {
-					structuredConsole.log('[CREATOR-SEARCH] fetched results', {
-						jobId: searchData.jobId,
-						endpoint: apiEndpoint,
-						apiCount: dedupedCreators.length,
-						previousCount: creators.length,
-						jobIsActive,
-						stillProcessing,
-					});
-				}
-
 				if (dedupedCreators.length || creators.length) {
 					setIsLoading(false);
-				}
-				if (!jobIsActive) {
-					setStillProcessing(false);
 				}
 			} catch (error) {
 				structuredConsole.error('Error fetching results', error);
@@ -349,15 +272,7 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 		};
 
 		fetchResults();
-	}, [
-		searchData?.jobId,
-		platformNormalized,
-		jobIsActive,
-		stillProcessing,
-		initialCreators.length,
-		creators.length,
-		debugPolling,
-	]);
+	}, [searchData?.jobId, platformNormalized, jobIsActive, initialCreators.length, creators.length]);
 
 	// Simulated progress animation
 	useEffect(() => {
@@ -382,65 +297,35 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 		return () => clearInterval(intervalId);
 	}, [waitingForResults]);
 
-	// Displayed progress
+	// Displayed progress - prefer React Query progress, then fake progress
 	const displayedProgress = useMemo(() => {
+		// Use RQ progress first (capped at 100% in useJobStatus)
+		if (progressFromRQ > 0) {
+			return progressFromRQ;
+		}
 		const realProgress = progressInfo?.progress ?? 0;
 		return realProgress > 0 ? realProgress : fakeProgress;
-	}, [progressInfo?.progress, fakeProgress]);
+	}, [progressFromRQ, progressInfo?.progress, fakeProgress]);
 
 	// Search completion handler
-	// FIX: Merge with existing creators instead of overwriting, then always fetch fresh data
 	const handleSearchComplete = useCallback(
-		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: completion handling + fallback fetch.
+		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Completion handling with merge and fetch
 		(data: { status?: string; creators?: unknown[]; totalCreators?: number }) => {
-			// V2 terminal states include 'partial' in addition to legacy states
 			const terminalStates = ['completed', 'partial', 'error', 'timeout'];
-			const isTerminal = data?.status && terminalStates.includes(data.status);
+			const isTerminalState = data?.status && terminalStates.includes(data.status);
 
-			// Always log completion for debugging
-			console.log('[GEMZ-CREATORS] handleSearchComplete called', {
-				event: 'complete',
-				jobId: searchData?.jobId,
-				status: data?.status,
-				isTerminal,
-				creatorsInPayload: data?.creators?.length ?? 0,
-				totalCreators: data?.totalCreators,
-				timestamp: new Date().toISOString(),
-			});
-
-			if (data && isTerminal) {
-				console.log('[GEMZ-CREATORS] Setting stillProcessing=false', {
-					jobId: searchData?.jobId,
-					status: data.status,
-				});
-				setStillProcessing(false);
+			if (data && isTerminalState) {
 				setIsFetching(false);
 				setIsLoading(false);
 
-				// @why Update server total and status to trigger useAutoFetchAllPages
-				if (data?.totalCreators != null) {
-					setServerTotalCreators(data.totalCreators);
-				}
-				setCompletedStatus(data.status);
-
-				// FIX: MERGE with existing creators instead of overwriting
-				// This preserves intermediate results that may have more data than completion payload
+				// Merge with existing creators
 				const incomingCreators = dedupeCreators(data.creators || [], {
 					platformHint: platformNormalized,
 				});
 
 				setCreators((prev) => {
-					// Merge incoming with existing, keeping the larger set
 					const merged = dedupeCreators([...prev, ...incomingCreators], {
 						platformHint: platformNormalized,
-					});
-
-					console.log('[GEMZ-CREATORS]', {
-						event: 'complete-merge',
-						jobId: searchData?.jobId,
-						previous: prev.length,
-						incoming: incomingCreators.length,
-						merged: merged.length,
 					});
 
 					if (searchData?.jobId && merged.length) {
@@ -449,16 +334,7 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 					return merged;
 				});
 
-				if (debugPolling) {
-					structuredConsole.log('[CREATOR-SEARCH] complete', {
-						jobId: searchData?.jobId,
-						status: data.status,
-						incoming: incomingCreators.length,
-					});
-				}
-
-				// FIX: Always fetch fresh data from API on completion to ensure we have everything
-				// This handles the case where polling returned partial data
+				// Fetch fresh data from API on completion
 				const apiEndpoint = getScrapingEndpoint(platformNormalized);
 				fetch(`${apiEndpoint}?jobId=${searchData?.jobId}&limit=200`, { credentials: 'include' })
 					.then((response) => parseJsonSafe(response))
@@ -466,17 +342,15 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 						if (result?.error === 'invalid_json') {
 							return;
 						}
-						const foundCreators =
-							result.results?.reduce(
-								(acc: unknown[], res: { creators?: unknown[] }) => [
-									...acc,
-									...(res.creators || []),
-								],
-								[]
-							) || [];
+						// Use push-based flattening instead of spread accumulator
+						const foundCreators: unknown[] = [];
+						for (const res of result.results ?? []) {
+							if (Array.isArray(res?.creators)) {
+								foundCreators.push(...res.creators);
+							}
+						}
 						const deduped = dedupeCreators(foundCreators, { platformHint: platformNormalized });
 
-						// Only update if API returned more data than we have
 						setCreators((prev) => {
 							if (deduped.length > prev.length) {
 								const finalMerged = dedupeCreators([...prev, ...deduped], {
@@ -485,32 +359,17 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 								if (searchData?.jobId && finalMerged.length) {
 									resultsCacheRef.current.set(searchData.jobId, finalMerged);
 								}
-								console.log('[GEMZ-CREATORS]', {
-									event: 'complete-fetch',
-									jobId: searchData?.jobId,
-									previous: prev.length,
-									fetched: deduped.length,
-									final: finalMerged.length,
-								});
 								return finalMerged;
 							}
 							return prev;
 						});
-
-						if (debugPolling) {
-							structuredConsole.log('[CREATOR-SEARCH] complete-fetch', {
-								jobId: searchData?.jobId,
-								endpoint: apiEndpoint,
-								creators: deduped.length,
-							});
-						}
 					})
 					.catch((err) => {
 						structuredConsole.error('[CREATOR-SEARCH] complete-fetch error', err);
 					});
 			}
 		},
-		[platformNormalized, searchData?.jobId, debugPolling]
+		[platformNormalized, searchData?.jobId]
 	);
 
 	// Intermediate results handler
@@ -522,7 +381,6 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 					return;
 				}
 
-				setStillProcessing(true);
 				setIsLoading(false);
 				setIsFetching(false);
 
@@ -533,22 +391,13 @@ export function useCreatorSearch(searchData: SearchData | null): UseCreatorSearc
 					if (searchData?.jobId && merged.length) {
 						resultsCacheRef.current.set(searchData.jobId, merged);
 					}
-					// Always log intermediate results for debugging
-					console.log('[GEMZ-CREATORS]', {
-						event: 'intermediate',
-						jobId: searchData?.jobId,
-						incoming: incoming.length,
-						previous: prev.length,
-						merged: merged.length,
-						delta: merged.length - prev.length,
-					});
 					return merged;
 				});
 			} catch (e) {
 				structuredConsole.error('Error handling intermediate results', e);
 			}
 		},
-		[platformNormalized, searchData?.jobId, debugPolling]
+		[platformNormalized, searchData?.jobId]
 	);
 
 	return {

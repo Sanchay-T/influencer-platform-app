@@ -1,51 +1,30 @@
 'use client';
 
-import { useAuth } from '@clerk/nextjs';
 import { AlertCircle, CheckCircle2, Loader2, RefreshCcw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { structuredConsole } from '@/lib/logging/console-proxy';
-import {
-	buildEndpoint,
-	clampProgress,
-	computeStage,
-	flattenCreators,
-	MAX_AUTH_RETRIES,
-	MAX_GENERAL_RETRIES,
-} from './search-progress-helpers';
+import { useJobPolling } from '@/lib/query/hooks';
+import { clampProgress, computeStage, flattenCreators } from './search-progress-helpers';
 import IntermediateList from './search-progress-intermediate-list';
 
-const parseJsonSafe = async (response) => {
-	const text = await response.text();
-	try {
-		return JSON.parse(text);
-	} catch (_err) {
-		structuredConsole.error('[SEARCH-PROGRESS] Non-JSON response', {
-			status: response.status,
-			snippet: text?.slice?.(0, 500),
-		});
-		return { error: 'invalid_json', raw: text, status: response.status };
-	}
-};
-
-// [ComponentUsage] Rendered by `search-results.jsx` to drive progress UI and intermediate result hydration
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: legacy progress flow with retries and telemetry.
+/**
+ * @context SearchProgress component drives progress UI during keyword/similar searches.
+ * @why Refactored to use unified useJobPolling hook instead of custom polling loop.
+ * This ensures sidebar and main content stay in sync via React Query cache.
+ */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Progress UI with multiple states
 export default function SearchProgress({
 	jobId,
 	onComplete,
 	onIntermediateResults,
 	platform = 'tiktok',
 	searchData,
-	onMeta,
+	onMeta: _onMeta, // Unused but kept for backward compatibility
 	onProgress,
 }) {
 	const router = useRouter();
-	const { isLoaded: authLoaded, isSignedIn } = useAuth();
-	const authReady = authLoaded && isSignedIn;
-	const debugPolling =
-		typeof window !== 'undefined' && window.localStorage.getItem('gemz_debug_polling') === 'true';
 
 	const platformOverride = searchData?.selectedPlatform || searchData?.platform || platform;
 	const platformNormalized = useMemo(
@@ -61,398 +40,147 @@ export default function SearchProgress({
 			: Array.isArray(searchData?.usernames) && searchData.usernames.length > 0
 				? `@${searchData.usernames[0]}`
 				: searchData?.targetUsername;
-	const campaignId = searchData?.campaignId;
 
-	const [status, setStatus] = useState('processing');
-	const [_progress, setProgress] = useState(0);
+	// Local UI state (not duplicating polling state)
 	const [displayProgress, setDisplayProgress] = useState(0);
 	const [error, setError] = useState(null);
-	const [recovery, setRecovery] = useState(null);
-	const [processedResults, setProcessedResults] = useState(0);
-	const [targetResults, setTargetResults] = useState(0);
-	const [processingSpeed, setProcessingSpeed] = useState(0);
 	const [showIntermediateResults, setShowIntermediateResults] = useState(false);
 	const [intermediateCreators, setIntermediateCreators] = useState([]);
+	const [processingSpeed, setProcessingSpeed] = useState(0);
 
-	const pollTimeoutRef = useRef(null);
 	const startTimeRef = useRef(Date.now());
 	const lastCreatorCountRef = useRef(0);
-	const authRetryRef = useRef(0);
-	const generalRetryRef = useRef(0);
+	const hasCalledCompleteRef = useRef(false);
 
-	const clearPollTimeout = useCallback(() => {
-		if (pollTimeoutRef.current) {
-			clearTimeout(pollTimeoutRef.current);
-			pollTimeoutRef.current = null;
-		}
-	}, []);
-
-	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: legacy fallback requires explicit guards.
-	const loadCampaignSnapshot = useCallback(async () => {
-		if (!(campaignId && jobId)) {
-			return;
-		}
-		try {
-			const res = await fetch(`/api/campaigns/${campaignId}`, { credentials: 'include' });
-			if (!res.ok) {
-				return;
-			}
-			const snapshot = await parseJsonSafe(res);
-			if (snapshot?.error === 'invalid_json') {
-				return;
-			}
-			const jobs = Array.isArray(snapshot?.scrapingJobs) ? snapshot.scrapingJobs : [];
-			const job = jobs.find((entry) => entry?.id === jobId);
-			if (!job) {
-				return;
-			}
-
-			const creators = flattenCreators(job.results);
-			if (creators.length && typeof onIntermediateResults === 'function') {
-				onIntermediateResults({
-					creators,
-					progress: clampProgress(job.progress),
-					status: job.status,
-					isPartial: true,
-				});
-			}
-			if (typeof onProgress === 'function') {
-				onProgress({
-					processedResults: job.processedResults ?? creators.length,
-					targetResults: job.targetResults ?? null,
-					progress: clampProgress(job.progress),
-					status: job.status || 'processing',
-				});
-			}
-		} catch (snapshotError) {
-			structuredConsole.warn('[SEARCH-PROGRESS] Snapshot fallback failed', snapshotError);
-		}
-	}, [campaignId, jobId, onIntermediateResults, onProgress]);
-
-	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: legacy polling flow with retries.
-	const poll = useCallback(async () => {
-		if (!jobId) {
-			return;
-		}
-
-		const endpoint = buildEndpoint(platformNormalized, hasTargetUsername, jobId);
-		if (!endpoint) {
-			return;
-		}
-
-		const schedule = (delayMs) => {
-			clearPollTimeout();
-			pollTimeoutRef.current = setTimeout(() => {
-				poll();
-			}, delayMs);
-		};
-
-		if (!authReady) {
-			schedule(750);
-			return;
-		}
-
-		try {
-			const pollStart = Date.now();
-			const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-			const timeoutId = controller ? setTimeout(() => controller.abort(), 10000) : null;
-			try {
-				const response = await fetch(endpoint, {
-					credentials: 'include',
-					signal: controller?.signal,
-				});
-				if (timeoutId) {
-					clearTimeout(timeoutId);
-				}
-
-				if (response.status === 401) {
-					authRetryRef.current += 1;
-					if (authRetryRef.current >= MAX_AUTH_RETRIES) {
-						setError('We lost your session. Please refresh the page and sign in again.');
-						clearPollTimeout();
-						return;
-					}
-					await loadCampaignSnapshot();
-					schedule(authReady ? 2000 : 750);
-					return;
-				}
-
-				if (response.status === 404) {
-					setError('This run is no longer available.');
-					clearPollTimeout();
-					setStatus('error');
-					return;
-				}
-
-				if (!response.ok) {
-					generalRetryRef.current += 1;
-					setError(`Temporary issue fetching progress (${response.status})`);
-					if (debugPolling) {
-						structuredConsole.warn('[SEARCH-PROGRESS] Poll non-OK', {
-							jobId,
-							endpoint,
-							status: response.status,
-							durationMs: Date.now() - pollStart,
-							generalRetries: generalRetryRef.current,
-						});
-					}
-					if (generalRetryRef.current >= MAX_GENERAL_RETRIES) {
-						clearPollTimeout();
-						return;
-					}
-					schedule(2500);
-					return;
-				}
-
-				const data = await parseJsonSafe(response);
-				if (data?.error === 'invalid_json') {
-					setError('Progress endpoint returned non-JSON');
-					if (debugPolling) {
-						structuredConsole.warn('[SEARCH-PROGRESS] Poll invalid JSON', {
-							jobId,
-							endpoint,
-							status: response.status,
-							durationMs: Date.now() - pollStart,
-						});
-					}
-					clearPollTimeout();
-					return;
-				}
-				authRetryRef.current = 0;
-				generalRetryRef.current = 0;
-				setError(null);
-
-				if (typeof onMeta === 'function' && data?.metadata) {
-					onMeta(data.metadata);
-				}
-
-				const jobStatus = data?.status ?? data?.job?.status ?? 'processing';
-				// V2: progressPercent or progress.percentComplete; Legacy: progress (number)
-				const jobProgress = clampProgress(
-					data?.progressPercent ??
-						data?.progress?.percentComplete ??
-						data?.progress ??
-						data?.job?.progress
-				);
-				// V2: processedResults or progress.creatorsFound; Legacy: processedResults
-				const jobProcessed =
-					data?.processedResults ??
-					data?.progress?.creatorsFound ??
-					data?.job?.processedResults ??
-					0;
-				const jobTarget = data?.targetResults ?? data?.job?.targetResults ?? 0;
-				const jobTotalCreators = data?.totalCreators ?? jobProcessed;
-
-				// V2 terminal states: completed, partial, error, timeout
-				// V2 active states: dispatching, searching, enriching
-				// Legacy states: processing, pending
-				const isTerminalStatus = ['completed', 'partial', 'error', 'timeout'].includes(jobStatus);
-				const isActiveStatus = [
-					'dispatching',
-					'searching',
-					'enriching',
-					'processing',
-					'pending',
-				].includes(jobStatus);
-
-				// Always log poll results for debugging (can be viewed in browser console)
-				console.log('[GEMZ-POLL]', {
-					jobId,
-					status: jobStatus,
-					isTerminal: isTerminalStatus,
-					isActive: isActiveStatus,
-					progress: jobProgress,
-					processed: jobProcessed,
-					totalCreators: jobTotalCreators,
-					target: jobTarget,
-					enriched: data?.progress?.creatorsEnriched ?? 0,
-					keywords: `${data?.progress?.keywordsCompleted ?? 0}/${data?.progress?.keywordsDispatched ?? 0}`,
-					creatorsInResponse: Array.isArray(data?.results)
-						? data.results.reduce((acc, r) => acc + (r?.creators?.length ?? 0), 0)
-						: 0,
-					timestamp: new Date().toISOString(),
-				});
-
-				if (debugPolling) {
-					const creatorsCount = Array.isArray(data?.results)
-						? data.results.reduce((acc, r) => acc + (r?.creators?.length ?? 0), 0)
-						: 0;
-					structuredConsole.log('[SEARCH-PROGRESS] Poll ok', {
-						jobId,
-						endpoint,
-						status: response.status,
-						durationMs: Date.now() - pollStart,
-						jobStatus,
-						jobProgress,
-						jobProcessed,
-						jobTarget,
-						creatorsCount,
-					});
-				}
-
-				setStatus(jobStatus);
-				setProgress(jobProgress);
-				setDisplayProgress((prev) => Math.max(prev, jobProgress));
-				setProcessedResults(jobProcessed);
-				setTargetResults(jobTarget);
-				setRecovery(data?.recovery ?? null);
-
-				const elapsedSeconds = Math.max(1, (Date.now() - startTimeRef.current) / 1000);
-				if (jobProcessed > 0) {
-					setProcessingSpeed(Math.round((jobProcessed / elapsedSeconds) * 60));
-				}
-
-				if (typeof onProgress === 'function') {
-					onProgress({
-						processedResults: jobProcessed,
-						targetResults: jobTarget,
-						progress: jobProgress,
-						status: jobStatus,
-					});
-				}
-
-				const creators = flattenCreators(data?.results ?? data?.job?.results);
-				if (creators.length) {
-					if (creators.length !== lastCreatorCountRef.current) {
-						setShowIntermediateResults(true);
-						setIntermediateCreators(creators);
-						lastCreatorCountRef.current = creators.length;
-					}
-					if (typeof onIntermediateResults === 'function') {
-						onIntermediateResults({
-							creators,
-							progress: jobProgress,
-							status: jobStatus,
-							// FIX: 'partial' is also a completed state in V2
-							isPartial: !isTerminalStatus,
-						});
-					}
-				}
-
-				// FIX: Handle all V2 terminal states (completed, partial, error, timeout)
-				if (isTerminalStatus) {
-					console.log('[GEMZ-POLL] Terminal state detected!', {
-						jobId,
-						status: jobStatus,
-						totalCreators: jobTotalCreators,
-						processed: jobProcessed,
-						creatorsLoaded: creators.length,
-					});
-					clearPollTimeout();
-					if (debugPolling) {
-						structuredConsole.log('[SEARCH-PROGRESS] Poll terminal', {
-							jobId,
-							jobStatus,
-							jobProgress,
-							jobProcessed,
-							jobTarget,
-						});
-					}
-					// 'completed' and 'partial' are both success states
-					if (jobStatus === 'completed' || jobStatus === 'partial') {
-						setDisplayProgress(100);
-						setProgress(100);
-					}
-					setShowIntermediateResults(false);
-					if (typeof onComplete === 'function') {
-						onComplete({
-							status: jobStatus,
-							creators,
-							partialCompletion: Boolean(data?.partialCompletion),
-							finalCount: jobProcessed || creators.length,
-							totalCreators: jobTotalCreators, // Pass total for auto-fetch
-							errorRecovered: Boolean(data?.errorRecovered),
-							error: data?.error || null,
-						});
-					}
-					return;
-				}
-
-				const nextInterval = jobProgress < 70 ? 1500 : jobProgress < 95 ? 2000 : 3000;
-				schedule(nextInterval);
-			} catch (fetchError) {
-				if (timeoutId) {
-					clearTimeout(timeoutId);
-				}
-				if (fetchError?.name === 'AbortError') {
-					if (debugPolling) {
-						structuredConsole.warn('[SEARCH-PROGRESS] Poll aborted', {
-							jobId,
-							endpoint,
-						});
-					}
-					schedule(2000);
-					return;
-				}
-				generalRetryRef.current += 1;
-				setError('Network error while polling progress');
-				if (debugPolling) {
-					structuredConsole.warn('[SEARCH-PROGRESS] Poll network error', {
-						jobId,
-						endpoint,
-						generalRetries: generalRetryRef.current,
-					});
-				}
-				if (generalRetryRef.current >= MAX_GENERAL_RETRIES) {
-					clearPollTimeout();
-					return;
-				}
-				schedule(2500);
-			}
-		} catch (controllerError) {
-			structuredConsole.error('[SEARCH-PROGRESS] Unexpected polling error', controllerError);
-			schedule(3000);
-		}
-	}, [
-		authReady,
-		clearPollTimeout,
-		hasTargetUsername,
-		jobId,
-		loadCampaignSnapshot,
-		onComplete,
-		onIntermediateResults,
-		onMeta,
-		onProgress,
-		platformNormalized,
-		debugPolling,
-	]);
-
+	// Reset refs when jobId changes
+	// biome-ignore lint/correctness/useExhaustiveDependencies: Intentionally reset on jobId change
 	useEffect(() => {
 		startTimeRef.current = Date.now();
 		lastCreatorCountRef.current = 0;
-		authRetryRef.current = 0;
-		generalRetryRef.current = 0;
-
-		setStatus('processing');
-		setProgress(0);
+		hasCalledCompleteRef.current = false;
 		setDisplayProgress(0);
-		setProcessedResults(0);
-		setTargetResults(0);
-		setProcessingSpeed(0);
-		setRecovery(null);
 		setError(null);
 		setShowIntermediateResults(false);
 		setIntermediateCreators([]);
+		setProcessingSpeed(0);
+	}, [jobId]);
 
-		if (jobId) {
-			if (debugPolling) {
-				structuredConsole.log('[SEARCH-PROGRESS] Poll start', {
-					jobId,
-					platformNormalized,
-					hasTargetUsername,
+	// Handle progress updates from polling
+	const handleProgress = useCallback(
+		(progressData) => {
+			const { progress, totalCreators } = progressData;
+
+			// Update display progress (never decrease)
+			setDisplayProgress((prev) => Math.max(prev, clampProgress(progress)));
+
+			// Calculate processing speed
+			const elapsedSeconds = Math.max(1, (Date.now() - startTimeRef.current) / 1000);
+			if (totalCreators > 0) {
+				setProcessingSpeed(Math.round((totalCreators / elapsedSeconds) * 60));
+			}
+
+			// Call parent's onProgress callback
+			if (typeof onProgress === 'function') {
+				onProgress({
+					processedResults: totalCreators,
+					targetResults: progressData.keywordsDispatched > 0 ? null : totalCreators,
+					progress: clampProgress(progress),
+					status: progressData.status,
 				});
 			}
-			poll();
+		},
+		[onProgress]
+	);
+
+	// Handle job completion
+	const handleComplete = useCallback(
+		(completionData) => {
+			if (hasCalledCompleteRef.current) {
+				return;
+			}
+			hasCalledCompleteRef.current = true;
+
+			// Set to 100% on success
+			if (completionData.isSuccess) {
+				setDisplayProgress(100);
+			}
+
+			setShowIntermediateResults(false);
+
+			// Call parent's onComplete callback
+			if (typeof onComplete === 'function') {
+				onComplete({
+					status: completionData.status,
+					creators: intermediateCreators,
+					partialCompletion: completionData.status === 'partial',
+					finalCount: completionData.totalCreators,
+					totalCreators: completionData.totalCreators,
+					errorRecovered: false,
+					error: completionData.error || null,
+				});
+			}
+		},
+		[jobId, onComplete, intermediateCreators]
+	);
+
+	// Use unified polling hook
+	const {
+		status,
+		progress,
+		totalCreators,
+		isTerminal,
+		isActive,
+		isSuccess,
+		isError,
+		data: pollData,
+		refetch,
+	} = useJobPolling(jobId, {
+		onProgress: handleProgress,
+		onComplete: handleComplete,
+	});
+
+	// Update intermediate creators when poll data changes
+	useEffect(() => {
+		if (!pollData?.results) {
+			return;
 		}
 
-		return () => clearPollTimeout();
-	}, [jobId, poll, clearPollTimeout, debugPolling, hasTargetUsername, platformNormalized]);
+		const creators = flattenCreators(pollData.results);
+		if (creators.length > 0 && creators.length !== lastCreatorCountRef.current) {
+			setShowIntermediateResults(true);
+			setIntermediateCreators(creators);
+			lastCreatorCountRef.current = creators.length;
+
+			if (typeof onIntermediateResults === 'function') {
+				onIntermediateResults({
+					creators,
+					progress: clampProgress(progress),
+					status: status || 'processing',
+					isPartial: !isTerminal,
+				});
+			}
+		}
+	}, [pollData?.results, progress, status, isTerminal, onIntermediateResults]);
+
+	// Update display progress from hook (never decrease)
+	useEffect(() => {
+		if (progress > 0) {
+			setDisplayProgress((prev) => Math.max(prev, clampProgress(progress)));
+		}
+	}, [progress]);
+
+	// Handle errors
+	useEffect(() => {
+		if (isError) {
+			setError('Network error while polling progress');
+		} else {
+			setError(null);
+		}
+	}, [isError]);
 
 	const handleRetry = () => {
 		setError(null);
-		generalRetryRef.current = 0;
-		authRetryRef.current = 0;
-		poll();
+		refetch();
 	};
 
 	const handleBackToDashboard = () => {
@@ -479,10 +207,10 @@ export default function SearchProgress({
 	const progressStage = useMemo(
 		() =>
 			computeStage({
-				status,
+				status: status || 'processing',
 				displayProgress,
-				processedResults,
-				targetResults,
+				processedResults: totalCreators,
+				targetResults: pollData?.targetResults ?? 0,
 				platformNormalized,
 				hasTargetUsername,
 				primaryKeyword,
@@ -492,29 +220,36 @@ export default function SearchProgress({
 			hasTargetUsername,
 			platformNormalized,
 			primaryKeyword,
-			processedResults,
+			totalCreators,
 			status,
-			targetResults,
+			pollData?.targetResults,
 		]
 	);
 
+	const displayStatus = status || 'processing';
 	const statusTitle =
-		status === 'completed'
+		displayStatus === 'completed' || displayStatus === 'partial'
 			? 'Campaign completed'
-			: status === 'timeout'
+			: displayStatus === 'timeout'
 				? 'Campaign timed out'
-				: error
-					? 'Connection issue'
-					: 'Processing search';
+				: displayStatus === 'error'
+					? 'Campaign failed'
+					: error
+						? 'Connection issue'
+						: 'Processing search';
+
+	const targetResults = pollData?.targetResults ?? 0;
 
 	return (
 		<div className="w-full max-w-md mx-auto">
 			<div className="space-y-8 py-8">
 				<div className="flex flex-col items-center gap-2 text-center">
-					{status === 'completed' ? (
+					{isSuccess ? (
 						<CheckCircle2 className="h-6 w-6 text-primary" />
-					) : status === 'timeout' ? (
+					) : displayStatus === 'timeout' ? (
 						<AlertCircle className="h-6 w-6 text-amber-500" />
+					) : displayStatus === 'error' ? (
+						<AlertCircle className="h-6 w-6 text-red-500" />
 					) : error ? (
 						<RefreshCcw className="h-6 w-6 text-zinc-200" />
 					) : (
@@ -525,8 +260,8 @@ export default function SearchProgress({
 
 					{error ? (
 						<p className="text-sm text-zinc-400">{error}</p>
-					) : recovery ? (
-						<p className="text-sm text-zinc-400">{recovery}</p>
+					) : pollData?.error ? (
+						<p className="text-sm text-zinc-400">{pollData.error}</p>
 					) : estimatedTime ? (
 						<p className="text-sm text-zinc-400">{estimatedTime}</p>
 					) : null}
@@ -536,12 +271,13 @@ export default function SearchProgress({
 					<div className="bg-zinc-800/60 border border-zinc-700/50 rounded-lg p-4">
 						<div className="flex justify-between items-center mb-3">
 							<div className="flex items-center gap-2">
-								<Loader2 className="h-4 w-4 animate-spin text-zinc-300" />
+								{isActive && <Loader2 className="h-4 w-4 animate-spin text-zinc-300" />}
+								{isTerminal && <CheckCircle2 className="h-4 w-4 text-primary" />}
 								<span className="text-sm font-medium text-zinc-100">{progressStage}</span>
 							</div>
-							{processedResults > 0 && (
+							{totalCreators > 0 && (
 								<span className="text-sm font-medium text-zinc-200 bg-zinc-800/60 border border-zinc-700/50 px-2 py-1 rounded">
-									{targetResults ? `${processedResults}/${targetResults}` : `${processedResults}`}{' '}
+									{targetResults ? `${totalCreators}/${targetResults}` : `${totalCreators}`}{' '}
 									creators
 								</span>
 							)}
@@ -557,7 +293,7 @@ export default function SearchProgress({
 				</div>
 
 				{showIntermediateResults && intermediateCreators.length > 0 && (
-					<IntermediateList creators={intermediateCreators} status={status} />
+					<IntermediateList creators={intermediateCreators} status={displayStatus} />
 				)}
 
 				{error ? (
