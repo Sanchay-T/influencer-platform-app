@@ -85,6 +85,13 @@ export function useJobPolling(
 	const prevStatusRef = useRef<string | undefined>(undefined);
 	const hasCalledCompleteRef = useRef(false);
 
+	// Store callbacks in refs to avoid dependency issues
+	// @why Parent components may not memoize callbacks, causing infinite loops
+	const onProgressRef = useRef(onProgress);
+	const onCompleteRef = useRef(onComplete);
+	onProgressRef.current = onProgress;
+	onCompleteRef.current = onComplete;
+
 	// Reset completion tracking when jobId changes
 	// biome-ignore lint/correctness/useExhaustiveDependencies: Intentionally reset on jobId change
 	useEffect(() => {
@@ -92,9 +99,9 @@ export function useJobPolling(
 		prevStatusRef.current = undefined;
 	}, [jobId]);
 
-	// Handle callbacks
+	// Handle callbacks - uses refs to avoid infinite loops from unmemoized callbacks
 	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Callback coordination requires multiple branches
-	// biome-ignore lint/correctness/useExhaustiveDependencies: Using specific properties for performance
+	// biome-ignore lint/correctness/useExhaustiveDependencies: Using specific properties to avoid unnecessary re-runs
 	useEffect(() => {
 		if (!jobStatus.data) {
 			return;
@@ -113,9 +120,9 @@ export function useJobPolling(
 			keywordsDispatched: jobStatus.data.progress?.keywordsDispatched ?? 0,
 		};
 
-		// Call onProgress for active jobs
-		if (jobStatus.isActive && onProgress) {
-			onProgress(progressData);
+		// Call onProgress for active jobs (using ref to avoid dependency issues)
+		if (jobStatus.isActive && onProgressRef.current) {
+			onProgressRef.current(progressData);
 		}
 
 		// Detect transition to terminal state
@@ -125,9 +132,9 @@ export function useJobPolling(
 		if (wasActive && nowTerminal && !hasCalledCompleteRef.current) {
 			hasCalledCompleteRef.current = true;
 
-			// Call completion callback
-			if (onComplete) {
-				onComplete({
+			// Call completion callback (using ref to avoid dependency issues)
+			if (onCompleteRef.current) {
+				onCompleteRef.current({
 					status: status ?? 'unknown',
 					totalCreators,
 					isSuccess: isSuccessStatus(status),
@@ -145,15 +152,7 @@ export function useJobPolling(
 
 		// Update previous status for next render
 		prevStatusRef.current = status;
-	}, [
-		jobStatus.data,
-		jobStatus.isActive,
-		jobStatus.status,
-		onProgress,
-		onComplete,
-		jobId,
-		queryClient,
-	]);
+	}, [jobStatus.data, jobStatus.isActive, jobStatus.status, jobId, queryClient]);
 
 	return {
 		status: jobStatus.status,
