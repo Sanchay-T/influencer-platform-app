@@ -92,30 +92,45 @@ export async function GET(req: Request) {
 	}
 
 	// ========================================================================
-	// Step 3.5: Check for Stale Jobs (skip if already completed)
+	// Step 3.5: Check for Completion (immediate check + stale fallback)
 	// ========================================================================
 
 	if (job.status === 'processing' || job.enrichmentStatus === 'in_progress') {
 		try {
 			const tracker = loadJobTracker(jobId);
-			const staleResult = await tracker.checkStaleAndComplete();
 
-			if (staleResult.completed) {
-				logger.info(
-					'[v2-status] Auto-completed stale job',
-					{ jobId, reason: staleResult.reason },
-					LogCategory.JOB
-				);
+			// First: Try immediate completion if 100% enriched
+			// @why Enrichment workers should call checkAndComplete, but if they miss it
+			// (due to counter mismatch or race condition), this ensures we don't wait 2 min
+			const completedNow = await tracker.checkAndComplete();
+			if (completedNow) {
+				logger.info('[v2-status] Completed job (100% enriched)', { jobId }, LogCategory.JOB);
 				const updatedJob = await db.query.scrapingJobs.findFirst({
 					where: eq(scrapingJobs.id, jobId),
 				});
 				if (updatedJob) {
 					Object.assign(job, updatedJob);
 				}
+			} else {
+				// Fallback: Check for stale jobs (2 min timeout, 80%+ enriched)
+				const staleResult = await tracker.checkStaleAndComplete();
+				if (staleResult.completed) {
+					logger.info(
+						'[v2-status] Auto-completed stale job',
+						{ jobId, reason: staleResult.reason },
+						LogCategory.JOB
+					);
+					const updatedJob = await db.query.scrapingJobs.findFirst({
+						where: eq(scrapingJobs.id, jobId),
+					});
+					if (updatedJob) {
+						Object.assign(job, updatedJob);
+					}
+				}
 			}
 		} catch (err) {
 			logger.warn(
-				'[v2-status] Stale check failed, continuing',
+				'[v2-status] Completion check failed, continuing',
 				{ jobId, error: String(err) },
 				LogCategory.JOB
 			);
