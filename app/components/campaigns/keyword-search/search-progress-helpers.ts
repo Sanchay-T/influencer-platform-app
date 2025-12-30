@@ -112,6 +112,7 @@ export function computeStage({
 	platformNormalized,
 	hasTargetUsername,
 	primaryKeyword,
+	creatorsEnriched,
 }: {
 	status: string;
 	displayProgress: number;
@@ -120,11 +121,13 @@ export function computeStage({
 	platformNormalized: string;
 	hasTargetUsername: boolean;
 	primaryKeyword?: string | null;
+	creatorsEnriched?: number;
 }) {
 	if (status === 'pending') return 'Preparing search';
+	if (status === 'dispatching') return 'Starting search workers';
 	if (status === 'timeout') return 'Search timed out';
 	if (status === 'error') return 'Encountered temporary errors';
-	if (status === 'completed') {
+	if (status === 'completed' || status === 'partial') {
 		if (targetResults) {
 			const matched = processedResults === targetResults;
 			return matched
@@ -132,6 +135,16 @@ export function computeStage({
 				: `Finalised ${processedResults} of ${targetResults} requested`;
 		}
 		return `Delivered ${processedResults} creators`;
+	}
+
+	// Enrichment phase - show specific progress
+	// @why Users see all creators found but spinner keeps going - this explains what's happening
+	if (status === 'enriching' && processedResults > 0) {
+		const enriched = creatorsEnriched ?? 0;
+		if (enriched > 0) {
+			return `Found ${processedResults} creators • Enriching data (${enriched}/${processedResults})`;
+		}
+		return `Found ${processedResults} creators • Starting enrichment`;
 	}
 
 	const percent = Math.round(displayProgress);

@@ -128,6 +128,7 @@ export default function SearchProgress({
 		status,
 		progress,
 		totalCreators,
+		creatorsEnriched,
 		isTerminal,
 		isActive,
 		isSuccess,
@@ -214,6 +215,7 @@ export default function SearchProgress({
 				platformNormalized,
 				hasTargetUsername,
 				primaryKeyword,
+				creatorsEnriched,
 			}),
 		[
 			displayProgress,
@@ -223,6 +225,7 @@ export default function SearchProgress({
 			totalCreators,
 			status,
 			pollData?.targetResults,
+			creatorsEnriched,
 		]
 	);
 
