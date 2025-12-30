@@ -10,11 +10,20 @@
  */
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRef } from 'react';
 import {
 	isActiveStatus,
 	isDoneStatus,
 	isSuccessStatus as isSuccessStatusHelper,
 } from '@/lib/types/statuses';
+
+// Debug logging helper - enable via: localStorage.setItem('debug_job_status', 'true')
+const debugLog = (tag: string, msg: string, data?: Record<string, unknown>) => {
+	if (typeof window !== 'undefined' && localStorage.getItem('debug_job_status') === 'true') {
+		const timestamp = new Date().toISOString().slice(11, 23);
+		console.log(`%c[${tag}][${timestamp}] ${msg}`, 'color: #00bcd4', data ?? '');
+	}
+};
 
 // V2 Status values returned by the API
 export type JobStatus =
@@ -59,15 +68,29 @@ export const jobStatusKeys = {
 };
 
 async function fetchJobStatus(jobId: string): Promise<JobStatusData> {
+	debugLog('FETCH', `Fetching status for job ${jobId.slice(0, 8)}...`);
+	const startTime = performance.now();
+
 	const res = await fetch(`/api/v2/status?jobId=${jobId}&limit=0`, {
 		credentials: 'include',
 	});
 
 	if (!res.ok) {
+		debugLog('FETCH', `FAILED: ${res.status}`, { jobId });
 		throw new Error(`Failed to fetch job status: ${res.status}`);
 	}
 
-	return res.json();
+	const data = await res.json();
+	const elapsed = (performance.now() - startTime).toFixed(0);
+
+	debugLog('FETCH', `Response in ${elapsed}ms`, {
+		jobId: jobId.slice(0, 8),
+		status: data.status,
+		totalCreators: data.totalCreators,
+		progress: data.progress?.percentComplete,
+	});
+
+	return data;
 }
 
 export interface UseJobStatusResult {
@@ -87,6 +110,10 @@ export interface UseJobStatusResult {
 }
 
 export function useJobStatus(jobId: string | undefined): UseJobStatusResult {
+	const renderCountRef = useRef(0);
+	const prevStatusRef = useRef<string | undefined>(undefined);
+	renderCountRef.current += 1;
+
 	const query = useQuery({
 		queryKey: jobStatusKeys.detail(jobId ?? ''),
 		queryFn: async () => {
@@ -99,8 +126,13 @@ export function useJobStatus(jobId: string | undefined): UseJobStatusResult {
 		refetchInterval: (query) => {
 			// Poll every 2s for active jobs, stop when complete
 			const status = query.state.data?.status;
-			// Use V2 status values for active detection
-			return isActiveStatus(status) ? 2000 : false;
+			const shouldPoll = isActiveStatus(status);
+			debugLog('POLL', shouldPoll ? 'Polling enabled (2s)' : 'Polling stopped', {
+				jobId: jobId?.slice(0, 8),
+				status,
+				shouldPoll,
+			});
+			return shouldPoll ? 2000 : false;
 		},
 		staleTime: 5000, // Consider data fresh for 5 seconds
 	});
@@ -113,6 +145,28 @@ export function useJobStatus(jobId: string | undefined): UseJobStatusResult {
 	const totalCreators = query.data?.totalCreators ?? 0;
 	// Cap progress at 100%
 	const progress = Math.min(100, query.data?.progress?.percentComplete ?? 0);
+
+	// Log state changes
+	if (status !== prevStatusRef.current) {
+		debugLog('STATE', `Status changed: ${prevStatusRef.current} → ${status}`, {
+			jobId: jobId?.slice(0, 8),
+			totalCreators,
+			progress,
+			isTerminal,
+			isActive,
+			renderCount: renderCountRef.current,
+		});
+		prevStatusRef.current = status;
+	}
+
+	// Log every 10th render to detect render storms
+	if (renderCountRef.current % 10 === 0) {
+		debugLog('RENDER', `Render #${renderCountRef.current}`, {
+			jobId: jobId?.slice(0, 8),
+			status,
+			totalCreators,
+		});
+	}
 
 	return {
 		data: query.data,

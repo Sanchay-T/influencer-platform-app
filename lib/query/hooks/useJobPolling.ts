@@ -17,6 +17,14 @@ import { useEffect, useRef } from 'react';
 import { isDoneStatus, isSuccessStatus } from '@/lib/types/statuses';
 import { type JobStatusData, jobStatusKeys, useJobStatus } from './useJobStatus';
 
+// Debug logging helper - enable via: localStorage.setItem('debug_job_status', 'true')
+const debugLog = (tag: string, msg: string, data?: Record<string, unknown>) => {
+	if (typeof window !== 'undefined' && localStorage.getItem('debug_job_status') === 'true') {
+		const timestamp = new Date().toISOString().slice(11, 23);
+		console.log(`%c[${tag}][${timestamp}] ${msg}`, 'color: #ff9800', data ?? '');
+	}
+};
+
 export interface ProgressData {
 	status: string;
 	progress: number;
@@ -104,11 +112,21 @@ export function useJobPolling(
 	// biome-ignore lint/correctness/useExhaustiveDependencies: Using specific properties to avoid unnecessary re-runs
 	useEffect(() => {
 		if (!jobStatus.data) {
+			debugLog('POLLING', 'No data yet, skipping callback', { jobId: jobId?.slice(0, 8) });
 			return;
 		}
 
 		const { status, totalCreators, progress } = jobStatus;
 		const prevStatus = prevStatusRef.current;
+
+		debugLog('POLLING', 'useEffect triggered', {
+			jobId: jobId?.slice(0, 8),
+			status,
+			prevStatus,
+			totalCreators,
+			progress,
+			isActive: jobStatus.isActive,
+		});
 
 		// Build progress data
 		const progressData: ProgressData = {
@@ -122,6 +140,7 @@ export function useJobPolling(
 
 		// Call onProgress for active jobs (using ref to avoid dependency issues)
 		if (jobStatus.isActive && onProgressRef.current) {
+			debugLog('CALLBACK', 'Calling onProgress', { status, totalCreators, progress });
 			onProgressRef.current(progressData);
 		}
 
@@ -129,8 +148,19 @@ export function useJobPolling(
 		const wasActive = prevStatus && !isDoneStatus(prevStatus);
 		const nowTerminal = isDoneStatus(status);
 
+		debugLog('TRANSITION', 'Checking terminal transition', {
+			wasActive,
+			nowTerminal,
+			hasCalledComplete: hasCalledCompleteRef.current,
+		});
+
 		if (wasActive && nowTerminal && !hasCalledCompleteRef.current) {
 			hasCalledCompleteRef.current = true;
+			debugLog('COMPLETE', 'Job completed! Calling onComplete', {
+				status,
+				totalCreators,
+				isSuccess: isSuccessStatus(status),
+			});
 
 			// Call completion callback (using ref to avoid dependency issues)
 			if (onCompleteRef.current) {
@@ -144,6 +174,7 @@ export function useJobPolling(
 
 			// Invalidate related caches to ensure fresh data
 			if (jobId) {
+				debugLog('CACHE', 'Invalidating caches', { jobId: jobId.slice(0, 8) });
 				queryClient.invalidateQueries({ queryKey: jobStatusKeys.detail(jobId) });
 				queryClient.invalidateQueries({ queryKey: ['job-creators', jobId] });
 				queryClient.invalidateQueries({ queryKey: ['campaign'] });
