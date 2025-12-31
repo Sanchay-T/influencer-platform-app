@@ -434,11 +434,14 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 	}, [logUXEvent, selectedJob]);
 
 	// Fetch results when job selected
+	// @why For active jobs, always fetch even if cache says "loaded" - cache may have stale/partial data
 	useEffect(() => {
 		if (!selectedJob) {
 			return;
 		}
-		if (selectedJob.resultsLoaded) {
+		// Active jobs should always fetch fresh data (cache may have 1 creator from initial load)
+		const shouldFetch = !selectedJob.resultsLoaded || isActiveJob(selectedJob);
+		if (!shouldFetch) {
 			return;
 		}
 		fetchJobSnapshot(selectedJob);
