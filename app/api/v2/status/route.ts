@@ -151,6 +151,15 @@ export async function GET(req: Request) {
 
 	const totalCreators = countResult[0]?.count ?? 0;
 
+	// Get actual enriched count from DB (not counter column)
+	// @why Counter columns have race conditions from parallel workers - DB state is source of truth
+	const enrichedResult = await db
+		.select({ count: sql<number>`count(*)::int` })
+		.from(jobCreators)
+		.where(sql`${jobCreators.jobId} = ${jobId} AND ${jobCreators.enriched} = true`);
+
+	const actualEnrichedCount = enrichedResult[0]?.count ?? 0;
+
 	// Get paginated creators (DB-level OFFSET/LIMIT)
 	const paginatedRows = await db
 		.select({ creatorData: jobCreators.creatorData })
@@ -205,9 +214,10 @@ export async function GET(req: Request) {
 
 	const keywordsDispatched = job.keywordsDispatched ?? 0;
 	const keywordsCompleted = job.keywordsCompleted ?? 0;
-	const creatorsEnriched = job.creatorsEnriched ?? 0;
+	// Use actual DB count, not stale counter (race conditions from parallel workers)
+	const creatorsEnriched = actualEnrichedCount;
 
-	// Use actual DB count for progress calculation, not stale counter
+	// Progress = 50% search + 50% enrichment
 	let percentComplete = 0;
 	if (keywordsDispatched > 0) {
 		percentComplete += (keywordsCompleted / keywordsDispatched) * 50;

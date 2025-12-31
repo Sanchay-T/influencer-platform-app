@@ -12,8 +12,8 @@
 **Status:** Implementation Complete — Deployed to Vercel (with enrichment UX fix)
 **Branch:** `fix/search-progress-ux`
 **Started:** Dec 30, 2025
-**Updated:** Dec 31, 2025 — 08:10 AM
-**Latest Commits:** `9cd30aaf8` (enriched column), `da2a3ab69` (DB-driven completion), `9d6c83e42` (2-min delay fix), `2e3bd8e55` (enrichment UX)
+**Updated:** Dec 31, 2025 — 08:48 PM
+**Latest Commits:** `36b9a441f` (Supabase Realtime), `9cd30aaf8` (enriched column), `da2a3ab69` (DB-driven completion), `9d6c83e42` (2-min delay fix)
 
 ### Goal
 Fix the keyword search progress UI that breaks in production. Backend returns 1000 creators correctly, but frontend gets stuck with partial results (200-800), spinners that never stop, and requires full browser refresh to see correct data.
@@ -118,7 +118,14 @@ useJobPolling (React Query) ──polls──► React Query Cache
     - Added composite index (jobId, enriched) for fast COUNT queries
     - Updated enrich-worker to set column when enriching
     - Updated getActualEnrichmentState() to use column instead of JSON extraction
-    - **REQUIRES MIGRATION**: Run `npm run db:push` to apply schema
+
+14. ✅ **Supabase Realtime for instant updates** (Commit `36b9a441f`)
+    - Enabled Realtime on scraping_jobs table (SQL)
+    - Set REPLICA IDENTITY FULL for full row data
+    - Created lib/supabase/client.ts for browser-side client
+    - Created useJobRealtime hook for WebSocket subscriptions
+    - Updated useJobPolling to use Realtime with polling fallback
+    - UI now updates instantly (no 2s polling delay)
 
 ### Checklist
 - [x] **Phase 1: Add Debug Logging** (Previous commit)
@@ -154,45 +161,41 @@ useJobPolling (React Query) ──polls──► React Query Cache
 
 ### Next Action
 ```
-⚠️ MIGRATION REQUIRED BEFORE TESTING
-
-Run this command to apply schema changes:
-  npm run db:push
-
-This adds the `enriched` column and index to job_creators table.
-
----
-
-PHASE 8: Final Test in Production (USER ACTION REQUIRED)
+PHASE 9: Final Test in Production (USER ACTION REQUIRED)
 
 ✅ All code committed and pushed
+✅ Database migrations applied (enriched column + Realtime enabled)
 ✅ Latest commits:
-   - 9cd30aaf8: Indexed enriched column (faster queries)
-   - da2a3ab69: DB-driven completion (counter race conditions eliminated)
+   - 36b9a441f: Supabase Realtime (instant updates)
+   - 9cd30aaf8: Indexed enriched column
+   - da2a3ab69: DB-driven completion
    - 9d6c83e42: Immediate completion when 100% enriched
-   - 2e3bd8e55: Enrichment progress UI
 
-FIXES DEPLOYED:
-1. Job completion uses indexed boolean column (not slow JSON extraction)
-2. UI shows "Found X creators • Enriching data (Y/X)" during enrichment
-3. Jobs complete IMMEDIATELY when 100% enriched (no more 2-min wait)
-4. Stale timeout reduced from 2min to 30sec
+ARCHITECTURE NOW:
+1. Supabase Realtime (WebSocket) - instant updates
+2. Polling fallback (2s) - when Realtime disconnected
+3. DB-driven completion - no counter race conditions
+4. Indexed enriched column - fast completion queries
 
-WAITING FOR USER:
-1. Run `npm run db:push` to apply migration
-2. Go to usegems.io
-3. Create a keyword search with 1000 creators
-4. Verify job completes quickly after enrichment finishes
+TO TEST:
+1. Go to usegems.io
+2. Open browser DevTools → Console
+3. Run: localStorage.setItem('debug_job_status', 'true')
+4. Start a 1000-creator keyword search
+5. Watch console for [REALTIME] logs (shows WebSocket updates)
+6. Verify job completes quickly and UI updates instantly
 ```
 
 ### Key Files Modified
 | Purpose | File |
 |---------|------|
+| **Supabase client** | `lib/supabase/client.ts` (NEW) |
+| **Realtime hook** | `lib/query/hooks/useJobRealtime.ts` (NEW) |
+| **Hybrid polling** | `lib/query/hooks/useJobPolling.ts` |
 | **Schema (enriched column)** | `lib/db/schema.ts` |
 | **Enrichment worker** | `lib/search-engine/v2/workers/enrich-worker.ts` |
 | **DB-driven completion** | `lib/search-engine/v2/core/job-tracker.ts` |
 | **Stale timeout config** | `lib/search-engine/v2/core/job-tracker-types.ts` |
-| Unified polling | `lib/query/hooks/useJobPolling.ts` (NEW) |
 | Status hook | `lib/query/hooks/useJobStatus.ts` |
 | Hook exports | `lib/query/hooks/index.ts` |
 | Progress UI | `app/components/campaigns/keyword-search/search-progress.jsx` |
@@ -240,4 +243,4 @@ WAITING FOR USER:
 
 ---
 
-*Last updated: Dec 31, 2025 — 07:09 AM*
+*Last updated: Dec 31, 2025 — 08:48 PM*
