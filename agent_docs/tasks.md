@@ -12,8 +12,8 @@
 **Status:** Implementation Complete — Deployed to Vercel (with enrichment UX fix)
 **Branch:** `fix/search-progress-ux`
 **Started:** Dec 30, 2025
-**Updated:** Dec 31, 2025 — 08:48 PM
-**Latest Commits:** `36b9a441f` (Supabase Realtime), `9cd30aaf8` (enriched column), `da2a3ab69` (DB-driven completion), `9d6c83e42` (2-min delay fix)
+**Updated:** Dec 31, 2025 — 09:00 PM
+**Latest Commits:** `d4189a3bf` (DB-driven status API), `36b9a441f` (Supabase Realtime), `9cd30aaf8` (enriched column), `da2a3ab69` (DB-driven completion)
 
 ### Goal
 Fix the keyword search progress UI that breaks in production. Backend returns 1000 creators correctly, but frontend gets stuck with partial results (200-800), spinners that never stop, and requires full browser refresh to see correct data.
@@ -127,6 +127,11 @@ useJobPolling (React Query) ──polls──► React Query Cache
     - Updated useJobPolling to use Realtime with polling fallback
     - UI now updates instantly (no 2s polling delay)
 
+15. ✅ **DB-driven enrichment count in status API** (Commit `d4189a3bf`)
+    - Status API now queries actual COUNT(*) WHERE enriched=true
+    - Replaces stale counter columns that lag behind due to race conditions
+    - Counter discrepancy was significant: 347 vs 407 enriched (60 behind)
+
 ### Checklist
 - [x] **Phase 1: Add Debug Logging** (Previous commit)
 - [x] **Phase 2: Identify Root Cause** 
@@ -166,29 +171,28 @@ PHASE 9: Final Test in Production (USER ACTION REQUIRED)
 ✅ All code committed and pushed
 ✅ Database migrations applied (enriched column + Realtime enabled)
 ✅ Latest commits:
+   - d4189a3bf: DB-driven enrichment count in status API (JUST PUSHED)
    - 36b9a441f: Supabase Realtime (instant updates)
    - 9cd30aaf8: Indexed enriched column
    - da2a3ab69: DB-driven completion
-   - 9d6c83e42: Immediate completion when 100% enriched
 
 ARCHITECTURE NOW:
 1. Supabase Realtime (WebSocket) - instant updates
 2. Polling fallback (2s) - when Realtime disconnected
-3. DB-driven completion - no counter race conditions
+3. DB-driven enrichment count - no counter race conditions
 4. Indexed enriched column - fast completion queries
 
-TO TEST:
-1. Go to usegems.io
-2. Open browser DevTools → Console
-3. Run: localStorage.setItem('debug_job_status', 'true')
-4. Start a 1000-creator keyword search
-5. Watch console for [REALTIME] logs (shows WebSocket updates)
-6. Verify job completes quickly and UI updates instantly
+AFTER VERCEL DEPLOYS (d4189a3bf):
+1. Refresh usegems.io
+2. Watch the two active jobs - enrichment progress should be accurate now
+3. Progress should match actual DB state, not stale counters
+4. Jobs should complete when enrichment reaches 100%
 ```
 
 ### Key Files Modified
 | Purpose | File |
 |---------|------|
+| **Status API (DB-driven)** | `app/api/v2/status/route.ts` |
 | **Supabase client** | `lib/supabase/client.ts` (NEW) |
 | **Realtime hook** | `lib/query/hooks/useJobRealtime.ts` (NEW) |
 | **Hybrid polling** | `lib/query/hooks/useJobPolling.ts` |
