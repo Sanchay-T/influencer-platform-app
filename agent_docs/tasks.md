@@ -9,21 +9,32 @@
 
 **ID:** TASK-008
 **Title:** Fix Search Progress UX — Keyword Search Reliability
-**Status:** Implementation Complete — Ready for Testing
+**Status:** Implementation Complete — Deployed to Vercel (with enrichment UX fix)
 **Branch:** `fix/search-progress-ux`
 **Started:** Dec 30, 2025
-**Updated:** Dec 30, 2025 — 10:45 PM
+**Updated:** Dec 31, 2025 — 07:09 AM
+**Latest Commits:** `9d6c83e42` (2-min delay fix), `2e3bd8e55` (enrichment UX), `0e8eb3793`, `a676eb689`, `1e21cfe2b`
 
 ### Goal
 Fix the keyword search progress UI that breaks in production. Backend returns 1000 creators correctly, but frontend gets stuck with partial results (200-800), spinners that never stop, and requires full browser refresh to see correct data.
 
-### Root Cause Identified
-**Two independent polling loops + duplicate state = sync failure**
+### Root Causes Identified
+1. **Two independent polling loops + duplicate state = sync failure** (FIXED)
+   - SearchProgress had its own polling loop
+   - useCampaignJobs had its own polling loop  
+   - useCreatorSearch had duplicate state
+   - These never synced with each other
 
-- SearchProgress had its own polling loop
-- useCampaignJobs had its own polling loop  
-- useCreatorSearch had duplicate state (stillProcessing, serverTotalCreators, completedStatus)
-- These never synced with each other, causing sidebar and main content to show different data
+2. **Enrichment phase UX "slop"** (FIXED in 2e3bd8e55)
+   - Status stays "enriching" even after all creators found
+   - Spinner keeps running with no explanation
+   - User doesn't know what's happening
+
+3. **2-minute completion delay** (FIXED in 9d6c83e42)
+   - Status API only called checkStaleAndComplete() which requires 2-min staleness
+   - Enrichment workers' checkAndComplete() missed due to counter race conditions
+   - Jobs waited 2 minutes even when 100% enriched
+   - Fix: Status API now calls checkAndComplete() first for immediate completion
 
 ### Solution Implemented: Unified React Query Architecture
 
@@ -73,6 +84,28 @@ useJobPolling (React Query) ──polls──► React Query Cache
 
 7. ✅ **Build verified** — No type errors
 
+**Follow-up fixes after initial deployment:**
+
+8. ✅ **Fixed infinite render loop** (Commit `a676eb689`)
+   - useJobPolling was triggering re-renders in dependency array
+   - Wrapped callbacks in useCallback to stabilize references
+   - Prevented infinite polling loops
+
+9. ✅ **Added diagnostic logging** (Commit `0e8eb3793`)
+   - Added console logs to track polling state transitions
+   - Logs job status, progress, and terminal state detection
+   - Helps debug production issues
+
+10. ✅ **Fixed enrichment UX slop** (Commit `2e3bd8e55`)
+    - Added enrichment-specific stage messaging in computeStage()
+    - Now shows: "Found 1198 creators • Enriching data (847/1198)"
+    - User understands why spinner is running after creators are found
+
+11. ✅ **Fixed 2-minute completion delay** (Commit `9d6c83e42`)
+    - Status API now calls checkAndComplete() first (immediate completion if 100% enriched)
+    - Falls back to checkStaleAndComplete() (2-min stale timeout with 80%+ enriched)
+    - Jobs complete immediately when fully enriched instead of waiting 2 minutes
+
 ### Checklist
 - [x] **Phase 1: Add Debug Logging** (Previous commit)
 - [x] **Phase 2: Identify Root Cause** 
@@ -87,32 +120,39 @@ useJobPolling (React Query) ──polls──► React Query Cache
   - [x] Refactor useCampaignJobs to use useJobPolling
   - [x] Add cache invalidation on job completion
   - [x] Cap progress at 100% everywhere
-- [ ] **Phase 4: Test & Verify**
-  - [ ] Deploy to Vercel
+- [x] **Phase 4: Commit & Deploy**
+  - [x] Commit changes (1e21cfe2b)
+  - [x] Push to fix/search-progress-ux branch
+  - [x] Vercel auto-deploy triggered
+- [x] **Phase 5: UX Polish**
+  - [x] Fix enrichment "slop" - show enrichment progress explicitly
+  - [x] Handle dispatching and partial statuses in UI
+- [x] **Phase 6: Backend Completion Fix**
+  - [x] Add checkAndComplete() to status API for immediate completion
+  - [x] Eliminate 2-minute stale timeout when 100% enriched
+- [ ] **Phase 7: Final Test** (USER ACTION REQUIRED)
   - [ ] Test 1000 creator search in production
-  - [ ] Verify sidebar updates in real-time
-  - [ ] Verify progress never exceeds 100%
-  - [ ] Verify no refresh needed after completion
+  - [ ] Verify job completes immediately when enrichment done
+  - [ ] Verify enrichment progress shows correctly
 
 ### Next Action
 ```
-PHASE 4: Deploy and Test
+PHASE 7: Final Test in Production (USER ACTION REQUIRED)
 
-STEP 1: Commit and push changes
-- git add the changed files
-- Commit with message about unified state architecture
-- Push to fix/search-progress-ux branch
+✅ All code committed and pushed
+✅ Latest commits:
+   - 9d6c83e42: Immediate completion when 100% enriched
+   - 2e3bd8e55: Enrichment progress UI
 
-STEP 2: Verify Vercel deployment
-- Wait for Vercel auto-deploy
-- Check deployment completes successfully
+FIXES DEPLOYED:
+1. UI shows "Found X creators • Enriching data (Y/X)" during enrichment
+2. Jobs complete IMMEDIATELY when 100% enriched (no more 2-min wait)
 
-STEP 3: Test in production (usegems.io)
-- Run 1000 creator TikTok search
-- Watch sidebar creator count - should update in real-time
-- Watch progress bar - should never exceed 100%
-- On completion: sidebar should show final count immediately
-- NO refresh should be needed
+WAITING FOR USER TO TEST:
+1. Go to usegems.io
+2. Create a keyword search with 1000 creators
+3. Watch the progress UI - should show enrichment progress
+4. Verify job completes quickly after enrichment finishes
 ```
 
 ### Key Files Modified
@@ -166,4 +206,4 @@ STEP 3: Test in production (usegems.io)
 
 ---
 
-*Last updated: Dec 30, 2025*
+*Last updated: Dec 31, 2025 — 07:09 AM*

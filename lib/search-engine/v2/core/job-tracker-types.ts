@@ -49,8 +49,9 @@ export interface JobSnapshot {
 // Constants
 // ============================================================================
 
-// Timeout for stale job detection (2 minutes)
-export const STALE_JOB_TIMEOUT_MS = 2 * 60 * 1000;
+// Timeout for stale job detection (30 seconds)
+// @why Reduced from 2 min - with DB-driven completion, we no longer wait for counter sync
+export const STALE_JOB_TIMEOUT_MS = 30 * 1000;
 
 // Minimum enrichment percentage to consider job "good enough" for completion
 export const MIN_ENRICHMENT_PERCENTAGE = 80;
