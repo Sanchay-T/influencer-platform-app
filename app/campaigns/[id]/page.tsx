@@ -107,13 +107,14 @@ async function getCampaign(id: string) {
 				}
 
 				try {
-					// Fetch first 50 creators from job_creators table
+					// Fetch first 200 creators from job_creators table
+					// @why 200 is enough for initial view, pagination handles the rest
 					const creators = await db
 						.select({ creatorData: jobCreators.creatorData })
 						.from(jobCreators)
 						.where(eq(jobCreators.jobId, job.id))
 						.orderBy(jobCreators.createdAt)
-						.limit(50);
+						.limit(200);
 
 					// Get total count
 					const countResult = await db

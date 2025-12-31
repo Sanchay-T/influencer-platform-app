@@ -26,6 +26,8 @@ export interface AutoFetchConfig {
 	loadedCount: number;
 	/** Callback to merge new creators into state */
 	onNewCreators: (creators: unknown[]) => void;
+	/** Whether auto-fetch is enabled. Default: false (use pagination instead) */
+	enabled?: boolean;
 }
 
 export interface AutoFetchResult {
@@ -92,6 +94,7 @@ export function useAutoFetchAllPages({
 	serverTotal,
 	loadedCount,
 	onNewCreators,
+	enabled = false, // @why Disabled by default - use pagination instead of auto-fetching all pages
 }: AutoFetchConfig): AutoFetchResult {
 	const [isFetchingMore, setIsFetchingMore] = useState(false);
 	const [fetchedCount, setFetchedCount] = useState(0);
@@ -154,6 +157,10 @@ export function useAutoFetchAllPages({
 
 	// Auto-fetch when job completes and we have less than server total
 	useEffect(() => {
+		// Skip if auto-fetch is disabled (use pagination instead)
+		if (!enabled) {
+			return;
+		}
 		const isCompleted = status?.toLowerCase() === 'completed';
 		if (!isCompleted) {
 			return;
@@ -174,7 +181,7 @@ export function useAutoFetchAllPages({
 		}, 500);
 
 		return () => clearTimeout(timeoutId);
-	}, [jobId, status, serverTotal, loadedCount, fetchRemainingPages]);
+	}, [enabled, jobId, status, serverTotal, loadedCount, fetchRemainingPages]);
 
 	return {
 		isFetchingMore,
