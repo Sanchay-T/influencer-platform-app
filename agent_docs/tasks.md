@@ -132,6 +132,11 @@ useJobPolling (React Query) ──polls──► React Query Cache
     - Replaces stale counter columns that lag behind due to race conditions
     - Counter discrepancy was significant: 347 vs 407 enriched (60 behind)
 
+16. ✅ **Fix 15-second loading delay for completed runs** (Commit `d84c4954d`)
+    - Increased server pre-load from 50 to 200 creators
+    - Disabled auto-fetch all pages by default (use pagination instead)
+    - Users now see 200 creators instantly, can paginate for more
+
 ### Checklist
 - [x] **Phase 1: Add Debug Logging** (Previous commit)
 - [x] **Phase 2: Identify Root Cause** 
@@ -171,22 +176,24 @@ PHASE 9: Final Test in Production (USER ACTION REQUIRED)
 ✅ All code committed and pushed
 ✅ Database migrations applied (enriched column + Realtime enabled)
 ✅ Latest commits:
-   - d4189a3bf: DB-driven enrichment count in status API (JUST PUSHED)
+   - d84c4954d: Fix 15s loading delay (pre-load 200, disable auto-fetch)
+   - d4189a3bf: DB-driven enrichment count in status API
    - 36b9a441f: Supabase Realtime (instant updates)
    - 9cd30aaf8: Indexed enriched column
    - da2a3ab69: DB-driven completion
 
 ARCHITECTURE NOW:
-1. Supabase Realtime (WebSocket) - instant updates
-2. Polling fallback (2s) - when Realtime disconnected
-3. DB-driven enrichment count - no counter race conditions
-4. Indexed enriched column - fast completion queries
+1. Server pre-loads 200 creators (was 50)
+2. Auto-fetch disabled - use pagination instead
+3. Supabase Realtime (WebSocket) - instant status updates
+4. DB-driven enrichment count - no counter race conditions
+5. Indexed enriched column - fast completion queries
 
-AFTER VERCEL DEPLOYS (d4189a3bf):
+AFTER VERCEL DEPLOYS (d84c4954d):
 1. Refresh usegems.io
-2. Watch the two active jobs - enrichment progress should be accurate now
-3. Progress should match actual DB state, not stale counters
-4. Jobs should complete when enrichment reaches 100%
+2. Click on any completed run - should show 200 creators instantly
+3. No more 15-second wait to load everything
+4. Use pagination to see more creators if needed
 ```
 
 ### Key Files Modified

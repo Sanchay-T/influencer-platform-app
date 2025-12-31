@@ -321,9 +321,42 @@ const SearchResults = ({ searchData }) => {
 
 	const clearSelection = () => setSelectedCreators({});
 
+	// @why Fetch page data on-demand when navigating beyond loaded creators
+	// With auto-fetch disabled, we only have 200 pre-loaded creators
+	// When user clicks "Next" past that, we fetch the needed page from server
 	const handlePageChange = useCallback(
-		(newPage) => {
+		async (newPage) => {
 			if (newPage === currentPage) return;
+
+			// Calculate what data we need for the target page
+			const targetStartIndex = (newPage - 1) * itemsPerPage;
+			const targetEndIndex = newPage * itemsPerPage;
+
+			// Check if we have enough loaded creators for this page
+			const haveEnoughData = creators.length >= targetEndIndex || creators.length >= totalResults;
+
+			// If we don't have the data, fetch it from server
+			if (!haveEnoughData && searchData?.jobId) {
+				setIsPageLoading(true);
+				try {
+					const response = await fetch(
+						`/api/v2/status?jobId=${searchData.jobId}&offset=${creators.length}&limit=200`,
+						{ credentials: 'include' }
+					);
+					if (response.ok) {
+						const data = await response.json();
+						const pageCreators = data.results?.flatMap((r) => r.creators || []) || [];
+						if (pageCreators.length > 0) {
+							handleNewCreators(pageCreators);
+						}
+					}
+				} catch (error) {
+					console.error('Failed to fetch page:', error);
+				} finally {
+					setIsPageLoading(false);
+				}
+			}
+
 			setCurrentPage(newPage);
 			// Scroll to top of results section when navigating pages
 			resultsHeaderRef.current?.scrollIntoView({
@@ -331,7 +364,15 @@ const SearchResults = ({ searchData }) => {
 				block: 'start',
 			});
 		},
-		[currentPage, setCurrentPage]
+		[
+			currentPage,
+			setCurrentPage,
+			creators.length,
+			itemsPerPage,
+			totalResults,
+			searchData?.jobId,
+			handleNewCreators,
+		]
 	);
 
 	const handlePageSizeChange = useCallback(
