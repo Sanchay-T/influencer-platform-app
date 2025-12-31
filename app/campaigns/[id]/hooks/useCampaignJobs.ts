@@ -67,12 +67,18 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 				return job;
 			}
 
+			// @why Server-provided totalCreators comes from actual DB query (source of truth)
+			// Cache may have stale counts from earlier polling. Server data wins.
+			const serverTotalCreators = job.totalCreators;
+
 			return {
 				...job,
 				resultsLoaded: cached.creatorBuffer.length > 0,
 				creatorBuffer: cached.creatorBuffer,
 				totalCreators:
-					typeof cached.totalCreators === 'number' ? cached.totalCreators : job.totalCreators,
+					typeof serverTotalCreators === 'number' && serverTotalCreators > 0
+						? serverTotalCreators
+						: (cached.totalCreators ?? job.totalCreators),
 				pagination: cached.pagination ?? job.pagination,
 				pageLimit: cached.pageLimit ?? job.pageLimit,
 			};
