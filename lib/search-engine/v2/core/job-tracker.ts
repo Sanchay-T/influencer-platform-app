@@ -70,7 +70,8 @@ export class JobTracker {
 		const [result] = await db
 			.select({
 				total: sql<number>`COUNT(*)::int`,
-				enriched: sql<number>`COUNT(*) FILTER (WHERE (${jobCreators.creatorData}->>'bioEnriched')::boolean = true)::int`,
+				// @why Uses indexed `enriched` column instead of JSON extraction (faster)
+				enriched: sql<number>`COUNT(*) FILTER (WHERE ${jobCreators.enriched} = true)::int`,
 			})
 			.from(jobCreators)
 			.where(eq(jobCreators.jobId, this.jobId));

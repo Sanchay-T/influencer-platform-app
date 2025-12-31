@@ -113,6 +113,9 @@ export const jobCreators = pgTable(
 		platform: varchar('platform', { length: 50 }).notNull(),
 		username: varchar('username', { length: 255 }).notNull(),
 		creatorData: jsonb('creator_data').notNull(), // Full NormalizedCreator object
+		// @context Enrichment tracking - proper column instead of JSON extraction
+		// @why Indexed column is faster than JSON->>'bioEnriched' for completion queries
+		enriched: boolean('enriched').notNull().default(false),
 		createdAt: timestamp('created_at').notNull().defaultNow(),
 	},
 	(table) => ({
@@ -120,6 +123,8 @@ export const jobCreators = pgTable(
 		uniqueCreator: unique('job_creators_unique').on(table.jobId, table.platform, table.username),
 		// Index for fast job lookups and pagination
 		jobIdIdx: index('idx_job_creators_job_id').on(table.jobId),
+		// Index for fast completion queries (COUNT WHERE enriched = true)
+		enrichedIdx: index('idx_job_creators_enriched').on(table.jobId, table.enriched),
 	})
 );
 

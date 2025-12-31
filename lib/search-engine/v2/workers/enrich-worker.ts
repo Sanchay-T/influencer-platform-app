@@ -125,11 +125,9 @@ export async function processEnrich(options: ProcessEnrichOptions): Promise<Enri
 			};
 		}
 
-		// Filter to only non-enriched creators
-		const creatorsToEnrich = creatorRows.filter((row) => {
-			const creator = row.creatorData as NormalizedCreator;
-			return !creator.bioEnriched;
-		});
+		// Filter to only non-enriched creators (use column, not JSON)
+		// @why The `enriched` column is indexed and faster than JSON extraction
+		const creatorsToEnrich = creatorRows.filter((row) => !row.enriched);
 
 		if (creatorsToEnrich.length === 0) {
 			logger.info(
@@ -209,8 +207,12 @@ export async function processEnrich(options: ProcessEnrichOptions): Promise<Enri
 		// ========================================================================
 
 		// Update each row individually (no transaction needed - each is atomic)
+		// @why Set both `creatorData` (JSON) and `enriched` column for completion queries
 		for (const { row, enriched } of enrichedResults) {
-			await db.update(jobCreators).set({ creatorData: enriched }).where(eq(jobCreators.id, row.id));
+			await db
+				.update(jobCreators)
+				.set({ creatorData: enriched, enriched: true })
+				.where(eq(jobCreators.id, row.id));
 		}
 
 		// ========================================================================
