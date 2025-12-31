@@ -515,6 +515,24 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 		});
 	}, [activeJobId, polledData, updateJobState]);
 
+	// Periodically refresh creators for active jobs
+	// @why Status polling uses limit=0 (only counts), so we need separate creator fetch
+	useEffect(() => {
+		if (!(activeJob && activeJobId)) {
+			return;
+		}
+
+		// Fetch creators every 5 seconds while job is active
+		const intervalId = setInterval(() => {
+			const currentJob = jobs.find((j) => j.id === activeJobId);
+			if (currentJob && isActiveJob(currentJob)) {
+				fetchJobSnapshot(currentJob);
+			}
+		}, 5000);
+
+		return () => clearInterval(intervalId);
+	}, [activeJob, activeJobId, jobs, fetchJobSnapshot]);
+
 	// Handle job selection
 	const handleSelectJob = useCallback(
 		(jobId: string) => {
