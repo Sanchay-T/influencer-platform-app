@@ -19,6 +19,11 @@ export {
 	useJobPolling,
 } from './useJobPolling';
 export {
+	type RealtimeJobData,
+	type UseJobRealtimeResult,
+	useJobRealtime,
+} from './useJobRealtime';
+export {
 	type JobStatus,
 	type JobStatusData,
 	jobStatusKeys,

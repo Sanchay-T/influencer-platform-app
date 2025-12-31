@@ -1,20 +1,26 @@
 /**
- * useJobPolling - Unified polling hook for job status
+ * useJobPolling - Unified job status hook with Realtime + Polling
  *
- * @context This is the SINGLE SOURCE OF TRUTH for job polling.
+ * @context This is the SINGLE SOURCE OF TRUTH for job status.
  * All components that need job status updates should use this hook
  * instead of implementing their own polling loops.
  *
+ * Architecture:
+ * - Primary: Supabase Realtime (WebSocket push, ~instant updates)
+ * - Fallback: React Query polling (2s interval when Realtime disconnected)
+ *
  * Features:
- * - Automatic polling with React Query
+ * - Real-time updates via Supabase Realtime
+ * - Automatic fallback to polling if Realtime fails
  * - Callbacks for progress and completion events
  * - Cache invalidation on completion
  * - Stops polling on terminal states
  */
 
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { isDoneStatus, isSuccessStatus } from '@/lib/types/statuses';
+import { useJobRealtime } from './useJobRealtime';
 import { type JobStatusData, jobStatusKeys, useJobStatus } from './useJobStatus';
 
 // Debug logging helper - enable via: localStorage.setItem('debug_job_status', 'true')
@@ -69,7 +75,7 @@ export interface UseJobPollingResult {
 }
 
 /**
- * Unified polling hook - use this instead of custom polling loops
+ * Unified job status hook - Realtime + Polling fallback
  *
  * @example
  * ```tsx
@@ -86,8 +92,47 @@ export function useJobPolling(
 	const { onProgress, onComplete, enabled = true } = options;
 	const queryClient = useQueryClient();
 
-	// Use the enhanced useJobStatus hook (handles polling internally)
+	// Primary: Supabase Realtime for instant updates
+	const realtime = useJobRealtime(enabled && jobId ? jobId : undefined);
+
+	// Fallback: React Query polling (only when Realtime disconnected)
+	// @why Realtime may fail due to network issues, tab backgrounding, etc.
 	const jobStatus = useJobStatus(enabled && jobId ? jobId : undefined);
+
+	// Merge data: prefer Realtime when connected, fall back to polling
+	const mergedData = useMemo(() => {
+		// If Realtime has fresh data, use it to enhance polling data
+		if (realtime.isConnected && realtime.data && jobStatus.data) {
+			debugLog('MERGE', 'Using Realtime data', {
+				realtimeStatus: realtime.data.status,
+				pollingStatus: jobStatus.data.status,
+			});
+			return {
+				...jobStatus.data,
+				status: realtime.data.status as JobStatusData['status'],
+				progress: {
+					...jobStatus.data.progress,
+					keywordsDispatched: realtime.data.keywordsDispatched,
+					keywordsCompleted: realtime.data.keywordsCompleted,
+					creatorsFound: realtime.data.creatorsFound,
+					creatorsEnriched: realtime.data.creatorsEnriched,
+					percentComplete: realtime.data.progress,
+				},
+				totalCreators: realtime.data.creatorsFound,
+				error: realtime.data.error,
+			};
+		}
+		return jobStatus.data;
+	}, [realtime.isConnected, realtime.data, jobStatus.data]);
+
+	// Compute derived values from merged data
+	const status = mergedData?.status;
+	const isTerminal = isDoneStatus(status);
+	const isActive = !isTerminal && !!status;
+	const isSuccess = isSuccessStatus(status);
+	const totalCreators = mergedData?.totalCreators ?? 0;
+	const progress = Math.min(100, mergedData?.progress?.percentComplete ?? 0);
+	const creatorsEnriched = mergedData?.progress?.creatorsEnriched ?? 0;
 
 	// Track previous status to detect transitions
 	const prevStatusRef = useRef<string | undefined>(undefined);
@@ -107,25 +152,23 @@ export function useJobPolling(
 		prevStatusRef.current = undefined;
 	}, [jobId]);
 
-	// Handle callbacks - uses refs to avoid infinite loops from unmemoized callbacks
+	// Handle callbacks
 	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Callback coordination requires multiple branches
-	// biome-ignore lint/correctness/useExhaustiveDependencies: Using specific properties to avoid unnecessary re-runs
 	useEffect(() => {
-		if (!jobStatus.data) {
-			debugLog('POLLING', 'No data yet, skipping callback', { jobId: jobId?.slice(0, 8) });
+		if (!mergedData) {
 			return;
 		}
 
-		const { status, totalCreators, progress } = jobStatus;
 		const prevStatus = prevStatusRef.current;
 
-		debugLog('POLLING', 'useEffect triggered', {
+		debugLog('HYBRID', 'State update', {
 			jobId: jobId?.slice(0, 8),
+			source: realtime.isConnected ? 'realtime' : 'polling',
 			status,
 			prevStatus,
 			totalCreators,
 			progress,
-			isActive: jobStatus.isActive,
+			isActive,
 		});
 
 		// Build progress data
@@ -133,14 +176,13 @@ export function useJobPolling(
 			status: status ?? 'unknown',
 			progress,
 			totalCreators,
-			creatorsEnriched: jobStatus.data.progress?.creatorsEnriched ?? 0,
-			keywordsCompleted: jobStatus.data.progress?.keywordsCompleted ?? 0,
-			keywordsDispatched: jobStatus.data.progress?.keywordsDispatched ?? 0,
+			creatorsEnriched,
+			keywordsCompleted: mergedData.progress?.keywordsCompleted ?? 0,
+			keywordsDispatched: mergedData.progress?.keywordsDispatched ?? 0,
 		};
 
 		// Call onProgress for active jobs (using ref to avoid dependency issues)
-		if (jobStatus.isActive && onProgressRef.current) {
-			debugLog('CALLBACK', 'Calling onProgress', { status, totalCreators, progress });
+		if (isActive && onProgressRef.current) {
 			onProgressRef.current(progressData);
 		}
 
@@ -148,18 +190,12 @@ export function useJobPolling(
 		const wasActive = prevStatus && !isDoneStatus(prevStatus);
 		const nowTerminal = isDoneStatus(status);
 
-		debugLog('TRANSITION', 'Checking terminal transition', {
-			wasActive,
-			nowTerminal,
-			hasCalledComplete: hasCalledCompleteRef.current,
-		});
-
 		if (wasActive && nowTerminal && !hasCalledCompleteRef.current) {
 			hasCalledCompleteRef.current = true;
-			debugLog('COMPLETE', 'Job completed! Calling onComplete', {
+			debugLog('COMPLETE', 'Job completed!', {
 				status,
 				totalCreators,
-				isSuccess: isSuccessStatus(status),
+				source: realtime.isConnected ? 'realtime' : 'polling',
 			});
 
 			// Call completion callback (using ref to avoid dependency issues)
@@ -168,13 +204,12 @@ export function useJobPolling(
 					status: status ?? 'unknown',
 					totalCreators,
 					isSuccess: isSuccessStatus(status),
-					error: jobStatus.data.error,
+					error: mergedData.error,
 				});
 			}
 
 			// Invalidate related caches to ensure fresh data
 			if (jobId) {
-				debugLog('CACHE', 'Invalidating caches', { jobId: jobId.slice(0, 8) });
 				queryClient.invalidateQueries({ queryKey: jobStatusKeys.detail(jobId) });
 				queryClient.invalidateQueries({ queryKey: ['job-creators', jobId] });
 				queryClient.invalidateQueries({ queryKey: ['campaign'] });
@@ -183,19 +218,29 @@ export function useJobPolling(
 
 		// Update previous status for next render
 		prevStatusRef.current = status;
-	}, [jobStatus.data, jobStatus.isActive, jobStatus.status, jobId, queryClient]);
+	}, [
+		mergedData,
+		status,
+		isActive,
+		totalCreators,
+		progress,
+		creatorsEnriched,
+		jobId,
+		queryClient,
+		realtime.isConnected,
+	]);
 
 	return {
-		status: jobStatus.status,
-		progress: jobStatus.progress,
-		totalCreators: jobStatus.totalCreators,
-		creatorsEnriched: jobStatus.data?.progress?.creatorsEnriched ?? 0,
-		isTerminal: jobStatus.isTerminal,
-		isActive: jobStatus.isActive,
-		isSuccess: jobStatus.isSuccess,
+		status,
+		progress,
+		totalCreators,
+		creatorsEnriched,
+		isTerminal,
+		isActive,
+		isSuccess,
 		isLoading: jobStatus.isLoading,
-		isError: jobStatus.isError,
-		data: jobStatus.data,
+		isError: jobStatus.isError && !realtime.isConnected,
+		data: mergedData,
 		refetch: jobStatus.refetch,
 	};
 }

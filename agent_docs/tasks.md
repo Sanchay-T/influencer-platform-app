@@ -12,8 +12,8 @@
 **Status:** Implementation Complete — Deployed to Vercel (with enrichment UX fix)
 **Branch:** `fix/search-progress-ux`
 **Started:** Dec 30, 2025
-**Updated:** Dec 31, 2025 — 07:45 AM
-**Latest Commits:** `da2a3ab69` (DB-driven completion), `9d6c83e42` (2-min delay fix), `2e3bd8e55` (enrichment UX), `0e8eb3793`, `a676eb689`, `1e21cfe2b`
+**Updated:** Dec 31, 2025 — 08:10 AM
+**Latest Commits:** `9cd30aaf8` (enriched column), `da2a3ab69` (DB-driven completion), `9d6c83e42` (2-min delay fix), `2e3bd8e55` (enrichment UX)
 
 ### Goal
 Fix the keyword search progress UI that breaks in production. Backend returns 1000 creators correctly, but frontend gets stuck with partial results (200-800), spinners that never stop, and requires full browser refresh to see correct data.
@@ -113,6 +113,13 @@ useJobPolling (React Query) ──polls──► React Query Cache
     - Reduced stale timeout from 2min to 30sec (counter sync no longer needed)
     - Eliminates race conditions from parallel QStash workers
 
+13. ✅ **Added indexed enriched column** (Commit `9cd30aaf8`)
+    - Added `enriched` boolean column to job_creators table
+    - Added composite index (jobId, enriched) for fast COUNT queries
+    - Updated enrich-worker to set column when enriching
+    - Updated getActualEnrichmentState() to use column instead of JSON extraction
+    - **REQUIRES MIGRATION**: Run `npm run db:push` to apply schema
+
 ### Checklist
 - [x] **Phase 1: Add Debug Logging** (Previous commit)
 - [x] **Phase 2: Identify Root Cause** 
@@ -147,30 +154,42 @@ useJobPolling (React Query) ──polls──► React Query Cache
 
 ### Next Action
 ```
+⚠️ MIGRATION REQUIRED BEFORE TESTING
+
+Run this command to apply schema changes:
+  npm run db:push
+
+This adds the `enriched` column and index to job_creators table.
+
+---
+
 PHASE 8: Final Test in Production (USER ACTION REQUIRED)
 
 ✅ All code committed and pushed
 ✅ Latest commits:
+   - 9cd30aaf8: Indexed enriched column (faster queries)
    - da2a3ab69: DB-driven completion (counter race conditions eliminated)
    - 9d6c83e42: Immediate completion when 100% enriched
    - 2e3bd8e55: Enrichment progress UI
 
 FIXES DEPLOYED:
-1. Job completion now uses actual DB state (COUNT queries) not counters
+1. Job completion uses indexed boolean column (not slow JSON extraction)
 2. UI shows "Found X creators • Enriching data (Y/X)" during enrichment
 3. Jobs complete IMMEDIATELY when 100% enriched (no more 2-min wait)
-4. Stale timeout reduced from 2min to 30sec (counter sync no longer needed)
+4. Stale timeout reduced from 2min to 30sec
 
-WAITING FOR USER TO TEST:
-1. Go to usegems.io
-2. Create a keyword search with 1000 creators
-3. Watch the progress UI - should show enrichment progress
-4. Verify job completes quickly after enrichment finishes (no 2-min delay)
+WAITING FOR USER:
+1. Run `npm run db:push` to apply migration
+2. Go to usegems.io
+3. Create a keyword search with 1000 creators
+4. Verify job completes quickly after enrichment finishes
 ```
 
 ### Key Files Modified
 | Purpose | File |
 |---------|------|
+| **Schema (enriched column)** | `lib/db/schema.ts` |
+| **Enrichment worker** | `lib/search-engine/v2/workers/enrich-worker.ts` |
 | **DB-driven completion** | `lib/search-engine/v2/core/job-tracker.ts` |
 | **Stale timeout config** | `lib/search-engine/v2/core/job-tracker-types.ts` |
 | Unified polling | `lib/query/hooks/useJobPolling.ts` (NEW) |
