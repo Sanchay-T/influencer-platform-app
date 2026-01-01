@@ -65,11 +65,11 @@ async function setupTestUser(index: number): Promise<TestUser> {
   const userUuid = newUser.id;  // Internal UUID
 
   // Create subscription (uses UUID reference)
+  // @why trialStatus is now derived from subscriptionStatus + trialEndDate
   await db.insert(userSubscriptions).values({
     userId: userUuid,  // UUID reference
     currentPlan: 'fame_flex',
     subscriptionStatus: 'active',
-    trialStatus: 'converted',
   }).onConflictDoNothing();
 
   // Create billing (uses UUID reference)

@@ -80,7 +80,7 @@ export async function getUserProfile(userId: string): Promise<UserProfileComplet
 			currentPlan: userSubscriptions.currentPlan,
 			intendedPlan: userSubscriptions.intendedPlan,
 			subscriptionStatus: userSubscriptions.subscriptionStatus,
-			trialStatus: userSubscriptions.trialStatus,
+			// trialStatus removed - derive via deriveTrialStatus()
 			trialStartDate: userSubscriptions.trialStartDate,
 			trialEndDate: userSubscriptions.trialEndDate,
 			subscriptionCancelDate: userSubscriptions.subscriptionCancelDate,
@@ -132,7 +132,6 @@ export async function getUserProfile(userId: string): Promise<UserProfileComplet
 		email: userRecord.email,
 		currentPlan: userRecord.currentPlan,
 		onboardingStep: userRecord.onboardingStep,
-		trialStatus: userRecord.trialStatus,
 	});
 
 	// Transform to match expected format
@@ -141,7 +140,7 @@ export async function getUserProfile(userId: string): Promise<UserProfileComplet
 		// Ensure required fields have defaults
 		currentPlan: userRecord.currentPlan, // NULL = not onboarded yet
 		subscriptionStatus: userRecord.subscriptionStatus || 'none',
-		trialStatus: userRecord.trialStatus || 'pending',
+		// trialStatus removed - derive via deriveTrialStatus()
 		billingSyncStatus: userRecord.billingSyncStatus || 'pending',
 		planFeatures: userRecord.planFeatures || {},
 		usageCampaignsCurrent: userRecord.usageCampaignsCurrent || 0,
@@ -206,7 +205,7 @@ export async function createUser(userData: {
 					userId: newUser.id,
 					currentPlan: userData.currentPlan || null, // NULL = hasn't completed onboarding
 					intendedPlan: userData.intendedPlan,
-					trialStatus: userData.trialStartDate ? 'active' : 'pending',
+					// trialStatus removed - now derived from subscriptionStatus + trialEndDate
 					trialStartDate: userData.trialStartDate,
 					trialEndDate: userData.trialEndDate,
 				})
@@ -252,7 +251,7 @@ export async function createUser(userData: {
 				currentPlan: newSubscription.currentPlan,
 				intendedPlan: newSubscription.intendedPlan,
 				subscriptionStatus: newSubscription.subscriptionStatus,
-				trialStatus: newSubscription.trialStatus,
+				// trialStatus removed - derive via deriveTrialStatus()
 				trialStartDate: newSubscription.trialStartDate,
 				trialEndDate: newSubscription.trialEndDate,
 				subscriptionCancelDate: newSubscription.subscriptionCancelDate,
@@ -283,7 +282,7 @@ export async function createUser(userData: {
 				internalId: newUser.id,
 				email: userData.email,
 				currentPlan: newSubscription.currentPlan,
-				trialStatus: newSubscription.trialStatus,
+				// trialStatus removed - derive via deriveTrialStatus()
 				onboardingStep: newUser.onboardingStep,
 			});
 		} catch (transactionError: any) {
@@ -384,7 +383,7 @@ export async function updateUserProfile(
 		currentPlan?: string;
 		intendedPlan?: string;
 		subscriptionStatus?: string;
-		trialStatus?: string;
+		// trialStatus removed - now derived
 		trialStartDate?: Date;
 		trialEndDate?: Date;
 		subscriptionCancelDate?: Date;
@@ -437,7 +436,7 @@ export async function updateUserProfile(
 			currentPlan: updates.currentPlan,
 			intendedPlan: updates.intendedPlan,
 			subscriptionStatus: updates.subscriptionStatus,
-			trialStatus: updates.trialStatus,
+			// trialStatus removed - now derived
 			trialStartDate: updates.trialStartDate,
 			trialEndDate: updates.trialEndDate,
 			subscriptionCancelDate: updates.subscriptionCancelDate,
@@ -618,7 +617,7 @@ export async function getUserByStripeCustomerId(
 			currentPlan: userSubscriptions.currentPlan,
 			intendedPlan: userSubscriptions.intendedPlan,
 			subscriptionStatus: userSubscriptions.subscriptionStatus,
-			trialStatus: userSubscriptions.trialStatus,
+			// trialStatus removed - derive via deriveTrialStatus()
 			trialStartDate: userSubscriptions.trialStartDate,
 			trialEndDate: userSubscriptions.trialEndDate,
 			subscriptionCancelDate: userSubscriptions.subscriptionCancelDate,
@@ -662,7 +661,7 @@ export async function getUserByStripeCustomerId(
 		// Ensure required fields have defaults
 		currentPlan: userRecord.currentPlan, // NULL = not onboarded yet
 		subscriptionStatus: userRecord.subscriptionStatus || 'none',
-		trialStatus: userRecord.trialStatus || 'pending',
+		// trialStatus removed - derive via deriveTrialStatus()
 		billingSyncStatus: userRecord.billingSyncStatus || 'pending',
 		planFeatures: userRecord.planFeatures || {},
 		usageCampaignsCurrent: userRecord.usageCampaignsCurrent || 0,

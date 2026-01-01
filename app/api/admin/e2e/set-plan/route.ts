@@ -14,8 +14,7 @@ const isTestMode =
 	process.env.NODE_ENV === 'development' || process.env.ENABLE_AUTH_BYPASS === 'true';
 
 const VALID_PLANS = ['glow_up', 'viral_surge', 'fame_flex'] as const;
-const VALID_TRIAL_STATUSES = ['pending', 'active', 'expired', 'converted'] as const;
-const VALID_SUBSCRIPTION_STATUSES = ['none', 'active', 'canceled', 'past_due'] as const;
+const VALID_SUBSCRIPTION_STATUSES = ['none', 'active', 'trialing', 'canceled', 'past_due'] as const;
 
 export async function PATCH(request: Request) {
 	if (!isTestMode) {
@@ -26,7 +25,7 @@ export async function PATCH(request: Request) {
 	}
 
 	const body = await request.json();
-	const { email, plan, trialStatus = 'active', subscriptionStatus = 'active' } = body;
+	const { email, plan, subscriptionStatus = 'trialing' } = body;
 
 	if (!(email && plan)) {
 		return NextResponse.json({ error: 'email and plan are required' }, { status: 400 });
@@ -43,13 +42,6 @@ export async function PATCH(request: Request) {
 	if (!VALID_PLANS.includes(plan)) {
 		return NextResponse.json(
 			{ error: `Invalid plan. Must be one of: ${VALID_PLANS.join(', ')}` },
-			{ status: 400 }
-		);
-	}
-
-	if (!VALID_TRIAL_STATUSES.includes(trialStatus)) {
-		return NextResponse.json(
-			{ error: `Invalid trialStatus. Must be one of: ${VALID_TRIAL_STATUSES.join(', ')}` },
 			{ status: 400 }
 		);
 	}
@@ -75,17 +67,23 @@ export async function PATCH(request: Request) {
 			return NextResponse.json({ error: 'User not found', email }, { status: 404 });
 		}
 
-		// Update subscription
+		// Set trial dates if status is trialing
+		const now = new Date();
+		const trialStartDate = subscriptionStatus === 'trialing' ? now : undefined;
+		const trialEndDate =
+			subscriptionStatus === 'trialing'
+				? new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+				: undefined;
+
+		// Update subscription (trialStatus is now derived from subscriptionStatus + trialEndDate)
 		await db
 			.update(userSubscriptions)
 			.set({
 				currentPlan: plan,
-				trialStatus,
 				subscriptionStatus,
-				trialStartedAt: trialStatus === 'active' ? new Date() : undefined,
-				trialExpiresAt:
-					trialStatus === 'active' ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) : undefined,
-				updatedAt: new Date(),
+				trialStartDate,
+				trialEndDate,
+				updatedAt: now,
 			})
 			.where(eq(userSubscriptions.userId, user.id));
 
@@ -94,7 +92,7 @@ export async function PATCH(request: Request) {
 			.update(users)
 			.set({
 				onboardingStep: 'completed',
-				updatedAt: new Date(),
+				updatedAt: now,
 			})
 			.where(eq(users.id, user.id));
 
@@ -103,7 +101,7 @@ export async function PATCH(request: Request) {
 			.update(userBilling)
 			.set({
 				stripeSubscriptionId: 'sub_e2e_test_' + Date.now(),
-				updatedAt: new Date(),
+				updatedAt: now,
 			})
 			.where(eq(userBilling.userId, user.id));
 
@@ -112,7 +110,6 @@ export async function PATCH(request: Request) {
 			userId: user.id,
 			email: user.email,
 			plan,
-			trialStatus,
 			subscriptionStatus,
 			onboardingStep: 'completed',
 		});

@@ -4,6 +4,7 @@ import { desc, eq, or, sql } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { isAdminUser } from '@/lib/auth/admin-utils';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
+import { deriveTrialStatus } from '@/lib/billing/trial-status';
 import { db } from '@/lib/db';
 import { userSubscriptions, users } from '@/lib/db/schema';
 
@@ -68,7 +69,8 @@ export async function GET(req: NextRequest) {
 				user_id: users.userId,
 				full_name: users.fullName,
 				business_name: users.businessName,
-				trial_status: userSubscriptions.trialStatus,
+				subscription_status: userSubscriptions.subscriptionStatus,
+				trial_end_date: userSubscriptions.trialEndDate,
 				onboarding_step: users.onboardingStep,
 				created_at: users.createdAt,
 			})
@@ -82,15 +84,18 @@ export async function GET(req: NextRequest) {
 
 		const dbTime = Date.now() - dbStartTime;
 
-		// Minimal processing
-		const results = dbUsers.map((user) => ({
-			user_id: user.user_id,
-			full_name: user.full_name,
-			business_name: user.business_name,
-			trial_status: user.trial_status,
-			onboarding_step: user.onboarding_step,
-			computed_trial_status: user.trial_status === 'active' ? 'Active' : 'No Trial',
-		}));
+		// Minimal processing - derive trial status
+		const results = dbUsers.map((user) => {
+			const trialStatus = deriveTrialStatus(user.subscription_status, user.trial_end_date);
+			return {
+				user_id: user.user_id,
+				full_name: user.full_name,
+				business_name: user.business_name,
+				trial_status: trialStatus,
+				onboarding_step: user.onboarding_step,
+				computed_trial_status: trialStatus === 'active' ? 'Active' : 'No Trial',
+			};
+		});
 
 		// Cache the results
 		userCache.set(cacheKey, {

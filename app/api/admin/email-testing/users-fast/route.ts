@@ -2,6 +2,7 @@ import { desc, eq, or, sql } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { isAdminUser } from '@/lib/auth/admin-utils';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
+import { deriveTrialStatus } from '@/lib/billing/trial-status';
 import { db } from '@/lib/db';
 import { userBilling, userSubscriptions, users } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
@@ -43,7 +44,7 @@ export async function GET(req: NextRequest) {
 				business_name: users.businessName,
 				trial_start_date: userSubscriptions.trialStartDate,
 				trial_end_date: userSubscriptions.trialEndDate,
-				trial_status: userSubscriptions.trialStatus,
+				subscription_status: userSubscriptions.subscriptionStatus,
 				onboarding_step: users.onboardingStep,
 				stripe_customer_id: userBilling.stripeCustomerId,
 				created_at: users.createdAt,
@@ -64,17 +65,20 @@ export async function GET(req: NextRequest) {
 		const dbTime = Date.now() - dbStartTime;
 		structuredConsole.log(`⚡ [FAST-SEARCH] Drizzle query: ${dbTime}ms`);
 
-		// Minimal processing
+		// Minimal processing - derive trial status
 		const processStartTime = Date.now();
-		const results = dbUsers.map((user) => ({
-			user_id: user.user_id,
-			full_name: user.full_name,
-			business_name: user.business_name,
-			trial_status: user.trial_status,
-			onboarding_step: user.onboarding_step,
-			stripe_customer_id: user.stripe_customer_id,
-			computed_trial_status: user.trial_status === 'active' ? 'Active' : 'No Trial',
-		}));
+		const results = dbUsers.map((user) => {
+			const trialStatus = deriveTrialStatus(user.subscription_status, user.trial_end_date);
+			return {
+				user_id: user.user_id,
+				full_name: user.full_name,
+				business_name: user.business_name,
+				trial_status: trialStatus,
+				onboarding_step: user.onboarding_step,
+				stripe_customer_id: user.stripe_customer_id,
+				computed_trial_status: trialStatus === 'active' ? 'Active' : 'No Trial',
+			};
+		});
 
 		const processTime = Date.now() - processStartTime;
 		const totalTime = Date.now() - startTime;

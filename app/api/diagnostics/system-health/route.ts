@@ -1,6 +1,7 @@
 import { count, desc, eq } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
+import { deriveTrialStatus } from '@/lib/billing/trial-status';
 import { db } from '@/lib/db';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { backgroundJobs, events } from '@/lib/db/schema';
@@ -71,10 +72,16 @@ export async function GET(request: NextRequest) {
 		const userProfile = await getUserProfile(userId);
 
 		if (userProfile) {
+			// Derive trial status from subscription status + trial end date
+			const trialStatus = deriveTrialStatus(
+				userProfile.subscriptionStatus,
+				userProfile.trialEndDate
+			);
+
 			diagnostics.checks.userProfile = {
 				exists: true,
 				onboardingStep: userProfile.onboardingStep,
-				trialStatus: userProfile.trialStatus,
+				trialStatus, // Now derived
 				currentPlan: userProfile.currentPlan,
 				subscriptionStatus: userProfile.subscriptionStatus,
 				hasStripeData: !!(userProfile.stripeCustomerId && userProfile.stripeSubscriptionId),

@@ -194,7 +194,7 @@ export const userSubscriptions = pgTable('user_subscriptions', {
 	currentPlan: varchar('current_plan', { length: 50 }),
 	intendedPlan: varchar('intended_plan', { length: 50 }), // Plan selected before checkout
 	subscriptionStatus: varchar('subscription_status', { length: 20 }).default('none').notNull(),
-	trialStatus: varchar('trial_status', { length: 20 }).default('pending').notNull(),
+	// trialStatus REMOVED - now derived from subscriptionStatus + trialEndDate via deriveTrialStatus()
 	trialStartDate: timestamp('trial_start_date'),
 	trialEndDate: timestamp('trial_end_date'),
 	subscriptionCancelDate: timestamp('subscription_cancel_date'),
@@ -792,7 +792,7 @@ export type UserProfileComplete = {
 	currentPlan: string | null;
 	intendedPlan?: string | null;
 	subscriptionStatus: string;
-	trialStatus: string;
+	// trialStatus removed - derive via deriveTrialStatus(subscriptionStatus, trialEndDate)
 	trialStartDate?: Date | null;
 	trialEndDate?: Date | null;
 	subscriptionCancelDate?: Date | null;

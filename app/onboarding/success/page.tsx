@@ -8,6 +8,7 @@ import { type SessionData, SuccessCard } from './success-card';
 
 const POLL_INTERVAL_MS = 2000; // Poll every 2 seconds
 const MAX_POLL_ATTEMPTS = 30; // Max 60 seconds of polling
+const VERIFY_SESSION_ATTEMPT = 5; // After 10 seconds, try Stripe verification
 
 function OnboardingSuccessContent() {
 	const router = useRouter();
@@ -43,6 +44,33 @@ function OnboardingSuccessContent() {
 		return false;
 	}, []);
 
+	// Verify session directly with Stripe (fallback when webhook is delayed)
+	const verifySession = useCallback(async (): Promise<boolean> => {
+		if (!sessionId) return false;
+
+		try {
+			structuredConsole.info('Attempting Stripe session verification', { sessionId });
+			const res = await fetch(`/api/stripe/verify-session?session_id=${sessionId}`);
+
+			if (res.ok) {
+				const data = await res.json();
+				if (data.verified) {
+					structuredConsole.info('Session verified via Stripe API', { planId: data.planId });
+					setWebhookConfirmed(true);
+					clearBillingCache();
+					if (pollIntervalRef.current) {
+						clearInterval(pollIntervalRef.current);
+						pollIntervalRef.current = null;
+					}
+					return true;
+				}
+			}
+		} catch (err) {
+			structuredConsole.error('Session verification failed', err);
+		}
+		return false;
+	}, [sessionId]);
+
 	// Start polling for webhook
 	const startPolling = useCallback(() => {
 		pollCountRef.current = 0;
@@ -53,6 +81,15 @@ function OnboardingSuccessContent() {
 			const confirmed = await pollForWebhook();
 			if (confirmed) {
 				return;
+			}
+
+			// After 10 seconds (5 attempts), try Stripe verification as fallback
+			// @why Webhook may be delayed or failed, but Stripe has the subscription
+			if (pollCountRef.current === VERIFY_SESSION_ATTEMPT) {
+				const verified = await verifySession();
+				if (verified) {
+					return;
+				}
 			}
 
 			// Stop polling after max attempts
@@ -66,7 +103,7 @@ function OnboardingSuccessContent() {
 				structuredConsole.warn('Webhook polling timeout - allowing continue');
 			}
 		}, POLL_INTERVAL_MS);
-	}, [pollForWebhook]);
+	}, [pollForWebhook, verifySession]);
 
 	useEffect(() => {
 		const load = async () => {

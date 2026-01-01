@@ -19,12 +19,7 @@ import {
 	updateUserProfile,
 } from '@/lib/db/queries/user-queries';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
-import {
-	getPlanConfig,
-	getPlanKeyByPriceId,
-	type SubscriptionStatus,
-	type TrialStatus,
-} from './plan-config';
+import { getPlanConfig, getPlanKeyByPriceId, type SubscriptionStatus } from './plan-config';
 import type { WebhookResult } from './subscription-types';
 
 const logger = createCategoryLogger(LogCategory.BILLING);
@@ -90,19 +85,10 @@ export async function handleSubscriptionChange(
 			};
 		}
 
-		// 3. Calculate trial status from Stripe data
-		const now = Date.now();
+		// 3. Extract trial dates from Stripe data
+		// Note: trialStatus is now derived dynamically via deriveTrialStatus()
 		const trialEnd = subscription.trial_end ? subscription.trial_end * 1000 : null;
 		const trialStart = subscription.trial_start ? subscription.trial_start * 1000 : null;
-
-		let trialStatus: TrialStatus = 'pending';
-		if (subscription.status === 'trialing' && trialEnd && trialEnd > now) {
-			trialStatus = 'active';
-		} else if (subscription.status === 'active' && trialEnd && trialEnd <= now) {
-			trialStatus = 'converted';
-		} else if (subscription.status === 'canceled') {
-			trialStatus = 'cancelled';
-		}
 
 		// 4. Get plan limits
 		const planConfig = getPlanConfig(planKey);
@@ -120,8 +106,7 @@ export async function handleSubscriptionChange(
 			// Subscription status
 			subscriptionStatus: subscription.status as SubscriptionStatus,
 
-			// Trial info
-			trialStatus,
+			// Trial dates (trialStatus is now derived, not stored)
 			trialStartDate: trialStart ? new Date(trialStart) : undefined,
 			trialEndDate: trialEnd ? new Date(trialEnd) : undefined,
 
@@ -150,7 +135,7 @@ export async function handleSubscriptionChange(
 
 		logger.info(`[${handlerId}] Successfully processed ${eventType}`, {
 			userId: user.userId,
-			metadata: { planKey, trialStatus, status: subscription.status },
+			metadata: { planKey, status: subscription.status },
 		});
 
 		return {
@@ -160,7 +145,6 @@ export async function handleSubscriptionChange(
 			details: {
 				eventType,
 				planKey,
-				trialStatus,
 				subscriptionStatus: subscription.status,
 			},
 		};
@@ -203,9 +187,9 @@ export async function handleSubscriptionDeleted(
 
 	// Keep currentPlan as-is (shows what they WERE on)
 	// Access is denied via subscriptionStatus check
+	// Note: trialStatus not stored - derived from subscriptionStatus
 	await updateUserProfile(user.userId, {
 		subscriptionStatus: 'canceled',
-		trialStatus: 'cancelled',
 		subscriptionCancelDate: new Date(),
 		billingSyncStatus: 'webhook_deleted',
 		lastWebhookEvent: 'customer.subscription.deleted',

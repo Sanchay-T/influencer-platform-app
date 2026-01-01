@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { isAdminUser } from '@/lib/auth/admin-utils';
-import { db } from '@/lib/db';
+import { deriveTrialStatus } from '@/lib/billing/trial-status';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
@@ -28,10 +28,10 @@ export async function GET(request: Request) {
 			return NextResponse.json({ error: 'User not found' }, { status: 404 });
 		}
 
-		// Calculate billing status
+		// Calculate billing status - derive trial status
 		const currentPlan = userProfile.currentPlan || 'free';
 		const subscriptionStatus = userProfile.subscriptionStatus || 'none';
-		const trialStatus = userProfile.trialStatus || 'pending';
+		const trialStatus = deriveTrialStatus(subscriptionStatus, userProfile.trialEndDate);
 		const isActive = subscriptionStatus === 'active' || trialStatus === 'active';
 		const isTrialing = trialStatus === 'active';
 

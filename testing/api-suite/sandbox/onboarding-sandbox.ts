@@ -62,11 +62,11 @@ async function createSandboxUser(): Promise<SandboxUser> {
   }
 
   // Create related tables (required for full flow)
+  // @why trialStatus is now derived from subscriptionStatus + trialEndDate
   await db.insert(userSubscriptions).values({
     userId: newUser.id,
     currentPlan: null,
-    subscriptionStatus: 'inactive',
-    trialStatus: 'pending',
+    subscriptionStatus: 'none',
   }).onConflictDoNothing()
 
   await db.insert(userBilling).values({

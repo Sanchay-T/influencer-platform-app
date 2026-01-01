@@ -74,12 +74,12 @@ export async function POST(request: Request) {
 		const internalUserId = newUser.id;
 
 		// Create related records using the internal UUID
+		// @why trialStatus is now derived from subscriptionStatus + trialEndDate
 		await db.insert(userSubscriptions).values({
 			userId: internalUserId,
 			currentPlan: null,
 			intendedPlan: null,
 			subscriptionStatus: 'none',
-			trialStatus: 'pending',
 			createdAt: new Date(),
 			updatedAt: new Date(),
 		});

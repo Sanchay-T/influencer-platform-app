@@ -165,11 +165,11 @@ async function setupE2EUser(): Promise<E2EUser> {
   }
 
   // Create required related records
+  // @why trialStatus is now derived from subscriptionStatus + trialEndDate
   await db.insert(userSubscriptions).values({
     userId: dbUser.id,
     currentPlan: null,
-    subscriptionStatus: 'inactive',
-    trialStatus: 'pending',
+    subscriptionStatus: 'none',
   }).onConflictDoNothing()
 
   await db.insert(userBilling).values({
@@ -317,12 +317,12 @@ async function activatePlan(user: E2EUser): Promise<void> {
 
   console.log(`\n💳 Activating plan for E2E user`)
 
+  // @why trialStatus is now derived from subscriptionStatus + trialEndDate
   await db
     .update(userSubscriptions)
     .set({
       currentPlan: 'fame_flex',
       subscriptionStatus: 'active',
-      trialStatus: 'converted',
     })
     .where(eq(userSubscriptions.userId, user.dbUserId))
 

@@ -10,7 +10,7 @@
 import { getUserProfile, type UserProfileComplete } from '@/lib/db/queries/user-queries';
 import { getPlanConfig, isValidPlan, type PlanKey } from './plan-config';
 import type { AccessResult } from './subscription-types';
-import { calculateTrialTime } from './trial-utils';
+import { deriveTrialStatus } from './trial-status';
 
 // ═══════════════════════════════════════════════════════════════
 // INTERNAL TYPE FOR PASSING USER THROUGH VALIDATION CHAIN
@@ -43,9 +43,10 @@ async function validateAccessInternal(userId: string): Promise<AccessResultWithU
 	const hasActiveSubscription =
 		user.subscriptionStatus === 'active' || user.subscriptionStatus === 'trialing';
 
-	// Check trial status
-	const trialTime = calculateTrialTime(user.trialStartDate, user.trialEndDate);
-	const hasActiveTrial = user.trialStatus === 'active' && !trialTime.isExpired;
+	// Derive trial status dynamically instead of trusting DB field
+	// @why DB trial_status can be stale if webhook failed or user abandoned checkout
+	const effectiveTrialStatus = deriveTrialStatus(user.subscriptionStatus, user.trialEndDate);
+	const hasActiveTrial = effectiveTrialStatus === 'active';
 
 	// Check onboarding
 	const onboardingComplete = user.onboardingStep === 'completed';
@@ -54,7 +55,7 @@ async function validateAccessInternal(userId: string): Promise<AccessResultWithU
 		return {
 			allowed: false,
 			reason:
-				user.trialStatus === 'expired'
+				effectiveTrialStatus === 'expired'
 					? 'Your trial has expired. Please upgrade to continue.'
 					: 'Please subscribe to access this feature.',
 			upgradeRequired: true,
@@ -91,7 +92,7 @@ export async function validateAccess(userId: string): Promise<AccessResult> {
  */
 export async function validateCampaignCreation(userId: string): Promise<AccessResult> {
 	const accessResult = await validateAccessInternal(userId);
-	if (!accessResult.allowed || !accessResult.user) {
+	if (!(accessResult.allowed && accessResult.user)) {
 		const { user: _user, ...result } = accessResult;
 		return result;
 	}
@@ -138,7 +139,7 @@ export async function validateCreatorSearch(
 	estimatedResults: number = 100
 ): Promise<AccessResult> {
 	const accessResult = await validateAccessInternal(userId);
-	if (!accessResult.allowed || !accessResult.user) {
+	if (!(accessResult.allowed && accessResult.user)) {
 		const { user: _user, ...result } = accessResult;
 		return result;
 	}

@@ -18,7 +18,7 @@ export type AdminUserSummary = {
 	onboardingStep: string;
 	currentPlan: string;
 	subscriptionStatus: string;
-	trialStatus: string;
+	// trialStatus derived from subscriptionStatus + trialEndDate
 	planCampaignsLimit: number | null;
 	planCreatorsLimit: number | null;
 	createdAt: Date;
@@ -37,7 +37,7 @@ export async function searchUsersByEmail(query: string, limit = 10): Promise<Adm
 			onboardingStep: users.onboardingStep,
 			currentPlan: userSubscriptions.currentPlan,
 			subscriptionStatus: userSubscriptions.subscriptionStatus,
-			trialStatus: userSubscriptions.trialStatus,
+			// trialStatus removed - derive via deriveTrialStatus()
 			planCampaignsLimit: userUsage.planCampaignsLimit,
 			planCreatorsLimit: userUsage.planCreatorsLimit,
 			createdAt: users.createdAt,
@@ -52,7 +52,7 @@ export async function searchUsersByEmail(query: string, limit = 10): Promise<Adm
 		...row,
 		currentPlan: row.currentPlan ?? 'free',
 		subscriptionStatus: row.subscriptionStatus ?? 'none',
-		trialStatus: row.trialStatus ?? 'pending',
+		// trialStatus derived - not stored
 	}));
 }
 
@@ -107,7 +107,7 @@ export async function grantPlanToUserByEmail(
 			currentPlan: planKey,
 			intendedPlan: planKey,
 			subscriptionStatus: 'active',
-			trialStatus: 'converted',
+			// trialStatus removed - derived from subscriptionStatus
 			billingSyncStatus: 'synced',
 			updatedAt: now,
 		};

@@ -32,7 +32,7 @@ export default function AccessGuardOverlay({
 	const mountTs = useMemo(() => new Date().toISOString(), []);
 
 	const isAllowedRoute = useMemo(
-		() => ['/billing', '/onboarding'].some((p) => pathname?.startsWith(p)),
+		() => ['/billing', '/onboarding', '/account'].some((p) => pathname?.startsWith(p)),
 		[pathname]
 	);
 

@@ -1,5 +1,5 @@
 import { Client } from '@upstash/qstash';
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
 import { backgroundJobs, events } from '@/lib/db/schema';
@@ -204,6 +204,7 @@ export class JobProcessor {
 
 	/**
 	 * Complete Onboarding Job Processor
+	 * @why trialStatus is now derived from subscriptionStatus + trialEndDate, not stored
 	 */
 	private static async processCompleteOnboarding(payload: any): Promise<JobResult> {
 		structuredConsole.log('🎯 [JOB-PROCESSOR] Processing complete onboarding:', payload);
@@ -222,8 +223,11 @@ export class JobProcessor {
 				return { success: false, error: 'User profile not found', retryable: false };
 			}
 
-			// Check if already completed (idempotency)
-			if (userProfile.onboardingStep === 'completed' && userProfile.trialStatus === 'active') {
+			// Check if already completed (idempotency) - use subscriptionStatus instead of trialStatus
+			if (
+				userProfile.onboardingStep === 'completed' &&
+				userProfile.subscriptionStatus === 'trialing'
+			) {
 				structuredConsole.log('✅ [JOB-PROCESSOR] Onboarding already completed (idempotent)');
 				return { success: true, data: { message: 'Already completed' } };
 			}
@@ -272,9 +276,9 @@ export class JobProcessor {
 			});
 
 			// Update user profile atomically
+			// @why trialStatus is now derived from subscriptionStatus + trialEndDate
 			const updateData: any = {
 				onboardingStep: 'completed',
-				trialStatus: 'active',
 				trialStartDate,
 				trialEndDate,
 				subscriptionStatus: 'trialing',
@@ -300,7 +304,7 @@ export class JobProcessor {
 				data: {
 					userId,
 					onboardingStep: 'completed',
-					trialStatus: 'active',
+					subscriptionStatus: 'trialing',
 					trialStartDate: trialStartDate.toISOString(),
 					trialEndDate: trialEndDate.toISOString(),
 				},

@@ -14,9 +14,9 @@ import {
 	PLANS,
 	type PlanKey,
 	type SubscriptionStatus,
-	type TrialStatus,
 } from './plan-config';
 import type { BillingStatus } from './subscription-types';
+import { deriveTrialStatus } from './trial-status';
 import { calculateTrialTime } from './trial-utils';
 
 // ═══════════════════════════════════════════════════════════════
@@ -37,8 +37,12 @@ export async function getBillingStatus(userId: string): Promise<BillingStatus> {
 	// Calculate trial time
 	const trialTime = calculateTrialTime(user.trialStartDate, user.trialEndDate);
 
-	// Determine states
-	const isTrialing = user.trialStatus === 'active' && user.subscriptionStatus !== 'active';
+	// Derive trial status dynamically instead of trusting DB field
+	// @why DB trial_status can be stale if webhook failed or user abandoned checkout
+	const effectiveTrialStatus = deriveTrialStatus(user.subscriptionStatus, user.trialEndDate);
+
+	// Determine states using derived status
+	const isTrialing = effectiveTrialStatus === 'active' && user.subscriptionStatus !== 'active';
 	const hasActiveSubscription = user.subscriptionStatus === 'active';
 	const currentPlan = user.currentPlan as PlanKey | null;
 
@@ -67,7 +71,7 @@ export async function getBillingStatus(userId: string): Promise<BillingStatus> {
 		isTrialing,
 		hasActiveSubscription,
 
-		trialStatus: (user.trialStatus as TrialStatus) || 'pending',
+		trialStatus: effectiveTrialStatus,
 		daysRemaining: trialTime.daysRemaining,
 		hoursRemaining: trialTime.hoursRemaining,
 		minutesRemaining: trialTime.minutesRemaining,

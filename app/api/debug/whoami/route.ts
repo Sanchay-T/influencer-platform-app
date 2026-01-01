@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
-import { db } from '@/lib/db';
+import { deriveTrialStatus } from '@/lib/billing/trial-status';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
@@ -23,6 +23,12 @@ export async function GET() {
 		const userProfile = await getUserProfile(userId);
 
 		if (userProfile) {
+			// Derive trial status
+			const trialStatus = deriveTrialStatus(
+				userProfile.subscriptionStatus,
+				userProfile.trialEndDate
+			);
+
 			structuredConsole.log('👤 [DEBUG-WHOAMI] User Profile Found:');
 			structuredConsole.log('📧 [DEBUG-WHOAMI] Email:', userProfile.email || 'NOT_SET');
 			structuredConsole.log('👤 [DEBUG-WHOAMI] Full Name:', userProfile.fullName || 'NOT_SET');
@@ -31,10 +37,24 @@ export async function GET() {
 				userProfile.businessName || 'NOT_SET'
 			);
 			structuredConsole.log('📋 [DEBUG-WHOAMI] Onboarding Step:', userProfile.onboardingStep);
-			structuredConsole.log('🔄 [DEBUG-WHOAMI] Trial Status:', userProfile.trialStatus);
+			structuredConsole.log('🔄 [DEBUG-WHOAMI] Trial Status (derived):', trialStatus);
 			structuredConsole.log('💳 [DEBUG-WHOAMI] Current Plan:', userProfile.currentPlan);
 			structuredConsole.log('📅 [DEBUG-WHOAMI] Created At:', userProfile.createdAt);
 			structuredConsole.log('🆔🆔🆔 [DEBUG-WHOAMI] ===================================');
+
+			return NextResponse.json({
+				userId,
+				userProfile: {
+					email: userProfile.email,
+					fullName: userProfile.fullName,
+					businessName: userProfile.businessName,
+					onboardingStep: userProfile.onboardingStep,
+					trialStatus, // Now derived
+					currentPlan: userProfile.currentPlan,
+					createdAt: userProfile.createdAt,
+				},
+				message: 'Check server console for detailed logs',
+			});
 		} else {
 			structuredConsole.log('❌ [DEBUG-WHOAMI] No user profile found in database');
 			structuredConsole.log('🆔🆔🆔 [DEBUG-WHOAMI] ===================================');
@@ -42,17 +62,7 @@ export async function GET() {
 
 		return NextResponse.json({
 			userId,
-			userProfile: userProfile
-				? {
-						email: userProfile.email,
-						fullName: userProfile.fullName,
-						businessName: userProfile.businessName,
-						onboardingStep: userProfile.onboardingStep,
-						trialStatus: userProfile.trialStatus,
-						currentPlan: userProfile.currentPlan,
-						createdAt: userProfile.createdAt,
-					}
-				: null,
+			userProfile: null,
 			message: 'Check server console for detailed logs',
 		});
 	} catch (error) {

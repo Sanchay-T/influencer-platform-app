@@ -7,6 +7,7 @@
 
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
+import { deriveTrialStatus } from '@/lib/billing/trial-status';
 import { db } from '@/lib/db';
 import { userBilling, userSubscriptions, users, userUsage } from '@/lib/db/schema';
 
@@ -39,8 +40,8 @@ export async function GET(request: Request) {
 				createdAt: users.createdAt,
 				currentPlan: userSubscriptions.currentPlan,
 				intendedPlan: userSubscriptions.intendedPlan,
-				trialStatus: userSubscriptions.trialStatus,
 				subscriptionStatus: userSubscriptions.subscriptionStatus,
+				trialEndDate: userSubscriptions.trialEndDate,
 				stripeCustomerId: userBilling.stripeCustomerId,
 				stripeSubscriptionId: userBilling.stripeSubscriptionId,
 			})
@@ -56,6 +57,9 @@ export async function GET(request: Request) {
 			return NextResponse.json({ error: 'User not found', exists: false }, { status: 404 });
 		}
 
+		// Derive trial status from subscription status + trial end date
+		const trialStatus = deriveTrialStatus(profile.subscriptionStatus, profile.trialEndDate);
+
 		return NextResponse.json({
 			exists: true,
 			userId: profile.id,
@@ -63,7 +67,7 @@ export async function GET(request: Request) {
 			onboardingStep: profile.onboardingStep,
 			currentPlan: profile.currentPlan,
 			intendedPlan: profile.intendedPlan,
-			trialStatus: profile.trialStatus,
+			trialStatus, // Now derived
 			stripeCustomerId: profile.stripeCustomerId,
 			stripeSubscriptionId: profile.stripeSubscriptionId,
 			subscriptionStatus: profile.subscriptionStatus,

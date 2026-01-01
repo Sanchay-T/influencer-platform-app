@@ -18,11 +18,15 @@ export default async function DashboardPage() {
 	const userProfile = await ensureUserProfile(userId);
 
 	const onboardingStep = userProfile.onboardingStep;
+	const subscriptionStatus = userProfile.subscriptionStatus;
 
-	// If user has selected a plan but webhook hasn't fired yet,
-	// redirect to success page which will poll for webhook completion.
-	// This prevents the modal from showing again after Stripe checkout.
-	if (onboardingStep === 'plan_selected') {
+	// Only redirect to success page if webhook is pending (subscription exists but onboarding not complete)
+	// @why If plan_selected + subscription_status='none', user abandoned checkout and should retry
+	const hasPendingWebhook =
+		onboardingStep === 'plan_selected' &&
+		(subscriptionStatus === 'trialing' || subscriptionStatus === 'active');
+
+	if (hasPendingWebhook) {
 		redirect('/onboarding/success');
 	}
 
@@ -30,12 +34,17 @@ export default async function DashboardPage() {
 	const { favorites, recentLists, metrics } = await getDashboardOverview(userId);
 
 	const showOnboarding = onboardingStep !== 'completed';
+
+	// Determine which step to show in onboarding modal
+	// plan_selected with no subscription = abandoned checkout, restart at plan selection (step 3)
 	const onboardingInitialStep =
-		onboardingStep === 'info_captured'
-			? 2
+		onboardingStep === 'plan_selected'
+			? 3 // Abandoned checkout - restart at plan selection
 			: onboardingStep === 'intent_captured'
 				? 3
-				: 1;
+				: onboardingStep === 'info_captured'
+					? 2
+					: 1;
 	const onboardingData = {
 		fullName: userProfile.fullName ?? '',
 		businessName: userProfile.businessName ?? '',

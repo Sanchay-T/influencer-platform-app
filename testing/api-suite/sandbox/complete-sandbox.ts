@@ -98,13 +98,13 @@ async function createSandboxUser(): Promise<SandboxUser> {
   }
 
   // Create subscription - start inactive, will activate after onboarding
+  // @why trialStatus is now derived from subscriptionStatus + trialEndDate
   await db
     .insert(userSubscriptions)
     .values({
       userId: newUser.id,
       currentPlan: null,
-      subscriptionStatus: 'inactive',
-      trialStatus: 'pending',
+      subscriptionStatus: 'none',
     })
     .onConflictDoNothing()
 
@@ -141,12 +141,12 @@ async function activatePlan(user: SandboxUser): Promise<void> {
   console.log(`\n💳 Activating plan for user: ${user.clerkId}`)
 
   // Update subscription to active
+  // @why trialStatus is now derived from subscriptionStatus + trialEndDate
   await db
     .update(userSubscriptions)
     .set({
       currentPlan: 'fame_flex', // Unlimited plan for testing
       subscriptionStatus: 'active',
-      trialStatus: 'converted',
     })
     .where(eq(userSubscriptions.userId, user.uuid))
 
