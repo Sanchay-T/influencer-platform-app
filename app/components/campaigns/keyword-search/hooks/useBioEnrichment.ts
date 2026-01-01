@@ -174,10 +174,6 @@ export function useBioEnrichment(
 		if (hydratedCount > 0) {
 			hasHydrated.current = true;
 			setBioData(hydrated);
-			// If all creators have bio_enriched, mark complete
-			if (missingCount === 0) {
-				setHasFetchedComplete(true);
-			}
 		}
 	}, [creators, isInstagram, isTikTok]);
 
