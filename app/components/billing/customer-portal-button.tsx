@@ -35,25 +35,9 @@ export default function CustomerPortalButton({
 		try {
 			structuredConsole.log('🔗 [CUSTOMER-PORTAL-BUTTON] Opening customer portal...');
 
-			// First check if user can access portal
-			const accessCheckResponse = await fetch('/api/stripe/customer-portal', {
-				method: 'GET',
-			});
-
-			if (!accessCheckResponse.ok) {
-				throw new Error('Unable to access customer portal');
-			}
-
-			const accessData = await accessCheckResponse.json();
-
-			if (!accessData.canAccessPortal) {
-				throw new Error(
-					'Customer portal not available. Please complete your subscription setup first.'
-				);
-			}
-
-			// Create portal session
-			const portalResponse = await fetch('/api/stripe/customer-portal', {
+			// Create portal session - uses /api/stripe/portal (POST)
+			// Access check is done by parent component via canManageSubscription
+			const portalResponse = await fetch('/api/stripe/portal', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -71,12 +55,6 @@ export default function CustomerPortalButton({
 			const portalData = await portalResponse.json();
 
 			if (!portalData.success) {
-				// Handle mock customer case
-				if (portalData.isMockCustomer) {
-					throw new Error(
-						'This is a test account using mock Stripe data. Subscription management is not available for test accounts.'
-					);
-				}
 				throw new Error(portalData.error || 'Invalid portal response');
 			}
 
