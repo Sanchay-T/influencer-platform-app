@@ -275,17 +275,43 @@ async function handleUserCreated(userData: any, requestId: string) {
 		const existingProfile = await getUserProfile(userId);
 
 		if (existingProfile) {
-			await BillingLogger.logDatabase(
-				'READ',
-				'User profile already exists - skipping creation',
-				userId,
-				{
-					table: 'users',
-					existingProfile: !!existingProfile,
-					currentPlan: existingProfile.currentPlan,
-				},
-				requestId
-			);
+			// User exists - but check if email needs updating (race condition fix)
+			// If ensureUserProfile created the user with a fallback email, update it now
+			const isPlaceholderEmail =
+				existingProfile.email?.includes('@example.com') ||
+				existingProfile.email?.includes('@placeholder.com');
+
+			if (isPlaceholderEmail && email) {
+				await BillingLogger.logDatabase(
+					'UPDATE',
+					'Updating user email from placeholder to real email',
+					userId,
+					{
+						table: 'users',
+						oldEmail: existingProfile.email,
+						newEmail: email,
+						reason: 'race_condition_fix',
+					},
+					requestId
+				);
+
+				await updateUserProfile(userId, { email, fullName });
+				structuredConsole.log(
+					`✅ [CLERK-WEBHOOK] Updated placeholder email to ${email} for ${userId}`
+				);
+			} else {
+				await BillingLogger.logDatabase(
+					'READ',
+					'User profile already exists - skipping creation',
+					userId,
+					{
+						table: 'users',
+						existingProfile: !!existingProfile,
+						currentPlan: existingProfile.currentPlan,
+					},
+					requestId
+				);
+			}
 			return;
 		}
 
