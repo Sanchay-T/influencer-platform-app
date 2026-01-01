@@ -20,5 +20,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 		params: {
 			eventsPerSecond: 10, // Rate limit for high-frequency updates
 		},
+		log_level: 'error', // Suppress info/debug logs (including JWT token)
 	},
 });
