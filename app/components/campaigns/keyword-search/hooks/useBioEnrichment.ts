@@ -1,11 +1,14 @@
 'use client';
 
 /**
- * Hook to automatically fetch bio data for creators when search completes.
+ * Hook to provide bio data for creators.
  *
- * @why V2 enrich-workers handle bio enrichment server-side for NEW runs.
- * This hook provides a FALLBACK for OLD runs that don't have bio_enriched data.
- * It only triggers if creators are missing bio_enriched data after job completes.
+ * For V2 runs: Bio data is pre-enriched by server workers and stored in job_creators.
+ * This hook HYDRATES that data into React state for the UI.
+ *
+ * For OLD runs (pre-V2): Falls back to client-side fetch, but NOTE:
+ * The fallback APIs write to scraping_results table, which V2 UI doesn't read.
+ * So fallback is essentially broken for V2 architecture.
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -29,34 +32,86 @@ export interface UseBioEnrichmentResult {
 	isLoading: boolean;
 }
 
-/**
- * Helper to check if a creator needs bio enrichment based on platform.
- */
-const creatorNeedsEnrichment = (
-	creator: Creator,
-	isInstagram: boolean,
-	isTikTok: boolean
-): boolean => {
-	// Already has bio_enriched data from V2 workers? Skip.
-	const bioEnriched = creator?.bio_enriched as Record<string, unknown> | undefined;
-	if (bioEnriched?.fetched_at) {
-		return false;
-	}
+// Debug flag
+const DEBUG = typeof window !== 'undefined' && localStorage.getItem('debug_bio') === 'true';
 
+function log(...args: unknown[]) {
+	if (DEBUG) {
+		console.log('[GEMZ-BIO]', ...args);
+	}
+}
+
+/**
+ * Normalize platform to detect Instagram/TikTok/YouTube
+ */
+function detectPlatform(platformRaw: string | null | undefined): {
+	isInstagram: boolean;
+	isTikTok: boolean;
+	isYouTube: boolean;
+	normalized: string;
+} {
+	const platform = (platformRaw ?? '').toLowerCase().trim();
+
+	const isInstagram =
+		platform === 'instagram' ||
+		platform === 'instagram_scrapecreators' ||
+		platform.includes('scrapecreators') ||
+		platform.includes('instagram');
+
+	const isTikTok =
+		platform === 'tiktok' ||
+		platform === 'tiktok_keyword' ||
+		platform === 'tiktokkeyword' ||
+		platform.includes('tiktok');
+
+	const isYouTube =
+		platform === 'youtube' ||
+		platform === 'youtube_keyword' ||
+		platform === 'youtubekeyword' ||
+		platform.includes('youtube');
+
+	return { isInstagram, isTikTok, isYouTube, normalized: platform };
+}
+
+/**
+ * Get a unique key for a creator (for bioData map)
+ */
+function getCreatorKey(creator: Creator, isInstagram: boolean, isTikTok: boolean): string | null {
 	if (isInstagram) {
 		const ownerId = (creator as Record<string, unknown>)?.owner?.id;
-		return Boolean(ownerId);
+		if (ownerId && typeof ownerId === 'string') {
+			return ownerId;
+		}
 	}
+
 	if (isTikTok) {
 		const handle = creator?.creator?.uniqueId || creator?.creator?.username;
-		return Boolean(handle);
+		if (handle && typeof handle === 'string') {
+			return handle;
+		}
 	}
-	return false;
-};
+
+	// Fallback to username
+	const username = creator?.creator?.username;
+	if (username && typeof username === 'string') {
+		return username;
+	}
+
+	return null;
+}
 
 /**
- * Hook that hydrates bio data from existing server-side enrichment,
- * and provides a fallback client-side fetch for old runs without bio_enriched.
+ * Check if a creator already has bio_enriched data from V2 workers
+ */
+function hasBioEnriched(creator: Creator): boolean {
+	const bioEnriched = (creator as Record<string, unknown>)?.bio_enriched as
+		| Record<string, unknown>
+		| undefined;
+	return Boolean(bioEnriched?.fetched_at);
+}
+
+/**
+ * Hook that provides bio data from V2 enrichment or fallback
  */
 export function useBioEnrichment(
 	creators: Creator[],
@@ -72,14 +127,25 @@ export function useBioEnrichment(
 	const hasHydrated = useRef(false);
 
 	// Platform detection
-	const platform = (platformNormalized ?? '').toLowerCase();
-	const isInstagram = platform === 'instagram' || platform.includes('scrapecreators');
-	const isTikTok = platform === 'tiktok';
+	const { isInstagram, isTikTok, isYouTube, normalized } = useMemo(
+		() => detectPlatform(platformNormalized),
+		[platformNormalized]
+	);
 	const isSupportedPlatform = isInstagram || isTikTok;
+
+	log('Platform detection:', {
+		raw: platformNormalized,
+		normalized,
+		isInstagram,
+		isTikTok,
+		isYouTube,
+		isSupportedPlatform,
+	});
 
 	// Reset when jobId changes
 	useEffect(() => {
 		if (jobId !== lastJobId.current) {
+			log('Job changed:', { from: lastJobId.current, to: jobId });
 			lastJobId.current = jobId ?? null;
 			hasFetched.current = false;
 			hasHydrated.current = false;
@@ -88,56 +154,68 @@ export function useBioEnrichment(
 		}
 	}, [jobId]);
 
-	// Hydrate bioData from existing bio_enriched on mount (for page reloads)
-	// This ensures persisted bio data displays immediately without re-fetching
+	// HYDRATE: Extract bio_enriched from V2 creators into bioData state
 	useEffect(() => {
 		if (hasHydrated.current || !creators?.length) {
 			return;
 		}
 
+		log('Hydrating bio data from', creators.length, 'creators');
+
 		const hydrated: BioDataMap = {};
+		let hydratedCount = 0;
+		let missingCount = 0;
+
 		for (const creator of creators) {
-			const bioEnriched = creator?.bio_enriched as Record<string, unknown> | undefined;
+			const bioEnriched = (creator as Record<string, unknown>)?.bio_enriched as
+				| Record<string, unknown>
+				| undefined;
+
 			if (bioEnriched?.fetched_at) {
-				const creatorAny = creator as Record<string, unknown>;
-				const key =
-					(creatorAny?.owner as Record<string, unknown>)?.id ||
-					creator?.creator?.uniqueId ||
-					creator?.creator?.username;
+				const key = getCreatorKey(creator, isInstagram, isTikTok);
 				if (key) {
-					hydrated[key as string] = {
+					hydrated[key] = {
 						biography: bioEnriched.biography as string | null | undefined,
 						bio_links: (bioEnriched.bio_links as BioData['bio_links']) || [],
 						external_url: bioEnriched.external_url as string | null | undefined,
 						extracted_email: bioEnriched.extracted_email as string | null | undefined,
 					};
+					hydratedCount++;
 				}
+			} else {
+				missingCount++;
 			}
 		}
 
-		if (Object.keys(hydrated).length > 0) {
+		log('Hydration result:', { hydratedCount, missingCount, total: creators.length });
+
+		if (hydratedCount > 0) {
 			hasHydrated.current = true;
 			setBioData(hydrated);
-			setHasFetchedComplete(true);
+			// If all creators have bio_enriched, mark complete
+			if (missingCount === 0) {
+				setHasFetchedComplete(true);
+			}
 		}
-	}, [creators]);
+	}, [creators, isInstagram, isTikTok]);
 
-	// Compute how many creators need enrichment (don't have bio_enriched from V2)
+	// Count creators needing enrichment
 	const creatorsNeedingEnrichment = useMemo(() => {
 		if (!isSupportedPlatform || creators.length === 0) {
 			return 0;
 		}
-		return creators.filter((c) => creatorNeedsEnrichment(c, isInstagram, isTikTok)).length;
-	}, [creators, isSupportedPlatform, isInstagram, isTikTok]);
+		return creators.filter((c) => !hasBioEnriched(c)).length;
+	}, [creators, isSupportedPlatform]);
 
-	// Only show loading if job is complete and creators need enrichment
+	// Loading state: only show if job complete but still need enrichment
 	const isLoading =
 		isSupportedPlatform &&
 		!hasFetchedComplete &&
 		creators.length > 0 &&
 		creatorsNeedingEnrichment > 0;
 
-	// Fallback: fetch bios client-side for OLD runs without bio_enriched data
+	// FALLBACK: For old runs without bio_enriched
+	// NOTE: This writes to scraping_results table which V2 UI doesn't read!
 	useEffect(() => {
 		if (!isSupportedPlatform) {
 			setHasFetchedComplete(true);
@@ -149,23 +227,30 @@ export function useBioEnrichment(
 			return;
 		}
 
-		// Check if ANY creators need enrichment (missing bio_enriched from V2)
-		const needsEnrichment = creators.some((c) => creatorNeedsEnrichment(c, isInstagram, isTikTok));
+		// Check if we need fallback
+		const needsFallback = creators.some((c) => !hasBioEnriched(c));
 
-		if (!needsEnrichment) {
-			// All creators have bio_enriched from V2 workers - no client fetch needed
+		log('Fallback check:', {
+			isJobComplete,
+			needsFallback,
+			creatorsNeedingEnrichment,
+			hasFetched: hasFetched.current,
+		});
+
+		if (!needsFallback) {
+			log('All creators have bio_enriched - skipping fallback');
 			setHasFetchedComplete(true);
 			return;
 		}
 
+		// WARNING: Fallback writes to scraping_results, not job_creators
+		// This is a known limitation for V2 architecture
 		const fetchBios = async () => {
 			hasFetched.current = true;
 			setIsFetching(true);
 
 			try {
-				const creatorsToEnrich = creators.filter((c) =>
-					creatorNeedsEnrichment(c, isInstagram, isTikTok)
-				);
+				const creatorsToEnrich = creators.filter((c) => !hasBioEnriched(c));
 
 				if (creatorsToEnrich.length === 0) {
 					setIsFetching(false);
@@ -173,18 +258,21 @@ export function useBioEnrichment(
 					return;
 				}
 
+				log('Fallback: fetching bios for', creatorsToEnrich.length, 'creators');
 				console.log('[GEMZ-BIO] Fallback: fetching bios for old run', {
 					jobId,
 					count: creatorsToEnrich.length,
-					platform: isInstagram ? 'instagram' : 'tiktok',
+					platform: isInstagram ? 'instagram' : isTikTok ? 'tiktok' : 'unknown',
 				});
 
 				let response: Response | undefined;
 
 				if (isInstagram) {
-					const userIds = creatorsToEnrich.map(
-						(c) => ((c as Record<string, unknown>).owner as Record<string, unknown>)?.id
-					);
+					const userIds = creatorsToEnrich
+						.map((c) => ((c as Record<string, unknown>).owner as Record<string, unknown>)?.id)
+						.filter(Boolean);
+
+					log('Instagram fallback:', { userIds: userIds.length });
 
 					response = await fetch('/api/creators/fetch-bios', {
 						method: 'POST',
@@ -192,7 +280,11 @@ export function useBioEnrichment(
 						body: JSON.stringify({ userIds, jobId }),
 					});
 				} else if (isTikTok) {
-					const handles = creatorsToEnrich.map((c) => c.creator?.uniqueId || c.creator?.username);
+					const handles = creatorsToEnrich
+						.map((c) => c.creator?.uniqueId || c.creator?.username)
+						.filter(Boolean);
+
+					log('TikTok fallback:', { handles: handles.length });
 
 					response = await fetch('/api/creators/fetch-tiktok-bios', {
 						method: 'POST',
@@ -203,11 +295,14 @@ export function useBioEnrichment(
 
 				if (!(response && response.ok)) {
 					console.error('[GEMZ-BIO] Fallback fetch failed:', response?.status);
+					log('Fallback failed:', response?.status);
 					return;
 				}
 
 				const data = await response.json();
-				setBioData(data.results || {});
+				log('Fallback result:', { resultsCount: Object.keys(data.results || {}).length });
+
+				setBioData((prev) => ({ ...prev, ...(data.results || {}) }));
 
 				if (data.stats) {
 					const emailsFound = Object.values(data.results || {}).filter(
@@ -221,6 +316,7 @@ export function useBioEnrichment(
 				}
 			} catch (error) {
 				console.error('[GEMZ-BIO] Fallback fetch error:', error);
+				log('Fallback error:', error);
 			} finally {
 				setIsFetching(false);
 				setHasFetchedComplete(true);
@@ -228,7 +324,13 @@ export function useBioEnrichment(
 		};
 
 		fetchBios();
-	}, [jobStatus, creators, jobId, isSupportedPlatform, isInstagram, isTikTok]);
+	}, [jobStatus, creators, jobId, isSupportedPlatform, isInstagram, isTikTok, creatorsNeedingEnrichment]);
+
+	log('Return state:', {
+		bioDataKeys: Object.keys(bioData).length,
+		isLoading,
+		hasFetchedComplete,
+	});
 
 	return { bioData, isLoading };
 }
