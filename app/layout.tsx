@@ -5,6 +5,7 @@ import { ClerkProvider } from '@clerk/nextjs';
 import type { Metadata } from 'next';
 // Font configuration for app-wide Inter usage.
 import { Inter } from 'next/font/google';
+import Script from 'next/script';
 import type { ReactNode } from 'react';
 import { AuthLogger } from './components/auth/auth-logger';
 import { NavigationLogger } from './components/navigation/navigation-logger';
@@ -52,8 +53,6 @@ const clerkAppearance: Appearance = {
 			'w-full justify-center rounded-2xl border border-white/15 bg-white/12 px-4 py-3 text-white shadow-[0_18px_55px_rgba(255,46,204,0.28)] transition hover:bg-white/22 hover:shadow-[0_24px_80px_rgba(255,46,204,0.35)]',
 		socialButtonsButtonText: 'text-sm font-semibold tracking-wide text-white',
 		socialButtonsButtonIcon: 'text-white filter drop-shadow-[0_0_10px_rgba(255,46,204,0.4)]',
-		socialButtonsIconButton:
-			'border-white/20 bg-white/10 hover:bg-white/20 text-white shadow-[0_12px_40px_rgba(236,72,153,0.25)]',
 		socialButtonsIconButton:
 			'border-white/20 bg-white/10 hover:bg-white/20 text-white shadow-[0_12px_40px_rgba(236,72,153,0.25)]',
 		dividerLine: 'bg-white/10',
@@ -111,6 +110,20 @@ export default function RootLayout({ children }: RootLayoutProps) {
 	return (
 		<ClerkProvider appearance={clerkAppearance}>
 			<html lang="en" className="dark">
+				<head>
+					<Script
+						src="https://www.googletagmanager.com/gtag/js?id=AW-17841436850"
+						strategy="afterInteractive"
+					/>
+					<Script id="google-ads-gtag" strategy="afterInteractive">
+						{`
+							window.dataLayer = window.dataLayer || [];
+							function gtag(){dataLayer.push(arguments);}
+							gtag('js', new Date());
+							gtag('config', 'AW-17841436850');
+						`}
+					</Script>
+				</head>
 				<body className={`${inter.variable} font-sans bg-background text-foreground antialiased`}>
 					<ClientConsoleBridge />
 					<AuthLogger />
