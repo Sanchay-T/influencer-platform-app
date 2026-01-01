@@ -516,23 +516,6 @@ export class CreatorEnrichmentService {
 		return metadata.enrichment;
 	}
 
-	public static async getCachedEnrichmentByHandle(
-		platform: SupportedPlatform,
-		handle: string
-	): Promise<CreatorEnrichmentRecord | null> {
-		const creator = await CreatorEnrichmentService.findCreatorRecord({ platform, handle });
-		if (!creator) {
-			return null;
-		}
-
-		const metadata = creator.metadata as EnrichmentMetadataContainer | null;
-		if (!metadata?.enrichment) {
-			return null;
-		}
-
-		return metadata.enrichment;
-	}
-
 	public static async enrichCreator(
 		options: EnrichCreatorOptions
 	): Promise<CreatorEnrichmentResult> {

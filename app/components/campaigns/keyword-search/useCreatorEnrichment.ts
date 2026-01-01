@@ -1,8 +1,7 @@
 'use client';
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { structuredConsole } from '@/lib/logging/console-proxy';
 import type { CreatorEnrichmentRecord, CreatorEnrichmentUsage } from '@/types/creator-enrichment';
 
 type EnrichmentTarget = {
@@ -41,7 +40,6 @@ export function useCreatorEnrichment(initial?: Record<string, CreatorEnrichmentR
 		total: 0,
 	});
 	const [usage, setUsage] = useState<CreatorEnrichmentUsage | null>(null);
-	const prefetchingRef = useRef<Set<string>>(new Set());
 
 	const setLoading = useCallback((key: string, value: boolean) => {
 		setLoadingMap((prev) => {
@@ -55,60 +53,6 @@ export function useCreatorEnrichment(initial?: Record<string, CreatorEnrichmentR
 			return next;
 		});
 	}, []);
-
-	const seedEnrichment = useCallback(
-		(platform: string, handle: string, record: CreatorEnrichmentRecord) => {
-			const sanitized = sanitizeHandle(handle);
-			if (!sanitized) return;
-			const key = buildKey(platform, sanitized);
-			setEnrichments((prev) => {
-				if (prev[key]) {
-					return prev;
-				}
-				return { ...prev, [key]: record };
-			});
-		},
-		[]
-	);
-
-	const prefetchEnrichment = useCallback(
-		async (platform: string, handle: string) => {
-			const sanitized = sanitizeHandle(handle);
-			if (!sanitized) return null;
-			const key = buildKey(platform, sanitized);
-			if (enrichments[key] || prefetchingRef.current.has(key)) {
-				return enrichments[key] ?? null;
-			}
-			prefetchingRef.current.add(key);
-			try {
-				const response = await fetch(
-					`/api/creators/enriched-data?platform=${encodeURIComponent(platform)}&handle=${encodeURIComponent(sanitized)}`,
-					{ cache: 'no-store' }
-				);
-				if (response.status === 204) {
-					return null;
-				}
-				if (!response.ok) {
-					return null;
-				}
-				const json = await response.json();
-				if (json?.data) {
-					const record = json.data as CreatorEnrichmentRecord;
-					setEnrichments((prev) => ({ ...prev, [key]: record }));
-					return record;
-				}
-				return null;
-			} catch (error) {
-				structuredConsole.warn('[creator-enrichment] prefetch failed', {
-					error: error instanceof Error ? error.message : String(error),
-				});
-				return null;
-			} finally {
-				prefetchingRef.current.delete(key);
-			}
-		},
-		[enrichments]
-	);
 
 	const enrichCreator = useCallback(
 		async (target: EnrichmentTarget, options: EnrichOptions = {}) => {
@@ -247,21 +191,10 @@ export function useCreatorEnrichment(initial?: Record<string, CreatorEnrichmentR
 			isLoading,
 			enrichCreator,
 			enrichMany,
-			prefetchEnrichment,
-			seedEnrichment,
 			usage,
 			bulkState,
 		}),
-		[
-			getEnrichment,
-			isLoading,
-			enrichCreator,
-			enrichMany,
-			prefetchEnrichment,
-			seedEnrichment,
-			usage,
-			bulkState,
-		]
+		[getEnrichment, isLoading, enrichCreator, enrichMany, usage, bulkState]
 	);
 
 	return helpers;

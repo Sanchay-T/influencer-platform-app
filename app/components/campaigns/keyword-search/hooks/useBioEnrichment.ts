@@ -3,16 +3,13 @@
 /**
  * Hook to provide bio data for creators.
  *
- * For V2 runs: Bio data is pre-enriched by server workers and stored in job_creators.
+ * V2 runs have bio data pre-enriched by server workers and stored in job_creators.
  * This hook HYDRATES that data into React state for the UI.
  *
- * For OLD runs (pre-V2): Falls back to client-side fetch, but NOTE:
- * The fallback APIs write to scraping_results table, which V2 UI doesn't read.
- * So fallback is essentially broken for V2 architecture.
+ * Old runs without enrichment will show "No bio" - users should run new searches.
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import toast from 'react-hot-toast';
 import type { Creator } from '../utils/creator-utils';
 
 // Types
@@ -120,36 +117,21 @@ export function useBioEnrichment(
 	platformNormalized: string | null | undefined
 ): UseBioEnrichmentResult {
 	const [bioData, setBioData] = useState<BioDataMap>({});
-	const [isFetching, setIsFetching] = useState(false);
-	const [hasFetchedComplete, setHasFetchedComplete] = useState(false);
-	const hasFetched = useRef(false);
 	const lastJobId = useRef<string | null>(null);
 	const hasHydrated = useRef(false);
 
 	// Platform detection
-	const { isInstagram, isTikTok, isYouTube, normalized } = useMemo(
+	const { isInstagram, isTikTok } = useMemo(
 		() => detectPlatform(platformNormalized),
 		[platformNormalized]
 	);
-	const isSupportedPlatform = isInstagram || isTikTok;
-
-	log('Platform detection:', {
-		raw: platformNormalized,
-		normalized,
-		isInstagram,
-		isTikTok,
-		isYouTube,
-		isSupportedPlatform,
-	});
 
 	// Reset when jobId changes
 	useEffect(() => {
 		if (jobId !== lastJobId.current) {
 			log('Job changed:', { from: lastJobId.current, to: jobId });
 			lastJobId.current = jobId ?? null;
-			hasFetched.current = false;
 			hasHydrated.current = false;
-			setHasFetchedComplete(false);
 			setBioData({});
 		}
 	}, [jobId]);
@@ -199,140 +181,14 @@ export function useBioEnrichment(
 		}
 	}, [creators, isInstagram, isTikTok]);
 
-	// Count creators needing enrichment
-	const creatorsNeedingEnrichment = useMemo(() => {
-		if (!isSupportedPlatform || creators.length === 0) {
-			return 0;
-		}
-		return creators.filter((c) => !hasBioEnriched(c)).length;
-	}, [creators, isSupportedPlatform]);
-
-	// Loading state: only show if job complete but still need enrichment
-	const isLoading =
-		isSupportedPlatform &&
-		!hasFetchedComplete &&
-		creators.length > 0 &&
-		creatorsNeedingEnrichment > 0;
-
-	// FALLBACK: For old runs without bio_enriched
-	// NOTE: This writes to scraping_results table which V2 UI doesn't read!
-	useEffect(() => {
-		if (!isSupportedPlatform) {
-			setHasFetchedComplete(true);
-			return;
-		}
-
-		const isJobComplete = jobStatus === 'completed' || jobStatus === 'partial';
-		if (!isJobComplete || hasFetched.current || creators.length === 0) {
-			return;
-		}
-
-		// Check if we need fallback
-		const needsFallback = creators.some((c) => !hasBioEnriched(c));
-
-		log('Fallback check:', {
-			isJobComplete,
-			needsFallback,
-			creatorsNeedingEnrichment,
-			hasFetched: hasFetched.current,
-		});
-
-		if (!needsFallback) {
-			log('All creators have bio_enriched - skipping fallback');
-			setHasFetchedComplete(true);
-			return;
-		}
-
-		// WARNING: Fallback writes to scraping_results, not job_creators
-		// This is a known limitation for V2 architecture
-		const fetchBios = async () => {
-			hasFetched.current = true;
-			setIsFetching(true);
-
-			try {
-				const creatorsToEnrich = creators.filter((c) => !hasBioEnriched(c));
-
-				if (creatorsToEnrich.length === 0) {
-					setIsFetching(false);
-					setHasFetchedComplete(true);
-					return;
-				}
-
-				log('Fallback: fetching bios for', creatorsToEnrich.length, 'creators');
-				console.log('[GEMZ-BIO] Fallback: fetching bios for old run', {
-					jobId,
-					count: creatorsToEnrich.length,
-					platform: isInstagram ? 'instagram' : isTikTok ? 'tiktok' : 'unknown',
-				});
-
-				let response: Response | undefined;
-
-				if (isInstagram) {
-					const userIds = creatorsToEnrich
-						.map((c) => ((c as Record<string, unknown>).owner as Record<string, unknown>)?.id)
-						.filter(Boolean);
-
-					log('Instagram fallback:', { userIds: userIds.length });
-
-					response = await fetch('/api/creators/fetch-bios', {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({ userIds, jobId }),
-					});
-				} else if (isTikTok) {
-					const handles = creatorsToEnrich
-						.map((c) => c.creator?.uniqueId || c.creator?.username)
-						.filter(Boolean);
-
-					log('TikTok fallback:', { handles: handles.length });
-
-					response = await fetch('/api/creators/fetch-tiktok-bios', {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({ handles, jobId }),
-					});
-				}
-
-				if (!(response && response.ok)) {
-					console.error('[GEMZ-BIO] Fallback fetch failed:', response?.status);
-					log('Fallback failed:', response?.status);
-					return;
-				}
-
-				const data = await response.json();
-				log('Fallback result:', { resultsCount: Object.keys(data.results || {}).length });
-
-				setBioData((prev) => ({ ...prev, ...(data.results || {}) }));
-
-				if (data.stats) {
-					const emailsFound = Object.values(data.results || {}).filter(
-						(b: unknown) => (b as BioData).extracted_email
-					).length;
-					if (emailsFound > 0) {
-						toast.success(
-							`Found ${emailsFound} emails from bios (${(data.stats.durationMs / 1000).toFixed(1)}s)`
-						);
-					}
-				}
-			} catch (error) {
-				console.error('[GEMZ-BIO] Fallback fetch error:', error);
-				log('Fallback error:', error);
-			} finally {
-				setIsFetching(false);
-				setHasFetchedComplete(true);
-			}
-		};
-
-		fetchBios();
-	}, [jobStatus, creators, jobId, isSupportedPlatform, isInstagram, isTikTok, creatorsNeedingEnrichment]);
+	// V2 data is already enriched - no fallback needed
+	// Old runs without bio_enriched should be re-run with new searches
 
 	log('Return state:', {
 		bioDataKeys: Object.keys(bioData).length,
-		isLoading,
-		hasFetchedComplete,
 	});
 
-	return { bioData, isLoading };
+	return { bioData, isLoading: false };
 }
 
 /**

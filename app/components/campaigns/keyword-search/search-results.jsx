@@ -97,8 +97,6 @@ const SearchResults = ({ searchData }) => {
 		isLoading: isEnrichmentLoading,
 		enrichCreator,
 		enrichMany,
-		prefetchEnrichment,
-		seedEnrichment,
 		usage: enrichmentUsage,
 		bulkState: enrichmentBulkState,
 	} = useCreatorEnrichment();
@@ -265,31 +263,8 @@ const SearchResults = ({ searchData }) => {
 		currentRowIds.length > 0 && currentRowIds.every((id) => selectedCreators[id]);
 	const someSelectedOnPage = currentRowIds.some((id) => selectedCreators[id]);
 
-	// Prefetch/hydrate enrichment for visible rows
-	useEffect(() => {
-		currentRows.forEach(({ snapshot, raw }) => {
-			const target = buildEnrichmentTarget(snapshot, platformNormalized);
-			const platformValue = target.platform || 'tiktok';
-			const existing =
-				raw?.metadata?.enrichment || snapshot?.metadata?.enrichment || raw?.enrichment;
-			if (existing) {
-				seedEnrichment(platformValue, target.handle, existing);
-				applyEnrichmentToCreators(existing, target, raw, 'hydrate');
-			} else {
-				void prefetchEnrichment(platformValue, target.handle).then((record) => {
-					if (record) {
-						applyEnrichmentToCreators(record, target, raw, 'hydrate');
-					}
-				});
-			}
-		});
-	}, [
-		currentRows,
-		platformNormalized,
-		prefetchEnrichment,
-		seedEnrichment,
-		applyEnrichmentToCreators,
-	]);
+	// V2 data is already enriched - bio/email comes from job_creators.creatorData
+	// No per-creator API calls needed
 
 	const toggleSelection = (rowId, snapshot) => {
 		setSelectedCreators((prev) => {
