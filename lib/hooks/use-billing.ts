@@ -46,6 +46,9 @@ export interface BillingStatus {
 		features: string[];
 		price: number;
 	};
+	canManageSubscription?: boolean;
+	stripeCustomerId?: string | null;
+	subscriptionStatus?: string;
 }
 
 /**
@@ -186,6 +189,9 @@ export function useBilling(): BillingStatus {
 					creatorsLimit: actualCreatorsLimit,
 					progressPercentage: data.usageInfo?.progressPercentage || 0,
 				},
+				canManageSubscription: data.canManageSubscription,
+				stripeCustomerId: data.stripeCustomerId,
+				subscriptionStatus: data.subscriptionStatus,
 			});
 		};
 

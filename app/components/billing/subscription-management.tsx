@@ -12,18 +12,15 @@ import {
 	Star,
 	Zap,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { useBilling } from '@/lib/hooks/use-billing';
-import { structuredConsole } from '@/lib/logging/console-proxy';
 import { ErrorBoundary } from '../error-boundary';
 import { ManageSubscriptionButton } from './customer-portal-button';
-
-type PortalInfo = { canAccessPortal: boolean; isMockCustomer?: boolean } | null;
 
 const planMeta: Record<string, { label: string; price: string; Icon: typeof Shield }> = {
 	free: { label: 'Free Trial', price: '$0', Icon: Shield },
@@ -44,26 +41,12 @@ function SubscriptionCard() {
 		trialEndDate,
 		trialStatus,
 		refreshBillingData,
+		canManageSubscription,
 	} = useBilling();
 
-	const [portal, setPortal] = useState<PortalInfo>(null);
-	const [portalLoading, setPortalLoading] = useState(false);
-
-	// Fetch portal capability once per page load; reuse billing cache to avoid flicker
-	useEffect(() => {
-		if (!isLoaded || portal || portalLoading) return;
-		setPortalLoading(true);
-		fetch('/api/stripe/customer-portal')
-			.then((res) => (res.ok ? res.json() : { canAccessPortal: false }))
-			.then((data) =>
-				setPortal({
-					canAccessPortal: !!data.canAccessPortal,
-					isMockCustomer: !!data.isMockCustomer,
-				})
-			)
-			.catch((err) => structuredConsole.error('Portal fetch failed', err))
-			.finally(() => setPortalLoading(false));
-	}, [isLoaded, portal, portalLoading]);
+	// Portal access is determined by canManageSubscription from billing status
+	// (user has stripeCustomerId = can access Stripe portal)
+	const canAccessPortal = canManageSubscription ?? false;
 
 	const statusBadge = useMemo(() => {
 		if (isTrialing) return <Badge variant="secondary">Trial Active</Badge>;
@@ -229,11 +212,7 @@ function SubscriptionCard() {
 						>
 							Refresh data
 						</Button>
-						{portalLoading ? (
-							<Button disabled className="gap-2">
-								<Loader2 className="h-4 w-4 animate-spin" /> Preparing portal...
-							</Button>
-						) : portal?.canAccessPortal ? (
+						{canAccessPortal ? (
 							<ManageSubscriptionButton
 								className="gap-2"
 								returnUrl={typeof window !== 'undefined' ? window.location.href : '/billing'}
