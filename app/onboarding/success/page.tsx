@@ -51,7 +51,9 @@ function OnboardingSuccessContent() {
 			pollCountRef.current++;
 
 			const confirmed = await pollForWebhook();
-			if (confirmed) return;
+			if (confirmed) {
+				return;
+			}
 
 			// Stop polling after max attempts
 			if (pollCountRef.current >= MAX_POLL_ATTEMPTS) {
@@ -68,10 +70,19 @@ function OnboardingSuccessContent() {
 
 	useEffect(() => {
 		const load = async () => {
-			if (!sessionId) {
+			// Always check if user is already completed first (handles direct navigation)
+			const alreadyCompleted = await pollForWebhook();
+			if (alreadyCompleted) {
 				setLoading(false);
 				return;
 			}
+
+			// No session_id and not completed - redirect to dashboard to restart onboarding
+			if (!sessionId) {
+				router.push('/dashboard');
+				return;
+			}
+
 			try {
 				// Fetch session details for display
 				const sessionRes = await fetch(`/api/stripe/session?session_id=${sessionId}`);
@@ -82,12 +93,8 @@ function OnboardingSuccessContent() {
 					structuredConsole.error('Failed to fetch session', sessionRes.status);
 				}
 
-				// Check if webhook already completed (fast path)
-				const alreadyCompleted = await pollForWebhook();
-				if (!alreadyCompleted) {
-					// Start polling for webhook completion
-					startPolling();
-				}
+				// Start polling for webhook completion
+				startPolling();
 			} catch (err) {
 				structuredConsole.error('Success page error', err);
 			} finally {
@@ -102,7 +109,7 @@ function OnboardingSuccessContent() {
 				clearInterval(pollIntervalRef.current);
 			}
 		};
-	}, [sessionId, pollForWebhook, startPolling]);
+	}, [sessionId, pollForWebhook, startPolling, router]);
 
 	const handleContinue = () => {
 		setIsSubmitting(true);
@@ -127,7 +134,9 @@ function OnboardingSuccessContent() {
 
 export default function OnboardingSuccess() {
 	return (
-		<Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+		<Suspense
+			fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}
+		>
 			<OnboardingSuccessContent />
 		</Suspense>
 	);
