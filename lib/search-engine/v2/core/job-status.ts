@@ -5,6 +5,7 @@
  */
 
 import { eq } from 'drizzle-orm';
+import { invalidateJobCache } from '@/lib/cache/redis';
 import { db } from '@/lib/db';
 import { scrapingJobs } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
@@ -66,6 +67,9 @@ export async function markJobEnriching(jobId: string): Promise<void> {
 
 /**
  * Mark job as completed
+ *
+ * @why Also invalidates Redis cache to ensure fresh data is served
+ * with all enrichment data (bio_enriched, emails, etc.)
  */
 export async function markJobCompleted(jobId: string): Promise<void> {
 	await db
@@ -79,11 +83,16 @@ export async function markJobCompleted(jobId: string): Promise<void> {
 		})
 		.where(eq(scrapingJobs.id, jobId));
 
-	logger.info('Job marked as completed', { jobId }, LogCategory.JOB);
+	// Invalidate cache to ensure fresh data with enrichment
+	await invalidateJobCache(jobId);
+
+	logger.info('Job marked as completed (cache invalidated)', { jobId }, LogCategory.JOB);
 }
 
 /**
  * Mark job as partial (some keywords failed but we have results)
+ *
+ * @why Also invalidates Redis cache to ensure fresh data is served
  */
 export async function markJobPartial(jobId: string, error?: string): Promise<void> {
 	await db
@@ -97,7 +106,10 @@ export async function markJobPartial(jobId: string, error?: string): Promise<voi
 		})
 		.where(eq(scrapingJobs.id, jobId));
 
-	logger.info('Job marked as partial', { jobId, error }, LogCategory.JOB);
+	// Invalidate cache to ensure fresh data with enrichment
+	await invalidateJobCache(jobId);
+
+	logger.info('Job marked as partial (cache invalidated)', { jobId, error }, LogCategory.JOB);
 }
 
 /**
