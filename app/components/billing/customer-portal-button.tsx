@@ -123,7 +123,13 @@ export function ManageSubscriptionButton({
 	returnUrl?: string;
 }) {
 	return (
-		<CustomerPortalButton size={size} variant="default" className={className} returnUrl={returnUrl}>
+		<CustomerPortalButton
+			size={size}
+			variant="default"
+			className={className}
+			returnUrl={returnUrl}
+			showIcon={false}
+		>
 			<div className="flex items-center gap-2">
 				<CreditCard className="h-4 w-4" />
 				Manage Subscription
@@ -143,7 +149,13 @@ export function UpdatePaymentMethodButton({
 	returnUrl?: string;
 }) {
 	return (
-		<CustomerPortalButton size={size} variant="outline" className={className} returnUrl={returnUrl}>
+		<CustomerPortalButton
+			size={size}
+			variant="outline"
+			className={className}
+			returnUrl={returnUrl}
+			showIcon={false}
+		>
 			<div className="flex items-center gap-2">
 				<CreditCard className="h-4 w-4" />
 				Update Payment Method
@@ -163,7 +175,13 @@ export function ViewBillingHistoryButton({
 	returnUrl?: string;
 }) {
 	return (
-		<CustomerPortalButton size={size} variant="outline" className={className} returnUrl={returnUrl}>
+		<CustomerPortalButton
+			size={size}
+			variant="outline"
+			className={className}
+			returnUrl={returnUrl}
+			showIcon={false}
+		>
 			<div className="flex items-center gap-2">
 				<Shield className="h-4 w-4" />
 				View Billing History
