@@ -207,6 +207,30 @@ export async function GET(req: Request) {
 	// Extract creator data from rows
 	const paginatedCreators = paginatedRows.map((row) => row.creatorData);
 
+	// DEBUG: Log first creator's enrichment data to diagnose bio/email display issues
+	if (paginatedCreators.length > 0) {
+		const firstCreator = paginatedCreators[0] as Record<string, unknown>;
+		const creatorObj = firstCreator?.creator as Record<string, unknown>;
+		logger.info(
+			'[v2-status] DEBUG: First creator data structure',
+			{
+				jobId,
+				hasCreator: !!creatorObj,
+				hasBio: !!creatorObj?.bio,
+				hasEmails: Array.isArray(creatorObj?.emails) && creatorObj.emails.length > 0,
+				emailCount: Array.isArray(creatorObj?.emails) ? creatorObj.emails.length : 0,
+				hasBioEnriched: !!firstCreator?.bioEnriched,
+				hasBioEnrichedObj: !!firstCreator?.bio_enriched,
+				bioEnrichedKeys: firstCreator?.bio_enriched
+					? Object.keys(firstCreator.bio_enriched as object)
+					: [],
+				extractedEmail: (firstCreator?.bio_enriched as Record<string, unknown>)?.extracted_email,
+				sampleBio: creatorObj?.bio ? String(creatorObj.bio).substring(0, 100) + '...' : null,
+			},
+			LogCategory.JOB
+		);
+	}
+
 	logger.debug(
 		`[v2-status] Results query completed in ${Date.now() - resultsStart}ms`,
 		{},

@@ -117,6 +117,27 @@ export function useSearchJob(jobId: string | null, platform?: string): UseSearch
 		}
 
 		const newCreators = data.results[0].creators;
+
+		// DEBUG: Log first creator's data structure to diagnose bio/email display issues
+		if (newCreators.length > 0) {
+			const first = newCreators[0] as Record<string, unknown>;
+			const creatorObj = first?.creator as Record<string, unknown>;
+			console.log('[GEMZ-DEBUG] useSearchJob received creators:', {
+				count: newCreators.length,
+				firstCreator: {
+					username: creatorObj?.username,
+					hasBio: !!creatorObj?.bio,
+					bioLength: creatorObj?.bio ? String(creatorObj.bio).length : 0,
+					hasEmails: Array.isArray(creatorObj?.emails) && creatorObj.emails.length > 0,
+					emailCount: Array.isArray(creatorObj?.emails) ? creatorObj.emails.length : 0,
+					emails: creatorObj?.emails,
+					hasBioEnriched: !!first?.bioEnriched,
+					hasBioEnrichedObj: !!first?.bio_enriched,
+					bio_enriched: first?.bio_enriched,
+				},
+			});
+		}
+
 		setAccumulatedCreators((prev) => {
 			// For pagination: replace creators at the current page's position
 			// For polling during search: merge/dedupe
