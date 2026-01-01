@@ -20,7 +20,8 @@ import {
 	handleImageStart,
 	resolveMediaPreview,
 } from '../utils';
-import type { Creator, CreatorSnapshot } from '../utils/creator-snapshot';
+import type { CreatorSnapshot } from '../utils/creator-snapshot';
+import type { Creator } from '../utils/creator-utils';
 
 export interface RowData {
 	id: string;

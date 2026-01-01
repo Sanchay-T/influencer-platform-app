@@ -109,10 +109,11 @@ export function useBioEnrichment(
 		}
 	}, [creators]);
 
-	// Platform detection - both Instagram and TikTok use post-search bio enrichment
-	const isScrapecreatorsPlatform = platformNormalized === 'instagram_scrapecreators';
-	const isTikTokPlatform = platformNormalized === 'tiktok';
-	const shouldEnrich = isScrapecreatorsPlatform || isTikTokPlatform;
+	// @why DISABLED - V2 enrich-workers already handle bio enrichment server-side
+	// Client-side enrichment was writing to scraping_results table while UI reads from job_creators
+	// This caused duplicate API calls ($0.00188/call) that were completely wasted
+	// See: lib/search-engine/v2/workers/enrich-worker.ts for server-side implementation
+	const shouldEnrich = false;
 
 	// Compute if any creators actually need enrichment (avoids showing spinner when all have bio_enriched)
 	const creatorsNeedingEnrichment = useMemo(() => {

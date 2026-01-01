@@ -5,16 +5,10 @@
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Types
-export interface CreatorSnapshot {
-	handle: string;
-	platform?: string;
-	followers?: number | null;
-	displayName?: string;
-	avatarUrl?: string;
-	url?: string;
-	metadata?: Record<string, unknown> | null;
-}
+// @why Import and re-export from AddToListButton to ensure type compatibility when saving to lists
+// Previously had a separate type definition missing externalId, causing silent failures
+import type { CreatorSnapshot } from '@/components/lists/add-to-list-button';
+export type { CreatorSnapshot };
 
 export interface EnrichmentTarget {
 	handle: string;
