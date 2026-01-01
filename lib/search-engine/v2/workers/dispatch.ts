@@ -174,6 +174,19 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 
 	const startTime = Date.now();
 
+	// 🔍 DEBUG: Log environment check
+	console.log('[GEMZ-DEBUG] 🚀 dispatch() called', {
+		userId,
+		platform,
+		keywordCount: keywords.length,
+		targetResults,
+		campaignId,
+		QSTASH_TOKEN_SET: !!process.env.QSTASH_TOKEN,
+		NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+		V2_WORKER_URL: process.env.V2_WORKER_URL,
+		NODE_ENV: process.env.NODE_ENV,
+	});
+
 	// If QStash is not configured, we can't fan-out workers (search + enrichment).
 	// In that case, fail fast with a JSON error so the client doesn't crash on response.json().
 	if (!process.env.QSTASH_TOKEN) {
@@ -277,6 +290,14 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 	const baseUrl = getWorkerBaseUrl();
 	const dispatchWorkerUrl = `${baseUrl}/api/v2/worker/dispatch`;
 
+	// 🔍 DEBUG: Log worker URL
+	console.log('[GEMZ-DEBUG] 📡 QStash publish target', {
+		jobId,
+		baseUrl,
+		dispatchWorkerUrl,
+		getWorkerBaseUrl_result: getWorkerBaseUrl(),
+	});
+
 	const step4Start = Date.now();
 	try {
 		const message: DispatchWorkerMessage = {
@@ -288,13 +309,30 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 			enableExpansion,
 		};
 
-		await qstash.publishJSON({
+		console.log('[GEMZ-DEBUG] 📤 About to publish to QStash', {
+			url: dispatchWorkerUrl,
+			messageKeys: Object.keys(message),
+			jobId,
+		});
+
+		const qstashResult = await qstash.publishJSON({
 			url: dispatchWorkerUrl,
 			body: message,
 			retries: 3,
 			timeout: 60,
 		});
-	} catch (_error) {
+
+		console.log('[GEMZ-DEBUG] ✅ QStash publish SUCCESS', {
+			jobId,
+			qstashMessageId: qstashResult?.messageId,
+		});
+	} catch (qstashError) {
+		console.error('[GEMZ-DEBUG] ❌ QStash publish FAILED', {
+			jobId,
+			error: qstashError instanceof Error ? qstashError.message : String(qstashError),
+			stack: qstashError instanceof Error ? qstashError.stack : undefined,
+		});
+
 		const tracker = loadJobTracker(jobId);
 		await tracker.markError('Failed to queue dispatch worker');
 		return {

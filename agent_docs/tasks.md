@@ -173,7 +173,7 @@ useJobPolling (React Query) ──polls──► React Query Cache
     - Ensures backward compatibility with legacy data
     - Only runs for old data, new runs use server enrichment
 
-24. ✅ **Clean Architecture Refactor** (Jan 01, 2026)
+24. ✅ **Clean Architecture Refactor** (Commit eb49bf19c)
     - Added `message` field to Status API (human-readable from backend)
     - Created `useSearchJob` hook (single source of truth)
     - Created `ProgressDisplay` component (simple, stateless)
@@ -181,6 +181,17 @@ useJobPolling (React Query) ──polls──► React Query Cache
     - Deleted: `useBioEnrichment.ts`, `useAutoFetchAllPages.ts`, `useCreatorSearch.ts`
     - Before: 47+ state values, 7 loading indicators, 4 progress sources
     - After: ~12 state values, 1 loading indicator, 1 progress source (API)
+
+25. ✅ **Submit Delay & Double-Click Fix** (Commit d5c58e936)
+    - Added loading overlay during campaign submission (visual feedback)
+    - Added isSubmitting state to prevent double-click submissions
+    - Passed isSubmitting to KeywordReview component to disable button
+    - Added detailed timing logs ([GEMZ-SUBMIT], [GEMZ-DISPATCH]) for debugging
+
+26. ✅ **Bio/Email Display Fix** (Commits 8e439acff, 20c588bf4, eb817bd94)
+    - Added diagnostic logging to investigate bio/email not displaying (8e439acff)
+    - Suppressed verbose Supabase realtime logs to reduce console noise (20c588bf4)
+    - Fixed: Display bio and email from enriched creator data (eb817bd94)
 
 ### Checklist
 - [x] **Phase 1: Add Debug Logging** (Previous commit)
@@ -216,13 +227,26 @@ useJobPolling (React Query) ──polls──► React Query Cache
   - [x] Rewrite search-results.jsx (500→200 lines)
   - [x] Delete obsolete hooks (useBioEnrichment, useAutoFetchAllPages, useCreatorSearch)
   - [x] Commit and push refactor
-- [ ] **Phase 9: Final Test & Merge** (USER ACTION REQUIRED)
-  - [ ] Review uncommitted change in app/campaigns/search/keyword/page.jsx
+- [x] **Phase 9: Submit Delay & Double-Click Fix** (Commit d5c58e936)
+  - [x] Add loading overlay during campaign submission
+  - [x] Add isSubmitting state to prevent double-click
+  - [x] Add detailed timing logs for debugging
+  - [x] Deploy to sorz.ai for testing
+- [x] **Phase 10: Bio/Email Display Fix** (Commits 8e439acff, 20c588bf4, eb817bd94)
+  - [x] Add diagnostic logging for bio/email display issue
+  - [x] Suppress Supabase realtime verbose logs
+  - [x] Fix bio/email display from enriched creator data
+  - [x] Deploy to production
+- [ ] **Phase 11: Final Verification & Merge** (USER ACTION REQUIRED)
+  - [ ] Test 1000 creator search on sorz.ai (full end-to-end)
+  - [ ] Verify bio/email display correctly from enriched data
+  - [ ] Verify submit button loading overlay works
+  - [ ] Verify no double-click submission possible
+  - [ ] Verify progress messages update correctly during search
+  - [ ] Verify pagination works after search completes
+  - [ ] Review uncommitted changes (monologue.md, database-backups/, scripts/)
   - [ ] Commit or discard uncommitted changes
-  - [ ] Test 1000 creator search in production
-  - [ ] Verify progress message updates correctly
-  - [ ] Verify pagination works after completion
-  - [ ] Merge to main if tests pass
+  - [ ] Merge to main if all tests pass
 
 ### Next Action
 ```
