@@ -265,10 +265,9 @@ export function clearBillingCache() {
 	} catch {}
 	try {
 		if ((globalThis as any).__BILLING_CACHE__) {
-			(globalThis as any).__BILLING_CACHE__.data =
-				null(globalThis as any).__BILLING_CACHE__.ts =
-				0(globalThis as any).__BILLING_CACHE__.inflight =
-					null;
+			(globalThis as any).__BILLING_CACHE__.data = null;
+			(globalThis as any).__BILLING_CACHE__.ts = 0;
+			(globalThis as any).__BILLING_CACHE__.inflight = null;
 		}
 	} catch {}
 }
