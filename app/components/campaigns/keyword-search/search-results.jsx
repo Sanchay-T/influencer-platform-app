@@ -331,8 +331,8 @@ const SearchResults = ({ searchData }) => {
 					onSelectPage={handleSelectPage}
 					toggleSelection={toggleSelection}
 					renderProfileLink={renderProfileLink}
-					getBioDataForCreator={() => null}
-					getBioEmailForCreator={() => null}
+					getBioDataForCreator={(creator) => creator?.bio_enriched || null}
+					getBioEmailForCreator={(creator) => creator?.bio_enriched?.extracted_email || null}
 					getEnrichment={getEnrichment}
 					isEnrichmentLoading={isEnrichmentLoading}
 					enrichCreator={enrichCreator}
