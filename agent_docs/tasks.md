@@ -9,11 +9,11 @@
 
 **ID:** TASK-008
 **Title:** Fix Search Progress UX — Keyword Search Reliability
-**Status:** ✅ COMPLETE — Clean Architecture Refactor Done
-**Branch:** `fix/search-progress-ux`
+**Status:** ✅ COMPLETE — Ready for final merge
+**Branch:** `fix/search-progress-ux` (synced with main)
 **Started:** Dec 30, 2025
-**Completed:** Jan 01, 2026 — 06:25 PM
-**Latest Commits:** Phase 2 Clean Architecture Refactor (47+ state values → 12, 7 loading indicators → 1)
+**Last Updated:** Jan 01, 2026 — 08:15 PM
+**Latest Commits:** Cache invalidation (4e39a76f5) + Bio/Email display fix (eb817bd94)
 
 ### Goal
 Fix the keyword search progress UI that breaks in production. Backend returns 1000 creators correctly, but frontend gets stuck with partial results (200-800), spinners that never stop, and requires full browser refresh to see correct data.
@@ -193,6 +193,16 @@ useJobPolling (React Query) ──polls──► React Query Cache
     - Suppressed verbose Supabase realtime logs to reduce console noise (20c588bf4)
     - Fixed: Display bio and email from enriched creator data (eb817bd94)
 
+27. ✅ **Debug Logging for V2 Pipeline** (Commit 84cd41340)
+    - Added debug logging for V2 search pipeline
+    - Helps track job status transitions in production
+
+28. ✅ **Cache Invalidation on Job Completion** (Commit 4e39a76f5)
+    - Added invalidateJobCache() calls to markJobCompleted() and markJobPartial()
+    - Ensures fresh data with enrichment is served after job completes
+    - Root cause: Redis cache was set before enrichment completed, returning stale data
+    - Manually cleared cache for Run #21 job to fix existing data
+
 ### Checklist
 - [x] **Phase 1: Add Debug Logging** (Previous commit)
 - [x] **Phase 2: Identify Root Cause**
@@ -247,6 +257,75 @@ useJobPolling (React Query) ──polls──► React Query Cache
   - [ ] Review uncommitted changes (monologue.md, database-backups/, scripts/)
   - [ ] Commit or discard uncommitted changes
   - [ ] Merge to main if all tests pass
+
+---
+
+## Investigation: Expired Trials & Stuck Onboarding (Jan 1, 2026)
+
+### Issue 1: Trial Status Not Expiring
+
+**Problem:** Users with expired trials still show "Active" status with "0 days left" in the UI.
+
+**Evidence (UAT Database):**
+- 37 users have `trial_status = 'active'` but `trial_end_date < NOW()`
+- Example: Trial ended Nov 28, 2025 but still shows "Active" on Jan 1, 2026
+
+**Production Database - Expired Trials:**
+| Email | Trial End | Status |
+|-------|-----------|--------|
+| (anonymous) | Oct 20, 2025 | trialing/active |
+| (anonymous) | Oct 19, 2025 | trialing/active |
+| (anonymous) | Oct 17, 2025 | trialing/active |
+| accounts+appsumotest@usegemz.io | Oct 9, 2025 | none/active |
+
+**Root Cause:**
+- No scheduled job or webhook to update `trial_status` when trial expires
+- Stripe webhooks may not be triggering for trial end (need to verify webhook configuration)
+- Frontend displays `trial_status` directly without checking `trial_end_date`
+
+**Proposed Fix Options:**
+1. **Frontend Fix (Quick):** Add date check in UI - if `trial_end_date < now`, show "Expired"
+2. **Backend Fix (Proper):** Add scheduled job to mark expired trials as `expired`
+3. **Webhook Fix (Best):** Ensure Stripe `customer.subscription.trial_will_end` webhook updates status
+
+---
+
+### Issue 2: Stuck Onboarding - accounts+appsumotest@usegemz.io
+
+**User Data:**
+```
+Email: accounts+appsumotest@usegemz.io
+User ID: edd4b955-66f9-4547-b4e8-9e63ad0174a3
+Created: Oct 2, 2025
+
+user_subscriptions:
+  - trial_status: active (SHOULD BE EXPIRED - trial ended Oct 9, 2025)
+  - subscription_status: none (never paid)
+  - billing_sync_status: plan_selected
+  - intended_plan: glow_up
+  - current_plan: free
+
+user_profiles:
+  - NO RECORD EXISTS (NULL from LEFT JOIN)
+```
+
+**Root Cause:**
+1. User started onboarding, selected "glow_up" plan (`billing_sync_status: plan_selected`)
+2. Never completed Stripe checkout (`subscription_status: none`)
+3. Trial expired Oct 9, 2025 but status never updated
+4. `user_profiles` record was never created (possibly signup flow bug)
+
+**Why Stuck:**
+- No profile record → Onboarding state unknown
+- `billing_sync_status: plan_selected` → Waiting for checkout completion that never happened
+- User may see partial UI or be blocked from dashboard
+
+**Proposed Fix:**
+1. Create missing `user_profiles` record with `onboarding_step: 'pending'` to restart onboarding
+2. Update `trial_status` to `expired`
+3. Or: Delete user and have them re-signup
+
+---
 
 ### Next Action
 ```
@@ -342,4 +421,4 @@ IMMEDIATE NEXT STEPS:
 
 ---
 
-*Last updated: Dec 31, 2025 — 08:48 PM*
+*Last updated: Jan 01, 2026 — 08:15 PM*
