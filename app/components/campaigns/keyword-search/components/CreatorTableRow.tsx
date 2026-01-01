@@ -3,9 +3,13 @@
 /**
  * Individual table row for creator display.
  * Renders avatar, username, followers, bio, email, views, post link, enrich button, and save button.
+ *
+ * @performance Wrapped in React.memo to prevent re-renders when parent updates
+ * but this row's props haven't changed. Critical for tables with 50+ rows.
  */
 
 import { RefreshCw, Sparkles, User } from 'lucide-react';
+import { memo } from 'react';
 import { AddToListButton } from '@/components/lists/add-to-list-button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -87,7 +91,7 @@ export interface CreatorTableRowProps {
 	style?: React.CSSProperties;
 }
 
-export function CreatorTableRow({
+export const CreatorTableRow = memo(function CreatorTableRow({
 	row,
 	isSelected,
 	platformNormalized,
@@ -352,7 +356,7 @@ export function CreatorTableRow({
 			</TableCell>
 		</TableRow>
 	);
-}
+});
 
 // Helper components
 const ExternalLinkIcon = () => (

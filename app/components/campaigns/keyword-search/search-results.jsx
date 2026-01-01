@@ -1,27 +1,27 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { dedupeCreators } from '../utils/dedupe-creators';
-import { BioEmailConfirmDialog } from './components/BioEmailConfirmDialog';
+/**
+ * SearchResults - Simplified component using clean architecture
+ *
+ * @why From 500+ lines to ~200 lines by using single source of truth (useSearchJob)
+ * Frontend is "dumb" - just displays what backend says
+ *
+ * @context Part of clean architecture refactor (TASK-008)
+ * Replaces: useCreatorSearch, useBioEnrichment, useAutoFetchAllPages, SearchProgress
+ */
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CreatorGalleryView } from './components/CreatorGalleryView';
 import { CreatorTableView } from './components/CreatorTableView';
 import { EmailFilterOverlay } from './components/EmailFilterOverlay';
 import { PaginationControls } from './components/PaginationControls';
+import { ProgressDisplay } from './components/ProgressDisplay';
 import { ResultsContainer } from './components/ResultsContainer';
-import { SearchLoadingStates } from './components/SearchLoadingStates';
 import { SearchResultsHeader } from './components/SearchResultsHeader';
-import { useAutoFetchAllPages } from './hooks/useAutoFetchAllPages';
-import { useBioEmailDialog } from './hooks/useBioEmailDialog';
-import { useBioEnrichment } from './hooks/useBioEnrichment';
-import { useCreatorFiltering } from './hooks/useCreatorFiltering';
-import { useCreatorSearch } from './hooks/useCreatorSearch';
-import SearchProgress from './search-progress';
+import { useSearchJob } from './hooks/useSearchJob';
 import { useCreatorEnrichment } from './useCreatorEnrichment';
-// Extracted utilities
 import {
 	buildEnrichmentTarget,
-	getBioDataForCreator,
-	getBioEmailForCreator,
 	hasAnyEmail,
 	processBulkEnrichResults,
 	transformCreatorsToRows,
@@ -29,69 +29,78 @@ import {
 import { applyEnrichmentToCreatorList } from './utils/enrichment-applier';
 import { buildProfileLink } from './utils/profile-link';
 
-const SearchResults = ({ searchData }) => {
-	// Core search state from custom hook
-	const {
-		creators,
-		setCreators,
-		isLoading,
-		isFetching,
-		stillProcessing,
-		progressInfo,
-		setProgressInfo,
-		elapsedSeconds,
-		displayedProgress,
-		serverTotalCreators,
-		// @why Track job status in state for auto-fetch trigger
-		// The searchData.status prop doesn't update when polling detects completion
-		completedStatus,
-		waitingForResults,
-		shouldPoll,
-		jobIsActive,
-		platformNormalized,
-		handleSearchComplete,
-		handleIntermediateResults,
-		resultsCacheRef,
-	} = useCreatorSearch(searchData);
+// ============================================================================
+// Helper: Email filtering
+// ============================================================================
 
-	// Auto-fetch remaining pages when job is completed
-	// This replaces the manual "Load more" button with automatic background loading
-	const handleNewCreators = useCallback(
-		(newCreators) => {
-			setCreators((prev) => {
-				const merged = dedupeCreators([...prev, ...newCreators], {
-					platformHint: platformNormalized,
-				});
-				// Update cache
-				if (searchData?.jobId && merged.length > prev.length) {
-					resultsCacheRef.current.set(searchData.jobId, merged);
-				}
-				return merged;
-			});
-		},
-		[platformNormalized, searchData?.jobId, resultsCacheRef, setCreators]
+function useEmailFilter(creators, _platformNormalized) {
+	const [showEmailOnly, setShowEmailOnly] = useState(false);
+	const [emailOverlayDismissed, setEmailOverlayDismissed] = useState(false);
+
+	const hasEmail = useCallback(
+		(creator) => hasAnyEmail(creator, {}), // No bio data needed - server already enriched
+		[]
 	);
 
-	// @why Use serverTotalCreators and completedStatus from hook state instead of searchData props
-	// The props don't update when job completes, but hook state does (via handleSearchComplete)
-	// This ensures useAutoFetchAllPages triggers correctly when job status changes to 'completed'
-	const { isFetchingMore } = useAutoFetchAllPages({
-		jobId: searchData?.jobId,
-		platform: platformNormalized,
-		status: completedStatus ?? searchData?.status,
-		serverTotal: serverTotalCreators ?? searchData?.totalCreators,
-		loadedCount: creators.length,
-		onNewCreators: handleNewCreators,
-	});
+	const filteredCreators = useMemo(() => {
+		if (!showEmailOnly) {
+			return creators;
+		}
+		return creators.filter(hasEmail);
+	}, [creators, showEmailOnly, hasEmail]);
+
+	const emailCount = useMemo(() => creators.filter(hasEmail).length, [creators, hasEmail]);
+
+	const shouldShowEmailOverlay =
+		!emailOverlayDismissed && showEmailOnly && filteredCreators.length === 0 && emailCount === 0;
+
+	return {
+		showEmailOnly,
+		setShowEmailOnly,
+		filteredCreators,
+		emailCount,
+		emailOverlayDismissed,
+		setEmailOverlayDismissed,
+		shouldShowEmailOverlay,
+	};
+}
+
+// ============================================================================
+// Main Component
+// ============================================================================
+
+const SearchResults = ({ searchData }) => {
+	const jobId = searchData?.jobId;
+	const platformNormalized = (searchData?.platform ?? '').toLowerCase().replace(/[-_]/g, '');
+
+	// Single source of truth for job state
+	const {
+		status,
+		message,
+		progress,
+		creatorsFound,
+		creatorsEnriched,
+		creators,
+		totalCreators,
+		currentPage,
+		totalPages,
+		itemsPerPage,
+		setPage,
+		setItemsPerPage,
+		isComplete,
+		isActive,
+		isLoading,
+		isPageLoading,
+	} = useSearchJob(jobId, platformNormalized);
 
 	// UI state
-	const [isPageLoading, setIsPageLoading] = useState(false);
-	const [campaignName, setCampaignName] = useState('Campaign');
-	const [selectedCreators, setSelectedCreators] = useState({});
 	const [viewMode, setViewMode] = useState('table');
+	const [selectedCreators, setSelectedCreators] = useState({});
+	const [campaignName, setCampaignName] = useState('Campaign');
+	const [localCreators, setLocalCreators] = useState([]);
 	const resultsHeaderRef = useRef(null);
 
-	// Enrichment hook
+	// Enrichment hook (for Enrich button only)
 	const {
 		getEnrichment,
 		isLoading: isEnrichmentLoading,
@@ -101,80 +110,28 @@ const SearchResults = ({ searchData }) => {
 		bulkState: enrichmentBulkState,
 	} = useCreatorEnrichment();
 
-	// Bio enrichment
-	const jobStatusNormalized =
-		typeof searchData?.status === 'string' ? searchData.status.toLowerCase() : '';
-	const { bioData, isLoading: bioLoading } = useBioEnrichment(
-		creators,
-		jobStatusNormalized,
-		searchData?.jobId,
-		platformNormalized
-	);
-
-	// Wrapper for email checking that closes over bioData
-	const hasAnyEmailFn = useCallback((creator) => hasAnyEmail(creator, bioData), [bioData]);
-
-	// Filtering and pagination from hook
+	// Email filtering
 	const {
 		showEmailOnly,
 		setShowEmailOnly,
-		currentPage,
-		setCurrentPage,
-		itemsPerPage,
-		setItemsPerPage,
 		filteredCreators,
-		currentCreators,
-		totalResults: filteredTotalResults,
-		totalPages,
-		startIndex,
 		emailCount,
-		showFilteredEmpty,
 		emailOverlayDismissed,
 		setEmailOverlayDismissed,
 		shouldShowEmailOverlay,
-	} = useCreatorFiltering({
-		creators,
-		platformNormalized,
-		viewMode,
-		hasAnyEmailFn,
-		initialPageSize: 50,
-	});
+	} = useEmailFilter(localCreators, platformNormalized);
 
-	// @why Use server's processedResults as single source of truth for total count
-	// During processing: progressInfo.processedResults (real-time from polling)
-	// After completion: serverTotalCreators (from handleSearchComplete)
-	// Fallback: filteredTotalResults (locally loaded creators)
-	// This prevents showing different counts in header vs progress banner
-	const totalResults = showEmailOnly
-		? filteredTotalResults
-		: stillProcessing && progressInfo?.processedResults
-			? progressInfo.processedResults
-			: serverTotalCreators && serverTotalCreators > filteredTotalResults
-				? serverTotalCreators
-				: filteredTotalResults;
-
-	// Recalculate totalPages using server total (not just loaded creators)
-	// This ensures pagination shows correct page count even before all data loads
-	const actualTotalPages = Math.max(1, Math.ceil(totalResults / itemsPerPage));
-
-	// Wrappers for bio helpers - close over bioData state
-	const getBioEmailForCreatorFn = useCallback(
-		(creator) => getBioEmailForCreator(creator, bioData),
-		[bioData]
-	);
-	const getBioDataForCreatorFn = useCallback(
-		(creator) => getBioDataForCreator(creator, bioData),
-		[bioData]
-	);
+	// Sync creators from hook to local state
+	useEffect(() => {
+		if (creators && creators.length > 0) {
+			setLocalCreators(creators);
+		}
+	}, [creators]);
 
 	// Derived values
-	const isInstagramUs = [
-		'instagram',
-		'instagram_us_reels',
-		'instagram-us-reels',
-		'instagram-1.0',
-		'instagram_1.0',
-	].includes(platformNormalized);
+	const isInstagramUs = ['instagram', 'instagramusreels', 'instagram10'].includes(
+		platformNormalized
+	);
 
 	const selectedSnapshots = useMemo(() => Object.values(selectedCreators), [selectedCreators]);
 	const selectionCount = selectedSnapshots.length;
@@ -183,74 +140,16 @@ const SearchResults = ({ searchData }) => {
 		[selectedSnapshots, platformNormalized]
 	);
 
-	// Apply enrichment data to creators list and update state
-	const applyEnrichmentToCreators = useCallback(
-		(record, targetData, rawReference, origin = 'hydrate') => {
-			if (!record) {
-				return;
-			}
-
-			setCreators((prev) => {
-				const { creators: updated, didChange } = applyEnrichmentToCreatorList(
-					prev,
-					record,
-					targetData,
-					rawReference,
-					origin
-				);
-				if (didChange && searchData?.jobId) {
-					resultsCacheRef.current.set(searchData.jobId, updated);
-				}
-				return didChange ? updated : prev;
-			});
-		},
-		[searchData?.jobId, resultsCacheRef, setCreators]
-	);
-
-	// Bio email dialog hook
-	const {
-		dialogState: bioEmailDialogState,
-		setDialogState: setBioEmailDialogState,
-		handleUseBioEmail,
-		handleEnrichAnyway,
-		handleOpenChange: handleBioEmailDialogOpenChange,
-	} = useBioEmailDialog({
-		jobId: searchData?.jobId,
-		setCreators,
-		enrichCreator,
-		applyEnrichmentToCreators,
-	});
-
-	const handleBulkEnrich = useCallback(async () => {
-		if (!selectedEnrichmentTargets.length) {
-			return;
-		}
-		const result = await enrichMany(selectedEnrichmentTargets);
-		processBulkEnrichResults(result, creators, applyEnrichmentToCreators);
-	}, [applyEnrichmentToCreators, enrichMany, selectedEnrichmentTargets, creators]);
-
-	// Fetch campaign name for breadcrumbs
-	useEffect(() => {
-		const fetchCampaignName = async () => {
-			if (!searchData?.campaignId) return;
-			try {
-				const response = await fetch(`/api/campaigns/${searchData.campaignId}`);
-				if (!response.ok) return;
-				const data = await response.json();
-				if (data?.name) {
-					setCampaignName(data.name);
-				}
-			} catch (error) {
-				console.error('Error fetching campaign name:', error);
-			}
-		};
-		fetchCampaignName();
-	}, [searchData?.campaignId]);
-
+	// Transform creators to rows for table/gallery
 	const renderProfileLink = useCallback(
 		(creator) => buildProfileLink(creator, platformNormalized),
 		[platformNormalized]
 	);
+
+	const startIndex = (currentPage - 1) * itemsPerPage;
+	const currentCreators = useMemo(() => {
+		return filteredCreators.slice(startIndex, startIndex + itemsPerPage);
+	}, [filteredCreators, startIndex, itemsPerPage]);
 
 	const currentRows = useMemo(
 		() =>
@@ -263,10 +162,28 @@ const SearchResults = ({ searchData }) => {
 		currentRowIds.length > 0 && currentRowIds.every((id) => selectedCreators[id]);
 	const someSelectedOnPage = currentRowIds.some((id) => selectedCreators[id]);
 
-	// V2 data is already enriched - bio/email comes from job_creators.creatorData
-	// No per-creator API calls needed
+	// Apply enrichment to creators
+	const applyEnrichmentToCreators = useCallback(
+		(record, targetData, rawReference, origin = 'hydrate') => {
+			if (!record) {
+				return;
+			}
+			setLocalCreators((prev) => {
+				const { creators: updated, didChange } = applyEnrichmentToCreatorList(
+					prev,
+					record,
+					targetData,
+					rawReference,
+					origin
+				);
+				return didChange ? updated : prev;
+			});
+		},
+		[]
+	);
 
-	const toggleSelection = (rowId, snapshot) => {
+	// Selection handlers
+	const toggleSelection = useCallback((rowId, snapshot) => {
 		setSelectedCreators((prev) => {
 			const next = { ...prev };
 			if (next[rowId]) {
@@ -276,155 +193,108 @@ const SearchResults = ({ searchData }) => {
 			}
 			return next;
 		});
-	};
+	}, []);
 
-	const handleSelectPage = (shouldSelect) => {
-		setSelectedCreators((prev) => {
-			const next = { ...prev };
-			if (shouldSelect) {
-				currentRows.forEach(({ id, snapshot }) => {
-					next[id] = snapshot;
-				});
-			} else {
-				currentRows.forEach(({ id }) => {
-					delete next[id];
-				});
-			}
-			return next;
-		});
-	};
-
-	const clearSelection = () => setSelectedCreators({});
-
-	// @why Fetch page data on-demand when navigating beyond loaded creators
-	// With auto-fetch disabled, we only have 200 pre-loaded creators
-	// When user clicks "Next" past that, we fetch the needed page from server
-	const handlePageChange = useCallback(
-		async (newPage) => {
-			if (newPage === currentPage) return;
-
-			// Calculate what data we need for the target page
-			const targetStartIndex = (newPage - 1) * itemsPerPage;
-			const targetEndIndex = newPage * itemsPerPage;
-
-			// Check if we have enough loaded creators for this page
-			const haveEnoughData = creators.length >= targetEndIndex || creators.length >= totalResults;
-
-			// If we don't have the data, fetch it from server
-			if (!haveEnoughData && searchData?.jobId) {
-				setIsPageLoading(true);
-				try {
-					const response = await fetch(
-						`/api/v2/status?jobId=${searchData.jobId}&offset=${creators.length}&limit=200`,
-						{ credentials: 'include' }
-					);
-					if (response.ok) {
-						const data = await response.json();
-						const pageCreators = data.results?.flatMap((r) => r.creators || []) || [];
-						if (pageCreators.length > 0) {
-							handleNewCreators(pageCreators);
-						}
-					}
-				} catch (error) {
-					console.error('Failed to fetch page:', error);
-				} finally {
-					setIsPageLoading(false);
+	const handleSelectPage = useCallback(
+		(shouldSelect) => {
+			setSelectedCreators((prev) => {
+				const next = { ...prev };
+				if (shouldSelect) {
+					currentRows.forEach(({ id, snapshot }) => {
+						next[id] = snapshot;
+					});
+				} else {
+					currentRows.forEach(({ id }) => {
+						delete next[id];
+					});
 				}
-			}
-
-			setCurrentPage(newPage);
-			// Scroll to top of results section when navigating pages
-			resultsHeaderRef.current?.scrollIntoView({
-				behavior: 'smooth',
-				block: 'start',
+				return next;
 			});
 		},
-		[
-			currentPage,
-			setCurrentPage,
-			creators.length,
-			itemsPerPage,
-			totalResults,
-			searchData?.jobId,
-			handleNewCreators,
-		]
+		[currentRows]
 	);
 
+	const clearSelection = useCallback(() => setSelectedCreators({}), []);
+
+	// Bulk enrich handler
+	const handleBulkEnrich = useCallback(async () => {
+		if (!selectedEnrichmentTargets.length) {
+			return;
+		}
+		const result = await enrichMany(selectedEnrichmentTargets);
+		processBulkEnrichResults(result, localCreators, applyEnrichmentToCreators);
+	}, [selectedEnrichmentTargets, enrichMany, localCreators, applyEnrichmentToCreators]);
+
+	// Page change handler
+	const handlePageChange = useCallback(
+		(newPage) => {
+			setPage(newPage);
+			resultsHeaderRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+		},
+		[setPage]
+	);
+
+	// Page size change handler
 	const handlePageSizeChange = useCallback(
 		(newSize) => {
 			setItemsPerPage(newSize);
-			// Scroll to top of results section (not entire page) when page size changes
-			// This keeps user in context while showing updated first page
 			setTimeout(() => {
-				resultsHeaderRef.current?.scrollIntoView({
-					behavior: 'smooth',
-					block: 'start',
-				});
+				resultsHeaderRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 			}, 50);
 		},
 		[setItemsPerPage]
 	);
 
-	// Early return for no job
-	if (!searchData?.jobId) return null;
+	// Fetch campaign name
+	useEffect(() => {
+		const fetchCampaignName = async () => {
+			if (!searchData?.campaignId) {
+				return;
+			}
+			try {
+				const response = await fetch(`/api/campaigns/${searchData.campaignId}`);
+				if (!response.ok) {
+					return;
+				}
+				const data = await response.json();
+				if (data?.name) {
+					setCampaignName(data.name);
+				}
+			} catch (_error) {}
+		};
+		fetchCampaignName();
+	}, [searchData?.campaignId]);
 
-	// Check if job is completed/done (not actively processing)
-	const jobStatusLower = (searchData?.status || '').toLowerCase();
-	const isJobDone = ['completed', 'error', 'timeout', 'partial'].includes(jobStatusLower);
-
-	// Loading state - show spinner while waiting for results
-	// For completed jobs, show simple loading instead of "Discovering creators"
-	if (!(filteredCreators.length || showFilteredEmpty)) {
-		// For completed jobs, show simple loading (data fetch from DB)
-		if (isJobDone) {
-			return (
-				<div className="flex flex-col items-center justify-center min-h-[300px] text-sm text-zinc-400 gap-3">
-					<div className="animate-spin rounded-full h-8 w-8 border-2 border-zinc-200 border-t-transparent" />
-					<p>Loading saved results...</p>
-				</div>
-			);
-		}
-
-		// For active jobs, show full progress UI
-		return (
-			<>
-				{shouldPoll && (
-					<div className="hidden" aria-hidden="true">
-						<SearchProgress
-							jobId={searchData.jobId}
-							platform={searchData.selectedPlatform || searchData.platform}
-							searchData={searchData}
-							onProgress={setProgressInfo}
-							onIntermediateResults={handleIntermediateResults}
-							onComplete={handleSearchComplete}
-						/>
-					</div>
-				)}
-				<SearchLoadingStates
-					waitingForResults={waitingForResults}
-					isFetching={isFetching}
-					showEmailOnly={showEmailOnly}
-					elapsedSeconds={elapsedSeconds}
-					displayedProgress={displayedProgress}
-					platformNormalized={platformNormalized}
-				/>
-			</>
-		);
+	// No job yet
+	if (!jobId) {
+		return null;
 	}
+
+	// Loading/Progress state - show progress display
+	if (!isComplete && localCreators.length === 0) {
+		return <ProgressDisplay message={message} progress={progress} creatorsFound={creatorsFound} />;
+	}
+
+	// Calculate actual totals for display
+	const displayTotalResults = showEmailOnly ? filteredCreators.length : totalCreators;
+	const displayTotalPages = Math.max(
+		1,
+		Math.ceil((showEmailOnly ? filteredCreators.length : totalCreators) / itemsPerPage)
+	);
 
 	return (
 		<div ref={resultsHeaderRef} className="space-y-4">
 			<SearchResultsHeader
 				campaignName={campaignName}
 				campaignId={searchData?.campaignId}
-				jobId={searchData?.jobId}
+				jobId={jobId}
 				viewMode={viewMode}
 				setViewMode={setViewMode}
 				showEmailOnly={showEmailOnly}
 				setShowEmailOnly={setShowEmailOnly}
 				currentPage={currentPage}
-				totalPages={actualTotalPages}
-				totalResults={totalResults}
+				totalPages={displayTotalPages}
+				totalResults={displayTotalResults}
 				itemsPerPage={itemsPerPage}
 				emailCount={emailCount}
 				selectionCount={selectionCount}
@@ -433,8 +303,8 @@ const SearchResults = ({ searchData }) => {
 				enrichmentBulkState={enrichmentBulkState}
 				handleBulkEnrich={handleBulkEnrich}
 				enrichmentUsage={enrichmentUsage}
-				stillProcessing={stillProcessing}
-				displayedProgress={displayedProgress}
+				stillProcessing={isActive}
+				displayedProgress={progress}
 				isInstagramUs={isInstagramUs}
 			/>
 
@@ -445,24 +315,10 @@ const SearchResults = ({ searchData }) => {
 				/>
 			)}
 
-			{/* Silent poller to keep progress flowing while table renders */}
-			{shouldPoll && (
-				<div className="hidden" aria-hidden="true">
-					<SearchProgress
-						jobId={searchData.jobId}
-						platform={searchData.selectedPlatform || searchData.platform}
-						searchData={searchData}
-						onProgress={setProgressInfo}
-						onIntermediateResults={handleIntermediateResults}
-						onComplete={handleSearchComplete}
-					/>
-				</div>
-			)}
-
 			<ResultsContainer
-				stillProcessing={stillProcessing}
+				stillProcessing={isActive}
 				isPageLoading={isPageLoading}
-				progressInfo={progressInfo}
+				progressInfo={null}
 			>
 				<CreatorTableView
 					rows={currentRows}
@@ -470,18 +326,18 @@ const SearchResults = ({ searchData }) => {
 					allSelectedOnPage={allSelectedOnPage}
 					someSelectedOnPage={someSelectedOnPage}
 					platformNormalized={platformNormalized}
-					bioLoading={bioLoading}
+					bioLoading={false}
 					viewMode={viewMode}
 					onSelectPage={handleSelectPage}
 					toggleSelection={toggleSelection}
 					renderProfileLink={renderProfileLink}
-					getBioDataForCreator={getBioDataForCreatorFn}
-					getBioEmailForCreator={getBioEmailForCreatorFn}
+					getBioDataForCreator={() => null}
+					getBioEmailForCreator={() => null}
 					getEnrichment={getEnrichment}
 					isEnrichmentLoading={isEnrichmentLoading}
 					enrichCreator={enrichCreator}
 					applyEnrichmentToCreators={applyEnrichmentToCreators}
-					setBioEmailConfirmDialog={setBioEmailDialogState}
+					setBioEmailConfirmDialog={() => {}}
 				/>
 				<CreatorGalleryView
 					rows={currentRows}
@@ -496,27 +352,18 @@ const SearchResults = ({ searchData }) => {
 
 			<PaginationControls
 				currentPage={currentPage}
-				totalPages={actualTotalPages}
-				totalResults={totalResults}
+				totalPages={displayTotalPages}
+				totalResults={displayTotalResults}
 				itemsPerPage={itemsPerPage}
 				isLoading={isPageLoading}
 				onPageChange={handlePageChange}
 				onPageSizeChange={handlePageSizeChange}
 			/>
 
-			{/* Subtle loading indicator when auto-fetching remaining pages */}
-			{isFetchingMore && (
-				<div className="flex justify-center py-2">
-					<span className="text-xs text-zinc-500 animate-pulse">Loading more results...</span>
-				</div>
+			{/* Show enrichment progress during active search */}
+			{isActive && creatorsFound > 0 && (
+				<div className="text-center text-xs text-zinc-500">{message}</div>
 			)}
-
-			<BioEmailConfirmDialog
-				dialogState={bioEmailDialogState}
-				onOpenChange={handleBioEmailDialogOpenChange}
-				onUseBioEmail={handleUseBioEmail}
-				onEnrichAnyway={handleEnrichAnyway}
-			/>
 		</div>
 	);
 };

@@ -2,9 +2,13 @@
  * CreatorGalleryCard - Gallery view card for a single creator.
  * Displays creator preview image, stats, bio, and action buttons.
  * Extracted from search-results.jsx for modularity.
+ *
+ * @performance Wrapped in React.memo to prevent re-renders when parent updates
+ * but this card's props haven't changed. Critical for galleries with 50+ cards.
  */
 
 import { ExternalLink, Youtube } from 'lucide-react';
+import { memo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -38,7 +42,7 @@ export interface CreatorGalleryCardProps {
 	renderProfileLink: (creator: Creator) => string;
 }
 
-export function CreatorGalleryCard({
+export const CreatorGalleryCard = memo(function CreatorGalleryCard({
 	row,
 	isSelected,
 	platformNormalized,
@@ -260,4 +264,4 @@ export function CreatorGalleryCard({
 			</div>
 		</Card>
 	);
-}
+});

@@ -276,40 +276,64 @@ export const systemConfigurations = pgTable(
 export type WebhookStatus = 'processing' | 'completed' | 'failed';
 export type WebhookSource = 'stripe' | 'clerk' | 'qstash';
 
-export const webhookEvents = pgTable('webhook_events', {
-	id: uuid('id').primaryKey().defaultRandom(),
-	eventId: text('event_id').notNull().unique(), // External event ID (from Stripe/Clerk)
-	source: varchar('source', { length: 20 }).notNull(), // 'stripe' | 'clerk' | 'qstash'
-	eventType: varchar('event_type', { length: 100 }).notNull(), // e.g., 'customer.subscription.created'
-	status: varchar('status', { length: 20 }).notNull().default('processing'), // 'processing' | 'completed' | 'failed'
-	eventTimestamp: timestamp('event_timestamp'), // When the event was created at source
-	processedAt: timestamp('processed_at'), // When we finished processing
-	createdAt: timestamp('created_at').notNull().defaultNow(), // When we received it
-	errorMessage: text('error_message'), // Error details if failed
-	retryCount: integer('retry_count').notNull().default(0),
-	payload: jsonb('payload'), // Optional: store event payload for debugging
-	metadata: jsonb('metadata'), // Additional context (request ID, etc.)
-});
+export const webhookEvents = pgTable(
+	'webhook_events',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		eventId: text('event_id').notNull().unique(), // External event ID (from Stripe/Clerk)
+		source: varchar('source', { length: 20 }).notNull(), // 'stripe' | 'clerk' | 'qstash'
+		eventType: varchar('event_type', { length: 100 }).notNull(), // e.g., 'customer.subscription.created'
+		status: varchar('status', { length: 20 }).notNull().default('processing'), // 'processing' | 'completed' | 'failed'
+		eventTimestamp: timestamp('event_timestamp'), // When the event was created at source
+		processedAt: timestamp('processed_at'), // When we finished processing
+		createdAt: timestamp('created_at').notNull().defaultNow(), // When we received it
+		errorMessage: text('error_message'), // Error details if failed
+		retryCount: integer('retry_count').notNull().default(0),
+		payload: jsonb('payload'), // Optional: store event payload for debugging
+		metadata: jsonb('metadata'), // Additional context (request ID, etc.)
+	},
+	(table) => ({
+		// @performance Index for idempotency checks and cleanup queries
+		statusIdx: index('idx_webhook_events_status').on(table.status),
+		statusCreatedAtIdx: index('idx_webhook_events_status_created_at').on(
+			table.status,
+			table.createdAt
+		),
+	})
+);
 
 // Event Sourcing table for tracking all state changes (Industry Standard)
-export const events = pgTable('events', {
-	id: uuid('id').primaryKey().defaultRandom(),
-	aggregateId: text('aggregate_id').notNull(), // User ID, Job ID, etc.
-	aggregateType: varchar('aggregate_type', { length: 50 }).notNull(), // 'user', 'subscription', 'onboarding'
-	eventType: varchar('event_type', { length: 100 }).notNull(), // 'subscription_created', 'onboarding_completed'
-	eventVersion: integer('event_version').notNull().default(1),
-	eventData: jsonb('event_data').notNull(), // Full event payload
-	metadata: jsonb('metadata'), // Request ID, source, user agent, etc.
-	timestamp: timestamp('timestamp').notNull().defaultNow(),
-	processedAt: timestamp('processed_at'), // When background job processed this event
-	processingStatus: varchar('processing_status', { length: 20 }).notNull().default('pending'), // 'pending', 'processing', 'completed', 'failed'
-	retryCount: integer('retry_count').notNull().default(0),
-	error: text('error'), // Error message if processing failed
-	idempotencyKey: text('idempotency_key').notNull().unique(), // Prevent duplicate processing
-	sourceSystem: varchar('source_system', { length: 50 }).notNull(), // 'stripe_webhook', 'admin_action', 'user_action'
-	correlationId: text('correlation_id'), // Track related events
-	causationId: text('causation_id'), // What caused this event
-});
+export const events = pgTable(
+	'events',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		aggregateId: text('aggregate_id').notNull(), // User ID, Job ID, etc.
+		aggregateType: varchar('aggregate_type', { length: 50 }).notNull(), // 'user', 'subscription', 'onboarding'
+		eventType: varchar('event_type', { length: 100 }).notNull(), // 'subscription_created', 'onboarding_completed'
+		eventVersion: integer('event_version').notNull().default(1),
+		eventData: jsonb('event_data').notNull(), // Full event payload
+		metadata: jsonb('metadata'), // Request ID, source, user agent, etc.
+		timestamp: timestamp('timestamp').notNull().defaultNow(),
+		processedAt: timestamp('processed_at'), // When background job processed this event
+		processingStatus: varchar('processing_status', { length: 20 }).notNull().default('pending'), // 'pending', 'processing', 'completed', 'failed'
+		retryCount: integer('retry_count').notNull().default(0),
+		error: text('error'), // Error message if processing failed
+		idempotencyKey: text('idempotency_key').notNull().unique(), // Prevent duplicate processing
+		sourceSystem: varchar('source_system', { length: 50 }).notNull(), // 'stripe_webhook', 'admin_action', 'user_action'
+		correlationId: text('correlation_id'), // Track related events
+		causationId: text('causation_id'), // What caused this event
+	},
+	(table) => ({
+		// @performance Indexes for event sourcing queries
+		aggregateIdIdx: index('idx_events_aggregate_id').on(table.aggregateId),
+		aggregateIdTypeIdx: index('idx_events_aggregate_id_type').on(
+			table.aggregateId,
+			table.aggregateType
+		),
+		eventTypeIdx: index('idx_events_event_type').on(table.eventType),
+		processingStatusIdx: index('idx_events_processing_status').on(table.processingStatus),
+	})
+);
 
 // Creator directory tables -------------------------------------------------
 export const creatorProfiles = pgTable(
@@ -452,24 +476,33 @@ export const listExports = pgTable('list_exports', {
 });
 
 // Background Jobs table for QStash job tracking (Industry Standard)
-export const backgroundJobs = pgTable('background_jobs', {
-	id: uuid('id').primaryKey().defaultRandom(),
-	jobType: varchar('job_type', { length: 100 }).notNull(), // 'complete_onboarding', 'send_trial_email'
-	payload: jsonb('payload').notNull(), // Job data
-	status: varchar('status', { length: 20 }).notNull().default('pending'), // 'pending', 'processing', 'completed', 'failed'
-	qstashMessageId: text('qstash_message_id'), // QStash message ID for tracking
-	priority: integer('priority').notNull().default(100), // Lower = higher priority
-	maxRetries: integer('max_retries').notNull().default(3),
-	retryCount: integer('retry_count').notNull().default(0),
-	scheduledFor: timestamp('scheduled_for').notNull().defaultNow(),
-	startedAt: timestamp('started_at'),
-	completedAt: timestamp('completed_at'),
-	failedAt: timestamp('failed_at'),
-	error: text('error'),
-	result: jsonb('result'), // Job execution result
-	createdAt: timestamp('created_at').notNull().defaultNow(),
-	updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+export const backgroundJobs = pgTable(
+	'background_jobs',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		jobType: varchar('job_type', { length: 100 }).notNull(), // 'complete_onboarding', 'send_trial_email'
+		payload: jsonb('payload').notNull(), // Job data
+		status: varchar('status', { length: 20 }).notNull().default('pending'), // 'pending', 'processing', 'completed', 'failed'
+		qstashMessageId: text('qstash_message_id'), // QStash message ID for tracking
+		priority: integer('priority').notNull().default(100), // Lower = higher priority
+		maxRetries: integer('max_retries').notNull().default(3),
+		retryCount: integer('retry_count').notNull().default(0),
+		scheduledFor: timestamp('scheduled_for').notNull().defaultNow(),
+		startedAt: timestamp('started_at'),
+		completedAt: timestamp('completed_at'),
+		failedAt: timestamp('failed_at'),
+		error: text('error'),
+		result: jsonb('result'), // Job execution result
+		createdAt: timestamp('created_at').notNull().defaultNow(),
+		updatedAt: timestamp('updated_at').notNull().defaultNow(),
+	},
+	(table) => ({
+		// @performance Indexes for job processing queries
+		statusIdx: index('idx_background_jobs_status').on(table.status),
+		jobTypeStatusIdx: index('idx_background_jobs_job_type_status').on(table.jobType, table.status),
+		scheduledForIdx: index('idx_background_jobs_scheduled_for').on(table.scheduledFor),
+	})
+);
 
 // DEPRECATED: subscription_plans table - Plan configuration is now in lib/billing/plan-config.ts
 // This table is only used by admin API (/api/admin/plans/) and seed scripts.

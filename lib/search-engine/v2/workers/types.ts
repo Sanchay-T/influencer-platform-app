@@ -221,6 +221,9 @@ export interface StatusResponse {
 	/** Current job status */
 	status: 'dispatching' | 'searching' | 'enriching' | 'completed' | 'error' | 'partial';
 
+	/** Human-readable status message for the UI */
+	message: string;
+
 	/** Progress counters */
 	progress: ProgressCounters;
 
@@ -240,6 +243,7 @@ export interface StatusResponse {
 
 	/** Metadata */
 	totalCreators: number;
+	processedResults: number;
 	targetResults: number;
 	platform: string;
 	keywords: string[];

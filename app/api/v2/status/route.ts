@@ -24,6 +24,41 @@ import { UI_JOB_STATUS } from '@/lib/types/statuses';
 export const maxDuration = 30;
 
 // ============================================================================
+// Helper Functions
+// ============================================================================
+
+/**
+ * Generate human-readable status message for the UI
+ * @why Frontend should be "dumb" - just display what backend says
+ */
+function getStatusMessage(
+	status: StatusResponse['status'],
+	progress: {
+		keywordsCompleted: number;
+		keywordsDispatched: number;
+		creatorsFound: number;
+		creatorsEnriched: number;
+	}
+): string {
+	switch (status) {
+		case 'dispatching':
+			return 'Starting search...';
+		case 'searching':
+			return `Searching for creators (${progress.keywordsCompleted}/${progress.keywordsDispatched} keywords)...`;
+		case 'enriching':
+			return `Enriching creator data (${progress.creatorsEnriched} of ${progress.creatorsFound})...`;
+		case 'completed':
+			return `Found ${progress.creatorsFound} creators`;
+		case 'partial':
+			return `Completed with ${progress.creatorsFound} creators (some errors)`;
+		case 'error':
+			return 'Search failed';
+		default:
+			return 'Processing...';
+	}
+}
+
+// ============================================================================
 // Route Handler
 // ============================================================================
 
@@ -233,8 +268,16 @@ export async function GET(req: Request) {
 	// Step 7: Build Response
 	// ========================================================================
 
+	const progressData = {
+		keywordsDispatched,
+		keywordsCompleted,
+		creatorsFound: totalCreators,
+		creatorsEnriched,
+	};
+
 	const response: StatusResponse = {
 		status,
+		message: getStatusMessage(status, progressData),
 		progress: {
 			keywordsDispatched,
 			keywordsCompleted,
