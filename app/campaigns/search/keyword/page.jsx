@@ -37,6 +37,7 @@ export default function KeywordSearch() {
 		targetUsername: null,
 	});
 	const [isLoading, setIsLoading] = useState(true);
+	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [campaignName, setCampaignName] = useState('');
 
 	useEffect(() => {
@@ -106,9 +107,17 @@ export default function KeywordSearch() {
 	// Manejar el paso 2: Revisión y envío de keywords
 	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Legacy flow; keep readable while improving error diagnostics.
 	const handleKeywordsSubmit = async (payload) => {
+		// Prevent double submission
+		if (isSubmitting) {
+			console.log('[GEMZ-SUBMIT] ⚠️ Blocked - already submitting');
+			return;
+		}
+
+		setIsSubmitting(true);
 		const timings = { start: performance.now() };
 		console.log('[GEMZ-SUBMIT] 🚀 Starting submit...', {
 			keywords: payload?.keywords?.length || payload?.usernames?.length,
+			timestamp: new Date().toISOString(),
 		});
 
 		try {
@@ -272,7 +281,9 @@ export default function KeywordSearch() {
 		} catch (error) {
 			structuredConsole.warn('[KeywordSearch] keyword submission failed', error);
 			toast.error(error.message || 'Failed to start campaign');
+			setIsSubmitting(false);
 		}
+		// Note: Don't reset isSubmitting on success - we're navigating away
 	};
 
 	if (isLoading) {
@@ -321,11 +332,21 @@ export default function KeywordSearch() {
 
 				{step === 1 && <KeywordSearchForm onSubmit={handleFormSubmit} />}
 				{step === 2 && (
-					<KeywordReview
-						onSubmit={handleKeywordsSubmit}
-						isLoading={isLoading}
-						platform={searchData?.selectedPlatform || searchData.platforms?.[0]}
-					/>
+					<div className="relative">
+						{isSubmitting && (
+							<div className="absolute inset-0 bg-zinc-900/80 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
+								<div className="flex flex-col items-center gap-3">
+									<div className="animate-spin rounded-full h-8 w-8 border-2 border-zinc-600 border-t-emerald-500" />
+									<p className="text-sm text-zinc-300">Starting your search...</p>
+								</div>
+							</div>
+						)}
+						<KeywordReview
+							onSubmit={handleKeywordsSubmit}
+							isLoading={isLoading || isSubmitting}
+							platform={searchData?.selectedPlatform || searchData.platforms?.[0]}
+						/>
+					</div>
 				)}
 			</div>
 		</DashboardLayout>

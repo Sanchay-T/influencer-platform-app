@@ -184,7 +184,7 @@ useJobPolling (React Query) ──polls──► React Query Cache
 
 ### Checklist
 - [x] **Phase 1: Add Debug Logging** (Previous commit)
-- [x] **Phase 2: Identify Root Cause** 
+- [x] **Phase 2: Identify Root Cause**
   - [x] Browser tested: Progress goes to 179%, sidebar stuck
   - [x] DB verified: 1023 creators stored correctly
   - [x] Root cause: Two polling loops never sync
@@ -209,39 +209,55 @@ useJobPolling (React Query) ──polls──► React Query Cache
 - [x] **Phase 7: DB-Driven Completion**
   - [x] Replace counter-based completion with actual DB queries
   - [x] Reduce stale timeout from 2min to 30sec
-- [ ] **Phase 8: Final Test** (USER ACTION REQUIRED)
+- [x] **Phase 8: Clean Architecture Refactor** (Commit eb49bf19c)
+  - [x] Add message field to Status API (human-readable backend message)
+  - [x] Create useSearchJob hook (single source of truth)
+  - [x] Create ProgressDisplay component (stateless)
+  - [x] Rewrite search-results.jsx (500→200 lines)
+  - [x] Delete obsolete hooks (useBioEnrichment, useAutoFetchAllPages, useCreatorSearch)
+  - [x] Commit and push refactor
+- [ ] **Phase 9: Final Test & Merge** (USER ACTION REQUIRED)
+  - [ ] Review uncommitted change in app/campaigns/search/keyword/page.jsx
+  - [ ] Commit or discard uncommitted changes
   - [ ] Test 1000 creator search in production
-  - [ ] Verify job completes immediately when enrichment done
-  - [ ] Verify enrichment progress shows correctly
+  - [ ] Verify progress message updates correctly
+  - [ ] Verify pagination works after completion
+  - [ ] Merge to main if tests pass
 
 ### Next Action
 ```
-✅ CLEAN ARCHITECTURE REFACTOR COMPLETE — READY FOR TESTING
+🚀 SUBMIT DELAY FIX DEPLOYED — TEST ON sorz.ai
 
-Changes made:
-- Status API now returns `message` field with human-readable status
-- New unified `useSearchJob` hook replaces 4 scattered hooks
-- New `ProgressDisplay` component for simple progress UI
-- SearchResults rewritten from 500+ lines to ~200 lines
-- Deleted 3 obsolete hooks (useBioEnrichment, useAutoFetchAllPages, useCreatorSearch)
+Status:
+- Branch: fix/search-progress-ux → deploys to sorz.ai
+- Fixed: Submit campaign delay + double-click issue
 
-Files modified:
-- app/api/v2/status/route.ts (added getStatusMessage helper)
-- lib/search-engine/v2/workers/types.ts (added message field to StatusResponse)
-- app/components/campaigns/keyword-search/search-results.jsx (new simplified version)
-- app/components/campaigns/keyword-search/hooks/useSearchJob.ts (NEW)
-- app/components/campaigns/keyword-search/components/ProgressDisplay.tsx (NEW)
-- app/components/campaigns/keyword-search/search-progress.jsx (minimal version for similar-search compat)
+What was fixed:
+- Added isSubmitting state at page level (prevents double submission)
+- Added loading overlay during submission (visual feedback)
+- Passed isSubmitting to KeywordReview to disable button
+- Added detailed timing logs for debugging
 
-NEXT STEPS:
-1. Commit changes: git add -A && git commit -m "feat: clean architecture refactor"
-2. Push: git push origin fix/search-progress-ux
-3. Test in production at usegems.io:
-   - Start a new keyword search
-   - Verify progress message updates
-   - Verify creators appear in table
-   - Verify pagination works after completion
-   - Verify Enrich button works
+IMMEDIATE NEXT STEPS:
+1. Test on sorz.ai:
+   - Go to a campaign → Keyword Search
+   - Add keywords and click "Submit Campaign"
+   - VERIFY: Loading overlay appears immediately
+   - VERIFY: Button is disabled (no double-click possible)
+   - VERIFY: Navigation to run page happens after API returns
+   - Check browser console for timing logs: [GEMZ-SUBMIT] and [GEMZ-DISPATCH]
+
+2. If issues persist, check console logs:
+   - [GEMZ-SUBMIT] 🚀 Starting submit... → when button clicked
+   - [GEMZ-SUBMIT] 📡 Calling /api/v2/dispatch... → before fetch
+   - [GEMZ-SUBMIT] ✅ Dispatch response received → after fetch with timing
+   - [GEMZ-SUBMIT] 🎯 Navigating to campaign page → before router.push
+   - [GEMZ-DISPATCH] ⏱️ Timing breakdown → server-side timing
+
+3. If everything works on sorz.ai:
+   git checkout main
+   git merge fix/search-progress-ux
+   git push origin main
 ```
 
 ### Key Files Modified
