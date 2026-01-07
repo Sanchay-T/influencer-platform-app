@@ -168,11 +168,11 @@ export async function runSearchJob(jobId: string): Promise<SearchExecutionResult
 
 	await service.recordBenchmark(providerResult.metrics);
 
-	// Track search completion in LogSnag (fire and forget)
+	// Track search completion in LogSnag
 	// Only track when search completes successfully
 	if (providerResult.status === 'completed' || providerResult.status === 'has_more') {
 		const searchType = job.keywords ? 'keyword' : 'similar';
-		trackSearchRan({
+		await trackSearchRan({
 			userId: job.userId,
 			platform: job.platform || 'unknown',
 			type: searchType,

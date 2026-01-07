@@ -53,8 +53,8 @@ export async function POST(req: Request) {
 		// Increment usage counter
 		await incrementCampaignCount(userId);
 
-		// Track campaign creation in LogSnag (fire and forget)
-		trackCampaignCreated({ userId, name: name || 'Untitled Campaign' });
+		// Track campaign creation in LogSnag
+		await trackCampaignCreated({ userId, name: name || 'Untitled Campaign' });
 
 		return NextResponse.json(campaign);
 	} catch (error) {

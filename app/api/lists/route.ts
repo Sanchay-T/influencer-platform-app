@@ -53,8 +53,8 @@ export async function POST(request: Request) {
 			settings: body.settings,
 		});
 
-		// Track list creation in LogSnag (fire and forget)
-		trackListCreated({
+		// Track list creation in LogSnag
+		await trackListCreated({
 			userId,
 			name: body.name || 'Untitled List',
 			type: body.type || 'custom',

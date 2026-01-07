@@ -25,9 +25,9 @@ export async function POST(request: Request, { params }: { params: { id: string 
 		const body = await request.json();
 		const result = await addCreatorsToList(userId, params.id, body.creators ?? []);
 
-		// Track creators saved in LogSnag (fire and forget)
+		// Track creators saved in LogSnag
 		if (result.added > 0) {
-			trackCreatorSaved({
+			await trackCreatorSaved({
 				userId,
 				listName: params.id, // Using list ID as name since we don't have it here
 				count: result.added,

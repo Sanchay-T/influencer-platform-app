@@ -7,55 +7,60 @@
 
 ## Current Task
 
-**ID:** TASK-009
-**Title:** Fix Trial Status & Onboarding Flow
-**Status:** 🚧 IN PROGRESS — Uncommitted work
-**Branch:** `main` (working directly on main)
-**Started:** Jan 01, 2026
-**Last Updated:** Jan 01, 2026 — 10:29 PM
-**Latest Commits:** Meta Pixel (6a73028fd) + Google Ads (6f149185d) + Success page fix (3f23c3845)
+**ID:** TASK-010
+**Title:** Fix Search Progress UX — Keyword Search Reliability
+**Status:** 🔍 INVESTIGATION PHASE
+**Branch:** `fix/search-progress-ux` (clean)
+**Started:** Dec 30, 2025
+**Last Updated:** Jan 02, 2026 — 12:32 AM
+**Latest Commits:** Portal fixes (491b7d207) + Clerk webhook email (a52525181) + Trial status removal (f8d8d313e)
 
 ### Goal
-Fix trial status expiration detection and onboarding completion flow. Currently, users with expired trials still show "Active" status in the UI, and some users are stuck in incomplete onboarding states.
+Fix keyword search progress UI reliability issues in production. Backend successfully finds and stores 1000 creators, but frontend fails to display them properly - requires full browser refresh to see correct results. Works perfectly in local dev, breaks only in production (usegems.io) and UAT (sorz.ai).
 
 ### Problems Identified
 
-**Issue 1: Trial Status Not Expiring**
-- 37+ users in production have `trial_status = 'active'` but `trial_end_date < NOW()`
-- UI shows "Active" with "0 days left" instead of "Expired"
-- No scheduled job or webhook updates `trial_status` when trial expires
-- Frontend displays `trial_status` directly without checking `trial_end_date`
+**Primary Symptoms (Production Only)**
+- Progress freezes at random % during keyword search
+- Loading spinners keep spinning forever after search completes
+- Partial results displayed (200-800 creators instead of 1000)
+- Only full browser refresh fixes the issue
+- Job status stuck on "Processing" even after refresh shows 1000 creators
+- Bio fetch spinners stuck (row-level, global, header spinners all affected)
 
-**Issue 2: Stuck Onboarding**
-- Example: accounts+appsumotest@usegemz.io (trial expired Oct 9, 2025)
-- User selected plan but never completed Stripe checkout
-- `billing_sync_status: plan_selected` but `subscription_status: none`
-- No `user_profiles` record exists (signup flow bug)
-- User likely blocked from accessing dashboard
+**Environment Comparison**
+- **Local Development:** Works perfectly - all 1000 creators display
+- **Production (usegems.io):** Breaks - partial results, stuck spinners
+- **UAT (sorz.ai):** Breaks - same issues as production
+- **Platforms Affected:** Both TikTok and Instagram equally
+- **Timing:** Breaks at 1-2 minutes into search
+
+### Root Cause Hypotheses (From Investigation)
+
+**High Probability (Production-Specific)**
+1. Vercel serverless timing - Polling may hit function timeout limits
+2. Network latency creates race conditions - Longer round-trips in production
+3. QStash webhook latency - Workers complete but status updates delayed
+4. Redis cache serving stale data - Production uses Redis, local uses in-memory
+
+**Medium Probability (State Management)**
+5. Polling terminates prematurely - `SearchProgress` stops before job truly completes
+6. Terminal state detection broken - Backend returns "completed" but frontend doesn't recognize it
+7. Spinner state not cleaned up - Multiple independent spinners don't coordinate
+
+### User Preferences for Fix
+- Add debug logging: Yes, add console logs
+- Trade-off: Reliability > Real-time updates
+- Polling interval: Slower (3-5s) acceptable if more reliable
+- Manual fallback: No - focus on auto-updates only
 
 ### Work Completed So Far
 
-1. ✅ **Success page fix** (Commit 3f23c3845)
-   - Success page now checks `billing_sync_status = 'completed'` before requiring `session_id`
-   - Prevents redirect loops for users with partial onboarding
-
-2. ✅ **Google Ads tracking** (Commits 6f149185d, 6a73028fd)
-   - Added gtag.js for Google Ads conversion tracking
-   - Added Meta Pixel tracking
-   - Both integrated into onboarding success page
-
-3. 🚧 **Uncommitted work in progress:**
-   - Modified: `lib/billing/access-validation.ts`
-   - Modified: `lib/billing/billing-status.ts`
-   - Modified: `lib/billing/webhook-handlers.ts`
-   - Modified: `lib/db/queries/admin-plan-manager.ts`
-   - Modified: `lib/db/queries/user-queries.ts`
-   - Modified: `lib/db/schema.ts`
-   - Modified: `app/components/billing/access-guard-overlay.tsx`
-   - Modified: `app/dashboard/page.tsx`
-   - Modified: `app/onboarding/success/page.tsx`
-   - New: `app/api/stripe/verify-session/` (directory)
-   - New: `lib/billing/trial-status.ts`
+1. ✅ **Initial investigation** (Dec 30, 2025)
+   - Documented symptoms and patterns
+   - Identified environment-specific behavior (local works, production breaks)
+   - Listed root cause hypotheses
+   - Gathered user preferences for fix approach
 
 ### Checklist
 - [x] **Phase 1: Investigation & Root Cause Analysis**

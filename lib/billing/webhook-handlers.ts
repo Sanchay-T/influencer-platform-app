@@ -134,16 +134,16 @@ export async function handleSubscriptionChange(
 		// 6. Apply update
 		await updateUserProfile(user.userId, updateData);
 
-		// 7. Track billing events in LogSnag (fire and forget)
+		// 7. Track billing events in LogSnag
 		const userEmail = user.email || 'unknown';
 		const planName = planConfig.name;
 
 		if (subscription.status === 'trialing') {
-			trackTrialStarted({ email: userEmail, plan: planName });
+			await trackTrialStarted({ email: userEmail, plan: planName });
 		} else if (subscription.status === 'active') {
 			// Get monthly price value for tracking
 			const monthlyPrice = planConfig.price.monthly / 100; // Convert cents to dollars
-			trackPaidCustomer({ email: userEmail, plan: planName, value: monthlyPrice });
+			await trackPaidCustomer({ email: userEmail, plan: planName, value: monthlyPrice });
 		}
 
 		logger.info(`[${handlerId}] Successfully processed ${eventType}`, {

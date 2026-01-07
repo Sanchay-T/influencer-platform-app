@@ -402,8 +402,8 @@ async function handleUserCreated(userData: any, requestId: string) {
 			`✅ [CLERK-WEBHOOK] User profile created for ${userId} (trial pending payment)`
 		);
 
-		// Track signup event in LogSnag (fire and forget)
-		trackUserSignup({ email: email || 'unknown', name: fullName });
+		// Track signup event in LogSnag
+		await trackUserSignup({ email: email || 'unknown', name: fullName });
 
 		userLogger?.log('USER_CREATED', 'User profile created successfully', {
 			userId,
