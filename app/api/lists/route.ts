@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { trackListCreated } from '@/lib/analytics/logsnag';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { createList, getListsForUser } from '@/lib/db/queries/list-queries';
+import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
 function errorResponse(error: unknown, status = 500) {
@@ -54,10 +55,12 @@ export async function POST(request: Request) {
 		});
 
 		// Track list creation in LogSnag
+		const user = await getUserProfile(userId);
 		await trackListCreated({
 			userId,
 			name: body.name || 'Untitled List',
 			type: body.type || 'custom',
+			email: user?.email || 'unknown',
 		});
 
 		return NextResponse.json({ list }, { status: 201 });

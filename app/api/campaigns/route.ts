@@ -4,6 +4,7 @@ import { trackCampaignCreated } from '@/lib/analytics/logsnag';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { incrementCampaignCount, validateCampaignCreation } from '@/lib/billing';
 import { db } from '@/lib/db';
+import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { campaigns } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
@@ -54,7 +55,12 @@ export async function POST(req: Request) {
 		await incrementCampaignCount(userId);
 
 		// Track campaign creation in LogSnag
-		await trackCampaignCreated({ userId, name: name || 'Untitled Campaign' });
+		const user = await getUserProfile(userId);
+		await trackCampaignCreated({
+			userId,
+			name: name || 'Untitled Campaign',
+			email: user?.email || 'unknown',
+		});
 
 		return NextResponse.json(campaign);
 	} catch (error) {

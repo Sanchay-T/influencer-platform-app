@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { trackCreatorSaved } from '@/lib/analytics/logsnag';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { addCreatorsToList, removeListItems, updateListItems } from '@/lib/db/queries/list-queries';
+import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
 function errorToResponse(error: unknown) {
@@ -27,10 +28,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
 		// Track creators saved in LogSnag
 		if (result.added > 0) {
+			const user = await getUserProfile(userId);
 			await trackCreatorSaved({
 				userId,
 				listName: params.id, // Using list ID as name since we don't have it here
 				count: result.added,
+				email: user?.email || 'unknown',
 			});
 		}
 

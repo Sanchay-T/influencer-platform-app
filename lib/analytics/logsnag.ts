@@ -92,13 +92,17 @@ export async function trackPaidCustomer(data: {
 // Product Usage Events
 // ============================================================================
 
-export async function trackCampaignCreated(data: { userId: string; name: string }): Promise<void> {
+export async function trackCampaignCreated(data: {
+	userId: string;
+	name: string;
+	email: string;
+}): Promise<void> {
 	await track({
 		channel: 'campaigns',
 		event: 'Campaign Created',
 		icon: '📋',
 		description: `Campaign: ${data.name}`,
-		tags: { userId: data.userId },
+		tags: { userId: data.userId, email: data.email },
 	});
 }
 
@@ -107,6 +111,7 @@ export async function trackSearchRan(data: {
 	platform: string;
 	type: string;
 	creatorCount: number;
+	email: string;
 }): Promise<void> {
 	await track({
 		channel: 'searches',
@@ -118,6 +123,7 @@ export async function trackSearchRan(data: {
 			platform: data.platform,
 			type: data.type,
 			creators: data.creatorCount,
+			email: data.email,
 		},
 	});
 }
@@ -126,13 +132,14 @@ export async function trackListCreated(data: {
 	userId: string;
 	name: string;
 	type: string;
+	email: string;
 }): Promise<void> {
 	await track({
 		channel: 'lists',
 		event: 'List Created',
 		icon: '📝',
 		description: `List: ${data.name} (${data.type})`,
-		tags: { userId: data.userId, type: data.type },
+		tags: { userId: data.userId, type: data.type, email: data.email },
 	});
 }
 
@@ -140,12 +147,13 @@ export async function trackCreatorSaved(data: {
 	userId: string;
 	listName: string;
 	count: number;
+	email: string;
 }): Promise<void> {
 	await track({
 		channel: 'lists',
 		event: 'Creators Saved',
 		icon: '⭐',
 		description: `${data.count} creator(s) saved to ${data.listName}`,
-		tags: { userId: data.userId, count: data.count },
+		tags: { userId: data.userId, count: data.count, email: data.email },
 	});
 }
