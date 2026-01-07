@@ -29,14 +29,17 @@ interface TrackOptions {
  */
 async function track(options: TrackOptions): Promise<void> {
 	if (!process.env.LOGSNAG_TOKEN) {
+		console.warn('[LogSnag] LOGSNAG_TOKEN not set, skipping event:', options.event);
 		return;
 	}
 
 	try {
+		console.log('[LogSnag] Tracking event:', options.event, 'to project:', PROJECT_NAME);
 		await logsnag.track(options);
+		console.log('[LogSnag] Event sent successfully:', options.event);
 	} catch (error) {
 		// Log but don't throw - analytics shouldn't break the app
-		console.error('[LogSnag] Failed to track event:', error);
+		console.error('[LogSnag] Failed to track event:', options.event, error);
 	}
 }
 
