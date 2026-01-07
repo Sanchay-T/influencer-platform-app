@@ -7,9 +7,12 @@
 
 import { LogSnag } from 'logsnag';
 
+// Project name can be configured via env var, defaults to 'gemz'
+const PROJECT_NAME = process.env.LOGSNAG_PROJECT || 'gemz';
+
 const logsnag = new LogSnag({
 	token: process.env.LOGSNAG_TOKEN!,
-	project: 'gemz',
+	project: PROJECT_NAME,
 });
 
 interface TrackOptions {
