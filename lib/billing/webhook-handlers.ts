@@ -13,6 +13,7 @@
  */
 
 import type Stripe from 'stripe';
+import { trackPaidCustomer, trackTrialStarted } from '@/lib/analytics/logsnag';
 import {
 	getUserByStripeCustomerId,
 	getUserProfile,
@@ -132,6 +133,18 @@ export async function handleSubscriptionChange(
 
 		// 6. Apply update
 		await updateUserProfile(user.userId, updateData);
+
+		// 7. Track billing events in LogSnag (fire and forget)
+		const userEmail = user.email || 'unknown';
+		const planName = planConfig.name;
+
+		if (subscription.status === 'trialing') {
+			trackTrialStarted({ email: userEmail, plan: planName });
+		} else if (subscription.status === 'active') {
+			// Get monthly price value for tracking
+			const monthlyPrice = planConfig.price.monthly / 100; // Convert cents to dollars
+			trackPaidCustomer({ email: userEmail, plan: planName, value: monthlyPrice });
+		}
 
 		logger.info(`[${handlerId}] Successfully processed ${eventType}`, {
 			userId: user.userId,

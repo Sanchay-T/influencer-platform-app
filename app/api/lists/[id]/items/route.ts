@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { trackCreatorSaved } from '@/lib/analytics/logsnag';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { addCreatorsToList, removeListItems, updateListItems } from '@/lib/db/queries/list-queries';
 import { structuredConsole } from '@/lib/logging/console-proxy';
@@ -23,6 +24,16 @@ export async function POST(request: Request, { params }: { params: { id: string 
 	try {
 		const body = await request.json();
 		const result = await addCreatorsToList(userId, params.id, body.creators ?? []);
+
+		// Track creators saved in LogSnag (fire and forget)
+		if (result.added > 0) {
+			trackCreatorSaved({
+				userId,
+				listName: params.id, // Using list ID as name since we don't have it here
+				count: result.added,
+			});
+		}
+
 		return NextResponse.json(result, { status: 201 });
 	} catch (error) {
 		return errorToResponse(error);

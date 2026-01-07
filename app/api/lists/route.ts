@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { trackListCreated } from '@/lib/analytics/logsnag';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { createList, getListsForUser } from '@/lib/db/queries/list-queries';
 import { structuredConsole } from '@/lib/logging/console-proxy';
@@ -51,6 +52,14 @@ export async function POST(request: Request) {
 			tags: body.tags,
 			settings: body.settings,
 		});
+
+		// Track list creation in LogSnag (fire and forget)
+		trackListCreated({
+			userId,
+			name: body.name || 'Untitled List',
+			type: body.type || 'custom',
+		});
+
 		return NextResponse.json({ list }, { status: 201 });
 	} catch (error) {
 		if ((error as Error).message === 'USER_NOT_FOUND') {

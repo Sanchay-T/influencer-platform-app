@@ -1,5 +1,6 @@
 import { count, desc, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
+import { trackCampaignCreated } from '@/lib/analytics/logsnag';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { incrementCampaignCount, validateCampaignCreation } from '@/lib/billing';
 import { db } from '@/lib/db';
@@ -51,6 +52,9 @@ export async function POST(req: Request) {
 
 		// Increment usage counter
 		await incrementCampaignCount(userId);
+
+		// Track campaign creation in LogSnag (fire and forget)
+		trackCampaignCreated({ userId, name: name || 'Untitled Campaign' });
 
 		return NextResponse.json(campaign);
 	} catch (error) {

@@ -1,4 +1,5 @@
 // search-engine/runner.ts — entry point that dispatches jobs to provider adapters
+import { trackSearchRan } from '@/lib/analytics/logsnag';
 import { SystemConfig } from '@/lib/config/system-config';
 import { LogCategory, logger } from '@/lib/logging';
 import { SearchJobService } from './job-service';
@@ -166,6 +167,18 @@ export async function runSearchJob(jobId: string): Promise<SearchExecutionResult
 	}
 
 	await service.recordBenchmark(providerResult.metrics);
+
+	// Track search completion in LogSnag (fire and forget)
+	// Only track when search completes successfully
+	if (providerResult.status === 'completed' || providerResult.status === 'has_more') {
+		const searchType = job.keywords ? 'keyword' : 'similar';
+		trackSearchRan({
+			userId: job.userId,
+			platform: job.platform || 'unknown',
+			type: searchType,
+			creatorCount: providerResult.processedResults || 0,
+		});
+	}
 
 	return {
 		service,

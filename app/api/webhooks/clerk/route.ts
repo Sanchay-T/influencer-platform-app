@@ -1,6 +1,7 @@
 import { headers } from 'next/headers';
 import { type NextRequest, NextResponse } from 'next/server';
 import { Webhook } from 'svix';
+import { trackUserSignup } from '@/lib/analytics/logsnag';
 import { createUser, getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
 import BillingLogger from '@/lib/loggers/billing-logger';
 import { structuredConsole } from '@/lib/logging/console-proxy';
@@ -400,6 +401,9 @@ async function handleUserCreated(userData: any, requestId: string) {
 		structuredConsole.log(
 			`✅ [CLERK-WEBHOOK] User profile created for ${userId} (trial pending payment)`
 		);
+
+		// Track signup event in LogSnag (fire and forget)
+		trackUserSignup({ email: email || 'unknown', name: fullName });
 
 		userLogger?.log('USER_CREATED', 'User profile created successfully', {
 			userId,

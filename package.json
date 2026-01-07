@@ -112,6 +112,7 @@
 		"drizzle-orm": "^0.39.3",
 		"framer-motion": "^12.7.4",
 		"heic-convert": "^2.1.0",
+		"logsnag": "^1.0.0",
 		"lucide-react": "^0.475.0",
 		"next": "^15.2.6",
 		"openai": "5.20.1",
