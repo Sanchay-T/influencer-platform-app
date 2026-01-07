@@ -2,6 +2,11 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import {
+	trackCompleteRegistration,
+	trackPurchase,
+	trackStartTrial,
+} from '@/lib/analytics/meta-pixel';
 import { clearBillingCache } from '@/lib/hooks/use-billing';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { type SessionData, SuccessCard } from './success-card';
@@ -19,6 +24,7 @@ function OnboardingSuccessContent() {
 	const [webhookConfirmed, setWebhookConfirmed] = useState(false);
 	const pollCountRef = useRef(0);
 	const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+	const eventsFiredRef = useRef(false);
 	const sessionId = searchParams.get('session_id');
 
 	// Poll for webhook completion
@@ -147,6 +153,38 @@ function OnboardingSuccessContent() {
 			}
 		};
 	}, [sessionId, pollForWebhook, startPolling, router]);
+
+	// Fire Meta Pixel events when onboarding completes
+	useEffect(() => {
+		if (webhookConfirmed && sessionData && !eventsFiredRef.current) {
+			eventsFiredRef.current = true;
+
+			// Always fire CompleteRegistration for successful onboarding
+			trackCompleteRegistration();
+
+			// Fire StartTrial if this is a trial subscription
+			if (sessionData.subscription?.status === 'trialing') {
+				trackStartTrial(sessionData.planId);
+			}
+
+			// Fire Purchase with value (parse price from plan config)
+			const priceStr =
+				sessionData.billing === 'yearly'
+					? sessionData.plan.yearlyPrice
+					: sessionData.plan.monthlyPrice;
+			const value = parseFloat(priceStr.replace(/[^0-9.]/g, ''));
+
+			if (!Number.isNaN(value)) {
+				trackPurchase(value, 'USD', sessionData.planId);
+			}
+
+			structuredConsole.info('Meta Pixel events fired', {
+				planId: sessionData.planId,
+				billing: sessionData.billing,
+				value,
+			});
+		}
+	}, [webhookConfirmed, sessionData]);
 
 	const handleContinue = () => {
 		setIsSubmitting(true);
