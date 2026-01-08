@@ -328,13 +328,118 @@ export class JobProcessor {
 
   /**
    * Expire Trial Job Processor
+   *
+   * Handles trial expiration by updating user status when trial period ends.
+   * Idempotent - safe to call multiple times for the same user.
    */
   private static async processExpireTrial(payload: any): Promise<JobResult> {
     structuredConsole.log('⏰ [JOB-PROCESSOR] Processing expire trial:', payload);
-    
-    // TODO: Implement trial expiration logic
-    
-    return { success: true, data: { trialExpired: true } };
+
+    try {
+      const { userId } = payload;
+
+      if (!userId) {
+        return { success: false, error: 'Missing userId in payload', retryable: false };
+      }
+
+      // Get user profile
+      const userProfile = await getUserProfile(userId);
+
+      if (!userProfile) {
+        return { success: false, error: 'User profile not found', retryable: false };
+      }
+
+      // Check if trial is already expired or converted (idempotency)
+      if (userProfile.trialStatus === 'expired') {
+        structuredConsole.log('✅ [JOB-PROCESSOR] Trial already expired (idempotent):', userId);
+        return { success: true, data: { message: 'Trial already expired', trialExpired: true } };
+      }
+
+      if (userProfile.trialStatus === 'converted') {
+        structuredConsole.log('✅ [JOB-PROCESSOR] Trial already converted to paid (idempotent):', userId);
+        return { success: true, data: { message: 'Trial already converted', trialExpired: false } };
+      }
+
+      // Check if trial is not active (nothing to expire)
+      if (userProfile.trialStatus !== 'active') {
+        structuredConsole.log('⚠️ [JOB-PROCESSOR] Trial not active, skipping expiration:', {
+          userId,
+          currentStatus: userProfile.trialStatus
+        });
+        return { success: true, data: { message: 'Trial not active', trialExpired: false } };
+      }
+
+      // Verify trial has actually ended (check trial end date)
+      if (userProfile.trialEndDate) {
+        const now = new Date();
+        const trialEnd = new Date(userProfile.trialEndDate);
+
+        if (now < trialEnd) {
+          structuredConsole.log('⚠️ [JOB-PROCESSOR] Trial not yet expired, skipping:', {
+            userId,
+            trialEndDate: trialEnd.toISOString(),
+            now: now.toISOString()
+          });
+          return {
+            success: true,
+            data: {
+              message: 'Trial not yet expired',
+              trialExpired: false,
+              trialEndDate: trialEnd.toISOString()
+            }
+          };
+        }
+      }
+
+      // Create event for audit trail
+      const correlationId = EventService.generateCorrelationId();
+      await EventService.createEvent({
+        aggregateId: userId,
+        aggregateType: AGGREGATE_TYPES.TRIAL,
+        eventType: EVENT_TYPES.TRIAL_EXPIRED,
+        eventData: {
+          userId,
+          previousTrialStatus: userProfile.trialStatus,
+          trialStartDate: userProfile.trialStartDate?.toISOString(),
+          trialEndDate: userProfile.trialEndDate?.toISOString(),
+          processedBy: 'background_job'
+        },
+        sourceSystem: SOURCE_SYSTEMS.QSTASH_JOB,
+        correlationId,
+        idempotencyKey: EventService.generateIdempotencyKey('trial', userId, 'expired')
+      });
+
+      // Update user profile - mark trial as expired
+      await updateUserProfile(userId, {
+        trialStatus: 'expired',
+        subscriptionStatus: 'expired',
+        billingSyncStatus: 'trial_expired'
+      });
+
+      structuredConsole.log('✅ [JOB-PROCESSOR] Trial expired successfully:', {
+        userId,
+        previousStatus: userProfile.trialStatus,
+        trialStartDate: userProfile.trialStartDate?.toISOString(),
+        trialEndDate: userProfile.trialEndDate?.toISOString()
+      });
+
+      return {
+        success: true,
+        data: {
+          userId,
+          trialExpired: true,
+          expiredAt: new Date().toISOString()
+        }
+      };
+
+    } catch (error) {
+      structuredConsole.error('❌ [JOB-PROCESSOR] Error expiring trial:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        retryable: true
+      };
+    }
   }
 
   /**
