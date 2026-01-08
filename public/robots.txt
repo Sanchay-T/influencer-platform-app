@@ -1,0 +1,22 @@
+# Gemz - Influencer Discovery Platform
+# https://usegemz.io
+
+User-agent: *
+Allow: /
+
+# Block authenticated/private routes
+Disallow: /api/
+Disallow: /dashboard/
+Disallow: /campaigns/
+Disallow: /lists/
+Disallow: /onboarding/
+Disallow: /billing/
+Disallow: /profile/
+Disallow: /sign-in/
+Disallow: /sign-up/
+Disallow: /debug/
+Disallow: /admin/
+Disallow: /theme-preview/
+
+# Sitemap
+Sitemap: https://usegemz.io/sitemap.xml

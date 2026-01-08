@@ -22,10 +22,10 @@ const inter = Inter({
 const clerkAppearance: Appearance = {
 	baseTheme: 'dark',
 	layout: {
-		helpPageUrl: 'mailto:support@usegems.com',
+		helpPageUrl: 'mailto:support@usegemz.io',
 		shimmer: false,
-		privacyPageUrl: 'https://usegems.com/privacy',
-		termsPageUrl: 'https://usegems.com/terms',
+		privacyPageUrl: 'https://usegemz.io/privacy',
+		termsPageUrl: 'https://usegemz.io/terms',
 	},
 	variables: {
 		colorPrimary: '#FF2ECC',
@@ -73,32 +73,73 @@ const clerkAppearance: Appearance = {
 };
 
 export const metadata: Metadata = {
-	title: 'Gemz — Real-time influencer discovery & campaign activation',
-	description:
-		'Gemz helps growth teams find, qualify, and activate high-performing creators across TikTok, Instagram, and YouTube with AI-ranked insights.',
 	metadataBase: new URL('https://usegemz.io'),
+
+	// Primary
+	title: {
+		default: 'Gemz — AI-Powered Influencer Discovery Platform',
+		template: '%s | Gemz',
+	},
+	description:
+		'Find and activate high-performing creators across TikTok, Instagram, and YouTube. AI-ranked insights, verified emails, and campaign management in one platform.',
+
+	// Keywords
+	keywords: [
+		'influencer discovery',
+		'influencer marketing platform',
+		'find influencers',
+		'creator discovery',
+		'TikTok influencers',
+		'Instagram influencers',
+		'YouTube influencers',
+		'influencer outreach',
+		'creator marketing',
+		'influencer database',
+	],
+
+	// Canonical URL
+	alternates: {
+		canonical: 'https://usegemz.io',
+	},
+
+	// Open Graph
 	openGraph: {
 		title: 'Gemz — Find the Right Influencer, Fast. With AI.',
-		description:
-			'Source verified creators, enrich outreach data, and launch campaigns in minutes with Gemz.',
+		description: 'Source verified creators, enrich outreach data, and launch campaigns in minutes.',
 		url: 'https://usegemz.io',
 		siteName: 'Gemz',
+		locale: 'en_US',
+		type: 'website',
 		images: [
 			{
 				url: '/landing/og-preview.png',
-				width: 1536,
-				height: 1024,
-				alt: 'Gemz - Find the Right Influencer, Fast. With AI.',
+				width: 1200,
+				height: 630,
+				alt: 'Gemz - AI-Powered Influencer Discovery',
 			},
 		],
-		type: 'website',
 	},
+
+	// Twitter
 	twitter: {
 		card: 'summary_large_image',
-		title: 'Gemz — Find the Right Influencer, Fast. With AI.',
+		title: 'Gemz — AI-Powered Influencer Discovery',
 		description:
-			'AI-powered influencer discovery that keeps your pipeline fresh across every platform.',
+			'Find and activate high-performing creators across TikTok, Instagram, and YouTube.',
 		images: ['/landing/og-preview.png'],
+	},
+
+	// Robots
+	robots: {
+		index: true,
+		follow: true,
+		googleBot: {
+			index: true,
+			follow: true,
+			'max-video-preview': -1,
+			'max-image-preview': 'large',
+			'max-snippet': -1,
+		},
 	},
 };
 
@@ -153,6 +194,32 @@ export default function RootLayout({ children }: RootLayoutProps) {
 							alt=""
 						/>
 					</noscript>
+
+					{/* JSON-LD Structured Data for SEO */}
+					<script
+						type="application/ld+json"
+						// biome-ignore lint/security/noDangerouslySetInnerHtml: Required for JSON-LD
+						dangerouslySetInnerHTML={{
+							__html: JSON.stringify({
+								'@context': 'https://schema.org',
+								'@type': 'SoftwareApplication',
+								name: 'Gemz',
+								applicationCategory: 'BusinessApplication',
+								operatingSystem: 'Web',
+								description:
+									'AI-powered influencer discovery platform for TikTok, Instagram, and YouTube.',
+								url: 'https://usegemz.io',
+								offers: {
+									'@type': 'AggregateOffer',
+									lowPrice: '99',
+									highPrice: '499',
+									priceCurrency: 'USD',
+									offerCount: '3',
+								},
+							}),
+						}}
+					/>
+
 					<ClientConsoleBridge />
 					<AuthLogger />
 					<NavigationLogger />
