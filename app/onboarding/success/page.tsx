@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { trackGA4Purchase, trackGA4TrialStart } from '@/lib/analytics/google-analytics';
 import {
 	trackCompleteRegistration,
 	trackPurchase,
@@ -162,23 +163,28 @@ function OnboardingSuccessContent() {
 			// Always fire CompleteRegistration for successful onboarding
 			trackCompleteRegistration();
 
-			// Fire StartTrial if this is a trial subscription
-			if (sessionData.subscription?.status === 'trialing') {
-				trackStartTrial(sessionData.planId);
-			}
-
-			// Fire Purchase with value (parse price from plan config)
+			// Parse price for event values
 			const priceStr =
 				sessionData.billing === 'yearly'
 					? sessionData.plan.yearlyPrice
 					: sessionData.plan.monthlyPrice;
 			const value = parseFloat(priceStr.replace(/[^0-9.]/g, ''));
 
-			if (!Number.isNaN(value)) {
-				trackPurchase(value, 'USD', sessionData.planId);
+			// Fire StartTrial if this is a trial subscription
+			if (sessionData.subscription?.status === 'trialing') {
+				trackStartTrial(sessionData.planId);
+				if (!Number.isNaN(value)) {
+					trackGA4TrialStart(sessionData.planId, value);
+				}
 			}
 
-			structuredConsole.info('Meta Pixel events fired', {
+			// Fire Purchase with value
+			if (!Number.isNaN(value)) {
+				trackPurchase(value, 'USD', sessionData.planId);
+				trackGA4Purchase(sessionData.planId, value);
+			}
+
+			structuredConsole.info('Conversion events fired (Meta Pixel + GA4)', {
 				planId: sessionData.planId,
 				billing: sessionData.billing,
 				value,

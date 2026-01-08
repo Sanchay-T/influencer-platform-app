@@ -111,17 +111,18 @@ export default function RootLayout({ children }: RootLayoutProps) {
 		<ClerkProvider appearance={clerkAppearance}>
 			<html lang="en" className="dark">
 				<head>
-					{/* Google Ads (gtag.js) */}
+					{/* Google Ads + GA4 (gtag.js) */}
 					<Script
 						src="https://www.googletagmanager.com/gtag/js?id=AW-17841436850"
 						strategy="afterInteractive"
 					/>
-					<Script id="google-ads-gtag" strategy="afterInteractive">
+					<Script id="google-gtag" strategy="afterInteractive">
 						{`
 							window.dataLayer = window.dataLayer || [];
 							function gtag(){dataLayer.push(arguments);}
 							gtag('js', new Date());
 							gtag('config', 'AW-17841436850');
+							gtag('config', 'G-ZG4F8W3RJD');
 						`}
 					</Script>
 
