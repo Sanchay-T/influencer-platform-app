@@ -18,11 +18,11 @@ import {
 	Users,
 	X,
 } from 'lucide-react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
 export default function MarketingLanding() {
@@ -49,20 +49,12 @@ export default function MarketingLanding() {
 				<div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-800/20 via-black to-black" />
 			</div>
 
-			<div className="absolute top-0 right-0 w-1/2 h-screen pointer-events-none">
-				<img
-					src="/influencer-makeup-dark.jpg"
-					alt=""
-					className="absolute right-0 top-1/4 w-full h-auto object-contain opacity-90"
-				/>
-			</div>
-
 			{/* Content */}
 			<div className="relative z-10">
 				{/* Header */}
 				<header className="flex items-center justify-between p-6 lg:px-12">
 					<div className="flex items-center">
-						<img src="/landing/gemz-logo.png" alt="Gemz" className="h-12 w-auto" />
+						<img src="/images/untitled-20design.png" alt="Gemz" className="h-12 w-auto" />
 					</div>
 
 					<nav className="hidden md:flex items-center">
@@ -185,7 +177,7 @@ export default function MarketingLanding() {
 
 						{/* Right Column - Pricing Card */}
 						<div className="lg:justify-self-end">
-							<Card className="backdrop-blur-md bg-white/3 border-white/10 p-8 max-w-sm">
+							<div className="rounded-lg border backdrop-blur-md bg-white/[0.03] border-white/10 p-8 max-w-sm">
 								<div className="space-y-6">
 									<div className="flex items-center justify-between">
 										<h3 className="text-xl font-semibold text-white">
@@ -257,7 +249,7 @@ export default function MarketingLanding() {
 												}}
 											>
 												Get Deal
-												<ArrowRight className="ml-2 h-4 w-4" />
+												<ArrowRight className="h-4 w-4 ml-2" />
 											</Button>
 										</SignUpButton>
 									)}
@@ -268,7 +260,7 @@ export default function MarketingLanding() {
 										</p>
 									</div>
 								</div>
-							</Card>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -306,10 +298,10 @@ export default function MarketingLanding() {
 						{/* Attribution */}
 						<div className="flex items-center justify-center space-x-3 pt-4">
 							<Avatar className="w-10 h-10">
-								<AvatarImage src="/testimonial-creator-1.jpg" />
-								<AvatarFallback>AI</AvatarFallback>
+								<AvatarImage src="/images/blaine-bolus.jpg" />
+								<AvatarFallback>BB</AvatarFallback>
 							</Avatar>
-							<span className="text-white/90 text-sm">Co-founder & AI Strategy Lead</span>
+							<span className="text-white/90 text-sm">Blaine Bolus, cofounder of Castmagic</span>
 						</div>
 					</div>
 				</section>
@@ -342,7 +334,7 @@ export default function MarketingLanding() {
 					{/* Features Grid */}
 					<div className="grid lg:grid-cols-2 gap-6 mb-6">
 						{/* Live Influencer Search */}
-						<Card className="backdrop-blur-md bg-white/5 border-white/10 p-8 hover:bg-white/10 transition-all">
+						<div className="rounded-lg border backdrop-blur-md bg-white/5 border-white/10 p-8 hover:bg-white/10 transition-all">
 							<div className="space-y-6">
 								<div className="space-y-4">
 									<div className="space-y-3">
@@ -371,31 +363,19 @@ export default function MarketingLanding() {
 									</p>
 								</div>
 							</div>
-						</Card>
+						</div>
 
 						{/* Signal Based Relevance */}
-						<Card className="backdrop-blur-md bg-white/5 border-white/10 p-8 hover:bg-white/10 transition-all">
+						<div className="rounded-lg border backdrop-blur-md bg-white/5 border-white/10 p-8 hover:bg-white/10 transition-all">
 							<div className="space-y-6">
-								<div className="relative h-48 flex items-center justify-center">
-									<div className="absolute inset-0 flex items-center justify-center">
-										<div className="grid grid-cols-3 gap-8 opacity-40">
-											<Mail className="h-6 w-6 text-white/50" />
-											<div className="h-6 w-6" />
-											<div className="h-6 w-6" />
-											<div className="h-6 w-6" />
-											<div className="h-6 w-6" />
-											<X className="h-6 w-6 text-white/50" />
-										</div>
-									</div>
-									<div
-										className="relative z-10 w-24 h-24 rounded-full bg-black border-2 border-white/20 flex items-center justify-center"
-										style={{
-											boxShadow:
-												'0 0 60px rgba(255, 255, 255, 0.3), 0 0 30px rgba(255, 255, 255, 0.2)',
-										}}
-									>
-										<Sparkles className="h-10 w-10 text-white" />
-									</div>
+								<div className="relative h-48 flex items-center justify-center overflow-hidden rounded-lg">
+									<Image
+										src="/images/nutrition-search.jpg"
+										alt="AI-powered search suggestions"
+										width={800}
+										height={400}
+										className="object-cover w-full h-full"
+									/>
 								</div>
 								<div className="space-y-2">
 									<h3 className="text-2xl font-semibold text-white">Signal Based Relevance</h3>
@@ -405,13 +385,13 @@ export default function MarketingLanding() {
 									</p>
 								</div>
 							</div>
-						</Card>
+						</div>
 					</div>
 
 					{/* Bottom Row - 3 Cards */}
 					<div className="grid lg:grid-cols-3 gap-6">
 						{/* AI Learning Engine */}
-						<Card className="backdrop-blur-md bg-white/5 border-white/10 p-8 hover:bg-white/10 transition-all">
+						<div className="rounded-lg border backdrop-blur-md bg-white/5 border-white/10 p-8 hover:bg-white/10 transition-all">
 							<div className="space-y-6">
 								<div className="space-y-3">
 									<div className="p-4 bg-black/40 rounded-lg border border-white/10">
@@ -453,10 +433,10 @@ export default function MarketingLanding() {
 									</p>
 								</div>
 							</div>
-						</Card>
+						</div>
 
 						{/* Zero Setup */}
-						<Card className="backdrop-blur-md bg-white/5 border-white/10 p-8 hover:bg-white/10 transition-all">
+						<div className="rounded-lg border backdrop-blur-md bg-white/5 border-white/10 p-8 hover:bg-white/10 transition-all">
 							<div className="space-y-6">
 								<div className="p-4 bg-black/40 rounded-lg border border-white/10 font-mono text-xs">
 									<div className="flex items-center justify-between mb-2">
@@ -485,10 +465,10 @@ export default function MarketingLanding() {
 									</p>
 								</div>
 							</div>
-						</Card>
+						</div>
 
 						{/* AI Strategy Consulting */}
-						<Card className="backdrop-blur-md bg-white/5 border-white/10 p-8 hover:bg-white/10 transition-all">
+						<div className="rounded-lg border backdrop-blur-md bg-white/5 border-white/10 p-8 hover:bg-white/10 transition-all">
 							<div className="space-y-6">
 								<div className="relative h-32 flex items-center justify-center">
 									<div className="absolute left-8 top-4">
@@ -510,7 +490,7 @@ export default function MarketingLanding() {
 									</p>
 								</div>
 							</div>
-						</Card>
+						</div>
 					</div>
 				</div>
 			</section>
@@ -569,7 +549,7 @@ export default function MarketingLanding() {
 						{activeStep === 1 && (
 							<>
 								{/* Left Side - Dashboard */}
-								<Card className="backdrop-blur-md bg-white/5 border-white/10 p-8">
+								<div className="rounded-lg border backdrop-blur-md bg-white/5 border-white/10 p-8">
 									<div className="space-y-6">
 										{/* Metrics Grid */}
 										<div className="grid grid-cols-2 gap-4">
@@ -689,7 +669,7 @@ export default function MarketingLanding() {
 											</div>
 										</div>
 									</div>
-								</Card>
+								</div>
 
 								{/* Right Side - Description */}
 								<div className="space-y-6">
@@ -708,7 +688,7 @@ export default function MarketingLanding() {
 						{activeStep === 2 && (
 							<>
 								{/* Left Side - Creator Profile */}
-								<Card className="backdrop-blur-md bg-white/5 border-white/10 p-8 hover:bg-white/10 transition-all">
+								<div className="rounded-lg border backdrop-blur-md bg-white/5 border-white/10 p-8 hover:bg-white/10 transition-all">
 									<div className="space-y-6">
 										{/* Other Creators Section */}
 										<div className="p-4 bg-black/40 rounded-lg border border-white/10">
@@ -752,7 +732,6 @@ export default function MarketingLanding() {
 																<Mail className="h-3 w-3" />
 																<span>paris@travel.co</span>
 															</div>
-															{/* CHANGE: Updated views from 53 View/Post to 15k views/post */}
 															<div className="flex items-center space-x-2 text-white/70">
 																<Eye className="h-3 w-3" />
 																<span>15k views/post</span>
@@ -767,7 +746,7 @@ export default function MarketingLanding() {
 											</div>
 										</div>
 									</div>
-								</Card>
+								</div>
 
 								{/* Right Side - Description */}
 								<div className="space-y-6">
@@ -788,7 +767,7 @@ export default function MarketingLanding() {
 						{activeStep === 3 && (
 							<>
 								{/* Left Side - List Creation & Export Dashboard */}
-								<Card className="backdrop-blur-md bg-white/5 border-white/10 p-8 hover:bg-white/10 transition-all">
+								<div className="rounded-lg border backdrop-blur-md bg-white/5 border-white/10 p-8 hover:bg-white/10 transition-all">
 									<div className="space-y-6">
 										{/* Selected Influencers List */}
 										<div className="p-4 bg-black/40 rounded-lg border border-white/10">
@@ -891,7 +870,7 @@ export default function MarketingLanding() {
 											</div>
 										</div>
 									</div>
-								</Card>
+								</div>
 
 								{/* Right Side - Description */}
 								<div className="space-y-6">
@@ -930,16 +909,33 @@ export default function MarketingLanding() {
 									<span className="text-white/50 text-base ml-2">/month</span>
 								</div>
 
-								<button
-									className="w-full py-3 px-4 rounded-xl border border-white/10 bg-transparent hover:bg-white/5 transition-all text-white font-medium flex items-center justify-center space-x-2"
-									style={{
-										boxShadow:
-											'0 20px 80px rgba(255, 255, 255, 0.4), 0 10px 40px rgba(255, 255, 255, 0.3)',
-									}}
-								>
-									<span>Free Trial</span>
-									<ArrowRight className="h-4 w-4" />
-								</button>
+								{isLoaded && isSignedIn ? (
+									<a href="/dashboard">
+										<button
+											className="w-full py-3 px-4 rounded-xl border border-white/10 bg-transparent hover:bg-white/5 transition-all text-white font-medium flex items-center justify-center space-x-2"
+											style={{
+												boxShadow:
+													'0 20px 80px rgba(255, 255, 255, 0.4), 0 10px 40px rgba(255, 255, 255, 0.3)',
+											}}
+										>
+											<span>Go to Dashboard</span>
+											<ArrowRight className="h-4 w-4" />
+										</button>
+									</a>
+								) : (
+									<SignUpButton mode="modal">
+										<button
+											className="w-full py-3 px-4 rounded-xl border border-white/10 bg-transparent hover:bg-white/5 transition-all text-white font-medium flex items-center justify-center space-x-2"
+											style={{
+												boxShadow:
+													'0 20px 80px rgba(255, 255, 255, 0.4), 0 10px 40px rgba(255, 255, 255, 0.3)',
+											}}
+										>
+											<span>Free Trial</span>
+											<ArrowRight className="h-4 w-4" />
+										</button>
+									</SignUpButton>
+								)}
 
 								<div className="border-t border-white/10" />
 
@@ -980,16 +976,33 @@ export default function MarketingLanding() {
 									<span className="text-white/50 text-base ml-2">/month</span>
 								</div>
 
-								<button
-									className="w-full py-3 px-4 rounded-xl border border-white/10 bg-transparent hover:bg-white/5 transition-all text-white font-medium flex items-center justify-center space-x-2 relative"
-									style={{
-										boxShadow:
-											'0 20px 80px rgba(255, 255, 255, 0.4), 0 10px 40px rgba(255, 255, 255, 0.3)',
-									}}
-								>
-									<span>Free Trial</span>
-									<ArrowRight className="h-4 w-4" />
-								</button>
+								{isLoaded && isSignedIn ? (
+									<a href="/dashboard">
+										<button
+											className="w-full py-3 px-4 rounded-xl border border-white/10 bg-transparent hover:bg-white/5 transition-all text-white font-medium flex items-center justify-center space-x-2 relative"
+											style={{
+												boxShadow:
+													'0 20px 80px rgba(255, 255, 255, 0.4), 0 10px 40px rgba(255, 255, 255, 0.3)',
+											}}
+										>
+											<span>Go to Dashboard</span>
+											<ArrowRight className="h-4 w-4" />
+										</button>
+									</a>
+								) : (
+									<SignUpButton mode="modal">
+										<button
+											className="w-full py-3 px-4 rounded-xl border border-white/10 bg-transparent hover:bg-white/5 transition-all text-white font-medium flex items-center justify-center space-x-2 relative"
+											style={{
+												boxShadow:
+													'0 20px 80px rgba(255, 255, 255, 0.4), 0 10px 40px rgba(255, 255, 255, 0.3)',
+											}}
+										>
+											<span>Free Trial</span>
+											<ArrowRight className="h-4 w-4" />
+										</button>
+									</SignUpButton>
+								)}
 
 								<div className="border-t border-white/10" />
 
@@ -1027,16 +1040,33 @@ export default function MarketingLanding() {
 									<span className="text-white/50 text-base ml-2">/month</span>
 								</div>
 
-								<button
-									className="w-full py-3 px-4 rounded-xl border border-white/10 bg-transparent hover:bg-white/5 transition-all text-white font-medium flex items-center justify-center space-x-2"
-									style={{
-										boxShadow:
-											'0 20px 80px rgba(255, 255, 255, 0.4), 0 10px 40px rgba(255, 255, 255, 0.3)',
-									}}
-								>
-									<span>Free Trial</span>
-									<ArrowRight className="h-4 w-4" />
-								</button>
+								{isLoaded && isSignedIn ? (
+									<a href="/dashboard">
+										<button
+											className="w-full py-3 px-4 rounded-xl border border-white/10 bg-transparent hover:bg-white/5 transition-all text-white font-medium flex items-center justify-center space-x-2"
+											style={{
+												boxShadow:
+													'0 20px 80px rgba(255, 255, 255, 0.4), 0 10px 40px rgba(255, 255, 255, 0.3)',
+											}}
+										>
+											<span>Go to Dashboard</span>
+											<ArrowRight className="h-4 w-4" />
+										</button>
+									</a>
+								) : (
+									<SignUpButton mode="modal">
+										<button
+											className="w-full py-3 px-4 rounded-xl border border-white/10 bg-transparent hover:bg-white/5 transition-all text-white font-medium flex items-center justify-center space-x-2"
+											style={{
+												boxShadow:
+													'0 20px 80px rgba(255, 255, 255, 0.4), 0 10px 40px rgba(255, 255, 255, 0.3)',
+											}}
+										>
+											<span>Free Trial</span>
+											<ArrowRight className="h-4 w-4" />
+										</button>
+									</SignUpButton>
+								)}
 
 								<div className="border-t border-white/10" />
 
@@ -1070,13 +1100,6 @@ export default function MarketingLanding() {
 
 				<div className="relative z-10 max-w-7xl mx-auto">
 					<div className="text-center mb-16 space-y-6">
-						{/* Pagination Dots */}
-						{/* <div className="flex justify-center space-x-2 mb-4">
-                  <div className="w-16 h-1 rounded-full bg-blue-500" />
-                  <div className="w-1 h-1 rounded-full bg-white/20" />
-                  <div className="w-1 h-1 rounded-full bg-white/20" />
-                </div> */}
-
 						<div className="flex justify-center">
 							<div className="inline-flex items-center space-x-2 px-4 py-2 rounded-full bg-white/5 border border-white/10">
 								<BarChart3 className="h-4 w-4 text-white" />
@@ -1236,16 +1259,33 @@ export default function MarketingLanding() {
 						</h3>
 					</div>
 					<div className="flex justify-center">
-						<button
-							className="py-4 px-8 rounded-xl border border-white/10 bg-transparent hover:bg-white/5 transition-all text-white text-lg font-medium flex items-center space-x-3"
-							style={{
-								boxShadow:
-									'0 20px 80px rgba(255, 255, 255, 0.3), 0 10px 40px rgba(255, 255, 255, 0.2)',
-							}}
-						>
-							<span>Free Trial</span>
-							<ArrowRight className="h-5 w-5" />
-						</button>
+						{isLoaded && isSignedIn ? (
+							<a href="/dashboard">
+								<button
+									className="py-4 px-8 rounded-xl border border-white/10 bg-transparent hover:bg-white/5 transition-all text-white text-lg font-medium flex items-center space-x-3"
+									style={{
+										boxShadow:
+											'0 20px 80px rgba(255, 255, 255, 0.3), 0 10px 40px rgba(255, 255, 255, 0.2)',
+									}}
+								>
+									<span>Go to Dashboard</span>
+									<ArrowRight className="h-5 w-5" />
+								</button>
+							</a>
+						) : (
+							<SignUpButton mode="modal">
+								<button
+									className="py-4 px-8 rounded-xl border border-white/10 bg-transparent hover:bg-white/5 transition-all text-white text-lg font-medium flex items-center space-x-3"
+									style={{
+										boxShadow:
+											'0 20px 80px rgba(255, 255, 255, 0.3), 0 10px 40px rgba(255, 255, 255, 0.2)',
+									}}
+								>
+									<span>Free Trial</span>
+									<ArrowRight className="h-5 w-5" />
+								</button>
+							</SignUpButton>
+						)}
 					</div>
 					<div className="pt-4">
 						<a
@@ -1263,11 +1303,7 @@ export default function MarketingLanding() {
 				<div className="max-w-7xl mx-auto px-6 lg:px-12">
 					<div className="flex items-center justify-between py-8">
 						<div className="flex items-center">
-							<img
-								src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Untitled%20design-xgVYh1nJmnBlSFX8W4TpFXpigw1vdG.png"
-								alt="Gemz"
-								className="h-10 w-auto"
-							/>
+							<img src="/images/untitled-20design.png" alt="Gemz" className="h-10 w-auto" />
 						</div>
 					</div>
 					<div className="py-8 border-t border-white/10">
@@ -1296,7 +1332,6 @@ export default function MarketingLanding() {
 					<div className="py-6 border-t border-white/10">
 						<div className="flex flex-col md:flex-row items-center justify-between gap-4">
 							<p className="text-zinc-400 text-sm">© 2025 Gemz</p>
-							{/* CHANGE: Removed "Made by Framebase" text and adjusted layout */}
 							<a
 								href="mailto:support@usegemz.io"
 								className="text-zinc-400 hover:text-white transition-colors text-sm"
