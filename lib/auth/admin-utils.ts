@@ -46,7 +46,8 @@ export async function isAdminUser(): Promise<boolean> {
 
 		// Get user from Clerk to access email
 		structuredConsole.log('🔍 [ADMIN-CHECK] Getting user from Clerk...');
-		const user = await clerkBackendClient.users.getUser(userId);
+		const clerk = await clerkBackendClient();
+		const user = await clerk.users.getUser(userId);
 		const userEmail = user.primaryEmailAddress?.emailAddress;
 
 		structuredConsole.log('🔍 [ADMIN-CHECK] User email retrieved:', userEmail);
@@ -107,7 +108,8 @@ export async function getCurrentUserAdminInfo() {
 		const { userId } = await auth();
 		if (!userId) return { isAdmin: false, user: null };
 
-		const user = await clerkBackendClient.users.getUser(userId);
+		const clerk = await clerkBackendClient();
+		const user = await clerk.users.getUser(userId);
 		const isAdmin = await isAdminUser();
 
 		return {
@@ -189,9 +191,20 @@ export async function demoteUserFromAdmin(
  */
 export async function getAllAdminUsers() {
 	try {
-		const result = {
-			environmentAdmins: [] as string[],
-			databaseAdmins: [] as any[],
+		type AdminUser = {
+			userId: string;
+			fullName: string | null;
+			email: string | null;
+			isAdmin: boolean;
+			updatedAt: Date | null;
+		};
+		const result: {
+			environmentAdmins: string[];
+			databaseAdmins: AdminUser[];
+			totalCount: number;
+		} = {
+			environmentAdmins: [],
+			databaseAdmins: [],
 			totalCount: 0,
 		};
 

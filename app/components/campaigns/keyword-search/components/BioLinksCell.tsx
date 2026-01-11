@@ -44,7 +44,7 @@ export function BioLinksCell({
 	bioLinks = [],
 	externalUrl,
 	isLoading = false,
-}: BioLinksCellProps): JSX.Element {
+}: BioLinksCellProps) {
 	const [isExpanded, setIsExpanded] = useState(false);
 
 	const hasBio = bio && bio.trim().length > 0;

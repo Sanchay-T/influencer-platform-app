@@ -60,13 +60,14 @@ const DEFAULT_CONFIGS = {
 	'logging.rate_limit_per_minute': { value: '100', type: 'number' },
 	'logging.log_retention_days_development': { value: '7', type: 'number' },
 	'logging.log_retention_days': { value: '30', type: 'number' },
-} as const;
+} satisfies Record<string, { value: string; type: 'number' | 'duration' | 'string' | 'boolean' }>;
 
 type ConfigKey = keyof typeof DEFAULT_CONFIGS;
+const hasConfigKey = (key: string): key is ConfigKey => Object.hasOwn(DEFAULT_CONFIGS, key);
 
 // In-memory cache
 interface CacheItem {
-	value: any;
+	value: unknown;
 	timestamp: number;
 	ttl: number;
 }
@@ -75,7 +76,7 @@ class ConfigCache {
 	private cache = new Map<string, CacheItem>();
 	private readonly TTL_MS = 30 * 1000; // 30 seconds
 
-	set(key: string, value: any, ttl = this.TTL_MS): void {
+	set(key: string, value: unknown, ttl = this.TTL_MS): void {
 		this.cache.set(key, {
 			value,
 			timestamp: Date.now(),
@@ -83,7 +84,7 @@ class ConfigCache {
 		});
 	}
 
-	get(key: string): any | null {
+	get(key: string): unknown | null {
 		const item = this.cache.get(key);
 		if (!item) return null;
 
@@ -131,7 +132,7 @@ function parseDuration(value: string): number {
 }
 
 // Validation functions
-function validateValue(value: string, type: string): any {
+function validateValue(value: string, type: string): unknown {
 	switch (type) {
 		case 'number': {
 			const num = parseInt(value, 10);
@@ -163,7 +164,7 @@ export class SystemConfig {
 	/**
 	 * Get a configuration value by category and key
 	 */
-	static async get(category: string, key: string): Promise<any> {
+	static async get(category: string, key: string): Promise<unknown> {
 		const cacheKey = `${category}.${key}`;
 
 		// Check cache first
@@ -194,7 +195,7 @@ export class SystemConfig {
 			structuredConsole.log(
 				`🔧 [CONFIG-DEFAULT] Not found in database, using default for: ${cacheKey}`
 			);
-			const defaultConfig = DEFAULT_CONFIGS[cacheKey as ConfigKey];
+			const defaultConfig = hasConfigKey(cacheKey) ? DEFAULT_CONFIGS[cacheKey] : undefined;
 			if (defaultConfig) {
 				const validatedValue = validateValue(defaultConfig.value, defaultConfig.type);
 				structuredConsole.log(
@@ -208,7 +209,7 @@ export class SystemConfig {
 			structuredConsole.log(
 				`🔧 [CONFIG-FALLBACK] Configuration not found in database: ${category}.${key}, using defaults`
 			);
-			const fallbackConfig = DEFAULT_CONFIGS[cacheKey as ConfigKey];
+			const fallbackConfig = hasConfigKey(cacheKey) ? DEFAULT_CONFIGS[cacheKey] : undefined;
 			if (fallbackConfig) {
 				const validatedValue = validateValue(fallbackConfig.value, fallbackConfig.type);
 				structuredConsole.log(
@@ -224,7 +225,7 @@ export class SystemConfig {
 			structuredConsole.error(`[CONFIG] Error loading config ${category}.${key}:`, error);
 
 			// Emergency fallback to defaults
-			const emergencyConfig = DEFAULT_CONFIGS[cacheKey as ConfigKey];
+			const emergencyConfig = hasConfigKey(cacheKey) ? DEFAULT_CONFIGS[cacheKey] : undefined;
 			if (emergencyConfig) {
 				structuredConsole.log(`🔧 [CONFIG-EMERGENCY] Using emergency fallback for: ${cacheKey}`);
 				const validatedValue = validateValue(emergencyConfig.value, emergencyConfig.type);

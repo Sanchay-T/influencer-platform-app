@@ -8,6 +8,7 @@
  */
 
 import { getUserProfile } from '@/lib/db/queries/user-queries';
+import { isValidSubscriptionStatus } from '@/lib/types/statuses';
 import {
 	getPlanConfig,
 	isValidPlan,
@@ -35,16 +36,20 @@ export async function getBillingStatus(userId: string): Promise<BillingStatus> {
 	}
 
 	// Calculate trial time
-	const trialTime = calculateTrialTime(user.trialStartDate, user.trialEndDate);
+	const trialTime = calculateTrialTime(user.trialStartDate, user.trialEndDate ?? null);
 
 	// Derive trial status dynamically instead of trusting DB field
 	// @why DB trial_status can be stale if webhook failed or user abandoned checkout
-	const effectiveTrialStatus = deriveTrialStatus(user.subscriptionStatus, user.trialEndDate);
+	const effectiveTrialStatus = deriveTrialStatus(
+		user.subscriptionStatus,
+		user.trialEndDate ?? null
+	);
 
 	// Determine states using derived status
 	const isTrialing = effectiveTrialStatus === 'active' && user.subscriptionStatus !== 'active';
 	const hasActiveSubscription = user.subscriptionStatus === 'active';
-	const currentPlan = user.currentPlan as PlanKey | null;
+	const planCandidate = user.currentPlan ?? '';
+	const currentPlan: PlanKey | null = isValidPlan(planCandidate) ? planCandidate : null;
 
 	// Get plan limits (use defaults if no plan)
 	let campaignsLimit = 0;
@@ -66,6 +71,12 @@ export async function getBillingStatus(userId: string): Promise<BillingStatus> {
 	// Billing amount
 	const billingAmount = currentPlan ? PLANS[currentPlan].monthlyPrice / 100 : 0;
 
+	const statusValue = user.subscriptionStatus;
+	const subscriptionStatus: SubscriptionStatus =
+		typeof statusValue === 'string' && isValidSubscriptionStatus(statusValue)
+			? statusValue
+			: 'none';
+
 	return {
 		currentPlan,
 		isTrialing,
@@ -83,7 +94,7 @@ export async function getBillingStatus(userId: string): Promise<BillingStatus> {
 		trialEndDate: user.trialEndDate?.toISOString(),
 		trialEndsAt: user.trialEndDate?.toISOString().split('T')[0],
 
-		subscriptionStatus: (user.subscriptionStatus as SubscriptionStatus) || 'none',
+		subscriptionStatus,
 		billingAmount,
 		billingCycle: 'monthly',
 		nextBillingDate: hasActiveSubscription

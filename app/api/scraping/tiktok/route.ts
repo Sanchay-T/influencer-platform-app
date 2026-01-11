@@ -6,7 +6,7 @@ import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { validateCreatorSearch } from '@/lib/billing';
 import { SystemConfig } from '@/lib/config/system-config';
 import { db } from '@/lib/db';
-import { campaigns, type JobStatus, scrapingJobs, scrapingResults } from '@/lib/db/schema';
+import { campaigns, scrapingJobs, scrapingResults } from '@/lib/db/schema';
 import BillingLogger from '@/lib/loggers/billing-logger';
 import { LogCategory, logger } from '@/lib/logging';
 import {
@@ -17,11 +17,20 @@ import {
 } from '@/lib/middleware/api-logger';
 import { qstash } from '@/lib/queue/qstash';
 import { normalizePageParams, paginateCreators } from '@/lib/search-engine/utils/pagination';
+import {
+	getNumberProperty,
+	getStringArrayProperty,
+	getStringProperty,
+	isRecord,
+	isString,
+	toError,
+	toRecord,
+} from '@/lib/utils/type-guards';
 
 const fs = require('fs');
 const path = require('path');
 
-function appendRunLog(jobId: string, entry: Record<string, any>) {
+function appendRunLog(jobId: string, entry: Record<string, unknown>) {
 	try {
 		const dir = path.join(process.cwd(), 'logs', 'runs', 'tiktok');
 		if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -88,8 +97,9 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
 		logPhase('validation');
 
 		// Load dynamic configuration
-		const TIMEOUT_MINUTES =
-			(await SystemConfig.get('timeouts', 'standard_job_timeout')) / (60 * 1000);
+		const timeoutValue = await SystemConfig.get('timeouts', 'standard_job_timeout');
+		const timeoutMs = typeof timeoutValue === 'number' ? timeoutValue : Number(timeoutValue ?? 0);
+		const TIMEOUT_MINUTES = Number.isFinite(timeoutMs) ? timeoutMs / (60 * 1000) : 60;
 		log.debug(
 			'TikTok API configuration loaded',
 			{
@@ -101,7 +111,7 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
 
 		// Parse request body with error handling
 		const bodyText = await req.text();
-		let body;
+		let body: unknown;
 
 		try {
 			body = JSON.parse(bodyText);
@@ -113,20 +123,35 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
 				},
 				LogCategory.TIKTOK
 			);
-		} catch (parseError: any) {
+		} catch (parseError: unknown) {
+			const error = toError(parseError);
 			log.error(
 				'TikTok API JSON parsing failed',
-				parseError,
+				error,
 				{
 					requestId,
 					bodyLength: bodyText.length,
 				},
 				LogCategory.TIKTOK
 			);
-			return createErrorResponse(`Invalid JSON: ${parseError.message}`, 400, requestId);
+			return createErrorResponse(`Invalid JSON: ${error.message}`, 400, requestId);
 		}
 
-		const { keywords, targetResults = 1000, campaignId } = body;
+		const bodyRecord = toRecord(body);
+		if (!bodyRecord) {
+			return createErrorResponse('Invalid JSON payload', 400, requestId);
+		}
+
+		const keywords = getStringArrayProperty(bodyRecord, 'keywords') ?? [];
+		const targetResultsValue = getNumberProperty(bodyRecord, 'targetResults');
+		const targetResultsText = getStringProperty(bodyRecord, 'targetResults');
+		const parsedTargetResults =
+			targetResultsValue ?? (targetResultsText ? Number(targetResultsText) : null);
+		const targetResults =
+			typeof parsedTargetResults === 'number' && Number.isFinite(parsedTargetResults)
+				? parsedTargetResults
+				: 1000;
+		const campaignId = getStringProperty(bodyRecord, 'campaignId') ?? undefined;
 
 		log.info(
 			'TikTok API request parameters extracted',
@@ -411,7 +436,8 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
 					retries: 3,
 					notifyOnFailure: true,
 				});
-				qstashMessageId = (result as any)?.messageId || null;
+				const resultRecord = toRecord(result);
+				qstashMessageId = isString(resultRecord?.messageId) ? resultRecord.messageId : null;
 				log.info(
 					'TikTok job queued in QStash',
 					{
@@ -422,14 +448,15 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
 					},
 					LogCategory.QSTASH
 				);
-			} catch (publishError: any) {
+			} catch (publishError: unknown) {
+				const error = toError(publishError);
 				// In development, Upstash cannot call localhost; do not fail the request
 				log.warn(
 					'TikTok QStash publish failed (continuing)',
 					{
 						requestId,
 						jobId: job.id,
-						error: String(publishError?.message || publishError),
+						error: error.message,
 					},
 					LogCategory.QSTASH
 				);
@@ -457,10 +484,11 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
 				200,
 				requestId
 			);
-		} catch (dbError: any) {
+		} catch (dbError: unknown) {
+			const error = toError(dbError);
 			log.error(
 				'TikTok API database operation failed',
-				dbError,
+				error,
 				{
 					requestId,
 					userId,
@@ -469,12 +497,13 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
 				},
 				LogCategory.DATABASE
 			);
-			return createErrorResponse(`Database error: ${dbError.message}`, 500, requestId);
+			return createErrorResponse(`Database error: ${error.message}`, 500, requestId);
 		}
-	} catch (error: any) {
+	} catch (error: unknown) {
+		const requestError = toError(error);
 		log.error(
 			'TikTok API request failed',
-			error,
+			requestError,
 			{
 				requestId,
 				url: req.url,
@@ -482,7 +511,7 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
 			},
 			LogCategory.TIKTOK
 		);
-		return createErrorResponse(error.message || 'Internal server error', 500, requestId);
+		return createErrorResponse(requestError.message, 500, requestId);
 	}
 }, LogCategory.TIKTOK);
 
@@ -499,7 +528,7 @@ export const GET = withApiLogging(async (req: Request, { requestId, logPhase, lo
 
 		logPhase('validation');
 		const { searchParams } = new URL(req.url);
-		const jobId = searchParams.get('jobId');
+		const jobId = searchParams.get('jobId') ?? undefined;
 
 		log.info(
 			'TikTok API GET request started',
@@ -559,41 +588,42 @@ export const GET = withApiLogging(async (req: Request, { requestId, logPhase, lo
 			);
 			return createErrorResponse('Job not found', 404, requestId);
 		}
+		const resolvedJob = job;
 
 		logPhase('business');
 		try {
-			const resultsArray = Array.isArray(job.results)
-				? job.results
-				: job.results
-					? [job.results]
+			const resultsArray = Array.isArray(resolvedJob.results)
+				? resolvedJob.results
+				: resolvedJob.results
+					? [resolvedJob.results]
 					: [];
 			const first = resultsArray[0];
-			const currentCount =
-				first && Array.isArray((first as any).creators) ? (first as any).creators.length : 0;
-			appendRunLog(job.id, {
+			const firstRecord = toRecord(first);
+			const currentCount = Array.isArray(firstRecord?.creators) ? firstRecord.creators.length : 0;
+			appendRunLog(resolvedJob.id, {
 				type: 'poll_snapshot',
-				status: job.status,
-				progress: parseFloat(job.progress || '0'),
-				processedResults: job.processedResults,
-				targetResults: job.targetResults,
+				status: resolvedJob.status,
+				progress: parseFloat(resolvedJob.progress || '0'),
+				processedResults: resolvedJob.processedResults,
+				targetResults: resolvedJob.targetResults,
 				currentSavedCreators: currentCount,
 			});
 		} catch {}
 
 		// Check for job timeout
-		if (job.timeoutAt && new Date(job.timeoutAt) < new Date()) {
-			if (job.status === 'processing' || job.status === 'pending') {
+		if (resolvedJob.timeoutAt && new Date(resolvedJob.timeoutAt) < new Date()) {
+			if (resolvedJob.status === 'processing' || resolvedJob.status === 'pending') {
 				await logDbOperation(
 					'update_timeout_job',
 					async () => {
 						return await db
 							.update(scrapingJobs)
 							.set({
-								status: 'timeout' as JobStatus,
+								status: 'timeout',
 								error: 'Job exceeded maximum allowed time',
 								completedAt: new Date(),
 							})
-							.where(eq(scrapingJobs.id, job.id));
+							.where(eq(scrapingJobs.id, resolvedJob.id));
 					},
 					{ requestId }
 				);
@@ -603,7 +633,7 @@ export const GET = withApiLogging(async (req: Request, { requestId, logPhase, lo
 					{
 						requestId,
 						jobId,
-						timeoutAt: job.timeoutAt,
+						timeoutAt: resolvedJob.timeoutAt,
 					},
 					LogCategory.TIKTOK
 				);
@@ -626,16 +656,16 @@ export const GET = withApiLogging(async (req: Request, { requestId, logPhase, lo
 				{
 					requestId,
 					jobId,
-					lastUpdated: job.updatedAt,
+					lastUpdated: resolvedJob.updatedAt,
 					minutesSinceUpdate: Math.round(
-						(new Date().getTime() - new Date(job.updatedAt).getTime()) / (60 * 1000)
+						(new Date().getTime() - new Date(resolvedJob.updatedAt).getTime()) / (60 * 1000)
 					),
 				},
 				LogCategory.TIKTOK
 			);
 
 			try {
-				if ((job.processedResults || 0) < job.targetResults) {
+				if ((resolvedJob.processedResults || 0) < resolvedJob.targetResults) {
 					// Restart interrupted job
 					await logDbOperation(
 						'restart_stalled_job',
@@ -646,7 +676,7 @@ export const GET = withApiLogging(async (req: Request, { requestId, logPhase, lo
 									updatedAt: new Date(),
 									error: 'Process restarted after interruption',
 								})
-								.where(eq(scrapingJobs.id, job.id));
+								.where(eq(scrapingJobs.id, resolvedJob.id));
 						},
 						{ requestId }
 					);
@@ -654,7 +684,7 @@ export const GET = withApiLogging(async (req: Request, { requestId, logPhase, lo
 					const { getWebhookUrl } = await import('@/lib/utils/url-utils');
 					await qstash.publishJSON({
 						url: `${getWebhookUrl()}/api/qstash/process-search`,
-						body: { jobId: job.id },
+						body: { jobId: resolvedJob.id },
 						delay: '5s',
 						retries: 3,
 						notifyOnFailure: true,
@@ -672,11 +702,11 @@ export const GET = withApiLogging(async (req: Request, { requestId, logPhase, lo
 					return createApiResponse(
 						{
 							status: 'processing',
-							processedResults: job.processedResults,
-							targetResults: job.targetResults,
+							processedResults: resolvedJob.processedResults,
+							targetResults: resolvedJob.targetResults,
 							recovery: 'Job processing restarted after interruption',
-							results: job.results,
-							progress: parseFloat(job.progress || '0'),
+							results: resolvedJob.results,
+							progress: parseFloat(resolvedJob.progress || '0'),
 						},
 						200,
 						requestId
@@ -694,7 +724,7 @@ export const GET = withApiLogging(async (req: Request, { requestId, logPhase, lo
 									updatedAt: new Date(),
 									progress: '100',
 								})
-								.where(eq(scrapingJobs.id, job.id));
+								.where(eq(scrapingJobs.id, resolvedJob.id));
 						},
 						{ requestId }
 					);
@@ -711,7 +741,7 @@ export const GET = withApiLogging(async (req: Request, { requestId, logPhase, lo
 			} catch (error) {
 				log.error(
 					'TikTok API stalled job recovery failed',
-					error as Error,
+					toError(error),
 					{
 						requestId,
 						jobId,
@@ -726,9 +756,9 @@ export const GET = withApiLogging(async (req: Request, { requestId, logPhase, lo
 			{
 				requestId,
 				jobId,
-				status: job.status,
-				processedResults: job.processedResults,
-				targetResults: job.targetResults,
+				status: resolvedJob.status,
+				processedResults: resolvedJob.processedResults,
+				targetResults: resolvedJob.targetResults,
 			},
 			LogCategory.TIKTOK
 		);
@@ -742,23 +772,27 @@ export const GET = withApiLogging(async (req: Request, { requestId, logPhase, lo
 			results: paginatedResults,
 			totalCreators,
 			pagination,
-		} = paginateCreators(job.results, limit, offset);
+		} = paginateCreators(resolvedJob.results, limit, offset);
 
 		const payload = {
-			status: job.status,
-			processedResults: job.processedResults,
-			targetResults: job.targetResults,
-			error: job.error,
+			status: resolvedJob.status,
+			processedResults: resolvedJob.processedResults,
+			targetResults: resolvedJob.targetResults,
+			error: resolvedJob.error,
 			results: paginatedResults,
-			progress: parseFloat(job.progress || '0'),
-			engine: (job.searchParams as any)?.runner ?? 'search-engine',
-			benchmark: (job.searchParams as any)?.searchEngineBenchmark ?? null,
+			progress: parseFloat(resolvedJob.progress || '0'),
+			engine: isString(toRecord(resolvedJob.searchParams)?.runner)
+				? toRecord(resolvedJob.searchParams)?.runner
+				: 'search-engine',
+			benchmark: isRecord(toRecord(resolvedJob.searchParams)?.searchEngineBenchmark)
+				? toRecord(resolvedJob.searchParams)?.searchEngineBenchmark
+				: null,
 			totalCreators,
 			pagination,
 		};
 		try {
 			const currentCount = totalCreators;
-			appendRunLog(job.id, {
+			appendRunLog(resolvedJob.id, {
 				type: 'poll_return',
 				status: payload.status,
 				progress: payload.progress,
@@ -769,7 +803,7 @@ export const GET = withApiLogging(async (req: Request, { requestId, logPhase, lo
 	} catch (error) {
 		log.error(
 			'TikTok API GET request failed',
-			error as Error,
+			error instanceof Error ? error : new Error(String(error)),
 			{
 				requestId,
 				url: req.url,

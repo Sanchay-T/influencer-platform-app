@@ -3,6 +3,7 @@
  * Extracts complex matching logic to reduce main component complexity.
  */
 
+import { getRecordProperty, getStringProperty, toRecord } from '@/lib/utils/type-guards';
 import { normalizeHandleValue, normalizePlatformValue } from './creator-utils';
 
 export interface EnrichmentTarget {
@@ -33,23 +34,21 @@ export function findCreatorMatch(
 	const normalizedPlatform = normalizePlatformValue(target.platform);
 
 	const match = creators.find((entry) => {
-		if (!entry) return false;
+		const entryRecord = toRecord(entry);
+		if (!entryRecord) return false;
 
 		// Handle nested creator object
-		const base =
-			entry && typeof entry.creator === 'object' && entry.creator !== null
-				? (entry.creator as Record<string, unknown>)
-				: entry;
+		const base = getRecordProperty(entryRecord, 'creator') ?? entryRecord;
 
 		// Extract handle from various possible locations
 		const entryHandle =
 			normalizeHandleValue(
-				(base?.handle as string) ??
-					(base?.username as string) ??
-					(base?.uniqueId as string) ??
-					(entry?.handle as string) ??
-					(entry?.username as string) ??
-					(entry?.uniqueId as string) ??
+				getStringProperty(base, 'handle') ??
+					getStringProperty(base, 'username') ??
+					getStringProperty(base, 'uniqueId') ??
+					getStringProperty(entryRecord, 'handle') ??
+					getStringProperty(entryRecord, 'username') ??
+					getStringProperty(entryRecord, 'uniqueId') ??
 					null
 			) ?? null;
 
@@ -62,7 +61,7 @@ export function findCreatorMatch(
 
 		// Check platform match
 		const entryPlatform = normalizePlatformValue(
-			(base?.platform as string) ?? (entry?.platform as string) ?? null
+			getStringProperty(base, 'platform') ?? getStringProperty(entryRecord, 'platform') ?? null
 		);
 		return !entryPlatform || entryPlatform === normalizedPlatform;
 	});

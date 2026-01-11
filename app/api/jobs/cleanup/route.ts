@@ -39,14 +39,17 @@ export async function POST() {
 			);
 
 		// 2. Eliminar jobs antiguos según su estado
-		const deletedJobs = {
+		type CleanupStatus = 'completed' | 'error' | 'cancelled' | 'timeout';
+		const cleanupStatuses: CleanupStatus[] = ['completed', 'error', 'cancelled', 'timeout'];
+		const deletedJobs: Record<CleanupStatus, number> = {
 			completed: 0,
 			error: 0,
 			cancelled: 0,
 			timeout: 0,
 		};
 
-		for (const [status, days] of Object.entries(CLEANUP_CONFIG.maxAgeDays)) {
+		for (const status of cleanupStatuses) {
+			const days = CLEANUP_CONFIG.maxAgeDays[status];
 			const cutoffDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
 
 			// Primero eliminar resultados asociados
@@ -60,7 +63,7 @@ export async function POST() {
 				.where(and(lt(scrapingJobs.createdAt, cutoffDate), eq(scrapingJobs.status, status)))
 				.returning();
 
-			deletedJobs[status as keyof typeof deletedJobs] = result.length;
+			deletedJobs[status] = result.length;
 		}
 
 		return NextResponse.json({

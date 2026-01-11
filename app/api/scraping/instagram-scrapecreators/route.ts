@@ -5,11 +5,12 @@ import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { validateCreatorSearch } from '@/lib/billing';
 import { db } from '@/lib/db';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
-import { campaigns, type JobStatus, scrapingJobs } from '@/lib/db/schema';
+import { campaigns, scrapingJobs } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { qstash } from '@/lib/queue/qstash';
 import { normalizePageParams, paginateCreators } from '@/lib/search-engine/utils/pagination';
 import { createRunLogger } from '@/lib/search-engine/utils/run-logger';
+import { isRecord, isString, toArray, toError, toRecord } from '@/lib/utils/type-guards';
 import { getWebhookUrl } from '@/lib/utils/url-utils';
 
 const TIMEOUT_MINUTES = 60;
@@ -21,8 +22,12 @@ export async function POST(req: NextRequest) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
 
-		const body = await req.json().catch(() => ({}));
-		const { keywords, campaignId, amount: rawAmount, targetResults: rawTarget } = body ?? {};
+		const body = await req.json().catch(() => null);
+		const bodyRecord = toRecord(body);
+		const keywords = toArray(bodyRecord?.keywords) ?? [];
+		const campaignId = isString(bodyRecord?.campaignId) ? bodyRecord.campaignId : '';
+		const rawAmount = bodyRecord?.amount;
+		const rawTarget = bodyRecord?.targetResults;
 
 		if (!Array.isArray(keywords) || keywords.length === 0) {
 			return NextResponse.json(
@@ -32,8 +37,9 @@ export async function POST(req: NextRequest) {
 		}
 
 		const sanitizedKeywords = keywords
-			.map((k: any) => (typeof k === 'string' ? k.trim() : ''))
-			.filter((k: string) => k.length > 0);
+			.filter(isString)
+			.map((k) => k.trim())
+			.filter((k) => k.length > 0);
 
 		if (sanitizedKeywords.length === 0) {
 			return NextResponse.json({ error: 'No valid keywords provided' }, { status: 400 });
@@ -144,10 +150,11 @@ export async function POST(req: NextRequest) {
 			targetResults: targetResults,
 			amount,
 		});
-	} catch (error: any) {
+	} catch (error: unknown) {
+		const requestError = toError(error);
 		structuredConsole.error('[INSTAGRAM-SCRAPECREATORS] request failed', error);
 		return NextResponse.json(
-			{ error: 'Internal server error', message: error?.message },
+			{ error: 'Internal server error', message: requestError.message },
 			{ status: 500 }
 		);
 	}
@@ -194,7 +201,7 @@ export async function GET(req: NextRequest) {
 			await db
 				.update(scrapingJobs)
 				.set({
-					status: 'timeout' as JobStatus,
+					status: 'timeout',
 					error: 'Job exceeded maximum allowed time',
 					completedAt: new Date(),
 				})
@@ -236,13 +243,20 @@ export async function GET(req: NextRequest) {
 			results: paginatedResults ?? [],
 			progress: Number(job.progress ?? '0'),
 			platform: job.platform ?? 'instagram_scrapecreators',
-			engine: (job.searchParams as any)?.runner ?? 'instagram_scrapecreators',
-			benchmark: (job.searchParams as any)?.searchEngineBenchmark ?? null,
+			engine: isString(toRecord(job.searchParams)?.runner)
+				? toRecord(job.searchParams)?.runner
+				: 'instagram_scrapecreators',
+			benchmark: isRecord(toRecord(job.searchParams)?.searchEngineBenchmark)
+				? toRecord(job.searchParams)?.searchEngineBenchmark
+				: null,
 			totalCreators,
 			pagination,
 		});
-	} catch (error: any) {
+	} catch (error: unknown) {
 		structuredConsole.error('[INSTAGRAM-SCRAPECREATORS] GET failed', error);
-		return NextResponse.json({ error: error?.message ?? 'Internal server error' }, { status: 500 });
+		return NextResponse.json(
+			{ error: error instanceof Error ? error.message : 'Internal server error' },
+			{ status: 500 }
+		);
 	}
 }

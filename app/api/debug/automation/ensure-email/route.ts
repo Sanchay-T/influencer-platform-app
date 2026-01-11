@@ -3,6 +3,7 @@ import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
 import { getUserEmailFromClerk } from '@/lib/email/email-service';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { getArrayProperty, getStringProperty, toRecord } from '@/lib/utils/type-guards';
 
 export async function POST(request: Request) {
 	try {
@@ -42,12 +43,10 @@ export async function POST(request: Request) {
 
 		await updateUserProfile(targetUserId, { email });
 		return NextResponse.json({ success: true, email, updated: true });
-	} catch (error: any) {
+	} catch (error: unknown) {
 		structuredConsole.error('[ENSURE-EMAIL] Failed to ensure email', error);
-		return NextResponse.json(
-			{ error: 'Failed to ensure email', detail: error?.message || String(error) },
-			{ status: 500 }
-		);
+		const message = error instanceof Error ? error.message : String(error);
+		return NextResponse.json({ error: 'Failed to ensure email', detail: message }, { status: 500 });
 	}
 }
 
@@ -66,10 +65,18 @@ async function ensureEmailInClerk(userId: string, email: string) {
 		throw new Error(`Failed to load Clerk user (${userRes.status})`);
 	}
 	const user = await userRes.json();
+	const userRecord = toRecord(user);
+	if (!userRecord) {
+		throw new Error('Invalid Clerk user payload');
+	}
 
-	let primary = (user.email_addresses || []).find(
-		(entry: any) => entry.email_address?.toLowerCase() === email
-	);
+	const emailAddresses = getArrayProperty(userRecord, 'email_addresses') ?? [];
+	let primary = emailAddresses
+		.map((entry) => toRecord(entry))
+		.find((entry) => {
+			const address = entry ? getStringProperty(entry, 'email_address') : null;
+			return address?.toLowerCase() === email;
+		});
 
 	if (!primary) {
 		const createRes = await fetch(`${apiBase}/v1/users/${userId}/email_addresses`, {
@@ -80,14 +87,16 @@ async function ensureEmailInClerk(userId: string, email: string) {
 		if (!createRes.ok) {
 			throw new Error(`Failed to create email address in Clerk (${createRes.status})`);
 		}
-		primary = await createRes.json();
+		primary = toRecord(await createRes.json());
 	}
 
-	if (primary && user.primary_email_address_id !== primary.id) {
+	const primaryId = primary ? getStringProperty(primary, 'id') : null;
+	const currentPrimaryId = getStringProperty(userRecord, 'primary_email_address_id');
+	if (primaryId && currentPrimaryId !== primaryId) {
 		const patchRes = await fetch(`${apiBase}/v1/users/${userId}`, {
 			method: 'PATCH',
 			headers,
-			body: JSON.stringify({ primary_email_address_id: primary.id }),
+			body: JSON.stringify({ primary_email_address_id: primaryId }),
 		});
 		if (!patchRes.ok) {
 			throw new Error(`Failed to set primary email in Clerk (${patchRes.status})`);

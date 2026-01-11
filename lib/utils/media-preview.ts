@@ -1,6 +1,11 @@
 // Breadcrumb: resolveCreatorPreview feeds gallery cards (SearchResults, SimilarSearch, KeywordSearch) with platform-specific media covers.
 
-type UnknownRecord = Record<string, any>;
+import {
+	getArrayProperty,
+	getRecordProperty,
+	toRecord,
+	type UnknownRecord,
+} from '@/lib/utils/type-guards';
 
 const MAX_DEPTH = 6;
 
@@ -105,7 +110,7 @@ const normalizeCandidateUrl = (value: string | null | undefined): string | null 
 	return null;
 };
 
-const extractFirstUrl = (candidate: any, depth = 0): string | null => {
+const extractFirstUrl = (candidate: unknown, depth = 0): string | null => {
 	if (candidate == null || depth > MAX_DEPTH) return null;
 
 	if (typeof candidate === 'string') {
@@ -121,21 +126,32 @@ const extractFirstUrl = (candidate: any, depth = 0): string | null => {
 	}
 
 	if (typeof candidate === 'object') {
+		const record = toRecord(candidate);
+		if (!record) return null;
+
 		for (const key of PRIMARY_IMAGE_KEYS) {
-			if (Object.hasOwn(candidate, key)) {
-				const resolved = extractFirstUrl(candidate[key as keyof typeof candidate], depth + 1);
+			if (Object.hasOwn(record, key)) {
+				const resolved = extractFirstUrl(record[key], depth + 1);
 				if (resolved) return resolved;
 			}
 		}
 
-		for (const key of Object.keys(candidate)) {
+		for (const [key, value] of Object.entries(record)) {
 			if (PRIMARY_IMAGE_KEYS.includes(key) || EXCLUDED_KEYS.has(key)) continue;
-			const resolved = extractFirstUrl(candidate[key as keyof typeof candidate], depth + 1);
+			const resolved = extractFirstUrl(value, depth + 1);
 			if (resolved) return resolved;
 		}
 	}
 
 	return null;
+};
+
+const getFirstEdgeNode = (record: UnknownRecord | null): unknown => {
+	if (!record) return null;
+	const edges = getArrayProperty(record, 'edges');
+	if (!edges || edges.length === 0) return null;
+	const firstEdge = toRecord(edges[0]);
+	return firstEdge ? firstEdge.node : null;
 };
 
 export const resolveCreatorPreview = (
@@ -144,7 +160,24 @@ export const resolveCreatorPreview = (
 ): string | null => {
 	if (!creator) return fallback ?? null;
 
-	const subject = creator as UnknownRecord;
+	const subject = toRecord(creator);
+	if (!subject) return fallback ?? null;
+
+	const aweme = getRecordProperty(subject, 'aweme');
+	const awemeInfo = aweme ? getRecordProperty(aweme, 'aweme_info') : null;
+	const awemeInfoAlt = getRecordProperty(subject, 'aweme_info');
+	const item = getRecordProperty(subject, 'item');
+	const itemStruct = getRecordProperty(subject, 'itemStruct');
+	const edgeOwnerNode = getFirstEdgeNode(
+		getRecordProperty(subject, 'edge_owner_to_timeline_media')
+	);
+	const edgeRelatedNode = getFirstEdgeNode(
+		getRecordProperty(subject, 'edge_web_media_to_related_media')
+	);
+	const edgeSidecarNode = getFirstEdgeNode(getRecordProperty(subject, 'edge_sidecar_to_children'));
+	const edgeHighlightNode = getFirstEdgeNode(getRecordProperty(subject, 'edge_highlight_reels'));
+	const imageVersions2 = getRecordProperty(subject, 'image_versions2');
+	const imageVersions = getRecordProperty(subject, 'image_versions');
 
 	const containers = [
 		subject?.preview,
@@ -162,20 +195,20 @@ export const resolveCreatorPreview = (
 		subject?.node,
 		subject?.post,
 		subject?.reel,
-		subject?.aweme?.video,
-		subject?.aweme?.aweme_info?.video,
-		subject?.aweme_info?.video,
-		subject?.item?.video,
-		subject?.itemStruct?.video,
-		subject?.edge_owner_to_timeline_media?.edges?.[0]?.node,
-		subject?.edge_web_media_to_related_media?.edges?.[0]?.node,
-		subject?.edge_sidecar_to_children?.edges?.[0]?.node,
-		subject?.edge_highlight_reels?.edges?.[0]?.node,
+		aweme?.video,
+		awemeInfo?.video,
+		awemeInfoAlt?.video,
+		item?.video,
+		itemStruct?.video,
+		edgeOwnerNode,
+		edgeRelatedNode,
+		edgeSidecarNode,
+		edgeHighlightNode,
 		subject?.carousel_media,
 		subject?.carouselMedia,
 		subject?.images,
-		subject?.image_versions2?.candidates,
-		subject?.image_versions?.candidates,
+		imageVersions2 ? imageVersions2.candidates : null,
+		imageVersions ? imageVersions.candidates : null,
 		subject?.resources,
 		subject?.display_resources,
 		subject?.displayResources,

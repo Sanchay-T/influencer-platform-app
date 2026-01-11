@@ -143,7 +143,7 @@ export async function POST(req: Request) {
 			LogCategory.JOB
 		);
 
-		return NextResponse.json({ success: false, error: result.error, ...result });
+		return NextResponse.json(result);
 	}
 
 	logger.info(
@@ -157,5 +157,5 @@ export async function POST(req: Request) {
 		LogCategory.JOB
 	);
 
-	return NextResponse.json({ success: true, ...result });
+	return NextResponse.json(result);
 }

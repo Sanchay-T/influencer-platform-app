@@ -8,6 +8,12 @@ import {
 	transformEnhancedProfile,
 	transformInstagramProfile,
 } from '@/lib/platforms/instagram-similar/transformer';
+import {
+	getNumberProperty,
+	getRecordProperty,
+	getStringProperty,
+	toRecord,
+} from '@/lib/utils/type-guards';
 import type { SearchJobService } from '../job-service';
 import type {
 	NormalizedCreator,
@@ -33,46 +39,53 @@ function resolveEnhancementCap(): number {
 	return DEFAULT_ENHANCEMENTS;
 }
 
-function normalizeCreatorPayload(creator: NormalizedCreator): NormalizedCreator {
+function normalizeCreatorPayload(creator: Record<string, unknown>): NormalizedCreator {
+	const creatorRecord = toRecord(creator) ?? {};
+	const creatorNested = getRecordProperty(creatorRecord, 'creator');
+	const metadataRecord = getRecordProperty(creatorRecord, 'metadata');
 	const followerCount = resolveFollowerCount(creator);
 
 	return {
 		platform: 'Instagram',
 		engine: 'search-engine',
-		...creator,
-		followers: followerCount ?? creator.followers ?? creator.followers_count ?? null,
-		followers_count: followerCount ?? creator.followers_count ?? null,
+		...creatorRecord,
+		followers:
+			followerCount ??
+			getNumberProperty(creatorRecord, 'followers') ??
+			getNumberProperty(creatorRecord, 'followers_count') ??
+			null,
+		// biome-ignore lint/style/useNamingConvention: external payload uses snake_case
+		followers_count: followerCount ?? getNumberProperty(creatorRecord, 'followers_count') ?? null,
 		creator: {
-			...(creator.creator || {}),
+			...(creatorNested ?? {}),
 			platform: 'Instagram',
-			followers: followerCount ?? creator.creator?.followers ?? null,
+			followers:
+				followerCount ??
+				(creatorNested ? getNumberProperty(creatorNested, 'followers') : null) ??
+				null,
 		},
-		metadata: creator.metadata || creator,
+		metadata: metadataRecord ?? creatorRecord,
 	};
 }
 
 // Breadcrumb: keeps Instagram search-engine payload aligned with YouTube so downstream tables/export stay uniform.
-function resolveFollowerCount(creator: NormalizedCreator): number | null {
-	const candidates: Array<unknown> = [
-		(creator as Record<string, unknown>).followers,
-		(creator as Record<string, unknown>).followers_count,
-		creator.creator?.followers,
-		(creator.creator as Record<string, unknown> | undefined)?.followers_count,
-		(creator.metadata as Record<string, unknown> | undefined)?.followers,
-		(creator.metadata as Record<string, unknown> | undefined)?.followers_count,
+function resolveFollowerCount(creator: Record<string, unknown>): number | null {
+	const creatorRecord = toRecord(creator) ?? {};
+	const creatorNested = getRecordProperty(creatorRecord, 'creator');
+	const metadataRecord = getRecordProperty(creatorRecord, 'metadata');
+	const candidates = [
+		getNumberProperty(creatorRecord, 'followers'),
+		getNumberProperty(creatorRecord, 'followers_count'),
+		getNumberProperty(creatorNested ?? {}, 'followers'),
+		getNumberProperty(creatorNested ?? {}, 'followers_count'),
+		getNumberProperty(metadataRecord ?? {}, 'followers'),
+		getNumberProperty(metadataRecord ?? {}, 'followers_count'),
 	];
-
-	for (const candidate of candidates) {
-		if (typeof candidate === 'number' && Number.isFinite(candidate)) {
-			return candidate;
-		}
-	}
-
-	return null;
+	return candidates.find((candidate): candidate is number => typeof candidate === 'number') ?? null;
 }
 
-function dedupeInstagramCreators(creators: NormalizedCreator[]): NormalizedCreator[] {
-	const map = new Map<string, NormalizedCreator>();
+function dedupeInstagramCreators<T extends Record<string, unknown>>(creators: T[]): T[] {
+	const map = new Map<string, T>();
 	creators.forEach((creator, index) => {
 		const key = instagramDedupeKey(creator) ?? `fallback-${index}`;
 		map.set(key, creator);
@@ -80,26 +93,37 @@ function dedupeInstagramCreators(creators: NormalizedCreator[]): NormalizedCreat
 	return Array.from(map.values());
 }
 
-function instagramDedupeKey(creator: NormalizedCreator): string | null {
+function instagramDedupeKey(creator: Record<string, unknown>): string | null {
+	const creatorRecord = toRecord(creator);
+	if (!creatorRecord) {
+		return null;
+	}
+	const creatorNested = getRecordProperty(creatorRecord, 'creator');
 	const username =
-		creator.username || creator.handle || creator.creator?.uniqueId || creator.creator?.username;
-	if (username && typeof username === 'string') {
+		getStringProperty(creatorRecord, 'username') ??
+		getStringProperty(creatorRecord, 'handle') ??
+		(creatorNested ? getStringProperty(creatorNested, 'uniqueId') : null) ??
+		(creatorNested ? getStringProperty(creatorNested, 'username') : null);
+	if (username) {
 		return username.trim().toLowerCase();
 	}
-	const id = creator.id || creator.externalId || creator.profileId;
-	if (id && typeof id === 'string') {
+	const id =
+		getStringProperty(creatorRecord, 'id') ??
+		getStringProperty(creatorRecord, 'externalId') ??
+		getStringProperty(creatorRecord, 'profileId');
+	if (id) {
 		return id.trim().toLowerCase();
 	}
 	return null;
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: legacy flow staged for refactor
 export async function runInstagramSimilarProvider(
 	{ job, config }: ProviderContext,
 	service: SearchJobService
 ): Promise<ProviderRunResult> {
-	const searchParams = (job.searchParams ?? {}) as Record<string, any>;
-	const previousBenchmark =
-		(searchParams.searchEngineBenchmark as SearchMetricsSnapshot | undefined) ?? undefined;
+	const searchParams = toRecord(job.searchParams) ?? {};
+	const previousBenchmarkRecord = toRecord(searchParams.searchEngineBenchmark);
 
 	const toNumber = (value: unknown): number | null => {
 		if (value == null) {
@@ -109,23 +133,87 @@ export async function runInstagramSimilarProvider(
 		return Number.isFinite(parsed) ? parsed : null;
 	};
 
+	const parseBatches = (value: unknown): SearchMetricsSnapshot['batches'] => {
+		if (!Array.isArray(value)) {
+			return [];
+		}
+		return value
+			.map((entry): SearchMetricsSnapshot['batches'][number] | null => {
+				const record = toRecord(entry);
+				if (!record) {
+					return null;
+				}
+				const noteValue = getStringProperty(record, 'note');
+				return {
+					index: toNumber(record.index) ?? 0,
+					size: toNumber(record.size) ?? 0,
+					durationMs: toNumber(record.durationMs) ?? 0,
+					handle: getStringProperty(record, 'handle') ?? null,
+					keyword: getStringProperty(record, 'keyword') ?? null,
+					newCreators: toNumber(record.newCreators) ?? undefined,
+					totalCreators: toNumber(record.totalCreators) ?? undefined,
+					duplicates: toNumber(record.duplicates) ?? undefined,
+					...(noteValue ? { note: noteValue } : {}),
+				};
+			})
+			.filter((entry): entry is SearchMetricsSnapshot['batches'][number] => entry !== null);
+	};
+
+	const parseCosts = (value: unknown): SearchMetricsSnapshot['costs'] => {
+		if (!Array.isArray(value)) {
+			return [];
+		}
+		return value
+			.map((entry): NonNullable<SearchMetricsSnapshot['costs']>[number] | null => {
+				const record = toRecord(entry);
+				if (!record) {
+					return null;
+				}
+				const provider = getStringProperty(record, 'provider');
+				const unit = getStringProperty(record, 'unit');
+				const quantity = toNumber(record.quantity);
+				const unitCostUsd = toNumber(record.unitCostUsd);
+				const totalCostUsd = toNumber(record.totalCostUsd);
+				if (
+					!(provider && unit) ||
+					quantity === null ||
+					unitCostUsd === null ||
+					totalCostUsd === null
+				) {
+					return null;
+				}
+				const noteValue = getStringProperty(record, 'note');
+				return {
+					provider,
+					unit,
+					quantity,
+					unitCostUsd,
+					totalCostUsd,
+					...(noteValue ? { note: noteValue } : {}),
+				};
+			})
+			.filter(
+				(entry): entry is NonNullable<SearchMetricsSnapshot['costs']>[number] => entry !== null
+			);
+	};
+
 	const priorApiCalls = toNumber(searchParams.totalApiCalls) ?? job.processedRuns ?? 0;
-	const previousTotalCost =
-		typeof previousBenchmark?.totalCostUsd === 'number' &&
-		Number.isFinite(previousBenchmark.totalCostUsd)
-			? previousBenchmark.totalCostUsd
-			: 0;
+	const previousTotalCost = toNumber(previousBenchmarkRecord?.totalCostUsd) ?? 0;
+	const previousProcessedCreators = toNumber(previousBenchmarkRecord?.processedCreators) ?? 0;
+	const previousBatches = parseBatches(previousBenchmarkRecord?.batches);
+	const previousCosts = parseCosts(previousBenchmarkRecord?.costs);
+	const previousTimings = toRecord(previousBenchmarkRecord?.timings);
 
 	const metrics: SearchMetricsSnapshot = {
 		apiCalls: priorApiCalls,
-		processedCreators: job.processedResults || previousBenchmark?.processedCreators || 0,
-		batches: previousBenchmark?.batches ? [...previousBenchmark.batches] : [],
+		processedCreators: job.processedResults || previousProcessedCreators || 0,
+		batches: previousBatches,
 		timings: {
-			startedAt: previousBenchmark?.timings?.startedAt ?? new Date().toISOString(),
-			finishedAt: previousBenchmark?.timings?.finishedAt,
-			totalDurationMs: previousBenchmark?.timings?.totalDurationMs,
+			startedAt: getStringProperty(previousTimings ?? {}, 'startedAt') ?? new Date().toISOString(),
+			finishedAt: getStringProperty(previousTimings ?? {}, 'finishedAt') ?? undefined,
+			totalDurationMs: toNumber(previousTimings?.totalDurationMs) ?? undefined,
 		},
-		costs: previousBenchmark?.costs ? [...previousBenchmark.costs] : [],
+		costs: previousCosts,
 		totalCostUsd: previousTotalCost,
 	};
 
@@ -136,7 +224,8 @@ export async function runInstagramSimilarProvider(
 	const username = extractUsername(String(job.targetUsername));
 	const normalizedCurrentHandle = username.toLowerCase();
 
-	const sanitizeHandles = (values: unknown[] | undefined): string[] => {
+	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: handles sanitization across mixed data sources
+	const sanitizeHandles = (values: unknown): string[] => {
 		if (!Array.isArray(values)) {
 			return [];
 		}
@@ -147,10 +236,9 @@ export async function runInstagramSimilarProvider(
 			if (typeof value === 'string' || typeof value === 'number') {
 				candidate = String(value);
 			} else if (value && typeof value === 'object') {
-				if (typeof (value as Record<string, any>).handle === 'string') {
-					candidate = (value as Record<string, any>).handle;
-				} else if (typeof (value as Record<string, any>).username === 'string') {
-					candidate = (value as Record<string, any>).username;
+				const record = toRecord(value);
+				if (record) {
+					candidate = getStringProperty(record, 'handle') ?? getStringProperty(record, 'username');
 				}
 			}
 			if (!candidate) {
@@ -184,29 +272,22 @@ export async function runInstagramSimilarProvider(
 	const auditTrail: Array<{ handle: string; newCreators: number; processedAt?: string }> =
 		Array.isArray(searchParams.auditTrail)
 			? searchParams.auditTrail
-					.map((entry: any) => {
-						if (!entry || typeof entry !== 'object') {
+					.map((entry: unknown) => {
+						const record = toRecord(entry);
+						if (!record) {
 							return null;
 						}
 						const handleValue =
-							typeof entry.handle === 'string'
-								? entry.handle
-								: typeof entry.username === 'string'
-									? entry.username
-									: null;
+							getStringProperty(record, 'handle') ?? getStringProperty(record, 'username') ?? null;
 						if (!handleValue) {
 							return null;
 						}
 						const newCreatorsValue =
-							typeof entry.newCreators === 'number'
-								? entry.newCreators
-								: Number(
-										(entry as Record<string, any>).new_count ??
-											(entry as Record<string, any>).count ??
-											0
-									);
-						const processedAtValue =
-							typeof entry.processedAt === 'string' ? entry.processedAt : undefined;
+							toNumber(getNumberProperty(record, 'newCreators')) ??
+							toNumber(getNumberProperty(record, 'new_count')) ??
+							toNumber(getNumberProperty(record, 'count')) ??
+							0;
+						const processedAtValue = getStringProperty(record, 'processedAt') ?? undefined;
 						return {
 							handle: handleValue,
 							newCreators: Number.isFinite(newCreatorsValue) ? newCreatorsValue : 0,
@@ -282,8 +363,7 @@ export async function runInstagramSimilarProvider(
 		throw new Error(profileResult.error || 'Failed to fetch Instagram profile');
 	}
 
-	const transformed = transformInstagramProfile(profileResult.data).map(normalizeCreatorPayload);
-	let creators = dedupeInstagramCreators(transformed);
+	const creators = dedupeInstagramCreators(transformInstagramProfile(profileResult.data));
 	const initialCreatorCount = creators.length;
 
 	let enrichedCount = 0;
@@ -295,12 +375,16 @@ export async function runInstagramSimilarProvider(
 		}
 
 		const candidate = creators[index];
-		if (!(candidate && candidate.username)) {
+		const candidateRecord = toRecord(candidate);
+		const candidateUsername = candidateRecord
+			? getStringProperty(candidateRecord, 'username')
+			: null;
+		if (!candidateUsername) {
 			continue;
 		}
 
 		const enhancementStarted = Date.now();
-		const enhanced = await getEnhancedInstagramProfile(candidate.username);
+		const enhanced = await getEnhancedInstagramProfile(candidateUsername);
 		metrics.apiCalls += 1;
 		remainingApiBudget = Math.max(remainingApiBudget - 1, 0);
 
@@ -317,7 +401,7 @@ export async function runInstagramSimilarProvider(
 		});
 
 		if (enhanced.success && enhanced.data) {
-			creators[index] = normalizeCreatorPayload(transformEnhancedProfile(candidate, enhanced.data));
+			creators[index] = transformEnhancedProfile(candidate, enhanced.data);
 			enrichedCount += 1;
 		}
 
@@ -330,14 +414,14 @@ export async function runInstagramSimilarProvider(
 		}
 	}
 
-	creators = dedupeInstagramCreators(creators);
+	const normalizedCreators = dedupeInstagramCreators(creators.map(normalizeCreatorPayload));
 
 	totalApifyComputeUnits += computeUnitsThisRun;
 	totalApifyResultCount += resultCountThisRun;
 	totalApifyResultCostUsd += resultCostThisRun;
 
-	const merged = await service.mergeCreators(creators, instagramDedupeKey);
-	const mergedTotal = merged.total ?? creators.length;
+	const merged = await service.mergeCreators(normalizedCreators, instagramDedupeKey);
+	const mergedTotal = merged.total ?? normalizedCreators.length;
 	const newCreators = merged.newCount ?? 0;
 
 	metrics.processedCreators = mergedTotal;
@@ -413,7 +497,7 @@ export async function runInstagramSimilarProvider(
 	}
 
 	const hasMore = nextTarget !== null;
-	const queuePatch: Record<string, any> = {
+	const queuePatch: Record<string, unknown> = {
 		runner: 'search-engine',
 		platform: 'instagram_similar',
 		targetUsername: nextTarget ?? username,
@@ -443,8 +527,8 @@ export async function runInstagramSimilarProvider(
 	await service.setTargetUsername(nextTarget ?? username);
 
 	if (hasMore) {
-		delete metrics.timings.finishedAt;
-		delete metrics.timings.totalDurationMs;
+		metrics.timings.finishedAt = undefined;
+		metrics.timings.totalDurationMs = undefined;
 	} else {
 		const finishedAt = new Date();
 		metrics.timings.finishedAt = finishedAt.toISOString();

@@ -161,10 +161,9 @@ export class QStashLogger {
 		jobId: string,
 		phase: string,
 		platformContext: PlatformProcessingContext,
-		additionalData?: Record<string, any>
+		additionalData?: Record<string, unknown>
 	): void {
-		const jobInfo = this.activeJobs.get(jobId);
-		const context = jobInfo?.context || { jobId };
+		const context = this.resolveContext(jobId, platformContext.platform);
 
 		logger.info(
 			`${platformContext.platform} processing phase: ${phase}`,
@@ -198,10 +197,9 @@ export class QStashLogger {
 		operation: string,
 		apiCall: () => Promise<T>,
 		platformContext: PlatformProcessingContext,
-		metadata?: Record<string, any>
+		metadata?: Record<string, unknown>
 	): Promise<T> {
-		const jobInfo = this.activeJobs.get(jobId);
-		const context = jobInfo?.context || { jobId };
+		const context = this.resolveContext(jobId, platformContext.platform);
 
 		return await logExternalCall(
 			`${platformContext.platform.toLowerCase()}_${operation}`,
@@ -225,10 +223,9 @@ export class QStashLogger {
 		jobId: string,
 		operation: string,
 		dbCall: () => Promise<T>,
-		metadata?: Record<string, any>
+		metadata?: Record<string, unknown>
 	): Promise<T> {
-		const jobInfo = this.activeJobs.get(jobId);
-		const context = jobInfo?.context || { jobId };
+		const context = this.resolveContext(jobId);
 
 		return await logDbOperation(`job_${operation}`, dbCall, {
 			requestId: context.requestId,
@@ -252,8 +249,7 @@ export class QStashLogger {
 			maxApiCalls?: number;
 		}
 	): void {
-		const jobInfo = this.activeJobs.get(jobId);
-		const context = jobInfo?.context || { jobId };
+		const context = this.resolveContext(jobId);
 
 		logger.info(
 			'QStash job progress updated',
@@ -292,10 +288,9 @@ export class QStashLogger {
 			totalItems: number;
 		},
 		platform: string,
-		additionalMetrics?: Record<string, any>
+		additionalMetrics?: Record<string, unknown>
 	): void {
-		const jobInfo = this.activeJobs.get(jobId);
-		const context = jobInfo?.context || { jobId };
+		const context = this.resolveContext(jobId, platform);
 
 		logger.info(
 			'Batch processing completed',
@@ -333,8 +328,7 @@ export class QStashLogger {
 			topResults?: Array<{ username: string; followerCount: number; score?: number }>;
 		}
 	): void {
-		const jobInfo = this.activeJobs.get(jobId);
-		const context = jobInfo?.context || { jobId };
+		const context = this.resolveContext(jobId, platform);
 
 		logger.info(
 			'Quality filtering completed',
@@ -368,8 +362,7 @@ export class QStashLogger {
 			partialResults?: number;
 		}
 	): void {
-		const jobInfo = this.activeJobs.get(jobId);
-		const context = jobInfo?.context || { jobId };
+		const context = this.resolveContext(jobId);
 
 		logger.error(
 			`QStash job error in ${phase}`,
@@ -385,6 +378,15 @@ export class QStashLogger {
 			},
 			LogCategory.JOB
 		);
+	}
+
+	/**
+	 * Get appropriate log category for platform
+	 */
+	private resolveContext(jobId: string, platform?: string): QStashJobContext {
+		const jobInfo = this.activeJobs.get(jobId);
+		if (jobInfo) return jobInfo.context;
+		return { jobId, platform: platform ?? 'unknown' };
 	}
 
 	/**
@@ -413,8 +415,7 @@ export class QStashLogger {
 			qualityFilterRate?: number;
 		}
 	): void {
-		const jobInfo = this.activeJobs.get(jobId);
-		const context = jobInfo?.context || { jobId };
+		const context = this.resolveContext(jobId);
 
 		logger.info(
 			'QStash job statistics',
@@ -484,7 +485,7 @@ export const logPlatformOperation = (
 	jobId: string,
 	platform: string,
 	operation: string,
-	data?: Record<string, any>
+	data?: Record<string, unknown>
 ) => qstashLogger.logPlatformPhase(jobId, operation, { platform, operation }, data);
 
 /**
@@ -501,5 +502,5 @@ export const logBatchResults = (
 		totalProcessed: number;
 		totalItems: number;
 	},
-	metrics?: Record<string, any>
+	metrics?: Record<string, unknown>
 ) => qstashLogger.logBatchProcessing(jobId, batchInfo, platform, metrics);

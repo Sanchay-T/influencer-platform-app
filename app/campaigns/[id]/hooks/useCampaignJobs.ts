@@ -12,7 +12,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { dedupeCreators } from '@/app/components/campaigns/utils/dedupe-creators';
 import type { Campaign } from '@/app/types/campaign';
 import { structuredConsole } from '@/lib/logging/console-proxy';
-import { useJobPolling } from '@/lib/query/hooks';
+import { type CompletionData, type ProgressData, useJobPolling } from '@/lib/query/hooks';
+import { isNumber, isString, toRecord } from '@/lib/utils/type-guards';
 import type { CampaignStatus, SearchDiagnostics, UiScrapingJob } from '../types/campaign-page';
 import {
 	createJobUpdateFromPayload,
@@ -28,6 +29,25 @@ import { readCachedRunSnapshot, writeCachedRunSnapshot } from './run-snapshot-ca
 // Cache for expensive deduplication operations
 const dedupeCache = new Map<string, unknown[]>();
 const RUN_SNAPSHOT_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+const resolvePagination = (
+	value: unknown,
+	fallback?: UiScrapingJob['pagination']
+): UiScrapingJob['pagination'] | undefined => {
+	const record = toRecord(value);
+	if (!record) {
+		return fallback;
+	}
+
+	return {
+		total: isNumber(record.total) ? record.total : fallback?.total,
+		limit: isNumber(record.limit) ? record.limit : fallback?.limit,
+		nextOffset:
+			isNumber(record.nextOffset) || record.nextOffset === null
+				? record.nextOffset
+				: fallback?.nextOffset,
+	};
+};
 
 interface UseCampaignJobsResult {
 	// State
@@ -139,6 +159,7 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 
 	// Fetch job snapshot
 	const fetchJobSnapshot = useCallback(
+		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Snapshot fetch handles multiple error states.
 		async (job: UiScrapingJob) => {
 			const endpoint = resolveScrapingEndpoint(job);
 
@@ -155,9 +176,9 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 				});
 
 				const text = await response.text();
-				let data: Record<string, unknown>;
+				let data: Record<string, unknown> | null;
 				try {
-					data = JSON.parse(text);
+					data = toRecord(JSON.parse(text));
 				} catch {
 					structuredConsole.error('fetchJobSnapshot received non-JSON response', {
 						jobId: job.id,
@@ -171,15 +192,15 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 					return;
 				}
 
-				if (!response.ok || data?.error) {
+				if (!(data && response.ok) || data.error) {
+					const errorMessage = isString(data?.error) ? data?.error : 'Failed to load results';
 					updateJobState(job.id, {
-						resultsError: (data?.error as string) ?? 'Failed to load results',
+						resultsError: errorMessage,
 						resultsLoaded: true,
-						status: (data?.status as UiScrapingJob['status']) ?? job.status,
-						progress: (data?.progress as number) ?? job.progress,
-						pagination: (data?.pagination as UiScrapingJob['pagination']) ?? job.pagination,
-						totalCreators:
-							typeof data?.totalCreators === 'number' ? data.totalCreators : job.totalCreators,
+						status: isString(data?.status) ? data?.status : job.status,
+						progress: isNumber(data?.progress) ? data?.progress : job.progress,
+						pagination: resolvePagination(data?.pagination, job.pagination),
+						totalCreators: isNumber(data?.totalCreators) ? data.totalCreators : job.totalCreators,
 					});
 					return;
 				}
@@ -209,6 +230,7 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 
 	// Load more results (pagination)
 	const loadMoreResults = useCallback(
+		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Pagination flow has multiple guard paths.
 		async (job: UiScrapingJob) => {
 			if (!job.pagination || job.pagination.nextOffset == null) {
 				return;
@@ -232,9 +254,9 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 				});
 
 				const text = await response.text();
-				let data: Record<string, unknown>;
+				let data: Record<string, unknown> | null;
 				try {
-					data = JSON.parse(text);
+					data = toRecord(JSON.parse(text));
 				} catch {
 					structuredConsole.error('loadMoreResults received non-JSON response', {
 						jobId: job.id,
@@ -247,10 +269,11 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 					return;
 				}
 
-				if (!response.ok || data?.error) {
+				if (!(data && response.ok) || data.error) {
+					const errorMessage = isString(data?.error) ? data?.error : 'Failed to load more results';
 					updateJobState(job.id, {
-						resultsError: (data?.error as string) ?? 'Failed to load more results',
-						pagination: (data?.pagination as UiScrapingJob['pagination']) ?? job.pagination,
+						resultsError: errorMessage,
+						pagination: resolvePagination(data?.pagination, job.pagination),
 					});
 					return;
 				}
@@ -323,6 +346,20 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 		return sortedJobs.find((job) => isActiveJob(job)) ?? null;
 	}, [sortedJobs]);
 
+	const isSelectedV2Job = useMemo(() => {
+		if (!selectedJob) {
+			return false;
+		}
+		return resolveScrapingEndpoint(selectedJob) === '/api/v2/status';
+	}, [selectedJob]);
+
+	const isActiveV2Job = useMemo(() => {
+		if (!activeJob) {
+			return false;
+		}
+		return resolveScrapingEndpoint(activeJob) === '/api/v2/status';
+	}, [activeJob]);
+
 	const isCampaignActive = useMemo(() => {
 		return sortedJobs.some((job) => isActiveJob(job));
 	}, [sortedJobs]);
@@ -359,7 +396,7 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 		}
 
 		if (Array.isArray(selectedJob.creatorBuffer) && selectedJob.creatorBuffer.length > 0) {
-			return selectedJob.creatorBuffer as unknown[];
+			return selectedJob.creatorBuffer;
 		}
 
 		if (!selectedJob.results || selectedJob.results.length === 0) {
@@ -379,7 +416,10 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 		const cacheKey = `${selectedJob.id}-${rawCreators.length}`;
 
 		if (dedupeCache.has(cacheKey)) {
-			return dedupeCache.get(cacheKey)!;
+			const cached = dedupeCache.get(cacheKey);
+			if (cached) {
+				return cached;
+			}
 		}
 
 		const platformHint = selectedJob.platform?.toLowerCase() || 'tiktok';
@@ -440,12 +480,13 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 			return;
 		}
 		// Active jobs should always fetch fresh data (cache may have 1 creator from initial load)
-		const shouldFetch = !selectedJob.resultsLoaded || isActiveJob(selectedJob);
+		const shouldFetch =
+			!isSelectedV2Job && (!selectedJob.resultsLoaded || isActiveJob(selectedJob));
 		if (!shouldFetch) {
 			return;
 		}
 		fetchJobSnapshot(selectedJob);
-	}, [fetchJobSnapshot, selectedJob]);
+	}, [fetchJobSnapshot, selectedJob, isSelectedV2Job]);
 
 	// Log tab changes
 	useEffect(() => {
@@ -466,14 +507,14 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 	const activeJobId = activeJob?.id;
 	const { data: polledData } = useJobPolling(activeJobId, {
 		onProgress: useCallback(
-			(progressData) => {
+			(progressData: ProgressData) => {
 				if (!activeJobId) {
 					return;
 				}
 
 				// Update job state with progress data from React Query
 				updateJobState(activeJobId, {
-					status: progressData.status as UiScrapingJob['status'],
+					status: isString(progressData.status) ? progressData.status : undefined,
 					progress: progressData.progress,
 					totalCreators: progressData.totalCreators,
 				});
@@ -481,14 +522,14 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 			[activeJobId, updateJobState]
 		),
 		onComplete: useCallback(
-			(completionData) => {
+			(completionData: CompletionData) => {
 				if (!activeJobId) {
 					return;
 				}
 
 				// Update job state on completion
 				updateJobState(activeJobId, {
-					status: completionData.status as UiScrapingJob['status'],
+					status: isString(completionData.status) ? completionData.status : undefined,
 					totalCreators: completionData.totalCreators,
 					progress: 100,
 					resultsLoaded: true,
@@ -512,7 +553,7 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 
 		// Update the active job with latest polled data
 		updateJobState(activeJobId, {
-			status: polledData.status as UiScrapingJob['status'],
+			status: isString(polledData.status) ? polledData.status : undefined,
 			progress: Math.min(100, polledData.progress?.percentComplete ?? 0),
 			totalCreators: polledData.totalCreators,
 		});
@@ -525,6 +566,10 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 			return;
 		}
 
+		if (isActiveV2Job) {
+			return;
+		}
+
 		// Fetch creators every 5 seconds while job is active
 		const intervalId = setInterval(() => {
 			const currentJob = jobs.find((j) => j.id === activeJobId);
@@ -534,7 +579,7 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 		}, 5000);
 
 		return () => clearInterval(intervalId);
-	}, [activeJob, activeJobId, jobs, fetchJobSnapshot]);
+	}, [activeJob, activeJobId, jobs, fetchJobSnapshot, isActiveV2Job]);
 
 	// Handle job selection
 	const handleSelectJob = useCallback(
@@ -572,7 +617,7 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 			logEvent('run-click:transition-completed', {
 				jobId,
 				totalTransitionTime: `${duration}ms`,
-				FIXED: 'INSTANT_TRANSITION_APPLIED',
+				fixed: 'instant_transition_applied',
 			});
 			transitionStartTimeRef.current = null;
 

@@ -6,6 +6,7 @@
  * progress monitoring without log flooding, and performance optimization.
  */
 
+import { isNumber, isRecord, isString } from '@/lib/utils/type-guards';
 import { logger } from './logger';
 import { LogCategory, type LogContext, LogLevel } from './types';
 
@@ -34,7 +35,7 @@ export interface JobProgress {
 	/** Current operation description */
 	currentOperation?: string;
 	/** Additional metadata for this progress update */
-	metadata?: Record<string, any>;
+	metadata?: Record<string, unknown>;
 }
 
 /**
@@ -56,6 +57,15 @@ export interface JobContext extends LogContext {
 	/** Current job state */
 	state?: JobState;
 }
+
+type JobContextOptions = {
+	campaignId?: string;
+	platform?: string;
+	searchType?: string;
+	userId?: string;
+	qstashMessageId?: string;
+	metadata?: Record<string, unknown>;
+};
 
 /**
  * Performance metrics for jobs
@@ -108,9 +118,11 @@ export class BackgroundJobLogger {
 	 * Start tracking a new background job
 	 */
 	public startJob(context: Omit<JobContext, 'jobId'> & { jobId?: string }): string {
-		const jobId = context.jobId || this.generateJobId(context.jobType);
+		const jobType = typeof context.jobType === 'string' ? context.jobType : 'job';
+		const jobId = context.jobId || this.generateJobId(jobType);
 		const jobContext: JobContext = {
 			...context,
+			jobType,
 			jobId,
 			state: JobState.PROCESSING,
 			timestamp: new Date().toISOString(),
@@ -146,7 +158,7 @@ export class BackgroundJobLogger {
 		const logLevel = this.getLogLevelForState(state);
 		const message = `Job ${state}: ${baseContext.jobType}`;
 
-		logger.logEntry(logLevel as any, message, baseContext, category || LogCategory.JOB);
+		logger.log(logLevel, message, baseContext, category || LogCategory.JOB);
 	}
 
 	/**
@@ -259,12 +271,20 @@ export class BackgroundJobLogger {
 		const jobTimer = this.jobTimers.get(jobId);
 		const duration = jobTimer ? Date.now() - jobTimer.startTime : undefined;
 
+		const errorRecord = isRecord(error) ? error : null;
+		const errorCodeValue = errorRecord ? errorRecord.code : undefined;
+		const errorCode = isString(errorCodeValue)
+			? errorCodeValue
+			: isNumber(errorCodeValue)
+				? String(errorCodeValue)
+				: error.name;
+
 		const failureContext: JobContext = {
 			jobId,
 			state: JobState.FAILED,
 			jobType: context?.jobType || 'unknown',
 			executionTime: duration,
-			errorCode: (error as any).code || error.name,
+			errorCode,
 			...context,
 			metadata: {
 				...context?.metadata,
@@ -317,7 +337,7 @@ export class BackgroundJobLogger {
 		const message = `${platform} API ${success ? 'success' : 'failure'}: ${endpoint}`;
 		const level = success ? LogLevel.DEBUG : LogLevel.WARN;
 
-		logger.logEntry(level as any, message, apiContext, LogCategory.API);
+		logger.log(level, message, apiContext, LogCategory.API);
 	}
 
 	/**
@@ -352,7 +372,7 @@ export class BackgroundJobLogger {
 		const message = `Image ${operation}: ${originalFormat} → ${targetFormat} (${processingTime}ms)`;
 		const level = success ? LogLevel.DEBUG : LogLevel.WARN;
 
-		logger.logEntry(level as any, message, imageContext, LogCategory.STORAGE);
+		logger.log(level, message, imageContext, LogCategory.STORAGE);
 	}
 
 	/**
@@ -386,7 +406,7 @@ export class BackgroundJobLogger {
 		const message = `Email ${operation}: ${template} to ${recipient.replace(/(.{2}).*@/, '$1***@')}`;
 		const level = success ? LogLevel.INFO : LogLevel.ERROR;
 
-		logger.logEntry(level as any, message, emailContext, LogCategory.EMAIL);
+		logger.log(level, message, emailContext, LogCategory.EMAIL);
 	}
 
 	/**
@@ -444,14 +464,7 @@ export class BackgroundJobLogger {
 	 */
 	public createJobContext(
 		jobType: string,
-		options: {
-			campaignId?: string;
-			platform?: string;
-			searchType?: string;
-			userId?: string;
-			qstashMessageId?: string;
-			metadata?: Record<string, any>;
-		} = {}
+		options: JobContextOptions = {}
 	): Omit<JobContext, 'jobId'> {
 		return {
 			jobType,
@@ -536,6 +549,6 @@ export const jobLog = {
 	memory: (jobId: string, context?: Partial<JobContext>) =>
 		backgroundJobLogger.checkMemoryUsage(jobId, context),
 
-	createContext: (jobType: string, options?: any) =>
+	createContext: (jobType: string, options?: JobContextOptions) =>
 		backgroundJobLogger.createJobContext(jobType, options),
 };

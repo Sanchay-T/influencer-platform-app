@@ -11,6 +11,7 @@ export interface EmailEntry {
 }
 
 export interface Creator {
+	[key: string]: unknown;
 	creator?: {
 		emails?: string[];
 		email?: string;
@@ -20,7 +21,62 @@ export interface Creator {
 		avatarUrl?: string;
 		profile_pic_url?: string;
 		profilePicUrl?: string;
+		bio?: string;
+		location?: string;
+		category?: string;
+		followers?: number;
+		followerCount?: number;
 	};
+	username?: string;
+	handle?: string;
+	channelId?: string;
+	uniqueId?: string;
+	name?: string;
+	id?: string | number;
+	profile_id?: string;
+	profileId?: string;
+	externalId?: string;
+	full_name?: string;
+	fullName?: string;
+	title?: string;
+	profile_pic_url?: string;
+	thumbnail?: string;
+	thumbnailUrl?: string;
+	avatarUrl?: string;
+	picture?: string;
+	profilePicUrl?: string;
+	followers?: number;
+	followers_count?: number;
+	followersCount?: number;
+	subscriberCount?: number;
+	subscribers?: number;
+	bio?: string;
+	description?: string;
+	about?: string;
+	category?: string;
+	niche?: string;
+	genre?: string;
+	location?: string;
+	country?: string;
+	region?: string;
+	engagementRate?: number;
+	engagement_rate?: number;
+	profileUrl?: string;
+	platform?: string;
+	video?: {
+		url?: string;
+		statistics?: {
+			views?: number;
+		};
+		stats?: Record<string, unknown>;
+		playCount?: number;
+		viewCount?: number;
+		views?: number;
+		[key: string]: unknown;
+	};
+	latestVideo?: Record<string, unknown>;
+	content?: Record<string, unknown>;
+	stats?: Record<string, unknown>;
 	emails?: string[];
 	email?: string;
 	contact?: {
@@ -33,22 +89,30 @@ export interface Creator {
 			summary?: {
 				allEmails?: (string | { email?: string; value?: string; address?: string })[];
 			};
+			creatorId?: string;
+			enrichedAt?: string;
 		};
 		clientNewEmails?: string[];
 		matchedTerms?: string[];
+		primaryEmail?: string | null;
+		lastEnrichedAt?: string | null;
+		creatorId?: string;
+		platform?: string;
+		handle?: string;
+		snippet?: string;
+		creator?: {
+			platform?: string;
+			handle?: string;
+		};
+		profile?: {
+			creatorId?: string;
+		};
 	};
 	bio_enriched?: {
 		extracted_email?: string;
 	};
 	contact_email?: string;
 	email_source?: string;
-	video?: {
-		url?: string;
-		statistics?: {
-			views?: number;
-		};
-	};
-	platform?: string;
 }
 
 /**
@@ -65,9 +129,10 @@ export const normalizeEmailCandidate = (
 		return trimmed.length ? trimmed : null;
 	}
 	if (typeof value === 'object') {
-		const candidateFields = ['email', 'value', 'address'] as const;
+		const candidateFields = ['email', 'value', 'address'];
 		for (const field of candidateFields) {
-			const fieldValue = value[field];
+			const fieldValue =
+				field === 'email' ? value.email : field === 'value' ? value.value : value.address;
 			if (typeof fieldValue === 'string') {
 				const trimmed = fieldValue.trim();
 				if (trimmed.length) {

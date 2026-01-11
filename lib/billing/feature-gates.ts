@@ -215,11 +215,12 @@ export class FeatureGateService {
 		if (!result) {
 			return null;
 		}
+		const features: Record<string, unknown> = { ...result.features };
 		// Return features as-is for backward compatibility
 		// Old code expected a generic features object
 		return {
 			currentPlan: result.currentPlan,
-			features: result.features as unknown as Record<string, unknown>,
+			features,
 		};
 	}
 
@@ -228,7 +229,8 @@ export class FeatureGateService {
 		if (!info) {
 			return null;
 		}
-		const value = info.features[key as keyof PlanFeatures];
+		const features: Record<string, unknown> = { ...info.features };
+		const value = features[key];
 		const allowed = typeof value === 'boolean' ? value : Boolean(value);
 		return { allowed, currentPlan: info.currentPlan };
 	}

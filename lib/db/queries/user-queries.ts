@@ -8,6 +8,7 @@
 import { and, eq, sql } from 'drizzle-orm';
 import { clerkBackendClient } from '@/lib/auth/backend-auth';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
+import { getNumberProperty, getStringProperty, toRecord } from '@/lib/utils/type-guards';
 import { db } from '../index';
 import {
 	type User,
@@ -22,6 +23,8 @@ import {
 	users,
 	userUsage,
 } from '../schema';
+
+export type { UserProfileComplete };
 
 const userQueryLogger = createCategoryLogger(LogCategory.DATABASE);
 
@@ -135,7 +138,7 @@ export async function getUserProfile(userId: string): Promise<UserProfileComplet
 	});
 
 	// Transform to match expected format
-	return {
+	const profile: UserProfileComplete = {
 		...userRecord,
 		// Ensure required fields have defaults
 		currentPlan: userRecord.currentPlan, // NULL = not onboarded yet
@@ -149,7 +152,8 @@ export async function getUserProfile(userId: string): Promise<UserProfileComplet
 		usageResetDate: userRecord.usageResetDate || new Date(),
 		signupTimestamp: userRecord.signupTimestamp || userRecord.createdAt,
 		emailScheduleStatus: userRecord.emailScheduleStatus || {},
-	} as UserProfileComplete;
+	};
+	return profile;
 }
 
 /**
@@ -233,7 +237,7 @@ export async function createUser(userData: {
 				.returning();
 
 			// Return combined profile
-			return {
+			const profile: UserProfileComplete = {
 				// Core user data
 				id: newUser.id,
 				userId: newUser.userId,
@@ -275,7 +279,8 @@ export async function createUser(userData: {
 				emailScheduleStatus: newSystemData.emailScheduleStatus,
 				lastWebhookEvent: newSystemData.lastWebhookEvent,
 				lastWebhookTimestamp: newSystemData.lastWebhookTimestamp,
-			} as UserProfileComplete;
+			};
+			return profile;
 
 			info('User created successfully across normalized tables', {
 				userId: newUser.userId,
@@ -285,12 +290,17 @@ export async function createUser(userData: {
 				// trialStatus removed - derive via deriveTrialStatus()
 				onboardingStep: newUser.onboardingStep,
 			});
-		} catch (transactionError: any) {
-			const message = transactionError?.message?.toLowerCase?.() ?? '';
+		} catch (transactionError: unknown) {
+			const errorRecord = toRecord(transactionError);
+			const message = errorRecord ? getStringProperty(errorRecord, 'message') : null;
+			const code = errorRecord ? getStringProperty(errorRecord, 'code') : null;
+			const numericCode = errorRecord ? getNumberProperty(errorRecord, 'code') : null;
+			const lowerMessage = message ? message.toLowerCase() : '';
 			const duplicate =
-				message.includes('duplicate') ||
-				message.includes('unique') ||
-				transactionError?.code === '23505';
+				lowerMessage.includes('duplicate') ||
+				lowerMessage.includes('unique') ||
+				code === '23505' ||
+				numericCode === 23505;
 
 			if (duplicate) {
 				warn('User creation detected duplicate userId, returning existing profile', {
@@ -319,7 +329,8 @@ export async function ensureUserProfile(userId: string): Promise<UserProfileComp
 	let fullName: string | undefined;
 
 	try {
-		const clerkUser = await clerkBackendClient.users.getUser(userId);
+		const clerk = await clerkBackendClient();
+		const clerkUser = await clerk.users.getUser(userId);
 		email = clerkUser.emailAddresses?.[0]?.emailAddress ?? undefined;
 		const clerkFullName = `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim();
 		fullName = clerkFullName || undefined;
@@ -345,10 +356,17 @@ export async function ensureUserProfile(userId: string): Promise<UserProfileComp
 
 		info('ensureUserProfile created new record', { userId });
 		return createdProfile;
-	} catch (createError: any) {
-		const message = createError?.message?.toLowerCase?.() ?? '';
+	} catch (createError: unknown) {
+		const errorRecord = toRecord(createError);
+		const message = errorRecord ? getStringProperty(errorRecord, 'message') : null;
+		const code = errorRecord ? getStringProperty(errorRecord, 'code') : null;
+		const numericCode = errorRecord ? getNumberProperty(errorRecord, 'code') : null;
+		const lowerMessage = message ? message.toLowerCase() : '';
 		const duplicate =
-			message.includes('duplicate') || message.includes('unique') || createError?.code === '23505';
+			lowerMessage.includes('duplicate') ||
+			lowerMessage.includes('unique') ||
+			code === '23505' ||
+			numericCode === 23505;
 
 		if (duplicate) {
 			warn('ensureUserProfile detected concurrent creation, refetching', { userId });
@@ -390,22 +408,22 @@ export async function updateUserProfile(
 		billingSyncStatus?: string;
 
 		// Billing updates (minimal - Stripe Portal handles card/address)
-		stripeCustomerId?: string;
-		stripeSubscriptionId?: string;
+		stripeCustomerId?: string | null;
+		stripeSubscriptionId?: string | null;
 
 		// Usage updates
 		planCampaignsLimit?: number;
 		planCreatorsLimit?: number;
-		planFeatures?: any;
+		planFeatures?: unknown;
 		usageCampaignsCurrent?: number;
 		usageCreatorsCurrentMonth?: number;
 		enrichmentsCurrentMonth?: number;
 		usageResetDate?: Date;
 
 		// System updates
-		emailScheduleStatus?: any;
-		lastWebhookEvent?: string;
-		lastWebhookTimestamp?: Date;
+		emailScheduleStatus?: unknown;
+		lastWebhookEvent?: string | null;
+		lastWebhookTimestamp?: Date | null;
 	}
 ): Promise<void> {
 	return db.transaction(async (tx) => {
@@ -574,7 +592,14 @@ export async function getUserBilling(
 			)
 		);
 
-	return (result[0] as UserBilling & { stripeCustomerId: string }) || null;
+	const record = result[0];
+	if (!record || typeof record.stripeCustomerId !== 'string') {
+		return null;
+	}
+	return {
+		...record,
+		stripeCustomerId: record.stripeCustomerId,
+	};
 }
 
 /**
@@ -656,7 +681,7 @@ export async function getUserByStripeCustomerId(
 	}
 
 	// Transform to match expected format
-	return {
+	const profile: UserProfileComplete = {
 		...userRecord,
 		// Ensure required fields have defaults
 		currentPlan: userRecord.currentPlan, // NULL = not onboarded yet
@@ -670,5 +695,6 @@ export async function getUserByStripeCustomerId(
 		usageResetDate: userRecord.usageResetDate || new Date(),
 		signupTimestamp: userRecord.signupTimestamp || userRecord.createdAt,
 		emailScheduleStatus: userRecord.emailScheduleStatus || {},
-	} as UserProfileComplete;
+	};
+	return profile;
 }

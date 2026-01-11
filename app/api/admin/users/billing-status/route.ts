@@ -31,7 +31,7 @@ export async function GET(request: Request) {
 		// Calculate billing status - derive trial status
 		const currentPlan = userProfile.currentPlan || 'free';
 		const subscriptionStatus = userProfile.subscriptionStatus || 'none';
-		const trialStatus = deriveTrialStatus(subscriptionStatus, userProfile.trialEndDate);
+		const trialStatus = deriveTrialStatus(subscriptionStatus, userProfile.trialEndDate ?? null);
 		const isActive = subscriptionStatus === 'active' || trialStatus === 'active';
 		const isTrialing = trialStatus === 'active';
 

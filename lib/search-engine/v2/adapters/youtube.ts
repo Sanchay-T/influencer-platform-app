@@ -5,8 +5,14 @@
  * Uses ScrapeCreators API - REQUIRES enrichment for followers and bio.
  */
 
+import {
+	getNumberProperty,
+	getStringProperty,
+	toRecord,
+	toStringArray,
+} from '@/lib/utils/type-guards';
 import { ENDPOINTS } from '../core/config';
-import type { FetchResult, NormalizedCreator, SearchConfig } from '../core/types';
+import type { FetchResult, NormalizedCreator, Platform, SearchConfig } from '../core/types';
 import type { SearchAdapter } from './interface';
 import { registerAdapter } from './interface';
 import { enrichYouTubeCreator } from './youtube-enrichment';
@@ -45,7 +51,7 @@ interface YouTubeSearchResponse {
 // ============================================================================
 
 class YouTubeAdapter implements SearchAdapter {
-	readonly platform = 'youtube' as const;
+	readonly platform: Platform = 'youtube';
 
 	/**
 	 * Fetch results from YouTube search API
@@ -79,14 +85,15 @@ class YouTubeAdapter implements SearchAdapter {
 				};
 			}
 
-			const payload = (await response.json()) as YouTubeSearchResponse;
-			const items = payload.videos ?? [];
-			const nextToken = payload.continuationToken ?? null;
+			const payload = await response.json();
+			const payloadRecord = toRecord(payload);
+			const items = Array.isArray(payloadRecord?.videos) ? (payloadRecord?.videos ?? []) : [];
+			const nextToken = getStringProperty(payloadRecord ?? {}, 'continuationToken');
 
 			return {
 				items,
 				hasMore: Boolean(nextToken) && items.length > 0,
-				nextCursor: nextToken,
+				nextCursor: nextToken ?? null,
 				durationMs,
 			};
 		} catch (error) {
@@ -105,56 +112,67 @@ class YouTubeAdapter implements SearchAdapter {
 	 * Note: This provides basic info - enrich() adds followers and bio
 	 */
 	normalize(raw: unknown): NormalizedCreator | null {
-		const video = raw as YouTubeVideo;
-		const channel = video?.channel;
+		const video = toRecord(raw);
+		const channel = video ? toRecord(video.channel) : null;
 
-		if (!(channel?.id || channel?.handle)) {
+		if (!channel) {
+			return null;
+		}
+		const channelId = getStringProperty(channel, 'id') ?? getStringProperty(channel, 'handle');
+		const channelHandle = getStringProperty(channel, 'handle');
+		if (!(channelId || channelHandle)) {
 			return null;
 		}
 
-		const username = channel.handle || channel.id || '';
-		const channelId = channel.id || channel.handle || '';
-		const contentId = video.url?.split('v=')[1] || `${channelId}-${Date.now()}`;
+		const username = channelHandle || channelId || '';
+		const resolvedChannelId = channelId || channelHandle || '';
+		const videoUrl = getStringProperty(video ?? {}, 'url') ?? '';
+		const contentId = videoUrl.split('v=')[1] || `${resolvedChannelId}-${Date.now()}`;
 
 		const viewCount =
-			video.viewCountInt ??
-			(typeof video.viewCount === 'string'
-				? Number.parseInt(video.viewCount.replace(/[^0-9]/g, ''), 10) || 0
-				: 0);
+			getNumberProperty(video ?? {}, 'viewCountInt') ??
+			(() => {
+				const viewCountRaw = getStringProperty(video ?? {}, 'viewCount');
+				if (!viewCountRaw) return 0;
+				return Number.parseInt(viewCountRaw.replace(/[^0-9]/g, ''), 10) || 0;
+			})();
 
-		const thumbnail = video.thumbnail || '';
+		const thumbnail = getStringProperty(video ?? {}, 'thumbnail') ?? '';
 
 		const creator: NormalizedCreator = {
 			platform: 'YouTube',
 			id: contentId,
-			mergeKey: channelId,
+			mergeKey: resolvedChannelId,
 
 			creator: {
 				username,
-				name: channel.title || username,
+				name: getStringProperty(channel, 'title') ?? username,
 				followers: 0, // Will be filled by enrich()
-				avatarUrl: channel.thumbnail || '',
+				avatarUrl: getStringProperty(channel, 'thumbnail') ?? '',
 				bio: '', // Will be filled by enrich()
 				emails: [],
 				verified: false,
-				channelId,
+				channelId: resolvedChannelId,
 			},
 
 			content: {
 				id: contentId,
-				url: video.url || '',
-				description: video.title || video.description || '',
+				url: videoUrl,
+				description:
+					getStringProperty(video ?? {}, 'title') ??
+					getStringProperty(video ?? {}, 'description') ??
+					'',
 				thumbnail,
 				statistics: {
 					views: viewCount,
 					likes: 0,
 					comments: 0,
 				},
-				postedAt: video.publishedTime,
-				duration: video.lengthSeconds,
+				postedAt: getStringProperty(video ?? {}, 'publishedTime') ?? undefined,
+				duration: getNumberProperty(video ?? {}, 'lengthSeconds') ?? undefined,
 			},
 
-			hashtags: Array.isArray(video.hashtags) ? video.hashtags : [],
+			hashtags: toStringArray(video?.hashtags) ?? [],
 
 			// Not enriched yet
 			bioEnriched: false,
@@ -163,8 +181,11 @@ class YouTubeAdapter implements SearchAdapter {
 			preview: thumbnail || undefined,
 			previewUrl: thumbnail || undefined,
 			video: {
-				description: video.title || video.description || '',
-				url: video.url || '',
+				description:
+					getStringProperty(video ?? {}, 'title') ??
+					getStringProperty(video ?? {}, 'description') ??
+					'',
+				url: videoUrl,
 				preview: thumbnail || undefined,
 				previewUrl: thumbnail || undefined,
 				cover: thumbnail || undefined,

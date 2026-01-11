@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuth } from '@clerk/nextjs';
+import { useAuth, useUser } from '@clerk/nextjs';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect } from 'react';
 import { logNavigation, logUserAction } from '@/lib/utils/frontend-logger';
@@ -11,7 +11,10 @@ import { logNavigation, logUserAction } from '@/lib/utils/frontend-logger';
 function NavigationLoggerInner() {
 	const pathname = usePathname();
 	const searchParams = useSearchParams();
-	const { userId, user } = useAuth() as any;
+	const { userId } = useAuth();
+	const { user } = useUser();
+	const resolvedUserId = userId ?? undefined;
+	const resolvedUserEmail = user?.primaryEmailAddress?.emailAddress ?? undefined;
 
 	useEffect(() => {
 		// Log page navigation
@@ -20,8 +23,8 @@ function NavigationLoggerInner() {
 			pathname,
 			'page_navigation',
 			{
-				userId: userId || 'ANONYMOUS',
-				userEmail: user?.primaryEmailAddress?.emailAddress || 'NO_EMAIL',
+				userId: resolvedUserId ?? 'ANONYMOUS',
+				userEmail: resolvedUserEmail ?? 'NO_EMAIL',
 			}
 		);
 
@@ -36,8 +39,8 @@ function NavigationLoggerInner() {
 							userAgent: navigator.userAgent,
 						},
 						{
-							userId,
-							userEmail: user?.primaryEmailAddress?.emailAddress,
+							userId: resolvedUserId,
+							userEmail: resolvedUserEmail,
 						}
 					);
 					break;
@@ -54,8 +57,8 @@ function NavigationLoggerInner() {
 							userCanProceed: !!userId,
 						},
 						{
-							userId,
-							userEmail: user?.primaryEmailAddress?.emailAddress,
+							userId: resolvedUserId,
+							userEmail: resolvedUserEmail,
 						}
 					);
 					break;
@@ -68,8 +71,8 @@ function NavigationLoggerInner() {
 							purpose: 'view_trial_status',
 						},
 						{
-							userId,
-							userEmail: user?.primaryEmailAddress?.emailAddress,
+							userId: resolvedUserId,
+							userEmail: resolvedUserEmail,
 						}
 					);
 					break;
@@ -82,8 +85,8 @@ function NavigationLoggerInner() {
 							purpose: 'create_campaign',
 						},
 						{
-							userId,
-							userEmail: user?.primaryEmailAddress?.emailAddress,
+							userId: resolvedUserId,
+							userEmail: resolvedUserEmail,
 						}
 					);
 					break;
@@ -97,8 +100,8 @@ function NavigationLoggerInner() {
 								isAuthenticated: !!userId,
 							},
 							{
-								userId,
-								userEmail: user?.primaryEmailAddress?.emailAddress,
+								userId: resolvedUserId,
+								userEmail: resolvedUserEmail,
 							}
 						);
 					}
@@ -118,8 +121,8 @@ function NavigationLoggerInner() {
 					parameterCount: Array.from(searchParams.keys()).length,
 				},
 				{
-					userId,
-					userEmail: user?.primaryEmailAddress?.emailAddress,
+					userId: resolvedUserId,
+					userEmail: resolvedUserEmail,
 				}
 			);
 		}

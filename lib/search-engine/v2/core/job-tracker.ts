@@ -21,6 +21,7 @@ import { eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { jobCreators, scrapingJobs, scrapingResults } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
+import { toStringArray } from '@/lib/utils/type-guards';
 
 export * from './job-status';
 // Re-export types and status functions
@@ -46,6 +47,18 @@ interface ActualEnrichmentState {
 	enriched: number;
 	enrichmentPercent: number;
 }
+
+const isV2JobStatus = (value: unknown): value is V2JobStatus =>
+	value === 'pending' ||
+	value === 'dispatching' ||
+	value === 'searching' ||
+	value === 'enriching' ||
+	value === 'completed' ||
+	value === 'error' ||
+	value === 'partial';
+
+const isEnrichmentStatus = (value: unknown): value is EnrichmentStatus =>
+	value === 'pending' || value === 'in_progress' || value === 'completed';
 
 // ============================================================================
 // Job Tracker Class
@@ -100,13 +113,18 @@ export class JobTracker {
 			return null;
 		}
 
+		const enrichmentStatus = isEnrichmentStatus(job.enrichmentStatus)
+			? job.enrichmentStatus
+			: 'pending';
+		const status = isV2JobStatus(job.status) ? job.status : 'pending';
+
 		return {
 			keywordsDispatched: job.keywordsDispatched ?? 0,
 			keywordsCompleted: job.keywordsCompleted ?? 0,
 			creatorsFound: job.creatorsFound ?? 0,
 			creatorsEnriched: job.creatorsEnriched ?? 0,
-			enrichmentStatus: (job.enrichmentStatus as EnrichmentStatus) ?? 'pending',
-			status: job.status as V2JobStatus,
+			enrichmentStatus,
+			status,
 		};
 	}
 
@@ -119,21 +137,26 @@ export class JobTracker {
 			return null;
 		}
 
+		const enrichmentStatus = isEnrichmentStatus(job.enrichmentStatus)
+			? job.enrichmentStatus
+			: 'pending';
+		const status = isV2JobStatus(job.status) ? job.status : 'pending';
+
 		return {
 			id: job.id,
 			userId: job.userId,
 			campaignId: job.campaignId,
 			platform: job.platform,
-			keywords: Array.isArray(job.keywords) ? (job.keywords as string[]) : [],
+			keywords: toStringArray(job.keywords) ?? [],
 			targetResults: job.targetResults,
-			status: job.status as V2JobStatus,
+			status,
 			progress: {
 				keywordsDispatched: job.keywordsDispatched ?? 0,
 				keywordsCompleted: job.keywordsCompleted ?? 0,
 				creatorsFound: job.creatorsFound ?? 0,
 				creatorsEnriched: job.creatorsEnriched ?? 0,
-				enrichmentStatus: (job.enrichmentStatus as EnrichmentStatus) ?? 'pending',
-				status: job.status as V2JobStatus,
+				enrichmentStatus,
+				status,
 			},
 			createdAt: job.createdAt,
 			updatedAt: job.updatedAt,

@@ -6,7 +6,7 @@ import type { HTMLAttributes } from 'react';
 import * as React from 'react';
 import { useRef } from 'react';
 import { toast } from 'react-hot-toast';
-import { ErrorBoundary } from '@/components/error-boundary';
+import { ErrorBoundary } from '@/app/components/error-boundary';
 import { Button } from '@/components/ui/button';
 import {
 	Pagination,
@@ -117,6 +117,9 @@ function SearchResultsContent({
 		(currentPage - 1) * itemsPerPage,
 		currentPage * itemsPerPage
 	);
+	const maxPage = Math.ceil(creators.length / itemsPerPage);
+	const isFirstPage = currentPage === 1;
+	const isLastPage = currentPage === maxPage;
 
 	if (isLoading) {
 		return (
@@ -320,7 +323,9 @@ function SearchResultsContent({
 					<PaginationContent className="flex max-w-full flex-wrap items-center justify-center gap-2">
 						<PaginationItem>
 							<PaginationPrevious
+								aria-disabled={isFirstPage}
 								onClick={() => {
+									if (isFirstPage) return;
 									const newPage = Math.max(1, currentPage - 1);
 									userActionLogger.logClick('pagination-previous', {
 										fromPage: currentPage,
@@ -329,7 +334,6 @@ function SearchResultsContent({
 									});
 									handlePageChange(newPage);
 								}}
-								disabled={currentPage === 1}
 							/>
 						</PaginationItem>
 						{Array.from({ length: Math.ceil(creators.length / itemsPerPage) }).map((_, i) => (
@@ -352,8 +356,9 @@ function SearchResultsContent({
 						))}
 						<PaginationItem>
 							<PaginationNext
+								aria-disabled={isLastPage}
 								onClick={() => {
-									const maxPage = Math.ceil(creators.length / itemsPerPage);
+									if (isLastPage) return;
 									const newPage = Math.min(maxPage, currentPage + 1);
 									userActionLogger.logClick('pagination-next', {
 										fromPage: currentPage,
@@ -362,7 +367,6 @@ function SearchResultsContent({
 									});
 									handlePageChange(newPage);
 								}}
-								disabled={currentPage === Math.ceil(creators.length / itemsPerPage)}
 							/>
 						</PaginationItem>
 					</PaginationContent>

@@ -9,13 +9,14 @@ import { CreatorNotFoundError, creatorEnrichmentService } from '@/lib/services/c
 const logger = createCategoryLogger(LogCategory.API);
 
 interface RouteParams {
-	params: {
+	params: Promise<{
 		id: string;
-	};
+	}>;
 }
 
 export async function GET(_: Request, { params }: RouteParams) {
-	const creatorId = params?.id;
+	const resolvedParams = await params;
+	const creatorId = resolvedParams?.id;
 
 	if (!creatorId) {
 		return NextResponse.json({ error: 'CREATOR_ID_REQUIRED' }, { status: 400 });

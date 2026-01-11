@@ -13,7 +13,14 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { dedupeCreators } from '@/app/components/campaigns/utils/dedupe-creators';
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import type { StatusResponse } from '@/lib/search-engine/v2/workers/types';
+import {
+	getArrayProperty,
+	getRecordProperty,
+	getStringProperty,
+	toRecord,
+} from '@/lib/utils/type-guards';
 
 // ============================================================================
 // Types
@@ -120,19 +127,21 @@ export function useSearchJob(jobId: string | null, platform?: string): UseSearch
 
 		// DEBUG: Log first creator's data structure to diagnose bio/email display issues
 		if (newCreators.length > 0) {
-			const first = newCreators[0] as Record<string, unknown>;
-			const creatorObj = first?.creator as Record<string, unknown>;
-			console.log('[GEMZ-DEBUG] useSearchJob received creators:', {
+			const first = toRecord(newCreators[0]);
+			const creatorObj = first ? getRecordProperty(first, 'creator') : null;
+			const emails = creatorObj ? getArrayProperty(creatorObj, 'emails') : null;
+			const bioValue = creatorObj ? creatorObj.bio : null;
+			structuredConsole.log('[GEMZ-DEBUG] useSearchJob received creators:', {
 				count: newCreators.length,
 				firstCreator: {
-					username: creatorObj?.username,
-					hasBio: !!creatorObj?.bio,
-					bioLength: creatorObj?.bio ? String(creatorObj.bio).length : 0,
-					hasEmails: Array.isArray(creatorObj?.emails) && creatorObj.emails.length > 0,
-					emailCount: Array.isArray(creatorObj?.emails) ? creatorObj.emails.length : 0,
-					emails: creatorObj?.emails,
-					hasBioEnriched: !!first?.bioEnriched,
-					hasBioEnrichedObj: !!first?.bio_enriched,
+					username: creatorObj ? getStringProperty(creatorObj, 'username') : null,
+					hasBio: typeof bioValue === 'string' && bioValue.length > 0,
+					bioLength: typeof bioValue === 'string' ? bioValue.length : 0,
+					hasEmails: Array.isArray(emails) && emails.length > 0,
+					emailCount: Array.isArray(emails) ? emails.length : 0,
+					emails,
+					hasBioEnriched: Boolean(first?.bioEnriched),
+					hasBioEnrichedObj: Boolean(first?.bio_enriched),
 					bio_enriched: first?.bio_enriched,
 				},
 			});

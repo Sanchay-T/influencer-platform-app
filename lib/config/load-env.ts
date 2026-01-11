@@ -3,8 +3,8 @@ let envInitialized = false;
 function assignParsedVars(parsed: NodeJS.ProcessEnv | undefined) {
 	if (!parsed) return;
 	for (const [key, value] of Object.entries(parsed)) {
-		if (process.env[key] === undefined) {
-			process.env[key] = value as string;
+		if (process.env[key] === undefined && value !== undefined) {
+			process.env[key] = value;
 		}
 	}
 }

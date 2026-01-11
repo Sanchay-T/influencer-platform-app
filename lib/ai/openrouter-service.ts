@@ -15,6 +15,24 @@ export class OpenRouterService {
 		});
 	}
 
+	async chat(
+		messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
+		options?: {
+			model?: string;
+			temperature?: number;
+			maxTokens?: number;
+		}
+	): Promise<string> {
+		const completion = await this.openai.chat.completions.create({
+			model: options?.model ?? 'deepseek/deepseek-chat',
+			messages,
+			temperature: options?.temperature,
+			max_tokens: options?.maxTokens,
+		});
+
+		return completion.choices[0]?.message?.content ?? '';
+	}
+
 	async generateKeywordExpansions(originalQuery: string, count: number = 5): Promise<string[]> {
 		try {
 			const completion = await this.openai.chat.completions.create({
@@ -62,11 +80,11 @@ export class OpenRouterService {
 		totalResults: number;
 		totalFetched: number;
 		duplicatesRemoved: number;
-		results: any[];
+		results: unknown[];
 		expandedKeywords: string[];
 		keywordStats: Record<string, number>;
 		totalApiCalls: number;
-		pagination: any;
+		pagination: unknown;
 	}> {
 		try {
 			// Generate keywords

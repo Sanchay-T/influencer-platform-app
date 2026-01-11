@@ -4,6 +4,7 @@
  * Extracted from search-results.jsx for modularity.
  */
 
+import { getRecordProperty, getStringProperty, toRecord } from '@/lib/utils/type-guards';
 import {
 	arraysEqual,
 	type Creator,
@@ -38,6 +39,8 @@ interface PatchResult {
 	changed: boolean;
 }
 
+type CreatorLike = Creator | Creator['creator'] | Record<string, unknown> | null;
+
 /**
  * Patches a creator entry with enrichment data.
  * Returns the patched entry and whether any changes were made.
@@ -49,10 +52,7 @@ export function patchCreatorEntry(
 	primaryEmail: string | null,
 	origin: EnrichmentOrigin
 ): PatchResult {
-	const metadata =
-		entry && typeof entry.metadata === 'object' && entry.metadata !== null
-			? { ...entry.metadata }
-			: {};
+	const metadata: NonNullable<Creator['metadata']> = entry.metadata ? { ...entry.metadata } : {};
 
 	const existingBefore = extractEmails(entry).map((value) => value.toLowerCase());
 	const existingBeforeSet = new Set(existingBefore);
@@ -66,23 +66,21 @@ export function patchCreatorEntry(
 				})
 			: [];
 
-	const contactEmails = mergeEmailLists(
-		metadata.contactEmails as string[] | undefined,
-		incomingEmails
-	);
+	const existingContactEmails = normalizeEmailList(metadata.contactEmails);
+	const contactEmails = mergeEmailLists(existingContactEmails, incomingEmails);
 
-	const nextMetadata = {
+	const nextMetadata: NonNullable<Creator['metadata']> = {
 		...metadata,
 		enrichment: record,
 		contactEmails,
-		primaryEmail: primaryEmail ?? (metadata.primaryEmail as string | null) ?? null,
+		primaryEmail: primaryEmail ?? metadata.primaryEmail ?? null,
 		lastEnrichedAt: record.enrichedAt,
-	} as Creator['metadata'];
+	};
 
 	if (clientNewEmails.length) {
-		(nextMetadata as Record<string, unknown>).clientNewEmails = clientNewEmails;
-	} else if ((nextMetadata as Record<string, unknown>).clientNewEmails) {
-		delete (nextMetadata as Record<string, unknown>).clientNewEmails;
+		nextMetadata.clientNewEmails = clientNewEmails;
+	} else if (nextMetadata.clientNewEmails) {
+		delete nextMetadata.clientNewEmails;
 	}
 
 	const nextEntry: Creator = {
@@ -128,8 +126,8 @@ export function patchCreatorEntry(
 	const changed = detectEnrichmentChanges(
 		entry,
 		nextEntry,
-		metadata as Record<string, unknown>,
-		nextMetadata as Record<string, unknown>,
+		metadata,
+		nextMetadata,
 		creatorField,
 		contactField
 	);
@@ -143,26 +141,25 @@ export function patchCreatorEntry(
 function detectEnrichmentChanges(
 	entry: Creator,
 	nextEntry: Creator,
-	metadata: Record<string, unknown>,
-	nextMetadata: Record<string, unknown>,
+	metadata: NonNullable<Creator['metadata']>,
+	nextMetadata: NonNullable<Creator['metadata']>,
 	creatorField: Creator['creator'] | null,
 	contactField: Creator['contact'] | null
 ): boolean {
-	const previousContactEmails = normalizeEmailList(metadata.contactEmails as unknown[]);
-	const nextContactEmails = normalizeEmailList(nextMetadata.contactEmails as unknown[]);
+	const previousContactEmails = normalizeEmailList(metadata.contactEmails ?? []);
+	const nextContactEmails = normalizeEmailList(nextMetadata.contactEmails ?? []);
 
 	let changed =
 		!arraysEqual(previousContactEmails, nextContactEmails) ||
 		metadata.primaryEmail !== nextMetadata.primaryEmail ||
 		metadata.lastEnrichedAt !== nextMetadata.lastEnrichedAt ||
-		((metadata.enrichment as Record<string, unknown>)?.enrichedAt ?? null) !==
-			((nextMetadata.enrichment as Record<string, unknown>)?.enrichedAt ?? null) ||
+		(metadata.enrichment?.enrichedAt ?? null) !== (nextMetadata.enrichment?.enrichedAt ?? null) ||
 		!!metadata.clientNewEmails !== !!nextMetadata.clientNewEmails ||
 		(Array.isArray(metadata.clientNewEmails) &&
 			Array.isArray(nextMetadata.clientNewEmails) &&
 			!arraysEqual(
-				normalizeEmailList(metadata.clientNewEmails as unknown[]),
-				normalizeEmailList(nextMetadata.clientNewEmails as unknown[])
+				normalizeEmailList(metadata.clientNewEmails ?? []),
+				normalizeEmailList(nextMetadata.clientNewEmails ?? [])
 			));
 
 	// Check root emails
@@ -221,45 +218,44 @@ function detectEnrichmentChanges(
  * Checks if a creator entry matches the enrichment target.
  */
 export function doesEntryMatchTarget(
-	entry: Creator,
-	rawReference: Creator | null,
+	entry: CreatorLike,
+	rawReference: CreatorLike,
 	normalizedHandle: string | null,
 	normalizedPlatform: string | null,
 	recordCreatorId: string | null | undefined
 ): boolean {
-	if (!entry) {
+	const entryRecord = toRecord(entry);
+	if (!entryRecord) {
 		return false;
 	}
 
 	// Direct reference match
-	if (rawReference && (entry === rawReference || entry?.creator === rawReference)) {
+	if (rawReference && (entry === rawReference || entryRecord.creator === rawReference)) {
 		return true;
 	}
 
 	// Creator ID match
-	const metadata =
-		entry && typeof entry.metadata === 'object' && entry.metadata !== null
-			? (entry.metadata as Record<string, unknown>)
-			: undefined;
+	const metadataRecord = toRecord(entryRecord.metadata);
+	const enrichmentRecord = metadataRecord ? toRecord(metadataRecord.enrichment) : null;
+	const profileRecord = metadataRecord ? toRecord(metadataRecord.profile) : null;
 	const metadataCreatorId =
-		(metadata?.enrichment as Record<string, unknown>)?.creatorId ??
-		metadata?.creatorId ??
-		(entry as Record<string, unknown>)?.creatorId ??
-		(entry as Record<string, unknown>)?.id ??
-		(metadata?.profile as Record<string, unknown>)?.creatorId;
+		getStringProperty(enrichmentRecord ?? {}, 'creatorId') ??
+		getStringProperty(metadataRecord ?? {}, 'creatorId') ??
+		getStringProperty(entryRecord, 'creatorId') ??
+		getStringProperty(entryRecord, 'id') ??
+		(profileRecord ? getStringProperty(profileRecord, 'creatorId') : null);
 
 	if (recordCreatorId && metadataCreatorId && recordCreatorId === metadataCreatorId) {
 		return true;
 	}
 
 	// Platform match
-	const entryBase =
-		entry && typeof entry.creator === 'object' && entry.creator !== null ? entry.creator : entry;
+	const entryBase = getRecordProperty(entryRecord, 'creator') ?? entryRecord;
 	const entryPlatform = normalizePlatformValue(
-		((entryBase as Record<string, unknown>)?.platform as string) ??
-			entry?.platform ??
-			(metadata?.platform as string) ??
-			((metadata?.creator as Record<string, unknown>)?.platform as string)
+		getStringProperty(entryBase, 'platform') ??
+			getStringProperty(entryRecord, 'platform') ??
+			getStringProperty(metadataRecord ?? {}, 'platform') ??
+			getStringProperty(getRecordProperty(metadataRecord ?? {}, 'creator') ?? {}, 'platform')
 	);
 
 	if (normalizedPlatform && entryPlatform && normalizedPlatform !== entryPlatform) {
@@ -272,19 +268,19 @@ export function doesEntryMatchTarget(
 
 	// Handle match
 	const handleCandidates = [
-		(entryBase as Record<string, unknown>)?.uniqueId,
-		(entryBase as Record<string, unknown>)?.username,
-		(entryBase as Record<string, unknown>)?.handle,
-		(entryBase as Record<string, unknown>)?.name,
-		(entry as Record<string, unknown>)?.handle,
-		(entry as Record<string, unknown>)?.username,
-		metadata?.handle,
-		(metadata?.creator as Record<string, unknown>)?.handle,
-	] as (string | undefined)[];
+		getStringProperty(entryBase, 'uniqueId'),
+		getStringProperty(entryBase, 'username'),
+		getStringProperty(entryBase, 'handle'),
+		getStringProperty(entryBase, 'name'),
+		getStringProperty(entryRecord, 'handle'),
+		getStringProperty(entryRecord, 'username'),
+		getStringProperty(metadataRecord ?? {}, 'handle'),
+		getStringProperty(getRecordProperty(metadataRecord ?? {}, 'creator') ?? {}, 'handle'),
+	];
 
 	const normalizedHandles = handleCandidates
 		.map((candidate) => normalizeHandleValue(candidate))
-		.filter(Boolean) as string[];
+		.filter((value): value is string => Boolean(value));
 
 	return normalizedHandles.includes(normalizedHandle);
 }
@@ -351,12 +347,11 @@ export function applyEnrichmentToCreatorList(
 		}
 
 		// Also check nested creator field
+		const nestedCreator = toRecord(entry.creator);
 		if (
-			typeof entry === 'object' &&
-			entry !== null &&
-			entry.creator &&
+			nestedCreator &&
 			doesEntryMatchTarget(
-				entry.creator as unknown as Creator,
+				nestedCreator,
 				rawReference,
 				normalizedHandle,
 				normalizedPlatform,

@@ -18,6 +18,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import {
+	getNumberProperty,
+	getRecordProperty,
+	getStringArrayProperty,
+	getStringProperty,
+	toRecord,
+} from '@/lib/utils/type-guards';
+import {
 	buildEnrichmentTarget,
 	type CreatorSnapshot,
 	type EnrichmentTarget,
@@ -25,6 +32,7 @@ import {
 } from '../utils/creator-snapshot';
 import {
 	type Creator,
+	type EmailEntry,
 	extractEmails,
 	formatFollowers,
 	normalizeEmailCandidate,
@@ -106,18 +114,21 @@ export const CreatorTableRow = memo(function CreatorTableRow({
 	applyEnrichmentToCreators,
 	setBioEmailConfirmDialog,
 	style,
-}: CreatorTableRowProps): JSX.Element {
+}: CreatorTableRowProps) {
 	const { id: rowId, snapshot, raw: creator } = row;
 
 	// Avatar URL resolution
+	const creatorRecord = toRecord(creator) ?? {};
+	const creatorMeta = getRecordProperty(creatorRecord, 'creator') ?? {};
+	const creatorName = getStringProperty(creatorMeta, 'name') ?? undefined;
 	const avatarUrl =
-		creator.creator?.avatarUrl ||
-		creator.creator?.profile_pic_url ||
-		creator.creator?.profilePicUrl ||
-		(creator as Record<string, unknown>).profile_pic_url ||
-		(creator as Record<string, unknown>).profilePicUrl ||
+		getStringProperty(creatorMeta, 'avatarUrl') ||
+		getStringProperty(creatorMeta, 'profile_pic_url') ||
+		getStringProperty(creatorMeta, 'profilePicUrl') ||
+		getStringProperty(creatorRecord, 'profile_pic_url') ||
+		getStringProperty(creatorRecord, 'profilePicUrl') ||
 		'';
-	const imageUrl = ensureImageUrl(avatarUrl as string);
+	const imageUrl = ensureImageUrl(avatarUrl);
 
 	// Enrichment data
 	const enrichmentTarget = buildEnrichmentTarget(snapshot, platformNormalized);
@@ -141,10 +152,10 @@ export const CreatorTableRow = memo(function CreatorTableRow({
 	const displayEmails = enrichmentEmails.length ? enrichmentEmails : existingEmails;
 
 	// Client new emails tracking
-	const metadata = creator.metadata || {};
-	const clientNewEmails = Array.isArray(metadata.clientNewEmails) ? metadata.clientNewEmails : [];
+	const metadataRecord = toRecord(creator.metadata) ?? {};
+	const clientNewEmails = getStringArrayProperty(metadataRecord, 'clientNewEmails') ?? [];
 	const clientNewEmailSet = new Set(clientNewEmails.map((value: string) => value.toLowerCase()));
-	const displayEmailEntries = displayEmails.map((email) => {
+	const displayEmailEntries: EmailEntry[] = displayEmails.map((email) => {
 		const lower = email.toLowerCase();
 		const isNew = clientNewEmailSet.has(lower);
 		return { value: email, isNew };
@@ -152,14 +163,15 @@ export const CreatorTableRow = memo(function CreatorTableRow({
 
 	// Bio data
 	const liveBioData = getBioDataForCreator(creator);
-	const bioEmailFromDb = creator.bio_enriched?.extracted_email;
+	const bioEmailFromDb =
+		getStringProperty(toRecord(creator.bio_enriched) ?? {}, 'extracted_email') ?? null;
 	const bioEmailFromState = getBioEmailForCreator(creator);
 	const bioEmail = bioEmailFromDb || bioEmailFromState;
 	const savedBioEmail = creator.contact_email;
 	const emailSource = creator.email_source;
 
 	// Combine all email sources for display
-	const allEmails = [...displayEmailEntries];
+	const allEmails: EmailEntry[] = [...displayEmailEntries];
 	if (bioEmail && !allEmails.some((e) => e.value.toLowerCase() === bioEmail.toLowerCase())) {
 		allEmails.unshift({ value: bioEmail, isNew: false, isFromBio: true });
 	}
@@ -171,6 +183,27 @@ export const CreatorTableRow = memo(function CreatorTableRow({
 	}
 
 	// Enrich click handler
+	const readNumber = (record: Record<string, unknown> | null, key: string): number | null => {
+		if (!record) return null;
+		const numeric = getNumberProperty(record, key);
+		if (numeric != null) return numeric;
+		const text = getStringProperty(record, key);
+		if (!text) return null;
+		const parsed = Number(text);
+		return Number.isFinite(parsed) ? parsed : null;
+	};
+
+	const videoRecord = getRecordProperty(creatorRecord, 'video');
+	const videoStatsRecord = getRecordProperty(videoRecord ?? {}, 'statistics');
+	const viewCount =
+		readNumber(videoStatsRecord, 'views') ??
+		readNumber(videoStatsRecord, 'viewCount') ??
+		readNumber(videoRecord, 'views') ??
+		readNumber(videoRecord, 'viewCount');
+	const viewCountLabel = viewCount != null && viewCount > 0 ? viewCount.toLocaleString() : null;
+
+	const videoUrl = getStringProperty(videoRecord ?? {}, 'url') ?? null;
+
 	const handleEnrichClick = () => {
 		const hasExistingEmail = displayEmailEntries.length > 0;
 		if (bioEmail && !enrichment && !hasExistingEmail) {
@@ -218,11 +251,11 @@ export const CreatorTableRow = memo(function CreatorTableRow({
 					<Avatar className="h-10 w-10 flex-shrink-0">
 						<AvatarImage
 							src={imageUrl}
-							alt={creator.creator?.name || snapshot.handle}
+							alt={creatorName || snapshot.handle}
 							loading="lazy"
-							onLoad={(e) => handleImageLoad(e, creator.creator?.name)}
-							onError={(e) => handleImageError(e, creator.creator?.name, avatarUrl as string)}
-							onLoadStart={(e) => handleImageStart(e, creator.creator?.name)}
+							onLoad={(e) => handleImageLoad(e, creatorName)}
+							onError={(e) => handleImageError(e, creatorName, avatarUrl)}
+							onLoadStart={(e) => handleImageStart(e, creatorName)}
 							style={{ maxWidth: '100%', height: 'auto', backgroundColor: '#f3f4f6' }}
 						/>
 						<AvatarFallback>
@@ -231,14 +264,14 @@ export const CreatorTableRow = memo(function CreatorTableRow({
 					</Avatar>
 					{/* Mobile: Name + handle */}
 					<div className="space-y-1 sm:hidden">
-						{creator.creator?.name && creator.creator.name !== 'N/A' ? (
+						{creatorName && creatorName !== 'N/A' ? (
 							<a
 								href={renderProfileLink(creator)}
 								target="_blank"
 								rel="noopener noreferrer"
 								className="flex items-center gap-1 text-sm font-medium text-pink-400 hover:text-pink-300 hover:underline"
 							>
-								{creator.creator.name}
+								{creatorName}
 								<ExternalLinkIcon />
 							</a>
 						) : (
@@ -251,15 +284,15 @@ export const CreatorTableRow = memo(function CreatorTableRow({
 
 			{/* Username (desktop) */}
 			<TableCell className="hidden sm:table-cell px-4 py-4 align-top w-[220px] max-w-[260px]">
-				{creator.creator?.name && creator.creator.name !== 'N/A' ? (
+				{creatorName && creatorName !== 'N/A' ? (
 					<a
 						href={renderProfileLink(creator)}
 						target="_blank"
 						rel="noopener noreferrer"
 						className="flex items-center gap-1 text-pink-400 hover:text-pink-300 hover:underline"
-						title={`View ${creator.creator.name}'s profile`}
+						title={`View ${creatorName}'s profile`}
 					>
-						{creator.creator.name}
+						{creatorName}
 						<ExternalLinkIcon />
 					</a>
 				) : (
@@ -295,16 +328,14 @@ export const CreatorTableRow = memo(function CreatorTableRow({
 
 			{/* Views */}
 			<TableCell className="hidden lg:table-cell px-4 py-4 text-right text-sm tabular-nums">
-				{creator.video?.statistics?.views && creator.video.statistics.views > 0
-					? creator.video.statistics.views.toLocaleString()
-					: '—'}
+				{viewCountLabel ?? '—'}
 			</TableCell>
 
 			{/* Post Link */}
 			<TableCell className="hidden lg:table-cell px-4 py-4 text-center">
-				{creator.video?.url && (
+				{videoUrl && (
 					<a
-						href={creator.video.url}
+						href={videoUrl}
 						target="_blank"
 						rel="noopener noreferrer"
 						className="text-pink-400 hover:underline"
@@ -374,7 +405,7 @@ interface EmailDisplayProps {
 	emails: Array<{ value: string; isNew?: boolean; isFromBio?: boolean }>;
 }
 
-function EmailDisplay({ emails }: EmailDisplayProps): JSX.Element {
+function EmailDisplay({ emails }: EmailDisplayProps) {
 	if (emails.length === 0) {
 		return <span className="text-sm text-zinc-500">No email</span>;
 	}
@@ -438,7 +469,14 @@ function MobileCreatorDetails({
 	snapshot,
 	creator,
 	displayEmailEntries,
-}: MobileCreatorDetailsProps): JSX.Element {
+}: MobileCreatorDetailsProps) {
+	const creatorRecord = toRecord(creator) ?? {};
+	const videoRecord = getRecordProperty(creatorRecord, 'video');
+	const videoStatsRecord = getRecordProperty(videoRecord ?? {}, 'statistics');
+	const views = getNumberProperty(videoStatsRecord ?? {}, 'views');
+	const viewLabel = views != null && views > 0 ? views.toLocaleString() : null;
+	const videoUrl = getStringProperty(videoRecord ?? {}, 'url') ?? null;
+
 	return (
 		<div className="mt-2 space-y-1 text-xs text-zinc-400 lg:hidden">
 			<div>
@@ -466,16 +504,15 @@ function MobileCreatorDetails({
 			) : (
 				<span className="text-zinc-500">No email</span>
 			)}
-			{creator.video?.statistics?.views ? (
+			{viewLabel ? (
 				<div>
-					<span className="font-medium text-zinc-300">Views:</span>{' '}
-					{(creator.video.statistics.views || 0).toLocaleString()}
+					<span className="font-medium text-zinc-300">Views:</span> {viewLabel}
 				</div>
 			) : null}
-			{creator.video?.url && (
+			{videoUrl && (
 				<div>
 					<a
-						href={creator.video.url}
+						href={videoUrl}
 						target="_blank"
 						rel="noopener noreferrer"
 						className="text-pink-400 hover:underline"

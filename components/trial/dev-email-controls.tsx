@@ -16,6 +16,7 @@ import {
 	SelectValue,
 } from '@/components/ui/select';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { getStringProperty, toRecord } from '@/lib/utils/type-guards';
 
 interface DevEmailControlsProps {
 	userId: string;
@@ -23,6 +24,13 @@ interface DevEmailControlsProps {
 	fullName?: string;
 	businessName?: string;
 }
+
+type EmailResult = {
+	type: string;
+	status: 'success' | 'error';
+	message: string;
+	timestamp: string;
+};
 
 export function DevEmailControls({
 	userId,
@@ -33,14 +41,7 @@ export function DevEmailControls({
 	const [selectedEmailType, setSelectedEmailType] = useState<string>('trial_day2');
 	const [customDelay, setCustomDelay] = useState<string>('1m');
 	const [isLoading, setIsLoading] = useState(false);
-	const [results, setResults] = useState<
-		Array<{
-			type: string;
-			status: 'success' | 'error';
-			message: string;
-			timestamp: string;
-		}>
-	>([]);
+	const [results, setResults] = useState<EmailResult[]>([]);
 
 	const emailTypes = [
 		{ value: 'welcome', label: 'Welcome Email', defaultDelay: '10m' },
@@ -92,13 +93,16 @@ export function DevEmailControls({
 			});
 
 			const data = await response.json();
+			const payload = toRecord(data);
+			const messageId = payload ? getStringProperty(payload, 'messageId') : null;
+			const errorMessage = payload ? getStringProperty(payload, 'error') : null;
 
-			const result = {
+			const result: EmailResult = {
 				type: selectedEmailType,
-				status: response.ok ? ('success' as const) : ('error' as const),
+				status: response.ok ? 'success' : 'error',
 				message: response.ok
-					? `Email scheduled successfully! Message ID: ${data.messageId}`
-					: data.error || 'Failed to schedule email',
+					? `Email scheduled successfully! Message ID: ${messageId ?? 'unknown'}`
+					: (errorMessage ?? 'Failed to schedule email'),
 				timestamp: new Date().toLocaleTimeString(),
 			};
 
@@ -112,17 +116,13 @@ export function DevEmailControls({
 		} catch (error) {
 			structuredConsole.error('❌ [DEV-EMAIL] Error scheduling email:', error);
 
-			setResults((prev) =>
-				[
-					{
-						type: selectedEmailType,
-						status: 'error',
-						message: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-						timestamp: new Date().toLocaleTimeString(),
-					},
-					...prev,
-				].slice(0, 5)
-			);
+			const errorEntry: EmailResult = {
+				type: selectedEmailType,
+				status: 'error',
+				message: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+				timestamp: new Date().toLocaleTimeString(),
+			};
+			setResults((prev) => [errorEntry, ...prev].slice(0, 5));
 		} finally {
 			setIsLoading(false);
 		}

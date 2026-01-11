@@ -6,7 +6,7 @@ import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
 function errorToResponse(error: unknown) {
-	const message = (error as Error).message;
+	const message = error instanceof Error ? error.message : '';
 	if (message === 'USER_NOT_FOUND' || message === 'LIST_NOT_FOUND') {
 		return NextResponse.json({ error: 'List not found' }, { status: 404 });
 	}
@@ -17,21 +17,22 @@ function errorToResponse(error: unknown) {
 	return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
 }
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+	const { id } = await params;
 	const { userId } = await getAuthOrTest();
 	if (!userId) {
 		return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 	}
 	try {
 		const body = await request.json();
-		const result = await addCreatorsToList(userId, params.id, body.creators ?? []);
+		const result = await addCreatorsToList(userId, id, body.creators ?? []);
 
 		// Track creators saved in LogSnag
 		if (result.added > 0) {
 			const user = await getUserProfile(userId);
 			await trackCreatorSaved({
 				userId,
-				listName: params.id, // Using list ID as name since we don't have it here
+				listName: id, // Using list ID as name since we don't have it here
 				count: result.added,
 				email: user?.email || 'unknown',
 			});
@@ -43,28 +44,30 @@ export async function POST(request: Request, { params }: { params: { id: string 
 	}
 }
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+	const { id } = await params;
 	const { userId } = await getAuthOrTest();
 	if (!userId) {
 		return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 	}
 	try {
 		const body = await request.json();
-		await updateListItems(userId, params.id, body.items ?? []);
+		await updateListItems(userId, id, body.items ?? []);
 		return NextResponse.json({ ok: true });
 	} catch (error) {
 		return errorToResponse(error);
 	}
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+	const { id } = await params;
 	const { userId } = await getAuthOrTest();
 	if (!userId) {
 		return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 	}
 	try {
 		const body = await request.json();
-		await removeListItems(userId, params.id, body.itemIds ?? []);
+		await removeListItems(userId, id, body.itemIds ?? []);
 		return NextResponse.json({ ok: true });
 	} catch (error) {
 		return errorToResponse(error);

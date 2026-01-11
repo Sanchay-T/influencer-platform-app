@@ -2,6 +2,7 @@ import { Resend } from 'resend';
 import { clerkBackendClient } from '@/lib/auth/backend-auth';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { qstash } from '@/lib/queue/qstash';
+import { getRecordProperty, getStringProperty, toRecord } from '@/lib/utils/type-guards';
 
 const resendApiKey = process.env.RESEND_API_KEY;
 if (!resendApiKey) {
@@ -20,6 +21,17 @@ if (!resolvedSiteUrl) {
 	);
 }
 
+export type EmailType =
+	| 'welcome'
+	| 'abandonment'
+	| 'trial_day2'
+	| 'trial_day5'
+	| 'subscription_welcome';
+
+export type EmailDelay = `${bigint}s` | `${bigint}m` | `${bigint}h` | `${bigint}d`;
+
+const isEmailDelay = (value: string): value is EmailDelay => /^\d+[smhd]$/.test(value);
+
 // Email service configuration
 export const EMAIL_CONFIG = {
 	fromAddress: process.env.EMAIL_FROM_ADDRESS || 'hello@gemz.io',
@@ -30,7 +42,7 @@ export const EMAIL_CONFIG = {
 		trial_day2: '2d', // 2 days after trial starts
 		trial_day5: '5d', // 5 days after trial starts
 		subscription_welcome: '30s', // Quick confirmation after subscription activation
-	},
+	} satisfies Record<EmailType, EmailDelay>,
 };
 
 export interface EmailTemplateProps {
@@ -47,11 +59,18 @@ export interface EmailTemplateProps {
 
 export interface EmailScheduleParams {
 	userId: string;
-	emailType: 'welcome' | 'abandonment' | 'trial_day2' | 'trial_day5' | 'subscription_welcome';
+	emailType: EmailType;
 	userEmail: string;
 	templateProps: EmailTemplateProps;
 	delay?: string;
 }
+
+export type EmailScheduleStatus =
+	| 'scheduled'
+	| 'sent'
+	| 'failed'
+	| 'cancelled'
+	| 'cancelled_subscription';
 
 /**
  * Send an email immediately using Resend
@@ -76,8 +95,14 @@ export async function sendEmail(
 			react: reactComponent,
 		});
 
-		structuredConsole.log('✅ [EMAIL-SERVICE] Email sent successfully:', result.id);
-		return { success: true, id: result.id };
+		const resultRecord = toRecord(result);
+		const directId = resultRecord ? getStringProperty(resultRecord, 'id') : null;
+		const dataRecord = resultRecord ? getRecordProperty(resultRecord, 'data') : null;
+		const dataId = dataRecord ? getStringProperty(dataRecord, 'id') : null;
+		const resolvedId = directId ?? dataId ?? 'unknown';
+
+		structuredConsole.log('✅ [EMAIL-SERVICE] Email sent successfully:', resolvedId);
+		return { success: true, id: resolvedId };
 	} catch (error) {
 		structuredConsole.error('❌ [EMAIL-SERVICE] Failed to send email:', error);
 		return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
@@ -90,7 +115,8 @@ export async function sendEmail(
 export async function scheduleEmail(params: EmailScheduleParams) {
 	try {
 		const { userId, emailType, userEmail, templateProps, delay } = params;
-		const emailDelay = delay || EMAIL_CONFIG.delays[emailType];
+		const defaultDelay = EMAIL_CONFIG.delays[emailType];
+		const emailDelay = delay && isEmailDelay(delay) ? delay : defaultDelay;
 
 		structuredConsole.log('📅 [EMAIL-SCHEDULER] Scheduling email:', {
 			userId,
@@ -117,13 +143,19 @@ export async function scheduleEmail(params: EmailScheduleParams) {
 			delay: emailDelay,
 		});
 
+		const resultRecord = toRecord(result);
+		const messageId = resultRecord ? getStringProperty(resultRecord, 'messageId') : null;
+		const dataRecord = resultRecord ? getRecordProperty(resultRecord, 'data') : null;
+		const dataMessageId = dataRecord ? getStringProperty(dataRecord, 'messageId') : null;
+		const resolvedMessageId = messageId ?? dataMessageId ?? 'unknown';
+
 		structuredConsole.log('✅ [EMAIL-SCHEDULER] Email scheduled successfully:', {
-			messageId: result.messageId,
+			messageId: resolvedMessageId,
 			emailType,
 			delay: emailDelay,
 		});
 
-		return { success: true, messageId: result.messageId };
+		return { success: true, messageId: resolvedMessageId };
 	} catch (error) {
 		structuredConsole.error('❌ [EMAIL-SCHEDULER] Failed to schedule email:', error);
 		return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
@@ -136,7 +168,7 @@ export async function scheduleEmail(params: EmailScheduleParams) {
 export async function updateEmailScheduleStatus(
 	userId: string,
 	emailType: string,
-	status: 'scheduled' | 'sent' | 'failed',
+	status: EmailScheduleStatus,
 	messageId?: string
 ) {
 	try {
@@ -149,7 +181,7 @@ export async function updateEmailScheduleStatus(
 			throw new Error(`User not found: ${userId}`);
 		}
 
-		const currentStatus = (user.emailScheduleStatus as Record<string, any>) || {};
+		const currentStatus = toRecord(user.emailScheduleStatus) ?? {};
 
 		// Update the specific email type status
 		const updatedStatus = {
@@ -186,7 +218,8 @@ export async function updateEmailScheduleStatus(
 export async function getUserEmailFromClerk(userId: string): Promise<string | null> {
 	try {
 		structuredConsole.log('🔍 [CLERK-EMAIL] Starting Clerk email retrieval for userId:', userId);
-		const user = await clerkBackendClient.users.getUser(userId);
+		const clerk = await clerkBackendClient();
+		const user = await clerk.users.getUser(userId);
 
 		if (!user) {
 			structuredConsole.error('❌ [CLERK-EMAIL] User not found:', userId);
@@ -245,13 +278,20 @@ export async function shouldSendEmail(userId: string, emailType: string): Promis
 			return false;
 		}
 
-		const emailStatus = (user.emailScheduleStatus as Record<string, any>) || {};
+		const emailStatus = toRecord(user.emailScheduleStatus) ?? {};
 		const emailInfo = emailStatus[emailType];
+		const emailInfoRecord = toRecord(emailInfo);
+		const statusValue = emailInfoRecord ? getStringProperty(emailInfoRecord, 'status') : null;
 
 		// Don't send if already sent or scheduled
-		if (emailInfo && (emailInfo.status === 'sent' || emailInfo.status === 'scheduled')) {
+		if (
+			statusValue === 'sent' ||
+			statusValue === 'scheduled' ||
+			statusValue === 'cancelled' ||
+			statusValue === 'cancelled_subscription'
+		) {
 			structuredConsole.log(
-				`⏭️ [EMAIL-CHECK] Email ${emailType} already ${emailInfo.status} for user ${userId}`
+				`⏭️ [EMAIL-CHECK] Email ${emailType} already ${statusValue} for user ${userId}`
 			);
 			return false;
 		}

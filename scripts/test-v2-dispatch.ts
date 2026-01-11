@@ -13,6 +13,8 @@
  *   npx tsx scripts/test-v2-dispatch.ts --campaign-id=xxx
  */
 
+export {}
+
 // ============================================================================
 // Configuration
 // ============================================================================
@@ -29,7 +31,11 @@ const getArg = (name: string): string | undefined => {
 const KEYWORD = getArg('keyword') || 'fitness influencer';
 const PLATFORM = getArg('platform') || 'tiktok';
 const CAMPAIGN_ID = getArg('campaign-id');
-const TARGET_RESULTS = Number.parseInt(getArg('target') || '100', 10) as 100 | 500 | 1000;
+type TargetResults = 100 | 500 | 1000;
+const parsedTarget = Number.parseInt(getArg('target') || '100', 10);
+const isTargetResults = (value: number): value is TargetResults =>
+	[100, 500, 1000].some((target) => target === value);
+const TARGET_RESULTS: TargetResults = isTargetResults(parsedTarget) ? parsedTarget : 100;
 const POLL_INTERVAL_MS = 2000;
 const MAX_POLL_TIME_MS = 10 * 60 * 1000; // 10 minutes
 

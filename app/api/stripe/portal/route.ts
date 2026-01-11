@@ -15,6 +15,7 @@ import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { StripeClient } from '@/lib/billing';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
+import { toError } from '@/lib/utils/type-guards';
 
 const logger = createCategoryLogger(LogCategory.BILLING);
 
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
 		});
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-		logger.error('Portal session creation failed', error as Error);
+		logger.error('Portal session creation failed', toError(error));
 
 		return NextResponse.json(
 			{ error: 'Failed to create portal session', details: errorMessage },

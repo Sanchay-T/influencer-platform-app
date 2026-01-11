@@ -23,7 +23,7 @@ const logger = createCategoryLogger(LogCategory.BILLING);
 // STRIPE INSTANCE
 // ═══════════════════════════════════════════════════════════════
 
-const STRIPE_API_VERSION = '2025-06-30.basil' as const;
+const STRIPE_API_VERSION: Stripe.LatestApiVersion = '2025-06-30.basil';
 
 // Singleton Stripe instance
 let stripeInstance: Stripe | null = null;
@@ -318,7 +318,7 @@ export class StripeClient {
 			return null;
 		}
 
-		const defaultPmId = (customer as Stripe.Customer).invoice_settings?.default_payment_method;
+		const defaultPmId = customer.invoice_settings?.default_payment_method;
 		if (!defaultPmId || typeof defaultPmId !== 'string') {
 			return null;
 		}

@@ -1,4 +1,10 @@
 import { NextResponse } from 'next/server';
+import {
+	getArrayProperty,
+	getNumberProperty,
+	getStringProperty,
+	toRecord,
+} from '@/lib/utils/type-guards';
 
 type SuggestionRequestBody = {
 	seed?: string;
@@ -50,14 +56,18 @@ const schema = {
 			},
 		},
 	},
-} as const;
+};
 
 const defaultModel = process.env.OPENAI_SUGGESTION_MODEL || 'gpt-4o-mini';
 
 function sanitizeKeyword(value: unknown): string | null {
-	if (typeof value !== 'string') return null;
+	if (typeof value !== 'string') {
+		return null;
+	}
 	const normalized = value.replace(/\s+/g, ' ').trim();
-	if (normalized.length < MIN_SEED_LENGTH || normalized.length > 80) return null;
+	if (normalized.length < MIN_SEED_LENGTH || normalized.length > 80) {
+		return null;
+	}
 	return normalized;
 }
 
@@ -87,7 +97,9 @@ function buildCacheKey(
 
 function readCache(key: string): SuggestionItem[] | null {
 	const cached = suggestionCache.get(key);
-	if (!cached) return null;
+	if (!cached) {
+		return null;
+	}
 	if (Date.now() > cached.expiresAt) {
 		suggestionCache.delete(key);
 		return null;
@@ -152,7 +164,12 @@ async function streamOpenAICompletion({
 	const body = {
 		model: defaultModel,
 		stream: true,
-		response_format: { type: 'json_schema', json_schema: schema },
+		// biome-ignore lint/style/useNamingConvention: OpenAI API expects snake_case.
+		response_format: {
+			type: 'json_schema',
+			// biome-ignore lint/style/useNamingConvention: OpenAI API expects snake_case.
+			json_schema: schema,
+		},
 		temperature: 0.6,
 		top_p: 0.9,
 		messages,
@@ -179,7 +196,9 @@ async function streamOpenAICompletion({
 
 	while (true) {
 		const { done, value } = await reader.read();
-		if (done) break;
+		if (done) {
+			break;
+		}
 		buffer += decoder.decode(value, { stream: true });
 
 		const segments = buffer.split('\n');
@@ -187,7 +206,9 @@ async function streamOpenAICompletion({
 
 		for (const segment of segments) {
 			const line = segment.trim();
-			if (!line.startsWith('data:')) continue;
+			if (!line.startsWith('data:')) {
+				continue;
+			}
 			const data = line.slice(5).trim();
 			if (!data || data === '[DONE]') {
 				continue;
@@ -210,35 +231,52 @@ async function streamOpenAICompletion({
 	}
 
 	try {
-		const parsed = JSON.parse(content) as {
-			suggestions?: Array<{ keyword?: string; confidence?: number; rationale?: string }>;
-		};
-		const suggestions = Array.isArray(parsed?.suggestions) ? parsed!.suggestions : [];
+		const parsed: unknown = JSON.parse(content);
+		const parsedRecord = toRecord(parsed);
+		const suggestions = parsedRecord ? (getArrayProperty(parsedRecord, 'suggestions') ?? []) : [];
+
 		return suggestions
 			.map((entry) => {
-				const keyword = sanitizeKeyword(entry.keyword);
-				if (!keyword) return null;
-				return {
+				const entryRecord = toRecord(entry);
+				if (!entryRecord) {
+					return null;
+				}
+
+				const keyword = sanitizeKeyword(getStringProperty(entryRecord, 'keyword'));
+				if (!keyword) {
+					return null;
+				}
+
+				const confidenceValue = getNumberProperty(entryRecord, 'confidence');
+				const rationaleValue = getStringProperty(entryRecord, 'rationale');
+
+				const suggestion: SuggestionItem = {
 					keyword,
 					confidence:
-						typeof entry.confidence === 'number'
-							? Math.max(0, Math.min(1, entry.confidence))
-							: undefined,
-					rationale: typeof entry.rationale === 'string' ? entry.rationale.trim() : undefined,
-				} as SuggestionItem;
+						confidenceValue !== null ? Math.max(0, Math.min(1, confidenceValue)) : undefined,
+					rationale: rationaleValue !== null ? rationaleValue.trim() : undefined,
+				};
+
+				return suggestion;
 			})
 			.filter((entry): entry is SuggestionItem => {
-				if (!entry) return false;
-				if (!anchorTokens.length) return true;
+				if (!entry) {
+					return false;
+				}
+				if (!anchorTokens.length) {
+					return true;
+				}
 				const normalized = entry.keyword.toLowerCase();
 				return anchorTokens.some((token) => normalized.includes(token));
 			})
 			.slice(0, limit);
 	} catch (error) {
-		throw new Error(`Failed to parse structured suggestions: ${(error as Error).message}`);
+		const message = error instanceof Error ? error.message : 'Unknown error';
+		throw new Error(`Failed to parse structured suggestions: ${message}`);
 	}
 }
 
+// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function POST(request: Request) {
 	if (!process.env.OPENAI_API_KEY) {
 		return NextResponse.json({ error: 'OPENAI_API_KEY is not configured' }, { status: 500 });
@@ -323,7 +361,7 @@ export async function POST(request: Request) {
 				storeCache(cacheKey, suggestions);
 				send({ type: 'complete' });
 			} catch (error) {
-				send({ type: 'error', message: (error as Error).message });
+				send({ type: 'error', message: error instanceof Error ? error.message : 'Unknown error' });
 			} finally {
 				controller.close();
 			}

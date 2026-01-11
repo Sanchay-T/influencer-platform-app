@@ -1,17 +1,22 @@
+import { toRecord } from '@/lib/utils/type-guards';
+import type { Creator } from '../../keyword-search/utils';
+
 export interface SimilarSearchInitialState {
-	creators: any[];
+	creators: Creator[];
 	isLoading: boolean;
 }
 
 export interface SimilarSearchData {
-	creators?: any[];
+	creators?: unknown[];
 	status?: string | null;
 }
 
 export function deriveInitialStateFromSearchData(
 	data?: SimilarSearchData | null
 ): SimilarSearchInitialState {
-	const creators = Array.isArray(data?.creators) ? data!.creators : [];
+	const creators = Array.isArray(data?.creators)
+		? data.creators.filter((item): item is Creator => toRecord(item) !== null)
+		: [];
 	const status = (data?.status ?? '').toString().toLowerCase();
 
 	if (status === 'completed') {

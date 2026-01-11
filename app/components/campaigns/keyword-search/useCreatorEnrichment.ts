@@ -2,6 +2,13 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
+import {
+	getStringProperty,
+	isNumber,
+	isString,
+	toRecord,
+	toStringArray,
+} from '@/lib/utils/type-guards';
 import type { CreatorEnrichmentRecord, CreatorEnrichmentUsage } from '@/types/creator-enrichment';
 
 type EnrichmentTarget = {
@@ -28,6 +35,25 @@ type EnrichOptions = {
 const sanitizeHandle = (handle: string) => handle.replace(/^@/, '').trim();
 const buildKey = (platform: string, handle: string) =>
 	`${platform.toLowerCase()}::${handle.toLowerCase()}`;
+
+const isCreatorEnrichmentUsage = (value: unknown): value is CreatorEnrichmentUsage => {
+	const record = toRecord(value);
+	return Boolean(record && isNumber(record.count) && isNumber(record.limit));
+};
+
+const isCreatorEnrichmentRecord = (value: unknown): value is CreatorEnrichmentRecord => {
+	const record = toRecord(value);
+	if (!record) return false;
+	const summary = toRecord(record.summary);
+	const allEmails = summary ? toStringArray(summary.allEmails) : null;
+	return (
+		isString(record.creatorId) &&
+		isString(record.handle) &&
+		isString(record.platform) &&
+		isString(record.enrichedAt) &&
+		Array.isArray(allEmails)
+	);
+};
 
 export function useCreatorEnrichment(initial?: Record<string, CreatorEnrichmentRecord>) {
 	const [enrichments, setEnrichments] = useState<Record<string, CreatorEnrichmentRecord>>(
@@ -87,25 +113,29 @@ export function useCreatorEnrichment(initial?: Record<string, CreatorEnrichmentR
 				});
 
 				const result = await response.json().catch(() => ({}));
+				const resultRecord = toRecord(result);
 
 				if (!response.ok) {
-					if (result?.usage) {
-						setUsage(result.usage as CreatorEnrichmentUsage);
+					if (resultRecord && isCreatorEnrichmentUsage(resultRecord.usage)) {
+						setUsage(resultRecord.usage);
 					}
 					const message =
-						typeof result?.message === 'string' ? result.message : 'Unable to enrich creator.';
+						(resultRecord ? getStringProperty(resultRecord, 'message') : null) ??
+						'Unable to enrich creator.';
 					if (!options.silent) {
 						toast.error(message);
 					}
 					throw new Error(message);
 				}
 
-				if (result?.usage) {
-					setUsage(result.usage as CreatorEnrichmentUsage);
+				if (resultRecord && isCreatorEnrichmentUsage(resultRecord.usage)) {
+					setUsage(resultRecord.usage);
 				}
 
-				if (result?.data) {
-					setEnrichments((prev) => ({ ...prev, [key]: result.data as CreatorEnrichmentRecord }));
+				const enrichmentRecord =
+					resultRecord && isCreatorEnrichmentRecord(resultRecord.data) ? resultRecord.data : null;
+				if (enrichmentRecord) {
+					setEnrichments((prev) => ({ ...prev, [key]: enrichmentRecord }));
 				}
 
 				if (!options.silent) {
@@ -113,7 +143,7 @@ export function useCreatorEnrichment(initial?: Record<string, CreatorEnrichmentR
 					toast.success(`Enriched ${label}`);
 				}
 
-				return result.data as CreatorEnrichmentRecord;
+				return enrichmentRecord;
 			} finally {
 				setLoading(key, false);
 			}
@@ -124,13 +154,15 @@ export function useCreatorEnrichment(initial?: Record<string, CreatorEnrichmentR
 	const enrichMany = useCallback(
 		async (targets: EnrichmentTarget[]) => {
 			if (!targets.length) {
+				const emptyFailed: Array<{ target: EnrichmentTarget; error: string }> = [];
+				const emptyRecords: Array<{
+					target: EnrichmentTarget;
+					record: CreatorEnrichmentRecord | null;
+				}> = [];
 				return {
 					success: 0,
-					failed: [] as Array<{ target: EnrichmentTarget; error: string }>,
-					records: [] as Array<{
-						target: EnrichmentTarget;
-						record: CreatorEnrichmentRecord | null;
-					}>,
+					failed: emptyFailed,
+					records: emptyRecords,
 				};
 			}
 

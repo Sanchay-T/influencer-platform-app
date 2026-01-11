@@ -72,7 +72,7 @@ export interface ProviderRunResult {
 	metrics: SearchMetricsSnapshot;
 }
 
-export type NormalizedCreator = Record<string, any>;
+export type NormalizedCreator = Record<string, unknown>;
 
 export interface ProviderContext {
 	job: ScrapingJobRecord;

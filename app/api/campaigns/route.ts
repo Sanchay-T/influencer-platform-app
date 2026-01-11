@@ -135,10 +135,11 @@ export async function GET(request: Request) {
 			},
 			{ headers }
 		);
-	} catch (error: any) {
+	} catch (error: unknown) {
 		structuredConsole.error('[CAMPAIGNS-API] Error:', error);
+		const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 		return NextResponse.json(
-			{ error: 'Error loading campaigns', details: error?.message || 'Unknown error' },
+			{ error: 'Error loading campaigns', details: errorMessage },
 			{ status: 500 }
 		);
 	}

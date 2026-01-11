@@ -8,6 +8,7 @@ import { structuredConsole } from '@/lib/logging/console-proxy';
  * the application while providing zero-overhead performance for filtered logs.
  */
 
+import { toError, toRecord } from '@/lib/utils/type-guards';
 import {
 	CONSOLE_CONFIG,
 	CONTEXT_ENRICHMENT,
@@ -21,7 +22,7 @@ import {
 } from './constants';
 // Auth functionality disabled to avoid client/server import issues
 // TODO: Re-enable with proper server-only wrapper
-// let auth: any = null;
+// let auth: unknown = null;
 import {
 	type DataSanitizer,
 	LogCategory,
@@ -106,11 +107,14 @@ class Logger {
 					this.warn(
 						'High memory usage detected',
 						{
-							memoryUsage: {
-								heapUsed: memUsage.heapUsed,
-								heapTotal: memUsage.heapTotal,
-								external: memUsage.external,
-								rss: memUsage.rss,
+							memoryUsage: memUsage.heapUsed,
+							metadata: {
+								memoryUsageDetails: {
+									heapUsed: memUsage.heapUsed,
+									heapTotal: memUsage.heapTotal,
+									external: memUsage.external,
+									rss: memUsage.rss,
+								},
 							},
 						},
 						LogCategory.PERFORMANCE
@@ -125,8 +129,8 @@ class Logger {
 	 */
 	private shouldLog(level: LogLevel, category?: LogCategory): boolean {
 		const categoryLevel =
-			(category && this.categoryOverrides?.[category]) != null
-				? this.categoryOverrides?.[category]
+			category && this.categoryOverrides?.[category] != null
+				? this.categoryOverrides[category]
 				: undefined;
 		const effectiveLevel = categoryLevel ?? this.minLevel;
 		return level >= effectiveLevel;
@@ -185,10 +189,23 @@ class Logger {
 	/**
 	 * Sanitize sensitive data from log context and metadata
 	 */
-	private sanitizeData(data: any, sanitizer?: DataSanitizer): any {
+	private sanitizeData(data: LogContext, sanitizer?: DataSanitizer): LogContext;
+	private sanitizeData(data: unknown, sanitizer?: DataSanitizer): unknown;
+	private sanitizeData(data: unknown, sanitizer?: DataSanitizer): unknown {
 		if (!data || typeof data !== 'object') return data;
 
-		const sanitized = Array.isArray(data) ? [...data] : { ...data };
+		if (Array.isArray(data)) {
+			const sanitizedArray = data.map((item) => this.sanitizeData(item, sanitizer));
+			if (sanitizer?.sanitize) {
+				return sanitizer.sanitize(sanitizedArray);
+			}
+			return sanitizedArray;
+		}
+
+		const record = toRecord(data);
+		if (!record) return data;
+
+		const sanitized: Record<string, unknown> = { ...record };
 
 		// Use custom sanitizer if provided
 		if (sanitizer?.sanitize) {
@@ -204,7 +221,7 @@ class Logger {
 				delete sanitized[key];
 			} else if (fieldsToMask.some((field) => isSensitiveField(key))) {
 				sanitized[key] = '[REDACTED]';
-			} else if (typeof sanitized[key] === 'object') {
+			} else if (typeof sanitized[key] === 'object' && sanitized[key] !== null) {
 				sanitized[key] = this.sanitizeData(sanitized[key], sanitizer);
 			}
 		});
@@ -217,9 +234,9 @@ class Logger {
 	 */
 	private callNativeConsole(
 		method: 'debug' | 'info' | 'warn' | 'error' | 'log',
-		args: any[]
+		args: unknown[]
 	): void {
-		const target = (this.nativeConsole as any)?.[method] || this.nativeConsole.log;
+		const target = this.nativeConsole[method] || this.nativeConsole.log;
 		if (typeof target === 'function') {
 			target.apply(this.nativeConsole, args);
 		}
@@ -242,7 +259,7 @@ class Logger {
 		const timestamp = new Date(entry.timestamp).toLocaleTimeString();
 
 		// Structured console output for development
-		const logArgs = [
+		const logArgs: unknown[] = [
 			`${color}${icon} [${level}]${resetColor} ${timestamp} ${color}[${entry.category}]${resetColor}`,
 			entry.message,
 		];
@@ -302,11 +319,11 @@ class Logger {
 			}
 
 			const writer = await this.serverWriterPromise;
+			const env = process.env.NODE_ENV;
+			const normalizedEnv =
+				env === 'development' || env === 'test' || env === 'production' ? env : 'development';
 			await writer.writeStructuredLog(entry, {
-				environment:
-					this.config.environment ||
-					(process.env.NODE_ENV as 'development' | 'test' | 'production') ||
-					'development',
+				environment: this.config.environment || normalizedEnv,
 			});
 		} catch (error) {
 			if (this.config.enableConsole && process.env.NODE_ENV === 'development') {
@@ -393,7 +410,7 @@ class Logger {
 	/**
 	 * Capture raw console usage and route through the structured logger.
 	 */
-	public captureConsole(level: LogLevel, args: any[], category?: LogCategory): void {
+	public captureConsole(level: LogLevel, args: unknown[], category?: LogCategory): void {
 		if (this.consoleCaptureDepth > 2) {
 			this.callNativeConsole('log', args);
 			return;
@@ -521,6 +538,19 @@ class Logger {
 	}
 
 	/**
+	 * Generic log method for structured logging.
+	 */
+	public log(
+		level: LogLevel,
+		message: string,
+		context?: LogContext,
+		category?: LogCategory,
+		error?: Error
+	): void {
+		this.logEntry(level, message, context, category || LogCategory.SYSTEM, error);
+	}
+
+	/**
 	 * Debug level logging
 	 * Used for detailed debugging information in development
 	 */
@@ -623,7 +653,7 @@ class Logger {
 
 			this.error(
 				`${label} failed`,
-				error as Error,
+				toError(error),
 				{
 					...context,
 					executionTime: duration,

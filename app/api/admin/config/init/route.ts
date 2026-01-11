@@ -31,10 +31,11 @@ export async function POST(request: Request) {
 			message: 'Default configurations initialized successfully',
 			timestamp: new Date().toISOString(),
 		});
-	} catch (error: any) {
+	} catch (error: unknown) {
 		structuredConsole.error('💥 [ADMIN-CONFIG-INIT] Error initializing defaults:', error);
+		const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 		return NextResponse.json(
-			{ error: 'Internal Server Error', details: error.message },
+			{ error: 'Internal Server Error', details: errorMessage },
 			{ status: 500 }
 		);
 	}
@@ -77,10 +78,11 @@ export async function GET(request: Request) {
 				0
 			),
 		});
-	} catch (error: any) {
+	} catch (error: unknown) {
 		structuredConsole.error('💥 [ADMIN-CONFIG-INIT] Error checking initialization status:', error);
+		const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 		return NextResponse.json(
-			{ error: 'Internal Server Error', details: error.message },
+			{ error: 'Internal Server Error', details: errorMessage },
 			{ status: 500 }
 		);
 	}

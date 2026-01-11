@@ -1,34 +1,55 @@
+import { getNumberProperty, getRecordProperty, toRecord } from '@/lib/utils/type-guards';
+
 export const MIN_LIKES_THRESHOLD = Number(
 	process.env.MIN_LIKES_THRESHOLD ?? process.env.NEXT_PUBLIC_MIN_LIKES_THRESHOLD ?? 100
 );
+
 export const MIN_VIEWS_THRESHOLD = 1000;
 
-function extractLikes(creator: any): number | null {
+const getNestedNumber = (record: Record<string, unknown>, key: string): number | null => {
+	const value = getNumberProperty(record, key);
+	return typeof value === 'number' && !Number.isNaN(value) ? value : null;
+};
+
+function extractLikes(creator: unknown): number | null {
+	const creatorRecord = toRecord(creator);
+	if (!creatorRecord) return null;
+	const videoRecord = getRecordProperty(creatorRecord, 'video');
+	const videoStats = videoRecord ? getRecordProperty(videoRecord, 'statistics') : null;
+	const creatorStats = getRecordProperty(creatorRecord, 'statistics');
+
 	const paths = [
-		creator?.video?.statistics?.likes,
-		creator?.video?.likes,
-		creator?.statistics?.likes,
-		creator?.like_count,
-		creator?.likes,
+		videoStats ? getNestedNumber(videoStats, 'likes') : null,
+		videoRecord ? getNestedNumber(videoRecord, 'likes') : null,
+		creatorStats ? getNestedNumber(creatorStats, 'likes') : null,
+		getNestedNumber(creatorRecord, 'like_count'),
+		getNestedNumber(creatorRecord, 'likes'),
 	];
+
 	for (const val of paths) {
-		if (typeof val === 'number' && !Number.isNaN(val)) return val;
+		if (typeof val === 'number') return val;
 	}
 	return null;
 }
 
-function extractViews(creator: any): number | null {
+function extractViews(creator: unknown): number | null {
+	const creatorRecord = toRecord(creator);
+	if (!creatorRecord) return null;
+	const videoRecord = getRecordProperty(creatorRecord, 'video');
+	const videoStats = videoRecord ? getRecordProperty(videoRecord, 'statistics') : null;
+	const creatorStats = getRecordProperty(creatorRecord, 'statistics');
+
 	const paths = [
-		creator?.video?.statistics?.views,
-		creator?.video?.views,
-		creator?.video?.video_view_count,
-		creator?.statistics?.views,
-		creator?.video_view_count,
-		creator?.views,
-		creator?.view_count,
+		videoStats ? getNestedNumber(videoStats, 'views') : null,
+		videoRecord ? getNestedNumber(videoRecord, 'views') : null,
+		videoRecord ? getNestedNumber(videoRecord, 'video_view_count') : null,
+		creatorStats ? getNestedNumber(creatorStats, 'views') : null,
+		getNestedNumber(creatorRecord, 'video_view_count'),
+		getNestedNumber(creatorRecord, 'views'),
+		getNestedNumber(creatorRecord, 'view_count'),
 	];
 	for (const val of paths) {
-		if (typeof val === 'number' && !Number.isNaN(val)) return val;
+		if (typeof val === 'number') return val;
 	}
 	return null;
 }
@@ -43,7 +64,7 @@ function extractViews(creator: any): number | null {
  * Set includeNullLikes=false for stricter filtering where you want to exclude
  * creators without likes data.
  */
-export function filterCreatorsByLikes<T extends Record<string, any>>(
+export function filterCreatorsByLikes<T extends Record<string, unknown>>(
 	creators: T[],
 	minLikes: number = MIN_LIKES_THRESHOLD,
 	includeNullLikes: boolean = true
@@ -61,7 +82,7 @@ export function filterCreatorsByLikes<T extends Record<string, any>>(
  * Filters creators by minimum views threshold.
  * Same logic as filterCreatorsByLikes but for video views.
  */
-export function filterCreatorsByViews<T extends Record<string, any>>(
+export function filterCreatorsByViews<T extends Record<string, unknown>>(
 	creators: T[],
 	minViews: number = MIN_VIEWS_THRESHOLD,
 	includeNullViews: boolean = true

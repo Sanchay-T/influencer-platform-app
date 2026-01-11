@@ -1,12 +1,12 @@
 import './globals.css';
 
-import type { Appearance } from '@clerk/nextjs';
 import { ClerkProvider } from '@clerk/nextjs';
+import { dark } from '@clerk/themes';
 import type { Metadata } from 'next';
 // Font configuration for app-wide Inter usage.
 import { Inter } from 'next/font/google';
 import Script from 'next/script';
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { AuthLogger } from './components/auth/auth-logger';
 import { NavigationLogger } from './components/navigation/navigation-logger';
 import { ClientConsoleBridge } from './providers/console-bridge';
@@ -19,8 +19,8 @@ const inter = Inter({
 	display: 'swap',
 });
 
-const clerkAppearance: Appearance = {
-	baseTheme: 'dark',
+const clerkAppearance: ComponentProps<typeof ClerkProvider>['appearance'] = {
+	baseTheme: dark,
 	layout: {
 		helpPageUrl: 'mailto:support@usegemz.io',
 		shimmer: false,
@@ -31,8 +31,6 @@ const clerkAppearance: Appearance = {
 		colorPrimary: '#FF2ECC',
 		colorText: '#FFFFFF',
 		colorTextOnPrimaryBackground: '#FFFFFF',
-		colorTextOnSecondaryBackground: '#FFFFFF',
-		colorAlphaShade: 'rgba(255,46,204,0.24)',
 		colorBackground: 'rgba(9,9,11,0.94)',
 		borderRadius: '24px',
 		colorInputBackground: 'rgba(24,24,27,0.72)',
@@ -81,7 +79,7 @@ export const metadata: Metadata = {
 		template: '%s | Gemz',
 	},
 	description:
-		'Find and activate high-performing creators across TikTok, Instagram, and YouTube. AI-ranked insights, verified emails, and campaign management in one platform.',
+		'Gemz is an AI powered influencer discovery tool for finding creators in real time using keywords or similar creator matching. Find influencers relevant to your brand faster and build targeted partnerships.',
 
 	// Keywords
 	keywords: [
@@ -105,7 +103,8 @@ export const metadata: Metadata = {
 	// Open Graph
 	openGraph: {
 		title: 'Gemz — Find the Right Influencer, Fast. With AI.',
-		description: 'Source verified creators, enrich outreach data, and launch campaigns in minutes.',
+		description:
+			'Gemz is an AI powered influencer discovery tool for finding creators in real time using keywords or similar creator matching. Find influencers relevant to your brand faster and build targeted partnerships.',
 		url: 'https://usegemz.io',
 		siteName: 'Gemz',
 		locale: 'en_US',
@@ -125,7 +124,7 @@ export const metadata: Metadata = {
 		card: 'summary_large_image',
 		title: 'Gemz — AI-Powered Influencer Discovery',
 		description:
-			'Find and activate high-performing creators across TikTok, Instagram, and YouTube.',
+			'Gemz is an AI powered influencer discovery tool for finding creators in real time using keywords or similar creator matching. Find influencers relevant to your brand faster and build targeted partnerships.',
 		images: ['/landing/og-preview.png'],
 	},
 
@@ -207,7 +206,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
 								applicationCategory: 'BusinessApplication',
 								operatingSystem: 'Web',
 								description:
-									'AI-powered influencer discovery platform for TikTok, Instagram, and YouTube.',
+									'Gemz is an AI powered influencer discovery tool for finding creators in real time using keywords or similar creator matching. Find influencers relevant to your brand faster and build targeted partnerships.',
 								url: 'https://usegemz.io',
 								offers: {
 									'@type': 'AggregateOffer',

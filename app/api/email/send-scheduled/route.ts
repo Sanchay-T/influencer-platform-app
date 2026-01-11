@@ -11,6 +11,7 @@ import { logger } from '@/lib/logging';
 import { backgroundJobLogger, jobLog } from '@/lib/logging/background-job-logger';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { LogCategory } from '@/lib/logging/types';
+import { toError } from '@/lib/utils/type-guards';
 
 // Initialize QStash receiver
 const receiver = new Receiver({
@@ -56,8 +57,7 @@ export async function POST(request: Request) {
 			} catch (signatureError) {
 				logger.warn(
 					'QStash signature verification failed for admin test',
-					signatureError as Error,
-					{ jobId },
+					{ jobId, error: toError(signatureError) },
 					LogCategory.EMAIL
 				);
 			}
@@ -139,7 +139,12 @@ export async function POST(request: Request) {
 			}
 
 			jobLog.email(jobId, 'send', userEmail, emailType, true);
-			jobLog.complete(jobId, { emailId: result.id, action: 'email-sent' });
+			jobLog.complete(jobId, undefined, {
+				metadata: {
+					emailId: result.id,
+					action: 'email-sent',
+				},
+			});
 
 			logger.info(
 				'Scheduled email sent successfully',
@@ -192,7 +197,7 @@ export async function POST(request: Request) {
 				{ status: 500 }
 			);
 		}
-	} catch (error: any) {
+	} catch (error: unknown) {
 		logger.error(
 			'Error processing scheduled email',
 			error instanceof Error ? error : new Error(String(error)),

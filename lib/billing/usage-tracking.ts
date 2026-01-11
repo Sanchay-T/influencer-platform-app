@@ -14,7 +14,7 @@
 import { eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
-import { userUsage, users } from '@/lib/db/schema';
+import { users, userUsage } from '@/lib/db/schema';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
 import type { PlanKey } from './plan-config';
 import { getPlanConfig, isValidPlan } from './plan-config';
@@ -79,8 +79,9 @@ export async function getUsageSummary(userId: string): Promise<UsageSummary | nu
 		return null;
 	}
 
-	const currentPlan = profile.currentPlan as PlanKey | null;
-	const planConfig = currentPlan && isValidPlan(currentPlan) ? getPlanConfig(currentPlan) : null;
+	const planCandidate = profile.currentPlan ?? '';
+	const currentPlan = isValidPlan(planCandidate) ? planCandidate : null;
+	const planConfig = currentPlan ? getPlanConfig(currentPlan) : null;
 
 	const campaignLimit = planConfig?.limits.campaigns ?? 0;
 	const creatorLimit = planConfig?.limits.creatorsPerMonth ?? 0;
@@ -150,14 +151,24 @@ export async function incrementCampaignCount(clerkUserId: string): Promise<Incre
 				})
 				.returning({ newCount: userUsage.usageCampaignsCurrent });
 
-			logger.info('Created new usage record for user', { userId: clerkUserId, metadata: { campaigns: 1 } });
+			logger.info('Created new usage record for user', {
+				userId: clerkUserId,
+				metadata: { campaigns: 1 },
+			});
 			return { success: true, newCount: inserted[0]?.newCount || 1 };
 		}
 
-		logger.info('Incremented campaign count', { userId: clerkUserId, metadata: { newCount: result[0].newCount } });
+		logger.info('Incremented campaign count', {
+			userId: clerkUserId,
+			metadata: { newCount: result[0].newCount },
+		});
 		return { success: true, newCount: result[0].newCount || 1 };
 	} catch (error) {
-		logger.error('Failed to increment campaign count', error instanceof Error ? error : new Error(String(error)), { userId: clerkUserId });
+		logger.error(
+			'Failed to increment campaign count',
+			error instanceof Error ? error : new Error(String(error)),
+			{ userId: clerkUserId }
+		);
 		return {
 			success: false,
 			newCount: 0,
@@ -185,7 +196,10 @@ export async function incrementCreatorCount(
 		// Resolve Clerk ID to internal UUID
 		const internalUserId = await getInternalUserId(clerkUserId);
 		if (!internalUserId) {
-			logger.warn('User not found for creator increment', { userId: clerkUserId, metadata: { count } });
+			logger.warn('User not found for creator increment', {
+				userId: clerkUserId,
+				metadata: { count },
+			});
 			return { success: false, newCount: 0, error: 'User not found' };
 		}
 
@@ -210,14 +224,24 @@ export async function incrementCreatorCount(
 				})
 				.returning({ newCount: userUsage.usageCreatorsCurrentMonth });
 
-			logger.info('Created new usage record for user', { userId: clerkUserId, metadata: { creators: count } });
+			logger.info('Created new usage record for user', {
+				userId: clerkUserId,
+				metadata: { creators: count },
+			});
 			return { success: true, newCount: inserted[0]?.newCount || count };
 		}
 
-		logger.info('Incremented creator count', { userId: clerkUserId, metadata: { added: count, newCount: result[0].newCount } });
+		logger.info('Incremented creator count', {
+			userId: clerkUserId,
+			metadata: { added: count, newCount: result[0].newCount },
+		});
 		return { success: true, newCount: result[0].newCount || count };
 	} catch (error) {
-		logger.error('Failed to increment creator count', error instanceof Error ? error : new Error(String(error)), { userId: clerkUserId, metadata: { count } });
+		logger.error(
+			'Failed to increment creator count',
+			error instanceof Error ? error : new Error(String(error)),
+			{ userId: clerkUserId, metadata: { count } }
+		);
 		return {
 			success: false,
 			newCount: 0,
@@ -248,7 +272,11 @@ export async function resetMonthlyUsage(userId: string): Promise<boolean> {
 		logger.info('Reset monthly usage for user', { userId });
 		return true;
 	} catch (error) {
-		logger.error('Failed to reset monthly usage', error instanceof Error ? error : new Error(String(error)), { userId });
+		logger.error(
+			'Failed to reset monthly usage',
+			error instanceof Error ? error : new Error(String(error)),
+			{ userId }
+		);
 		return false;
 	}
 }
@@ -274,7 +302,10 @@ export async function resetAllMonthlyUsage(): Promise<number> {
 		logger.info('Reset monthly usage for all users', { metadata: { usersReset: count } });
 		return count;
 	} catch (error) {
-		logger.error('Failed to reset all monthly usage', error instanceof Error ? error : new Error(String(error)));
+		logger.error(
+			'Failed to reset all monthly usage',
+			error instanceof Error ? error : new Error(String(error))
+		);
 		return 0;
 	}
 }

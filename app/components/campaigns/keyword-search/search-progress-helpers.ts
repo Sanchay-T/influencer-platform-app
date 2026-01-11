@@ -1,33 +1,38 @@
 // [SearchProgressHelpers] Shared utilities for the keyword search progress UI
 
+import { isString, toRecord } from '@/lib/utils/type-guards';
+
 export const MAX_AUTH_RETRIES = 6;
 export const MAX_GENERAL_RETRIES = 4;
 
 // [ResultShape] Normalises API payloads so downstream consumers always see an array of creators
-export function flattenCreators(results: any) {
-	if (!results) return [] as any[];
+export function flattenCreators(results: unknown): unknown[] {
+	if (!results) return [];
 	const items = Array.isArray(results) ? results : [results];
-	const creators: any[] = [];
+	const creators: unknown[] = [];
 	// Breadcrumb: dedupe across multi-handle batches so progress metrics avoid double counting creators.
 	const seen = new Set<string>();
 
-	const resolveCreatorKey = (creator: any): string | null => {
-		if (!creator || typeof creator !== 'object') return null;
+	const resolveCreatorKey = (creator: unknown): string | null => {
+		const record = toRecord(creator);
+		if (!record) return null;
+		const nestedCreator = toRecord(record.creator);
+		const nestedMetadata = toRecord(record.metadata);
 		const candidateList: Array<unknown> = [
-			(creator as any).username,
-			(creator as any).handle,
-			(creator as any).id,
-			(creator as any).profileId,
-			(creator as any).externalId,
-			(creator.creator as any)?.username,
-			(creator.creator as any)?.uniqueId,
-			(creator.creator as any)?.handle,
-			(creator.metadata as any)?.username,
-			(creator.metadata as any)?.handle,
+			record.username,
+			record.handle,
+			record.id,
+			record.profileId,
+			record.externalId,
+			nestedCreator?.username,
+			nestedCreator?.uniqueId,
+			nestedCreator?.handle,
+			nestedMetadata?.username,
+			nestedMetadata?.handle,
 		];
 
 		for (const candidate of candidateList) {
-			if (typeof candidate === 'string' && candidate.trim().length > 0) {
+			if (isString(candidate) && candidate.trim().length > 0) {
 				return candidate.trim().toLowerCase();
 			}
 		}
@@ -36,8 +41,9 @@ export function flattenCreators(results: any) {
 	};
 
 	for (const item of items) {
-		if (!item) continue;
-		const list = Array.isArray(item.creators) ? item.creators : [];
+		const record = toRecord(item);
+		if (!record) continue;
+		const list = Array.isArray(record.creators) ? record.creators : [];
 		for (const creator of list) {
 			if (!creator) continue;
 			const key = resolveCreatorKey(creator);
@@ -97,7 +103,7 @@ export function buildEndpoint(
 	}
 }
 
-export function clampProgress(value: any) {
+export function clampProgress(value: unknown) {
 	const numeric = Number(value);
 	if (!Number.isFinite(numeric)) return 0;
 	return Math.min(100, Math.max(0, numeric));

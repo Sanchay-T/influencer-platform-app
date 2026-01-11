@@ -94,9 +94,10 @@ export async function POST(request: Request) {
 
 		await db.insert(userUsage).values({
 			userId: internalUserId,
-			campaignsUsed: 0,
-			creatorsUsed: 0,
-			enrichmentsUsed: 0,
+			usageCampaignsCurrent: 0,
+			usageCreatorsCurrentMonth: 0,
+			enrichmentsCurrentMonth: 0,
+			usageResetDate: new Date(),
 			createdAt: new Date(),
 			updatedAt: new Date(),
 		});

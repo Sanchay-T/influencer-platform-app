@@ -2,6 +2,12 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { buildTestAuthHeaders } from '@/lib/auth/testable-auth'
+import {
+  getArrayProperty,
+  getNumberProperty,
+  getStringProperty,
+  toRecord,
+} from '@/lib/utils/type-guards'
 
 export type E2EContext = {
   baseUrl: string
@@ -13,16 +19,58 @@ export type JobStatusPayload = {
   status: string
   processedResults: number
   targetResults?: number
-  results?: any[]
+  results?: unknown[]
   error?: unknown
   progress?: number
-  benchmark?: any
+  benchmark?: unknown
 }
 
 const TOKEN_PATH = resolve(__dirname, '..', 'clerk-session-token', '.session-token')
 
 const DEFAULT_POLL_DELAY_MS = Number(process.env.E2E_POLL_DELAY_MS || 5000)
 const DEFAULT_MAX_ATTEMPTS = Number(process.env.E2E_MAX_ATTEMPTS || 120)
+
+type RequestOptions = {
+  method?: string
+  body?: Record<string, unknown>
+  headers?: Record<string, string>
+  label?: string
+}
+
+function requireRecord(value: unknown, label: string): Record<string, unknown> {
+  const record = toRecord(value)
+  if (!record) {
+    throw new Error(`${label}: Expected object response`)
+  }
+  return record
+}
+
+function requireString(record: Record<string, unknown>, key: string, label: string): string {
+  const value = getStringProperty(record, key)
+  if (!value) {
+    throw new Error(`${label}: Missing ${key}`)
+  }
+  return value
+}
+
+function parseJobStatusPayload(value: unknown, label: string): JobStatusPayload {
+  const record = requireRecord(value, label)
+  const status = requireString(record, 'status', label)
+  const processedResults = getNumberProperty(record, 'processedResults')
+  if (processedResults === null) {
+    throw new Error(`${label}: Missing processedResults`)
+  }
+
+  return {
+    status,
+    processedResults,
+    targetResults: getNumberProperty(record, 'targetResults') ?? undefined,
+    results: getArrayProperty(record, 'results') ?? undefined,
+    error: record.error,
+    progress: getNumberProperty(record, 'progress') ?? undefined,
+    benchmark: record.benchmark,
+  }
+}
 
 export function createContext(): E2EContext {
   const baseUrl =
@@ -58,16 +106,23 @@ export async function ensureOk(res: Response, label: string) {
   }
 }
 
-export async function requestJson<T = any>(
+export async function requestJson(
   ctx: E2EContext,
   path: string,
-  options: {
-    method?: string
-    body?: Record<string, unknown>
-    headers?: Record<string, string>
-    label?: string
-  } = {}
-): Promise<T> {
+  options?: RequestOptions
+): Promise<unknown>
+export async function requestJson<T>(
+  ctx: E2EContext,
+  path: string,
+  options: RequestOptions,
+  parse: (value: unknown) => T
+): Promise<T>
+export async function requestJson<T>(
+  ctx: E2EContext,
+  path: string,
+  options: RequestOptions = {},
+  parse?: (value: unknown) => T
+): Promise<T | unknown> {
   const { method = options.body ? 'POST' : 'GET', body, headers = {}, label = `${method} ${path}` } = options
   const initHeaders: Record<string, string> = { ...authHeaders(ctx) }
   if (body) {
@@ -82,7 +137,8 @@ export async function requestJson<T = any>(
   })
   await ensureOk(res, label)
   const text = await res.text()
-  return text ? (JSON.parse(text) as T) : (undefined as T)
+  const parsed: unknown = text ? JSON.parse(text) : undefined
+  return parse ? parse(parsed) : parsed
 }
 
 export async function createCampaign(
@@ -111,7 +167,8 @@ export async function createCampaign(
   })
   await ensureOk(res, `Create campaign (${params.label})`)
   const payload = await res.json()
-  const id = payload?.id as string
+  const record = requireRecord(payload, `Create campaign (${params.label})`)
+  const id = requireString(record, 'id', `Create campaign (${params.label})`)
   console.log(`   ↳ campaignId: ${id}`)
   return id
 }
@@ -123,7 +180,7 @@ export async function startScrape(
     label: string
     body: Record<string, unknown>
   }
-): Promise<{ jobId: string; payload: any }> {
+): Promise<{ jobId: string; payload: unknown }> {
   console.log(`→ Starting ${params.label} scrape`)
   const res = await fetch(`${ctx.baseUrl}${params.path}`, {
     method: 'POST',
@@ -132,10 +189,12 @@ export async function startScrape(
   })
   await ensureOk(res, `Start ${params.label}`)
   const payload = await res.json()
-  const jobId = payload?.jobId as string
+  const record = requireRecord(payload, `Start ${params.label}`)
+  const jobId = requireString(record, 'jobId', `Start ${params.label}`)
   console.log(`   ↳ jobId: ${jobId}`)
-  if (payload?.qstashMessageId) {
-    console.log(`   ↳ qstashMessageId: ${payload.qstashMessageId}`)
+  const qstashMessageId = getStringProperty(record, 'qstashMessageId')
+  if (qstashMessageId) {
+    console.log(`   ↳ qstashMessageId: ${qstashMessageId}`)
   }
   return { jobId, payload }
 }
@@ -158,7 +217,7 @@ export async function pollJob(
       headers: authHeaders(ctx),
     })
     await ensureOk(res, `Check ${params.label} status`)
-    const payload = (await res.json()) as JobStatusPayload
+    const payload = parseJobStatusPayload(await res.json(), `Check ${params.label} status`)
     console.log(
       `   [${params.label}] attempt ${attempt} → status=${payload.status} processed=${payload.processedResults}`
     )

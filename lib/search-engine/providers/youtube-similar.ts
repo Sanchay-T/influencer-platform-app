@@ -7,6 +7,7 @@ import {
 	extractSearchKeywords,
 	transformToSimilarChannels,
 } from '@/lib/platforms/youtube-similar/transformer';
+import { getNumberProperty, getStringProperty, toArray, toRecord } from '@/lib/utils/type-guards';
 import type { SearchJobService } from '../job-service';
 import type {
 	NormalizedCreator,
@@ -20,7 +21,9 @@ import { addCost, SCRAPECREATORS_COST_PER_CALL_USD } from '../utils/cost';
 const PROFILE_CONCURRENCY = parseInt(process.env.YT_PROFILE_CONCURRENCY || '5', 10);
 const MAX_CHANNEL_ENHANCEMENTS = parseInt(process.env.YT_SIMILAR_PROFILE_ENHANCEMENTS || '10', 10);
 
-function parseFollowers(value: any): number | null {
+type ExtractedChannel = ReturnType<typeof extractChannelsFromVideos>[number];
+
+function parseFollowers(value: unknown): number | null {
 	if (value == null) return null;
 	if (typeof value === 'number') return value;
 	if (typeof value === 'string') {
@@ -39,34 +42,45 @@ function parseFollowers(value: any): number | null {
 	return null;
 }
 
-function normalizeCreator(channel: any, profile: any): NormalizedCreator {
-	const bio = profile?.description ?? '';
+function normalizeCreator(channel: unknown, profile: unknown): NormalizedCreator {
+	const channelRecord = toRecord(channel);
+	const profileRecord = toRecord(profile);
+	const bio = getStringProperty(profileRecord ?? {}, 'description') ?? '';
 	const emailRegex = /[\w.-]+@[\w.-]+\.[\w-]+/gi;
 	const emails = bio ? (bio.match(emailRegex) ?? []) : [];
-	const handle = channel?.handle || profile?.handle || '';
-	const subscriberText = profile?.subscriberCountText || profile?.subscriberCount || '0';
+	const handle =
+		getStringProperty(channelRecord ?? {}, 'handle') ??
+		getStringProperty(profileRecord ?? {}, 'handle') ??
+		'';
+	const subscriberText =
+		getStringProperty(profileRecord ?? {}, 'subscriberCountText') ??
+		getStringProperty(profileRecord ?? {}, 'subscriberCount') ??
+		'0';
+	const relevanceScore = getNumberProperty(channelRecord ?? {}, 'relevanceScore');
 	const similarityScore =
-		typeof channel?.relevanceScore === 'number' ? `${Math.round(channel.relevanceScore)}%` : null;
+		typeof relevanceScore === 'number' ? `${Math.round(relevanceScore)}%` : null;
 
 	return {
 		platform: 'YouTube',
-		id: channel?.id,
+		id: getStringProperty(channelRecord ?? {}, 'id') ?? '',
 		username: handle,
-		full_name: channel?.name,
-		name: channel?.name,
+		full_name: getStringProperty(channelRecord ?? {}, 'name'),
+		name: getStringProperty(channelRecord ?? {}, 'name'),
 		handle,
 		bio,
 		emails,
-		socialLinks: profile?.links || [],
-		profile_pic_url: channel?.thumbnail || '',
-		profileUrl: handle ? `https://www.youtube.com/${handle}` : channel?.profileUrl || '',
+		socialLinks: toArray(profileRecord?.links) ?? [],
+		profile_pic_url: getStringProperty(channelRecord ?? {}, 'thumbnail') ?? '',
+		profileUrl: handle
+			? `https://www.youtube.com/${handle}`
+			: getStringProperty(channelRecord ?? {}, 'profileUrl') || '',
 		subscriberCount: subscriberText,
 		followers: parseFollowers(subscriberText),
 		similarityScore,
-		relevanceScore: channel?.relevanceScore ?? null,
-		similarityFactors: channel?.similarityFactors ?? null,
-		videos: channel?.videos || [],
-	} as NormalizedCreator;
+		relevanceScore: relevanceScore ?? null,
+		similarityFactors: channelRecord?.similarityFactors ?? null,
+		videos: toArray(channelRecord?.videos) ?? [],
+	};
 }
 
 export async function runYouTubeSimilarProvider(
@@ -80,18 +94,19 @@ export async function runYouTubeSimilarProvider(
 		timings: { startedAt: new Date().toISOString() },
 	};
 
-	if (!job.targetUsername) {
+	const targetUsername = job.targetUsername ? String(job.targetUsername) : '';
+	if (!targetUsername) {
 		throw new Error('YouTube similar job is missing target username');
 	}
 
 	let channelProfileCalls = 0;
-	const targetProfile = await getYouTubeChannelProfile(job.targetUsername);
+	const targetProfile = await getYouTubeChannelProfile(targetUsername);
 	channelProfileCalls += 1;
 	const searchKeywords = extractSearchKeywords(targetProfile);
 
 	const keywordsToUse = searchKeywords;
 
-	const aggregatedChannels = new Map<string, any>();
+	const aggregatedChannels = new Map<string, ExtractedChannel>();
 
 	await service.markProcessing();
 
@@ -102,15 +117,15 @@ export async function runYouTubeSimilarProvider(
 		const searchResponse = await searchYouTubeWithKeywords([keyword]);
 		metrics.apiCalls += 1;
 
-		const channels = extractChannelsFromVideos(searchResponse.videos ?? [], job.targetUsername);
+		const channels = extractChannelsFromVideos(searchResponse.videos ?? [], targetUsername);
 		for (const channel of channels) {
 			if (!channel?.id) continue;
-			if (aggregatedChannels.has(channel.id)) {
-				const existing = aggregatedChannels.get(channel.id);
+			const existing = aggregatedChannels.get(channel.id);
+			if (existing) {
 				existing.videos = [...existing.videos, ...channel.videos];
-			} else {
-				aggregatedChannels.set(channel.id, channel);
+				continue;
 			}
+			aggregatedChannels.set(channel.id, channel);
 		}
 
 		metrics.batches.push({
@@ -155,7 +170,7 @@ export async function runYouTubeSimilarProvider(
 		const slice = topChannels.slice(i, i + PROFILE_CONCURRENCY);
 		const enhancedSlice = await Promise.all(
 			slice.map(async (channel) => {
-				let profile: any = null;
+				let profile: unknown = null;
 				if (enhancedChannels.length + i < MAX_CHANNEL_ENHANCEMENTS && channel?.handle) {
 					try {
 						channelProfileCalls += 1;

@@ -20,7 +20,7 @@ export interface LogEntry {
 	timestamp: string;
 	event: string;
 	message: string;
-	data?: any;
+	data?: unknown;
 	source?: string;
 }
 
@@ -60,12 +60,13 @@ export class UserSessionLogger {
 	}
 
 	private initSession(): void {
+		const logs: LogEntry[] = [];
 		const sessionData = {
 			emailHash: this.emailHash,
 			userId: this.userId,
 			sessionId: this.sessionId,
 			startedAt: new Date().toISOString(),
-			logs: [] as LogEntry[],
+			logs,
 		};
 
 		fs.writeFileSync(this.sessionFile, JSON.stringify(sessionData, null, 2));
@@ -79,7 +80,7 @@ export class UserSessionLogger {
 		});
 	}
 
-	log(event: string, message: string, data?: any, source?: string): void {
+	log(event: string, message: string, data?: unknown, source?: string): void {
 		const entry: LogEntry = {
 			timestamp: new Date().toISOString(),
 			event,
@@ -224,7 +225,7 @@ export function getCurrentUserLogger(): UserSessionLogger | null {
 	return currentLogger;
 }
 
-export function logUserEvent(email: string, event: string, message: string, data?: any): void {
+export function logUserEvent(email: string, event: string, message: string, data?: unknown): void {
 	const logger = UserSessionLogger.forUser(email);
 	logger.log(event, message, data);
 }

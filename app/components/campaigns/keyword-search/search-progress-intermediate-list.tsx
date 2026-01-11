@@ -1,9 +1,15 @@
 'use client';
 
 import { memo } from 'react';
+import {
+	getNumberProperty,
+	getRecordProperty,
+	getStringProperty,
+	toRecord,
+} from '@/lib/utils/type-guards';
 
 // [IntermediateList] Renders a compact snapshot of the latest creators surfaced mid-run
-function IntermediateList({ creators, status }: { creators: any[]; status: string }) {
+function IntermediateList({ creators, status }: { creators: unknown[]; status: string }) {
 	if (!creators.length) return null;
 	const latest = creators.slice(-5);
 	return (
@@ -16,8 +22,15 @@ function IntermediateList({ creators, status }: { creators: any[]; status: strin
 			</div>
 			<div className="space-y-3 max-h-72 overflow-y-auto pr-1">
 				{latest.map((creator, index) => {
-					const name = creator?.creator?.name || creator?.creator?.username || 'Unknown creator';
-					const followers = creator?.creator?.followers || creator?.creator?.followerCount;
+					const record = toRecord(creator) ?? {};
+					const creatorRecord = getRecordProperty(record, 'creator') ?? {};
+					const name =
+						getStringProperty(creatorRecord, 'name') ||
+						getStringProperty(creatorRecord, 'username') ||
+						'Unknown creator';
+					const followers =
+						getNumberProperty(creatorRecord, 'followers') ??
+						getNumberProperty(creatorRecord, 'followerCount');
 					return (
 						<div
 							key={`${name}-${index}`}

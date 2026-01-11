@@ -26,7 +26,7 @@ export async function GET() {
 			// Derive trial status
 			const trialStatus = deriveTrialStatus(
 				userProfile.subscriptionStatus,
-				userProfile.trialEndDate
+				userProfile.trialEndDate ?? null
 			);
 
 			structuredConsole.log('👤 [DEBUG-WHOAMI] User Profile Found:');

@@ -1,5 +1,6 @@
 import '@/lib/config/load-env';
-import { drizzle } from 'drizzle-orm/postgres-js';
+import dotenv from 'dotenv';
+import { drizzle, type PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { systemLogger } from '@/lib/logging';
 import * as schema from './schema';
@@ -19,7 +20,7 @@ import * as schema from './schema';
 declare global {
 	var __queryClient: ReturnType<typeof postgres> | undefined;
 
-	var __db: ReturnType<typeof drizzle> | undefined;
+	var __db: PostgresJsDatabase<typeof schema> | undefined;
 }
 
 function resolveDatabaseUrl(): string {
@@ -28,14 +29,13 @@ function resolveDatabaseUrl(): string {
 	}
 
 	try {
-		const dotenv = require('dotenv');
 		const candidates = ['.env.local', '.env.development', '.env'];
 		for (const path of candidates) {
 			const result = dotenv.config({ path });
 			if (result.parsed) {
 				for (const [key, value] of Object.entries(result.parsed)) {
 					if (process.env[key] === undefined) {
-						process.env[key] = value as string;
+						process.env[key] = value;
 					}
 				}
 				if (result.parsed.DATABASE_URL) {
@@ -93,7 +93,7 @@ if (!global.__queryClient) global.__queryClient = queryClient;
 // Note: We only use Supabase for database hosting, auth is handled by Clerk
 
 // Re-use Drizzle ORM wrapper as well
-export const db =
+export const db: PostgresJsDatabase<typeof schema> =
 	global.__db ??
 	drizzle(queryClient, {
 		schema: {

@@ -3,6 +3,7 @@ import { trackSearchRan } from '@/lib/analytics/logsnag';
 import { SystemConfig } from '@/lib/config/system-config';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { LogCategory, logger } from '@/lib/logging';
+import { isString, toRecord } from '@/lib/utils/type-guards';
 import { SearchJobService } from './job-service';
 import { runInstagramScrapeCreatorsProvider } from './providers/instagram-reels-scrapecreators';
 import { runInstagramSimilarProvider } from './providers/instagram-similar';
@@ -31,18 +32,20 @@ async function resolveConfig(platform?: string): Promise<SearchRuntimeConfig> {
 			? 'youtube_continuation_delay'
 			: 'tiktok_continuation_delay';
 
-	const maxApiCalls = await SystemConfig.get('api_limits', apiLimitKey);
+	const maxApiCallsRaw = await SystemConfig.get('api_limits', apiLimitKey);
+	const maxApiCalls = Number(maxApiCallsRaw);
 
-	let continuationDelayMs: number;
+	let delayRaw: unknown;
 	try {
-		continuationDelayMs = await SystemConfig.get('qstash_delays', delayKey);
+		delayRaw = await SystemConfig.get('qstash_delays', delayKey);
 	} catch {
-		continuationDelayMs = await SystemConfig.get('qstash_delays', 'tiktok_continuation_delay');
+		delayRaw = await SystemConfig.get('qstash_delays', 'tiktok_continuation_delay');
 	}
+	const continuationDelayMs = Number(delayRaw);
 
 	return {
-		maxApiCalls: Number(maxApiCalls) || 1,
-		continuationDelayMs: Number(continuationDelayMs) || 0,
+		maxApiCalls: Number.isFinite(maxApiCalls) && maxApiCalls > 0 ? maxApiCalls : 1,
+		continuationDelayMs: Number.isFinite(continuationDelayMs) ? continuationDelayMs : 0,
 	};
 }
 
@@ -68,15 +71,17 @@ function isInstagramSimilar(jobPlatform?: string, targetUsername?: unknown): boo
 	return !!targetUsername && (platform === 'instagram' || platform === 'instagram_similar');
 }
 
-function isInstagramScrapeCreators(jobPlatform?: string, searchParams?: any): boolean {
+function isInstagramScrapeCreators(jobPlatform?: string, searchParams?: unknown): boolean {
 	const platform = (jobPlatform ?? '').toLowerCase();
-	const runner = (searchParams?.runner ?? '').toLowerCase();
+	const paramsRecord = toRecord(searchParams);
+	const runner = isString(paramsRecord?.runner) ? paramsRecord.runner.toLowerCase() : '';
 	return runner === 'instagram_scrapecreators' || platform === 'instagram_scrapecreators';
 }
 
-function isSimilarDiscovery(jobPlatform?: string, searchParams?: any): boolean {
+function isSimilarDiscovery(jobPlatform?: string, searchParams?: unknown): boolean {
 	const platform = (jobPlatform ?? '').toLowerCase();
-	const runner = (searchParams?.runner ?? '').toLowerCase();
+	const paramsRecord = toRecord(searchParams);
+	const runner = isString(paramsRecord?.runner) ? paramsRecord.runner.toLowerCase() : '';
 	return runner === 'similar_discovery' || platform.startsWith('similar_discovery_');
 }
 
@@ -142,8 +147,6 @@ export async function runSearchJob(jobId: string): Promise<SearchExecutionResult
 	);
 
 	let providerResult: ProviderRunResult;
-	const searchParams = job.searchParams as any;
-
 	if (isTikTokKeyword(job.platform, job.keywords)) {
 		providerResult = await runTikTokKeywordProvider({ job, config }, service);
 	} else if (isYouTubeKeyword(job.platform, job.keywords)) {
@@ -152,9 +155,9 @@ export async function runSearchJob(jobId: string): Promise<SearchExecutionResult
 		providerResult = await runYouTubeSimilarProvider({ job, config }, service);
 	} else if (isInstagramSimilar(job.platform, job.targetUsername)) {
 		providerResult = await runInstagramSimilarProvider({ job, config }, service);
-	} else if (isInstagramScrapeCreators(job.platform, searchParams)) {
+	} else if (isInstagramScrapeCreators(job.platform, job.searchParams)) {
 		providerResult = await runInstagramScrapeCreatorsProvider({ job, config }, service);
-	} else if (isSimilarDiscovery(job.platform, searchParams)) {
+	} else if (isSimilarDiscovery(job.platform, job.searchParams)) {
 		console.log('[SEARCH-RUNNER] Dispatching to runSimilarDiscoveryProvider', {
 			jobId: job.id,
 			platform: job.platform,
@@ -163,7 +166,7 @@ export async function runSearchJob(jobId: string): Promise<SearchExecutionResult
 		providerResult = await runSimilarDiscoveryProvider({ job, config }, service);
 	} else {
 		throw new Error(
-			`Unsupported platform for new search runner: ${job.platform} (keywords: ${!!job.keywords}, targetUsername: ${!!job.targetUsername}, searchParams: ${JSON.stringify(searchParams)})`
+			`Unsupported platform for new search runner: ${job.platform} (keywords: ${!!job.keywords}, targetUsername: ${!!job.targetUsername}, searchParams: ${JSON.stringify(job.searchParams)})`
 		);
 	}
 
@@ -171,7 +174,7 @@ export async function runSearchJob(jobId: string): Promise<SearchExecutionResult
 
 	// Track search completion in LogSnag
 	// Only track when search completes successfully
-	if (providerResult.status === 'completed' || providerResult.status === 'has_more') {
+	if (providerResult.status === 'completed') {
 		const searchType = job.keywords ? 'keyword' : 'similar';
 		const user = await getUserProfile(job.userId);
 		await trackSearchRan({

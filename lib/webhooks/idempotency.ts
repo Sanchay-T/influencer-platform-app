@@ -18,7 +18,7 @@
  *   }
  */
 
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { type WebhookSource, type WebhookStatus, webhookEvents } from '@/lib/db/schema';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
@@ -149,7 +149,7 @@ export async function checkWebhookIdempotency(
 				eventType,
 				status: 'processing',
 				eventTimestamp,
-				payload: payload as any,
+				payload,
 				metadata: {
 					receivedAt: new Date().toISOString(),
 				},
@@ -171,14 +171,18 @@ export async function checkWebhookIdempotency(
 	} catch (error) {
 		// If we fail to check idempotency, log but allow processing
 		// Better to potentially duplicate than to drop events
-		logger.error('Failed to check webhook idempotency, allowing processing', {
-			metadata: {
-				eventId,
-				source,
-				eventType,
-				error: error instanceof Error ? error.message : 'Unknown error',
-			},
-		});
+		logger.error(
+			'Failed to check webhook idempotency, allowing processing',
+			error instanceof Error ? error : new Error(String(error)),
+			{
+				metadata: {
+					eventId,
+					source,
+					eventType,
+					error: error instanceof Error ? error.message : 'Unknown error',
+				},
+			}
+		);
 
 		return {
 			shouldProcess: true,
@@ -204,12 +208,16 @@ export async function markWebhookCompleted(eventId: string): Promise<void> {
 			metadata: { eventId },
 		});
 	} catch (error) {
-		logger.error('Failed to mark webhook as completed', {
-			metadata: {
-				eventId,
-				error: error instanceof Error ? error.message : 'Unknown error',
-			},
-		});
+		logger.error(
+			'Failed to mark webhook as completed',
+			error instanceof Error ? error : new Error(String(error)),
+			{
+				metadata: {
+					eventId,
+					error: error instanceof Error ? error.message : 'Unknown error',
+				},
+			}
+		);
 		// Don't throw - the webhook was processed, just logging failed
 	}
 }
@@ -228,17 +236,21 @@ export async function markWebhookFailed(eventId: string, errorMessage: string): 
 			})
 			.where(eq(webhookEvents.eventId, eventId));
 
-		logger.error('Webhook processing failed', {
+		logger.error('Webhook processing failed', undefined, {
 			metadata: { eventId, errorMessage },
 		});
 	} catch (error) {
-		logger.error('Failed to mark webhook as failed', {
-			metadata: {
-				eventId,
-				originalError: errorMessage,
-				error: error instanceof Error ? error.message : 'Unknown error',
-			},
-		});
+		logger.error(
+			'Failed to mark webhook as failed',
+			error instanceof Error ? error : new Error(String(error)),
+			{
+				metadata: {
+					eventId,
+					originalError: errorMessage,
+					error: error instanceof Error ? error.message : 'Unknown error',
+				},
+			}
+		);
 	}
 }
 
@@ -276,13 +288,12 @@ export async function cleanupOldWebhookEvents(olderThanDays: number = 30): Promi
 	cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
 
 	// Only delete completed events - keep failed for debugging
-	const result = await db.execute(
-		`DELETE FROM webhook_events
-     WHERE status = 'completed'
-     AND created_at < $1
-     RETURNING id`,
-		[cutoffDate]
-	);
+	const result = await db.execute(sql`
+    DELETE FROM webhook_events
+    WHERE status = 'completed'
+    AND created_at < ${cutoffDate}
+    RETURNING id
+  `);
 
 	const deletedCount = Array.isArray(result) ? result.length : 0;
 

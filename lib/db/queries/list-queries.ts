@@ -1,5 +1,6 @@
 import { and, desc, eq, inArray, or, sql } from 'drizzle-orm';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { isRecord, isString, toRecord } from '@/lib/utils/type-guards';
 import { db } from '../index';
 import {
 	type CreatorList,
@@ -84,6 +85,18 @@ export type CollaboratorInput = {
 	role: CreatorListRole;
 };
 
+type AccessibleList = {
+	list: CreatorList;
+	role: CreatorListRole;
+};
+
+const resolveCreatorListRole = (value: unknown): CreatorListRole | null => {
+	if (value === 'owner' || value === 'editor' || value === 'viewer') {
+		return value;
+	}
+	return null;
+};
+
 async function findInternalUser(clerkUserId: string) {
 	const user = await db.query.users.findFirst({
 		where: eq(users.userId, clerkUserId),
@@ -94,7 +107,10 @@ async function findInternalUser(clerkUserId: string) {
 	return user;
 }
 
-async function fetchAccessibleList(listId: string, internalUserId: string) {
+async function fetchAccessibleList(
+	listId: string,
+	internalUserId: string
+): Promise<AccessibleList | null> {
 	const list = await db.query.creatorLists.findFirst({
 		where: eq(creatorLists.id, listId),
 	});
@@ -104,7 +120,7 @@ async function fetchAccessibleList(listId: string, internalUserId: string) {
 	}
 
 	if (list.ownerId === internalUserId) {
-		return { list, role: 'owner' as CreatorListRole };
+		return { list, role: 'owner' };
 	}
 
 	const collaborator = await db.query.creatorListCollaborators.findFirst({
@@ -119,7 +135,12 @@ async function fetchAccessibleList(listId: string, internalUserId: string) {
 		return null;
 	}
 
-	return { list, role: collaborator.role as CreatorListRole };
+	const role = resolveCreatorListRole(collaborator.role);
+	if (!role) {
+		return null;
+	}
+
+	return { list, role };
 }
 
 function assertListRole(role: CreatorListRole, required: CreatorListRole | CreatorListRole[]) {
@@ -136,6 +157,22 @@ function buildStats(count: number, followerSum: number) {
 		updatedAt: new Date().toISOString(),
 	};
 }
+
+const normalizeEngagementRate = (value?: number | null): string | null => {
+	if (typeof value !== 'number' || !Number.isFinite(value)) {
+		return null;
+	}
+	return value.toString();
+};
+
+const mergeMetadata = (
+	current: unknown,
+	incoming?: Record<string, unknown>
+): Record<string, unknown> => {
+	const currentRecord = toRecord(current) ?? {};
+	const incomingRecord = toRecord(incoming) ?? {};
+	return { ...currentRecord, ...incomingRecord };
+};
 
 async function refreshListStats(listId: string) {
 	const [stats] = await db
@@ -380,12 +417,15 @@ export async function deleteList(clerkUserId: string, listId: string) {
 		await db.delete(creatorLists).where(eq(creatorLists.id, listId));
 		structuredConsole.debug('[LIST-DELETE] Base row removed', { listId });
 	} catch (error) {
+		const errorRecord = isRecord(error) ? error : null;
+		const errorCode = errorRecord?.code;
+		const errorDetail = errorRecord?.detail;
 		structuredConsole.error('[LIST-DELETE] Error during delete sequence', {
 			listId,
 			userId: user.id,
-			message: (error as Error).message,
-			code: (error as any)?.code,
-			detail: (error as any)?.detail,
+			message: error instanceof Error ? error.message : String(error),
+			code: isString(errorCode) ? errorCode : undefined,
+			detail: isString(errorDetail) ? errorDetail : undefined,
 		});
 		throw error;
 	}
@@ -468,7 +508,7 @@ export async function duplicateList(clerkUserId: string, listId: string, name?: 
 			creatorCount: Number(stats?.creatorCount ?? 0),
 			followerSum: Number(stats?.followerSum ?? 0),
 			collaboratorCount: 0,
-			viewerRole: 'owner' as CreatorListRole,
+			viewerRole: 'owner',
 		};
 	});
 }
@@ -493,6 +533,9 @@ async function upsertCreatorProfile(tx: typeof db, creator: CreatorInput) {
 			(creator.followers && creator.followers !== current.followers);
 
 		if (needsUpdate) {
+			const mergedMetadata = mergeMetadata(current.metadata, creator.metadata);
+			const normalizedEngagement =
+				normalizeEngagementRate(creator.engagementRate) ?? current.engagementRate ?? null;
 			const [updated] = await tx
 				.update(creatorProfiles)
 				.set({
@@ -501,9 +544,9 @@ async function upsertCreatorProfile(tx: typeof db, creator: CreatorInput) {
 					avatarUrl: creator.avatarUrl ?? current.avatarUrl,
 					url: creator.url ?? current.url,
 					followers: creator.followers ?? current.followers,
-					engagementRate: creator.engagementRate ?? current.engagementRate,
+					engagementRate: normalizedEngagement,
 					category: creator.category ?? current.category,
-					metadata: { ...current.metadata, ...(creator.metadata ?? {}) },
+					metadata: mergedMetadata,
 					updatedAt: new Date(),
 				})
 				.where(eq(creatorProfiles.id, current.id))
@@ -513,6 +556,7 @@ async function upsertCreatorProfile(tx: typeof db, creator: CreatorInput) {
 		return current;
 	}
 
+	const normalizedEngagement = normalizeEngagementRate(creator.engagementRate);
 	const [profile] = await tx
 		.insert(creatorProfiles)
 		.values({
@@ -523,9 +567,9 @@ async function upsertCreatorProfile(tx: typeof db, creator: CreatorInput) {
 			avatarUrl: creator.avatarUrl ?? null,
 			url: creator.url ?? null,
 			followers: creator.followers ?? null,
-			engagementRate: creator.engagementRate ?? null,
+			engagementRate: normalizedEngagement,
 			category: creator.category ?? null,
-			metadata: creator.metadata ?? {},
+			metadata: mergeMetadata({}, creator.metadata),
 		})
 		.returning();
 

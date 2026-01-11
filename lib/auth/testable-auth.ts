@@ -1,4 +1,6 @@
+import { createHmac } from 'node:crypto';
 import { headers as nextHeaders } from 'next/headers';
+import { isBoolean, isNumber, isString, toRecord } from '@/lib/utils/type-guards';
 
 export type TestAuthPayload = {
 	userId: string;
@@ -22,7 +24,6 @@ function base64UrlDecode(str: string): Buffer {
 function hmacSha256Base64Url(data: string, secret: string): string {
 	// Use Node crypto only in Node/server runtime
 	// This module is never imported by middleware (edge) in our setup.
-	const { createHmac } = require('crypto') as typeof import('crypto');
 	const h = createHmac('sha256', secret);
 	h.update(data);
 	return base64UrlEncode(h.digest());
@@ -42,8 +43,12 @@ export function buildTestAuthHeaders(payload: TestAuthPayload, secret?: string) 
 	};
 }
 
+type HeaderReader = {
+	get(name: string): string | null;
+};
+
 export function verifyTestAuthHeaders(
-	h: Headers,
+	h: HeaderReader,
 	opts?: { maxAgeSeconds?: number }
 ): TestAuthPayload | null {
 	if (isProd) return null;
@@ -59,8 +64,14 @@ export function verifyTestAuthHeaders(
 
 	try {
 		const buf = base64UrlDecode(token);
-		const payload = JSON.parse(buf.toString('utf8')) as TestAuthPayload;
-		if (!payload || typeof payload.userId !== 'string') return null;
+		const parsed = toRecord(JSON.parse(buf.toString('utf8')));
+		if (!(parsed && isString(parsed.userId))) return null;
+		const payload: TestAuthPayload = {
+			userId: parsed.userId,
+			email: isString(parsed.email) ? parsed.email : undefined,
+			admin: isBoolean(parsed.admin) ? parsed.admin : undefined,
+			iat: isNumber(parsed.iat) ? parsed.iat : undefined,
+		};
 		// Basic age check
 		const maxAge = opts?.maxAgeSeconds ?? 3600; // 1 hour default
 		if (payload.iat && Math.floor(Date.now() / 1000) - payload.iat > maxAge) return null;
@@ -71,9 +82,9 @@ export function verifyTestAuthHeaders(
 }
 
 // Convenience helper for server route handlers to peek payload
-export function getTestAuthFromRequestHeaders(): TestAuthPayload | null {
+export async function getTestAuthFromRequestHeaders(): Promise<TestAuthPayload | null> {
 	try {
-		const h = nextHeaders();
+		const h = await nextHeaders();
 		return verifyTestAuthHeaders(h);
 	} catch {
 		return null;

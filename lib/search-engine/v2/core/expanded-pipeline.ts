@@ -17,6 +17,7 @@ import type {
 	PipelineContext,
 	PipelineMetrics,
 	PipelineResult,
+	Platform,
 	SearchConfig,
 } from './types';
 
@@ -189,7 +190,7 @@ function mergeResults(current: PipelineResult, continuation: PipelineResult): Pi
  * Standalone runner with keyword expansion (for testing)
  */
 export async function runExpandedStandalone(
-	platform: string,
+	platform: Platform,
 	keywords: string[],
 	targetResults: number,
 	config: SearchConfig
@@ -204,7 +205,7 @@ export async function runExpandedStandalone(
 	const context: PipelineContext = {
 		jobId: `standalone-expanded-${Date.now()}`,
 		userId: 'test-user',
-		platform: platform as 'tiktok' | 'youtube' | 'instagram',
+		platform,
 		keywords,
 		targetResults,
 	};

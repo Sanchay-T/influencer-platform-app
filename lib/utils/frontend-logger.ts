@@ -1,5 +1,6 @@
 import { emitClientLog } from '@/lib/logging/react/helpers';
 import { LogCategory, type LogContext, LogLevel } from '@/lib/logging/types';
+import { toRecord } from '@/lib/utils/type-guards';
 
 // Breadcrumb: frontend logging facade -> consumed by client instrumentation (AuthLogger, NavigationLogger, onboarding flows).
 
@@ -9,8 +10,21 @@ interface ExtendedLogContext extends LogContext {
 
 interface ApiCallOptions {
 	method?: string;
-	body?: any;
+	body?: unknown;
 	headers?: Record<string, string>;
+}
+
+export interface LoggedApiResponse<T = unknown> {
+	ok: boolean;
+	status: number;
+	statusText: string;
+	headers: Headers;
+	json: () => Promise<T>;
+	data: T;
+	_parsedData: T;
+	_duration: number;
+	_requestId: string;
+	raw: Response;
 }
 
 const SESSION_ID = `session_${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -34,21 +48,26 @@ function buildContext(
 	return context;
 }
 
-function sanitizePayload(payload: any): any {
+function sanitizePayload(payload: unknown): unknown {
 	if (!payload || typeof payload !== 'object') return payload;
-	const clone = Array.isArray(payload) ? [...payload] : { ...payload };
+	if (Array.isArray(payload)) {
+		return payload.map((item) => sanitizePayload(item));
+	}
 
-	Object.keys(clone).forEach((key) => {
-		const value = clone[key];
+	const record = toRecord(payload);
+	if (!record) return payload;
+
+	const clone: Record<string, unknown> = { ...record };
+	for (const [key, value] of Object.entries(clone)) {
 		if (value && typeof value === 'object') {
 			clone[key] = sanitizePayload(value);
-			return;
+			continue;
 		}
 
 		if (SENSITIVE_FIELDS.some((field) => key.toLowerCase().includes(field))) {
 			clone[key] = '[REDACTED]';
 		}
-	});
+	}
 
 	return clone;
 }
@@ -84,14 +103,14 @@ class FrontendLogger {
 		FrontendLogger.emit(LogLevel.DEBUG, `Step: ${step}`, LogCategory.UI, context, metadata);
 	}
 
-	static logUserAction(action: string, details: any, context?: LogContext) {
+	static logUserAction(action: string, details: unknown, context?: LogContext) {
 		FrontendLogger.emit(LogLevel.DEBUG, `User action: ${action}`, LogCategory.UI, context, {
 			action,
 			details: sanitizePayload(details),
 		});
 	}
 
-	static logFormAction(formName: string, action: 'submit' | 'validation' | 'error', data: any) {
+	static logFormAction(formName: string, action: 'submit' | 'validation' | 'error', data: unknown) {
 		FrontendLogger.emit(LogLevel.DEBUG, `Form ${action}: ${formName}`, LogCategory.UI, undefined, {
 			formName,
 			action,
@@ -103,7 +122,7 @@ class FrontendLogger {
 		url: string,
 		options: ApiCallOptions = {},
 		context?: LogContext
-	): Promise<any> {
+	): Promise<LoggedApiResponse<unknown>> {
 		const method = options.method || 'GET';
 		const start = Date.now();
 		const requestId = `api_${start}_${Math.random().toString(36).substring(7)}`;
@@ -180,24 +199,28 @@ class FrontendLogger {
 		});
 	}
 
-	static logAuth(event: 'login' | 'logout' | 'session_check' | 'user_loaded', data: any) {
+	static logAuth(event: 'login' | 'logout' | 'session_check' | 'user_loaded', data: unknown) {
+		const record = toRecord(data);
+		const payload = record ? { ...record, event } : { event, data };
+		const sanitized = sanitizePayload(payload);
+		const metadata = toRecord(sanitized) ?? { payload: sanitized };
 		FrontendLogger.emit(
 			LogLevel.DEBUG,
 			`Auth event: ${event}`,
 			LogCategory.AUTH,
 			undefined,
-			sanitizePayload({ ...data, event })
+			metadata
 		);
 	}
 
-	static logSuccess(operation: string, result: any, context?: LogContext) {
+	static logSuccess(operation: string, result: unknown, context?: LogContext) {
 		FrontendLogger.emit(LogLevel.DEBUG, `Success: ${operation}`, LogCategory.UI, context, {
 			operation,
 			result: sanitizePayload(result),
 		});
 	}
 
-	static logError(operation: string, error: any, context?: LogContext) {
+	static logError(operation: string, error: unknown, context?: LogContext) {
 		const normalized =
 			error instanceof Error
 				? error
@@ -217,7 +240,7 @@ class FrontendLogger {
 		);
 	}
 
-	static logEmailEvent(type: 'scheduled' | 'sent' | 'failed', emailType: string, details: any) {
+	static logEmailEvent(type: 'scheduled' | 'sent' | 'failed', emailType: string, details: unknown) {
 		FrontendLogger.emit(
 			LogLevel.DEBUG,
 			`Email ${type}: ${emailType}`,

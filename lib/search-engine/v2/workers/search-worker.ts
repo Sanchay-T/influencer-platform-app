@@ -40,6 +40,9 @@ const MAX_RESULTS_PER_KEYWORD = 50;
 // Maximum continuation runs for pagination
 const MAX_CONTINUATION_RUNS = 5;
 
+const isPlatform = (value: unknown): value is Platform =>
+	value === 'tiktok' || value === 'youtube' || value === 'instagram';
+
 // ============================================================================
 // Main Worker Function
 // ============================================================================
@@ -55,6 +58,8 @@ export interface ProcessSearchOptions {
 export async function processSearch(options: ProcessSearchOptions): Promise<SearchWorkerResult> {
 	const { message } = options;
 	const { jobId, platform, keyword, batchIndex, totalKeywords, userId, targetResults } = message;
+
+	const normalizedPlatform = isPlatform(platform) ? platform : 'tiktok';
 
 	const startTime = Date.now();
 
@@ -108,8 +113,8 @@ export async function processSearch(options: ProcessSearchOptions): Promise<Sear
 		// Step 1: Get Platform Adapter and Config
 		// ========================================================================
 
-		const adapter = getAdapter(platform as Platform);
-		const config = buildConfig(platform as Platform);
+		const adapter = getAdapter(normalizedPlatform);
+		const config = buildConfig(normalizedPlatform);
 
 		// ========================================================================
 		// Step 2: Fetch Creators from API
@@ -257,7 +262,7 @@ export async function processSearch(options: ProcessSearchOptions): Promise<Sear
 
 			const { batchesDispatched } = await dispatchEnrichmentBatches({
 				jobId,
-				platform: platform as Platform,
+				platform: normalizedPlatform,
 				creatorIds,
 				userId,
 			});

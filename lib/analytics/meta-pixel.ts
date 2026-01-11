@@ -22,6 +22,14 @@ export function trackMetaEvent(event: string, params?: Record<string, unknown>):
 }
 
 /**
+ * Track lead/signup (account created, before payment)
+ * @see https://developers.facebook.com/docs/meta-pixel/reference#standard-events
+ */
+export function trackLead(): void {
+	trackMetaEvent('Lead');
+}
+
+/**
  * Track user registration/signup completion
  * @see https://developers.facebook.com/docs/meta-pixel/reference#standard-events
  */

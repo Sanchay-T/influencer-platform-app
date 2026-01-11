@@ -49,7 +49,7 @@ export const DEFAULT_CONFIG = {
 	keywordsPerExpansion: 5,
 	maxExpansionRuns: 10,
 	maxKeywordsTotal: 50,
-} as const;
+};
 
 // ============================================================================
 // Platform-Specific Timeout Overrides
@@ -79,7 +79,7 @@ export const ENDPOINTS = {
 	instagram: {
 		search: '/v1/instagram/reels/search',
 	},
-} as const;
+};
 
 // ============================================================================
 // Build Config for Platform
@@ -134,7 +134,7 @@ export function buildConfig(platform: Platform): SearchConfig {
 export const COST = {
 	// $47 per 25,000 calls
 	perApiCall: 47 / 25_000, // ~$0.00188
-} as const;
+};
 
 // ============================================================================
 // Email Extraction

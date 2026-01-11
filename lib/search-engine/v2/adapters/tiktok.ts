@@ -5,8 +5,17 @@
  * Handles fetching from ScrapeCreators API and normalizing results.
  */
 
+import {
+	getNumberProperty,
+	getRecordProperty,
+	getStringProperty,
+	isNumber,
+	isString,
+	toArray,
+	toRecord,
+} from '@/lib/utils/type-guards';
 import { EMAIL_REGEX, ENDPOINTS } from '../core/config';
-import type { FetchResult, NormalizedCreator, SearchConfig } from '../core/types';
+import type { FetchResult, NormalizedCreator, Platform, SearchConfig } from '../core/types';
 import type { SearchAdapter } from './interface';
 import { registerAdapter } from './interface';
 import type { TikTokProfileResponse, TikTokSearchItem, TikTokSearchResponse } from './tiktok-types';
@@ -16,7 +25,7 @@ import type { TikTokProfileResponse, TikTokSearchItem, TikTokSearchResponse } fr
 // ============================================================================
 
 class TikTokAdapter implements SearchAdapter {
-	readonly platform = 'tiktok' as const;
+	readonly platform: Platform = 'tiktok';
 
 	/**
 	 * Fetch results from TikTok search API
@@ -49,12 +58,15 @@ class TikTokAdapter implements SearchAdapter {
 				};
 			}
 
-			const payload = (await response.json()) as TikTokSearchResponse;
-			const items = payload.search_item_list ?? [];
+			const payload = await response.json();
+			const payloadRecord = toRecord(payload);
+			const items = Array.isArray(payloadRecord?.search_item_list)
+				? (payloadRecord?.search_item_list ?? [])
+				: [];
 
 			return {
 				items,
-				hasMore: Boolean(payload.has_more) && items.length > 0,
+				hasMore: Boolean(payloadRecord?.has_more) && items.length > 0,
 				nextCursor: cursorNum + items.length,
 				durationMs,
 			};
@@ -73,72 +85,90 @@ class TikTokAdapter implements SearchAdapter {
 	 * Normalize a TikTok search item to standard format
 	 */
 	normalize(raw: unknown): NormalizedCreator | null {
-		const item = raw as TikTokSearchItem;
-		const aweme = item?.aweme_info;
-		const author = aweme?.author;
+		const item = toRecord(raw);
+		const aweme = item ? toRecord(item.aweme_info) : null;
+		const author = aweme ? toRecord(aweme.author) : null;
 
-		if (!author?.unique_id) {
+		const uniqueId = author ? getStringProperty(author, 'unique_id') : null;
+		if (!uniqueId) {
 			return null;
 		}
 
-		const bio = author.signature ?? '';
+		const bio = getStringProperty(author ?? {}, 'signature') ?? '';
 		const emails = bio ? (bio.match(EMAIL_REGEX) ?? []) : [];
 
+		const getFirstUrl = (value: unknown): string | null => {
+			const list = toArray(value);
+			if (!list) return null;
+			const match = list.find(
+				(entry): entry is string => isString(entry) && entry.trim().length > 0
+			);
+			return match ?? null;
+		};
+
 		// Get avatar URL
-		const avatarUrl = author.avatar_medium?.url_list?.[0] ?? '';
+		const avatarMedium = getRecordProperty(author ?? {}, 'avatar_medium');
+		const avatarUrl = getFirstUrl(avatarMedium?.url_list) ?? '';
 
 		// Get video cover/thumbnail
-		const video = aweme.video ?? {};
-		const coverCandidates = [
-			video.cover?.url_list?.[0],
-			video.dynamic_cover?.url_list?.[0],
-			video.origin_cover?.url_list?.[0],
-			video.animated_cover?.url_list?.[0],
-			video.share_cover?.url_list?.[0],
-			video.play_addr?.url_list?.[0],
-			video.download_addr?.url_list?.[0],
-		];
-		const coverUrl = coverCandidates.find((u) => typeof u === 'string' && u.trim()) ?? '';
-		const thumbnailUrl = coverUrl || video.thumbnail?.url_list?.[0] || video.thumbnail_url || '';
+		const video = getRecordProperty(aweme ?? {}, 'video') ?? {};
+		const coverUrl =
+			getFirstUrl(getRecordProperty(video, 'cover')?.url_list) ??
+			getFirstUrl(getRecordProperty(video, 'dynamic_cover')?.url_list) ??
+			getFirstUrl(getRecordProperty(video, 'origin_cover')?.url_list) ??
+			getFirstUrl(getRecordProperty(video, 'animated_cover')?.url_list) ??
+			getFirstUrl(getRecordProperty(video, 'share_cover')?.url_list) ??
+			getFirstUrl(getRecordProperty(video, 'play_addr')?.url_list) ??
+			getFirstUrl(getRecordProperty(video, 'download_addr')?.url_list) ??
+			'';
+		const thumbnailUrl =
+			coverUrl ||
+			getFirstUrl(getRecordProperty(video, 'thumbnail')?.url_list) ||
+			getStringProperty(video, 'thumbnail_url') ||
+			'';
 
 		// Extract hashtags
-		const hashtags = Array.isArray(aweme.text_extra)
-			? aweme.text_extra
-					.filter((t) => t.type === 1 && t.hashtag_name)
-					.map((t) => t.hashtag_name as string)
-			: [];
+		const textExtra = toArray(aweme?.text_extra) ?? [];
+		const hashtags = textExtra
+			.map((entry) => toRecord(entry))
+			.filter((entry) => (entry ? entry.type === 1 : false))
+			.map((entry) => (entry ? getStringProperty(entry, 'hashtag_name') : null))
+			.filter((value): value is string => Boolean(value));
 
-		const stats = aweme.statistics ?? {};
-		const contentId = aweme.aweme_id ?? `${author.unique_id}-${Date.now()}`;
+		const stats = getRecordProperty(aweme ?? {}, 'statistics') ?? {};
+		const contentId = getStringProperty(aweme ?? {}, 'aweme_id') ?? `${uniqueId}-${Date.now()}`;
 
 		const creator: NormalizedCreator = {
 			platform: 'TikTok',
 			id: contentId,
-			mergeKey: author.unique_id,
+			mergeKey: uniqueId,
 
 			creator: {
-				username: author.unique_id,
-				name: author.nickname || author.unique_id,
-				followers: author.follower_count ?? 0,
+				username: uniqueId,
+				name: getStringProperty(author ?? {}, 'nickname') ?? uniqueId,
+				followers: getNumberProperty(author ?? {}, 'follower_count') ?? 0,
 				avatarUrl,
 				bio,
 				emails,
-				verified: Boolean(author.is_verified || author.verified),
-				uniqueId: author.unique_id,
+				verified: Boolean(author?.is_verified || author?.verified),
+				uniqueId,
 			},
 
 			content: {
 				id: contentId,
-				url: aweme.share_url ?? '',
-				description: aweme.desc ?? '',
+				url: getStringProperty(aweme ?? {}, 'share_url') ?? '',
+				description: getStringProperty(aweme ?? {}, 'desc') ?? '',
 				thumbnail: thumbnailUrl,
 				statistics: {
-					views: stats.play_count ?? 0,
-					likes: stats.digg_count ?? 0,
-					comments: stats.comment_count ?? 0,
-					shares: stats.share_count ?? 0,
+					views: getNumberProperty(stats, 'play_count') ?? 0,
+					likes: getNumberProperty(stats, 'digg_count') ?? 0,
+					comments: getNumberProperty(stats, 'comment_count') ?? 0,
+					shares: getNumberProperty(stats, 'share_count') ?? 0,
 				},
-				postedAt: aweme.create_time ? new Date(aweme.create_time * 1000).toISOString() : undefined,
+				postedAt: (() => {
+					const created = getNumberProperty(aweme ?? {}, 'create_time');
+					return isNumber(created) ? new Date(created * 1000).toISOString() : undefined;
+				})(),
 			},
 
 			hashtags,
@@ -147,8 +177,8 @@ class TikTokAdapter implements SearchAdapter {
 			preview: thumbnailUrl || undefined,
 			previewUrl: thumbnailUrl || undefined,
 			video: {
-				description: aweme.desc ?? '',
-				url: aweme.share_url ?? '',
+				description: getStringProperty(aweme ?? {}, 'desc') ?? '',
+				url: getStringProperty(aweme ?? {}, 'share_url') ?? '',
 				preview: thumbnailUrl || undefined,
 				previewUrl: thumbnailUrl || undefined,
 				cover: coverUrl || undefined,
@@ -156,10 +186,10 @@ class TikTokAdapter implements SearchAdapter {
 				thumbnail: thumbnailUrl || undefined,
 				thumbnailUrl: thumbnailUrl || undefined,
 				statistics: {
-					views: stats.play_count ?? 0,
-					likes: stats.digg_count ?? 0,
-					comments: stats.comment_count ?? 0,
-					shares: stats.share_count ?? 0,
+					views: getNumberProperty(stats, 'play_count') ?? 0,
+					likes: getNumberProperty(stats, 'digg_count') ?? 0,
+					comments: getNumberProperty(stats, 'comment_count') ?? 0,
+					shares: getNumberProperty(stats, 'share_count') ?? 0,
 				},
 			},
 		};
@@ -232,13 +262,19 @@ class TikTokAdapter implements SearchAdapter {
 				};
 			}
 
-			const data = (await response.json()) as TikTokProfileResponse;
-			const profileUser = data.user ?? {};
-			const newBio = profileUser.signature || profileUser.desc || creator.creator.bio || '';
-			const externalUrl =
-				typeof profileUser.bioLink?.link === 'string' && profileUser.bioLink.link.trim().length > 0
-					? profileUser.bioLink.link.trim()
-					: null;
+			const data = await response.json();
+			const dataRecord = toRecord(data);
+			const profileUser = dataRecord ? (toRecord(dataRecord.user) ?? {}) : {};
+			const newBio =
+				getStringProperty(profileUser, 'signature') ??
+				getStringProperty(profileUser, 'desc') ??
+				creator.creator.bio ??
+				'';
+			const bioLink = getRecordProperty(profileUser, 'bioLink');
+			const externalUrl = (() => {
+				const link = bioLink ? getStringProperty(bioLink, 'link') : null;
+				return link && link.trim().length > 0 ? link.trim() : null;
+			})();
 
 			const emailsFromBio = newBio ? (newBio.match(EMAIL_REGEX) ?? []) : [];
 			const mergedEmails = [...new Set([...(creator.creator.emails ?? []), ...emailsFromBio])];

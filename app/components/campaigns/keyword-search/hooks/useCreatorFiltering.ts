@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
+import { toRecord } from '@/lib/utils/type-guards';
 
 export interface UseCreatorFilteringOptions {
 	creators: Array<Record<string, unknown>>;
@@ -53,9 +54,9 @@ function filterByViews(
 	if (!isInstagramKeyword) return creators;
 
 	return creators.filter((creator) => {
-		const video = creator?.video as Record<string, unknown> | undefined;
-		const statistics = video?.statistics as Record<string, unknown> | undefined;
-		const stats = (video?.stats || creator?.stats) as Record<string, unknown> | undefined;
+		const video = toRecord(creator?.video);
+		const statistics = toRecord(video?.statistics);
+		const stats = toRecord(video?.stats ?? creator?.stats);
 
 		const rawViewCount =
 			statistics?.views ??

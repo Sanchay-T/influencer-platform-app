@@ -42,10 +42,11 @@ export async function GET(request: Request) {
 				totalCount: Object.values(configs).reduce((sum, catConfigs) => sum + catConfigs.length, 0),
 			});
 		}
-	} catch (error: any) {
+	} catch (error: unknown) {
 		structuredConsole.error('💥 [ADMIN-CONFIG] Error in GET:', error);
+		const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 		return NextResponse.json(
-			{ error: 'Internal Server Error', details: error.message },
+			{ error: 'Internal Server Error', details: errorMessage },
 			{ status: 500 }
 		);
 	}
@@ -98,10 +99,11 @@ export async function POST(request: Request) {
 			key,
 			value,
 		});
-	} catch (error: any) {
+	} catch (error: unknown) {
 		structuredConsole.error('💥 [ADMIN-CONFIG] Error in POST:', error);
+		const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 		return NextResponse.json(
-			{ error: 'Internal Server Error', details: error.message },
+			{ error: 'Internal Server Error', details: errorMessage },
 			{ status: 500 }
 		);
 	}
@@ -143,7 +145,8 @@ export async function PUT(request: Request) {
 					config.description
 				);
 				results.push({ success: true, key: `${config.category}.${config.key}` });
-			} catch (error: any) {
+			} catch (error: unknown) {
+				const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 				structuredConsole.error(
 					`❌ [ADMIN-CONFIG] Error updating ${config.category}.${config.key}:`,
 					error
@@ -151,7 +154,7 @@ export async function PUT(request: Request) {
 				results.push({
 					success: false,
 					key: `${config.category}.${config.key}`,
-					error: error.message,
+					error: errorMessage,
 				});
 			}
 		}
@@ -172,10 +175,11 @@ export async function PUT(request: Request) {
 			message: `Bulk update completed: ${successCount}/${configurations.length} configurations updated`,
 			results,
 		});
-	} catch (error: any) {
+	} catch (error: unknown) {
 		structuredConsole.error('💥 [ADMIN-CONFIG] Error in PUT:', error);
+		const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 		return NextResponse.json(
-			{ error: 'Internal Server Error', details: error.message },
+			{ error: 'Internal Server Error', details: errorMessage },
 			{ status: 500 }
 		);
 	}
@@ -217,10 +221,11 @@ export async function DELETE(request: Request) {
 			category,
 			key,
 		});
-	} catch (error: any) {
+	} catch (error: unknown) {
 		structuredConsole.error('💥 [ADMIN-CONFIG] Error in DELETE:', error);
+		const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 		return NextResponse.json(
-			{ error: 'Internal Server Error', details: error.message },
+			{ error: 'Internal Server Error', details: errorMessage },
 			{ status: 500 }
 		);
 	}

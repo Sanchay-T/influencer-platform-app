@@ -25,7 +25,8 @@ export class ImageCache {
 				return existing.url;
 			}
 		} catch (error) {
-			structuredConsole.log(`⚠️ [CACHE] Check failed: ${error.message}`);
+			const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+			structuredConsole.log(`⚠️ [CACHE] Check failed: ${errorMessage}`);
 		}
 
 		// Download and cache
@@ -35,16 +36,13 @@ export class ImageCache {
 
 	private async downloadAndCache(url: string, cacheKey: string, platform: string): Promise<string> {
 		try {
-			const headers =
-				platform === 'TikTok'
-					? {
-							'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-							Referer: 'https://www.tiktok.com/',
-							Origin: 'https://www.tiktok.com',
-						}
-					: {
-							'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-						};
+			const headers: Record<string, string> = {
+				'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+			};
+			if (platform === 'TikTok') {
+				headers.Referer = 'https://www.tiktok.com/';
+				headers.Origin = 'https://www.tiktok.com';
+			}
 
 			const response = await fetch(url, { headers });
 			if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
@@ -58,7 +56,8 @@ export class ImageCache {
 					buffer = Buffer.from(await convert({ buffer, format: 'JPEG', quality: 0.85 }));
 					structuredConsole.log(`✅ [CACHE] Converted HEIC to JPEG`);
 				} catch (error) {
-					structuredConsole.log(`⚠️ [CACHE] HEIC conversion failed: ${error.message}`);
+					const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+					structuredConsole.log(`⚠️ [CACHE] HEIC conversion failed: ${errorMessage}`);
 				}
 			}
 
@@ -71,7 +70,8 @@ export class ImageCache {
 			structuredConsole.log(`✅ [CACHE] Cached: ${cacheKey} → ${blob.url}`);
 			return blob.url;
 		} catch (error) {
-			structuredConsole.log(`❌ [CACHE] Failed: ${error.message}`);
+			const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+			structuredConsole.log(`❌ [CACHE] Failed: ${errorMessage}`);
 			return `/api/proxy/image?url=${encodeURIComponent(url)}`;
 		}
 	}

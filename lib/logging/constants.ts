@@ -9,11 +9,11 @@ import { LogCategory, type LoggerConfig, LogLevel } from './types';
  * Environment-based log level thresholds
  * Determines minimum log level for each environment to control verbosity
  */
-export const LOG_LEVEL_CONFIG = {
+export const LOG_LEVEL_CONFIG: Record<'development' | 'test' | 'production', LogLevel> = {
 	development: LogLevel.WARN, // Default to WARN in dev to avoid noisy consoles
 	test: LogLevel.WARN, // Only warnings and errors in tests
 	production: LogLevel.INFO, // Info and above in production
-} as const;
+};
 
 const LOG_LEVEL_MAP: Record<string, LogLevel> = {
 	TRACE: LogLevel.DEBUG,
@@ -115,7 +115,7 @@ export const DEFAULT_LOGGER_CONFIG: Record<string, Partial<LoggerConfig>> = {
 		enableAutoContext: true,
 		prettyConsole: parseBooleanFlag(process.env.SERVER_LOG_PRETTY) ?? false,
 	},
-} as const;
+};
 
 /**
  * Sentry configuration constants
@@ -159,12 +159,44 @@ export const SENTRY_CONFIG = {
 		trackRoutes: true,
 		slowTransactionThreshold: 2000, // 2 seconds
 	},
-} as const;
+};
 
 /**
  * File logging configuration
  * For production environments where file logging is enabled
  */
+const FILE_PATTERNS: Record<LogCategory | 'default', string> = {
+	[LogCategory.API]: 'api-%DATE%.log',
+	[LogCategory.DATABASE]: 'database-%DATE%.log',
+	[LogCategory.AUTH]: 'auth-%DATE%.log',
+	[LogCategory.CONFIG]: 'config-%DATE%.log',
+	[LogCategory.CAMPAIGN]: 'campaign-%DATE%.log',
+	[LogCategory.SCRAPING]: 'scraping-%DATE%.log',
+	[LogCategory.SEARCH]: 'search-%DATE%.log',
+	[LogCategory.DATA]: 'data-%DATE%.log',
+	[LogCategory.PAYMENT]: 'payment-%DATE%.log',
+	[LogCategory.BILLING]: 'billing-%DATE%.log',
+	[LogCategory.STRIPE]: 'stripe-%DATE%.log',
+	[LogCategory.TRIAL]: 'trial-%DATE%.log',
+	[LogCategory.TIKTOK]: 'tiktok-%DATE%.log',
+	[LogCategory.INSTAGRAM]: 'instagram-%DATE%.log',
+	[LogCategory.YOUTUBE]: 'youtube-%DATE%.log',
+	[LogCategory.APIFY]: 'apify-%DATE%.log',
+	[LogCategory.QSTASH]: 'qstash-%DATE%.log',
+	[LogCategory.EMAIL]: 'email-%DATE%.log',
+	[LogCategory.STORAGE]: 'storage-%DATE%.log',
+	[LogCategory.CACHE]: 'cache-%DATE%.log',
+	[LogCategory.ADMIN]: 'admin-%DATE%.log',
+	[LogCategory.PERFORMANCE]: 'performance-%DATE%.log',
+	[LogCategory.SECURITY]: 'security-%DATE%.log',
+	[LogCategory.ONBOARDING]: 'onboarding-%DATE%.log',
+	[LogCategory.SYSTEM]: 'system-%DATE%.log',
+	[LogCategory.UI]: 'ui-%DATE%.log',
+	[LogCategory.WEBHOOK]: 'webhook-%DATE%.log',
+	[LogCategory.JOB]: 'job-%DATE%.log',
+	default: 'application-%DATE%.log',
+};
+
 export const FILE_LOGGING_CONFIG = {
 	LOG_DIRECTORY: process.cwd() + '/logs',
 
@@ -174,14 +206,8 @@ export const FILE_LOGGING_CONFIG = {
 	ROTATION_PATTERN: 'YYYY-MM-DD', // Daily rotation
 
 	// File naming patterns
-	FILE_PATTERNS: {
-		[LogCategory.API]: 'api-%DATE%.log',
-		[LogCategory.ERROR]: 'error-%DATE%.log',
-		[LogCategory.PAYMENT]: 'payment-%DATE%.log',
-		[LogCategory.SCRAPING]: 'scraping-%DATE%.log',
-		default: 'application-%DATE%.log',
-	},
-} as const;
+	FILE_PATTERNS: FILE_PATTERNS,
+};
 
 /**
  * Performance monitoring constants
@@ -203,13 +229,13 @@ export const PERFORMANCE_CONFIG = {
 		warningThreshold: 100 * 1024 * 1024, // 100MB
 		criticalThreshold: 200 * 1024 * 1024, // 200MB
 	},
-} as const;
+};
 
 /**
  * Data sanitization configuration
  * Defines sensitive fields that should be redacted from logs
  */
-export const SENSITIVE_FIELDS = [
+export const SENSITIVE_FIELDS: ReadonlyArray<string> = [
 	// Authentication & security
 	'password',
 	'token',
@@ -257,7 +283,7 @@ export const SENSITIVE_FIELDS = [
 	'RESEND_API_KEY',
 	'CLERK_SECRET_KEY',
 	'SUPABASE_SERVICE_ROLE_KEY',
-] as const;
+];
 
 /**
  * Request ID generation configuration
@@ -269,7 +295,7 @@ export const REQUEST_ID_CONFIG = {
 
 	// Headers to check for existing request IDs
 	REQUEST_ID_HEADERS: ['x-request-id', 'x-correlation-id', 'x-trace-id', 'request-id'],
-} as const;
+};
 
 /**
  * Context enrichment configuration
@@ -291,7 +317,39 @@ export const CONTEXT_ENRICHMENT = {
 		enableSystemInfo: process.env.NODE_ENV === 'development',
 		enableGitInfo: process.env.NODE_ENV === 'development',
 	},
-} as const;
+};
+
+const CATEGORY_ICONS: Record<LogCategory | 'default', string> = {
+	[LogCategory.API]: '🌐',
+	[LogCategory.DATABASE]: '🗄️',
+	[LogCategory.AUTH]: '🔐',
+	[LogCategory.CONFIG]: '⚙️',
+	[LogCategory.CAMPAIGN]: '📣',
+	[LogCategory.SCRAPING]: '🕷️',
+	[LogCategory.SEARCH]: '🔍',
+	[LogCategory.DATA]: '📊',
+	[LogCategory.PAYMENT]: '💳',
+	[LogCategory.BILLING]: '💰',
+	[LogCategory.STRIPE]: '💳',
+	[LogCategory.TRIAL]: '⏳',
+	[LogCategory.TIKTOK]: '🎵',
+	[LogCategory.INSTAGRAM]: '📸',
+	[LogCategory.YOUTUBE]: '▶️',
+	[LogCategory.APIFY]: '🧰',
+	[LogCategory.QSTASH]: '📤',
+	[LogCategory.EMAIL]: '📧',
+	[LogCategory.STORAGE]: '🗄️',
+	[LogCategory.CACHE]: '🧠',
+	[LogCategory.ADMIN]: '👑',
+	[LogCategory.PERFORMANCE]: '⚡',
+	[LogCategory.SECURITY]: '🛡️',
+	[LogCategory.ONBOARDING]: '🧭',
+	[LogCategory.SYSTEM]: '🧩',
+	[LogCategory.UI]: '🧩',
+	[LogCategory.WEBHOOK]: '🔗',
+	[LogCategory.JOB]: '🧪',
+	default: '📝',
+};
 
 /**
  * Console output configuration
@@ -311,30 +369,14 @@ export const CONSOLE_CONFIG = {
 	RESET_COLOR: '\x1b[0m',
 
 	// Icons for different categories
-	CATEGORY_ICONS: {
-		[LogCategory.API]: '🌐',
-		[LogCategory.DATABASE]: '🗄️',
-		[LogCategory.AUTH]: '🔐',
-		[LogCategory.PAYMENT]: '💳',
-		[LogCategory.BILLING]: '💰',
-		[LogCategory.STRIPE]: '💳',
-		[LogCategory.SCRAPING]: '🕷️',
-		[LogCategory.EMAIL]: '📧',
-		[LogCategory.ERROR]: '❌',
-		[LogCategory.PERFORMANCE]: '⚡',
-		[LogCategory.SECURITY]: '🛡️',
-		[LogCategory.ADMIN]: '👑',
-		[LogCategory.WEBHOOK]: '🔗',
-		[LogCategory.QSTASH]: '📤',
-		default: '📝',
-	},
+	CATEGORY_ICONS,
 
 	// Enable structured JSON output in development
 	USE_JSON_FORMAT: false,
 
 	// Include stack traces for errors
 	INCLUDE_STACK_TRACES: process.env.NODE_ENV === 'development',
-} as const;
+};
 
 /**
  * Rate limiting configuration for logs
@@ -346,11 +388,11 @@ export const RATE_LIMITING = {
 
 	// Rate limits per category (logs per minute)
 	LIMITS: {
-		[LogCategory.DEBUG]: 100,
-		[LogCategory.INFO]: 500,
-		[LogCategory.WARN]: 100,
-		[LogCategory.ERROR]: 50,
-		[LogCategory.CRITICAL]: 10,
+		[LogLevel.DEBUG]: 100,
+		[LogLevel.INFO]: 500,
+		[LogLevel.WARN]: 100,
+		[LogLevel.ERROR]: 50,
+		[LogLevel.CRITICAL]: 10,
 	},
 
 	// Burst allowance
@@ -358,13 +400,16 @@ export const RATE_LIMITING = {
 
 	// Window size in milliseconds
 	WINDOW_SIZE: 60 * 1000, // 1 minute
-} as const;
+};
 
 /**
  * Export current environment's logger configuration
  */
 export function getLoggerConfig(): Partial<LoggerConfig> {
-	const env = (process.env.NODE_ENV || 'development') as keyof typeof DEFAULT_LOGGER_CONFIG;
+	const env =
+		process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'test'
+			? process.env.NODE_ENV
+			: 'development';
 	const base = { ...(DEFAULT_LOGGER_CONFIG[env] || DEFAULT_LOGGER_CONFIG.development) };
 
 	if (parseBooleanFlag(process.env.SERVER_ENABLE_CONSOLE_LOGS) !== undefined) {
@@ -394,7 +439,10 @@ export function getLoggerConfig(): Partial<LoggerConfig> {
  * Get minimum log level for current environment
  */
 export function getMinLogLevel(): LogLevel {
-	const env = (process.env.NODE_ENV || 'development') as keyof typeof LOG_LEVEL_CONFIG;
+	const env =
+		process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'test'
+			? process.env.NODE_ENV
+			: 'development';
 	const defaultLevel = LOG_LEVEL_CONFIG[env] || LOG_LEVEL_CONFIG.development;
 	return resolveLogLevel(defaultLevel);
 }

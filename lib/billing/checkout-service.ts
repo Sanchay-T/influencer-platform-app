@@ -238,18 +238,27 @@ export class CheckoutService {
 				return { success: false };
 			}
 
-			const plan = session.metadata?.plan as PlanKey | undefined;
+			const planCandidate = session.metadata?.plan;
+			const plan = planCandidate && isValidPlan(planCandidate) ? planCandidate : undefined;
+
+			const customerId = typeof session.customer === 'string' ? session.customer : undefined;
+			const subscriptionId =
+				typeof session.subscription === 'string' ? session.subscription : undefined;
 
 			return {
 				success: true,
-				customerId: session.customer as string,
-				subscriptionId: session.subscription as string,
+				customerId,
+				subscriptionId,
 				plan,
 			};
 		} catch (error) {
-			logger.error('Failed to verify checkout session', error as Error, {
-				metadata: { sessionId },
-			});
+			logger.error(
+				'Failed to verify checkout session',
+				error instanceof Error ? error : new Error(String(error)),
+				{
+					metadata: { sessionId },
+				}
+			);
 			return { success: false };
 		}
 	}

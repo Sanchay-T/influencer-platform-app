@@ -18,13 +18,21 @@ export function TrialStatusCard({ trialData, className = '' }: TrialStatusCardPr
 	const { isPaidUser, hasActiveSubscription, currentPlan } = useBilling();
 
 	// If user has active paid subscription, show subscription status instead
-	if (isPaidUser && hasActiveSubscription && currentPlan !== 'free_trial') {
-		return (
-			<SubscriptionStatusCard
-				currentPlan={currentPlan as 'basic' | 'premium' | 'enterprise'}
-				className={className}
-			/>
-		);
+	if (isPaidUser && hasActiveSubscription) {
+		const legacyPlan =
+			currentPlan === 'glow_up'
+				? 'basic'
+				: currentPlan === 'viral_surge'
+					? 'premium'
+					: currentPlan === 'fame_flex'
+						? 'enterprise'
+						: null;
+
+		if (!legacyPlan) {
+			return null;
+		}
+
+		return <SubscriptionStatusCard currentPlan={legacyPlan} className={className} />;
 	}
 
 	if (!trialData) {

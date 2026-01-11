@@ -2,13 +2,30 @@ import { type NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-	apiVersion: '2024-06-20',
-});
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+const stripe = stripeSecretKey ? new Stripe(stripeSecretKey) : null;
+
+type PriceDetail = {
+	error?: string;
+	priceId?: string;
+	id?: string;
+	amount?: number | null;
+	currency?: string;
+	interval?: string | null;
+	interval_count?: number | null;
+	type?: string;
+	active?: boolean;
+	product?: string | Stripe.Product | Stripe.DeletedProduct;
+	displayAmount?: string;
+	displayInterval?: string;
+};
 
 export async function GET(req: NextRequest) {
 	try {
 		structuredConsole.log('🔍 [STRIPE-DEBUG] Checking all price configurations...');
+		if (!stripe) {
+			return NextResponse.json({ error: 'Stripe not configured' }, { status: 500 });
+		}
 
 		const priceIds = {
 			glow_up_monthly: process.env.STRIPE_GLOW_UP_MONTHLY_PRICE_ID,
@@ -19,7 +36,7 @@ export async function GET(req: NextRequest) {
 			fame_flex_yearly: process.env.STRIPE_FAME_FLEX_YEARLY_PRICE_ID,
 		};
 
-		const priceDetails = {};
+		const priceDetails: Record<string, PriceDetail> = {};
 
 		for (const [planName, priceId] of Object.entries(priceIds)) {
 			if (!priceId) {
@@ -39,7 +56,7 @@ export async function GET(req: NextRequest) {
 					active: price.active,
 					product: price.product,
 					// Convert to human readable
-					displayAmount: `$${(price.unit_amount! / 100).toFixed(2)}`,
+					displayAmount: `$${((price.unit_amount ?? 0) / 100).toFixed(2)}`,
 					displayInterval: price.recurring ? `per ${price.recurring.interval}` : 'one-time',
 				};
 

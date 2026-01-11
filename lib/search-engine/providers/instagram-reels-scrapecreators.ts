@@ -9,6 +9,13 @@
 
 import { OpenRouterService } from '@/lib/ai/openrouter-service';
 import { LogCategory, logger } from '@/lib/logging';
+import {
+	getNumberProperty,
+	getRecordProperty,
+	getStringProperty,
+	toRecord,
+	toStringArray,
+} from '@/lib/utils/type-guards';
 import type { SearchJobService } from '../job-service';
 import type {
 	NormalizedCreator,
@@ -71,12 +78,20 @@ type ApiResponse = {
 const MAX_PER_CALL = 60;
 
 function creatorKey(creator: NormalizedCreator) {
-	const shortcode = creator?.shortcode || creator?.video?.id;
-	if (typeof shortcode === 'string' && shortcode.trim()) return shortcode.trim().toLowerCase();
-	const id = creator?.id || creator?.video?.videoId || creator?.video?.id;
-	if (typeof id === 'string' && id.trim()) return id.trim().toLowerCase();
-	const username = creator?.creator?.username;
-	if (typeof username === 'string' && username.trim()) return username.trim().toLowerCase();
+	const record = toRecord(creator);
+	if (!record) return null;
+	const shortcode = getStringProperty(record, 'shortcode');
+	if (shortcode && shortcode.trim()) return shortcode.trim().toLowerCase();
+	const id = getStringProperty(record, 'id');
+	if (id && id.trim()) return id.trim().toLowerCase();
+	const videoRecord = getRecordProperty(record, 'video');
+	const videoId = videoRecord ? getStringProperty(videoRecord, 'videoId') : null;
+	const fallbackVideoId = videoRecord ? getStringProperty(videoRecord, 'id') : null;
+	const resolvedVideoId = videoId ?? fallbackVideoId;
+	if (resolvedVideoId && resolvedVideoId.trim()) return resolvedVideoId.trim().toLowerCase();
+	const creatorRecord = getRecordProperty(record, 'creator');
+	const username = creatorRecord ? getStringProperty(creatorRecord, 'username') : null;
+	if (username && username.trim()) return username.trim().toLowerCase();
 	return null;
 }
 
@@ -180,13 +195,24 @@ async function fetchReels(query: string, amount: number) {
 		throw new Error(`ScrapeCreators reels API ${response.status}: ${body || 'unknown error'}`);
 	}
 
-	const payload = (await response.json()) as ApiResponse;
-	if (payload?.success === false) {
-		throw new Error(payload.message || 'ScrapeCreators reels API returned success=false');
+	const payload = await response.json();
+	const payloadRecord = toRecord(payload);
+	if (!payloadRecord) {
+		throw new Error('ScrapeCreators reels API returned invalid payload');
+	}
+	if (payloadRecord.success === false) {
+		throw new Error(
+			getStringProperty(payloadRecord, 'message') ||
+				'ScrapeCreators reels API returned success=false'
+		);
 	}
 
-	const reels = Array.isArray(payload?.reels) ? payload!.reels : [];
-	return { reels, creditsRemaining: payload?.credits_remaining, durationMs };
+	const reels = Array.isArray(payloadRecord.reels) ? payloadRecord.reels : [];
+	return {
+		reels,
+		creditsRemaining: getNumberProperty(payloadRecord, 'credits_remaining') ?? undefined,
+		durationMs,
+	};
 }
 
 /**
@@ -374,7 +400,7 @@ export async function runInstagramScrapeCreatorsProvider(
 	// Create run logger with context for persistent file logging
 	const runLogger = createRunLogger('instagram-scrapecreators', job.id, {
 		userId: job.userId,
-		keywords: Array.isArray(job.keywords) ? (job.keywords as string[]) : [],
+		keywords: toStringArray(job.keywords) ?? [],
 		targetResults: job.targetResults,
 	});
 
@@ -402,15 +428,13 @@ export async function runInstagramScrapeCreatorsProvider(
 	// ========================================================
 	// LOAD CONTINUATION STATE
 	// ========================================================
-	const searchParams = (job.searchParams ?? {}) as Record<string, unknown>;
+	const searchParams = toRecord(job.searchParams) ?? {};
 
 	// Original keywords from job
-	const jobKeywords = Array.isArray(job.keywords)
-		? (job.keywords as string[]).map((k) => k?.toString?.().trim()).filter(Boolean)
-		: [];
-	const paramKeywords = Array.isArray(searchParams.allKeywords)
-		? (searchParams.allKeywords as string[]).map((k) => k?.toString?.().trim()).filter(Boolean)
-		: [];
+	const jobKeywords = (toStringArray(job.keywords) ?? []).map((k) => k.trim()).filter(Boolean);
+	const paramKeywords = (toStringArray(searchParams.allKeywords) ?? [])
+		.map((k) => k.trim())
+		.filter(Boolean);
 	const originalKeywords = Array.from(new Set([...jobKeywords, ...paramKeywords])).filter(
 		(value) => typeof value === 'string' && value.length > 0
 	);
@@ -420,9 +444,7 @@ export async function runInstagramScrapeCreatorsProvider(
 	}
 
 	// Load continuation state from searchParams
-	const processedKeywords: string[] = Array.isArray(searchParams.processedKeywords)
-		? (searchParams.processedKeywords as string[])
-		: [];
+	const processedKeywords: string[] = toStringArray(searchParams.processedKeywords) ?? [];
 	const consecutiveEmptyRuns = Number(searchParams.consecutiveEmptyRuns) || 0;
 	const currentRun = (job.processedRuns ?? 0) + 1;
 

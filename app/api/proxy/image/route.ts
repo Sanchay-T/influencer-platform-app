@@ -5,6 +5,7 @@ import { logger } from '@/lib/logging';
 import { backgroundJobLogger, jobLog } from '@/lib/logging/background-job-logger';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { LogCategory } from '@/lib/logging/types';
+import { toError } from '@/lib/utils/type-guards';
 
 // Generate placeholder for failed images
 function generatePlaceholderResponse(imageUrl: string, jobId?: string) {
@@ -119,10 +120,11 @@ export async function GET(request: Request) {
 				LogCategory.STORAGE
 			);
 
-			jobLog.complete(jobId, {
-				duration: Date.now() - startTime,
-				action: 'blob-redirect',
-			});
+			jobLog.complete(
+				jobId,
+				{ duration: Date.now() - startTime },
+				{ metadata: { action: 'blob-redirect' } }
+			);
 
 			return NextResponse.redirect(imageUrl, 302);
 		}
@@ -135,7 +137,7 @@ export async function GET(request: Request) {
 		structuredConsole.log('📡 [IMAGE-PROXY] Fetching image from source...');
 
 		// Enhanced headers to bypass CDN restrictions
-		const fetchHeaders = {
+		const fetchHeaders: Record<string, string> = {
 			'User-Agent':
 				'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
 			Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
@@ -147,8 +149,8 @@ export async function GET(request: Request) {
 
 		// Add specific headers for TikTok CDN
 		if (imageUrl.includes('tiktokcdn')) {
-			fetchHeaders['Referer'] = 'https://www.tiktok.com/';
-			fetchHeaders['Origin'] = 'https://www.tiktok.com';
+			fetchHeaders.Referer = 'https://www.tiktok.com/';
+			fetchHeaders.Origin = 'https://www.tiktok.com';
 			fetchHeaders['Sec-Fetch-Dest'] = 'image';
 			fetchHeaders['Sec-Fetch-Mode'] = 'no-cors';
 			fetchHeaders['Sec-Fetch-Site'] = 'cross-site';
@@ -163,14 +165,18 @@ export async function GET(request: Request) {
 			const fetchTime = Date.now() - startTime;
 			structuredConsole.log('📊 [IMAGE-PROXY] Fetch completed in', fetchTime + 'ms');
 			structuredConsole.log('📡 [IMAGE-PROXY] Fetch status:', response.status, response.statusText);
-		} catch (fetchError: any) {
-			structuredConsole.error('❌ [IMAGE-PROXY] Network error:', fetchError.message);
+		} catch (fetchError: unknown) {
+			const error = toError(fetchError);
+			structuredConsole.error('❌ [IMAGE-PROXY] Network error:', error.message);
 
 			// Handle DNS resolution errors (common with Instagram CDN)
-			if (
-				fetchError.cause?.code === 'ENOTFOUND' ||
-				fetchError.message.includes('getaddrinfo ENOTFOUND')
-			) {
+			const causeMessage =
+				error.cause instanceof Error
+					? error.cause.message
+					: typeof error.cause === 'string'
+						? error.cause
+						: '';
+			if (causeMessage.includes('ENOTFOUND') || error.message.includes('getaddrinfo ENOTFOUND')) {
 				structuredConsole.log('🔄 [IMAGE-PROXY] DNS resolution failed, generating placeholder...');
 				return generatePlaceholderResponse(imageUrl);
 			}
@@ -186,9 +192,9 @@ export async function GET(request: Request) {
 
 			// Strategy 1: Try without referrer headers (some CDNs block specific referrers)
 			structuredConsole.log('🔄 [IMAGE-PROXY] Retry 1: Removing referrer headers...');
-			const noReferrerHeaders = { ...fetchHeaders };
-			delete noReferrerHeaders['Referer'];
-			delete noReferrerHeaders['Origin'];
+			const noReferrerHeaders: Record<string, string> = { ...fetchHeaders };
+			delete noReferrerHeaders.Referer;
+			delete noReferrerHeaders.Origin;
 
 			response = await fetch(imageUrl, { headers: noReferrerHeaders });
 			structuredConsole.log(
@@ -355,7 +361,10 @@ export async function GET(request: Request) {
 				});
 
 				const convertTime = Date.now() - convertStartTime;
-				buffer = Buffer.from(outputBuffer);
+				buffer =
+					outputBuffer instanceof ArrayBuffer
+						? Buffer.from(outputBuffer)
+						: Buffer.from(outputBuffer);
 				contentType = 'image/jpeg';
 
 				structuredConsole.log('✅ [IMAGE-PROXY] HEIC conversion successful with heic-convert');
@@ -363,13 +372,15 @@ export async function GET(request: Request) {
 				structuredConsole.log('📏 [IMAGE-PROXY] Converted buffer size:', buffer.length, 'bytes');
 				structuredConsole.log('🎯 [IMAGE-PROXY] Final content type:', contentType);
 			} catch (heicConvertError) {
-				structuredConsole.error('❌ [IMAGE-PROXY] heic-convert failed:', heicConvertError.message);
+				const error = toError(heicConvertError);
+				structuredConsole.error('❌ [IMAGE-PROXY] heic-convert failed:', error.message);
 				structuredConsole.log('🔄 [IMAGE-PROXY] Trying Sharp as fallback...');
 
 				try {
 					// Fallback method: Try Sharp (likely to fail on Vercel)
 					const convertStartTime = Date.now();
-					buffer = await sharp(buffer).jpeg({ quality: 85 }).toBuffer();
+					const sharpBuffer = await sharp(buffer).jpeg({ quality: 85 }).toBuffer();
+					buffer = Buffer.from(sharpBuffer);
 
 					const convertTime = Date.now() - convertStartTime;
 					contentType = 'image/jpeg';
@@ -377,10 +388,8 @@ export async function GET(request: Request) {
 					structuredConsole.log('✅ [IMAGE-PROXY] HEIC conversion successful with Sharp fallback');
 					structuredConsole.log('⏱️ [IMAGE-PROXY] Conversion time:', convertTime + 'ms');
 				} catch (sharpError) {
-					structuredConsole.error(
-						'❌ [IMAGE-PROXY] Sharp fallback also failed:',
-						sharpError.message
-					);
+					const error = toError(sharpError);
+					structuredConsole.error('❌ [IMAGE-PROXY] Sharp fallback also failed:', error.message);
 					structuredConsole.log('🔄 [IMAGE-PROXY] Trying TikTok JPEG URL alternative...');
 
 					// Final fallback: Try to fetch JPEG version from TikTok
@@ -411,9 +420,10 @@ export async function GET(request: Request) {
 								throw new Error('JPEG alternative not available');
 							}
 						} catch (alternativeError) {
+							const error = toError(alternativeError);
 							structuredConsole.error(
 								'❌ [IMAGE-PROXY] All conversion methods failed:',
-								alternativeError.message
+								error.message
 							);
 							structuredConsole.log(
 								'🔄 [IMAGE-PROXY] Serving original HEIC (modern browsers may support it)'

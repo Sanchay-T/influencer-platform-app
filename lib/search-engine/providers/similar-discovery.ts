@@ -5,7 +5,9 @@
  * Supports Instagram and TikTok platforms.
  */
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { type DiscoveryAccount, discoverySearchSimilar } from '@/lib/services/influencers-club';
+import { getRecordProperty, getStringProperty, toRecord } from '@/lib/utils/type-guards';
 import type { SearchJobService } from '../job-service';
 import type {
 	NormalizedCreator,
@@ -41,6 +43,7 @@ function mapDiscoveryToCreator(
 		fullName: profile.full_name ?? '',
 		profilePicUrl: profile.picture ?? '',
 		followers: profile.followers ?? 0,
+		// biome-ignore lint/style/useNamingConvention: external API uses snake_case
 		followers_count: profile.followers ?? 0,
 		engagementRate: profile.engagement_percent ?? 0,
 		creator: {
@@ -62,12 +65,21 @@ function mapDiscoveryToCreator(
  * Dedupe key function for similar discovery creators
  */
 function similarDiscoveryDedupeKey(creator: NormalizedCreator): string | null {
-	const username = creator.username || creator.handle || creator.creator?.username;
-	if (username && typeof username === 'string') {
+	const creatorRecord = toRecord(creator);
+	if (!creatorRecord) {
+		return null;
+	}
+	const creatorNested = getRecordProperty(creatorRecord, 'creator');
+	const username =
+		getStringProperty(creatorRecord, 'username') ??
+		getStringProperty(creatorRecord, 'handle') ??
+		(creatorNested ? getStringProperty(creatorNested, 'username') : null);
+	if (username) {
 		return username.trim().toLowerCase();
 	}
-	const id = creator.id || creator.externalId;
-	if (id && typeof id === 'string') {
+	const id =
+		getStringProperty(creatorRecord, 'id') ?? getStringProperty(creatorRecord, 'externalId');
+	if (id) {
 		return id.trim().toLowerCase();
 	}
 	return null;
@@ -76,52 +88,116 @@ function similarDiscoveryDedupeKey(creator: NormalizedCreator): string | null {
 /**
  * Main provider function for similar creator discovery
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: legacy flow staged for refactor
 export async function runSimilarDiscoveryProvider(
 	{ job, config }: ProviderContext,
 	service: SearchJobService
 ): Promise<ProviderRunResult> {
 	const providerStartTime = Date.now();
-	console.log('[SIMILAR-DISCOVERY-PROVIDER] Starting', {
+	structuredConsole.log('[SIMILAR-DISCOVERY-PROVIDER] Starting', {
 		jobId: job.id,
 		platform: job.platform,
 		targetUsername: job.targetUsername,
 		targetResults: job.targetResults,
 	});
 
-	const searchParams = (job.searchParams ?? {}) as Record<string, unknown>;
-	const previousBenchmark =
-		(searchParams.searchEngineBenchmark as SearchMetricsSnapshot | undefined) ?? undefined;
+	const searchParams = toRecord(job.searchParams) ?? {};
+	const previousBenchmarkRecord = toRecord(searchParams.searchEngineBenchmark);
 
 	const toNumber = (value: unknown): number | null => {
-		if (value == null) return null;
+		if (value == null) {
+			return null;
+		}
 		const parsed = Number(value);
 		return Number.isFinite(parsed) ? parsed : null;
 	};
 
+	const parseBatches = (value: unknown): SearchMetricsSnapshot['batches'] => {
+		if (!Array.isArray(value)) {
+			return [];
+		}
+		return value
+			.map((entry): SearchMetricsSnapshot['batches'][number] | null => {
+				const record = toRecord(entry);
+				if (!record) {
+					return null;
+				}
+				const noteValue = getStringProperty(record, 'note');
+				return {
+					index: toNumber(record.index) ?? 0,
+					size: toNumber(record.size) ?? 0,
+					durationMs: toNumber(record.durationMs) ?? 0,
+					handle: getStringProperty(record, 'handle') ?? null,
+					keyword: getStringProperty(record, 'keyword') ?? null,
+					newCreators: toNumber(record.newCreators) ?? undefined,
+					totalCreators: toNumber(record.totalCreators) ?? undefined,
+					duplicates: toNumber(record.duplicates) ?? undefined,
+					...(noteValue ? { note: noteValue } : {}),
+				};
+			})
+			.filter((entry): entry is SearchMetricsSnapshot['batches'][number] => entry !== null);
+	};
+
+	const parseCosts = (value: unknown): SearchMetricsSnapshot['costs'] => {
+		if (!Array.isArray(value)) {
+			return [];
+		}
+		return value
+			.map((entry): NonNullable<SearchMetricsSnapshot['costs']>[number] | null => {
+				const record = toRecord(entry);
+				if (!record) {
+					return null;
+				}
+				const provider = getStringProperty(record, 'provider');
+				const unit = getStringProperty(record, 'unit');
+				const quantity = toNumber(record.quantity);
+				const unitCostUsd = toNumber(record.unitCostUsd);
+				const totalCostUsd = toNumber(record.totalCostUsd);
+				if (
+					!(provider && unit) ||
+					quantity === null ||
+					unitCostUsd === null ||
+					totalCostUsd === null
+				) {
+					return null;
+				}
+				const noteValue = getStringProperty(record, 'note');
+				return {
+					provider,
+					unit,
+					quantity,
+					unitCostUsd,
+					totalCostUsd,
+					...(noteValue ? { note: noteValue } : {}),
+				};
+			})
+			.filter(
+				(entry): entry is NonNullable<SearchMetricsSnapshot['costs']>[number] => entry !== null
+			);
+	};
+
 	// Extract platform from job.platform (e.g., 'similar_discovery_instagram' → 'instagram')
 	const platformSuffix = job.platform?.replace('similar_discovery_', '') ?? 'instagram';
-	const targetPlatform = (platformSuffix === 'tiktok' ? 'tiktok' : 'instagram') as
-		| 'instagram'
-		| 'tiktok';
+	const targetPlatform = platformSuffix === 'tiktok' ? 'tiktok' : 'instagram';
 
 	const priorApiCalls = toNumber(searchParams.totalApiCalls) ?? job.processedRuns ?? 0;
 	const priorPage = toNumber(searchParams.currentPage) ?? 0;
-	const previousTotalCost =
-		typeof previousBenchmark?.totalCostUsd === 'number' &&
-		Number.isFinite(previousBenchmark.totalCostUsd)
-			? previousBenchmark.totalCostUsd
-			: 0;
+	const previousTotalCost = toNumber(previousBenchmarkRecord?.totalCostUsd) ?? 0;
+	const previousProcessedCreators = toNumber(previousBenchmarkRecord?.processedCreators) ?? 0;
+	const previousBatches = parseBatches(previousBenchmarkRecord?.batches);
+	const previousCosts = parseCosts(previousBenchmarkRecord?.costs);
+	const previousTimings = toRecord(previousBenchmarkRecord?.timings);
 
 	const metrics: SearchMetricsSnapshot = {
 		apiCalls: priorApiCalls,
-		processedCreators: job.processedResults || previousBenchmark?.processedCreators || 0,
-		batches: previousBenchmark?.batches ? [...previousBenchmark.batches] : [],
+		processedCreators: job.processedResults || previousProcessedCreators || 0,
+		batches: previousBatches,
 		timings: {
-			startedAt: previousBenchmark?.timings?.startedAt ?? new Date().toISOString(),
-			finishedAt: previousBenchmark?.timings?.finishedAt,
-			totalDurationMs: previousBenchmark?.timings?.totalDurationMs,
+			startedAt: getStringProperty(previousTimings ?? {}, 'startedAt') ?? new Date().toISOString(),
+			finishedAt: getStringProperty(previousTimings ?? {}, 'finishedAt') ?? undefined,
+			totalDurationMs: toNumber(previousTimings?.totalDurationMs) ?? undefined,
 		},
-		costs: previousBenchmark?.costs ? [...previousBenchmark.costs] : [],
+		costs: previousCosts,
 		totalCostUsd: previousTotalCost,
 	};
 
@@ -182,7 +258,7 @@ export async function runSimilarDiscoveryProvider(
 	const maxPagesToFetch = Math.ceil(needMore / RESULTS_PER_PAGE);
 	let pagesFetched = 0;
 
-	console.log('[SIMILAR-DISCOVERY-PROVIDER] Starting pagination loop', {
+	structuredConsole.log('[SIMILAR-DISCOVERY-PROVIDER] Starting pagination loop', {
 		jobId: job.id,
 		needMore,
 		maxPagesToFetch,
@@ -193,7 +269,7 @@ export async function runSimilarDiscoveryProvider(
 	while (pagesFetched < maxPagesToFetch && currentPage < MAX_PAGES && remainingApiBudget > 0) {
 		const batchStart = Date.now();
 
-		console.log('[SIMILAR-DISCOVERY-PROVIDER] Fetching page', {
+		structuredConsole.log('[SIMILAR-DISCOVERY-PROVIDER] Fetching page', {
 			jobId: job.id,
 			page: currentPage,
 			pagesFetched,
@@ -207,7 +283,7 @@ export async function runSimilarDiscoveryProvider(
 				limit: RESULTS_PER_PAGE,
 			});
 
-			console.log('[SIMILAR-DISCOVERY-PROVIDER] Page fetched', {
+			structuredConsole.log('[SIMILAR-DISCOVERY-PROVIDER] Page fetched', {
 				jobId: job.id,
 				page: currentPage,
 				accounts: result.accounts.length,
@@ -248,7 +324,7 @@ export async function runSimilarDiscoveryProvider(
 			}
 		} catch (error) {
 			// Log error but continue if we have some results
-			console.warn('[similar-discovery] API error on page', currentPage, error);
+			structuredConsole.warn('[similar-discovery] API error on page', currentPage, error);
 			if (allCreatorsThisRun.length === 0) {
 				throw error;
 			}
@@ -257,7 +333,7 @@ export async function runSimilarDiscoveryProvider(
 	}
 
 	// Merge results
-	console.log('[SIMILAR-DISCOVERY-PROVIDER] Merging results', {
+	structuredConsole.log('[SIMILAR-DISCOVERY-PROVIDER] Merging results', {
 		jobId: job.id,
 		creatorsThisRun: allCreatorsThisRun.length,
 		elapsed: Date.now() - providerStartTime,
@@ -266,7 +342,7 @@ export async function runSimilarDiscoveryProvider(
 	const merged = await service.mergeCreators(allCreatorsThisRun, similarDiscoveryDedupeKey);
 	const mergedTotal = merged.total ?? 0;
 
-	console.log('[SIMILAR-DISCOVERY-PROVIDER] Results merged', {
+	structuredConsole.log('[SIMILAR-DISCOVERY-PROVIDER] Results merged', {
 		jobId: job.id,
 		mergedTotal,
 		newCount: merged.newCount,
@@ -284,7 +360,7 @@ export async function runSimilarDiscoveryProvider(
 		progress,
 	});
 
-	console.log('[SIMILAR-DISCOVERY-PROVIDER] Progress recorded', {
+	structuredConsole.log('[SIMILAR-DISCOVERY-PROVIDER] Progress recorded', {
 		jobId: job.id,
 		progress,
 		mergedTotal,
@@ -330,7 +406,7 @@ export async function runSimilarDiscoveryProvider(
 			: undefined;
 	}
 
-	console.log('[SIMILAR-DISCOVERY-PROVIDER] Completed', {
+	structuredConsole.log('[SIMILAR-DISCOVERY-PROVIDER] Completed', {
 		jobId: job.id,
 		status: hasMore ? 'partial' : 'completed',
 		processedResults: mergedTotal,

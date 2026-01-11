@@ -11,6 +11,7 @@ import {
 	Section,
 	Text,
 } from '@react-email/components';
+import type { CSSProperties } from 'react';
 
 interface TrialAbandonmentEmailProps {
 	username?: string;
@@ -116,74 +117,76 @@ export const TrialAbandonmentEmail = ({
 	</Html>
 );
 
-TrialAbandonmentEmail.PreviewProps = {
+const trialAbandonmentPreviewProps: TrialAbandonmentEmailProps = {
 	username: 'johndoe',
 	fullName: 'John Doe',
 	businessName: 'Acme Corp',
 	dashboardUrl: 'https://usegems.io/dashboard',
-} as TrialAbandonmentEmailProps;
+};
+
+TrialAbandonmentEmail.PreviewProps = trialAbandonmentPreviewProps;
 
 export default TrialAbandonmentEmail;
 
 // Styles
-const main = {
+const main: CSSProperties = {
 	backgroundColor: '#ffffff',
 	color: '#24292e',
 	fontFamily:
 		'-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji"',
 };
 
-const container = {
+const container: CSSProperties = {
 	maxWidth: '480px',
 	margin: '0 auto',
 	padding: '20px 0 48px',
 };
 
-const logo = {
+const logo: CSSProperties = {
 	margin: '0 auto 20px',
 };
 
-const title = {
+const title: CSSProperties = {
 	fontSize: '24px',
 	lineHeight: '1.25',
 	fontWeight: '600',
-	textAlign: 'center' as const,
+	textAlign: 'center',
 	margin: '0 0 30px',
 };
 
-const paragraph = {
+const paragraph: CSSProperties = {
 	fontSize: '16px',
 	lineHeight: '1.5',
 	margin: '0 0 16px',
 };
 
-const listItem = {
+const listItem: CSSProperties = {
 	fontSize: '16px',
 	lineHeight: '1.5',
 	margin: '0 0 8px',
 	paddingLeft: '20px',
 };
 
-const highlightSection = {
+const highlightSection: CSSProperties = {
 	backgroundColor: '#f8f9fa',
 	borderRadius: '8px',
 	padding: '20px',
 	margin: '24px 0',
 };
 
-const highlightText = {
+const highlightText: CSSProperties = {
 	fontSize: '18px',
 	lineHeight: '1.4',
 	margin: '0 0 16px',
-	textAlign: 'center' as const,
+	textAlign: 'center',
 };
 
-const buttonSection = {
-	textAlign: 'center' as const,
+const buttonSection: CSSProperties = {
+	textAlign: 'center',
 	margin: '32px 0',
 };
 
-const button = {
+const button: CSSProperties = {
 	fontSize: '16px',
 	backgroundColor: '#28a745',
 	color: '#fff',
@@ -195,44 +198,44 @@ const button = {
 	fontWeight: '600',
 };
 
-const testimonialSection = {
+const testimonialSection: CSSProperties = {
 	backgroundColor: '#e3f2fd',
 	borderLeft: '4px solid #2196f3',
 	padding: '16px 20px',
 	margin: '24px 0',
 };
 
-const testimonialText = {
+const testimonialText: CSSProperties = {
 	fontSize: '16px',
 	fontStyle: 'italic',
 	lineHeight: '1.5',
 	margin: '0 0 8px',
 };
 
-const testimonialAuthor = {
+const testimonialAuthor: CSSProperties = {
 	fontSize: '14px',
 	color: '#666',
 	margin: '0',
 };
 
-const link = {
+const link: CSSProperties = {
 	color: '#0066cc',
 	textDecoration: 'underline',
 };
 
-const hr = {
+const hr: CSSProperties = {
 	borderColor: '#e1e4e8',
 	margin: '42px 0 26px',
 };
 
-const footer = {
+const footer: CSSProperties = {
 	color: '#6a737d',
 	fontSize: '14px',
-	textAlign: 'center' as const,
+	textAlign: 'center',
 	margin: '0 0 10px',
 };
 
-const unsubscribeLink = {
+const unsubscribeLink: CSSProperties = {
 	color: '#6a737d',
 	fontSize: '12px',
 	textDecoration: 'underline',

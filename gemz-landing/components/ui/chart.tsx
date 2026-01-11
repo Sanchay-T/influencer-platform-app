@@ -4,9 +4,11 @@ import * as React from 'react'
 import * as RechartsPrimitive from 'recharts'
 
 import { cn } from '@/lib/utils'
+import { getStringProperty, toRecord } from '@/lib/utils/type-guards'
 
 // Format: { THEME_NAME: CSS_SELECTOR }
-const THEMES = { light: '', dark: '.dark' } as const
+const THEMES: Record<'light' | 'dark', string> = { light: '', dark: '.dark' }
+const THEME_KEYS: Array<keyof typeof THEMES> = ['light', 'dark']
 
 export type ChartConfig = {
   [k in string]: {
@@ -81,22 +83,18 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
   return (
     <style
       dangerouslySetInnerHTML={{
-        __html: Object.entries(THEMES)
-          .map(
-            ([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
+        __html: THEME_KEYS.map(
+          (theme) => `
+${THEMES[theme]} [data-chart=${id}] {
 ${colorConfig
   .map(([key, itemConfig]) => {
-    const color =
-      itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
-      itemConfig.color
+    const color = itemConfig.theme?.[theme] || itemConfig.color
     return color ? `  --color-${key}: ${color};` : null
   })
   .join('\n')}
 }
 `,
-          )
-          .join('\n'),
+        ).join('\n'),
       }}
     />
   )
@@ -138,7 +136,7 @@ function ChartTooltipContent({
     const itemConfig = getPayloadConfigFromPayload(config, item, key)
     const value =
       !labelKey && typeof label === 'string'
-        ? config[label as keyof typeof config]?.label || label
+        ? config[label]?.label || label
         : itemConfig?.label
 
     if (labelFormatter) {
@@ -184,6 +182,13 @@ function ChartTooltipContent({
           const itemConfig = getPayloadConfigFromPayload(config, item, key)
           const indicatorColor = color || item.payload.fill || item.color
 
+          const indicatorStyle: React.CSSProperties = {}
+
+          if (indicatorColor) {
+            indicatorStyle['--color-bg'] = indicatorColor
+            indicatorStyle['--color-border'] = indicatorColor
+          }
+
           return (
             <div
               key={item.dataKey}
@@ -212,10 +217,7 @@ function ChartTooltipContent({
                           },
                         )}
                         style={
-                          {
-                            '--color-bg': indicatorColor,
-                            '--color-border': indicatorColor,
-                          } as React.CSSProperties
+                          indicatorStyle
                         }
                       />
                     )
@@ -310,37 +312,17 @@ function getPayloadConfigFromPayload(
   payload: unknown,
   key: string,
 ) {
-  if (typeof payload !== 'object' || payload === null) {
+  const payloadRecord = toRecord(payload)
+  if (!payloadRecord) {
     return undefined
   }
 
-  const payloadPayload =
-    'payload' in payload &&
-    typeof payload.payload === 'object' &&
-    payload.payload !== null
-      ? payload.payload
-      : undefined
+  const payloadPayload = toRecord(payloadRecord.payload)
+  const directLabel = getStringProperty(payloadRecord, key)
+  const nestedLabel = payloadPayload ? getStringProperty(payloadPayload, key) : null
+  const configLabelKey = directLabel ?? nestedLabel ?? key
 
-  let configLabelKey: string = key
-
-  if (
-    key in payload &&
-    typeof payload[key as keyof typeof payload] === 'string'
-  ) {
-    configLabelKey = payload[key as keyof typeof payload] as string
-  } else if (
-    payloadPayload &&
-    key in payloadPayload &&
-    typeof payloadPayload[key as keyof typeof payloadPayload] === 'string'
-  ) {
-    configLabelKey = payloadPayload[
-      key as keyof typeof payloadPayload
-    ] as string
-  }
-
-  return configLabelKey in config
-    ? config[configLabelKey]
-    : config[key as keyof typeof config]
+  return config[configLabelKey] ?? config[key]
 }
 
 export {

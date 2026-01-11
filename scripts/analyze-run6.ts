@@ -1,7 +1,7 @@
-import { sql } from 'drizzle-orm';
+import { sql, desc, eq } from 'drizzle-orm';
 import { db } from '../lib/db';
 import { scrapingJobs, scrapingResults } from '../lib/db/schema';
-import { desc, eq } from 'drizzle-orm';
+import { isNumber, toArray, toRecord } from '../lib/utils/type-guards';
 
 async function analyze() {
   // Get most recent job (Run #6)
@@ -24,11 +24,13 @@ async function analyze() {
   console.log('');
   console.log('TARGET:', job.targetResults);
   console.log('');
-  console.log('Keywords (original input):', JSON.stringify(job.keywords?.slice(0, 5)), '... total:', (job.keywords as any[])?.length);
+  const keywords = toArray(job.keywords) ?? [];
+  console.log('Keywords (original input):', JSON.stringify(keywords.slice(0, 5)), '... total:', keywords.length);
   console.log('Keywords Dispatched:', job.keywordsDispatched);
   console.log('Keywords Completed:', job.keywordsCompleted);
   console.log('');
-  console.log('Creators Found (counter):', job.creatorsFound);
+  const creatorsFound = job.creatorsFound ?? 0;
+  console.log('Creators Found (counter):', creatorsFound);
   console.log('Creators Enriched:', job.creatorsEnriched);
   console.log('Enrichment Status:', job.enrichmentStatus);
   console.log('Error:', job.error || 'none');
@@ -38,7 +40,7 @@ async function analyze() {
     where: eq(scrapingResults.jobId, job.id),
   });
   
-  const creatorsInDb = (results?.creators as any[])?.length || 0;
+  const creatorsInDb = Array.isArray(results?.creators) ? results.creators.length : 0;
   console.log('');
   console.log('Creators in DB (actual):', creatorsInDb);
   
@@ -46,7 +48,11 @@ async function analyze() {
   const keysResult = await db.execute(sql`
     SELECT COUNT(*)::int as count FROM job_creator_keys WHERE job_id = ${job.id}
   `);
-  const keysCount = (keysResult as any)[0]?.count || 0;
+  const keysRows = toArray(keysResult) ?? [];
+  const firstRow = toRecord(keysRows[0]);
+  const rawCount = firstRow?.count;
+  const keysCount =
+    isNumber(rawCount) ? rawCount : typeof rawCount === 'string' ? Number(rawCount) : 0;
   console.log('Dedup keys:', keysCount);
   
   // Analysis
@@ -57,16 +63,16 @@ async function analyze() {
     console.log(`⚠️  UNDER TARGET: wanted ${job.targetResults}, got ${creatorsInDb} (${pct}%)`);
     console.log(`   Missing: ${gap} creators`);
   }
-  if (job.creatorsFound !== creatorsInDb) {
-    console.log(`⚠️  COUNTER MISMATCH: counter=${job.creatorsFound}, DB=${creatorsInDb}`);
-    console.log(`   Lost: ${job.creatorsFound - creatorsInDb} creators between count and save`);
+  if (creatorsFound !== creatorsInDb) {
+    console.log(`⚠️  COUNTER MISMATCH: counter=${creatorsFound}, DB=${creatorsInDb}`);
+    console.log(`   Lost: ${creatorsFound - creatorsInDb} creators between count and save`);
   }
   if (keysCount !== creatorsInDb) {
     console.log(`📊 Dedup efficiency: ${keysCount} keys for ${creatorsInDb} creators`);
   }
   
   // Check if keywords were expanded
-  const originalKeywords = (job.keywords as any[]) || [];
+  const originalKeywords = keywords;
   if (originalKeywords.length === job.keywordsDispatched) {
     console.log('📌 Keywords NOT expanded (dispatched same as input)');
   } else {

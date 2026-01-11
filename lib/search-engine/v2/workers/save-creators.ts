@@ -83,7 +83,7 @@ export async function saveCreatorsToJob(
 	// Step 2: Prepare rows for batch insert
 	const rows = creatorsToProcess.map((c) => ({
 		jobId,
-		platform: c.creator.platform || 'unknown',
+		platform: c.platform || 'unknown',
 		username: getDedupeKey(c).toLowerCase().trim(),
 		creatorData: c,
 	}));

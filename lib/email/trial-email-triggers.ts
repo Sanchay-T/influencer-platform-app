@@ -74,14 +74,11 @@ export async function scheduleTrialEmails(
 					emailType: 'trial_day2',
 					success: true,
 					messageId: day2Result.messageId,
-					deliveryTime: day2Result.deliveryTime,
 					delay: '2d',
 				});
 				structuredConsole.log('✅✅✅ [TRIAL-EMAILS] TRIAL DAY 2 EMAIL SCHEDULED SUCCESSFULLY');
 				structuredConsole.log('📧 [TRIAL-EMAILS] Day 2 details:', {
 					messageId: day2Result.messageId,
-					scheduledFor: day2Result.deliveryTime,
-					qstashId: day2Result.qstashId || 'N/A',
 					setupTime: Date.now() - day2StartTime + 'ms',
 				});
 			} else {
@@ -117,14 +114,11 @@ export async function scheduleTrialEmails(
 					emailType: 'trial_day5',
 					success: true,
 					messageId: day5Result.messageId,
-					deliveryTime: day5Result.deliveryTime,
 					delay: '5d',
 				});
 				structuredConsole.log('✅✅✅ [TRIAL-EMAILS] TRIAL DAY 5 EMAIL SCHEDULED SUCCESSFULLY');
 				structuredConsole.log('📧 [TRIAL-EMAILS] Day 5 details:', {
 					messageId: day5Result.messageId,
-					scheduledFor: day5Result.deliveryTime,
-					qstashId: day5Result.qstashId || 'N/A',
 					setupTime: Date.now() - day5StartTime + 'ms',
 				});
 			} else {

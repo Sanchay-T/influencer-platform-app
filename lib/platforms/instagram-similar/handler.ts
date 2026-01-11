@@ -6,24 +6,66 @@ import { structuredConsole } from '@/lib/logging/console-proxy';
 
 import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { scrapingJobs, scrapingResults } from '@/lib/db/schema';
+import { type ScrapingJob, scrapingJobs, scrapingResults } from '@/lib/db/schema';
 import { calculateApiCallLimit } from '@/lib/utils/api-limits';
+import {
+	getBooleanProperty,
+	getRecordProperty,
+	getStringProperty,
+	isRecord,
+	toError,
+	toRecord,
+} from '@/lib/utils/type-guards';
 import { extractUsername, getEnhancedInstagramProfile, getInstagramProfile } from './api';
 import {
 	extractProfileInfo,
 	transformEnhancedProfile,
 	transformInstagramProfile,
 } from './transformer';
-import type { InstagramSimilarJobResult } from './types';
+import type { InstagramSimilarCreatorRecord, InstagramSimilarJobResult } from './types';
 
 // Add simple API logging
-let simpleLogApiCall: any = null;
+type SimpleLogApiCall = (
+	platform: string,
+	jobType: string,
+	request: unknown,
+	response: unknown
+) => void;
+let simpleLogApiCall: SimpleLogApiCall | null = null;
 try {
 	const simpleLogger = require('../../../scripts/simple-api-logger.js');
-	simpleLogApiCall = simpleLogger.logApiCall;
+	if (isRecord(simpleLogger) && typeof simpleLogger.logApiCall === 'function') {
+		const logApiCall = simpleLogger.logApiCall;
+		simpleLogApiCall = (platform, jobType, request, response) => {
+			logApiCall(platform, jobType, request, response);
+		};
+	}
 } catch (error) {
 	// Logging not available
 }
+
+const isInstagramCreatorRecord = (value: unknown): value is InstagramSimilarCreatorRecord => {
+	const record = toRecord(value);
+	if (!record) return false;
+	const platform = getStringProperty(record, 'platform');
+	if (platform !== 'Instagram') return false;
+	const creatorRecord = getRecordProperty(record, 'creator');
+	if (!creatorRecord) return false;
+	const name = getStringProperty(creatorRecord, 'name');
+	const uniqueId = getStringProperty(creatorRecord, 'uniqueId');
+	const id = getStringProperty(record, 'id');
+	const username = getStringProperty(record, 'username');
+	const fullName = getStringProperty(record, 'full_name');
+	const profilePicUrl = getStringProperty(record, 'profile_pic_url');
+	const profileUrl = getStringProperty(record, 'profileUrl');
+	const isPrivate = getBooleanProperty(record, 'is_private');
+	const isVerified = getBooleanProperty(record, 'is_verified');
+	if (!(name && uniqueId && id && username && fullName && profilePicUrl && profileUrl)) {
+		return false;
+	}
+	if (isPrivate === null || isVerified === null) return false;
+	return true;
+};
 
 // Dynamic API limits based on target results and environment mode
 // const MAX_API_CALLS_FOR_TESTING = 1; // OLD: Hard-coded limit
@@ -32,7 +74,7 @@ try {
  * Process Instagram similar creator search job
  */
 export async function processInstagramSimilarJob(
-	job: any,
+	job: ScrapingJob,
 	jobId: string
 ): Promise<InstagramSimilarJobResult> {
 	structuredConsole.log(
@@ -83,7 +125,7 @@ export async function processInstagramSimilarJob(
 			})
 			.where(eq(scrapingJobs.id, jobId));
 		structuredConsole.log('✅ [INSTAGRAM-SIMILAR] Job status updated to processing');
-	} catch (updateError: any) {
+	} catch (updateError: unknown) {
 		structuredConsole.error('❌ [INSTAGRAM-SIMILAR] Error updating job status:', updateError);
 		return { status: 'error', error: 'Failed to update job status' };
 	}
@@ -91,7 +133,11 @@ export async function processInstagramSimilarJob(
 	try {
 		// Step 1: Extract and validate username
 		structuredConsole.log('🔍 [INSTAGRAM-SIMILAR] Step 1: Validating username');
-		const username = extractUsername(job.targetUsername);
+		const targetUsername = job.targetUsername ?? '';
+		if (!targetUsername) {
+			throw new Error('Missing target username for Instagram similar search');
+		}
+		const username = extractUsername(targetUsername);
 		structuredConsole.log('✅ [INSTAGRAM-SIMILAR] Username validated:', username);
 
 		// Step 2: Get Instagram profile with related profiles using Apify
@@ -109,8 +155,8 @@ export async function processInstagramSimilarJob(
 		// Simple logging - just request and response
 		if (simpleLogApiCall) {
 			const request = {
-				username: username,
-				targetUsername: job.targetUsername,
+				username,
+				targetUsername,
 			};
 
 			simpleLogApiCall('instagram', 'similar', request, profileData);
@@ -154,20 +200,22 @@ export async function processInstagramSimilarJob(
 			});
 
 			if (existingResults && existingResults.creators) {
-				const existingCreators = existingResults.creators as any[];
+				const existingCreators = Array.isArray(existingResults.creators)
+					? existingResults.creators.filter(isInstagramCreatorRecord)
+					: [];
 				structuredConsole.log(
 					`📊 [MERGE] Found ${existingCreators.length} existing creators from previous calls`
 				);
 
 				// Create set of existing IDs to avoid duplicates
 				existingCreators.forEach((creator) => {
-					const id = creator.id || creator.username || creator.creator?.username;
+					const id = creator.id || creator.username || creator.creator.uniqueId;
 					if (id) existingCreatorIds.add(id);
 				});
 
 				// Filter new creators to avoid duplicates
 				const uniqueNewCreators = newTransformedCreators.filter((creator) => {
-					const id = creator.id || creator.username || creator.creator?.username;
+					const id = creator.id || creator.username || creator.creator.uniqueId;
 					return id && !existingCreatorIds.has(id);
 				});
 
@@ -198,7 +246,7 @@ export async function processInstagramSimilarJob(
 		);
 
 		const liveBatchSize = 6; // Save every 6 profiles for frequent updates
-		const processedProfiles: any[] = []; // Track profiles processed so far
+		const processedProfiles: InstagramSimilarCreatorRecord[] = []; // Track profiles processed so far
 		let processingIndex = 0;
 
 		structuredConsole.log(
@@ -211,7 +259,7 @@ export async function processInstagramSimilarJob(
 			processingIndex = i + 1;
 
 			structuredConsole.log(
-				`🔄 [PROCESSING] Processing creator ${processingIndex}/${transformedCreators.length}: ${creator.creator?.name}`
+				`🔄 [PROCESSING] Processing creator ${processingIndex}/${transformedCreators.length}: ${creator.creator.name}`
 			);
 
 			// Add the processed creator to our list
@@ -256,7 +304,7 @@ export async function processInstagramSimilarJob(
 					await db
 						.update(scrapingResults)
 						.set({
-							creators: processedProfiles as any,
+							creators: processedProfiles,
 							createdAt: new Date(),
 						})
 						.where(eq(scrapingResults.jobId, jobId));
@@ -269,7 +317,7 @@ export async function processInstagramSimilarJob(
 					// Create new with processed profiles
 					await db.insert(scrapingResults).values({
 						jobId: jobId,
-						creators: processedProfiles as any,
+						creators: processedProfiles,
 						createdAt: new Date(),
 					});
 					structuredConsole.log(
@@ -301,7 +349,9 @@ export async function processInstagramSimilarJob(
 				});
 
 				if (verificationResults && verificationResults.creators) {
-					const savedCreators = verificationResults.creators as any[];
+					const savedCreators = Array.isArray(verificationResults.creators)
+						? verificationResults.creators
+						: [];
 					structuredConsole.log('✅ [DB-VERIFICATION] Database content verification:', {
 						savedCount: savedCreators.length,
 						expectedCount: processedProfiles.length,
@@ -379,10 +429,11 @@ export async function processInstagramSimilarJob(
 							if (i < batchEnd - 1) {
 								await new Promise((resolve) => setTimeout(resolve, 500)); // 500ms delay
 							}
-						} catch (enhancedError: any) {
+						} catch (enhancedError: unknown) {
+							const resolvedError = toError(enhancedError);
 							structuredConsole.error(
 								`❌ [INSTAGRAM-ENHANCED] Error fetching enhanced data for @${creator.username}:`,
-								enhancedError.message
+								resolvedError.message
 							);
 							// Continue with basic profile data
 						}
@@ -414,7 +465,9 @@ export async function processInstagramSimilarJob(
 					});
 
 					if (existingResults) {
-						const existingCreators = (existingResults.creators as any[]) || [];
+						const existingCreators = Array.isArray(existingResults.creators)
+							? existingResults.creators.filter(isInstagramCreatorRecord)
+							: [];
 
 						// Update the enhanced profiles in the existing results
 						for (let i = batchStart; i < batchEnd; i++) {
@@ -435,19 +488,21 @@ export async function processInstagramSimilarJob(
 							`✅ [INSTAGRAM-INTERMEDIATE] Enhanced ${batchEnd - batchStart} profiles (total: ${existingCreators.length})`
 						);
 					}
-				} catch (batchError: any) {
+				} catch (batchError: unknown) {
+					const resolvedError = toError(batchError);
 					structuredConsole.error(
 						`❌ [INSTAGRAM-BATCH] Error in batch ${Math.floor(batchStart / batchSize) + 1}:`,
-						batchError.message
+						resolvedError.message
 					);
 					structuredConsole.log(`🔄 [INSTAGRAM-BATCH] Continuing with remaining batches...`);
 					// Continue processing other batches
 				}
 			}
-		} catch (enhancedFetchingError: any) {
+		} catch (enhancedFetchingError: unknown) {
+			const resolvedError = toError(enhancedFetchingError);
 			structuredConsole.error(
 				`❌ [INSTAGRAM-SIMILAR] Critical error in enhanced fetching:`,
-				enhancedFetchingError.message
+				resolvedError.message
 			);
 			structuredConsole.log(
 				`🔄 [INSTAGRAM-SIMILAR] Skipping enhanced fetching, completing with basic profiles...`
@@ -485,7 +540,10 @@ export async function processInstagramSimilarJob(
 		});
 
 		if (finalResults && finalResults.creators) {
-			const finalCreatorCount = (finalResults.creators as any[]).length;
+			const finalCreators = Array.isArray(finalResults.creators)
+				? finalResults.creators.filter(isInstagramCreatorRecord)
+				: [];
+			const finalCreatorCount = finalCreators.length;
 			structuredConsole.log(
 				'✅ [INSTAGRAM-SIMILAR] Final results validated:',
 				finalCreatorCount,
@@ -510,7 +568,7 @@ export async function processInstagramSimilarJob(
 			if (transformedCreators.length > 0) {
 				await db.insert(scrapingResults).values({
 					jobId: jobId,
-					creators: transformedCreators as any,
+					creators: transformedCreators,
 					createdAt: new Date(),
 				});
 				structuredConsole.log(
@@ -524,7 +582,9 @@ export async function processInstagramSimilarJob(
 		// Step 6: Check if we need more API calls or can complete
 		const newProcessedRuns = currentRuns + 1;
 		const finalCreatorCount = finalResults
-			? (finalResults.creators as any[]).length
+			? Array.isArray(finalResults.creators)
+				? finalResults.creators.length
+				: 0
 			: transformedCreators.length;
 
 		structuredConsole.log('🔄 [INSTAGRAM-SIMILAR] Checking completion status:', {
@@ -622,8 +682,9 @@ export async function processInstagramSimilarJob(
 			status: 'completed',
 			processedResults: finalCreatorCount,
 		};
-	} catch (error: any) {
-		structuredConsole.error('❌ [INSTAGRAM-SIMILAR] Error processing job:', error);
+	} catch (error: unknown) {
+		const resolvedError = toError(error);
+		structuredConsole.error('❌ [INSTAGRAM-SIMILAR] Error processing job:', resolvedError);
 
 		// Update job status to error
 		try {
@@ -631,7 +692,7 @@ export async function processInstagramSimilarJob(
 				.update(scrapingJobs)
 				.set({
 					status: 'error',
-					error: error.message || 'Unknown error',
+					error: resolvedError.message || 'Unknown error',
 					completedAt: new Date(),
 					updatedAt: new Date(),
 				})
@@ -642,7 +703,7 @@ export async function processInstagramSimilarJob(
 
 		return {
 			status: 'error',
-			error: error.message || 'Failed to process Instagram similar search',
+			error: resolvedError.message || 'Failed to process Instagram similar search',
 		};
 	}
 }

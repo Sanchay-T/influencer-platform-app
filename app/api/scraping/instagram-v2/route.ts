@@ -3,9 +3,10 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { validateCreatorSearch } from '@/lib/billing';
 import { db } from '@/lib/db';
-import { campaigns, type JobStatus, scrapingJobs } from '@/lib/db/schema';
+import { campaigns, scrapingJobs } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { normalizePageParams, paginateCreators } from '@/lib/search-engine/utils/pagination';
+import { getNumberProperty, getStringProperty, toRecord } from '@/lib/utils/type-guards';
 import { getWebhookUrl } from '@/lib/utils/url-utils';
 
 // [InstagramV2Route] Breadcrumb: keyword search POST/GET entrypoint for instagram_v2 runner.
@@ -19,11 +20,23 @@ interface InstagramV2Options {
 }
 
 function sanitizeKeywords(raw: unknown): string[] {
-	if (!Array.isArray(raw)) return [];
+	if (!Array.isArray(raw)) {
+		return [];
+	}
 	return raw
 		.map((keyword) => (typeof keyword === 'string' ? keyword.trim() : ''))
 		.filter((keyword) => keyword.length > 0)
 		.slice(0, 5);
+}
+
+function buildOptions(raw: unknown): InstagramV2Options {
+	const options = toRecord(raw);
+	return {
+		maxCreators: options ? (getNumberProperty(options, 'maxCreators') ?? undefined) : undefined,
+		postsPerCreator: options
+			? (getNumberProperty(options, 'postsPerCreator') ?? undefined)
+			: undefined,
+	};
 }
 
 function buildSearchParams(options: InstagramV2Options) {
@@ -53,6 +66,7 @@ async function scheduleSearchJob(jobId: string) {
 	});
 }
 
+// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function POST(req: NextRequest) {
 	try {
 		const { userId } = await getAuthOrTest();
@@ -60,18 +74,12 @@ export async function POST(req: NextRequest) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
 
-		const body = await req.json();
-		const keywords = sanitizeKeywords(body?.keywords);
-		const targetResults = Number(body?.targetResults ?? 100);
-		const campaignId = body?.campaignId as string | undefined;
-		const options: InstagramV2Options = {
-			maxCreators:
-				typeof body?.options?.maxCreators === 'number' ? body.options.maxCreators : undefined,
-			postsPerCreator:
-				typeof body?.options?.postsPerCreator === 'number'
-					? body.options.postsPerCreator
-					: undefined,
-		};
+		const body: unknown = await req.json();
+		const bodyRecord = toRecord(body);
+		const keywords = sanitizeKeywords(bodyRecord?.keywords);
+		const targetResults = Number(bodyRecord?.targetResults ?? 100);
+		const campaignId = bodyRecord ? getStringProperty(bodyRecord, 'campaignId') : null;
+		const options = buildOptions(bodyRecord?.options);
 
 		if (!keywords.length) {
 			return NextResponse.json({ error: 'Keywords are required' }, { status: 400 });
@@ -118,17 +126,16 @@ export async function POST(req: NextRequest) {
 			);
 		}
 
-		const newJobValues = {
+		const newJobValues: typeof scrapingJobs.$inferInsert = {
 			userId,
 			keywords,
 			targetResults: adjustedTarget,
-			status: 'pending' as JobStatus,
+			status: 'pending',
 			processedRuns: 0,
 			processedResults: 0,
 			platform: 'Instagram',
 			region: 'US',
 			campaignId,
-			searchType: 'keyword' as const,
 			searchParams: buildSearchParams(options),
 			createdAt: new Date(),
 			updatedAt: new Date(),
@@ -162,6 +169,7 @@ export async function POST(req: NextRequest) {
 	}
 }
 
+// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function GET(req: NextRequest) {
 	try {
 		const { userId } = await getAuthOrTest();
@@ -176,7 +184,7 @@ export async function GET(req: NextRequest) {
 		}
 
 		const job = await db.query.scrapingJobs.findFirst({
-			where: (table, operators) => and(eq(table.id, jobId), eq(table.userId, userId)),
+			where: (table, _operators) => and(eq(table.id, jobId), eq(table.userId, userId)),
 			with: {
 				results: {
 					columns: {
@@ -203,7 +211,7 @@ export async function GET(req: NextRequest) {
 			await db
 				.update(scrapingJobs)
 				.set({
-					status: 'timeout' as JobStatus,
+					status: 'timeout',
 					error: 'Job exceeded maximum allowed time',
 					completedAt: new Date(),
 				})

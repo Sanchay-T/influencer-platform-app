@@ -14,15 +14,18 @@ import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { validateCreatorSearch } from '@/lib/billing';
 import { db } from '@/lib/db';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
-import { type JobStatus, scrapingJobs } from '@/lib/db/schema';
+import { scrapingJobs } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { qstash } from '@/lib/queue/qstash';
 import { normalizePageParams, paginateCreators } from '@/lib/search-engine/utils/pagination';
+import { isRecord, isString, toError, toRecord } from '@/lib/utils/type-guards';
 import { getWebhookUrl } from '@/lib/utils/url-utils';
 
 const TIMEOUT_MINUTES = 30;
-const VALID_PLATFORMS = ['instagram', 'tiktok'] as const;
-type ValidPlatform = (typeof VALID_PLATFORMS)[number];
+type ValidPlatform = 'instagram' | 'tiktok';
+const VALID_PLATFORMS: ValidPlatform[] = ['instagram', 'tiktok'];
+const isValidPlatform = (value: string): value is ValidPlatform =>
+	VALID_PLATFORMS.some((platform) => platform === value);
 
 export async function POST(req: NextRequest) {
 	const startTime = Date.now();
@@ -39,8 +42,12 @@ export async function POST(req: NextRequest) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
 
-		const body = await req.json().catch(() => ({}));
-		const { username, platform, campaignId, targetResults: rawTarget } = body ?? {};
+		const body = await req.json().catch(() => null);
+		const bodyRecord = toRecord(body);
+		const username = isString(bodyRecord?.username) ? bodyRecord.username : '';
+		const platform = isString(bodyRecord?.platform) ? bodyRecord.platform : '';
+		const campaignId = isString(bodyRecord?.campaignId) ? bodyRecord.campaignId : '';
+		const rawTarget = bodyRecord?.targetResults;
 		console.log('[SIMILAR-DISCOVERY] Request body parsed', {
 			username,
 			platform,
@@ -59,7 +66,7 @@ export async function POST(req: NextRequest) {
 		}
 
 		// Validate platform
-		if (!(platform && VALID_PLATFORMS.includes(platform as ValidPlatform))) {
+		if (!isValidPlatform(platform)) {
 			return NextResponse.json(
 				{ error: 'platform must be "instagram" or "tiktok"' },
 				{ status: 400 }
@@ -67,7 +74,7 @@ export async function POST(req: NextRequest) {
 		}
 
 		// Validate campaignId
-		if (!campaignId || typeof campaignId !== 'string') {
+		if (!campaignId) {
 			return NextResponse.json({ error: 'campaignId is required' }, { status: 400 });
 		}
 		const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -187,10 +194,11 @@ export async function POST(req: NextRequest) {
 			targetResults: targetResults,
 			platform: jobPlatform,
 		});
-	} catch (error: any) {
-		structuredConsole.error('[SIMILAR-DISCOVERY] POST failed', error);
+	} catch (error: unknown) {
+		const requestError = toError(error);
+		structuredConsole.error('[SIMILAR-DISCOVERY] POST failed', requestError);
 		return NextResponse.json(
-			{ error: 'Internal server error', message: error?.message },
+			{ error: 'Internal server error', message: requestError.message },
 			{ status: 500 }
 		);
 	}
@@ -235,7 +243,7 @@ export async function GET(req: NextRequest) {
 			await db
 				.update(scrapingJobs)
 				.set({
-					status: 'timeout' as JobStatus,
+					status: 'timeout',
 					error: 'Job exceeded maximum allowed time',
 					completedAt: new Date(),
 				})
@@ -273,12 +281,17 @@ export async function GET(req: NextRequest) {
 			platform: job.platform ?? 'similar_discovery_instagram',
 			targetPlatform,
 			engine: 'similar_discovery',
-			benchmark: (job.searchParams as any)?.searchEngineBenchmark ?? null,
+			benchmark: isRecord(toRecord(job.searchParams)?.searchEngineBenchmark)
+				? toRecord(job.searchParams)?.searchEngineBenchmark
+				: null,
 			totalCreators,
 			pagination,
 		});
-	} catch (error: any) {
+	} catch (error: unknown) {
 		structuredConsole.error('[SIMILAR-DISCOVERY] GET failed', error);
-		return NextResponse.json({ error: error?.message ?? 'Internal server error' }, { status: 500 });
+		return NextResponse.json(
+			{ error: error instanceof Error ? error.message : 'Internal server error' },
+			{ status: 500 }
+		);
 	}
 }

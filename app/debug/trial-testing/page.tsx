@@ -20,7 +20,15 @@ import { Label } from '@/components/ui/label';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
 export default function TrialTestingPage() {
-	const [trialStatus, setTrialStatus] = useState<any>(null);
+	type TrialStatusState = {
+		trialStatus: string;
+		daysRemaining: number;
+		progressPercentage: number;
+		trialStartDate?: string | null;
+		trialEndDate?: string | null;
+		timeUntilExpiry?: string | null;
+	};
+	const [trialStatus, setTrialStatus] = useState<TrialStatusState | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
 	const [simulateDay, setSimulateDay] = useState('3');
 	const [lastAction, setLastAction] = useState('');

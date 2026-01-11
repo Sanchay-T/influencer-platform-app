@@ -2,12 +2,38 @@
 
 import { type FormEvent, useMemo, useState } from 'react';
 import type { FeedRunResult } from '@/lib/services/instagram-feed';
+import { isNumber, isString, toRecord } from '@/lib/utils/type-guards';
 
 interface FeedResponse {
 	ok: boolean;
 	data?: FeedRunResult;
 	error?: string;
 }
+
+const isFeedRunResult = (value: unknown): value is FeedRunResult => {
+	const record = toRecord(value);
+	if (!record) return false;
+	return (
+		isString(record.keyword) &&
+		isString(record.generatedAt) &&
+		isNumber(record.creatorsConsidered) &&
+		isNumber(record.candidatesScored) &&
+		Array.isArray(record.items)
+	);
+};
+
+const parseFeedResponse = (value: unknown): FeedResponse | null => {
+	const record = toRecord(value);
+	if (!record || typeof record.ok !== 'boolean') return null;
+	const response: FeedResponse = { ok: record.ok };
+	if (isString(record.error)) {
+		response.error = record.error;
+	}
+	if (record.data && isFeedRunResult(record.data)) {
+		response.data = record.data;
+	}
+	return response;
+};
 
 export default function NewInstagramFlowPage() {
 	const [keyword, setKeyword] = useState('nutritionists');
@@ -26,7 +52,11 @@ export default function NewInstagramFlowPage() {
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ keyword }),
 			});
-			const data = (await res.json()) as FeedResponse;
+			const raw = await res.json();
+			const data = parseFeedResponse(raw);
+			if (!data) {
+				throw new Error('Unexpected response from feed API');
+			}
 			if (!(data.ok && data.data)) {
 				throw new Error(data.error ?? 'Feed generation failed');
 			}

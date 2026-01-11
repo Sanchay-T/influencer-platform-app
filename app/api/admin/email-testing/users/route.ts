@@ -8,6 +8,21 @@ import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
 
+type AdminSearchUser = {
+	user_id: string;
+	full_name: string | null;
+	business_name: string | null;
+	onboarding_step: string | null;
+	trial_start_date: null;
+	trial_end_date: null;
+	trial_status: null;
+	stripe_customer_id: null;
+	computed_trial_status: string;
+	time_remaining: string;
+	email?: string;
+	source?: string;
+};
+
 export async function GET(req: NextRequest) {
 	try {
 		if (process.env.NEXT_PHASE === 'phase-production-build') {
@@ -69,7 +84,7 @@ export async function GET(req: NextRequest) {
 			);
 
 			// Add computed trial status
-			const usersWithStatus = userResults.map((user) => {
+			const usersWithStatus: AdminSearchUser[] = userResults.map((user) => {
 				// Simplified status for normalized schema
 				return {
 					...user,
@@ -79,6 +94,7 @@ export async function GET(req: NextRequest) {
 					stripe_customer_id: null,
 					computed_trial_status: 'Profile Only',
 					time_remaining: 'N/A',
+					onboarding_step: user.onboarding_step ?? null,
 				};
 			});
 
@@ -90,18 +106,19 @@ export async function GET(req: NextRequest) {
 				structuredConsole.log('🔍 [ADMIN-SEARCH] No database results, searching Clerk...');
 				try {
 					structuredConsole.log('🔍 [CLERK-SEARCH] Searching Clerk with query:', query);
+					const clerkClient = await clerkBackendClient();
 
 					// Try different search approaches
 					let clerkUsers;
 					if (query.includes('@')) {
 						// Email search
-						clerkUsers = await clerkBackendClient.users.getUserList({
+						clerkUsers = await clerkClient.users.getUserList({
 							emailAddress: [query],
 							limit: 10,
 						});
 					} else {
 						// Name search - get recent users and filter
-						clerkUsers = await clerkBackendClient.users.getUserList({
+						clerkUsers = await clerkClient.users.getUserList({
 							limit: 50,
 							orderBy: '-created_at',
 						});
@@ -119,7 +136,7 @@ export async function GET(req: NextRequest) {
 
 					structuredConsole.log(`🔍 [CLERK-SEARCH] Found ${clerkUsers.data.length} Clerk users`);
 
-					const clerkResults = clerkUsers.data.map((user) => ({
+					const clerkResults: AdminSearchUser[] = clerkUsers.data.map((user) => ({
 						user_id: user.id,
 						full_name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
 						business_name: null,

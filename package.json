@@ -13,6 +13,9 @@
 		"start": "NODE_ENV=development next dev",
 		"start:prod": "next start",
 		"lint": "next lint",
+		"lint:fix": "node scripts/lint-fix-changed.js",
+		"typecheck": "tsc --noEmit",
+		"test": "npx tsx scripts/tests/run-all-validations.ts",
 		"logs:onboarding": "tail -f onboarding-logs",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
@@ -77,6 +80,7 @@
 	},
 	"dependencies": {
 		"@clerk/nextjs": "^6.23.3",
+		"@clerk/themes": "^2.4.47",
 		"@dnd-kit/core": "^6.3.1",
 		"@dnd-kit/sortable": "^10.0.0",
 		"@dnd-kit/utilities": "^3.2.1",

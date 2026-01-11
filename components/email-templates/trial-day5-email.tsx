@@ -11,6 +11,7 @@ import {
 	Section,
 	Text,
 } from '@react-email/components';
+import type { CSSProperties } from 'react';
 
 interface TrialDay5EmailProps {
 	username?: string;
@@ -155,70 +156,72 @@ export const TrialDay5Email = ({
 	</Html>
 );
 
-TrialDay5Email.PreviewProps = {
+const trialDay5PreviewProps: TrialDay5EmailProps = {
 	username: 'johndoe',
 	fullName: 'John Doe',
 	businessName: 'Acme Corp',
 	dashboardUrl: 'https://influencerplatform.vercel.app/campaigns',
-} as TrialDay5EmailProps;
+};
+
+TrialDay5Email.PreviewProps = trialDay5PreviewProps;
 
 export default TrialDay5Email;
 
 // Styles
-const main = {
+const main: CSSProperties = {
 	backgroundColor: '#ffffff',
 	color: '#24292e',
 	fontFamily:
 		'-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji"',
 };
 
-const container = {
+const container: CSSProperties = {
 	maxWidth: '480px',
 	margin: '0 auto',
 	padding: '20px 0 48px',
 };
 
-const logo = {
+const logo: CSSProperties = {
 	margin: '0 auto 20px',
 };
 
-const title = {
+const title: CSSProperties = {
 	fontSize: '24px',
 	lineHeight: '1.25',
 	fontWeight: '600',
-	textAlign: 'center' as const,
+	textAlign: 'center',
 	margin: '0 0 30px',
 };
 
-const paragraph = {
+const paragraph: CSSProperties = {
 	fontSize: '16px',
 	lineHeight: '1.5',
 	margin: '0 0 16px',
 };
 
-const accomplishmentSection = {
+const accomplishmentSection: CSSProperties = {
 	backgroundColor: '#e8f5e8',
 	borderRadius: '8px',
 	padding: '20px',
 	margin: '24px 0',
 };
 
-const accomplishmentTitle = {
+const accomplishmentTitle: CSSProperties = {
 	fontSize: '18px',
 	lineHeight: '1.4',
 	margin: '0 0 16px',
 	color: '#28a745',
-	textAlign: 'center' as const,
+	textAlign: 'center',
 };
 
-const accomplishmentItem = {
+const accomplishmentItem: CSSProperties = {
 	fontSize: '15px',
 	lineHeight: '1.5',
 	margin: '0 0 8px',
 	paddingLeft: '8px',
 };
 
-const urgencySection = {
+const urgencySection: CSSProperties = {
 	backgroundColor: '#fff3cd',
 	borderRadius: '8px',
 	padding: '20px',
@@ -226,27 +229,27 @@ const urgencySection = {
 	border: '2px solid #ffc107',
 };
 
-const urgencyTitle = {
+const urgencyTitle: CSSProperties = {
 	fontSize: '18px',
 	lineHeight: '1.4',
 	margin: '0 0 16px',
 	color: '#856404',
-	textAlign: 'center' as const,
+	textAlign: 'center',
 };
 
-const featureItem = {
+const featureItem: CSSProperties = {
 	fontSize: '15px',
 	lineHeight: '1.5',
 	margin: '0 0 8px',
 	paddingLeft: '8px',
 };
 
-const buttonSection = {
-	textAlign: 'center' as const,
+const buttonSection: CSSProperties = {
+	textAlign: 'center',
 	margin: '32px 0',
 };
 
-const primaryButton = {
+const primaryButton: CSSProperties = {
 	fontSize: '18px',
 	backgroundColor: '#dc3545',
 	color: '#fff',
@@ -259,29 +262,29 @@ const primaryButton = {
 	boxShadow: '0 4px 8px rgba(220, 53, 69, 0.3)',
 };
 
-const buttonSubtext = {
+const buttonSubtext: CSSProperties = {
 	fontSize: '14px',
 	color: '#6c757d',
 	margin: '12px 0 0',
 	fontStyle: 'italic',
 };
 
-const socialProofSection = {
+const socialProofSection: CSSProperties = {
 	backgroundColor: '#f8f9fa',
 	borderRadius: '8px',
 	padding: '20px',
 	margin: '24px 0',
-	textAlign: 'center' as const,
+	textAlign: 'center',
 };
 
-const socialProofTitle = {
+const socialProofTitle: CSSProperties = {
 	fontSize: '16px',
 	lineHeight: '1.4',
 	margin: '0 0 16px',
 	color: '#495057',
 };
 
-const testimonialText = {
+const testimonialText: CSSProperties = {
 	fontSize: '16px',
 	fontStyle: 'italic',
 	lineHeight: '1.5',
@@ -289,45 +292,45 @@ const testimonialText = {
 	color: '#212529',
 };
 
-const testimonialAuthor = {
+const testimonialAuthor: CSSProperties = {
 	fontSize: '14px',
 	color: '#6c757d',
 	margin: '0',
 };
 
-const reminderSection = {
+const reminderSection: CSSProperties = {
 	backgroundColor: '#f8d7da',
 	borderRadius: '8px',
 	padding: '16px',
 	margin: '24px 0',
-	textAlign: 'center' as const,
+	textAlign: 'center',
 };
 
-const reminderText = {
+const reminderText: CSSProperties = {
 	fontSize: '15px',
 	lineHeight: '1.4',
 	margin: '0',
 	color: '#721c24',
 };
 
-const link = {
+const link: CSSProperties = {
 	color: '#0066cc',
 	textDecoration: 'underline',
 };
 
-const hr = {
+const hr: CSSProperties = {
 	borderColor: '#e1e4e8',
 	margin: '42px 0 26px',
 };
 
-const footer = {
+const footer: CSSProperties = {
 	color: '#6a737d',
 	fontSize: '14px',
-	textAlign: 'center' as const,
+	textAlign: 'center',
 	margin: '0 0 10px',
 };
 
-const unsubscribeLink = {
+const unsubscribeLink: CSSProperties = {
 	color: '#6a737d',
 	fontSize: '12px',
 	textDecoration: 'underline',

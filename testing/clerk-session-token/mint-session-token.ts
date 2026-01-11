@@ -9,7 +9,7 @@
 import { writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
-const REQUIRED_VARS = ['CLERK_AUTOMATION_SERVICE_TOKEN'] as const
+const REQUIRED_VARS = ['CLERK_AUTOMATION_SERVICE_TOKEN']
 
 for (const key of REQUIRED_VARS) {
   if (!process.env[key]) {

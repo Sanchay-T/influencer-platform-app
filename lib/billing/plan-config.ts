@@ -141,11 +141,14 @@ const PRICE_ID_TO_PLAN: Map<string, PlanKey> = new Map();
 
 // Initialize the map with all price IDs
 for (const [planKey, config] of Object.entries(PLANS)) {
+	if (!isValidPlan(planKey)) {
+		continue;
+	}
 	if (config.monthlyPriceId) {
-		PRICE_ID_TO_PLAN.set(config.monthlyPriceId, planKey as PlanKey);
+		PRICE_ID_TO_PLAN.set(config.monthlyPriceId, planKey);
 	}
 	if (config.yearlyPriceId) {
-		PRICE_ID_TO_PLAN.set(config.yearlyPriceId, planKey as PlanKey);
+		PRICE_ID_TO_PLAN.set(config.yearlyPriceId, planKey);
 	}
 }
 
@@ -268,11 +271,15 @@ export function isUpgrade(fromPlan: PlanKey, toPlan: PlanKey): boolean {
 // TRIAL CONFIGURATION
 // ═══════════════════════════════════════════════════════════════
 
-export const TRIAL_CONFIG = {
+export const TRIAL_CONFIG: {
+	durationDays: number;
+	requiresCard: boolean;
+	autoChargeAfterTrial: boolean;
+} = {
 	durationDays: 7,
 	requiresCard: true,
 	autoChargeAfterTrial: true,
-} as const;
+};
 
 // ═══════════════════════════════════════════════════════════════
 // DISPLAY HELPERS

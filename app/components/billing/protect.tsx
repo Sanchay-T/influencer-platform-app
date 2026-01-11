@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useBilling, useFeatureAccess, usePlanAccess } from '@/lib/hooks/use-billing';
+import type { PlanKey } from '@/lib/types/statuses';
 
 interface ProtectProps {
 	children: React.ReactNode;
@@ -127,8 +128,9 @@ function UpgradePrompt({
 					requiredPlan: 'Enterprise',
 				},
 			};
-
-			const details = featureDetails[feature as keyof typeof featureDetails];
+			type FeatureKey = keyof typeof featureDetails;
+			const isFeatureKey = (value: string): value is FeatureKey => value in featureDetails;
+			const details = isFeatureKey(feature) ? featureDetails[feature] : undefined;
 			if (details) {
 				return {
 					title: `${details.title} - ${details.requiredPlan} Feature`,
@@ -229,22 +231,22 @@ export function PlanBadge({ className }: { className?: string }) {
 
 	if (!isLoaded) return null;
 
-	const badgeStyles = {
+	const badgeStyles: Record<PlanKey, string> = {
 		free: 'bg-gray-100 text-gray-800',
 		glow_up: 'bg-blue-100 text-blue-800',
 		viral_surge: 'bg-purple-100 text-purple-800',
 		fame_flex: 'bg-yellow-100 text-yellow-800',
-	} as const;
+	};
 
-	const planNames = {
+	const planNames: Record<PlanKey, string> = {
 		free: 'Free',
 		glow_up: 'Glow Up',
 		viral_surge: 'Viral Surge',
 		fame_flex: 'Fame Flex',
-	} as const;
+	};
 
-	const planStyle = badgeStyles[currentPlan as keyof typeof badgeStyles] || badgeStyles.free;
-	const displayName = planNames[currentPlan as keyof typeof planNames] || currentPlan;
+	const planStyle = badgeStyles[currentPlan];
+	const displayName = planNames[currentPlan] || currentPlan;
 
 	return (
 		<span

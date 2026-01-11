@@ -5,6 +5,8 @@
 
 import { useCallback, useState } from 'react';
 import toast from 'react-hot-toast';
+import { structuredConsole } from '@/lib/logging/console-proxy';
+import { getRecordProperty, getStringProperty, toRecord } from '@/lib/utils/type-guards';
 
 export interface BioEmailDialogState {
 	open: boolean;
@@ -60,12 +62,19 @@ export function useBioEmailDialog({
 		}
 
 		try {
+			const creatorRecord = toRecord(creator) ?? {};
+			const ownerRecord = getRecordProperty(creatorRecord, 'owner');
+			const ownerId = ownerRecord ? getStringProperty(ownerRecord, 'id') : null;
+			const creatorId = ownerId ?? getStringProperty(creatorRecord, 'id');
+			if (!creatorId) {
+				throw new Error('Missing creator id');
+			}
 			const response = await fetch('/api/creators/save-bio-email', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					jobId,
-					creatorId: (creator.owner as Record<string, unknown>)?.id || creator.id,
+					creatorId,
 					email: bioEmail,
 				}),
 			});
@@ -73,9 +82,10 @@ export function useBioEmailDialog({
 			if (response.ok) {
 				setCreators((prev) =>
 					prev.map((c) => {
-						const cOwner = c.owner as Record<string, unknown> | undefined;
-						const creatorOwner = creator.owner as Record<string, unknown> | undefined;
-						if (cOwner?.id && creatorOwner?.id && cOwner.id === creatorOwner.id) {
+						const cRecord = toRecord(c) ?? {};
+						const cOwner = getRecordProperty(cRecord, 'owner');
+						const cOwnerId = cOwner ? getStringProperty(cOwner, 'id') : null;
+						if (cOwnerId && ownerId && cOwnerId === ownerId) {
 							return { ...c, contact_email: bioEmail, email_source: 'bio' };
 						}
 						return c;
@@ -86,7 +96,7 @@ export function useBioEmailDialog({
 				toast.error('Failed to save email');
 			}
 		} catch (error) {
-			console.error('Error saving bio email:', error);
+			structuredConsole.error('Error saving bio email', error);
 			toast.error('Failed to save email');
 		}
 

@@ -8,8 +8,12 @@ const LOG_ENABLED = ['1', 'true', 'yes', 'on'].includes(
 );
 
 export type RunLogger = {
-	log: (event: string, payload?: Record<string, any>) => Promise<void>;
-	logTiming: (phase: string, durationMs: number, payload?: Record<string, any>) => Promise<void>;
+	log: (event: string, payload?: Record<string, unknown>) => Promise<void>;
+	logTiming: (
+		phase: string,
+		durationMs: number,
+		payload?: Record<string, unknown>
+	) => Promise<void>;
 	filePath: string;
 	enabled: boolean;
 	startTime: number;
@@ -35,7 +39,7 @@ export function createRunLogger(
 	const filePath = path.join(directory, `${timestamp}_${targetJobId}.log`);
 	const startTime = Date.now();
 
-	const log = async (event: string, payload: Record<string, any> = {}) => {
+	const log = async (event: string, payload: Record<string, unknown> = {}) => {
 		if (!LOG_ENABLED) return;
 		try {
 			await fs.mkdir(directory, { recursive: true });
@@ -59,7 +63,7 @@ export function createRunLogger(
 	const logTiming = async (
 		phase: string,
 		durationMs: number,
-		payload: Record<string, any> = {}
+		payload: Record<string, unknown> = {}
 	) => {
 		await log(`timing_${phase}`, { durationMs, ...payload });
 	};

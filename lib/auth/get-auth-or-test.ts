@@ -3,6 +3,7 @@ import { auth as backendAuth } from '@/lib/auth/backend-auth';
 import { verifyTestAuthHeaders } from '@/lib/auth/testable-auth';
 import { authLogger } from '@/lib/logging';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { toRecord } from '@/lib/utils/type-guards';
 
 export async function getAuthOrTest() {
 	// Breadcrumb: Resolve auth context
@@ -70,7 +71,7 @@ export async function getAuthOrTest() {
 	const authResult = await backendAuth();
 
 	if (!isProd) {
-		const sessionClaims = authResult.sessionClaims as Record<string, unknown> | undefined;
+		const sessionClaims = toRecord(authResult.sessionClaims) ?? undefined;
 		const sanitizedClaims = sessionClaims
 			? Object.fromEntries(
 					Object.entries(sessionClaims).map(([key, value]) => {

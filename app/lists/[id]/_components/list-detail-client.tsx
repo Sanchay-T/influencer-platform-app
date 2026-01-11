@@ -321,7 +321,9 @@ function BoardView({
 	return (
 		<DndContext
 			sensors={sensors}
-			onDragStart={(event) => setActiveId(event.active.id as string)}
+			onDragStart={(event) =>
+				setActiveId(typeof event.active.id === 'string' ? event.active.id : String(event.active.id))
+			}
 			onDragEnd={handleDragEnd}
 			onDragCancel={() => setActiveId(null)}
 		>

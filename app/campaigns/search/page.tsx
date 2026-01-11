@@ -6,14 +6,16 @@ import { Suspense, useState } from 'react';
 import DashboardLayout from '@/app/components/layout/dashboard-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
-const searchOptions = [
+type SearchType = 'keyword' | 'similar';
+
+const searchOptions: Array<{ type: SearchType; title: string; description: string }> = [
 	{
-		type: 'keyword' as const,
+		type: 'keyword',
 		title: 'Keyword-Based Search',
 		description: 'Discover creators using keywords, hashtags, and phrases.',
 	},
 	{
-		type: 'similar' as const,
+		type: 'similar',
 		title: 'Similar Creator Search',
 		description: 'Find lookalike creators based on a handle you already know.',
 	},
@@ -31,9 +33,9 @@ function CampaignSearchChooser() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const campaignId = searchParams?.get('campaignId') ?? '';
-	const [loadingType, setLoadingType] = useState<'keyword' | 'similar' | null>(null);
+	const [loadingType, setLoadingType] = useState<SearchType | null>(null);
 
-	const handlePick = (type: 'keyword' | 'similar') => {
+	const handlePick = (type: SearchType) => {
 		setLoadingType(type);
 		const target = campaignId
 			? `/campaigns/search/${type}?campaignId=${campaignId}`

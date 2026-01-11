@@ -9,7 +9,10 @@
 import { writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
-const REQUIRED_VARS = ['SESSION_EXCHANGE_KEY', 'CLERK_SECRET_KEY'] as const
+const REQUIRED_VARS: ReadonlyArray<'SESSION_EXCHANGE_KEY' | 'CLERK_SECRET_KEY'> = [
+  'SESSION_EXCHANGE_KEY',
+  'CLERK_SECRET_KEY',
+]
 
 for (const key of REQUIRED_VARS) {
   if (!process.env[key]) {
@@ -47,12 +50,9 @@ async function main() {
     process.exit(1)
   }
 
-  const headerObj = exchangeRes.headers as any
-  const getSetCookie =
-    headerObj && typeof headerObj.getSetCookie === 'function'
-      ? headerObj.getSetCookie.bind(exchangeRes.headers)
-      : null
-  const setCookie = getSetCookie ? getSetCookie() : []
+  type HeadersWithSetCookie = Headers & { getSetCookie?: () => string[] }
+  const headerObj: HeadersWithSetCookie = exchangeRes.headers
+  const setCookie = headerObj.getSetCookie ? headerObj.getSetCookie() : []
 
   if (!setCookie.length) {
     console.error('Exchange succeeded but no Set-Cookie headers were returned.')

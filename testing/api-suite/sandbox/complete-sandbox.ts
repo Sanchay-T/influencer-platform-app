@@ -42,6 +42,7 @@ import {
 } from '../../../lib/db/schema'
 import { eq } from 'drizzle-orm'
 import { buildTestAuthHeaders } from '../../../lib/auth/testable-auth'
+import { getStringProperty, toRecord } from '../../../lib/utils/type-guards'
 
 // ============================================================================
 // Configuration
@@ -395,7 +396,7 @@ async function testV2Search(
       }
 
       if (job.status === 'error') {
-        throw new Error(`Search failed: ${job.errorMessage}`)
+        throw new Error(`Search failed: ${job.error || 'unknown error'}`)
       }
     }
 
@@ -457,7 +458,10 @@ async function testSaveCreatorToList(
         where: eq(scrapingResults.jobId, jobId),
       })
       if (result && Array.isArray(result.creators) && result.creators.length > 0) {
-        creator = result.creators[0] as Record<string, unknown>
+        const creatorRecord = toRecord(result.creators[0])
+        if (creatorRecord) {
+          creator = creatorRecord
+        }
       }
     }
 
@@ -490,7 +494,12 @@ async function testSaveCreatorToList(
       step: 'Save Creator to List',
       passed: saved.success !== false,
       duration: Date.now() - start,
-      details: { listId, creatorUsername: (creator.creator as Record<string, unknown>)?.username },
+      details: {
+        listId,
+        creatorUsername: creator
+          ? getStringProperty(toRecord(creator.creator) ?? {}, 'username')
+          : null,
+      },
     }
   } catch (error) {
     return {
@@ -553,8 +562,10 @@ async function main() {
       console.log(`   ${searchResult.passed ? '✅' : '❌'} ${searchResult.step} (${searchResult.duration}ms)`)
 
       // Get job ID from details
-      if (searchResult.details && typeof searchResult.details === 'object' && 'jobId' in searchResult.details) {
-        searchJobId = searchResult.details.jobId as string
+      const detailsRecord = toRecord(searchResult.details)
+      const jobId = detailsRecord ? getStringProperty(detailsRecord, 'jobId') : null
+      if (jobId) {
+        searchJobId = jobId
       }
     } else if (SKIP_SEARCH) {
       console.log('\n📋 Test 3: V2 Keyword Search (SKIPPED)')

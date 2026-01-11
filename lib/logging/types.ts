@@ -30,6 +30,7 @@ export enum LogCategory {
 	CAMPAIGN = 'CAMPAIGN',
 	SCRAPING = 'SCRAPING',
 	SEARCH = 'SEARCH',
+	DATA = 'DATA',
 
 	// Payment and billing
 	PAYMENT = 'PAYMENT',
@@ -102,7 +103,10 @@ export interface LogContext {
 	stack?: string;
 
 	// Custom metadata
-	metadata?: Record<string, any>;
+	metadata?: Record<string, unknown>;
+
+	// Allow legacy/extra fields; prefer metadata for new additions.
+	[key: string]: unknown;
 }
 
 /**
@@ -139,7 +143,7 @@ export interface LogEntry {
 		message?: string;
 		stack?: string;
 		code?: string | number;
-		cause?: any;
+		cause?: unknown;
 	};
 
 	// Performance metrics
@@ -179,7 +183,7 @@ export interface LoggerConfig {
 		dsn?: string;
 		environment?: string;
 		tracesSampleRate?: number;
-		beforeSend?: (event: any) => any;
+		beforeSend?: (event: unknown) => unknown;
 	};
 
 	// File logging configuration
@@ -236,14 +240,14 @@ export interface SentryLogContext {
 	tags?: Record<string, string>;
 
 	// Sentry extra data
-	extra?: Record<string, any>;
+	extra?: Record<string, unknown>;
 
 	// Breadcrumb data
 	breadcrumb?: {
 		message?: string;
 		category?: string;
 		level?: 'debug' | 'info' | 'warning' | 'error' | 'fatal';
-		data?: Record<string, any>;
+		data?: Record<string, unknown>;
 	};
 
 	// Transaction context
@@ -290,15 +294,16 @@ export type LogMethod = (message: string, context?: LogContext, category?: LogCa
 /**
  * Type guard for checking if a value is a valid LogLevel
  */
-export function isValidLogLevel(value: any): value is LogLevel {
+export function isValidLogLevel(value: unknown): value is LogLevel {
 	return typeof value === 'number' && value >= 0 && value <= 4 && Number.isInteger(value);
 }
 
 /**
  * Type guard for checking if a value is a valid LogCategory
  */
-export function isValidLogCategory(value: any): value is LogCategory {
-	return typeof value === 'string' && Object.values(LogCategory).includes(value as LogCategory);
+export function isValidLogCategory(value: unknown): value is LogCategory {
+	if (typeof value !== 'string') return false;
+	return Object.values(LogCategory).some((category) => category === value);
 }
 
 /**
@@ -310,20 +315,5 @@ export interface DataSanitizer {
 	/** Fields to mask/redact in logs */
 	maskFields?: string[];
 	/** Custom sanitization function */
-	sanitize?: (data: any) => any;
+	sanitize?: (data: unknown) => unknown;
 }
-
-/**
- * Export all types for convenient importing
- */
-export type {
-	LogContext,
-	LogEntry,
-	LoggerConfig,
-	LogTransport,
-	SentryLogContext,
-	LogQueryOptions,
-	LogMethod,
-	PerformanceTimer,
-	DataSanitizer,
-};

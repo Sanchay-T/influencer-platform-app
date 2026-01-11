@@ -10,18 +10,29 @@ import {
 	SOURCE_SYSTEMS,
 } from '@/lib/events/event-service';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { getStringProperty, toRecord } from '@/lib/utils/type-guards';
 
 const qstash = new Client({
 	token: process.env.QSTASH_TOKEN!,
 });
 
+const resolveQstashMessageId = (response: unknown): string | null => {
+	if (Array.isArray(response)) {
+		const first = response[0];
+		const record = toRecord(first);
+		return record ? getStringProperty(record, 'messageId') : null;
+	}
+	const record = toRecord(response);
+	return record ? getStringProperty(record, 'messageId') : null;
+};
+
 export interface JobPayload {
-	[key: string]: any;
+	[key: string]: unknown;
 }
 
 export interface JobResult {
 	success: boolean;
-	data?: any;
+	data?: unknown;
 	error?: string;
 	retryable?: boolean;
 }
@@ -64,34 +75,48 @@ export class JobProcessor {
 				maxRetries,
 				scheduledFor: delay > 0 ? new Date(Date.now() + delay) : undefined,
 			});
+			if (!job.id) {
+				throw new Error('Background job ID missing after creation');
+			}
+			const jobId = job.id;
 
+			const delaySeconds = delay > 0 ? Math.ceil(delay / 1000) : undefined;
 			// Queue job via QStash
 			const qstashResponse = await qstash.publishJSON({
 				url: `${process.env.NEXT_PUBLIC_SITE_URL}/api/jobs/process`,
 				body: {
-					jobId: job.id,
+					jobId,
 					jobType,
 					payload,
 					attempt: 1,
 					maxRetries,
 				},
-				delay: delay > 0 ? `${delay}ms` : undefined,
+				delay: delaySeconds,
 				retries: maxRetries,
 			});
 
-			// Update job with QStash message ID
-			await db
-				.update(backgroundJobs)
-				.set({ qstashMessageId: qstashResponse.messageId })
-				.where(eq(backgroundJobs.id, job.id));
+			const qstashMessageId = resolveQstashMessageId(qstashResponse);
+
+			if (qstashMessageId) {
+				// Update job with QStash message ID
+				await db
+					.update(backgroundJobs)
+					.set({ qstashMessageId })
+					.where(eq(backgroundJobs.id, jobId));
+			} else {
+				structuredConsole.warn('⚠️ [JOB-PROCESSOR] Missing QStash message ID:', {
+					jobId,
+					jobType,
+				});
+			}
 
 			structuredConsole.log('✅ [JOB-PROCESSOR] Job queued successfully:', {
-				jobId: job.id,
-				qstashMessageId: qstashResponse.messageId,
+				jobId,
+				qstashMessageId: qstashMessageId ?? 'unknown',
 				jobType,
 			});
 
-			return job.id;
+			return jobId;
 		} catch (error) {
 			structuredConsole.error('❌ [JOB-PROCESSOR] Error queueing job:', error);
 			throw error;
@@ -206,11 +231,20 @@ export class JobProcessor {
 	 * Complete Onboarding Job Processor
 	 * @why trialStatus is now derived from subscriptionStatus + trialEndDate, not stored
 	 */
-	private static async processCompleteOnboarding(payload: any): Promise<JobResult> {
+	private static async processCompleteOnboarding(payload: unknown): Promise<JobResult> {
 		structuredConsole.log('🎯 [JOB-PROCESSOR] Processing complete onboarding:', payload);
 
 		try {
-			const { userId, stripeSubscriptionId, stripeCustomerId, planId = 'glow_up' } = payload;
+			const payloadRecord = toRecord(payload);
+			const userId = payloadRecord ? getStringProperty(payloadRecord, 'userId') : null;
+			const stripeSubscriptionId = payloadRecord
+				? getStringProperty(payloadRecord, 'stripeSubscriptionId')
+				: null;
+			const stripeCustomerId = payloadRecord
+				? getStringProperty(payloadRecord, 'stripeCustomerId')
+				: null;
+			const planId = payloadRecord ? getStringProperty(payloadRecord, 'planId') : null;
+			const resolvedPlanId = planId ?? 'glow_up';
 
 			if (!userId) {
 				return { success: false, error: 'Missing userId in payload', retryable: false };
@@ -263,9 +297,9 @@ export class JobProcessor {
 				eventType: EVENT_TYPES.ONBOARDING_COMPLETED,
 				eventData: {
 					userId,
-					stripeSubscriptionId,
-					stripeCustomerId,
-					planId,
+					stripeSubscriptionId: stripeSubscriptionId ?? undefined,
+					stripeCustomerId: stripeCustomerId ?? undefined,
+					planId: resolvedPlanId,
 					trialStartDate: trialStartDate.toISOString(),
 					trialEndDate: trialEndDate.toISOString(),
 					processedBy: 'background_job',
@@ -277,24 +311,24 @@ export class JobProcessor {
 
 			// Update user profile atomically
 			// @why trialStatus is now derived from subscriptionStatus + trialEndDate
-			const updateData: any = {
+			type UpdateUserProfileInput = Parameters<typeof updateUserProfile>[1];
+			const updateData: UpdateUserProfileInput = {
 				onboardingStep: 'completed',
 				trialStartDate,
 				trialEndDate,
 				subscriptionStatus: 'trialing',
 				billingSyncStatus: 'job_onboarding_completed',
-				updatedAt: new Date(),
 			};
 
 			if (stripeCustomerId) updateData.stripeCustomerId = stripeCustomerId;
 			if (stripeSubscriptionId) updateData.stripeSubscriptionId = stripeSubscriptionId;
-			if (planId) updateData.currentPlan = planId;
+			if (resolvedPlanId) updateData.currentPlan = resolvedPlanId;
 
 			await updateUserProfile(userId, updateData);
 
 			structuredConsole.log('✅ [JOB-PROCESSOR] Onboarding completed successfully:', {
 				userId,
-				planId,
+				planId: resolvedPlanId,
 				trialStartDate: trialStartDate.toISOString(),
 				trialEndDate: trialEndDate.toISOString(),
 			});
@@ -322,7 +356,7 @@ export class JobProcessor {
 	/**
 	 * Send Trial Email Job Processor
 	 */
-	private static async processSendTrialEmail(payload: any): Promise<JobResult> {
+	private static async processSendTrialEmail(payload: unknown): Promise<JobResult> {
 		structuredConsole.log('📧 [JOB-PROCESSOR] Processing send trial email:', payload);
 
 		// TODO: Implement email sending logic
@@ -334,7 +368,7 @@ export class JobProcessor {
 	/**
 	 * Expire Trial Job Processor
 	 */
-	private static async processExpireTrial(payload: any): Promise<JobResult> {
+	private static async processExpireTrial(payload: unknown): Promise<JobResult> {
 		structuredConsole.log('⏰ [JOB-PROCESSOR] Processing expire trial:', payload);
 
 		// TODO: Implement trial expiration logic
@@ -370,7 +404,7 @@ export class JobProcessor {
 		// Queue new attempt
 		return await JobProcessor.queueJob({
 			jobType: job.jobType,
-			payload: job.payload,
+			payload: toRecord(job.payload) ?? { value: job.payload },
 			maxRetries: job.maxRetries,
 		});
 	}

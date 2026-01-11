@@ -25,7 +25,7 @@ export default async function ListsPage() {
 		return <ListsPageClient initialLists={lists} />;
 	} catch (error) {
 		structuredConsole.error('[LISTS-RSC] error loading summaries', error);
-		const message = (error as Error).message;
+		const message = error instanceof Error ? error.message : '';
 		if (message === 'USER_NOT_FOUND') {
 			redirect('/dashboard');
 		}

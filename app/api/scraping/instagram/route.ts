@@ -3,11 +3,12 @@ import { NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { validateCreatorSearch } from '@/lib/billing';
 import { db } from '@/lib/db';
-import { campaigns, type JobStatus, scrapingJobs } from '@/lib/db/schema';
+import { campaigns, scrapingJobs } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { extractUsername } from '@/lib/platforms/instagram-similar/api';
 import { qstash } from '@/lib/queue/qstash';
 import { normalizePageParams, paginateCreators } from '@/lib/search-engine/utils/pagination';
+import { isRecord, isString, toError, toRecord } from '@/lib/utils/type-guards';
 import { getWebhookUrl } from '@/lib/utils/url-utils';
 
 const TIMEOUT_MINUTES = 60;
@@ -20,18 +21,21 @@ export async function POST(req: Request) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
 
-		let body: any;
+		let body: unknown;
 		try {
 			body = await req.json();
-		} catch (error: any) {
+		} catch (error: unknown) {
 			return NextResponse.json(
-				{ error: `Invalid JSON: ${error?.message ?? 'Unknown error'}` },
+				{
+					error: `Invalid JSON: ${error instanceof Error ? error.message : 'Unknown error'}`,
+				},
 				{ status: 400 }
 			);
 		}
 
-		const username = typeof body?.username === 'string' ? body.username.trim() : '';
-		const campaignId = typeof body?.campaignId === 'string' ? body.campaignId.trim() : '';
+		const bodyRecord = toRecord(body);
+		const username = isString(bodyRecord?.username) ? bodyRecord.username.trim() : '';
+		const campaignId = isString(bodyRecord?.campaignId) ? bodyRecord.campaignId.trim() : '';
 
 		if (!username) {
 			return NextResponse.json({ error: 'Username is required' }, { status: 400 });
@@ -103,7 +107,8 @@ export async function POST(req: Request) {
 				retries: 3,
 				notifyOnFailure: true,
 			});
-			qstashMessageId = (result as any)?.messageId ?? null;
+			const resultRecord = toRecord(result);
+			qstashMessageId = isString(resultRecord?.messageId) ? resultRecord.messageId : null;
 		} catch (error) {
 			structuredConsole.warn('Instagram similar QStash enqueue warning', error);
 		}
@@ -114,9 +119,10 @@ export async function POST(req: Request) {
 			qstashMessageId,
 			engine: 'search-engine',
 		});
-	} catch (error: any) {
-		structuredConsole.error('Instagram similar POST failed', error);
-		return NextResponse.json({ error: error?.message ?? 'Internal server error' }, { status: 500 });
+	} catch (error: unknown) {
+		const requestError = toError(error);
+		structuredConsole.error('Instagram similar POST failed', requestError);
+		return NextResponse.json({ error: requestError.message }, { status: 500 });
 	}
 }
 
@@ -156,7 +162,7 @@ export async function GET(req: Request) {
 				await db
 					.update(scrapingJobs)
 					.set({
-						status: 'timeout' as JobStatus,
+						status: 'timeout',
 						error: 'Job exceeded maximum allowed time',
 						completedAt: new Date(),
 					})
@@ -184,15 +190,22 @@ export async function GET(req: Request) {
 			error: job.error,
 			results: paginatedResults,
 			progress: parseFloat(job.progress || '0'),
-			engine: (job.searchParams as any)?.runner ?? 'search-engine',
-			benchmark: (job.searchParams as any)?.searchEngineBenchmark ?? null,
+			engine: isString(toRecord(job.searchParams)?.runner)
+				? toRecord(job.searchParams)?.runner
+				: 'search-engine',
+			benchmark: isRecord(toRecord(job.searchParams)?.searchEngineBenchmark)
+				? toRecord(job.searchParams)?.searchEngineBenchmark
+				: null,
 			totalCreators,
 			pagination,
 		};
 
 		return NextResponse.json(payload);
-	} catch (error: any) {
+	} catch (error: unknown) {
 		structuredConsole.error('Instagram similar GET failed', error);
-		return NextResponse.json({ error: error?.message ?? 'Internal server error' }, { status: 500 });
+		return NextResponse.json(
+			{ error: error instanceof Error ? error.message : 'Internal server error' },
+			{ status: 500 }
+		);
 	}
 }

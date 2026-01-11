@@ -7,6 +7,7 @@
  */
 
 import type { CreatorSnapshot } from '@/components/lists/add-to-list-button';
+import { isNumber, isString, toRecord } from '@/lib/utils/type-guards';
 import {
 	ensureImageUrl,
 	extractEmails,
@@ -41,7 +42,7 @@ export interface SimilarCreatorRow {
 }
 
 interface CreatorInput {
-	creator?: Record<string, unknown>;
+	creator?: CreatorInput;
 	platform?: string;
 	username?: string;
 	handle?: string;
@@ -93,9 +94,8 @@ function resolvePreviewImage(creator: CreatorInput | null): string | null {
 		return null;
 	}
 
-	const video = (creator.video || creator.latestVideo || creator.content) as
-		| Record<string, unknown>
-		| undefined;
+	const video =
+		toRecord(creator.video) ?? toRecord(creator.latestVideo) ?? toRecord(creator.content);
 	const sources = [
 		video?.cover,
 		video?.coverUrl,
@@ -110,13 +110,22 @@ function resolvePreviewImage(creator: CreatorInput | null): string | null {
 	];
 
 	for (const source of sources) {
-		if (typeof source === 'string' && source.trim().length > 0) {
-			return source;
+		if (isString(source) && source.trim().length > 0) {
+			return source.trim();
 		}
 	}
 
 	return null;
 }
+
+const toNumberValue = (value: unknown): number | null => {
+	if (isNumber(value)) return value;
+	if (isString(value) && value.trim()) {
+		const parsed = Number(value);
+		return Number.isFinite(parsed) ? parsed : null;
+	}
+	return null;
+};
 
 /**
  * Transforms an array of similar-search creators into normalized rows for display.
@@ -137,14 +146,10 @@ export function transformSimilarCreatorsToRows(
 
 	return creators.map((creator, index) => {
 		// Unwrap nested creator object if present
-		const base =
-			creator?.creator && typeof creator.creator === 'object'
-				? (creator.creator as CreatorInput)
-				: creator;
+		const base = creator.creator ?? creator;
 
 		// Resolve platform
-		const platformValue =
-			(creator.platform as string) || (base?.platform as string) || platformHint || 'tiktok';
+		const platformValue = creator.platform || base?.platform || platformHint || 'tiktok';
 		const platform = normalizePlatformValue(platformValue) || 'tiktok';
 
 		// Resolve handle/username
@@ -152,7 +157,7 @@ export function transformSimilarCreatorsToRows(
 			creator.username ||
 			base?.username ||
 			base?.handle ||
-			(base as Record<string, unknown>)?.uniqueId ||
+			base?.uniqueId ||
 			creator.handle ||
 			creator.channelId ||
 			base?.channelId ||
@@ -218,8 +223,8 @@ export function transformSimilarCreatorsToRows(
 			base?.profilePicUrl ||
 			creator.profilePicUrl ||
 			null;
-		const avatarUrl = ensureImageUrl(avatarSource as string | null);
-		const previewUrl = ensureImageUrl(resolvePreviewImage(creator) || (avatarSource as string));
+		const avatarUrl = ensureImageUrl(avatarSource);
+		const previewUrl = ensureImageUrl(resolvePreviewImage(creator) || avatarSource);
 
 		// Resolve follower count
 		const followerRaw =
@@ -234,10 +239,11 @@ export function transformSimilarCreatorsToRows(
 			creator.subscribers ??
 			base?.subscribers ??
 			null;
-		const followerLabel = formatFollowers(followerRaw as number | null);
+		const followerCount = toNumberValue(followerRaw);
+		const followerLabel = formatFollowers(followerCount);
 
 		// Extract emails
-		const emails = extractEmails(creator as Record<string, unknown>);
+		const emails = extractEmails(creator);
 
 		// Resolve bio
 		const bio =
@@ -271,10 +277,10 @@ export function transformSimilarCreatorsToRows(
 
 		// Resolve engagement rate
 		const engagementRate =
-			(creator.engagementRate as number) ??
-			(base?.engagementRate as number) ??
-			(creator.engagement_rate as number) ??
-			(base?.engagement_rate as number) ??
+			toNumberValue(creator.engagementRate) ??
+			toNumberValue(base?.engagementRate) ??
+			toNumberValue(creator.engagement_rate) ??
+			toNumberValue(base?.engagement_rate) ??
 			null;
 
 		// Build profile URL
@@ -285,12 +291,12 @@ export function transformSimilarCreatorsToRows(
 			platform,
 			externalId,
 			handle,
-			displayName: (displayName as string) || null,
+			displayName: displayName ?? null,
 			avatarUrl: avatarUrl || null,
 			url: profileUrl,
-			followers: (followerRaw as number) || null,
+			followers: followerCount,
 			engagementRate,
-			category: (category as string) || null,
+			category: category ?? null,
 			metadata: creator,
 		};
 
@@ -299,18 +305,18 @@ export function transformSimilarCreatorsToRows(
 			snapshot,
 			platform,
 			username: handle,
-			displayName: (displayName as string) || null,
+			displayName: displayName ?? null,
 			profileUrl,
 			avatarUrl,
 			previewUrl,
-			bio: (bio as string) || null,
+			bio: bio ?? null,
 			emails,
-			category: (category as string) || null,
-			location: (location as string) || null,
+			category: category ?? null,
+			location: location ?? null,
 			followerLabel,
-			followerCount: (followerRaw as number) || null,
+			followerCount,
 			engagementRate,
-			initials: resolveInitials(displayName as string, handle),
+			initials: resolveInitials(displayName ?? '', handle),
 		};
 	});
 }

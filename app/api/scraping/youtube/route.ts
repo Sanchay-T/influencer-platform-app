@@ -5,10 +5,11 @@ import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { validateCreatorSearch } from '@/lib/billing';
 import { db } from '@/lib/db';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
-import { campaigns, type JobStatus, scrapingJobs } from '@/lib/db/schema';
+import { campaigns, scrapingJobs } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { qstash } from '@/lib/queue/qstash';
 import { normalizePageParams, paginateCreators } from '@/lib/search-engine/utils/pagination';
+import { isNumber, isRecord, isString, toArray, toRecord } from '@/lib/utils/type-guards';
 import { getWebhookUrl } from '@/lib/utils/url-utils';
 
 const TIMEOUT_MINUTES = 60;
@@ -20,19 +21,24 @@ export async function POST(req: Request) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
 
-		let body: any;
+		let body: unknown;
 		try {
 			body = await req.json();
-		} catch (error: any) {
+		} catch (error: unknown) {
 			return NextResponse.json(
-				{ error: `Invalid JSON: ${error?.message ?? 'Unknown error'}` },
+				{
+					error: `Invalid JSON: ${error instanceof Error ? error.message : 'Unknown error'}`,
+				},
 				{ status: 400 }
 			);
 		}
 
-		const { keywords, targetResults = 1000, campaignId } = body ?? {};
+		const bodyRecord = toRecord(body);
+		const keywords = toArray(bodyRecord?.keywords) ?? [];
+		const targetResults = isNumber(bodyRecord?.targetResults) ? bodyRecord.targetResults : 1000;
+		const campaignId = isString(bodyRecord?.campaignId) ? bodyRecord.campaignId : '';
 
-		if (!Array.isArray(keywords) || keywords.length === 0) {
+		if (keywords.length === 0) {
 			return NextResponse.json(
 				{ error: 'Keywords are required and must be an array' },
 				{ status: 400 }
@@ -44,11 +50,12 @@ export async function POST(req: Request) {
 		}
 
 		const sanitizedKeywords = keywords
-			.map((keyword: string) =>
+			.filter(isString)
+			.map((keyword) =>
 				keyword
-					?.replace(/[\u0000-\u001F\u007F-\u009F\uD800-\uDFFF]/g, '')
-					?.replace(/\s+/g, ' ')
-					?.trim()
+					.replace(/[\u0000-\u001F\u007F-\u009F\uD800-\uDFFF]/g, '')
+					.replace(/\s+/g, ' ')
+					.trim()
 			)
 			.filter(Boolean);
 
@@ -132,7 +139,8 @@ export async function POST(req: Request) {
 				retries: 3,
 				notifyOnFailure: true,
 			});
-			qstashMessageId = (result as any)?.messageId ?? null;
+			const resultRecord = toRecord(result);
+			qstashMessageId = isString(resultRecord?.messageId) ? resultRecord.messageId : null;
 		} catch (error) {
 			// In local dev, Upstash callbacks may fail (e.g., localhost). We still return success so the client can poll.
 			structuredConsole.warn('YouTube QStash publish warning', error);
@@ -144,9 +152,12 @@ export async function POST(req: Request) {
 			qstashMessageId,
 			engine: 'search-engine',
 		});
-	} catch (error: any) {
+	} catch (error: unknown) {
 		structuredConsole.error('YouTube keyword search failed', error);
-		return NextResponse.json({ error: error?.message ?? 'Internal server error' }, { status: 500 });
+		return NextResponse.json(
+			{ error: error instanceof Error ? error.message : 'Internal server error' },
+			{ status: 500 }
+		);
 	}
 }
 
@@ -188,7 +199,7 @@ export async function GET(req: Request) {
 				await db
 					.update(scrapingJobs)
 					.set({
-						status: 'timeout' as JobStatus,
+						status: 'timeout',
 						error: 'Job exceeded maximum allowed time',
 						completedAt: new Date(),
 					})
@@ -216,15 +227,22 @@ export async function GET(req: Request) {
 			error: job.error,
 			results: paginatedResults,
 			progress: parseFloat(job.progress || '0'),
-			engine: (job.searchParams as any)?.runner ?? 'search-engine',
-			benchmark: (job.searchParams as any)?.searchEngineBenchmark ?? null,
+			engine: isString(toRecord(job.searchParams)?.runner)
+				? toRecord(job.searchParams)?.runner
+				: 'search-engine',
+			benchmark: isRecord(toRecord(job.searchParams)?.searchEngineBenchmark)
+				? toRecord(job.searchParams)?.searchEngineBenchmark
+				: null,
 			totalCreators,
 			pagination,
 		};
 
 		return NextResponse.json(payload);
-	} catch (error: any) {
+	} catch (error: unknown) {
 		structuredConsole.error('YouTube keyword status check failed', error);
-		return NextResponse.json({ error: error?.message ?? 'Internal server error' }, { status: 500 });
+		return NextResponse.json(
+			{ error: error instanceof Error ? error.message : 'Internal server error' },
+			{ status: 500 }
+		);
 	}
 }

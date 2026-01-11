@@ -4,9 +4,9 @@ import { db } from '@/lib/db';
 import { scrapingJobs, scrapingResults } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
 	try {
-		const jobId = params.id;
+		const { id: jobId } = await params;
 
 		// Obtener el job con sus resultados
 		const job = await db.query.scrapingJobs.findFirst({
@@ -42,9 +42,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 	}
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
 	try {
-		const jobId = params.id;
+		const { id: jobId } = await params;
 
 		// Verificar si el job existe
 		const job = await db.query.scrapingJobs.findFirst({

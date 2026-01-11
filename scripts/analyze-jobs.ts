@@ -1,6 +1,7 @@
+import { desc, eq, sql } from 'drizzle-orm';
 import { db } from '../lib/db';
 import { scrapingJobs, scrapingResults } from '../lib/db/schema';
-import { desc, eq, sql } from 'drizzle-orm';
+import { getNumberProperty, toRecord } from '../lib/utils/type-guards';
 
 async function analyze() {
   const jobs = await db.query.scrapingJobs.findMany({
@@ -33,14 +34,15 @@ async function analyze() {
       where: eq(scrapingResults.jobId, job.id),
     });
     
-    const creatorsInDb = results?.creators?.length || 0;
+    const creatorsInDb = Array.isArray(results?.creators) ? results.creators.length : 0;
     console.log('Creators in DB (actual):', creatorsInDb);
     
     // Get dedup keys count
     const keysResult = await db.execute(sql`
       SELECT COUNT(*) as count FROM job_creator_keys WHERE job_id = ${job.id}
     `);
-    const keysCount = keysResult.rows?.[0]?.count || 0;
+    const keysRow = Array.isArray(keysResult) && keysResult.length > 0 ? toRecord(keysResult[0]) : null;
+    const keysCount = keysRow ? getNumberProperty(keysRow, 'count') ?? 0 : 0;
     console.log('Dedup keys in job_creator_keys:', keysCount);
     
     if (job.creatorsFound !== creatorsInDb) {

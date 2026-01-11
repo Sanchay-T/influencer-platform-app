@@ -13,6 +13,7 @@
  */
 
 import assert from 'node:assert';
+import { getStringProperty, toRecord } from '@/lib/utils/type-guards';
 
 // =============================================================================
 // Types
@@ -60,8 +61,9 @@ export async function assertSuccess(
 		`${message}: Expected 2xx status, got ${response.status}`
 	);
 
-	const data = (await response.json()) as SuccessResponse;
-	return data;
+	const data = await response.json();
+	const record = toRecord(data);
+	return record ?? {};
 }
 
 /**
@@ -85,13 +87,23 @@ export async function assertError(
 		`${message}: Expected status ${expectedStatus}, got ${response.status}`
 	);
 
-	const data = (await response.json()) as ErrorResponse;
+	const data = await response.json();
+	const record = toRecord(data);
+	const errorValue = record ? getStringProperty(record, 'error') : null;
+	const messageValue = record ? getStringProperty(record, 'message') : null;
 	assert.ok(
-		data.error || data.message,
+		errorValue || messageValue,
 		`${message}: Error response should have 'error' or 'message' field`
 	);
 
-	return data;
+	const responsePayload: ErrorResponse = {
+		error: errorValue ?? undefined,
+		message: messageValue ?? undefined,
+		code: record ? (getStringProperty(record, 'code') ?? undefined) : undefined,
+		details: record ? record.details : undefined,
+	};
+
+	return responsePayload;
 }
 
 /**

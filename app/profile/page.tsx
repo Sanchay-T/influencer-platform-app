@@ -29,6 +29,7 @@ import { Separator } from '@/components/ui/separator';
 import { useAdmin } from '@/lib/hooks/use-admin';
 import { useBilling } from '@/lib/hooks/use-billing';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { isValidPlanKey } from '@/lib/types/statuses';
 import DashboardLayout from '../components/layout/dashboard-layout';
 
 export default function ProfileSettingsPage() {
@@ -307,7 +308,13 @@ export default function ProfileSettingsPage() {
 
 // SubscriptionPlanCard component using real billing status API with dark theme
 function SubscriptionPlanCard() {
-	const [billingStatus, setBillingStatus] = useState<any>(null);
+	type BillingStatusSummary = {
+		currentPlan?: string;
+		hasActiveSubscription?: boolean;
+		isTrialing?: boolean;
+		daysRemaining?: number;
+	};
+	const [billingStatus, setBillingStatus] = useState<BillingStatusSummary | null>(null);
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
@@ -342,7 +349,19 @@ function SubscriptionPlanCard() {
 		);
 	}
 
-	const planConfig = {
+	type PlanKey = 'free' | 'glow_up' | 'viral_surge' | 'fame_flex';
+	const planConfig: Record<
+		PlanKey,
+		{
+			name: string;
+			icon: typeof Star;
+			color: string;
+			priceMonthly: string;
+			priceYearly?: string;
+			description: string;
+			limits: string;
+		}
+	> = {
 		free: {
 			name: 'Free Plan',
 			icon: Star,
@@ -380,8 +399,9 @@ function SubscriptionPlanCard() {
 		},
 	};
 
-	const currentPlan = billingStatus?.currentPlan || 'free';
-	const config = planConfig[currentPlan as keyof typeof planConfig];
+	const planCandidate = billingStatus?.currentPlan ?? '';
+	const currentPlan: PlanKey = isValidPlanKey(planCandidate) ? planCandidate : 'free';
+	const config = planConfig[currentPlan];
 	const Icon = config?.icon || Star;
 
 	const isActive = billingStatus?.hasActiveSubscription;

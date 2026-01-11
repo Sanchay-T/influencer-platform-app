@@ -10,6 +10,15 @@ import {
 	isSuccessStatus,
 	type JobStatusDisplay,
 } from '@/lib/types/statuses';
+import {
+	getNumberProperty,
+	getRecordProperty,
+	getStringProperty,
+	isNumber,
+	isString,
+	toArray,
+	toRecord,
+} from '@/lib/utils/type-guards';
 import type { HandleQueueState, PlatformResult, UiScrapingJob } from '../types/campaign-page';
 
 // Re-export StatusVariant as an alias for backwards compatibility
@@ -29,28 +38,25 @@ export function getStatusVariant(status?: string): StatusVariant {
 export { isSuccessStatus };
 
 // Creator extraction helpers
-export const extractCreatorsArray = (
-	result: { creators?: PlatformResult } | undefined
-): unknown[] => {
-	if (!result) {
-		return [];
-	}
-	const creators = result.creators;
-	return Array.isArray(creators) ? (creators as unknown[]) : [];
+export const extractCreatorsArray = (result: unknown): unknown[] => {
+	const record = toRecord(result);
+	if (!record) return [];
+	const creators = record.creators;
+	return Array.isArray(creators) ? creators : [];
 };
 
-export const countCreatorsFromResults = (
-	results: Array<{ creators?: PlatformResult }> | undefined
-): number => {
+export const countCreatorsFromResults = (results: unknown[] | undefined): number => {
 	if (!Array.isArray(results)) {
 		return 0;
 	}
-	return results.reduce((total, result) => total + extractCreatorsArray(result).length, 0);
+	let total = 0;
+	for (const result of results) {
+		total += extractCreatorsArray(result).length;
+	}
+	return total;
 };
 
-export const flattenCreatorsFromResults = (
-	results: Array<{ creators?: PlatformResult }> | undefined
-): unknown[] => {
+export const flattenCreatorsFromResults = (results: unknown[] | undefined): unknown[] => {
 	if (!Array.isArray(results)) {
 		return [];
 	}
@@ -59,18 +65,21 @@ export const flattenCreatorsFromResults = (
 
 export const buildAggregatedResults = (
 	job: Pick<UiScrapingJob, 'id' | 'createdAt'>,
-	baseResults:
-		| Array<{ id?: string; createdAt?: Date | string } & Record<string, unknown>>
-		| undefined,
+	baseResults: unknown[] | undefined,
 	creators: unknown[]
 ) => {
 	const fallbackCreatedAt = job.createdAt ?? new Date();
 	const primary = Array.isArray(baseResults) && baseResults.length > 0 ? baseResults[0] : null;
-	const createdAt = primary?.createdAt ? new Date(primary.createdAt) : fallbackCreatedAt;
+	const primaryRecord = toRecord(primary);
+	const primaryCreatedAt = primaryRecord?.createdAt;
+	const createdAt =
+		primaryCreatedAt instanceof Date || typeof primaryCreatedAt === 'string'
+			? new Date(primaryCreatedAt)
+			: fallbackCreatedAt;
 
 	return [
 		{
-			id: (primary as { id?: string })?.id ?? `${job.id}-aggregate`,
+			id: getStringProperty(primaryRecord ?? {}, 'id') ?? `${job.id}-aggregate`,
 			jobId: job.id,
 			createdAt,
 			creators,
@@ -80,7 +89,7 @@ export const buildAggregatedResults = (
 
 // Endpoint resolution
 export const resolveScrapingEndpoint = (
-	job?: Pick<UiScrapingJob, 'platform' | 'targetUsername' | 'keywords'>
+	job?: Pick<UiScrapingJob, 'platform' | 'targetUsername' | 'keywords' | 'id'>
 ) => {
 	const normalized = (job?.platform || '').toLowerCase();
 	const hasTargetUsername =
@@ -92,7 +101,7 @@ export const resolveScrapingEndpoint = (
 	const logEndpoint = (endpoint: string) => {
 		if (debugPolling) {
 			structuredConsole.log('[RUN-ENDPOINT] resolve', {
-				jobId: (job as { id?: string })?.id ?? null,
+				jobId: job?.id ?? null,
 				platform: job?.platform ?? null,
 				hasTargetUsername,
 				hasKeywords,
@@ -147,42 +156,34 @@ export const resolveScrapingEndpoint = (
 
 // Handle queue parsing
 export function parseHandleQueueState(raw: unknown): HandleQueueState | null {
-	if (!raw || typeof raw !== 'object') {
+	const record = toRecord(raw);
+	if (!record) {
 		return null;
 	}
 
-	const record = raw as Record<string, unknown>;
+	const completedHandles = (toArray(record.completedHandles) ?? []).filter(
+		(value): value is string => typeof value === 'string'
+	);
 
-	const completedHandles = Array.isArray(record.completedHandles)
-		? (record.completedHandles as unknown[]).filter(
-				(value): value is string => typeof value === 'string'
-			)
-		: [];
-
-	const remainingHandles = Array.isArray(record.remainingHandles)
-		? (record.remainingHandles as unknown[]).filter(
-				(value): value is string => typeof value === 'string'
-			)
-		: [];
+	const remainingHandles = (toArray(record.remainingHandles) ?? []).filter(
+		(value): value is string => typeof value === 'string'
+	);
 
 	const metricsRecord: Record<string, import('../types/campaign-page').HandleQueueMetric> = {};
-	if (record.metrics && typeof record.metrics === 'object' && record.metrics !== null) {
-		const rawMetrics = record.metrics as Record<string, unknown>;
+	const rawMetrics = toRecord(record.metrics);
+	if (rawMetrics) {
 		Object.entries(rawMetrics).forEach(([key, value]) => {
-			if (!value || typeof value !== 'object') {
-				return;
-			}
-			const metric = value as Record<string, unknown>;
-			const handle =
-				typeof metric.handle === 'string' && metric.handle.trim().length > 0 ? metric.handle : key;
+			const metric = toRecord(value);
+			if (!metric) return;
+			const handle = getStringProperty(metric, 'handle');
 			metricsRecord[key] = {
-				handle,
-				keyword: typeof metric.keyword === 'string' ? metric.keyword : null,
+				handle: handle && handle.trim().length > 0 ? handle : key,
+				keyword: getStringProperty(metric, 'keyword'),
 				totalCreators: Number(metric.totalCreators) || 0,
 				newCreators: Number(metric.newCreators) || 0,
 				duplicateCreators: Number(metric.duplicateCreators) || 0,
 				batches: Number(metric.batches) || undefined,
-				lastUpdatedAt: typeof metric.lastUpdatedAt === 'string' ? metric.lastUpdatedAt : undefined,
+				lastUpdatedAt: getStringProperty(metric, 'lastUpdatedAt') ?? undefined,
 			};
 		});
 	}
@@ -205,13 +206,11 @@ export const createJobUpdateFromPayload = (
 ): Partial<UiScrapingJob> => {
 	const platformHint = job.platform?.toLowerCase?.() ?? 'tiktok';
 	const incomingResults = Array.isArray(data?.results) ? data.results : [];
-	const incomingCreators = flattenCreatorsFromResults(
-		incomingResults as Array<{ creators?: PlatformResult }>
-	);
+	const incomingCreators = flattenCreatorsFromResults(incomingResults);
 
 	const existingCreators = Array.isArray(job.creatorBuffer)
 		? job.creatorBuffer
-		: flattenCreatorsFromResults(job.results as Array<{ creators?: PlatformResult }>);
+		: flattenCreatorsFromResults(job.results);
 
 	const combinedCreators = append
 		? [...existingCreators, ...incomingCreators]
@@ -221,17 +220,13 @@ export const createJobUpdateFromPayload = (
 
 	const dedupedCreators = dedupeCreators(combinedCreators, { platformHint });
 
-	const aggregatedResults = buildAggregatedResults(
-		job,
-		incomingResults as Array<{ id?: string; createdAt?: Date | string }>,
-		dedupedCreators
-	);
+	const aggregatedResults = buildAggregatedResults(job, incomingResults, dedupedCreators);
 
 	const totalCreators =
 		typeof data?.totalCreators === 'number' ? data.totalCreators : dedupedCreators.length;
 
 	const queueState = parseHandleQueueState(
-		data?.queue ?? (data?.job as Record<string, unknown>)?.queue ?? null
+		data?.queue ?? getRecordProperty(data, 'job')?.queue ?? null
 	);
 
 	// Extract progress from v2 API response
@@ -240,11 +235,12 @@ export const createJobUpdateFromPayload = (
 		if (typeof data?.progressPercent === 'number') {
 			return data.progressPercent;
 		}
-		if (typeof data?.progress === 'object' && data.progress !== null) {
-			const progressObj = data.progress as { percentComplete?: number };
-			if (typeof progressObj.percentComplete === 'number') {
-				return progressObj.percentComplete;
-			}
+		const progressRecord = toRecord(data?.progress);
+		const percentComplete = progressRecord
+			? getNumberProperty(progressRecord, 'percentComplete')
+			: null;
+		if (typeof percentComplete === 'number') {
+			return percentComplete;
 		}
 		if (typeof data?.progress === 'number') {
 			return data.progress;
@@ -252,18 +248,28 @@ export const createJobUpdateFromPayload = (
 		return undefined;
 	};
 
+	const paginationRecord = toRecord(data?.pagination);
+	const pagination = paginationRecord
+		? {
+				total: getNumberProperty(paginationRecord, 'total') ?? undefined,
+				limit: getNumberProperty(paginationRecord, 'limit') ?? undefined,
+				nextOffset: (() => {
+					const raw = paginationRecord.nextOffset;
+					if (raw === null) return null;
+					return isNumber(raw) ? raw : undefined;
+				})(),
+			}
+		: job.pagination;
+
 	return {
-		status: (data?.status as UiScrapingJob['status']) ?? job.status,
+		status: typeof data?.status === 'string' ? data.status : job.status,
 		progress: extractProgress() ?? job.progress,
 		results: aggregatedResults,
 		resultsLoaded: true,
 		creatorBuffer: dedupedCreators,
 		totalCreators,
-		pagination: (data?.pagination as UiScrapingJob['pagination']) ?? job.pagination,
-		pageLimit:
-			(data?.pagination as UiScrapingJob['pagination'])?.limit ??
-			job.pageLimit ??
-			DEFAULT_PAGE_LIMIT,
+		pagination,
+		pageLimit: pagination?.limit ?? undefined ?? job.pageLimit ?? DEFAULT_PAGE_LIMIT,
 		resultsError: null,
 		handleQueue: queueState ?? job.handleQueue ?? null,
 	};
@@ -272,17 +278,13 @@ export const createJobUpdateFromPayload = (
 // ScrapingJob to UiScrapingJob conversion
 export const toUiJob = (job: import('../types/campaign-page').ScrapingJob): UiScrapingJob => {
 	const hydratedResults = Array.isArray(job.results) ? job.results : [];
-	const countedCreators = countCreatorsFromResults(
-		hydratedResults as Array<{ creators?: PlatformResult }>
-	);
+	const countedCreators = countCreatorsFromResults(hydratedResults);
 	const platformHint = job.platform?.toLowerCase?.() ?? 'tiktok';
-	const creatorCandidates = flattenCreatorsFromResults(
-		hydratedResults as Array<{ creators?: PlatformResult }>
-	);
+	const creatorCandidates = flattenCreatorsFromResults(hydratedResults);
 	const creatorBuffer =
 		creatorCandidates.length > 0 ? dedupeCreators(creatorCandidates, { platformHint }) : [];
 
-	const rawSearchParams = (job.searchParams ?? {}) as Record<string, unknown>;
+	const rawSearchParams = toRecord(job.searchParams) ?? {};
 	const queueState = parseHandleQueueState(rawSearchParams[HANDLE_QUEUE_PARAM_KEY]);
 
 	// Prefer server-provided totalCreators (from pre-loading), fall back to counted from results
@@ -349,7 +351,7 @@ export function getCreatorsCount(job?: UiScrapingJob | null): number {
 		return job.creatorBuffer.length;
 	}
 	// Priority 3: Count from results if loaded
-	const counted = countCreatorsFromResults(job?.results as Array<{ creators?: PlatformResult }>);
+	const counted = countCreatorsFromResults(job?.results);
 	if (counted > 0) {
 		return counted;
 	}
@@ -402,15 +404,16 @@ export function getCreatorsSample(job?: UiScrapingJob | null): string[] {
 		Array.isArray(job?.creatorBuffer) && job.creatorBuffer.length
 			? job.creatorBuffer
 			: job?.results?.length
-				? extractCreatorsArray(job.results[0] as { creators?: PlatformResult })
+				? extractCreatorsArray(job.results[0])
 				: [];
 	const creators = Array.isArray(source) ? source : [];
 	return creators
 		.slice(0, 3)
 		.map((item: unknown) => {
-			const creator = item as Record<string, unknown>;
-			const nested = creator?.creator as Record<string, unknown> | undefined;
-			return nested?.username || creator?.username;
+			const creator = toRecord(item);
+			if (!creator) return null;
+			const nested = getRecordProperty(creator, 'creator');
+			return getStringProperty(nested ?? {}, 'username') ?? getStringProperty(creator, 'username');
 		})
-		.filter((val): val is string => typeof val === 'string');
+		.filter((val): val is string => isString(val));
 }

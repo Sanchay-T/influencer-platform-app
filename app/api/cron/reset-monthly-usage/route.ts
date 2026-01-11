@@ -12,9 +12,9 @@
 
 import { NextResponse } from 'next/server';
 import { resetAllMonthlyUsage } from '@/lib/billing';
-import { createCategoryLogger } from '@/lib/logging';
+import { createCategoryLogger, LogCategory } from '@/lib/logging';
 
-const logger = createCategoryLogger('cron-usage-reset');
+const logger = createCategoryLogger(LogCategory.SYSTEM);
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -57,7 +57,8 @@ export async function GET(request: Request) {
 			timestamp: new Date().toISOString(),
 		});
 	} catch (error) {
-		logger.error('Monthly usage reset failed', { error });
+		const normalizedError = error instanceof Error ? error : new Error(String(error));
+		logger.error('Monthly usage reset failed', normalizedError);
 		return NextResponse.json(
 			{
 				error: 'Failed to reset usage',

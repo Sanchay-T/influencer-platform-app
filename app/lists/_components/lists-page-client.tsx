@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { formatFollowerCount } from '@/lib/dashboard/formatters';
 import type { ListSummary } from '@/lib/lists/overview';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { toStringArray } from '@/lib/utils/type-guards';
 
 const listTypeOptions = [
 	{ value: 'campaign', label: 'Campaign' },
@@ -78,7 +79,8 @@ export default function ListsPageClient({ initialLists }: ListsPageClientProps) 
 			toast.success('List created');
 		} catch (error) {
 			structuredConsole.error(error);
-			toast.error((error as Error).message);
+			const message = error instanceof Error ? error.message : 'Failed to create list';
+			toast.error(message);
 		} finally {
 			setCreating(false);
 		}
@@ -122,7 +124,8 @@ export default function ListsPageClient({ initialLists }: ListsPageClientProps) 
 				toast.success('List deleted');
 			} catch (error) {
 				structuredConsole.error('[LISTS-DELETE]', error);
-				toast.error((error as Error).message);
+				const message = error instanceof Error ? error.message : 'Unable to delete list';
+				toast.error(message);
 			} finally {
 				setDeletingId(null);
 				setActionMenuId(null);
@@ -227,103 +230,106 @@ export default function ListsPageClient({ initialLists }: ListsPageClientProps) 
 					</div>
 				) : (
 					<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-						{filteredLists.map((list) => (
-							<Card
-								key={list.id}
-								className="bg-zinc-900/70 border border-zinc-700/40 hover:border-pink-500/50 transition-all cursor-pointer overflow-hidden"
-								onClick={() => router.push(`/lists/${list.id}`)}
-							>
-								<CardHeader>
-									<div className="flex items-start justify-between gap-3">
-										<div className="min-w-0">
-											<CardTitle className="text-base text-zinc-100 truncate break-words">
-												{list.name}
-											</CardTitle>
-											{list.description && (
-												<CardDescription className="text-xs text-zinc-500 mt-1 line-clamp-2 break-words">
-													{list.description}
-												</CardDescription>
-											)}
+						{filteredLists.map((list) => {
+							const tags = toStringArray(list.tags) ?? [];
+							return (
+								<Card
+									key={list.id}
+									className="bg-zinc-900/70 border border-zinc-700/40 hover:border-pink-500/50 transition-all cursor-pointer overflow-hidden"
+									onClick={() => router.push(`/lists/${list.id}`)}
+								>
+									<CardHeader>
+										<div className="flex items-start justify-between gap-3">
+											<div className="min-w-0">
+												<CardTitle className="text-base text-zinc-100 truncate break-words">
+													{list.name}
+												</CardTitle>
+												{list.description && (
+													<CardDescription className="text-xs text-zinc-500 mt-1 line-clamp-2 break-words">
+														{list.description}
+													</CardDescription>
+												)}
+											</div>
+											<div className="relative flex items-center gap-2">
+												<Badge variant="secondary" className="bg-zinc-800/80 text-zinc-200">
+													{list.type}
+												</Badge>
+												<button
+													type="button"
+													className="rounded-full border border-zinc-700/50 bg-zinc-900/80 px-2 py-1.5 text-zinc-500 transition hover:border-pink-500/50 hover:text-pink-200"
+													onClick={(event) => {
+														event.stopPropagation();
+														setActionMenuId((prev) => (prev === list.id ? null : list.id));
+													}}
+													aria-label="List actions"
+												>
+													<MoreHorizontal className="h-4 w-4" />
+												</button>
+												{actionMenuId === list.id ? (
+													<div
+														className="absolute right-0 top-9 z-20 w-40 rounded-xl border border-zinc-700/50 bg-zinc-950/95 p-2 shadow-lg"
+														onClick={(event) => event.stopPropagation()}
+													>
+														<button
+															type="button"
+															className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-200 transition hover:bg-pink-500/10 hover:text-pink-200"
+															onClick={(event) => handleDeleteList(event, list)}
+															disabled={deletingId === list.id}
+														>
+															{deletingId === list.id ? (
+																<Loader2 className="h-4 w-4 animate-spin" />
+															) : (
+																<Trash2 className="h-4 w-4 text-pink-300" />
+															)}
+															Delete list
+														</button>
+													</div>
+												) : null}
+											</div>
 										</div>
-										<div className="relative flex items-center gap-2">
-											<Badge variant="secondary" className="bg-zinc-800/80 text-zinc-200">
+									</CardHeader>
+									<CardContent className="space-y-4">
+										<div className="flex items-center gap-2 text-xs text-zinc-400">
+											<Badge
+												variant="outline"
+												className="border-zinc-700/50 text-zinc-300 bg-zinc-900/40 uppercase tracking-wide"
+											>
 												{list.type}
 											</Badge>
-											<button
-												type="button"
-												className="rounded-full border border-zinc-700/50 bg-zinc-900/80 px-2 py-1.5 text-zinc-500 transition hover:border-pink-500/50 hover:text-pink-200"
-												onClick={(event) => {
-													event.stopPropagation();
-													setActionMenuId((prev) => (prev === list.id ? null : list.id));
-												}}
-												aria-label="List actions"
-											>
-												<MoreHorizontal className="h-4 w-4" />
-											</button>
-											{actionMenuId === list.id ? (
-												<div
-													className="absolute right-0 top-9 z-20 w-40 rounded-xl border border-zinc-700/50 bg-zinc-950/95 p-2 shadow-lg"
-													onClick={(event) => event.stopPropagation()}
-												>
-													<button
-														type="button"
-														className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-200 transition hover:bg-pink-500/10 hover:text-pink-200"
-														onClick={(event) => handleDeleteList(event, list)}
-														disabled={deletingId === list.id}
-													>
-														{deletingId === list.id ? (
-															<Loader2 className="h-4 w-4 animate-spin" />
-														) : (
-															<Trash2 className="h-4 w-4 text-pink-300" />
-														)}
-														Delete list
-													</button>
-												</div>
-											) : null}
-										</div>
-									</div>
-								</CardHeader>
-								<CardContent className="space-y-4">
-									<div className="flex items-center gap-2 text-xs text-zinc-400">
-										<Badge
-											variant="outline"
-											className="border-zinc-700/50 text-zinc-300 bg-zinc-900/40 uppercase tracking-wide"
-										>
-											{list.type}
-										</Badge>
-										{list.viewerRole !== 'owner' && (
-											<span className="text-pink-300/80">Shared with you</span>
-										)}
-									</div>
-									<div className="grid grid-cols-3 gap-3">
-										<StatPill label="Creators" value={list.creatorCount} />
-										<StatPill label="Followers" value={formatFollowerCount(list.followerSum)} />
-										<StatPill
-											label="Collaborators"
-											value={list.collaboratorCount}
-											icon={<Users className="h-4 w-4" />}
-										/>
-									</div>
-									{list.tags?.length ? (
-										<div className="flex flex-wrap gap-2">
-											{list.tags.slice(0, 3).map((tag) => (
-												<Badge
-													key={tag}
-													className="bg-pink-600/10 text-pink-200 border border-pink-600/40"
-												>
-													#{tag}
-												</Badge>
-											))}
-											{list.tags.length > 3 && (
-												<Badge className="bg-zinc-800/70 text-zinc-300 border border-zinc-700/60">
-													+{list.tags.length - 3}
-												</Badge>
+											{list.viewerRole !== 'owner' && (
+												<span className="text-pink-300/80">Shared with you</span>
 											)}
 										</div>
-									) : null}
-								</CardContent>
-							</Card>
-						))}
+										<div className="grid grid-cols-3 gap-3">
+											<StatPill label="Creators" value={list.creatorCount} />
+											<StatPill label="Followers" value={formatFollowerCount(list.followerSum)} />
+											<StatPill
+												label="Collaborators"
+												value={list.collaboratorCount}
+												icon={<Users className="h-4 w-4" />}
+											/>
+										</div>
+										{tags.length ? (
+											<div className="flex flex-wrap gap-2">
+												{tags.slice(0, 3).map((tag) => (
+													<Badge
+														key={tag}
+														className="bg-pink-600/10 text-pink-200 border border-pink-600/40"
+													>
+														#{tag}
+													</Badge>
+												))}
+												{tags.length > 3 && (
+													<Badge className="bg-zinc-800/70 text-zinc-300 border border-zinc-700/60">
+														+{tags.length - 3}
+													</Badge>
+												)}
+											</div>
+										) : null}
+									</CardContent>
+								</Card>
+							);
+						})}
 					</div>
 				)}
 			</div>

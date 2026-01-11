@@ -10,12 +10,20 @@
  * Trigger via QStash or direct call.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
 import { sql } from 'drizzle-orm';
+import { type NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { buildConfig } from '@/lib/search-engine/v2/core/config';
 import { runExpandedPipeline } from '@/lib/search-engine/v2/core/parallel-pipeline';
 import type { NormalizedCreator, PipelineContext } from '@/lib/search-engine/v2/core/types';
+import {
+	getBooleanProperty,
+	getNumberProperty,
+	getStringProperty,
+	toRecord,
+	toStringArray,
+} from '@/lib/utils/type-guards';
 // Import adapter to register it
 import '@/lib/search-engine/v2/adapters/tiktok';
 
@@ -30,22 +38,39 @@ interface TestRequest {
 	testId?: string;
 }
 
+function isTestPlatform(value: unknown): value is TestRequest['platform'] {
+	return value === 'tiktok' || value === 'youtube' || value === 'instagram';
+}
+
+// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function POST(request: NextRequest) {
 	const startTime = Date.now();
 
 	try {
-		const body = (await request.json()) as TestRequest;
-		const {
-			platform = 'tiktok',
-			keywords = ['fitness'],
-			target = 50,
-			enableBio = true,
-			enableExpansion = true,
-		} = body;
+		const body: unknown = await request.json();
+		const bodyRecord = toRecord(body);
+		const platform =
+			bodyRecord && isTestPlatform(bodyRecord.platform) ? bodyRecord.platform : 'tiktok';
+		const rawKeywords = bodyRecord ? toStringArray(bodyRecord.keywords) : null;
+		const keywords = rawKeywords && rawKeywords.length > 0 ? rawKeywords : ['fitness'];
+		const targetValue = bodyRecord ? getNumberProperty(bodyRecord, 'target') : null;
+		const targetParsed = bodyRecord ? Number(bodyRecord.target) : NaN;
+		const target = Number.isFinite(targetValue ?? targetParsed)
+			? (targetValue ?? targetParsed)
+			: 50;
+		const enableBioValue = bodyRecord ? getBooleanProperty(bodyRecord, 'enableBio') : null;
+		const enableExpansionValue = bodyRecord
+			? getBooleanProperty(bodyRecord, 'enableExpansion')
+			: null;
+		const enableBio = enableBioValue ?? true;
+		const enableExpansion = enableExpansionValue ?? true;
+		const testIdCandidate = bodyRecord ? getStringProperty(bodyRecord, 'testId') : null;
+		const testId =
+			testIdCandidate && testIdCandidate.trim().length > 0
+				? testIdCandidate
+				: `v2-test-${Date.now()}`;
 
-		const testId = body.testId || `v2-test-${Date.now()}`;
-
-		console.log(`[v2-test] Starting test ${testId}`, {
+		structuredConsole.log(`[v2-test] Starting test ${testId}`, {
 			platform,
 			keywords,
 			target,
@@ -74,15 +99,15 @@ export async function POST(request: NextRequest) {
 
 		// Run expanded pipeline (with AI keyword expansion)
 		const result = await runExpandedPipeline(context, config, {
-			onBatch: async (creators, metrics) => {
+			onBatch: async (creators, _metrics) => {
 				batchCount++;
 				allCreators.push(...creators);
-				console.log(
+				structuredConsole.log(
 					`[v2-test] Batch ${batchCount}: +${creators.length} creators (total: ${allCreators.length})`
 				);
 			},
 			onProgress: async (current, targetCount, status) => {
-				console.log(`[v2-test] Progress: ${current}/${targetCount} - ${status}`);
+				structuredConsole.log(`[v2-test] Progress: ${current}/${targetCount} - ${status}`);
 			},
 			enrichWorkers: 5,
 			batchSize: 10,
@@ -151,7 +176,7 @@ export async function POST(request: NextRequest) {
 			)
 		`);
 
-		console.log(`[v2-test] Test ${testId} complete`, {
+		structuredConsole.log(`[v2-test] Test ${testId} complete`, {
 			creators: allCreators.length,
 			keywordsUsed: result.keywordsUsed?.length,
 			expansionRuns: result.expansionRuns,
@@ -165,7 +190,7 @@ export async function POST(request: NextRequest) {
 			result: testResult,
 		});
 	} catch (error) {
-		console.error('[v2-test] Test failed:', error);
+		structuredConsole.error('[v2-test] Test failed:', error);
 
 		return NextResponse.json(
 			{
@@ -179,6 +204,7 @@ export async function POST(request: NextRequest) {
 }
 
 // GET - Retrieve test results
+// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function GET(request: NextRequest) {
 	const { searchParams } = new URL(request.url);
 	const testId = searchParams.get('testId');
@@ -221,7 +247,7 @@ export async function GET(request: NextRequest) {
 
 		return NextResponse.json({ tests: results });
 	} catch (error) {
-		console.error('[v2-test] Failed to get results:', error);
+		structuredConsole.error('[v2-test] Failed to get results:', error);
 		return NextResponse.json(
 			{ error: error instanceof Error ? error.message : String(error) },
 			{ status: 500 }

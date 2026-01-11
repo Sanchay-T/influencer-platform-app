@@ -18,7 +18,7 @@ import { jobCreators, scrapingJobs } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
 import { loadJobTracker } from '@/lib/search-engine/v2/core/job-tracker';
 import type { StatusResponse } from '@/lib/search-engine/v2/workers/types';
-import { UI_JOB_STATUS } from '@/lib/types/statuses';
+import { isNumber, isRecord, isString, toRecord, toStringArray } from '@/lib/utils/type-guards';
 
 // Increased timeout for large result sets
 export const maxDuration = 30;
@@ -219,8 +219,9 @@ export async function GET(req: Request) {
 
 	// DEBUG: Log first creator's enrichment data to diagnose bio/email display issues
 	if (paginatedCreators.length > 0) {
-		const firstCreator = paginatedCreators[0] as Record<string, unknown>;
-		const creatorObj = firstCreator?.creator as Record<string, unknown>;
+		const firstCreator = toRecord(paginatedCreators[0]);
+		const creatorObj = toRecord(firstCreator?.creator);
+		const bioEnriched = toRecord(firstCreator?.bio_enriched);
 		logger.info(
 			'[v2-status] DEBUG: First creator data structure',
 			{
@@ -231,10 +232,10 @@ export async function GET(req: Request) {
 				emailCount: Array.isArray(creatorObj?.emails) ? creatorObj.emails.length : 0,
 				hasBioEnriched: !!firstCreator?.bioEnriched,
 				hasBioEnrichedObj: !!firstCreator?.bio_enriched,
-				bioEnrichedKeys: firstCreator?.bio_enriched
-					? Object.keys(firstCreator.bio_enriched as object)
-					: [],
-				extractedEmail: (firstCreator?.bio_enriched as Record<string, unknown>)?.extracted_email,
+				bioEnrichedKeys: bioEnriched ? Object.keys(bioEnriched) : [],
+				extractedEmail: isString(bioEnriched?.extracted_email)
+					? bioEnriched.extracted_email
+					: undefined,
 				sampleBio: creatorObj?.bio ? String(creatorObj.bio).substring(0, 100) + '...' : null,
 			},
 			LogCategory.JOB
@@ -257,24 +258,24 @@ export async function GET(req: Request) {
 
 	switch (job.status) {
 		case 'pending':
-			status = UI_JOB_STATUS.DISPATCHING;
+			status = 'dispatching';
 			break;
 		case 'processing':
 			if (job.enrichmentStatus === 'in_progress') {
-				status = UI_JOB_STATUS.ENRICHING;
+				status = 'enriching';
 			} else {
-				status = UI_JOB_STATUS.SEARCHING;
+				status = 'searching';
 			}
 			break;
 		case 'completed':
-			status = job.error ? UI_JOB_STATUS.PARTIAL : UI_JOB_STATUS.COMPLETED;
+			status = job.error ? 'partial' : 'completed';
 			break;
 		case 'error':
 		case 'timeout':
-			status = UI_JOB_STATUS.ERROR;
+			status = 'error';
 			break;
 		default:
-			status = UI_JOB_STATUS.SEARCHING;
+			status = 'searching';
 	}
 
 	// ========================================================================
@@ -330,22 +331,32 @@ export async function GET(req: Request) {
 		totalCreators,
 		targetResults: job.targetResults,
 		platform: job.platform,
-		keywords: Array.isArray(job.keywords) ? (job.keywords as string[]) : [],
+		keywords: toStringArray(job.keywords) ?? [],
 		error: job.error ?? undefined,
 	};
 
-	(response as any).progressPercent = Math.round(percentComplete * 100) / 100;
+	response.progressPercent = Math.round(percentComplete * 100) / 100;
 
-	const searchParams2 = job.searchParams as Record<string, unknown> | null;
-	if (searchParams2?.searchEngineBenchmark) {
-		response.benchmark = searchParams2.searchEngineBenchmark as StatusResponse['benchmark'];
+	const searchParams2 = toRecord(job.searchParams);
+	const benchmarkValue = searchParams2?.searchEngineBenchmark;
+	if (isRecord(benchmarkValue)) {
+		const totalDurationMs = benchmarkValue.totalDurationMs;
+		const apiCalls = benchmarkValue.apiCalls;
+		const creatorsPerSecond = benchmarkValue.creatorsPerSecond;
+		if (isNumber(totalDurationMs) && isNumber(apiCalls) && isNumber(creatorsPerSecond)) {
+			response.benchmark = {
+				totalDurationMs,
+				apiCalls,
+				creatorsPerSecond,
+			};
+		}
 	}
 
 	// ========================================================================
 	// Step 8: Cache Completed Results
 	// ========================================================================
 
-	if (status === UI_JOB_STATUS.COMPLETED || status === UI_JOB_STATUS.PARTIAL) {
+	if (status === 'completed' || status === 'partial') {
 		// Cache completed job results for 24 hours
 		await cacheSet(cacheKey, response, CacheTTL.COMPLETED_JOB);
 		logger.info(`[v2-status] Cached results for ${jobId}`, {}, LogCategory.JOB);

@@ -28,6 +28,7 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { adminLogger } from '@/lib/logging';
 import { useComponentLogger, useUserActionLogger } from '@/lib/logging/react-logger';
+import { hasOwn } from '@/lib/utils/type-guards';
 
 interface Configuration {
 	id: string;
@@ -49,7 +50,7 @@ interface ConfigData {
 
 const VALUE_TYPES = ['number', 'duration', 'boolean'];
 
-const CATEGORY_DESCRIPTIONS = {
+const CATEGORY_DESCRIPTIONS: Record<string, string> = {
 	api_limits: 'API call limits and rate limiting settings',
 	qstash_delays: 'QStash message delays and scheduling',
 	timeouts: 'Job timeout and processing limits',
@@ -59,7 +60,7 @@ const CATEGORY_DESCRIPTIONS = {
 	cleanup: 'Job cleanup and retention rules',
 };
 
-const CATEGORY_ICONS = {
+const CATEGORY_ICONS: Record<string, string> = {
 	api_limits: '🔒',
 	qstash_delays: '⏱️',
 	timeouts: '⏰',
@@ -68,6 +69,9 @@ const CATEGORY_ICONS = {
 	processing: '⚙️',
 	cleanup: '🧹',
 };
+
+const resolveErrorMessage = (err: unknown) =>
+	err instanceof Error ? err.message : 'Unexpected error';
 
 function SystemConfigPageContent() {
 	const componentLogger = useComponentLogger('SystemConfigPage');
@@ -99,13 +103,15 @@ function SystemConfigPageContent() {
 
 			const data = await response.json();
 			setConfigData(data);
-		} catch (err: any) {
-			setError(err.message);
+		} catch (err: unknown) {
+			setError(resolveErrorMessage(err));
 			adminLogger.error(
 				'Error loading configurations',
 				err instanceof Error ? err : new Error(String(err)),
 				{
-					operation: 'load-configurations',
+					metadata: {
+						operation: 'load-configurations',
+					},
 				}
 			);
 		} finally {
@@ -128,13 +134,15 @@ function SystemConfigPageContent() {
 			}
 
 			await loadConfigurations();
-		} catch (err: any) {
-			setError(err.message);
+		} catch (err: unknown) {
+			setError(resolveErrorMessage(err));
 			adminLogger.error(
 				'Error initializing defaults',
 				err instanceof Error ? err : new Error(String(err)),
 				{
-					operation: 'initialize-defaults',
+					metadata: {
+						operation: 'initialize-defaults',
+					},
 				}
 			);
 		} finally {
@@ -169,15 +177,17 @@ function SystemConfigPageContent() {
 				valueType: 'number',
 				description: '',
 			});
-		} catch (err: any) {
-			setError(err.message);
+		} catch (err: unknown) {
+			setError(resolveErrorMessage(err));
 			adminLogger.error(
 				'Error saving configuration',
 				err instanceof Error ? err : new Error(String(err)),
 				{
-					operation: 'save-configuration',
-					configKey: config.key,
-					configCategory: config.category,
+					metadata: {
+						operation: 'save-configuration',
+						configKey: config.key,
+						configCategory: config.category,
+					},
 				}
 			);
 		} finally {
@@ -319,16 +329,20 @@ function SystemConfigPageContent() {
 							<Button
 								onClick={() => {
 									userActionLogger.logClick('add-new-configuration', {
-										category: newConfigData.category,
-										key: newConfigData.key,
-										valueType: newConfigData.valueType,
+										metadata: {
+											category: newConfigData.category,
+											key: newConfigData.key,
+											valueType: newConfigData.valueType,
+										},
 									});
 
 									adminLogger.info('Adding new configuration', {
-										category: newConfigData.category,
-										key: newConfigData.key,
-										valueType: newConfigData.valueType,
-										operation: 'add-config-attempt',
+										metadata: {
+											category: newConfigData.category,
+											key: newConfigData.key,
+											valueType: newConfigData.valueType,
+											operation: 'add-config-attempt',
+										},
 									});
 
 									saveConfiguration(newConfigData);
@@ -365,7 +379,7 @@ function SystemConfigPageContent() {
 							<CardHeader>
 								<CardTitle className="flex items-center">
 									<span className="text-2xl mr-2">
-										{CATEGORY_ICONS[category as keyof typeof CATEGORY_ICONS] || '⚙️'}
+										{hasOwn(CATEGORY_ICONS, category) ? CATEGORY_ICONS[category] : '⚙️'}
 									</span>
 									{category.replace('_', ' ').toUpperCase()}
 									<Badge variant="outline" className="ml-2">
@@ -373,8 +387,9 @@ function SystemConfigPageContent() {
 									</Badge>
 								</CardTitle>
 								<CardDescription>
-									{CATEGORY_DESCRIPTIONS[category as keyof typeof CATEGORY_DESCRIPTIONS] ||
-										'System configuration settings'}
+									{hasOwn(CATEGORY_DESCRIPTIONS, category)
+										? CATEGORY_DESCRIPTIONS[category]
+										: 'System configuration settings'}
 								</CardDescription>
 							</CardHeader>
 							<CardContent>
@@ -430,17 +445,21 @@ function SystemConfigPageContent() {
 																	size="sm"
 																	onClick={() => {
 																		userActionLogger.logClick('save-configuration-edit', {
-																			configId: editingConfig.id,
-																			configKey: editingConfig.key,
-																			configCategory: editingConfig.category,
+																			metadata: {
+																				configId: editingConfig.id,
+																				configKey: editingConfig.key,
+																				configCategory: editingConfig.category,
+																			},
 																		});
 
 																		adminLogger.info('Saving configuration edit', {
-																			configId: editingConfig.id,
-																			configKey: editingConfig.key,
-																			configCategory: editingConfig.category,
-																			newValue: editingConfig.value,
-																			operation: 'save-config-edit',
+																			metadata: {
+																				configId: editingConfig.id,
+																				configKey: editingConfig.key,
+																				configCategory: editingConfig.category,
+																				newValue: editingConfig.value,
+																				operation: 'save-config-edit',
+																			},
 																		});
 
 																		saveConfiguration(editingConfig);
@@ -477,16 +496,20 @@ function SystemConfigPageContent() {
 														size="sm"
 														onClick={() => {
 															userActionLogger.logClick('edit-configuration', {
-																configId: config.id,
-																configKey: config.key,
-																configCategory: config.category,
+																metadata: {
+																	configId: config.id,
+																	configKey: config.key,
+																	configCategory: config.category,
+																},
 															});
 
 															componentLogger.logInfo('Configuration edit started', {
-																configId: config.id,
-																configKey: config.key,
-																configCategory: config.category,
-																operation: 'start-config-edit',
+																metadata: {
+																	configId: config.id,
+																	configKey: config.key,
+																	configCategory: config.category,
+																	operation: 'start-config-edit',
+																},
 															});
 
 															setEditingConfig(config);

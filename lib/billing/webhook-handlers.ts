@@ -30,6 +30,39 @@ import type { WebhookResult } from './subscription-types';
 
 const logger = createCategoryLogger(LogCategory.BILLING);
 
+const resolveCustomerId = (customer: Stripe.Subscription['customer']): string | null => {
+	if (typeof customer === 'string') return customer;
+	if (
+		customer &&
+		typeof customer === 'object' &&
+		'id' in customer &&
+		typeof customer.id === 'string'
+	) {
+		return customer.id;
+	}
+	return null;
+};
+
+const mapStripeSubscriptionStatus = (status: Stripe.Subscription.Status): SubscriptionStatus => {
+	switch (status) {
+		case 'trialing':
+			return 'trialing';
+		case 'active':
+			return 'active';
+		case 'past_due':
+			return 'past_due';
+		case 'canceled':
+			return 'canceled';
+		case 'unpaid':
+			return 'unpaid';
+		case 'incomplete':
+		case 'incomplete_expired':
+			return 'none';
+		default:
+			return 'none';
+	}
+};
+
 // ═══════════════════════════════════════════════════════════════
 // SUBSCRIPTION CHANGE HANDLER
 // ═══════════════════════════════════════════════════════════════
@@ -54,7 +87,17 @@ export async function handleSubscriptionChange(
 
 	try {
 		// 1. Find the user
-		const customerId = subscription.customer as string;
+		const customerId = resolveCustomerId(subscription.customer);
+		if (!customerId) {
+			logger.error(`[${handlerId}] Missing customer ID on subscription`, undefined, {
+				metadata: { subscriptionId: subscription.id },
+			});
+			return {
+				success: false,
+				action: 'missing_customer',
+				details: { eventType, subscriptionId: subscription.id },
+			};
+		}
 		let user = await getUserByStripeCustomerId(customerId);
 
 		// Try metadata fallback
@@ -110,7 +153,7 @@ export async function handleSubscriptionChange(
 			intendedPlan: planKey,
 
 			// Subscription status
-			subscriptionStatus: subscription.status as SubscriptionStatus,
+			subscriptionStatus: mapStripeSubscriptionStatus(subscription.status),
 
 			// Trial dates (trialStatus is now derived, not stored)
 			trialStartDate: trialStart ? new Date(trialStart) : undefined,
@@ -147,7 +190,7 @@ export async function handleSubscriptionChange(
 			await trackTrialStarted({ email: userEmail, plan: planName });
 		} else if (subscription.status === 'active') {
 			// Get monthly price value for tracking
-			const monthlyPrice = planConfig.price.monthly / 100; // Convert cents to dollars
+			const monthlyPrice = planConfig.monthlyPrice / 100; // Convert cents to dollars
 
 			// Check if this is a trial conversion (user was previously trialing)
 			const wasTrialing = user.subscriptionStatus === 'trialing';
@@ -175,7 +218,8 @@ export async function handleSubscriptionChange(
 		};
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-		logger.error(`[${handlerId}] Failed to process ${eventType}`, error as Error, {
+		const normalizedError = error instanceof Error ? error : new Error(String(error));
+		logger.error(`[${handlerId}] Failed to process ${eventType}`, normalizedError, {
 			metadata: { subscriptionId: subscription.id },
 		});
 
@@ -199,7 +243,14 @@ export async function handleSubscriptionChange(
 export async function handleSubscriptionDeleted(
 	subscription: Stripe.Subscription
 ): Promise<WebhookResult> {
-	const customerId = subscription.customer as string;
+	const customerId = resolveCustomerId(subscription.customer);
+	if (!customerId) {
+		return {
+			success: false,
+			action: 'missing_customer',
+			details: { subscriptionId: subscription.id },
+		};
+	}
 	const user = await getUserByStripeCustomerId(customerId);
 
 	if (!user) {
@@ -268,7 +319,17 @@ export async function handleCheckoutCompleted(
 		};
 	}
 
-	const subscription = await stripe.subscriptions.retrieve(session.subscription as string, {
+	const subscriptionId =
+		typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
+	if (!subscriptionId) {
+		return {
+			success: false,
+			action: 'no_subscription',
+			details: { sessionId: session.id },
+		};
+	}
+
+	const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
 		expand: ['items.data.price'],
 	});
 

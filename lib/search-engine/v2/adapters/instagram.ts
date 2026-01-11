@@ -8,8 +8,15 @@
  * We must enrich creators via the Instagram basic-profile endpoint.
  */
 
+import {
+	getNumberProperty,
+	getStringProperty,
+	isNumber,
+	isString,
+	toRecord,
+} from '@/lib/utils/type-guards';
 import { ENDPOINTS } from '../core/config';
-import type { FetchResult, NormalizedCreator, SearchConfig } from '../core/types';
+import type { FetchResult, NormalizedCreator, Platform, SearchConfig } from '../core/types';
 import { enrichInstagramCreator } from './instagram-enrichment';
 import type { SearchAdapter } from './interface';
 import { registerAdapter } from './interface';
@@ -57,7 +64,7 @@ interface InstagramSearchResponse {
 // ============================================================================
 
 class InstagramAdapter implements SearchAdapter {
-	readonly platform = 'instagram' as const;
+	readonly platform: Platform = 'instagram';
 
 	/**
 	 * Fetch results from Instagram reels search API
@@ -93,19 +100,21 @@ class InstagramAdapter implements SearchAdapter {
 				};
 			}
 
-			const payload = (await response.json()) as InstagramSearchResponse;
+			const payload = await response.json();
+			const payloadRecord = toRecord(payload);
 
-			if (payload?.success === false) {
+			if (payloadRecord?.success === false) {
 				return {
 					items: [],
 					hasMore: false,
 					nextCursor: undefined,
 					durationMs,
-					error: payload.message || 'Instagram API returned success=false',
+					error:
+						getStringProperty(payloadRecord, 'message') || 'Instagram API returned success=false',
 				};
 			}
 
-			const items = payload.reels ?? [];
+			const items = Array.isArray(payloadRecord?.reels) ? (payloadRecord?.reels ?? []) : [];
 
 			return {
 				items,
@@ -128,41 +137,45 @@ class InstagramAdapter implements SearchAdapter {
 	 * Normalize an Instagram reel to standard format
 	 */
 	normalize(raw: unknown): NormalizedCreator | null {
-		const reel = raw as InstagramReel;
-		const owner = reel?.owner;
+		const reel = toRecord(raw);
+		const owner = reel ? toRecord(reel.owner) : null;
 
-		if (!owner?.username) {
+		const username = owner ? getStringProperty(owner, 'username') : null;
+		if (!username) {
 			return null;
 		}
 
-		const username = owner.username;
-		const instagramUserIdRaw = (owner as InstagramOwner)?.id;
-		const instagramUserId =
-			typeof instagramUserIdRaw === 'string'
-				? instagramUserIdRaw.trim() || undefined
-				: typeof instagramUserIdRaw === 'number'
-					? String(instagramUserIdRaw)
-					: undefined;
+		const instagramUserIdRaw = owner?.id;
+		const instagramUserId = isString(instagramUserIdRaw)
+			? instagramUserIdRaw.trim() || undefined
+			: isNumber(instagramUserIdRaw)
+				? String(instagramUserIdRaw)
+				: undefined;
 
-		const avatarUrl = owner.profile_pic_url ?? '';
-		const thumbnail = reel.thumbnail_src || reel.display_url || '';
+		const avatarUrl = getStringProperty(owner ?? {}, 'profile_pic_url') ?? '';
+		const thumbnail =
+			getStringProperty(reel ?? {}, 'thumbnail_src') ??
+			getStringProperty(reel ?? {}, 'display_url') ??
+			'';
+		const shortcode = getStringProperty(reel ?? {}, 'shortcode');
 		const reelUrl =
-			reel.url || (reel.shortcode ? `https://www.instagram.com/reel/${reel.shortcode}/` : '');
-		const contentId = reel.shortcode || reel.id || `${username}-${Date.now()}`;
+			getStringProperty(reel ?? {}, 'url') ||
+			(shortcode ? `https://www.instagram.com/reel/${shortcode}/` : '');
+		const contentId =
+			shortcode || getStringProperty(reel ?? {}, 'id') || `${username}-${Date.now()}`;
 
-		// Parse numeric values
-		const likeCount =
-			typeof reel.like_count === 'string'
-				? Number.parseInt(reel.like_count, 10)
-				: (reel.like_count ?? 0);
-		const commentCount =
-			typeof reel.comment_count === 'string'
-				? Number.parseInt(reel.comment_count, 10)
-				: (reel.comment_count ?? 0);
-		const viewCount =
-			typeof (reel.video_view_count ?? reel.video_play_count) === 'string'
-				? Number.parseInt(String(reel.video_view_count ?? reel.video_play_count), 10)
-				: (reel.video_view_count ?? reel.video_play_count ?? 0);
+		const toNumberValue = (value: unknown): number => {
+			if (isNumber(value)) return value;
+			if (isString(value)) {
+				const parsed = Number.parseInt(value, 10);
+				return Number.isFinite(parsed) ? parsed : 0;
+			}
+			return 0;
+		};
+
+		const likeCount = toNumberValue(reel?.like_count);
+		const commentCount = toNumberValue(reel?.comment_count);
+		const viewCount = toNumberValue(reel?.video_view_count ?? reel?.video_play_count);
 
 		const creator: NormalizedCreator = {
 			platform: 'Instagram',
@@ -171,27 +184,27 @@ class InstagramAdapter implements SearchAdapter {
 
 			creator: {
 				username,
-				name: owner.full_name || username,
-				followers: owner.follower_count ?? 0,
+				name: getStringProperty(owner ?? {}, 'full_name') ?? username,
+				followers: getNumberProperty(owner ?? {}, 'follower_count') ?? 0,
 				avatarUrl,
 				bio: '', // filled by enrich()
 				emails: [],
-				verified: Boolean(owner.is_verified),
+				verified: Boolean(owner?.is_verified),
 				instagramUserId,
 			},
 
 			content: {
 				id: contentId,
 				url: reelUrl,
-				description: reel.caption ?? '',
+				description: getStringProperty(reel ?? {}, 'caption') ?? '',
 				thumbnail,
 				statistics: {
 					views: Number.isFinite(viewCount) ? viewCount : 0,
 					likes: Number.isFinite(likeCount) ? likeCount : 0,
 					comments: Number.isFinite(commentCount) ? commentCount : 0,
 				},
-				postedAt: reel.taken_at,
-				duration: reel.video_duration,
+				postedAt: getStringProperty(reel ?? {}, 'taken_at') ?? undefined,
+				duration: getNumberProperty(reel ?? {}, 'video_duration') ?? undefined,
 			},
 
 			hashtags: [], // Instagram API doesn't return hashtags separately
@@ -203,7 +216,7 @@ class InstagramAdapter implements SearchAdapter {
 			preview: thumbnail || undefined,
 			previewUrl: thumbnail || undefined,
 			video: {
-				description: reel.caption ?? '',
+				description: getStringProperty(reel ?? {}, 'caption') ?? '',
 				url: reelUrl,
 				preview: thumbnail || undefined,
 				previewUrl: thumbnail || undefined,

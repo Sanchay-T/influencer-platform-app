@@ -19,10 +19,11 @@ const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:3002';
 const POLL_INTERVAL_MS = 2000;
 const MAX_POLL_TIME_MS = 15 * 60 * 1000; // 15 minutes
 
-const TEST_CONFIGS = [
-	{ target: 100 as const, keyword: 'fitness tips' },
-	{ target: 500 as const, keyword: 'beauty tutorial' },
-	{ target: 1000 as const, keyword: 'tech review' },
+type BenchmarkTarget = 100 | 500 | 1000;
+const TEST_CONFIGS: Array<{ target: BenchmarkTarget; keyword: string }> = [
+	{ target: 100, keyword: 'fitness tips' },
+	{ target: 500, keyword: 'beauty tutorial' },
+	{ target: 1000, keyword: 'tech review' },
 ];
 
 interface TestResult {

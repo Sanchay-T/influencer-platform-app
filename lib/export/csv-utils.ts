@@ -1,4 +1,6 @@
+import type { DedupeOptions } from '@/lib/utils/dedupe-creators';
 import { dedupeCreators as sharedDedupeCreators } from '@/lib/utils/dedupe-creators';
+import { toRecord } from '@/lib/utils/type-guards';
 
 export type { DedupeOptions } from '@/lib/utils/dedupe-creators';
 
@@ -13,12 +15,21 @@ const EMAIL_REGEX = /[^\s@]+@[^\s@]+\.[^\s@]+/i;
 
 type CreatorRecord = Record<string, unknown>;
 
-export const dedupeCreators = (creators: unknown[], options: DedupeOptions = {}): CreatorRecord[] =>
-	sharedDedupeCreators(creators as CreatorRecord[], options) as CreatorRecord[];
+export const dedupeCreators = (
+	creators: unknown[],
+	options: DedupeOptions = {}
+): CreatorRecord[] => {
+	const records = creators
+		.map((creator) => toRecord(creator))
+		.filter((creator): creator is CreatorRecord => !!creator);
+	return sharedDedupeCreators(records, options);
+};
 
 const normalizeEmail = (value: string): string | null => {
 	const trimmed = value.trim();
-	if (!trimmed) return null;
+	if (!trimmed) {
+		return null;
+	}
 
 	if (EMAIL_REGEX.test(trimmed)) {
 		return trimmed;
@@ -34,7 +45,9 @@ export const extractEmails = (input: unknown): string[] => {
 
 	while (stack.length > 0) {
 		const current = stack.pop();
-		if (current == null) continue;
+		if (current == null) {
+			continue;
+		}
 
 		if (typeof current === 'string') {
 			const normalized = normalizeEmail(current);
@@ -45,19 +58,23 @@ export const extractEmails = (input: unknown): string[] => {
 		}
 
 		if (Array.isArray(current)) {
-			current.forEach((value) => stack.push(value));
+			current.forEach((value) => {
+				stack.push(value);
+			});
 			continue;
 		}
 
 		if (typeof current === 'object') {
-			const record = current as CreatorRecord;
-			if (visited.has(record)) {
+			const record = toRecord(current);
+			if (!record || visited.has(record)) {
 				continue;
 			}
 			visited.add(record);
 
 			Object.entries(record).forEach(([key, value]) => {
-				if (!value) return;
+				if (!value) {
+					return;
+				}
 
 				if (EMAIL_KEY_PATTERN.test(key)) {
 					stack.push(value);

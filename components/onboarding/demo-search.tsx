@@ -5,9 +5,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function DemoSearch({ businessName }: { businessName: string }) {
 	const [isSearching, setIsSearching] = useState(false);
-	const [results, setResults] = useState<any[]>([]);
+	type DemoInfluencer = {
+		name: string;
+		platform: 'TikTok' | 'Instagram' | 'YouTube';
+		followers: string;
+		engagement: string;
+		bio: string;
+		email: string;
+		avatar: string;
+		url: string;
+	};
+	const [results, setResults] = useState<DemoInfluencer[]>([]);
 
-	const demoInfluencers = [
+	const demoInfluencers: DemoInfluencer[] = [
 		{
 			name: 'Sarah Johnson',
 			platform: 'TikTok',

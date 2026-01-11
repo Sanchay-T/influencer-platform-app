@@ -2,6 +2,8 @@
  * Simple V2 dispatch test
  */
 
+export {}
+
 async function main() {
 	const BASE_URL = process.env.TEST_URL || 'http://localhost:3002';
 

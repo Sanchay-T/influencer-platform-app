@@ -187,7 +187,7 @@ const CATEGORY_CONFIGS: Partial<Record<LogCategory, CategoryConfig>> = {
 		rateLimitPerMinute: 20, // Security events should be limited but captured
 	},
 
-	[LogCategory.ERROR]: {
+	[LogCategory.SYSTEM]: {
 		minLevel: LogLevel.ERROR,
 		enableSentry: true,
 		enableConsole: true,
@@ -344,20 +344,24 @@ export class LoggingConfigManager {
 	/**
 	 * Get a specific configuration value with fallback
 	 */
-	private async getConfigValue<T>(
+	private async getConfigValue<T extends string | number | boolean>(
 		category: string,
 		key: string,
 		environment: string,
 		defaultValue: T
 	): Promise<T> {
+		const matchesType = (value: unknown): value is T => typeof value === typeof defaultValue;
+
 		try {
 			// Try environment-specific key first
 			const envKey = `${key}_${environment}`;
 			try {
-				return (await SystemConfig.get(category, envKey)) as T;
+				const value = await SystemConfig.get(category, envKey);
+				return matchesType(value) ? value : defaultValue;
 			} catch {
 				// Fall back to general key
-				return (await SystemConfig.get(category, key)) as T;
+				const value = await SystemConfig.get(category, key);
+				return matchesType(value) ? value : defaultValue;
 			}
 		} catch {
 			// Fall back to default value
@@ -386,7 +390,7 @@ export class LoggingConfigManager {
 	/**
 	 * Update configuration in database
 	 */
-	async updateConfig(key: string, value: any, environment?: string): Promise<void> {
+	async updateConfig(key: string, value: unknown, environment?: string): Promise<void> {
 		const env = environment || this.getCurrentEnvironment();
 		const configKey = environment ? `${key}_${env}` : key;
 
@@ -395,7 +399,8 @@ export class LoggingConfigManager {
 		if (typeof value === 'number') valueType = 'number';
 		if (typeof value === 'boolean') valueType = 'boolean';
 
-		await SystemConfig.set('logging', configKey, value.toString(), valueType);
+		const stringValue = typeof value === 'string' ? value : String(value);
+		await SystemConfig.set('logging', configKey, stringValue, valueType);
 
 		// Clear cache to force reload
 		this.clearCache();
@@ -568,7 +573,7 @@ const loggingConfig = LoggingConfigManager.getInstance();
 export const getLoggingConfig = () => loggingConfig.getConfig();
 export const getCategoryConfig = (category: LogCategory) =>
 	loggingConfig.getCategoryConfig(category);
-export const updateLoggingConfig = (key: string, value: any, environment?: string) =>
+export const updateLoggingConfig = (key: string, value: unknown, environment?: string) =>
 	loggingConfig.updateConfig(key, value, environment);
 export const initializeLoggingDefaults = () => loggingConfig.initializeDefaults();
 export const validateLoggingConfig = () => loggingConfig.validateConfig();
