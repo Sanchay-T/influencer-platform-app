@@ -88,9 +88,60 @@ export async function trackPaidCustomer(data: {
 	});
 }
 
+export async function trackTrialConverted(data: {
+	email: string;
+	plan: string;
+	value: number;
+}): Promise<void> {
+	await track({
+		channel: 'billing',
+		event: 'Trial Converted',
+		icon: '🎉',
+		description: `${data.email} converted from trial to ${data.plan} ($${data.value}/mo)`,
+		tags: { email: data.email, plan: data.plan, value: data.value },
+		notify: true,
+	});
+}
+
+export async function trackSubscriptionCanceled(data: {
+	email: string;
+	plan: string;
+}): Promise<void> {
+	await track({
+		channel: 'billing',
+		event: 'Subscription Canceled',
+		icon: '😢',
+		description: `${data.email} canceled ${data.plan}`,
+		tags: { email: data.email, plan: data.plan },
+		notify: true,
+	});
+}
+
 // ============================================================================
 // Product Usage Events
 // ============================================================================
+
+export async function trackSearchStarted(data: {
+	userId: string;
+	platform: string;
+	type: string;
+	targetCount: number;
+	email: string;
+}): Promise<void> {
+	await track({
+		channel: 'searches',
+		event: 'Search Started',
+		icon: '🚀',
+		description: `${data.platform} ${data.type}: targeting ${data.targetCount} creators`,
+		tags: {
+			userId: data.userId,
+			platform: data.platform,
+			type: data.type,
+			targetCount: data.targetCount,
+			email: data.email,
+		},
+	});
+}
 
 export async function trackCampaignCreated(data: {
 	userId: string;

@@ -9,9 +9,11 @@
 
 import { eq } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
+import { trackSearchStarted } from '@/lib/analytics/logsnag';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { validateCreatorSearch } from '@/lib/billing';
 import { db } from '@/lib/db';
+import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { type JobStatus, scrapingJobs } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { qstash } from '@/lib/queue/qstash';
@@ -137,6 +139,16 @@ export async function POST(req: NextRequest) {
 			jobId: job.id,
 			platform: jobPlatform,
 			elapsed: Date.now() - startTime,
+		});
+
+		// Track search started in LogSnag
+		const user = await getUserProfile(userId);
+		await trackSearchStarted({
+			userId,
+			platform: platform === 'instagram' ? 'Instagram' : 'TikTok',
+			type: 'similar',
+			targetCount: targetResults,
+			email: user?.email || 'unknown',
 		});
 
 		// Enqueue for processing

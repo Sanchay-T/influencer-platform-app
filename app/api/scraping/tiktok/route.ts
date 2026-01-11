@@ -1,6 +1,7 @@
 import { Receiver } from '@upstash/qstash';
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
+import { trackSearchStarted } from '@/lib/analytics/logsnag';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { validateCreatorSearch } from '@/lib/billing';
 import { SystemConfig } from '@/lib/config/system-config';
@@ -384,6 +385,17 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
 				},
 				LogCategory.TIKTOK
 			);
+
+			// Track search started in LogSnag
+			const { getUserProfile } = await import('@/lib/db/queries/user-queries');
+			const user = await getUserProfile(userId);
+			await trackSearchStarted({
+				userId,
+				platform: 'TikTok',
+				type: 'keyword',
+				targetCount: effectiveTargetResults,
+				email: user?.email || 'unknown',
+			});
 
 			logPhase('external');
 

@@ -13,7 +13,12 @@
  */
 
 import type Stripe from 'stripe';
-import { trackPaidCustomer, trackTrialStarted } from '@/lib/analytics/logsnag';
+import {
+	trackPaidCustomer,
+	trackSubscriptionCanceled,
+	trackTrialConverted,
+	trackTrialStarted,
+} from '@/lib/analytics/logsnag';
 import {
 	getUserByStripeCustomerId,
 	getUserProfile,
@@ -143,7 +148,14 @@ export async function handleSubscriptionChange(
 		} else if (subscription.status === 'active') {
 			// Get monthly price value for tracking
 			const monthlyPrice = planConfig.price.monthly / 100; // Convert cents to dollars
-			await trackPaidCustomer({ email: userEmail, plan: planName, value: monthlyPrice });
+
+			// Check if this is a trial conversion (user was previously trialing)
+			const wasTrialing = user.subscriptionStatus === 'trialing';
+			if (wasTrialing) {
+				await trackTrialConverted({ email: userEmail, plan: planName, value: monthlyPrice });
+			} else {
+				await trackPaidCustomer({ email: userEmail, plan: planName, value: monthlyPrice });
+			}
 		}
 
 		logger.info(`[${handlerId}] Successfully processed ${eventType}`, {
@@ -207,6 +219,12 @@ export async function handleSubscriptionDeleted(
 		billingSyncStatus: 'webhook_deleted',
 		lastWebhookEvent: 'customer.subscription.deleted',
 		lastWebhookTimestamp: new Date(),
+	});
+
+	// Track cancellation in LogSnag
+	await trackSubscriptionCanceled({
+		email: user.email || 'unknown',
+		plan: user.currentPlan || 'unknown',
 	});
 
 	logger.info('Subscription deleted', {

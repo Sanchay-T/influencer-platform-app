@@ -1,8 +1,10 @@
 import { eq } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
+import { trackSearchStarted } from '@/lib/analytics/logsnag';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { validateCreatorSearch } from '@/lib/billing';
 import { db } from '@/lib/db';
+import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { campaigns, type JobStatus, scrapingJobs } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { qstash } from '@/lib/queue/qstash';
@@ -105,6 +107,16 @@ export async function POST(req: NextRequest) {
 			amount,
 			userId,
 			campaignId,
+		});
+
+		// Track search started in LogSnag
+		const user = await getUserProfile(userId);
+		await trackSearchStarted({
+			userId,
+			platform: 'Instagram',
+			type: 'keyword',
+			targetCount: targetResults,
+			email: user?.email || 'unknown',
 		});
 
 		// enqueue for processing
