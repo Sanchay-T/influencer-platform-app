@@ -16,6 +16,7 @@
 
 import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
+import { getDisposableEmailError, isDisposableEmail } from './disposable-emails';
 import {
 	type BillingInterval,
 	getPlanConfig,
@@ -74,6 +75,15 @@ export class CheckoutService {
 			userId,
 			metadata: { plan, interval, hasExistingCustomer: !!existingCustomerId },
 		});
+
+		// Block disposable/temporary emails to prevent trial abuse
+		if (isDisposableEmail(email)) {
+			logger.warn('Blocked disposable email at checkout', {
+				userId,
+				metadata: { emailDomain: email.split('@')[1] },
+			});
+			throw new Error(getDisposableEmailError());
+		}
 
 		// Validate plan
 		if (!isValidPlan(plan)) {
