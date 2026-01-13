@@ -150,6 +150,30 @@ export const jobCreators = pgTable(
 	})
 );
 
+// Export Jobs - Track background CSV export jobs
+// @context CSV exports run in background via QStash to avoid timeout
+export const exportJobs = pgTable(
+	'export_jobs',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		userId: text('user_id').notNull(),
+		campaignId: uuid('campaign_id').references(() => campaigns.id),
+		jobId: uuid('job_id').references(() => scrapingJobs.id), // For single job export
+		status: varchar('status', { length: 20 }).notNull().default('pending'),
+		// Status flow: pending → processing → completed | failed
+		totalCreators: integer('total_creators'),
+		downloadUrl: text('download_url'),
+		expiresAt: timestamp('expires_at'), // Vercel Blob TTL
+		error: text('error'),
+		createdAt: timestamp('created_at').notNull().defaultNow(),
+		completedAt: timestamp('completed_at'),
+	},
+	(table) => ({
+		userIdIdx: index('idx_export_jobs_user_id').on(table.userId),
+		statusIdx: index('idx_export_jobs_status').on(table.status),
+	})
+);
+
 // Search Jobs table (legacy/alternative)
 export const searchJobs = pgTable('search_jobs', {
 	id: text('id').primaryKey(),
@@ -766,6 +790,8 @@ export type ScrapingResult = typeof scrapingResults.$inferSelect;
 export type NewScrapingResult = typeof scrapingResults.$inferInsert;
 export type JobCreator = typeof jobCreators.$inferSelect;
 export type NewJobCreator = typeof jobCreators.$inferInsert;
+export type ExportJob = typeof exportJobs.$inferSelect;
+export type NewExportJob = typeof exportJobs.$inferInsert;
 export type SearchJob = typeof searchJobs.$inferSelect;
 export type NewSearchJob = typeof searchJobs.$inferInsert;
 export type SearchResult = typeof searchResults.$inferSelect;
