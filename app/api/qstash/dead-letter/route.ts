@@ -65,7 +65,11 @@ export async function POST(req: Request) {
 			}
 		} catch {
 			// Continue anyway - we want to capture the failure
-			logger.warn(LogCategory.QSTASH, 'DLQ signature verification failed, proceeding anyway');
+			logger.warn(
+				'DLQ signature verification failed, proceeding anyway',
+				undefined,
+				LogCategory.QSTASH
+			);
 		}
 	}
 
@@ -89,10 +93,15 @@ export async function POST(req: Request) {
 		timestamp: new Date().toISOString(),
 	};
 
-	logger.error(LogCategory.QSTASH, 'Dead letter queue received failed message', {
-		...dlqEvent,
-		body: message,
-	});
+	logger.error(
+		'Dead letter queue received failed message',
+		undefined,
+		{
+			...dlqEvent,
+			body: message,
+		},
+		LogCategory.QSTASH
+	);
 
 	// Report to Sentry for alerting
 	Sentry.captureMessage('QStash message failed after all retries', {
