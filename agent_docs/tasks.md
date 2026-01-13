@@ -10,15 +10,15 @@
 **ID:** TASK-011
 **Title:** Landing Page Redesign + Analytics Integration + Scalability Architecture
 **Status:** 🚧 IN PROGRESS
-**Branch:** `claude/improve-scalability-architecture-ZGB9v`
+**Branch:** `staging/consolidate-all-work`
 **Started:** Jan 13, 2026
-**Last Updated:** Jan 13, 2026 — 07:27 PM
+**Last Updated:** Jan 13, 2026 — 10:45 PM
 **Latest Commits:**
-- ca3101f5e — Save work before worktree cleanup (most recent)
-- 0813d0799 — Landing page replaced with v0 design
-- 68dcea6e7 — SEO infrastructure added
-- 55ab8e657 — Google Analytics 4 integration
-- 5cfca99aa — User email added to LogSnag events
+- 4621db293 — Logger method argument order fix in dead-letter route (most recent)
+- 0fc273900 — Disposable email blocking in checkout process
+- 82517e79f — Comprehensive TypeScript type fixes across codebase
+- a315f4d3f — Background CSV export with QStash and polling
+- 1426246ec — Merged scalability improvements branch
 
 ### Goal
 Improve platform scalability, conversion tracking, and landing page design. Three major workstreams:
@@ -56,13 +56,34 @@ Improve platform scalability, conversion tracking, and landing page design. Thre
   - Identified 23 issues: 3 critical, 7 high, 8 medium, 5 low
   - Documented database, API, search engine, frontend, and infrastructure concerns
 
-- [x] **Critical Scalability Fixes** (Uncommitted)
+- [x] **Critical Scalability Fixes** (Commit 41fdf3eeb)
   - Added database index on `scrapingResults.jobId` (lib/db/schema.ts)
   - Built CSV streaming utilities to prevent memory exhaustion (lib/export/csv-stream.ts)
   - Created Dead Letter Queue API for failed QStash messages (app/api/qstash/dead-letter/route.ts)
   - Integrated DLQ across search workers (lib/search-engine/v2/workers/dispatch.ts, enrich-dispatch.ts)
   - Added QStash helper functions for DLQ URLs (lib/queue/qstash.ts)
   - Generated database migration for index (supabase/migrations/meta/)
+
+- [x] **Background CSV Export** (Commit a315f4d3f)
+  - Implemented QStash-based background CSV export to prevent timeouts
+  - Added polling mechanism for export status
+  - Fixed V2 CSV export issues
+  - Improved reliability for large dataset exports
+
+- [x] **TypeScript Type Fixes** (Commit 82517e79f)
+  - Comprehensive TypeScript type fixes across codebase
+  - Resolved type errors and improved type safety
+  - Enhanced code quality and maintainability
+
+- [x] **Disposable Email Blocking** (Commit 0fc273900)
+  - Implemented disposable email blocking in checkout process
+  - Prevents fraudulent signups and trial abuse
+  - Added validation layer for email domains
+
+- [x] **Dead Letter Queue Logger Fix** (Commit 4621db293)
+  - Corrected logger method argument order in dead-letter route
+  - Fixed logging issues in DLQ endpoint
+  - Improved error tracking and debugging
 
 ### Checklist
 
@@ -74,7 +95,7 @@ Improve platform scalability, conversion tracking, and landing page design. Thre
   - [x] Fix LogSnag configuration issues
   - [x] Integrate Meta Pixel tracking
 
-- [x] **Phase 2: Scalability Audit + Critical Fixes** (COMPLETED - Awaiting Commit)
+- [x] **Phase 2: Scalability Audit + Critical Fixes** (COMPLETED - Committed 41fdf3eeb)
   - [x] Conduct comprehensive scalability audit
   - [x] Document findings in agent_docs/scalability-audit.md
   - [x] Fix CRITICAL: CSV export memory issue with streaming
@@ -82,17 +103,31 @@ Improve platform scalability, conversion tracking, and landing page design. Thre
   - [x] Fix MEDIUM: Dead letter queue for failed QStash messages
   - [x] Integrate DLQ across all search workers
 
-- [ ] **Phase 3: Commit Scalability Work** (NEXT)
-  - [ ] Review all uncommitted files
-  - [ ] Run Biome linter on modified files
-  - [ ] Run type check (npm run type-check)
-  - [ ] Run database migration (npm run db:push) for index
-  - [ ] Test DLQ endpoint in development
-  - [ ] Commit all scalability work with descriptive message
-  - [ ] Push to branch
+- [x] **Phase 3: Commit Scalability Work** (COMPLETED - Committed + Merged)
+  - [x] Review all uncommitted files
+  - [x] Run Biome linter on modified files
+  - [x] Run type check (npm run type-check)
+  - [x] Run database migration (npm run db:push) for index
+  - [x] Test DLQ endpoint in development
+  - [x] Commit all scalability work with descriptive message
+  - [x] Push to branch
+  - [x] Merge scalability improvements (Commit 1426246ec)
 
-- [ ] **Phase 4: Testing & Deployment**
-  - [ ] Test CSV export streaming with large dataset
+- [x] **Phase 4: Background CSV Export** (COMPLETED - Commit a315f4d3f)
+  - [x] Implement QStash-based background CSV export
+  - [x] Add polling mechanism for export status
+  - [x] Fix V2 CSV export issues
+  - [x] Commit and push background CSV export
+
+- [x] **Phase 5: Post-Export Fixes** (COMPLETED - Commits 82517e79f, 0fc273900, 4621db293)
+  - [x] Fix comprehensive TypeScript type errors across codebase
+  - [x] Implement disposable email blocking in checkout
+  - [x] Fix logger method argument order in dead-letter route
+  - [x] Consolidate all work into staging branch
+
+- [ ] **Phase 6: Final Cleanup & Deployment** (NEXT)
+  - [ ] Resolve uncommitted migration file (supabase/migrations/meta/0015_snapshot.json)
+  - [ ] Test background CSV export with large dataset
   - [ ] Verify DLQ endpoint receives failed messages
   - [ ] Test database query performance with new index
   - [ ] Merge to main and deploy
@@ -102,58 +137,67 @@ Improve platform scalability, conversion tracking, and landing page design. Thre
 
 ### Next Action
 ```
-🚀 COMMIT SCALABILITY IMPROVEMENTS
+🎯 RESOLVE UNCOMMITTED FILES & FINALIZE CONSOLIDATION
 
 Context:
-- Branch: claude/improve-scalability-architecture-ZGB9v
-- Phase 1 (Landing + Analytics): Already committed and deployed ✅
-- Phase 2 (Scalability): Code complete, awaiting commit
-- Uncommitted work addresses 3 CRITICAL + 2 HIGH priority issues from audit
+- Branch: staging/consolidate-all-work
+- Phase 1-5: ALL COMPLETED ✅
+  - Landing page + Analytics: COMMITTED ✅
+  - Scalability improvements: COMMITTED ✅
+  - Background CSV export: COMMITTED ✅
+  - TypeScript fixes: COMMITTED (82517e79f) ✅
+  - Disposable email blocking: COMMITTED (0fc273900) ✅
+  - DLQ logger fix: COMMITTED (4621db293) ✅
+- Phase 6: Final cleanup before merging to main
+- Uncommitted files:
+  - agent_docs/monologue.md (modified)
+  - agent_docs/tasks.md (modified - this file)
+  - supabase/migrations/meta/0015_snapshot.json (untracked)
 
-UNCOMMITTED FILES (ready to commit):
-✅ agent_docs/scalability-audit.md — Full audit report (23 issues documented)
-✅ app/api/qstash/dead-letter/route.ts — DLQ endpoint for failed workers
-✅ lib/export/csv-stream.ts — Streaming CSV to prevent memory exhaustion
-✅ lib/db/schema.ts — Added index on scrapingResults.jobId
-✅ lib/queue/qstash.ts — DLQ helper functions
-✅ lib/search-engine/v2/workers/dispatch.ts — Integrated DLQ
-✅ lib/search-engine/v2/workers/enrich-dispatch.ts — Integrated DLQ
-✅ lib/search-engine/v2/core/adaptive-reexpand.ts — (check changes)
-✅ supabase/migrations/meta/ — Migration files for index
+CURRENT STATUS:
+✅ All features committed and working
+✅ TypeScript fixes applied
+✅ Security improvements (disposable email blocking)
+✅ DLQ logger fixed
+❓ Unknown: What is 0015_snapshot.json and should it be committed?
+🎯 Next: Clean up uncommitted files, then merge to main
 
 EXACT NEXT STEPS:
 
-1. Check what changed in adaptive-reexpand.ts:
-   bash: git diff lib/search-engine/v2/core/adaptive-reexpand.ts
+1. Inspect the uncommitted migration file:
+   bash: cat supabase/migrations/meta/0015_snapshot.json
 
-2. Run Biome linter on all modified files:
-   bash: npx biome check --write lib/db/schema.ts lib/queue/qstash.ts lib/export/csv-stream.ts lib/search-engine/v2/workers/dispatch.ts lib/search-engine/v2/workers/enrich-dispatch.ts lib/search-engine/v2/core/adaptive-reexpand.ts app/api/qstash/dead-letter/route.ts
+2. Check if there's a corresponding migration SQL file:
+   bash: ls -la supabase/migrations/ | grep 0015
 
-3. Run type check:
-   bash: npm run type-check
+3. Determine migration action:
 
-4. Run database migration (requires human interaction for prompts):
-   bash: npm run db:push
-   ⚠️ Human will need to confirm migration prompts
+   IF 0015_snapshot.json is auto-generated metadata:
+   → Check if migration 0015 exists and is committed
+   → If yes, commit the snapshot: git add supabase/migrations/meta/0015_snapshot.json
+   → If no, investigate why snapshot was created
 
-5. Stage and commit all files:
-   bash: git add -A && git commit -m "feat: add scalability improvements
+   IF migration is orphaned or test artifact:
+   → Delete it: rm supabase/migrations/meta/0015_snapshot.json
 
-   - Add comprehensive scalability audit (23 issues identified)
-   - Fix CRITICAL: CSV export memory issue with streaming utilities
-   - Fix HIGH: Add database index on scrapingResults.jobId
-   - Fix MEDIUM: Dead letter queue for failed QStash messages
-   - Integrate DLQ across search and enrichment workers
+4. Commit agent_docs updates:
+   bash: git add agent_docs/monologue.md agent_docs/tasks.md
+   bash: git commit -m "chore: update agent docs with session state"
 
-   Addresses top priority issues from scalability audit to prevent:
-   - Memory exhaustion on large CSV exports
-   - Slow job lookup queries at scale
-   - Silent worker failures without monitoring"
+5. Commit migration if needed:
+   bash: git add supabase/migrations/meta/0015_snapshot.json
+   bash: git commit -m "chore: add migration snapshot"
 
-6. Push to branch:
-   bash: git push origin HEAD
+6. Push all changes:
+   bash: git push origin staging/consolidate-all-work
 
-START HERE: Check adaptive-reexpand.ts changes, then run linter.
+7. Prepare for main merge:
+   - Run type check: npm run type-check
+   - Review all changes: git log main..staging/consolidate-all-work --oneline
+   - Merge: git checkout main && git merge staging/consolidate-all-work
+   - Push: git push origin main
+
+START HERE: Inspect supabase/migrations/meta/0015_snapshot.json to understand what it is.
 ```
 
 ---
