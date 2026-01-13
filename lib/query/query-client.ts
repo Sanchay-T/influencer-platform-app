@@ -27,12 +27,27 @@ export const queryClient = new QueryClient({
 /**
  * Query key factories for type-safe cache management
  */
-export const queryKeys = {
+export const queryKeys: {
 	// Job status (includes progress, counts)
-	jobStatus: (jobId: string) => ['job-status', jobId] as const,
+	jobStatus: (jobId: string) => readonly ['job-status', string];
 	// Paginated creators
-	jobCreators: (jobId: string, offset: number, limit: number) =>
-		['job-creators', jobId, offset, limit] as const,
+	jobCreators: (
+		jobId: string,
+		offset: number,
+		limit: number
+	) => readonly ['job-creators', string, number, number];
 	// All creators (infinite query)
-	jobAllCreators: (jobId: string) => ['job-all-creators', jobId] as const,
-} as const;
+	jobAllCreators: (jobId: string) => readonly ['job-all-creators', string];
+} = {
+	// Job status (includes progress, counts)
+	jobStatus: (jobId: string) => ['job-status', jobId],
+	// Paginated creators
+	jobCreators: (jobId: string, offset: number, limit: number) => [
+		'job-creators',
+		jobId,
+		offset,
+		limit,
+	],
+	// All creators (infinite query)
+	jobAllCreators: (jobId: string) => ['job-all-creators', jobId],
+};

@@ -22,6 +22,7 @@ import type {
 	PipelineContext,
 	PipelineMetrics,
 	PipelineResult,
+	Platform,
 	SearchConfig,
 } from './types';
 
@@ -230,7 +231,7 @@ function buildMetrics(
  * Run a parallel search without database integration
  */
 export async function runParallelStandalone(
-	platform: string,
+	platform: Platform,
 	keywords: string[],
 	targetResults: number,
 	config: SearchConfig
@@ -240,7 +241,7 @@ export async function runParallelStandalone(
 	const context: PipelineContext = {
 		jobId: `standalone-parallel-${Date.now()}`,
 		userId: 'test-user',
-		platform: platform as 'tiktok' | 'youtube' | 'instagram',
+		platform,
 		keywords,
 		targetResults,
 	};

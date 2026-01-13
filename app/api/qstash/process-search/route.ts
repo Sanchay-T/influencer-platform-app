@@ -8,6 +8,7 @@ import { scrapingJobs } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
 import { qstash } from '@/lib/queue/qstash';
 import { runSearchJob } from '@/lib/search-engine/runner';
+import { toError } from '@/lib/utils/type-guards';
 import { getWebhookUrl } from '@/lib/utils/url-utils';
 
 const receiver = new Receiver({
@@ -52,9 +53,10 @@ export async function POST(req: Request) {
 	try {
 		const parsed = JSON.parse(rawBody);
 		jobId = parsed?.jobId;
-	} catch (error: any) {
+	} catch (error: unknown) {
+		const parsedError = toError(error);
 		return NextResponse.json(
-			{ error: `Invalid JSON body: ${error?.message ?? 'Unknown error'}` },
+			{ error: `Invalid JSON body: ${parsedError.message}` },
 			{ status: 400 }
 		);
 	}
@@ -198,7 +200,7 @@ export async function POST(req: Request) {
 			await qstash.publishJSON({
 				url: callbackUrl,
 				body: { jobId },
-				delay: `${BigInt(delaySeconds)}s` as const,
+				delay: `${BigInt(delaySeconds)}s`,
 				retries: 3,
 				notifyOnFailure: true,
 			});
@@ -212,15 +214,16 @@ export async function POST(req: Request) {
 			metrics: result.metrics,
 			continuationScheduled: needsContinuation,
 		});
-	} catch (error: any) {
-		logger.error('Search runner failed', error, { jobId }, LogCategory.JOB);
+	} catch (error: unknown) {
+		const runnerError = toError(error);
+		logger.error('Search runner failed', runnerError, { jobId }, LogCategory.JOB);
 
 		// Attempt to mark job as failed to prevent stuck "processing" status
 		try {
 			const { SearchJobService } = await import('@/lib/search-engine/job-service');
 			const service = await SearchJobService.load(jobId);
 			if (service) {
-				await service.complete('error', { error: error?.message ?? 'Search runner failure' });
+				await service.complete('error', { error: runnerError.message });
 				logger.info('Job marked as error after failure', { jobId }, LogCategory.JOB);
 			}
 		} catch (completionError) {
@@ -234,7 +237,7 @@ export async function POST(req: Request) {
 
 		return NextResponse.json(
 			{
-				error: error?.message ?? 'Search runner failure',
+				error: runnerError.message,
 				jobId,
 				marked: 'error',
 			},

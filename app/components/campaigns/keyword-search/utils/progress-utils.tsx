@@ -15,11 +15,7 @@ export interface PinkSpinnerProps {
 /**
  * Pink-accent loading spinner to align with enrichment brand styling.
  */
-export const PinkSpinner = ({
-	size = 'h-4 w-4',
-	className = '',
-	label,
-}: PinkSpinnerProps): JSX.Element => (
+export const PinkSpinner = ({ size = 'h-4 w-4', className = '', label }: PinkSpinnerProps) => (
 	<span
 		className={cn('relative inline-flex items-center justify-center', size, className)}
 		role="status"

@@ -16,6 +16,7 @@ import { getPlanKeyByPriceId } from '@/lib/billing/plan-config';
 import { StripeClient } from '@/lib/billing/stripe-client';
 import { handleSubscriptionChange } from '@/lib/billing/webhook-handlers';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
+import { toError } from '@/lib/utils/type-guards';
 
 const logger = createCategoryLogger(LogCategory.BILLING);
 
@@ -138,7 +139,7 @@ export async function GET(request: NextRequest) {
 		});
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-		logger.error('Session verification failed', error as Error);
+		logger.error('Session verification failed', toError(error));
 
 		return NextResponse.json(
 			{ error: 'Failed to verify session', details: errorMessage },

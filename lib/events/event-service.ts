@@ -8,6 +8,7 @@ import {
 	type NewEvent,
 } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { toRecord } from '@/lib/utils/type-guards';
 
 // Event types for type safety
 export type EventType =
@@ -40,11 +41,11 @@ export interface EventMetadata {
 	ipAddress?: string;
 	source?: string;
 	adminUserId?: string;
-	[key: string]: any;
+	[key: string]: unknown;
 }
 
 export interface EventData {
-	[key: string]: any;
+	[key: string]: unknown;
 }
 
 /**
@@ -167,13 +168,22 @@ export class EventService {
 	/**
 	 * Mark event as processed by background job
 	 */
-	static async markEventProcessed(eventId: string, result?: any): Promise<void> {
+	static async markEventProcessed(eventId: string, result?: unknown): Promise<void> {
+		const metadataUpdate =
+			result === undefined
+				? {}
+				: {
+						metadata: {
+							result,
+						},
+					};
+
 		await db
 			.update(events)
 			.set({
 				processingStatus: 'completed',
 				processedAt: new Date(),
-				...(result && { metadata: { result } }),
+				...metadataUpdate,
 			})
 			.where(eq(events.id, eventId));
 
@@ -212,7 +222,7 @@ export class EventService {
 		eventId,
 	}: {
 		jobType: string;
-		payload: any;
+		payload: unknown;
 		priority?: number;
 		scheduledFor?: Date;
 		maxRetries?: number;
@@ -221,8 +231,8 @@ export class EventService {
 		const job: NewBackgroundJob = {
 			jobType,
 			payload: {
-				...payload,
-				...(eventId && { eventId }),
+				...(toRecord(payload) ?? { value: payload }),
+				...(eventId ? { eventId } : {}),
 			},
 			priority,
 			scheduledFor: scheduledFor || new Date(),
@@ -258,41 +268,41 @@ export class EventService {
 // Event type constants for reuse
 export const EVENT_TYPES = {
 	// Subscription events
-	SUBSCRIPTION_CREATED: 'subscription_created' as EventType,
-	SUBSCRIPTION_UPDATED: 'subscription_updated' as EventType,
-	SUBSCRIPTION_DELETED: 'subscription_deleted' as EventType,
+	SUBSCRIPTION_CREATED: 'subscription_created',
+	SUBSCRIPTION_UPDATED: 'subscription_updated',
+	SUBSCRIPTION_DELETED: 'subscription_deleted',
 
 	// Trial events
-	TRIAL_STARTED: 'trial_started' as EventType,
-	TRIAL_EXPIRED: 'trial_expired' as EventType,
+	TRIAL_STARTED: 'trial_started',
+	TRIAL_EXPIRED: 'trial_expired',
 
 	// Onboarding events
-	ONBOARDING_STARTED: 'onboarding_started' as EventType,
-	ONBOARDING_COMPLETED: 'onboarding_completed' as EventType,
+	ONBOARDING_STARTED: 'onboarding_started',
+	ONBOARDING_COMPLETED: 'onboarding_completed',
 
 	// Payment events
-	PAYMENT_SUCCEEDED: 'payment_succeeded' as EventType,
-	PAYMENT_FAILED: 'payment_failed' as EventType,
+	PAYMENT_SUCCEEDED: 'payment_succeeded',
+	PAYMENT_FAILED: 'payment_failed',
 
 	// User events
-	USER_CREATED: 'user_created' as EventType,
+	USER_CREATED: 'user_created',
 
 	// Admin events
-	ADMIN_ACTION: 'admin_action' as EventType,
-} as const;
+	ADMIN_ACTION: 'admin_action',
+} satisfies Record<string, EventType>;
 
 export const AGGREGATE_TYPES = {
-	USER: 'user' as AggregateType,
-	SUBSCRIPTION: 'subscription' as AggregateType,
-	ONBOARDING: 'onboarding' as AggregateType,
-	PAYMENT: 'payment' as AggregateType,
-	TRIAL: 'trial' as AggregateType,
-} as const;
+	USER: 'user',
+	SUBSCRIPTION: 'subscription',
+	ONBOARDING: 'onboarding',
+	PAYMENT: 'payment',
+	TRIAL: 'trial',
+} satisfies Record<string, AggregateType>;
 
 export const SOURCE_SYSTEMS = {
-	STRIPE_WEBHOOK: 'stripe_webhook' as SourceSystem,
-	ADMIN_ACTION: 'admin_action' as SourceSystem,
-	USER_ACTION: 'user_action' as SourceSystem,
-	SYSTEM_AUTOMATION: 'system_automation' as SourceSystem,
-	QSTASH_JOB: 'qstash_job' as SourceSystem,
-} as const;
+	STRIPE_WEBHOOK: 'stripe_webhook',
+	ADMIN_ACTION: 'admin_action',
+	USER_ACTION: 'user_action',
+	SYSTEM_AUTOMATION: 'system_automation',
+	QSTASH_JOB: 'qstash_job',
+} satisfies Record<string, SourceSystem>;

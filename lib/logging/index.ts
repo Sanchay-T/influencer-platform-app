@@ -30,9 +30,9 @@ import { structuredConsole } from '@/lib/logging/console-proxy';
  * ```
  */
 
-import { log } from './logger';
+import { log, logger } from './logger';
 // Import types and functions for internal use
-import { LogCategory } from './types';
+import { LogCategory, LogLevel } from './types';
 
 // Constant exports
 export {
@@ -137,7 +137,7 @@ export function handleError(
  * );
  * ```
  */
-export function withPerformanceLogging<T extends any[], R>(
+export function withPerformanceLogging<T extends unknown[], R>(
 	fn: (...args: T) => Promise<R>,
 	operationName: string,
 	category?: LogCategory
@@ -335,7 +335,7 @@ export const devLogger = {
 	component:
 		process.env.NODE_ENV === 'development'
 			? {
-					mount: (componentName: string, props?: any) =>
+					mount: (componentName: string, props?: unknown) =>
 						logger.debug(
 							`Component mounted: ${componentName}`,
 							{
@@ -345,7 +345,7 @@ export const devLogger = {
 							LogCategory.UI
 						),
 
-					update: (componentName: string, changes?: any) =>
+					update: (componentName: string, changes?: unknown) =>
 						logger.debug(
 							`Component updated: ${componentName}`,
 							{
@@ -374,7 +374,7 @@ export const devLogger = {
 	state:
 		process.env.NODE_ENV === 'development'
 			? {
-					change: (stateName: string, before: any, after: any) =>
+					change: (stateName: string, before: unknown, after: unknown) =>
 						logger.debug(
 							`State changed: ${stateName}`,
 							{
@@ -400,7 +400,7 @@ export const migration = {
 	 * Provides structured logging while maintaining similar interface
 	 */
 	console: {
-		log: (message: any, ...args: any[]) => {
+		log: (message: unknown, ...args: unknown[]) => {
 			const fullMessage =
 				typeof message === 'string'
 					? `${message} ${args.map((arg) => JSON.stringify(arg)).join(' ')}`
@@ -409,7 +409,7 @@ export const migration = {
 			logger.debug(fullMessage, {}, LogCategory.SYSTEM);
 		},
 
-		info: (message: any, ...args: any[]) => {
+		info: (message: unknown, ...args: unknown[]) => {
 			const fullMessage =
 				typeof message === 'string'
 					? `${message} ${args.map((arg) => JSON.stringify(arg)).join(' ')}`
@@ -418,7 +418,7 @@ export const migration = {
 			logger.info(fullMessage, {}, LogCategory.SYSTEM);
 		},
 
-		warn: (message: any, ...args: any[]) => {
+		warn: (message: unknown, ...args: unknown[]) => {
 			const fullMessage =
 				typeof message === 'string'
 					? `${message} ${args.map((arg) => JSON.stringify(arg)).join(' ')}`
@@ -427,7 +427,7 @@ export const migration = {
 			logger.warn(fullMessage, {}, LogCategory.SYSTEM);
 		},
 
-		error: (message: any, ...args: any[]) => {
+		error: (message: unknown, ...args: unknown[]) => {
 			const fullMessage =
 				typeof message === 'string'
 					? `${message} ${args.map((arg) => JSON.stringify(arg)).join(' ')}`

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { PLAN_ORDER } from '@/lib/billing/plan-config';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { perfMonitor } from '@/lib/utils/performance-monitor';
+import { toError } from '@/lib/utils/type-guards';
 import type { BillingStatus } from './use-billing';
 
 // Plan hierarchy with 'free' prepended for client-side comparison logic
@@ -87,12 +88,13 @@ export function useBillingCached(): BillingStatus & { isLoading: boolean } {
 				structuredConsole.log('ℹ️ [BILLING-CACHE] No cache found');
 			}
 		} catch (error) {
+			const resolvedError = toError(error);
 			perfMonitor.endTimer(cacheTimer, {
 				cached: false,
-				error: error.message,
+				error: resolvedError.message,
 				dataSource: 'error',
 			});
-			structuredConsole.error('❌ [BILLING-CACHE] Error loading cache:', error);
+			structuredConsole.error('❌ [BILLING-CACHE] Error loading cache:', resolvedError);
 		}
 	}, [userId]);
 
@@ -139,7 +141,7 @@ export function useBillingCached(): BillingStatus & { isLoading: boolean } {
 				const hasFeature = (feature: string): boolean => {
 					const currentPlanIndex = PLAN_HIERARCHY_WITH_FREE.indexOf(data.currentPlan);
 
-					const featureMinimumPlans = {
+					const featureMinimumPlans: Record<string, number> = {
 						csv_export: 1,
 						bio_extraction: 1,
 						unlimited_search: 1,
@@ -148,8 +150,7 @@ export function useBillingCached(): BillingStatus & { isLoading: boolean } {
 						priority_support: 3,
 					};
 
-					const requiredPlanIndex =
-						featureMinimumPlans[feature as keyof typeof featureMinimumPlans];
+					const requiredPlanIndex = featureMinimumPlans[feature];
 					return requiredPlanIndex !== undefined ? currentPlanIndex >= requiredPlanIndex : true;
 				};
 
@@ -207,20 +208,22 @@ export function useBillingCached(): BillingStatus & { isLoading: boolean } {
 					});
 					structuredConsole.log('💾 [BILLING-CACHE] Data cached successfully');
 				} catch (error) {
+					const resolvedError = toError(error);
 					perfMonitor.endTimer(cacheWriteTimer, {
 						success: false,
-						error: error.message,
+						error: resolvedError.message,
 						operation: 'localStorage.setItem',
 					});
-					structuredConsole.error('❌ [BILLING-CACHE] Error saving cache:', error);
+					structuredConsole.error('❌ [BILLING-CACHE] Error saving cache:', resolvedError);
 				}
 			} catch (error) {
+				const resolvedError = toError(error);
 				perfMonitor.endTimer(apiTimer, {
-					error: error.message,
+					error: resolvedError.message,
 					dataSource: 'api',
 					cached: false,
 				});
-				structuredConsole.error('❌ [BILLING-CACHE] Error fetching billing status:', error);
+				structuredConsole.error('❌ [BILLING-CACHE] Error fetching billing status:', resolvedError);
 				setIsLoading(false);
 			}
 		};

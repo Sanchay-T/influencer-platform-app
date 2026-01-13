@@ -117,7 +117,7 @@ export class SentryLogger {
 	/**
 	 * Log entry to Sentry (logs to console instead)
 	 */
-	public static logToSentry(entry: LogEntry, sentryContext?: any): void {
+	public static logToSentry(entry: LogEntry, sentryContext?: unknown): void {
 		// Delegate to console logging
 		const level = entry.level?.toString().toLowerCase() || 'info';
 		if (level === 'error' || level === 'critical') {
@@ -132,14 +132,14 @@ export class SentryLogger {
 	/**
 	 * Configure scope (no-op)
 	 */
-	public static configureScope(callback: (scope: any) => void): void {
+	public static configureScope(callback: (scope: unknown) => void): void {
 		// No-op: scope configuration was Sentry-specific
 	}
 
 	/**
 	 * With scope (executes callback without scope)
 	 */
-	public static withScope<T>(callback: (scope: any) => T): T {
+	public static withScope<T>(callback: (scope: unknown) => T): T {
 		const noopScope = {
 			setTag: () => {},
 			setExtra: () => {},

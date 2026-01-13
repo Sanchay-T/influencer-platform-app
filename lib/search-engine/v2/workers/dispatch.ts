@@ -93,7 +93,7 @@ async function fanoutSearchWorkers(options: {
 
 		const message: SearchWorkerMessage = {
 			jobId,
-			platform: platform as Platform,
+			platform,
 			keyword,
 			batchIndex: i,
 			totalKeywords: keywords.length,
@@ -101,9 +101,7 @@ async function fanoutSearchWorkers(options: {
 			targetResults,
 		};
 
-		const workerTimeoutSeconds = Math.ceil(
-			(PLATFORM_TIMEOUTS[platform as Platform] || 120_000) / 1000
-		);
+		const workerTimeoutSeconds = Math.ceil((PLATFORM_TIMEOUTS[platform] || 120_000) / 1000);
 
 		const publishPromise = qstash.publishJSON({
 			url: searchWorkerUrl,
@@ -303,7 +301,7 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 	try {
 		const message: DispatchWorkerMessage = {
 			jobId,
-			platform: platform as Platform,
+			platform,
 			keywords,
 			targetResults,
 			userId,
@@ -442,7 +440,7 @@ export async function processDispatchWorker(
 
 	const { successCount, failCount } = await fanoutSearchWorkers({
 		jobId,
-		platform: platform as Platform,
+		platform,
 		keywords: finalKeywords,
 		userId,
 		targetResults,

@@ -9,7 +9,7 @@ import SubscriptionManagement from '@/app/components/billing/subscription-manage
 import UpgradeButton from '@/app/components/billing/upgrade-button';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useBilling } from '@/lib/hooks/use-billing';
+import { clearBillingCache, useBilling } from '@/lib/hooks/use-billing';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import DashboardLayout from '../components/layout/dashboard-layout';
 
@@ -77,12 +77,7 @@ function BillingContent() {
 
 			// Clear all billing caches
 			try {
-				localStorage.removeItem('gemz_entitlements_v1');
-				if ((globalThis as any).__BILLING_CACHE__) {
-					(globalThis as any).__BILLING_CACHE__.data = null;
-					(globalThis as any).__BILLING_CACHE__.ts = 0;
-					(globalThis as any).__BILLING_CACHE__.inflight = null;
-				}
+				clearBillingCache();
 				structuredConsole.log(
 					`✅ [BILLING-CHECKOUT-TEST] ${checkoutTestId} - Cache cleared successfully`
 				);

@@ -56,6 +56,10 @@ interface TestResult {
 
 function parseArgs(): { tests: TestConfig[] } {
 	const args = process.argv.slice(2);
+	const isPlatform = (value: string): value is Platform =>
+		value === 'tiktok' || value === 'instagram' || value === 'youtube';
+	const isTarget = (value: number): value is Target =>
+		value === 100 || value === 500 || value === 1000;
 
 	let platform: Platform | null = null;
 	let target: Target = 100;
@@ -64,16 +68,19 @@ function parseArgs(): { tests: TestConfig[] } {
 	for (const arg of args) {
 		if (arg.startsWith('--platform=')) {
 			const p = arg.split('=')[1];
-			if (['tiktok', 'instagram', 'youtube'].includes(p)) {
-				platform = p as Platform;
+			if (p && isPlatform(p)) {
+				platform = p;
 			}
 		} else if (arg.startsWith('--target=')) {
 			const t = Number.parseInt(arg.split('=')[1], 10);
-			if ([100, 500, 1000].includes(t)) {
-				target = t as Target;
+			if (isTarget(t)) {
+				target = t;
 			}
 		} else if (arg.startsWith('--keyword=')) {
-			keyword = arg.split('=')[1];
+			const nextKeyword = arg.split('=')[1];
+			if (nextKeyword) {
+				keyword = nextKeyword;
+			}
 		}
 	}
 

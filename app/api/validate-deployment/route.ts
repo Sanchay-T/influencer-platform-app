@@ -9,6 +9,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { generateValidationReport, validateEnvironment } from '@/lib/config/environment-validator';
 import { validateLoggingConfig } from '@/lib/config/logging-config';
 import { validateMonitoringConfig } from '@/lib/config/monitoring-config';
+import { getStringArrayProperty, toRecord } from '@/lib/utils/type-guards';
 
 /**
  * POST /api/validate-deployment - Run comprehensive deployment validation
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 		// Run comprehensive validation
 		const results = await runDeploymentValidation({
 			type,
-			environment,
+			environment: environment ?? undefined,
 			skipSlowChecks,
 		});
 
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 export async function GET(request: NextRequest): Promise<NextResponse> {
 	const searchParams = request.nextUrl.searchParams;
 	const format = searchParams.get('format') || 'json';
-	const environment = searchParams.get('environment');
+	const environment = searchParams.get('environment') ?? undefined;
 
 	try {
 		if (format === 'report') {
@@ -175,7 +176,7 @@ interface DeploymentValidationResult {
 interface ValidationCategoryResult {
 	status: 'pass' | 'fail' | 'warn';
 	message: string;
-	details?: any;
+	details?: unknown;
 }
 
 async function runDeploymentValidation(
@@ -193,14 +194,18 @@ async function runDeploymentValidation(
 
 	// 1. Environment Validation
 	const environmentResult = await validateEnvironmentCategory(environment, skipSlowChecks);
+	const environmentDetails = toRecord(environmentResult.details) ?? {};
 	if (environmentResult.status === 'fail') {
-		criticalIssues.push(...(environmentResult.details?.errors || [environmentResult.message]));
+		const errors = getStringArrayProperty(environmentDetails, 'errors') ?? [];
+		criticalIssues.push(...(errors.length > 0 ? errors : [environmentResult.message]));
 	}
-	if (environmentResult.details?.warnings) {
-		warnings.push(...environmentResult.details.warnings);
+	const detailWarnings = getStringArrayProperty(environmentDetails, 'warnings') ?? [];
+	const detailRecommendations = getStringArrayProperty(environmentDetails, 'recommendations') ?? [];
+	if (detailWarnings.length > 0) {
+		warnings.push(...detailWarnings);
 	}
-	if (environmentResult.details?.recommendations) {
-		recommendations.push(...environmentResult.details.recommendations);
+	if (detailRecommendations.length > 0) {
+		recommendations.push(...detailRecommendations);
 	}
 
 	// 2. Logging Configuration Validation

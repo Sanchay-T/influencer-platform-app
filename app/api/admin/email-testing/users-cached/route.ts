@@ -9,7 +9,7 @@ import { db } from '@/lib/db';
 import { userSubscriptions, users } from '@/lib/db/schema';
 
 // In-memory cache for user search results
-const userCache = new Map<string, { data: any[]; timestamp: number }>();
+const userCache = new Map<string, { data: unknown[]; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 export async function GET(req: NextRequest) {

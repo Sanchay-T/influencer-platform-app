@@ -6,6 +6,7 @@ import { db } from '@/lib/db';
 import { scrapingJobs, scrapingResults } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
 import { dedupeCreators as sharedDedupeCreators } from '@/lib/utils/dedupe-creators';
+import { getStringProperty, toArray, toRecord } from '@/lib/utils/type-guards';
 import type { NormalizedCreator, ScrapingJobRecord, SearchMetricsSnapshot } from './types';
 
 // Note: filterCreatorsByLikes removed from backend - filtering now done in frontend
@@ -55,40 +56,35 @@ type MergeableCreator = NormalizedCreator & { mergeKey?: string };
 const attachMergeKeys = (creators: NormalizedCreator[], getKey?: DedupeKeyFn): MergeableCreator[] =>
 	creators.map((creator) => {
 		if (!getKey) {
-			return creator as MergeableCreator;
+			return creator;
 		}
 		const key = getKey(creator);
 		if (typeof key === 'string' && key.trim().length > 0) {
 			const normalizedKey = key.trim().toLowerCase();
-			if ((creator as MergeableCreator).mergeKey === normalizedKey) {
-				return creator as MergeableCreator;
+			if (getStringProperty(creator, 'mergeKey') === normalizedKey) {
+				return creator;
 			}
 			return {
-				...(creator as Record<string, unknown>),
+				...creator,
 				mergeKey: normalizedKey,
-			} as MergeableCreator;
+			};
 		}
-		return creator as MergeableCreator;
+		return creator;
 	});
 
 const stripMergeKeys = (creators: MergeableCreator[]): NormalizedCreator[] =>
 	creators.map((creator) => {
-		if (creator && Object.hasOwn(creator, 'mergeKey')) {
-			const { mergeKey: _mergeKey, ...rest } = creator as Record<string, unknown> & {
-				mergeKey?: string;
-			};
-			return rest as NormalizedCreator;
-		}
-		return creator as NormalizedCreator;
+		const { mergeKey: _mergeKey, ...rest } = creator;
+		return rest;
 	});
 
 const dedupeWithHint = (
 	creators: MergeableCreator[],
 	platformHint: string | null
 ): MergeableCreator[] =>
-	sharedDedupeCreators(creators as Record<string, unknown>[], {
+	sharedDedupeCreators(creators, {
 		platformHint,
-	}) as MergeableCreator[];
+	});
 
 export class SearchJobService {
 	private job: ScrapingJobRecord;
@@ -179,7 +175,7 @@ export class SearchJobService {
 
 		// Merge searchParams if provided (preserves existing fields, updates/adds new ones)
 		if (searchParams) {
-			const existingParams = (this.job.searchParams ?? {}) as Record<string, unknown>;
+			const existingParams = toRecord(this.job.searchParams) ?? {};
 			updateData.searchParams = { ...existingParams, ...searchParams };
 		}
 
@@ -236,10 +232,11 @@ export class SearchJobService {
 				.where(eq(scrapingResults.jobId, this.job.id))
 				.limit(1);
 
-			const existingRaw =
-				existing && Array.isArray(existing.creators)
-					? (existing.creators as NormalizedCreator[])
-					: [];
+			const existingRaw = Array.isArray(existing?.creators)
+				? existing.creators
+						.map((creator) => toRecord(creator))
+						.filter((creator): creator is Record<string, unknown> => creator !== null)
+				: [];
 
 			const existingWithKeys = attachMergeKeys(existingRaw, getKey);
 			const normalizedExisting = dedupeWithHint(existingWithKeys, platformHint);
@@ -281,7 +278,7 @@ export class SearchJobService {
 		return { total: result.total, newCount: result.newCount };
 	}
 
-	async complete(finalStatus: 'completed' | 'error', data: { error?: string }) {
+	async complete(finalStatus: 'completed' | 'error', data: { error?: string; reason?: string }) {
 		await db
 			.update(scrapingJobs)
 			.set({
@@ -308,7 +305,7 @@ export class SearchJobService {
 		await this.refresh();
 	}
 
-	async updateSearchParams(patch: Record<string, any>) {
+	async updateSearchParams(patch: Record<string, unknown>) {
 		// 🔍 DIAGNOSTIC: Log before sanitization
 		console.log('[DIAGNOSTIC] updateSearchParams called', {
 			jobId: this.job.id,
@@ -360,7 +357,7 @@ export class SearchJobService {
 	}
 
 	private getHandleQueueState(): HandleQueueState {
-		const params = (this.job.searchParams ?? {}) as Record<string, unknown>;
+		const params = toRecord(this.job.searchParams) ?? {};
 		const raw = params[HANDLE_QUEUE_KEY];
 
 		const baseState: HandleQueueState = {
@@ -377,26 +374,22 @@ export class SearchJobService {
 			return baseState;
 		}
 
-		const rawRecord = raw as Record<string, unknown>;
-		const completedHandles = Array.isArray(rawRecord.completedHandles)
-			? (rawRecord.completedHandles as unknown[]).filter(
-					(value): value is string => typeof value === 'string'
-				)
-			: [];
-		const remainingHandles = Array.isArray(rawRecord.remainingHandles)
-			? (rawRecord.remainingHandles as unknown[]).filter(
-					(value): value is string => typeof value === 'string'
-				)
-			: [];
+		const rawRecord = toRecord(raw) ?? {};
+		const completedHandles = (toArray(rawRecord.completedHandles) ?? []).filter(
+			(value): value is string => typeof value === 'string'
+		);
+		const remainingHandles = (toArray(rawRecord.remainingHandles) ?? []).filter(
+			(value): value is string => typeof value === 'string'
+		);
 
 		const metrics: Record<string, HandleQueueMetric> = {};
-		if (rawRecord.metrics && typeof rawRecord.metrics === 'object') {
-			const rawMetrics = rawRecord.metrics as Record<string, unknown>;
+		const rawMetrics = toRecord(rawRecord.metrics);
+		if (rawMetrics) {
 			for (const [key, value] of Object.entries(rawMetrics)) {
-				if (!value || typeof value !== 'object') {
+				const metricRecord = toRecord(value);
+				if (!metricRecord) {
 					continue;
 				}
-				const metricRecord = value as Record<string, unknown>;
 				const handleValue =
 					typeof metricRecord.handle === 'string' && metricRecord.handle.trim().length > 0
 						? metricRecord.handle
@@ -550,8 +543,7 @@ export class SearchJobService {
 			where: (results, { eq }) => eq(results.jobId, this.job.id),
 		});
 
-		const previousCount =
-			existing && Array.isArray(existing.creators) ? (existing.creators as unknown[]).length : 0;
+		const previousCount = Array.isArray(existing?.creators) ? existing.creators.length : 0;
 
 		const platformHint = typeof this.job.platform === 'string' ? this.job.platform : null;
 		const deduped = stripMergeKeys(dedupeWithHint(attachMergeKeys(creators), platformHint));

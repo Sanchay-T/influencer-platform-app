@@ -28,7 +28,8 @@ export async function GET(req: Request) {
 		// Analyze results
 		const totalCreators =
 			job.results?.reduce((acc, result) => {
-				return acc + (result.creators?.length || 0);
+				const creatorsCount = Array.isArray(result.creators) ? result.creators.length : 0;
+				return acc + creatorsCount;
 			}, 0) || 0;
 
 		// Debug analysis
@@ -45,7 +46,9 @@ export async function GET(req: Request) {
 			results: {
 				totalCreatorsInDB: totalCreators,
 				resultsCount: job.results?.length || 0,
-				firstResultCreators: job.results?.[0]?.creators?.length || 0,
+				firstResultCreators: Array.isArray(job.results?.[0]?.creators)
+					? job.results?.[0]?.creators.length
+					: 0,
 			},
 			analysis: {
 				targetVsActual: `Target: ${job.targetResults}, Delivered: ${job.processedResults}`,

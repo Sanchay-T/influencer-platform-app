@@ -1,5 +1,6 @@
 import { and, desc, eq, gte, inArray, or, sql } from 'drizzle-orm';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { getRecordProperty, getStringProperty, isString, toRecord } from '@/lib/utils/type-guards';
 import { db } from '../index';
 import {
 	creatorListCollaborators,
@@ -136,21 +137,20 @@ function resolveProfileUrl(
 		return storedUrl.trim();
 	}
 
-	const metadataObject = (metadata as Record<string, unknown>) ?? {};
-	const metadataCandidates: Array<string | undefined> = [
-		metadataObject.profileUrl as string | undefined,
-		metadataObject.url as string | undefined,
-		metadataObject.profile_link as string | undefined,
-		metadataObject.profileLink as string | undefined,
-		metadataObject.link as string | undefined,
-		(metadataObject.creator as Record<string, unknown> | undefined)?.profileUrl as
-			| string
-			| undefined,
-		(metadataObject.creator as Record<string, unknown> | undefined)?.url as string | undefined,
+	const metadataObject = toRecord(metadata) ?? {};
+	const metadataCreator = getRecordProperty(metadataObject, 'creator');
+	const metadataCandidates: Array<string | null | undefined> = [
+		getStringProperty(metadataObject, 'profileUrl'),
+		getStringProperty(metadataObject, 'url'),
+		getStringProperty(metadataObject, 'profile_link'),
+		getStringProperty(metadataObject, 'profileLink'),
+		getStringProperty(metadataObject, 'link'),
+		getStringProperty(metadataCreator ?? {}, 'profileUrl'),
+		getStringProperty(metadataCreator ?? {}, 'url'),
 	];
 
 	for (const candidate of metadataCandidates) {
-		if (typeof candidate === 'string' && candidate.trim().length > 0) {
+		if (isString(candidate) && candidate.trim().length > 0) {
 			return candidate.trim();
 		}
 	}

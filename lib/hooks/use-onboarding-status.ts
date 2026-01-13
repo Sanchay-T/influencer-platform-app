@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { getRecordProperty, getStringProperty, toError, toRecord } from '@/lib/utils/type-guards';
 
 type Step =
 	| 'pending'
@@ -52,12 +53,16 @@ export function useOnboardingStatus(): OnboardingState {
 				setSubscriptionStatus(null);
 				return;
 			}
-			const data = await res.json();
-			const resolvedStep = data.onboardingStep ?? data.onboarding?.step ?? null;
-			const intendedPlan = data.intendedPlan ?? null;
-			const stripeCustomerId = data.stripeCustomerId ?? null;
-			const stripeSubscriptionId = data.stripeSubscriptionId ?? null;
-			const subscriptionStatus = data.subscriptionStatus ?? null;
+			const rawData = await res.json();
+			const data = toRecord(rawData);
+			const onboarding = data ? getRecordProperty(data, 'onboarding') : null;
+			const resolvedStep =
+				(data ? getStringProperty(data, 'onboardingStep') : null) ??
+				(onboarding ? getStringProperty(onboarding, 'step') : null);
+			const intendedPlan = data ? getStringProperty(data, 'intendedPlan') : null;
+			const stripeCustomerId = data ? getStringProperty(data, 'stripeCustomerId') : null;
+			const stripeSubscriptionId = data ? getStringProperty(data, 'stripeSubscriptionId') : null;
+			const subscriptionStatus = data ? getStringProperty(data, 'subscriptionStatus') : null;
 			setStep(resolvedStep);
 			setIsCompleted(resolvedStep === 'completed');
 			setIntendedPlan(intendedPlan);
@@ -65,8 +70,8 @@ export function useOnboardingStatus(): OnboardingState {
 			setStripeSubscriptionId(stripeSubscriptionId);
 			setSubscriptionStatus(subscriptionStatus);
 			setError(undefined);
-		} catch (e: any) {
-			setError(e?.message || 'fetch_error');
+		} catch (e: unknown) {
+			setError(toError(e).message || 'fetch_error');
 		} finally {
 			setIsLoading(false);
 		}

@@ -169,8 +169,8 @@ export function AddToListButton({
 		if (!open) return;
 
 		const handleClick = (event: MouseEvent) => {
-			const target = event.target as HTMLElement | null;
-			if (!(overlayRef.current && target)) return;
+			const target = event.target;
+			if (!(overlayRef.current && target instanceof HTMLElement)) return;
 
 			const clickedInsideOverlay = overlayRef.current.contains(target);
 			const clickedInsideSelect = !!target.closest('[data-radix-popper-content-wrapper]');
@@ -216,7 +216,8 @@ export function AddToListButton({
 			toast.success(`Created “${data.list.name}”`);
 		} catch (error) {
 			structuredConsole.error(error);
-			toast.error((error as Error).message);
+			const message = error instanceof Error ? error.message : 'Unable to create list';
+			toast.error(message);
 		} finally {
 			setCreating(false);
 		}
@@ -318,7 +319,8 @@ export function AddToListButton({
 			resetPanel();
 		} catch (error) {
 			structuredConsole.error('[AddToList] error adding creators', error);
-			toast.error((error as Error).message);
+			const message = error instanceof Error ? error.message : 'Failed to add creators';
+			toast.error(message);
 		} finally {
 			setAdding(false);
 		}

@@ -9,12 +9,28 @@ import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { userBilling, userSubscriptions, users } from '@/lib/db/schema';
+import {
+	isValidPlanKey,
+	isValidSubscriptionStatus,
+	type PlanKey,
+	type SubscriptionStatus,
+} from '@/lib/types/statuses';
+import { isString, toRecord } from '@/lib/utils/type-guards';
 
 const isTestMode =
 	process.env.NODE_ENV === 'development' || process.env.ENABLE_AUTH_BYPASS === 'true';
 
-const VALID_PLANS = ['glow_up', 'viral_surge', 'fame_flex'] as const;
-const VALID_SUBSCRIPTION_STATUSES = ['none', 'active', 'trialing', 'canceled', 'past_due'] as const;
+type PaidPlan = Exclude<PlanKey, 'free'>;
+const VALID_PLANS: ReadonlyArray<PaidPlan> = ['glow_up', 'viral_surge', 'fame_flex'];
+const VALID_SUBSCRIPTION_STATUSES: ReadonlyArray<SubscriptionStatus> = [
+	'none',
+	'active',
+	'trialing',
+	'canceled',
+	'past_due',
+];
+
+const isPaidPlan = (plan: PlanKey): plan is PaidPlan => plan !== 'free';
 
 export async function PATCH(request: Request) {
 	if (!isTestMode) {
@@ -24,10 +40,18 @@ export async function PATCH(request: Request) {
 		);
 	}
 
-	const body = await request.json();
-	const { email, plan, subscriptionStatus = 'trialing' } = body;
+	const body = toRecord(await request.json());
+	if (!body) {
+		return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+	}
 
-	if (!(email && plan)) {
+	const email = isString(body.email) ? body.email : '';
+	const rawPlan = isString(body.plan) ? body.plan : '';
+	const subscriptionStatusValue = isString(body.subscriptionStatus)
+		? body.subscriptionStatus
+		: 'trialing';
+
+	if (!(email && rawPlan)) {
 		return NextResponse.json({ error: 'email and plan are required' }, { status: 400 });
 	}
 
@@ -39,14 +63,14 @@ export async function PATCH(request: Request) {
 		);
 	}
 
-	if (!VALID_PLANS.includes(plan)) {
+	if (!(isValidPlanKey(rawPlan) && isPaidPlan(rawPlan))) {
 		return NextResponse.json(
 			{ error: `Invalid plan. Must be one of: ${VALID_PLANS.join(', ')}` },
 			{ status: 400 }
 		);
 	}
 
-	if (!VALID_SUBSCRIPTION_STATUSES.includes(subscriptionStatus)) {
+	if (!isValidSubscriptionStatus(subscriptionStatusValue)) {
 		return NextResponse.json(
 			{
 				error: `Invalid subscriptionStatus. Must be one of: ${VALID_SUBSCRIPTION_STATUSES.join(', ')}`,
@@ -54,6 +78,9 @@ export async function PATCH(request: Request) {
 			{ status: 400 }
 		);
 	}
+
+	const plan = rawPlan;
+	const subscriptionStatus = subscriptionStatusValue;
 
 	try {
 		// Find user by email

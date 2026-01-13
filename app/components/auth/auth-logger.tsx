@@ -3,8 +3,10 @@
 import { useAuth, useUser } from '@clerk/nextjs';
 
 import { useEffect } from 'react';
+import { trackLead } from '@/lib/analytics/meta-pixel';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { logAuth, logError, logUserAction } from '@/lib/utils/frontend-logger';
+import { toRecord } from '@/lib/utils/type-guards';
 
 /**
  * Authentication logging component that tracks all Clerk auth events
@@ -38,7 +40,7 @@ export function AuthLogger() {
 					userEmail: user?.primaryEmailAddress?.emailAddress,
 					firstName: user?.firstName,
 					lastName: user?.lastName,
-					hasProfileImage: !!user?.profileImageUrl,
+					hasProfileImage: Boolean(user?.hasImage ?? user?.imageUrl),
 					accountCreatedAt: user?.createdAt,
 					lastSignInAt: user?.lastSignInAt,
 				};
@@ -58,22 +60,29 @@ export function AuthLogger() {
 		}
 	}, [isLoaded, isSignedIn, userId, sessionId, user, userIsLoaded]);
 
-	// Log user data loading
+	// Log user data loading and track new signups
 	useEffect(() => {
 		if (userIsLoaded && user && isSignedIn) {
+			// Fire Meta Pixel Lead event for new signups (account created within last 2 minutes)
+			const isNewSignup =
+				user.createdAt && Date.now() - new Date(user.createdAt).getTime() < 2 * 60 * 1000;
+			if (isNewSignup) {
+				trackLead();
+			}
+
 			const userLoadedPayload = {
 				userId: user.id,
 				userEmail: user.primaryEmailAddress?.emailAddress,
 				firstName: user.firstName,
 				lastName: user.lastName,
 				fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
-				profileImageUrl: user.profileImageUrl,
+				profileImageUrl: user.imageUrl,
 				emailVerified: user.primaryEmailAddress?.verification?.status === 'verified',
 				phoneNumber: user.primaryPhoneNumber?.phoneNumber || 'None',
 				accountCreatedAt: user.createdAt,
 				lastSignInAt: user.lastSignInAt,
 				publicMetadata: user.publicMetadata,
-				privateMetadata: Object.keys(user.privateMetadata || {}).length > 0 ? 'HAS_DATA' : 'EMPTY',
+				privateMetadata: Object.keys(user.unsafeMetadata || {}).length > 0 ? 'HAS_DATA' : 'EMPTY',
 				emailAddresses: user.emailAddresses?.map((address) => ({
 					id: address.id,
 					emailAddress: address.emailAddress,
@@ -114,21 +123,25 @@ export function useAuthLogging() {
 	const auth = useAuth();
 	const { user } = useUser();
 
-	const logAuthEvent = (event: string, additionalData?: any) => {
-		logAuth(event as any, {
-			userId: auth.userId,
-			userEmail: user?.primaryEmailAddress?.emailAddress,
+	const logAuthEvent = (
+		event: 'login' | 'logout' | 'session_check' | 'user_loaded',
+		additionalData?: unknown
+	) => {
+		const extraData: Record<string, unknown> = toRecord(additionalData) ?? {};
+		logAuth(event, {
+			userId: auth.userId ?? undefined,
+			userEmail: user?.primaryEmailAddress?.emailAddress ?? undefined,
 			isLoaded: auth.isLoaded,
 			isSignedIn: auth.isSignedIn,
 			sessionId: auth.sessionId,
-			...additionalData,
+			...extraData,
 		});
 	};
 
-	const logUserEvent = (action: string, data: any) => {
+	const logUserEvent = (action: string, data: unknown) => {
 		logUserAction(action, data, {
-			userId: auth.userId,
-			userEmail: user?.primaryEmailAddress?.emailAddress,
+			userId: auth.userId ?? undefined,
+			userEmail: user?.primaryEmailAddress?.emailAddress ?? undefined,
 		});
 	};
 

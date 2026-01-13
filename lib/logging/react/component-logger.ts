@@ -6,7 +6,7 @@ import { emitClientLog, getClientLogGates, mergeContext, safeSerialize } from '.
 
 // Breadcrumb: useComponentLogger -> UI lifecycle tracing -> flows into centralized logger via emitClientLog.
 
-export function useComponentLogger(componentName: string, initialProps?: any) {
+export function useComponentLogger(componentName: string, initialProps?: unknown) {
 	const {
 		debug: canLogDebug,
 		info: canLogInfo,
@@ -64,7 +64,7 @@ export function useComponentLogger(componentName: string, initialProps?: any) {
 	}, [canLogDebug, componentName, createContext]);
 
 	const logUpdate = useCallback(
-		(changes: any, reason?: string) => {
+		(changes: unknown, reason?: string) => {
 			const previousProps = propsRef.current;
 			propsRef.current = changes;
 

@@ -18,13 +18,13 @@ export interface PageData<T = unknown> {
 	timestamp: number;
 }
 
-export interface UsePagePrefetchOptions {
+export interface UsePagePrefetchOptions<T = unknown> {
 	/** Maximum number of pages to keep in cache */
 	maxCacheSize?: number;
 	/** Time in ms before cached data is considered stale */
 	staleTTL?: number;
 	/** Function to fetch a page of data */
-	fetchPage: (page: number, pageSize: number) => Promise<PageData>;
+	fetchPage: (page: number, pageSize: number) => Promise<PageData<T>>;
 }
 
 export interface UsePagePrefetchResult<T = unknown> {
@@ -47,7 +47,7 @@ export function usePagePrefetch<T = unknown>({
 	maxCacheSize = DEFAULT_MAX_CACHE_SIZE,
 	staleTTL = DEFAULT_STALE_TTL,
 	fetchPage,
-}: UsePagePrefetchOptions): UsePagePrefetchResult<T> {
+}: UsePagePrefetchOptions<T>): UsePagePrefetchResult<T> {
 	const cacheRef = useRef<Map<string, PageData<T>>>(new Map());
 	const pendingRef = useRef<Map<string, Promise<PageData<T>>>>(new Map());
 
@@ -101,7 +101,6 @@ export function usePagePrefetch<T = unknown>({
 			const fetchPromise = fetchPage(page, pageSize).then((data) => {
 				const pageData: PageData<T> = {
 					...data,
-					items: data.items as T[],
 					timestamp: Date.now(),
 				};
 				cache.set(key, pageData);
@@ -110,8 +109,8 @@ export function usePagePrefetch<T = unknown>({
 				return pageData;
 			});
 
-			pending.set(key, fetchPromise as Promise<PageData<T>>);
-			return fetchPromise as Promise<PageData<T>>;
+			pending.set(key, fetchPromise);
+			return fetchPromise;
 		},
 		[getCacheKey, isStale, fetchPage, evictIfNeeded]
 	);

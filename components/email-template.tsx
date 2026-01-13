@@ -76,12 +76,14 @@ export const CampaignFinishedEmail = ({
 	</Html>
 );
 
-CampaignFinishedEmail.PreviewProps = {
+const campaignFinishedPreviewProps: CampaignFinishedEmailProps = {
 	username: 'alanturing',
 	campaignName: 'Summer Campaign',
 	campaignType: 'Influencer',
 	dashboardUrl: 'https://influencerplatform.vercel.app/dashboard',
-} as CampaignFinishedEmailProps;
+};
+
+CampaignFinishedEmail.PreviewProps = campaignFinishedPreviewProps;
 
 export default CampaignFinishedEmail;
 
@@ -107,12 +109,12 @@ const section = {
 	padding: '24px',
 	border: 'solid 1px #dedede',
 	borderRadius: '5px',
-	textAlign: 'center' as const,
+	textAlign: 'center',
 };
 
 const text = {
 	margin: '0 0 10px 0',
-	textAlign: 'left' as const,
+	textAlign: 'left',
 };
 
 const button = {
@@ -125,7 +127,7 @@ const button = {
 };
 
 const links = {
-	textAlign: 'center' as const,
+	textAlign: 'center',
 };
 
 const link = {
@@ -136,7 +138,7 @@ const link = {
 const footer = {
 	color: '#6a737d',
 	fontSize: '12px',
-	textAlign: 'center' as const,
+	textAlign: 'center',
 	marginTop: '60px',
 };
 
@@ -196,9 +198,11 @@ export const CampaignFinishedEmailEn = ({
 	</Html>
 );
 
-CampaignFinishedEmailEn.PreviewProps = {
+const campaignFinishedPreviewPropsEn: CampaignFinishedEmailProps = {
 	username: 'alanturing',
 	campaignName: 'Summer Campaign',
 	campaignType: 'Influencer',
 	dashboardUrl: 'https://influencerplatform.vercel.app/dashboard',
-} as CampaignFinishedEmailProps;
+};
+
+CampaignFinishedEmailEn.PreviewProps = campaignFinishedPreviewPropsEn;

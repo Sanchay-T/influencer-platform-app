@@ -45,9 +45,9 @@ export async function POST(req: Request) {
 		await createUser({
 			userId: testUserId,
 			email: email,
-			fullName: null,
-			businessName: null,
-			brandDescription: null,
+			fullName: undefined,
+			businessName: undefined,
+			brandDescription: undefined,
 			onboardingStep: 'pending',
 		});
 
@@ -77,12 +77,13 @@ export async function POST(req: Request) {
 			credentials: testCredentials,
 			note: 'Use these credentials to test the onboarding flow with detailed logging',
 		});
-	} catch (error: any) {
+	} catch (error: unknown) {
 		structuredConsole.error('❌ [TEST-USER-CREATE] Error creating test user:', error);
+		const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 		return NextResponse.json(
 			{
 				error: 'Failed to create test user',
-				details: error.message,
+				details: errorMessage,
 			},
 			{ status: 500 }
 		);
@@ -104,21 +105,19 @@ export async function GET(req: Request) {
 		// Find all test users (users with userId starting with "test_user_")
 		// Note: This would need a custom query for the normalized schema
 		// For now, return empty array as this is just for testing
-		const testUsers: any[] = [];
+		const testUsers: Array<{
+			userId: string;
+			onboardingStep?: string | null;
+			trialStatus?: string | null;
+			signupTimestamp?: string | null;
+			fullName?: string | null;
+			businessName?: string | null;
+		}> = [];
 
 		structuredConsole.log(`📊 [TEST-USER-LIST] Found ${testUsers.length} test users`);
 
-		return NextResponse.json({
-			testUsers: testUsers.map((user) => ({
-				userId: user.userId,
-				onboardingStep: user.onboardingStep,
-				trialStatus: user.trialStatus,
-				createdAt: user.signupTimestamp,
-				fullName: user.fullName,
-				businessName: user.businessName,
-			})),
-		});
-	} catch (error: any) {
+		return NextResponse.json({ testUsers });
+	} catch (error: unknown) {
 		structuredConsole.error('❌ [TEST-USER-LIST] Error listing test users:', error);
 		return NextResponse.json(
 			{

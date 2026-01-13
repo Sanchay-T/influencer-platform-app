@@ -70,14 +70,14 @@ export async function GET() {
 			trialData: trialData
 				? {
 						status: trialData.trialStatus,
-						startDate: trialData.trialStartDate?.toISOString(),
-						endDate: trialData.trialEndDate?.toISOString(),
+						startDate: trialData.trialStartDate,
+						endDate: trialData.trialEndDate,
 						daysRemaining: trialData.daysRemaining,
 						hoursRemaining: trialData.hoursRemaining,
 						minutesRemaining: trialData.minutesRemaining,
-						progressPercentage: trialData.progressPercentage,
-						timeUntilExpiry: trialData.timeUntilExpiry,
-						isExpired: trialData.isExpired,
+						progressPercentage: trialData.trialProgressPercentage,
+						timeUntilExpiry: trialData.trialTimeRemaining,
+						isExpired: trialData.trialStatus === 'expired',
 						stripeCustomerId: trialData.stripeCustomerId,
 						stripeSubscriptionId: trialData.stripeSubscriptionId,
 						subscriptionStatus: trialData.subscriptionStatus,
@@ -103,7 +103,7 @@ export async function GET() {
 		res.headers.set('x-duration-ms', String(duration));
 		structuredConsole.log(`🟣 [PROFILE-API-GET:${reqId}] END duration=${duration}ms`);
 		return res;
-	} catch (error: any) {
+	} catch (error: unknown) {
 		const reqId = `prof_get_err_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 		structuredConsole.error(`💥 [PROFILE-API-GET:${reqId}] Error fetching profile:`, error);
 		const res = NextResponse.json(

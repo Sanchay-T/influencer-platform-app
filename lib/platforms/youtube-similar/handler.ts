@@ -7,10 +7,30 @@ import { structuredConsole } from '@/lib/logging/console-proxy';
 import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { scrapingJobs, scrapingResults } from '@/lib/db/schema';
-import { qstash } from '@/lib/queue/qstash';
+import { getStringProperty, toError, toRecord } from '@/lib/utils/type-guards';
 import { getYouTubeChannelProfile, searchYouTubeWithKeywords } from './api';
 import { extractChannelsFromVideos, extractSearchKeywords } from './transformer';
-import type { YouTubeSimilarJobResult } from './types';
+import type { YouTubeSimilarChannel, YouTubeSimilarJobResult } from './types';
+
+type ExtractedChannel = ReturnType<typeof extractChannelsFromVideos>[number];
+
+type EnhancedChannel = YouTubeSimilarChannel & {
+	username: string;
+	// biome-ignore lint/style/useNamingConvention: API response uses snake_case
+	full_name: string;
+	bio: string;
+	emails: string[];
+	socialLinks: string[];
+	// biome-ignore lint/style/useNamingConvention: API response uses snake_case
+	is_private: boolean;
+	// biome-ignore lint/style/useNamingConvention: API response uses snake_case
+	is_verified: boolean;
+	// biome-ignore lint/style/useNamingConvention: API response uses snake_case
+	profile_pic_url: string;
+	profileUrl: string;
+	platform: 'YouTube';
+	subscriberCount: string;
+};
 
 // Increased limit to support comprehensive search strategy
 const MAX_API_CALLS_FOR_TESTING = 10;
@@ -18,13 +38,19 @@ const MAX_API_CALLS_FOR_TESTING = 10;
 /**
  * Process YouTube similar creator search job
  */
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: legacy flow staged for refactor
 export async function processYouTubeSimilarJob(
-	job: any,
+	job: unknown,
 	jobId: string
 ): Promise<YouTubeSimilarJobResult> {
+	const jobRecord = toRecord(job);
+	const targetUsername = jobRecord ? getStringProperty(jobRecord, 'targetUsername') : null;
+	if (!targetUsername) {
+		throw new Error('Missing target username for YouTube similar search');
+	}
 	structuredConsole.log(
 		'🎬 [YOUTUBE-SIMILAR] Processing YouTube similar job for username:',
-		job.targetUsername
+		targetUsername
 	);
 
 	// For YouTube similar, we do all searches in one job run
@@ -45,7 +71,7 @@ export async function processYouTubeSimilarJob(
 
 		// Step 1: Get target channel profile (20% → 40%)
 		structuredConsole.log('🔍 [YOUTUBE-SIMILAR] Step 1: Getting YouTube channel profile');
-		const targetProfile = await getYouTubeChannelProfile(job.targetUsername);
+		const targetProfile = await getYouTubeChannelProfile(targetUsername);
 
 		await db
 			.update(scrapingJobs)
@@ -72,7 +98,7 @@ export async function processYouTubeSimilarJob(
 		structuredConsole.log('🔍 [YOUTUBE-SIMILAR] Step 3: Executing comprehensive search strategy');
 
 		// Collect all channels from multiple searches
-		const allExtractedChannels: any[] = [];
+		const allExtractedChannels: ExtractedChannel[] = [];
 		let totalVideosFound = 0;
 		let searchesMade = 0;
 
@@ -89,7 +115,7 @@ export async function processYouTubeSimilarJob(
 
 				if (searchResults.videos && searchResults.videos.length > 0) {
 					totalVideosFound += searchResults.videos.length;
-					const channels = extractChannelsFromVideos(searchResults.videos, job.targetUsername);
+					const channels = extractChannelsFromVideos(searchResults.videos, targetUsername);
 					allExtractedChannels.push(...channels);
 					structuredConsole.log(
 						`✅ [YOUTUBE-SIMILAR] Search ${i + 1} found ${channels.length} unique channels from ${searchResults.videos.length} videos`
@@ -218,15 +244,15 @@ export async function processYouTubeSimilarJob(
 		structuredConsole.log('🔍 [YOUTUBE-SIMILAR] Step 4: Deduplicating and enhancing channels');
 
 		// Deduplicate channels by ID
-		const channelMap = new Map();
+		const channelMap = new Map<string, ExtractedChannel>();
 		allExtractedChannels.forEach((channel) => {
-			if (channelMap.has(channel.id)) {
+			const existing = channelMap.get(channel.id);
+			if (existing) {
 				// Merge video lists if channel already exists
-				const existing = channelMap.get(channel.id);
 				existing.videos = [...existing.videos, ...channel.videos];
-			} else {
-				channelMap.set(channel.id, channel);
+				return;
 			}
+			channelMap.set(channel.id, channel);
 		});
 
 		const extractedChannels = Array.from(channelMap.values());
@@ -260,7 +286,7 @@ export async function processYouTubeSimilarJob(
 			`📊 [YOUTUBE-SIMILAR] Enhancing ${maxEnhancedProfiles} of ${topChannels.length} channels with bio/email data`
 		);
 
-		const enhancedChannels = [];
+		const enhancedChannels: EnhancedChannel[] = [];
 
 		for (let i = 0; i < topChannels.length; i++) {
 			const channel = topChannels[i];
@@ -280,9 +306,10 @@ export async function processYouTubeSimilarJob(
 						linksCount: enhancedData.links?.length || 0,
 					});
 				} catch (enhanceError) {
+					const resolvedError = toError(enhanceError);
 					structuredConsole.error(
 						`❌ [YOUTUBE-ENHANCED] Failed to enhance ${channel.handle}:`,
-						enhanceError.message
+						resolvedError.message
 					);
 				}
 
@@ -306,22 +333,34 @@ export async function processYouTubeSimilarJob(
 			const uniqueEmails = [...new Set(allEmails)];
 
 			// Transform to unified format
-			const transformedChannel = {
+			const transformedChannel: EnhancedChannel = {
 				id: channel.id,
-				username: channel.handle || channel.name,
-				full_name: channel.name,
 				name: channel.name,
+				username: channel.handle || channel.name,
+				// biome-ignore lint/style/useNamingConvention: API response uses snake_case
+				full_name: channel.name,
 				handle: channel.handle,
+				thumbnail: channel.thumbnail,
 				bio: bio,
 				emails: uniqueEmails,
 				socialLinks: enhancedData?.links || [],
+				// biome-ignore lint/style/useNamingConvention: API response uses snake_case
 				is_private: false,
+				// biome-ignore lint/style/useNamingConvention: API response uses snake_case
 				is_verified: false,
+				// biome-ignore lint/style/useNamingConvention: API response uses snake_case
 				profile_pic_url: channel.thumbnail,
 				profileUrl: `https://www.youtube.com/${channel.handle || `@${channel.name.replace(/\s+/g, '')}`}`,
 				platform: 'YouTube',
 				subscriberCount: enhancedData?.subscriberCountText || '0 subscribers',
 				videos: channel.videos,
+				relevanceScore: 0,
+				similarityFactors: {
+					nameSimilarity: 0,
+					contentRelevance: 0,
+					activityScore: 0,
+					keywordMatch: 0,
+				},
 			};
 
 			enhancedChannels.push(transformedChannel);
@@ -357,12 +396,15 @@ export async function processYouTubeSimilarJob(
 			searchesMade: searchesMade, // Number of searches performed
 			similarChannels: enhancedChannels,
 			stats: {
+				totalSearchResults: totalVideosFound,
+				channelsExtracted: extractedChannels.length,
 				totalVideosFound: totalVideosFound,
 				totalSearches: searchesMade,
 				channelsBeforeDedup: allExtractedChannels.length,
 				channelsAfterDedup: extractedChannels.length,
 				channelsEnhanced: maxEnhancedProfiles,
 				finalResults: enhancedChannels.length,
+				avgRelevanceScore: 0,
 			},
 		};
 
@@ -422,22 +464,22 @@ export async function processYouTubeSimilarJob(
 			data: resultData,
 		};
 	} catch (error) {
-		structuredConsole.error('❌ [YOUTUBE-SIMILAR] Error during processing:', error);
+		const resolvedError = toError(error);
+		structuredConsole.error('❌ [YOUTUBE-SIMILAR] Error during processing:', resolvedError);
 
 		// Update job with error status
 		await db
 			.update(scrapingJobs)
 			.set({
 				status: 'error',
-				error:
-					error instanceof Error ? error.message : 'Unknown error during YouTube similar search',
+				error: resolvedError.message || 'Unknown error during YouTube similar search',
 				updatedAt: new Date(),
 			})
 			.where(eq(scrapingJobs.id, jobId));
 
 		return {
 			status: 'error',
-			error: error instanceof Error ? error.message : 'Unknown error',
+			error: resolvedError.message || 'Unknown error',
 		};
 	}
 }

@@ -7,12 +7,13 @@ import type { Campaign } from '@/app/types/campaign';
 import { db } from '@/lib/db';
 import { campaigns, jobCreators } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { toStringArray } from '@/lib/utils/type-guards';
 
 interface PageProps {
 	params: Promise<{ id: string }>;
 }
 
-async function getCampaign(id: string) {
+async function getCampaign(id: string): Promise<Campaign | null> {
 	try {
 		const { userId } = await auth();
 
@@ -99,11 +100,25 @@ async function getCampaign(id: string) {
 		// Pre-load first 50 creators for completed/partial jobs (for instant UI)
 		const jobsWithData = await Promise.all(
 			(campaign.scrapingJobs ?? []).map(async (job) => {
+				const progressValue =
+					typeof job.progress === 'string' ? Number(job.progress) : (job.progress ?? null);
+				const resolvedProgress =
+					typeof progressValue === 'number' && Number.isFinite(progressValue)
+						? progressValue
+						: undefined;
 				// Only pre-load for terminal states that have data
 				const hasData = ['completed', 'partial', 'error', 'timeout'].includes(job.status ?? '');
 
 				if (!hasData) {
-					return { ...job, results: [], totalCreators: 0, preloaded: false };
+					return {
+						...job,
+						progress: resolvedProgress,
+						scraperLimit: null,
+						keywords: toStringArray(job.keywords) ?? null,
+						results: [],
+						totalCreators: 0,
+						preloaded: false,
+					};
 				}
 
 				try {
@@ -132,19 +147,44 @@ async function getCampaign(id: string) {
 
 					return {
 						...job,
-						results: [{ id: job.id, creators: creators.map((c) => c.creatorData) }],
+						progress: resolvedProgress,
+						scraperLimit: null,
+						keywords: toStringArray(job.keywords) ?? null,
+						results: [
+							{
+								id: job.id,
+								jobId: job.id,
+								createdAt: job.createdAt,
+								creators: creators.map((c) => c.creatorData),
+							},
+						],
 						totalCreators,
 						preloaded: true,
 					};
 				} catch (error) {
 					structuredConsole.error(`Failed to pre-load creators for job ${job.id}:`, error);
-					return { ...job, results: [], totalCreators: 0, preloaded: false };
+					return {
+						...job,
+						progress: resolvedProgress,
+						scraperLimit: null,
+						keywords: toStringArray(job.keywords) ?? null,
+						results: [],
+						totalCreators: 0,
+						preloaded: false,
+					};
 				}
 			})
 		);
 
 		return {
-			...campaign,
+			id: campaign.id,
+			userId: campaign.userId,
+			name: campaign.name,
+			description: campaign.description,
+			searchType: campaign.searchType,
+			status: campaign.status,
+			createdAt: campaign.createdAt,
+			updatedAt: campaign.updatedAt,
 			scrapingJobs: jobsWithData,
 		};
 	} catch (error) {
@@ -169,7 +209,7 @@ export default async function CampaignPage({ params }: PageProps) {
 					</div>
 				}
 			>
-				<ClientCampaignPage campaign={campaign as Campaign | null} />
+				<ClientCampaignPage campaign={campaign} />
 			</Suspense>
 		</DashboardLayout>
 	);

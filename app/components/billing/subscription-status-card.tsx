@@ -58,20 +58,35 @@ export default function SubscriptionStatusCard({
 		return 'text-zinc-200 bg-zinc-800 border border-zinc-700/50';
 	};
 
-	const formatPlanName = (plan: string) => {
-		const planNames = {
-			free: 'Free Trial',
-			glow_up: 'Glow Up',
-			viral_surge: 'Viral Surge',
-			fame_flex: 'Fame Flex',
-		};
+	const planNames: Record<SubscriptionStatusCardProps['currentPlan'], string> = {
+		free: 'Free Trial',
+		glow_up: 'Glow Up',
+		viral_surge: 'Viral Surge',
+		fame_flex: 'Fame Flex',
+	};
+
+	const formatPlanName = (plan: SubscriptionStatusCardProps['currentPlan']) => {
 		return (
-			planNames[plan as keyof typeof planNames] ||
-			plan.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+			planNames[plan] || plan.replace('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
 		);
 	};
 
-	const getStatusInfo = () => {
+	type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
+	type StatusInfo = {
+		icon: typeof AlertTriangle;
+		color: string;
+		bgColor: string;
+		badge: {
+			text: string;
+			variant: BadgeVariant;
+			className: string;
+		};
+		title: string;
+		message: string;
+		showProgress: boolean;
+	};
+
+	const getStatusInfo = (): StatusInfo => {
 		if (isTrialing) {
 			const isExpiringSoon = daysRemaining <= 2;
 			return {
@@ -82,7 +97,7 @@ export default function SubscriptionStatusCard({
 					: 'bg-emerald-900/30 border-emerald-800',
 				badge: {
 					text: 'Trial Active',
-					variant: 'secondary' as const,
+					variant: 'secondary',
 					className: 'bg-zinc-800 text-zinc-200 border border-zinc-700/50',
 				},
 				title: isExpiringSoon ? 'Trial Expiring Soon' : 'Trial Active',
@@ -99,7 +114,7 @@ export default function SubscriptionStatusCard({
 					bgColor: 'bg-emerald-900/30 border-emerald-800',
 					badge: {
 						text: 'Active',
-						variant: 'secondary' as const,
+						variant: 'secondary',
 						className: 'bg-emerald-600/20 text-emerald-400 border border-emerald-600/30',
 					},
 					title: 'Subscription Active',
@@ -113,7 +128,7 @@ export default function SubscriptionStatusCard({
 					icon: AlertTriangle,
 					color: 'text-red-400',
 					bgColor: 'bg-red-900/30 border-red-800',
-					badge: { text: 'Past Due', variant: 'destructive' as const, className: '' },
+					badge: { text: 'Past Due', variant: 'destructive', className: '' },
 					title: 'Payment Past Due',
 					message: 'Please update your payment method to continue service',
 					showProgress: false,
@@ -125,7 +140,7 @@ export default function SubscriptionStatusCard({
 					bgColor: 'bg-zinc-800/60 border-zinc-700/50',
 					badge: {
 						text: 'Canceled',
-						variant: 'outline' as const,
+						variant: 'outline',
 						className: 'text-zinc-300 border-zinc-700/50',
 					},
 					title: 'Subscription Canceled',
@@ -139,7 +154,7 @@ export default function SubscriptionStatusCard({
 					bgColor: 'bg-zinc-800/60 border-zinc-700/50',
 					badge: {
 						text: 'Inactive',
-						variant: 'outline' as const,
+						variant: 'outline',
 						className: 'text-zinc-300 border-zinc-700/50',
 					},
 					title: 'No Active Subscription',

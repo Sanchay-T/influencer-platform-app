@@ -11,6 +11,7 @@ import {
 	Section,
 	Text,
 } from '@react-email/components';
+import type { CSSProperties } from 'react';
 
 interface TrialDay2EmailProps {
 	username?: string;
@@ -137,96 +138,98 @@ export const TrialDay2Email = ({
 	</Html>
 );
 
-TrialDay2Email.PreviewProps = {
+const trialDay2PreviewProps: TrialDay2EmailProps = {
 	username: 'johndoe',
 	fullName: 'John Doe',
 	businessName: 'Acme Corp',
 	dashboardUrl: 'https://influencerplatform.vercel.app/campaigns',
-} as TrialDay2EmailProps;
+};
+
+TrialDay2Email.PreviewProps = trialDay2PreviewProps;
 
 export default TrialDay2Email;
 
 // Styles
-const main = {
+const main: CSSProperties = {
 	backgroundColor: '#ffffff',
 	color: '#24292e',
 	fontFamily:
 		'-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji"',
 };
 
-const container = {
+const container: CSSProperties = {
 	maxWidth: '480px',
 	margin: '0 auto',
 	padding: '20px 0 48px',
 };
 
-const logo = {
+const logo: CSSProperties = {
 	margin: '0 auto 20px',
 };
 
-const title = {
+const title: CSSProperties = {
 	fontSize: '24px',
 	lineHeight: '1.25',
 	fontWeight: '600',
-	textAlign: 'center' as const,
+	textAlign: 'center',
 	margin: '0 0 30px',
 };
 
-const paragraph = {
+const paragraph: CSSProperties = {
 	fontSize: '16px',
 	lineHeight: '1.5',
 	margin: '0 0 16px',
 };
 
-const tipSection = {
+const tipSection: CSSProperties = {
 	backgroundColor: '#f0f8ff',
 	borderRadius: '8px',
 	padding: '20px',
 	margin: '24px 0',
 };
 
-const tipTitle = {
+const tipTitle: CSSProperties = {
 	fontSize: '18px',
 	lineHeight: '1.4',
 	margin: '0 0 16px',
 	color: '#1a73e8',
 };
 
-const tipItem = {
+const tipItem: CSSProperties = {
 	fontSize: '15px',
 	lineHeight: '1.5',
 	margin: '0 0 12px',
 	paddingLeft: '8px',
 };
 
-const statsSection = {
+const statsSection: CSSProperties = {
 	backgroundColor: '#f8f9fa',
 	borderRadius: '8px',
 	padding: '20px',
 	margin: '24px 0',
-	textAlign: 'center' as const,
+	textAlign: 'center',
 };
 
-const statsTitle = {
+const statsTitle: CSSProperties = {
 	fontSize: '18px',
 	lineHeight: '1.4',
 	margin: '0 0 16px',
 	color: '#28a745',
 };
 
-const statsItem = {
+const statsItem: CSSProperties = {
 	fontSize: '15px',
 	lineHeight: '1.6',
 	margin: '0 0 8px',
 	color: '#495057',
 };
 
-const buttonSection = {
-	textAlign: 'center' as const,
+const buttonSection: CSSProperties = {
+	textAlign: 'center',
 	margin: '32px 0',
 };
 
-const button = {
+const button: CSSProperties = {
 	fontSize: '16px',
 	backgroundColor: '#1a73e8',
 	color: '#fff',
@@ -238,39 +241,39 @@ const button = {
 	fontWeight: '600',
 };
 
-const helpSection = {
+const helpSection: CSSProperties = {
 	backgroundColor: '#fff3cd',
 	borderRadius: '8px',
 	padding: '20px',
 	margin: '24px 0',
-	textAlign: 'center' as const,
+	textAlign: 'center',
 };
 
-const helpText = {
+const helpText: CSSProperties = {
 	fontSize: '18px',
 	lineHeight: '1.4',
 	margin: '0 0 12px',
 	color: '#856404',
 };
 
-const link = {
+const link: CSSProperties = {
 	color: '#0066cc',
 	textDecoration: 'underline',
 };
 
-const hr = {
+const hr: CSSProperties = {
 	borderColor: '#e1e4e8',
 	margin: '42px 0 26px',
 };
 
-const footer = {
+const footer: CSSProperties = {
 	color: '#6a737d',
 	fontSize: '14px',
-	textAlign: 'center' as const,
+	textAlign: 'center',
 	margin: '0 0 10px',
 };
 
-const unsubscribeLink = {
+const unsubscribeLink: CSSProperties = {
 	color: '#6a737d',
 	fontSize: '12px',
 	textDecoration: 'underline',

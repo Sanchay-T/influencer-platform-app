@@ -5,6 +5,28 @@ import { structuredConsole } from '@/lib/logging/console-proxy';
 
 import type { YouTubeChannelProfile, YouTubeSimilarChannel, YouTubeVideo } from './types';
 
+type VideoSummary = {
+	title: string;
+	url: string;
+	views: number;
+	publishedTime: string;
+};
+
+type ExtractedChannel = {
+	id: string;
+	name: string;
+	handle: string;
+	thumbnail: string;
+	videos: VideoSummary[];
+};
+
+type SimilarityFactors = {
+	nameSimilarity: number;
+	contentRelevance: number;
+	activityScore: number;
+	keywordMatch: number;
+};
+
 /**
  * Extract content-based search keywords from YouTube channel profile
  * Enhanced to detect channel type and generate better search queries
@@ -152,25 +174,14 @@ function extractTopicsFromDescription(description: string): string[] {
 export function extractChannelsFromVideos(
 	videos: YouTubeVideo[],
 	excludeHandle: string
-): Array<{
-	id: string;
-	name: string;
-	handle: string;
-	thumbnail: string;
-	videos: Array<{
-		title: string;
-		url: string;
-		views: number;
-		publishedTime: string;
-	}>;
-}> {
+): ExtractedChannel[] {
 	structuredConsole.log(
 		'🔍 [YOUTUBE-TRANSFORMER] Extracting channels from',
 		videos.length,
 		'videos'
 	);
 
-	const channelMap = new Map();
+	const channelMap = new Map<string, ExtractedChannel>();
 
 	videos.forEach((video) => {
 		if (!video.channel) return;
@@ -192,7 +203,9 @@ export function extractChannelsFromVideos(
 		}
 
 		// Add video info to channel
-		channelMap.get(channelId).videos.push({
+		const entry = channelMap.get(channelId);
+		if (!entry) return;
+		entry.videos.push({
 			title: video.title,
 			url: video.url,
 			views: video.viewCountInt || 0,
@@ -210,12 +223,17 @@ export function extractChannelsFromVideos(
  * Calculate similarity score between channels using multiple factors
  */
 export function calculateSimilarityScore(
-	candidateChannel: any,
+	candidateChannel: ExtractedChannel,
 	targetProfile: YouTubeChannelProfile,
 	searchKeywords: string[]
-): { score: number; factors: any } {
+): { score: number; factors: SimilarityFactors } {
 	let totalScore = 0;
-	const factors: any = {};
+	const factors: SimilarityFactors = {
+		nameSimilarity: 0,
+		contentRelevance: 0,
+		activityScore: 0,
+		keywordMatch: 0,
+	};
 
 	// Factor 1: Channel name similarity (20% weight)
 	const nameScore = calculateNameSimilarity(
@@ -282,7 +300,7 @@ function calculateNameSimilarity(
 /**
  * Calculate content relevance based on video titles
  */
-function calculateContentRelevance(videos: any[], keywords: string[]): number {
+function calculateContentRelevance(videos: VideoSummary[], keywords: string[]): number {
 	if (!videos || videos.length === 0) return 0;
 
 	let totalRelevance = 0;
@@ -312,7 +330,7 @@ function calculateContentRelevance(videos: any[], keywords: string[]): number {
 /**
  * Calculate activity score based on video count and recency
  */
-function calculateActivityScore(videos: any[]): number {
+function calculateActivityScore(videos: VideoSummary[]): number {
 	if (!videos || videos.length === 0) return 0;
 
 	// Score based on number of videos and recency
@@ -336,14 +354,11 @@ function calculateActivityScore(videos: any[]): number {
 /**
  * Calculate keyword match score in channel context
  */
-function calculateKeywordMatch(channel: any, keywords: string[]): number {
+function calculateKeywordMatch(channel: ExtractedChannel, keywords: string[]): number {
 	if (!keywords || keywords.length === 0) return 0;
 
 	// Combine channel name and video titles for keyword matching
-	const textToAnalyze = [
-		channel.name || '',
-		...(channel.videos || []).map((v: any) => v.title || ''),
-	]
+	const textToAnalyze = [channel.name || '', ...channel.videos.map((v) => v.title || '')]
 		.join(' ')
 		.toLowerCase();
 
@@ -358,7 +373,7 @@ function calculateKeywordMatch(channel: any, keywords: string[]): number {
  * Transform channels to final similar channels format
  */
 export function transformToSimilarChannels(
-	channels: any[],
+	channels: ExtractedChannel[],
 	targetProfile: YouTubeChannelProfile,
 	searchKeywords: string[]
 ): YouTubeSimilarChannel[] {

@@ -9,6 +9,7 @@ import {
 	logDbOperation,
 	withApiLogging,
 } from '@/lib/middleware/api-logger';
+import { toError } from '@/lib/utils/type-guards';
 
 export const POST = withApiLogging(async (req: Request, { requestId, logPhase, logger: log }) => {
 	logPhase('auth');
@@ -76,11 +77,12 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
 			await logDbOperation(
 				'create_admin_user_profile',
 				async () => {
-					return await createUser({
+					await createUser({
 						userId,
-						isAdmin: true,
 						onboardingStep: 'pending',
 					});
+					await updateUserProfile(userId, { isAdmin: true });
+					return null;
 				},
 				{ requestId }
 			);
@@ -107,7 +109,7 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
 	} catch (error) {
 		log.error(
 			'Admin API promote user failed',
-			error as Error,
+			toError(error),
 			{
 				requestId,
 				operation: 'promote_user',

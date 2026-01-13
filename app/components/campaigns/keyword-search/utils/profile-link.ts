@@ -1,9 +1,32 @@
 // keyword-search/utils/profile-link.ts — canonical link builder used by
 // search-results table + verified via test-scripts/ui/profile-link.test.ts
+import {
+	getRecordProperty,
+	getStringProperty,
+	toRecord,
+	type UnknownRecord,
+} from '@/lib/utils/type-guards';
+
 const YOUTUBE_CHANNEL_BASE = 'https://www.youtube.com/channel/';
 const YOUTUBE_HANDLE_BASE = 'https://www.youtube.com/';
 const TIKTOK_BASE = 'https://www.tiktok.com/@';
 const INSTAGRAM_BASE = 'https://www.instagram.com/';
+
+const getNestedRecord = (root: unknown, path: string[]): UnknownRecord | null => {
+	let current = toRecord(root);
+	for (const key of path) {
+		if (!current) return null;
+		current = getRecordProperty(current, key);
+	}
+	return current;
+};
+
+const getNestedString = (root: unknown, path: string[]): string | null => {
+	if (path.length === 0) return null;
+	const record = path.length === 1 ? toRecord(root) : getNestedRecord(root, path.slice(0, -1));
+	if (!record) return null;
+	return getStringProperty(record, path[path.length - 1]);
+};
 
 function normalizePlatformValue(value: unknown): 'youtube' | 'instagram' | 'tiktok' | null {
 	if (typeof value !== 'string') {
@@ -36,16 +59,16 @@ function normalizePlatformValue(value: unknown): 'youtube' | 'instagram' | 'tikt
 	return null;
 }
 
-function hasYouTubeIndicators(creator: any): boolean {
+function hasYouTubeIndicators(creator: unknown): boolean {
 	const channelIdCandidates = [
-		creator?.creator?.channelId,
-		creator?.creator?.channel_id,
-		creator?.channelId,
-		creator?.channel_id,
-		creator?.creator?.id,
-		creator?.creator?.channel?.id,
-		creator?.channel?.id,
-		creator?.video?.channel?.id,
+		getNestedString(creator, ['creator', 'channelId']),
+		getNestedString(creator, ['creator', 'channel_id']),
+		getNestedString(creator, ['channelId']),
+		getNestedString(creator, ['channel_id']),
+		getNestedString(creator, ['creator', 'id']),
+		getNestedString(creator, ['creator', 'channel', 'id']),
+		getNestedString(creator, ['channel', 'id']),
+		getNestedString(creator, ['video', 'channel', 'id']),
 	];
 
 	if (channelIdCandidates.some((value) => typeof value === 'string' && value.trim().length > 0)) {
@@ -53,20 +76,20 @@ function hasYouTubeIndicators(creator: any): boolean {
 	}
 
 	const handleCandidates = [
-		creator?.creator?.handle,
-		creator?.creator?.username,
-		creator?.creator?.uniqueId,
-		creator?.handle,
-		creator?.username,
-		creator?.video?.channel?.handle,
-		creator?.channel?.handle,
+		getNestedString(creator, ['creator', 'handle']),
+		getNestedString(creator, ['creator', 'username']),
+		getNestedString(creator, ['creator', 'uniqueId']),
+		getNestedString(creator, ['handle']),
+		getNestedString(creator, ['username']),
+		getNestedString(creator, ['video', 'channel', 'handle']),
+		getNestedString(creator, ['channel', 'handle']),
 	];
 
 	if (handleCandidates.some((value) => typeof value === 'string' && value.trim().startsWith('@'))) {
 		return true;
 	}
 
-	const videoUrl = creator?.video?.url;
+	const videoUrl = getNestedString(creator, ['video', 'url']);
 	if (typeof videoUrl === 'string') {
 		const normalized = videoUrl.toLowerCase();
 		if (normalized.includes('youtube.com') || normalized.includes('youtu.be')) {
@@ -77,13 +100,13 @@ function hasYouTubeIndicators(creator: any): boolean {
 	return false;
 }
 
-function hasInstagramIndicators(creator: any): boolean {
+function hasInstagramIndicators(creator: unknown): boolean {
 	const urlCandidates = [
-		creator?.creator?.profileUrl,
-		creator?.creator?.profile_url,
-		creator?.profileUrl,
-		creator?.profile_url,
-		creator?.video?.url,
+		getNestedString(creator, ['creator', 'profileUrl']),
+		getNestedString(creator, ['creator', 'profile_url']),
+		getNestedString(creator, ['profileUrl']),
+		getNestedString(creator, ['profile_url']),
+		getNestedString(creator, ['video', 'url']),
 	];
 
 	return urlCandidates.some(
@@ -91,21 +114,21 @@ function hasInstagramIndicators(creator: any): boolean {
 	);
 }
 
-function hasTikTokIndicators(creator: any): boolean {
+function hasTikTokIndicators(creator: unknown): boolean {
 	const uniqueIdCandidates = [
-		creator?.creator?.uniqueId,
-		creator?.creator?.unique_id,
-		creator?.creator?.secUid,
-		creator?.creator?.sec_uid,
-		creator?.uniqueId,
-		creator?.unique_id,
+		getNestedString(creator, ['creator', 'uniqueId']),
+		getNestedString(creator, ['creator', 'unique_id']),
+		getNestedString(creator, ['creator', 'secUid']),
+		getNestedString(creator, ['creator', 'sec_uid']),
+		getNestedString(creator, ['uniqueId']),
+		getNestedString(creator, ['unique_id']),
 	];
 
 	if (uniqueIdCandidates.some((value) => typeof value === 'string' && value.trim().length > 0)) {
 		return true;
 	}
 
-	const videoUrl = creator?.video?.url;
+	const videoUrl = getNestedString(creator, ['video', 'url']);
 	if (typeof videoUrl === 'string') {
 		return videoUrl.toLowerCase().includes('tiktok.com');
 	}
@@ -114,17 +137,17 @@ function hasTikTokIndicators(creator: any): boolean {
 }
 
 function resolvePlatform(
-	creator: any,
+	creator: unknown,
 	platformHint: string | null
 ): 'youtube' | 'instagram' | 'tiktok' | null {
 	const candidates: unknown[] = [
-		creator?.platform,
-		creator?.creator?.platform,
-		creator?.sourcePlatform,
-		creator?.creator?.sourcePlatform,
-		creator?.metadata?.platform,
-		creator?.profile?.platform,
-		creator?.account?.platform,
+		getNestedString(creator, ['platform']),
+		getNestedString(creator, ['creator', 'platform']),
+		getNestedString(creator, ['sourcePlatform']),
+		getNestedString(creator, ['creator', 'sourcePlatform']),
+		getNestedString(creator, ['metadata', 'platform']),
+		getNestedString(creator, ['profile', 'platform']),
+		getNestedString(creator, ['account', 'platform']),
 		platformHint,
 	];
 
@@ -196,18 +219,18 @@ function normalizeYouTubeHandle(handle: string | null): string | null {
 	return withoutAt ? `@${withoutAt}` : null;
 }
 
-function buildTikTokLink(creator: any): string | null {
+function buildTikTokLink(creator: unknown): string | null {
 	const primary = firstNonEmpty([
-		creator?.creator?.uniqueId,
-		creator?.creator?.username,
-		creator?.username,
+		getNestedString(creator, ['creator', 'uniqueId']),
+		getNestedString(creator, ['creator', 'username']),
+		getNestedString(creator, ['username']),
 	]);
 	const normalized = normalizeTikTokHandle(primary);
 	if (normalized) {
 		return `${TIKTOK_BASE}${normalized}`;
 	}
 
-	const videoUrl = creator?.video?.url;
+	const videoUrl = getNestedString(creator, ['video', 'url']);
 	if (typeof videoUrl === 'string') {
 		const match = videoUrl.match(/@([^/]+)/);
 		if (match?.[1]) {
@@ -215,7 +238,7 @@ function buildTikTokLink(creator: any): string | null {
 		}
 	}
 
-	const creatorName = firstNonEmpty([creator?.creator?.name]);
+	const creatorName = firstNonEmpty([getNestedString(creator, ['creator', 'name'])]);
 	if (creatorName && !creatorName.includes(' ')) {
 		return `${TIKTOK_BASE}${creatorName}`;
 	}
@@ -229,18 +252,18 @@ function buildTikTokLink(creator: any): string | null {
 	return null;
 }
 
-function buildInstagramLink(creator: any): string | null {
+function buildInstagramLink(creator: unknown): string | null {
 	const rawHandle = firstNonEmpty([
-		creator?.creator?.uniqueId,
-		creator?.creator?.username,
-		creator?.ownerUsername,
+		getNestedString(creator, ['creator', 'uniqueId']),
+		getNestedString(creator, ['creator', 'username']),
+		getNestedString(creator, ['ownerUsername']),
 	]);
 	const normalized = normalizeInstagramHandle(rawHandle);
 	if (normalized) {
 		return `${INSTAGRAM_BASE}${normalized}`;
 	}
 
-	const creatorName = firstNonEmpty([creator?.creator?.name]);
+	const creatorName = firstNonEmpty([getNestedString(creator, ['creator', 'name'])]);
 	const fallback = normalizeInstagramHandle(creatorName);
 	if (fallback) {
 		return `${INSTAGRAM_BASE}${fallback}`;
@@ -249,16 +272,16 @@ function buildInstagramLink(creator: any): string | null {
 	return null;
 }
 
-function buildYouTubeLink(creator: any): string | null {
+function buildYouTubeLink(creator: unknown): string | null {
 	const channelId = firstNonEmpty([
-		creator?.creator?.channelId,
-		creator?.creator?.channel_id,
-		creator?.channelId,
-		creator?.channel_id,
-		creator?.creator?.id,
-		creator?.creator?.channel?.id,
-		creator?.channel?.id,
-		creator?.video?.channel?.id,
+		getNestedString(creator, ['creator', 'channelId']),
+		getNestedString(creator, ['creator', 'channel_id']),
+		getNestedString(creator, ['channelId']),
+		getNestedString(creator, ['channel_id']),
+		getNestedString(creator, ['creator', 'id']),
+		getNestedString(creator, ['creator', 'channel', 'id']),
+		getNestedString(creator, ['channel', 'id']),
+		getNestedString(creator, ['video', 'channel', 'id']),
 	]);
 	if (channelId) {
 		const normalizedId = channelId.replace(/^channel\//i, '').trim();
@@ -268,20 +291,20 @@ function buildYouTubeLink(creator: any): string | null {
 	}
 
 	const handle = firstNonEmpty([
-		creator?.creator?.handle,
-		creator?.creator?.username,
-		creator?.creator?.uniqueId,
-		creator?.handle,
-		creator?.username,
-		creator?.video?.channel?.handle,
-		creator?.channel?.handle,
+		getNestedString(creator, ['creator', 'handle']),
+		getNestedString(creator, ['creator', 'username']),
+		getNestedString(creator, ['creator', 'uniqueId']),
+		getNestedString(creator, ['handle']),
+		getNestedString(creator, ['username']),
+		getNestedString(creator, ['video', 'channel', 'handle']),
+		getNestedString(creator, ['channel', 'handle']),
 	]);
 	const normalizedHandle = normalizeYouTubeHandle(handle);
 	if (normalizedHandle) {
 		return `${YOUTUBE_HANDLE_BASE}${normalizedHandle}`;
 	}
 
-	const videoUrl = creator?.video?.url;
+	const videoUrl = getNestedString(creator, ['video', 'url']);
 	if (typeof videoUrl === 'string' && videoUrl.length > 0) {
 		if (videoUrl.includes('/channel/') || videoUrl.includes('/c/') || videoUrl.includes('/@')) {
 			const channelMatch = videoUrl.match(/\/(channel\/[^/]+|c\/[^/]+|@[^/]+)/);
@@ -295,7 +318,7 @@ function buildYouTubeLink(creator: any): string | null {
 	return null;
 }
 
-export function buildProfileLink(creator: any, platform: string): string {
+export function buildProfileLink(creator: unknown, platform: string): string {
 	const normalizedPlatform = resolvePlatform(creator, platform ?? null);
 
 	if (normalizedPlatform === 'tiktok') {

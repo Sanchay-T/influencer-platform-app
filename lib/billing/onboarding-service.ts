@@ -24,6 +24,7 @@ import {
 	updateEmailScheduleStatus,
 } from '@/lib/email/email-service';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
+import { toError } from '@/lib/utils/type-guards';
 import type { BillingInterval, PlanKey } from './plan-config';
 
 const logger = createCategoryLogger(LogCategory.BILLING);
@@ -32,14 +33,23 @@ const logger = createCategoryLogger(LogCategory.BILLING);
 // TYPES & SCHEMAS
 // ═══════════════════════════════════════════════════════════════
 
-export const OnboardingSteps = [
+export type OnboardingStep =
+	| 'pending'
+	| 'info_captured'
+	| 'intent_captured'
+	| 'plan_selected'
+	| 'completed';
+
+export const OnboardingSteps: ReadonlyArray<OnboardingStep> = [
 	'pending',
 	'info_captured',
 	'intent_captured',
 	'plan_selected',
 	'completed',
-] as const;
-export type OnboardingStep = (typeof OnboardingSteps)[number];
+];
+
+export const isOnboardingStep = (value: string): value is OnboardingStep =>
+	OnboardingSteps.some((step) => step === value);
 
 // Validation helpers
 const nonEmptyTrimmed = (label: string, max: number) =>
@@ -81,7 +91,10 @@ export interface OnboardingStatus {
 
 function getStepIndex(step: OnboardingStep | string | null | undefined): number {
 	if (!step) return 0; // 'pending' is index 0
-	const index = OnboardingSteps.indexOf(step as OnboardingStep);
+	if (!isOnboardingStep(step)) {
+		return 0;
+	}
+	const index = OnboardingSteps.indexOf(step);
 	return index >= 0 ? index : 0;
 }
 
@@ -225,14 +238,15 @@ export class OnboardingService {
 			};
 		}
 
-		const currentStep = (user.onboardingStep as OnboardingStep) || 'pending';
+		const rawStep = typeof user.onboardingStep === 'string' ? user.onboardingStep : '';
+		const currentStep = isOnboardingStep(rawStep) ? rawStep : 'pending';
 		const currentIndex = getStepIndex(currentStep);
 		const isComplete = currentStep === 'completed';
 
 		// Get completed steps
-		const stepsCompleted = OnboardingSteps.slice(0, currentIndex + 1).filter(
-			(s) => s !== 'pending'
-		) as OnboardingStep[];
+		const stepsCompleted: OnboardingStep[] = OnboardingSteps.slice(0, currentIndex + 1).filter(
+			(step) => step !== 'pending'
+		);
 
 		// Determine next step
 		let nextStep: OnboardingStep | null = null;
@@ -286,7 +300,7 @@ export class OnboardingService {
 
 			return result;
 		} catch (error) {
-			logger.error('Failed to queue welcome email', error as Error, { userId });
+			logger.error('Failed to queue welcome email', toError(error), { userId });
 			return { success: false, error: 'Failed to queue email' };
 		}
 	}
@@ -324,7 +338,7 @@ export class OnboardingService {
 
 			return result;
 		} catch (error) {
-			logger.error('Failed to queue abandonment email', error as Error, { userId });
+			logger.error('Failed to queue abandonment email', toError(error), { userId });
 			return { success: false, error: 'Failed to queue email' };
 		}
 	}

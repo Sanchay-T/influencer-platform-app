@@ -10,7 +10,7 @@ interface PerformanceMetric {
 	startTime: number;
 	endTime?: number;
 	duration?: number;
-	metadata?: Record<string, any>;
+	metadata?: Record<string, unknown>;
 }
 
 interface PerformanceSummary {
@@ -30,7 +30,7 @@ class PerformanceMonitor {
 	/**
 	 * Start timing an operation
 	 */
-	startTimer(operation: string, metadata?: Record<string, any>): string {
+	startTimer(operation: string, metadata?: Record<string, unknown>): string {
 		const timerId = `${operation}_${Date.now()}_${Math.random()}`;
 		const startTime = performance.now();
 
@@ -55,7 +55,7 @@ class PerformanceMonitor {
 	/**
 	 * End timing an operation
 	 */
-	endTimer(timerId: string, metadata?: Record<string, any>): number {
+	endTimer(timerId: string, metadata?: Record<string, unknown>): number {
 		const startTime = this.activeTimers.get(timerId);
 		if (!startTime) {
 			structuredConsole.warn(`⚠️ [PERF] Timer not found: ${timerId}`);
@@ -91,7 +91,11 @@ class PerformanceMonitor {
 	/**
 	 * Quick timing for simple operations
 	 */
-	time<T>(operation: string, fn: () => T | Promise<T>, metadata?: Record<string, any>): Promise<T> {
+	time<T>(
+		operation: string,
+		fn: () => T | Promise<T>,
+		metadata?: Record<string, unknown>
+	): Promise<T> {
 		return new Promise(async (resolve, reject) => {
 			const timerId = this.startTimer(operation, metadata);
 
@@ -100,7 +104,8 @@ class PerformanceMonitor {
 				this.endTimer(timerId);
 				resolve(result);
 			} catch (error) {
-				this.endTimer(timerId, { error: error.message });
+				const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+				this.endTimer(timerId, { error: errorMessage });
 				reject(error);
 			}
 		});
@@ -239,13 +244,16 @@ export class BrowserPerformance {
 	 */
 	static getNavigationTiming(): Record<string, number> | null {
 		try {
-			const navigation = performance.getEntriesByType(
-				'navigation'
-			)[0] as PerformanceNavigationTiming;
+			const entry = performance.getEntriesByType('navigation')[0];
+			if (!(entry && isNavigationTiming(entry))) {
+				return null;
+			}
+			const navigation = entry;
 
+			const origin = navigation.startTime;
 			return {
-				domContentLoaded: navigation.domContentLoadedEventEnd - navigation.navigationStart,
-				loadComplete: navigation.loadEventEnd - navigation.navigationStart,
+				domContentLoaded: navigation.domContentLoadedEventEnd - origin,
+				loadComplete: navigation.loadEventEnd - origin,
 				dnsLookup: navigation.domainLookupEnd - navigation.domainLookupStart,
 				tcpConnection: navigation.connectEnd - navigation.connectStart,
 				serverResponse: navigation.responseEnd - navigation.requestStart,
@@ -255,6 +263,22 @@ export class BrowserPerformance {
 			return null;
 		}
 	}
+}
+
+function isNavigationTiming(entry: PerformanceEntry): entry is PerformanceNavigationTiming {
+	return (
+		entry.entryType === 'navigation' &&
+		'domContentLoadedEventEnd' in entry &&
+		'navigationStart' in entry &&
+		'loadEventEnd' in entry &&
+		'domainLookupEnd' in entry &&
+		'domainLookupStart' in entry &&
+		'connectEnd' in entry &&
+		'connectStart' in entry &&
+		'responseEnd' in entry &&
+		'requestStart' in entry &&
+		'domComplete' in entry
+	);
 }
 
 // React hook for component performance monitoring
@@ -270,13 +294,10 @@ export function usePerformanceMonitor() {
 	const getComponentSummary = (componentName: string) => {
 		return Object.entries(perfMonitor.getAllSummaries())
 			.filter(([key]) => key.startsWith(componentName))
-			.reduce(
-				(acc, [key, summary]) => {
-					acc[key] = summary;
-					return acc;
-				},
-				{} as Record<string, PerformanceSummary>
-			);
+			.reduce<Record<string, PerformanceSummary>>((acc, [key, summary]) => {
+				acc[key] = summary;
+				return acc;
+			}, {});
 	};
 
 	return {

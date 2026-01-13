@@ -3,11 +3,45 @@
  * Provides functions to extract, check, and save creator emails.
  */
 
-import type { BioDataMap } from '../hooks/useBioEnrichment';
+import { structuredConsole } from '@/lib/logging/console-proxy';
+import {
+	getRecordProperty,
+	getStringArrayProperty,
+	getStringProperty,
+	toRecord,
+	type UnknownRecord,
+} from '@/lib/utils/type-guards';
 import { type Creator, hasContactEmail } from './creator-utils';
+
+export type BioData = {
+	biography?: string | null;
+	bio_links?: Array<{ url?: string; lynx_url?: string; title?: string }>;
+	external_url?: string | null;
+	extracted_email?: string | null;
+};
+
+export type BioDataMap = Record<string, BioData>;
 
 // Email regex pattern for extracting from bio text
 const EMAIL_REGEX = /[\w.-]+@[\w.-]+\.[\w-]+/i;
+
+const getOwnerId = (creator: Creator): string | null => {
+	const record = toRecord(creator);
+	const owner = record ? getRecordProperty(record, 'owner') : null;
+	return owner ? getStringProperty(owner, 'id') : null;
+};
+
+const getCreatorRecord = (creator: Creator): UnknownRecord | null =>
+	toRecord(creator.creator ?? creator);
+
+const resolveBio = (record: UnknownRecord | null): string | null => {
+	if (!record) return null;
+	const candidate =
+		getStringProperty(record, 'bio') ??
+		getStringProperty(record, 'signature') ??
+		getStringProperty(record, 'description');
+	return candidate && candidate.trim() ? candidate : null;
+};
 
 /**
  * Gets bio-extracted email for a creator.
@@ -15,7 +49,7 @@ const EMAIL_REGEX = /[\w.-]+@[\w.-]+\.[\w-]+/i;
  */
 export function getBioEmailForCreator(creator: Creator, bioData: BioDataMap): string | null {
 	// 1. Check Instagram enrichment (by owner.id)
-	const ownerId = (creator as Record<string, unknown>)?.owner?.id as string | undefined;
+	const ownerId = getOwnerId(creator);
 	if (ownerId && bioData[ownerId]?.extracted_email) {
 		return bioData[ownerId].extracted_email ?? null;
 	}
@@ -27,19 +61,15 @@ export function getBioEmailForCreator(creator: Creator, bioData: BioDataMap): st
 	}
 
 	// 3. Fall back to creator's own emails array
-	const creatorObj = creator?.creator || creator;
-	const emails = (creatorObj as Record<string, unknown>)?.emails as string[] | undefined;
+	const creatorObj = getCreatorRecord(creator);
+	const emails = creatorObj ? getStringArrayProperty(creatorObj, 'emails') : null;
 	if (Array.isArray(emails) && emails.length > 0) {
 		return emails[0];
 	}
 
 	// 4. Try to extract from bio text
-	const bio =
-		(creatorObj as Record<string, unknown>)?.bio ||
-		(creatorObj as Record<string, unknown>)?.signature ||
-		(creatorObj as Record<string, unknown>)?.description ||
-		'';
-	if (bio && typeof bio === 'string') {
+	const bio = resolveBio(creatorObj);
+	if (bio) {
 		const emailMatch = bio.match(EMAIL_REGEX);
 		if (emailMatch) {
 			return emailMatch[0];
@@ -64,7 +94,7 @@ export function getBioDataForCreator(
 	extracted_email: string | null;
 } | null {
 	// 1. Check Instagram enrichment (by owner.id)
-	const ownerId = (creator as Record<string, unknown>)?.owner?.id as string | undefined;
+	const ownerId = getOwnerId(creator);
 	if (ownerId && bioData[ownerId]) {
 		return {
 			biography: bioData[ownerId].biography ?? null,
@@ -86,14 +116,10 @@ export function getBioDataForCreator(
 	}
 
 	// 3. Fall back to creator's own bio data (from search results)
-	const creatorObj = creator?.creator || creator;
-	const bio =
-		(creatorObj as Record<string, unknown>)?.bio ||
-		(creatorObj as Record<string, unknown>)?.signature ||
-		(creatorObj as Record<string, unknown>)?.description ||
-		'';
+	const creatorObj = getCreatorRecord(creator);
+	const bio = resolveBio(creatorObj);
 
-	if (bio && typeof bio === 'string' && bio.trim()) {
+	if (bio) {
 		const emailMatch = bio.match(EMAIL_REGEX);
 		return {
 			biography: bio,
@@ -126,7 +152,7 @@ export function hasAnyEmail(creator: Creator, bioData: BioDataMap): boolean {
 	}
 
 	// Check bioData from live state (Instagram - by ownerId)
-	const ownerId = (creator as Record<string, unknown>)?.owner?.id as string | undefined;
+	const ownerId = getOwnerId(creator);
 	if (ownerId && bioData[ownerId]?.extracted_email) {
 		return true;
 	}
@@ -157,7 +183,7 @@ export async function saveBioEmail(
 		});
 		return response.ok;
 	} catch (error) {
-		console.error('Error saving bio email:', error);
+		structuredConsole.error('Error saving bio email', error);
 		return false;
 	}
 }

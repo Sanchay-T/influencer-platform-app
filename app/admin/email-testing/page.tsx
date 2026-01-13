@@ -3,7 +3,6 @@
 import { useUser } from '@clerk/nextjs';
 import {
 	AlertCircle,
-	Calendar,
 	CheckCircle,
 	Clock,
 	Database,
@@ -31,9 +30,8 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { adminLogger, LogCategory } from '@/lib/logging';
-import { useApiLogger, useComponentLogger, useUserActionLogger } from '@/lib/logging/react-logger';
+import { adminLogger } from '@/lib/logging';
+import { useComponentLogger, useUserActionLogger } from '@/lib/logging/react-logger';
 
 interface UserProfile {
 	user_id: string;
@@ -44,7 +42,7 @@ interface UserProfile {
 	trial_status: string;
 	trial_start_date: string;
 	trial_end_date: string;
-	email_schedule_status: any;
+	email_schedule_status: unknown;
 	stripe_customer_id: string;
 	stripe_subscription_id: string;
 }
@@ -62,7 +60,6 @@ function AdminEmailTestingPageContent() {
 	const { user: currentUser } = useUser(); // Get current admin user
 	const componentLogger = useComponentLogger('AdminEmailTestingPage');
 	const userActionLogger = useUserActionLogger();
-	const apiLogger = useApiLogger();
 	const [searchQuery, setSearchQuery] = useState('');
 	const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
 	const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
@@ -116,9 +113,11 @@ function AdminEmailTestingPageContent() {
 				setSearchResults(data.users || []);
 			} else {
 				adminLogger.error('Failed to search users', new Error(response.statusText), {
-					searchQuery: query,
 					statusCode: response.status,
-					operation: 'user-search',
+					metadata: {
+						searchQuery: query,
+						operation: 'user-search',
+					},
 				});
 				setSearchResults([]);
 			}
@@ -127,8 +126,10 @@ function AdminEmailTestingPageContent() {
 				'Error searching users',
 				error instanceof Error ? error : new Error(String(error)),
 				{
-					searchQuery: query,
-					operation: 'user-search',
+					metadata: {
+						searchQuery: query,
+						operation: 'user-search',
+					},
 				}
 			);
 			setSearchResults([]);
@@ -155,14 +156,18 @@ function AdminEmailTestingPageContent() {
 
 		if (!(targetUserId && targetEmail)) {
 			adminLogger.warn('No user selected for email sending', {
-				selectedUser: selectedUser?.user_id,
-				targetUserId,
-				targetEmail,
-				adminEmail,
-				userIdParam: userId,
-				userEmailParam: userEmail,
-				currentUserId: currentUser?.id,
-				operation: 'email-validation',
+				userId: currentUser?.id,
+				userEmail: adminEmail,
+				metadata: {
+					selectedUserId: selectedUser?.user_id,
+					targetUserId,
+					targetEmail,
+					adminEmail,
+					userIdParam: userId,
+					userEmailParam: userEmail,
+					currentUserId: currentUser?.id,
+					operation: 'email-validation',
+				},
 			});
 			return;
 		}
@@ -172,16 +177,20 @@ function AdminEmailTestingPageContent() {
 		try {
 			adminLogger.info('Sending test email', {
 				userId: targetUserId,
-				emailType: selectedEmailType,
-				delay: customDelay,
 				userEmail: targetEmail,
-				operation: 'test-email-send',
+				metadata: {
+					emailType: selectedEmailType,
+					delay: customDelay,
+					operation: 'test-email-send',
+				},
 			});
 
 			userActionLogger.logClick('send-test-email', {
-				emailType: selectedEmailType,
-				delay: customDelay,
-				targetUserId,
+				metadata: {
+					emailType: selectedEmailType,
+					delay: customDelay,
+					targetUserId,
+				},
 			});
 
 			const response = await fetch('/api/admin/email-testing/send', {
@@ -217,18 +226,22 @@ function AdminEmailTestingPageContent() {
 
 			if (response.ok) {
 				adminLogger.info('Email scheduled successfully', {
-					messageId: data.messageId,
-					emailType: selectedEmailType,
 					userId: targetUserId,
 					userEmail: targetEmail,
-					operation: 'email-schedule-success',
+					metadata: {
+						messageId: data.messageId,
+						emailType: selectedEmailType,
+						operation: 'email-schedule-success',
+					},
 				});
 			} else {
 				adminLogger.error('Failed to schedule email', new Error(data.error), {
-					emailType: selectedEmailType,
 					userId: targetUserId,
 					userEmail: targetEmail,
-					operation: 'email-schedule-failure',
+					metadata: {
+						emailType: selectedEmailType,
+						operation: 'email-schedule-failure',
+					},
 				});
 			}
 		} catch (error) {
@@ -236,26 +249,25 @@ function AdminEmailTestingPageContent() {
 				'Error sending email',
 				error instanceof Error ? error : new Error(String(error)),
 				{
-					emailType: selectedEmailType,
 					userId: targetUserId,
 					userEmail: targetEmail,
-					operation: 'email-send-error',
+					metadata: {
+						emailType: selectedEmailType,
+						operation: 'email-send-error',
+					},
 				}
 			);
 
-			setEmailResults((prev) =>
-				[
-					{
-						type: selectedEmailType,
-						status: 'error',
-						message: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-						timestamp: new Date().toLocaleTimeString(),
-						userId: targetUserId,
-						userEmail: targetEmail,
-					},
-					...prev,
-				].slice(0, 10)
-			);
+			const errorResult: EmailResult = {
+				type: selectedEmailType,
+				status: 'error',
+				message: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+				timestamp: new Date().toLocaleTimeString(),
+				userId: targetUserId,
+				userEmail: targetEmail,
+			};
+
+			setEmailResults((prev) => [errorResult, ...prev].slice(0, 10));
 		} finally {
 			setIsSending(false);
 		}
@@ -352,7 +364,8 @@ function AdminEmailTestingPageContent() {
 									{searchResults.map((user) => {
 										const trialStatus = getTrialStatus(user);
 										return (
-											<div
+											<button
+												type="button"
 												key={user.user_id}
 												className={`p-3 rounded-lg border cursor-pointer transition-colors ${
 													selectedUser?.user_id === user.user_id
@@ -362,13 +375,17 @@ function AdminEmailTestingPageContent() {
 												onClick={() => {
 													componentLogger.logInfo('User selected from search results', {
 														userId: user.user_id,
-														userName: user.full_name,
-														operation: 'user-selection',
+														metadata: {
+															userName: user.full_name,
+															operation: 'user-selection',
+														},
 													});
 
 													userActionLogger.logClick('select-user', {
 														userId: user.user_id,
-														userName: user.full_name,
+														metadata: {
+															userName: user.full_name,
+														},
 													});
 
 													setSelectedUser(user);
@@ -393,7 +410,7 @@ function AdminEmailTestingPageContent() {
 													</Badge>
 													<span className="text-xs text-gray-500">{trialStatus.timeLeft}</span>
 												</div>
-											</div>
+											</button>
 										);
 									})}
 								</div>
@@ -495,15 +512,19 @@ function AdminEmailTestingPageContent() {
 									<Button
 										onClick={() => {
 											componentLogger.logInfo('Send button clicked', {
-												selectedUserId: selectedUser?.user_id,
-												emailType: selectedEmailType,
-												delay: customDelay,
-												operation: 'send-button-click',
+												metadata: {
+													selectedUserId: selectedUser?.user_id,
+													emailType: selectedEmailType,
+													delay: customDelay,
+													operation: 'send-button-click',
+												},
 											});
 
 											userActionLogger.logClick('send-test-email-button', {
-												emailType: selectedEmailType,
-												delay: customDelay,
+												metadata: {
+													emailType: selectedEmailType,
+													delay: customDelay,
+												},
 											});
 
 											sendTestEmail();
@@ -573,35 +594,38 @@ function AdminEmailTestingPageContent() {
 								</CardHeader>
 								<CardContent>
 									<div className="space-y-3 max-h-80 overflow-y-auto">
-										{emailResults.map((result, index) => (
-											<div
-												key={index}
-												className={`p-3 rounded-lg border flex items-start gap-3 ${
-													result.status === 'success'
-														? 'bg-green-50 border-green-200'
-														: 'bg-red-50 border-red-200'
-												}`}
-											>
-												{result.status === 'success' ? (
-													<CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-												) : (
-													<AlertCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
-												)}
-												<div className="flex-1 min-w-0">
-													<div className="flex items-center justify-between mb-1">
-														<span className="font-medium text-sm">
-															{emailTypes.find((t) => t.value === result.type)?.label ||
-																result.type}
-														</span>
-														<span className="text-xs text-gray-500">{result.timestamp}</span>
+										{emailResults.map((result) => {
+											const resultKey = `${result.timestamp}-${result.userId}-${result.type}`;
+											return (
+												<div
+													key={resultKey}
+													className={`p-3 rounded-lg border flex items-start gap-3 ${
+														result.status === 'success'
+															? 'bg-green-50 border-green-200'
+															: 'bg-red-50 border-red-200'
+													}`}
+												>
+													{result.status === 'success' ? (
+														<CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+													) : (
+														<AlertCircle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+													)}
+													<div className="flex-1 min-w-0">
+														<div className="flex items-center justify-between mb-1">
+															<span className="font-medium text-sm">
+																{emailTypes.find((t) => t.value === result.type)?.label ||
+																	result.type}
+															</span>
+															<span className="text-xs text-gray-500">{result.timestamp}</span>
+														</div>
+														<div className="text-xs text-gray-600 mb-1">
+															📧 {result.userEmail} ({result.userId.substring(0, 8)}...)
+														</div>
+														<div className="text-sm break-all">{result.message}</div>
 													</div>
-													<div className="text-xs text-gray-600 mb-1">
-														📧 {result.userEmail} ({result.userId.substring(0, 8)}...)
-													</div>
-													<div className="text-sm break-all">{result.message}</div>
 												</div>
-											</div>
-										))}
+											);
+										})}
 									</div>
 								</CardContent>
 							</Card>

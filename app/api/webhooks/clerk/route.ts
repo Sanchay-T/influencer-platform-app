@@ -8,6 +8,14 @@ import BillingLogger from '@/lib/loggers/billing-logger';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { UserSessionLogger } from '@/lib/logging/user-session-logger';
 import {
+	getArrayProperty,
+	getNumberProperty,
+	getStringProperty,
+	toError,
+	toRecord,
+	type UnknownRecord,
+} from '@/lib/utils/type-guards';
+import {
 	checkWebhookIdempotency,
 	markWebhookCompleted,
 	markWebhookFailed,
@@ -21,10 +29,23 @@ type WebhookEvent = {
 	id: string;
 	object: 'event';
 	type: string;
-	data: any;
+	data: unknown;
 	timestamp: number;
 };
 
+const getPrimaryEmail = (record: UnknownRecord): string | undefined => {
+	const emailEntries = getArrayProperty(record, 'email_addresses') ?? [];
+	for (const entry of emailEntries) {
+		const entryRecord = toRecord(entry);
+		const email = entryRecord ? getStringProperty(entryRecord, 'email_address') : null;
+		if (email) {
+			return email;
+		}
+	}
+	return undefined;
+};
+
+// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function POST(req: NextRequest) {
 	const requestId = BillingLogger.generateRequestId();
 
@@ -67,20 +88,64 @@ export async function POST(req: NextRequest) {
 
 		// Get the body
 		const payload = await req.text();
-		const body = JSON.parse(payload);
+
+		const webhookSecret = process.env.CLERK_WEBHOOK_SECRET;
+		if (!webhookSecret) {
+			await BillingLogger.logAPI(
+				'REQUEST_ERROR',
+				'Missing Clerk webhook secret',
+				undefined,
+				{
+					error: 'MISSING_WEBHOOK_SECRET',
+					requestId,
+				},
+				requestId
+			);
+			return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 });
+		}
 
 		// Create a new Svix instance with your webhook secret
-		const wh = new Webhook(process.env.CLERK_WEBHOOK_SECRET!);
+		const wh = new Webhook(webhookSecret);
 
 		let evt: WebhookEvent;
 
 		// Verify the payload with the headers
 		try {
-			evt = wh.verify(payload, {
+			const verified = wh.verify(payload, {
 				'svix-id': svixId,
 				'svix-timestamp': svixTimestamp,
 				'svix-signature': svixSignature,
-			}) as WebhookEvent;
+			});
+
+			const verifiedRecord = toRecord(verified);
+			if (!verifiedRecord) {
+				throw new Error('Invalid Clerk webhook payload');
+			}
+
+			const id = getStringProperty(verifiedRecord, 'id');
+			const objectValue = getStringProperty(verifiedRecord, 'object');
+			const type = getStringProperty(verifiedRecord, 'type');
+			const numericTimestamp = getNumberProperty(verifiedRecord, 'timestamp');
+			const timestampText = getStringProperty(verifiedRecord, 'timestamp');
+			const timestamp = numericTimestamp ?? (timestampText ? Number(timestampText) : null);
+			const data = verifiedRecord.data;
+
+			if (
+				!(id && type) ||
+				objectValue !== 'event' ||
+				timestamp === null ||
+				Number.isNaN(timestamp)
+			) {
+				throw new Error('Invalid Clerk webhook event');
+			}
+
+			evt = {
+				id,
+				object: 'event',
+				type,
+				data,
+				timestamp,
+			};
 
 			await BillingLogger.logAPI(
 				'REQUEST_SUCCESS',
@@ -111,6 +176,8 @@ export async function POST(req: NextRequest) {
 		}
 
 		const { type, data } = evt;
+		const dataRecord: UnknownRecord = toRecord(data) ?? {};
+		const dataId = getStringProperty(dataRecord, 'id') ?? undefined;
 
 		// Check idempotency - prevent duplicate processing
 		const { shouldProcess, reason } = await checkWebhookIdempotency(
@@ -125,7 +192,7 @@ export async function POST(req: NextRequest) {
 			await BillingLogger.logAPI(
 				'RESPONSE',
 				`Clerk webhook skipped (idempotent): ${reason}`,
-				data?.id,
+				dataId,
 				{
 					eventType: type,
 					eventId: evt.id,
@@ -140,11 +207,11 @@ export async function POST(req: NextRequest) {
 		await BillingLogger.logAPI(
 			'RESPONSE',
 			`Processing Clerk webhook event: ${type}`,
-			data?.id,
+			dataId,
 			{
 				eventType: type,
 				eventId: evt.id,
-				userId: data?.id,
+				userId: dataId,
 				requestId,
 			},
 			requestId
@@ -169,7 +236,7 @@ export async function POST(req: NextRequest) {
 					await BillingLogger.logAPI(
 						'RESPONSE',
 						`Unhandled Clerk webhook event: ${type}`,
-						data?.id,
+						dataId,
 						{
 							eventType: type,
 							handled: false,
@@ -187,7 +254,7 @@ export async function POST(req: NextRequest) {
 			await BillingLogger.logAPI(
 				'REQUEST_SUCCESS',
 				'Clerk webhook processed successfully',
-				data?.id,
+				dataId,
 				{
 					eventType: type,
 					eventId: evt.id,
@@ -206,7 +273,7 @@ export async function POST(req: NextRequest) {
 			await BillingLogger.logError(
 				'CLERK_WEBHOOK_PROCESSING_ERROR',
 				'Clerk webhook event processing failed',
-				data?.id,
+				dataId,
 				{
 					eventType: type,
 					eventId: evt.id,
@@ -246,12 +313,23 @@ export async function POST(req: NextRequest) {
 /**
  * Handle user creation - Create user profile with free plan
  */
-async function handleUserCreated(userData: any, requestId: string) {
-	const userId = userData.id;
-	const email = userData.email_addresses?.[0]?.email_address;
-	const firstName = userData.first_name;
-	const lastName = userData.last_name;
-	const fullName = `${firstName || ''} ${lastName || ''}`.trim() || 'New User';
+async function handleUserCreated(userData: unknown, requestId: string) {
+	const userRecord = toRecord(userData);
+	if (!userRecord) {
+		structuredConsole.error('❌ [CLERK-WEBHOOK] Invalid user payload for user.created');
+		throw new Error('Invalid Clerk user payload');
+	}
+
+	const userId = getStringProperty(userRecord, 'id');
+	if (!userId) {
+		structuredConsole.error('❌ [CLERK-WEBHOOK] Missing user id in user.created payload');
+		throw new Error('Missing Clerk user id');
+	}
+
+	const email = getPrimaryEmail(userRecord);
+	const firstName = getStringProperty(userRecord, 'first_name') ?? '';
+	const lastName = getStringProperty(userRecord, 'last_name') ?? '';
+	const fullName = `${firstName} ${lastName}`.trim() || 'New User';
 
 	// Initialize user session logger for debugging
 	const userLogger = email ? UserSessionLogger.forUser(email, userId) : null;
@@ -342,13 +420,16 @@ async function handleUserCreated(userData: any, requestId: string) {
 				// It will be set by Stripe webhook after user completes payment
 				// NULL = user hasn't completed onboarding yet
 			});
-		} catch (createError: any) {
+		} catch (createError: unknown) {
 			// Handle race condition: another process created the user between our check and insert
-			const message = createError?.message?.toLowerCase?.() ?? '';
+			const error = toError(createError);
+			const errorRecord = toRecord(createError) ?? {};
+			const codeString = getStringProperty(errorRecord, 'code');
+			const codeNumber = getNumberProperty(errorRecord, 'code');
+			const errorCode = codeString ?? (codeNumber != null ? String(codeNumber) : null);
+			const message = error.message.toLowerCase();
 			const isDuplicate =
-				message.includes('duplicate') ||
-				message.includes('unique') ||
-				createError?.code === '23505';
+				message.includes('duplicate') || message.includes('unique') || errorCode === '23505';
 
 			if (isDuplicate) {
 				await BillingLogger.logDatabase(
@@ -394,7 +475,7 @@ async function handleUserCreated(userData: any, requestId: string) {
 			userId,
 			{
 				fromPlan: undefined,
-				toPlan: null, // No plan until payment confirmed
+				toPlan: undefined, // No plan until payment confirmed
 				reason: 'user_created',
 				billingCycle: 'none', // No subscription yet
 				effective: new Date().toISOString(),
@@ -440,12 +521,23 @@ async function handleUserCreated(userData: any, requestId: string) {
 /**
  * Handle user updates - Update email, name, etc.
  */
-async function handleUserUpdated(userData: any, requestId: string) {
-	const userId = userData.id;
-	const email = userData.email_addresses?.[0]?.email_address;
-	const firstName = userData.first_name;
-	const lastName = userData.last_name;
-	const fullName = `${firstName || ''} ${lastName || ''}`.trim();
+async function handleUserUpdated(userData: unknown, requestId: string) {
+	const userRecord = toRecord(userData);
+	if (!userRecord) {
+		structuredConsole.error('❌ [CLERK-WEBHOOK] Invalid user payload for user.updated');
+		throw new Error('Invalid Clerk user payload');
+	}
+
+	const userId = getStringProperty(userRecord, 'id');
+	if (!userId) {
+		structuredConsole.error('❌ [CLERK-WEBHOOK] Missing user id in user.updated payload');
+		throw new Error('Missing Clerk user id');
+	}
+
+	const email = getPrimaryEmail(userRecord);
+	const firstName = getStringProperty(userRecord, 'first_name') ?? '';
+	const lastName = getStringProperty(userRecord, 'last_name') ?? '';
+	const fullName = `${firstName} ${lastName}`.trim();
 
 	try {
 		await BillingLogger.logDatabase(
@@ -462,10 +554,14 @@ async function handleUserUpdated(userData: any, requestId: string) {
 		);
 
 		// Update user profile
-		const updateData: any = {};
+		const updateData: { email?: string; fullName?: string } = {};
 
-		if (email) updateData.email = email;
-		if (fullName) updateData.fullName = fullName;
+		if (email) {
+			updateData.email = email;
+		}
+		if (fullName) {
+			updateData.fullName = fullName;
+		}
 
 		await updateUserProfile(userId, updateData);
 
@@ -504,8 +600,18 @@ async function handleUserUpdated(userData: any, requestId: string) {
 /**
  * Handle user deletion - Clean up user data
  */
-async function handleUserDeleted(userData: any, requestId: string) {
-	const userId = userData.id;
+async function handleUserDeleted(userData: unknown, requestId: string) {
+	const userRecord = toRecord(userData);
+	if (!userRecord) {
+		structuredConsole.error('❌ [CLERK-WEBHOOK] Invalid user payload for user.deleted');
+		throw new Error('Invalid Clerk user payload');
+	}
+
+	const userId = getStringProperty(userRecord, 'id');
+	if (!userId) {
+		structuredConsole.error('❌ [CLERK-WEBHOOK] Missing user id in user.deleted payload');
+		throw new Error('Missing Clerk user id');
+	}
 
 	try {
 		await BillingLogger.logDatabase(

@@ -1,12 +1,6 @@
+import { getNumberProperty, getStringProperty, toArray, toRecord } from '@/lib/utils/type-guards';
 import { EMAIL_REGEX } from '../core/config';
 import type { BioEnrichedInfo, NormalizedCreator, SearchConfig } from '../core/types';
-
-interface InstagramBasicProfileResponse {
-	biography?: string;
-	bio_links?: Array<{ title?: string; url?: string; lynx_url?: string; link_type?: string }>;
-	external_url?: string;
-	follower_count?: number;
-}
 
 function buildAttemptedResult(
 	creator: NormalizedCreator,
@@ -17,17 +11,23 @@ function buildAttemptedResult(
 		...creator,
 		bioEnriched: true,
 		bioEnrichedAt: fetchedAt,
+		// biome-ignore lint/style/useNamingConvention: API payload uses snake_case
 		bio_enriched: {
 			biography: creator.creator.bio?.trim() ? creator.creator.bio : null,
+			// biome-ignore lint/style/useNamingConvention: API payload uses snake_case
 			bio_links: [],
+			// biome-ignore lint/style/useNamingConvention: API payload uses snake_case
 			external_url: null,
+			// biome-ignore lint/style/useNamingConvention: API payload uses snake_case
 			extracted_email: null,
+			// biome-ignore lint/style/useNamingConvention: API payload uses snake_case
 			fetched_at: fetchedAt,
 			error,
 		} satisfies BioEnrichedInfo,
 	};
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: v2 adapter awaiting refactor
 export async function enrichInstagramCreator(
 	creator: NormalizedCreator,
 	config: SearchConfig
@@ -64,27 +64,39 @@ export async function enrichInstagramCreator(
 			);
 		}
 
-		const profile = (await response.json()) as InstagramBasicProfileResponse;
+		const profileRecord = toRecord(await response.json());
+		if (!profileRecord) {
+			return buildAttemptedResult(creator, fetchedAt, 'invalid_instagram_profile_payload');
+		}
 
-		const biographyRaw = typeof profile.biography === 'string' ? profile.biography : '';
+		const biographyRaw = getStringProperty(profileRecord, 'biography') ?? '';
 		const biography = biographyRaw.trim().length > 0 ? biographyRaw : '';
 
-		const bioLinks = Array.isArray(profile.bio_links)
-			? profile.bio_links
-					.map((link) => ({
-						url:
-							typeof link.url === 'string'
-								? link.url
-								: typeof link.lynx_url === 'string'
-									? link.lynx_url
-									: undefined,
-						lynx_url: typeof link.lynx_url === 'string' ? link.lynx_url : undefined,
-						title: typeof link.title === 'string' ? link.title : undefined,
-					}))
-					.filter((link) => Boolean(link.url && link.url.trim().length > 0))
-			: [];
+		const rawLinks = toArray(profileRecord.bio_links) ?? [];
+		type BioLink = {
+			url?: string;
+			// biome-ignore lint/style/useNamingConvention: API payload uses snake_case
+			lynx_url?: string;
+			title?: string;
+		};
+		const bioLinks = rawLinks
+			.map((link): BioLink | null => {
+				const linkRecord = toRecord(link);
+				if (!linkRecord) {
+					return null;
+				}
+				const url =
+					getStringProperty(linkRecord, 'url') ?? getStringProperty(linkRecord, 'lynx_url');
+				return {
+					url: url ?? undefined,
+					// biome-ignore lint/style/useNamingConvention: API payload uses snake_case
+					lynx_url: getStringProperty(linkRecord, 'lynx_url') ?? undefined,
+					title: getStringProperty(linkRecord, 'title') ?? undefined,
+				};
+			})
+			.filter((link): link is BioLink => link !== null);
 
-		const externalUrlRaw = typeof profile.external_url === 'string' ? profile.external_url : '';
+		const externalUrlRaw = getStringProperty(profileRecord, 'external_url') ?? '';
 		const externalUrl = externalUrlRaw.trim().length > 0 ? externalUrlRaw.trim() : null;
 
 		const emails: string[] = [];
@@ -110,12 +122,17 @@ export async function enrichInstagramCreator(
 
 		const mergedEmails = [...new Set([...(creator.creator.emails ?? []), ...emails])];
 		const extractedEmail = mergedEmails.length > 0 ? mergedEmails[0] : null;
+		const followerCount = getNumberProperty(profileRecord, 'follower_count');
 
 		const bioEnriched: BioEnrichedInfo = {
 			biography: biography ? biography : null,
+			// biome-ignore lint/style/useNamingConvention: API payload uses snake_case
 			bio_links: bioLinks,
+			// biome-ignore lint/style/useNamingConvention: API payload uses snake_case
 			external_url: externalUrl,
+			// biome-ignore lint/style/useNamingConvention: API payload uses snake_case
 			extracted_email: extractedEmail,
+			// biome-ignore lint/style/useNamingConvention: API payload uses snake_case
 			fetched_at: fetchedAt,
 		};
 
@@ -125,13 +142,11 @@ export async function enrichInstagramCreator(
 				...creator.creator,
 				bio: biography,
 				emails: mergedEmails,
-				followers:
-					typeof profile.follower_count === 'number'
-						? profile.follower_count
-						: creator.creator.followers,
+				followers: typeof followerCount === 'number' ? followerCount : creator.creator.followers,
 			},
 			bioEnriched: true,
 			bioEnrichedAt: fetchedAt,
+			// biome-ignore lint/style/useNamingConvention: API payload uses snake_case
 			bio_enriched: bioEnriched,
 		};
 	} catch {

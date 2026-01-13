@@ -6,24 +6,28 @@
  *   AUTOMATION_TESTING_SECRET=... AUTOMATION_USER_ID=... npx tsx testing/automation-headers/run-automation-smoke.ts
  */
 
-const REQUIRED_VARS = ['AUTOMATION_TESTING_SECRET', 'AUTOMATION_USER_ID'] as const
+export {}
 
-for (const key of REQUIRED_VARS) {
-  if (!process.env[key]) {
+function requireEnv(key: string): string {
+  const value = process.env[key]
+  if (!value) {
     console.error(`Missing ${key} in environment.`)
     process.exit(1)
   }
+  return value
 }
 
 const baseUrl = process.env.AUTOMATION_BASE_URL || 'http://127.0.0.1:3002'
+const automationSecret = requireEnv('AUTOMATION_TESTING_SECRET')
+const automationUserId = requireEnv('AUTOMATION_USER_ID')
 
 async function main() {
   console.log('→ Pinging /api/usage/summary with automation headers at', baseUrl)
 
   const res = await fetch(`${baseUrl}/api/usage/summary`, {
     headers: {
-      'X-Testing-Token': process.env.AUTOMATION_TESTING_SECRET!,
-      'X-Automation-User-Id': process.env.AUTOMATION_USER_ID!,
+      'X-Testing-Token': automationSecret,
+      'X-Automation-User-Id': automationUserId,
     },
   })
 

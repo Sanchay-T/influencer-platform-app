@@ -1,11 +1,18 @@
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { validateCreatorSearch } from '@/lib/billing';
 import { db } from '@/lib/db';
-import { campaigns, type JobStatus, scrapingJobs, scrapingResults } from '@/lib/db/schema';
+import { campaigns, scrapingJobs } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { normalizePageParams, paginateCreators } from '@/lib/search-engine/utils/pagination';
+import {
+	getBooleanProperty,
+	getNumberProperty,
+	getStringProperty,
+	toRecord,
+	toStringArray,
+} from '@/lib/utils/type-guards';
 import { getWebhookUrl } from '@/lib/utils/url-utils';
 
 const TIMEOUT_MINUTES = 60;
@@ -18,23 +25,27 @@ interface InstagramUsReelsOptions {
 }
 
 function sanitizeKeywords(raw: unknown): string[] {
-	if (!Array.isArray(raw)) return [];
+	if (!Array.isArray(raw)) {
+		return [];
+	}
 	return raw
 		.map((keyword) => {
-			if (typeof keyword !== 'string') return '';
+			if (typeof keyword !== 'string') {
+				return '';
+			}
 			return keyword.replace(/^#/, '').trim();
 		})
 		.filter((keyword) => keyword.length > 0);
 }
 
 function buildPipelineOptions(raw: unknown): InstagramUsReelsOptions {
-	const options = (raw ?? {}) as Record<string, unknown>;
+	const options = toRecord(raw) ?? {};
+	const serpEnabled = getBooleanProperty(options, 'serpEnabled');
 	return {
-		transcripts: options.transcripts === true,
-		serpEnabled: options.serpEnabled !== false,
-		maxProfiles: typeof options.maxProfiles === 'number' ? options.maxProfiles : undefined,
-		reelsPerProfile:
-			typeof options.reelsPerProfile === 'number' ? options.reelsPerProfile : undefined,
+		transcripts: getBooleanProperty(options, 'transcripts') === true,
+		serpEnabled: serpEnabled !== false,
+		maxProfiles: getNumberProperty(options, 'maxProfiles') ?? undefined,
+		reelsPerProfile: getNumberProperty(options, 'reelsPerProfile') ?? undefined,
 	};
 }
 
@@ -67,6 +78,7 @@ async function scheduleSearchJob(jobId: string) {
 	});
 }
 
+// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function POST(req: NextRequest) {
 	try {
 		const { userId } = await getAuthOrTest();
@@ -74,11 +86,12 @@ export async function POST(req: NextRequest) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
 
-		const body = await req.json();
-		const keywords = Array.from(new Set(sanitizeKeywords(body?.keywords)));
-		const requestedTarget = Number(body?.targetResults ?? 100);
-		const campaignId = body?.campaignId as string | undefined;
-		const options = buildPipelineOptions(body?.options);
+		const body: unknown = await req.json();
+		const bodyRecord = toRecord(body);
+		const keywords = Array.from(new Set(sanitizeKeywords(bodyRecord?.keywords)));
+		const requestedTarget = Number(bodyRecord?.targetResults ?? 100);
+		const campaignId = bodyRecord ? getStringProperty(bodyRecord, 'campaignId') : null;
+		const options = buildPipelineOptions(bodyRecord?.options);
 
 		if (!keywords.length) {
 			return NextResponse.json({ error: 'Keywords are required' }, { status: 400 });
@@ -137,17 +150,16 @@ export async function POST(req: NextRequest) {
 			baseTargetPerKeyword: requestedTarget,
 			effectiveTarget: adjustedTarget,
 		};
-		const newJobValues = {
+		const newJobValues: typeof scrapingJobs.$inferInsert = {
 			userId,
 			keywords: normalizedKeywords,
 			targetResults: adjustedTarget,
-			status: 'pending' as JobStatus,
+			status: 'pending',
 			processedRuns: 0,
 			processedResults: 0,
 			platform: 'Instagram',
 			region: 'US',
 			campaignId,
-			searchType: 'keyword' as const,
 			searchParams: {
 				...buildSearchParams(options),
 				...searchKeywordMeta,
@@ -177,7 +189,7 @@ export async function POST(req: NextRequest) {
 			jobId: job.id,
 			message: 'Instagram US reels search started successfully',
 		});
-	} catch (error: any) {
+	} catch (error: unknown) {
 		structuredConsole.error('[instagram-us-reels] POST failed', error);
 		return NextResponse.json(
 			{ error: error instanceof Error ? error.message : 'Unknown error' },
@@ -186,6 +198,7 @@ export async function POST(req: NextRequest) {
 	}
 }
 
+// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function GET(req: NextRequest) {
 	try {
 		const { userId } = await getAuthOrTest();
@@ -193,8 +206,8 @@ export async function GET(req: NextRequest) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
 
-		const { searchParams } = new URL(req.url);
-		const jobId = searchParams.get('jobId');
+		const { searchParams: requestSearchParams } = new URL(req.url);
+		const jobId = requestSearchParams.get('jobId');
 		if (!jobId) {
 			return NextResponse.json({ error: 'jobId is required' }, { status: 400 });
 		}
@@ -228,7 +241,7 @@ export async function GET(req: NextRequest) {
 			await db
 				.update(scrapingJobs)
 				.set({
-					status: 'timeout' as JobStatus,
+					status: 'timeout',
 					error: 'Job exceeded maximum allowed time',
 					completedAt: new Date(),
 				})
@@ -241,8 +254,8 @@ export async function GET(req: NextRequest) {
 		}
 
 		const { limit, offset } = normalizePageParams(
-			searchParams.get('limit'),
-			searchParams.get('offset') ?? searchParams.get('cursor')
+			requestSearchParams.get('limit'),
+			requestSearchParams.get('offset') ?? requestSearchParams.get('cursor')
 		);
 
 		const {
@@ -251,40 +264,31 @@ export async function GET(req: NextRequest) {
 			pagination,
 		} = paginateCreators(job.results, limit, offset);
 
-		const queueStateRaw = (job.searchParams as Record<string, unknown> | null | undefined)
-			?.searchEngineHandleQueue;
-		const queueState =
-			queueStateRaw && typeof queueStateRaw === 'object'
-				? (queueStateRaw as Record<string, unknown>)
-				: null;
-		const completedHandles =
-			queueState && Array.isArray(queueState.completedHandles)
-				? (queueState.completedHandles as unknown[]).filter(
-						(value): value is string => typeof value === 'string'
-					)
-				: [];
-		const remainingHandles =
-			queueState && Array.isArray(queueState.remainingHandles)
-				? (queueState.remainingHandles as unknown[]).filter(
-						(value): value is string => typeof value === 'string'
-					)
-				: [];
-		const queueMetrics =
-			queueState && typeof queueState.metrics === 'object' && queueState.metrics !== null
-				? queueState.metrics
-				: {};
+		const jobSearchParams = toRecord(job.searchParams);
+		const queueState = jobSearchParams ? toRecord(jobSearchParams.searchEngineHandleQueue) : null;
+		const completedHandles = queueState ? (toStringArray(queueState.completedHandles) ?? []) : [];
+		const remainingHandles = queueState ? (toStringArray(queueState.remainingHandles) ?? []) : [];
+		const queueMetrics = queueState ? (toRecord(queueState.metrics) ?? {}) : {};
+		const totalHandlesFallback = completedHandles.length + remainingHandles.length;
+		const totalHandlesRaw = queueState ? queueState.totalHandles : undefined;
+		const totalHandlesValue = queueState ? getNumberProperty(queueState, 'totalHandles') : null;
+		const totalHandlesCandidate = queueState
+			? (totalHandlesValue ?? Number(totalHandlesRaw))
+			: Number.NaN;
+		const totalHandles = Number.isFinite(totalHandlesCandidate)
+			? totalHandlesCandidate
+			: totalHandlesFallback;
+		const activeHandle = queueState ? getStringProperty(queueState, 'activeHandle') : null;
+		const lastUpdatedAt = queueState ? getStringProperty(queueState, 'lastUpdatedAt') : null;
 
 		const queuePayload = queueState
 			? {
-					totalHandles:
-						Number(queueState.totalHandles) || completedHandles.length + remainingHandles.length,
+					totalHandles,
 					completedHandles,
 					remainingHandles,
-					activeHandle:
-						typeof queueState.activeHandle === 'string' ? queueState.activeHandle : null,
+					activeHandle,
 					metrics: queueMetrics,
-					lastUpdatedAt:
-						typeof queueState.lastUpdatedAt === 'string' ? queueState.lastUpdatedAt : null,
+					lastUpdatedAt,
 				}
 			: null;
 
@@ -307,7 +311,7 @@ export async function GET(req: NextRequest) {
 			pagination,
 			queue: queuePayload,
 		});
-	} catch (error: any) {
+	} catch (error: unknown) {
 		structuredConsole.error('[instagram-us-reels] GET failed', error);
 		return NextResponse.json(
 			{ error: error instanceof Error ? error.message : 'Unknown error' },

@@ -12,7 +12,7 @@ export type Platform = 'tiktok' | 'youtube' | 'instagram';
 export type JobStatus = 'pending' | 'processing' | 'completed' | 'error' | 'timeout';
 
 // ============================================================================
-// Normalized Creator (Strict - no Record<string, any>)
+// Normalized Creator (Strict - no Record<string, unknown>)
 // ============================================================================
 
 export interface CreatorInfo {

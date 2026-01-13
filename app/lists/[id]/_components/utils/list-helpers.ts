@@ -2,6 +2,15 @@
  * Helper functions for the list detail page
  * Extracted from list-detail-client.tsx for modularity
  */
+
+import {
+	getArrayProperty,
+	getRecordProperty,
+	getStringProperty,
+	isString,
+	toRecord,
+	type UnknownRecord,
+} from '@/lib/utils/type-guards';
 import type { ColumnState, ListItem } from '../types/list-detail';
 import { defaultBucketOrder } from '../types/list-detail';
 
@@ -104,27 +113,27 @@ export function findBucketForItem(columns: ColumnState, id: string): string {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function resolveAvatarSource(creator: ListItem['creator']): string | null {
-	const metadata = creator.metadata ?? {};
-	const nested =
-		typeof metadata === 'object' && metadata ? (metadata as Record<string, unknown>) : {};
+	const fallbackRecord: UnknownRecord = {};
+	const metadataRecord: UnknownRecord = toRecord(creator.metadata) ?? fallbackRecord;
+	const nested = getRecordProperty(metadataRecord, 'creator') ?? fallbackRecord;
 	const candidateSources = [
 		creator.avatarUrl,
-		nested.avatarUrl as string | undefined,
-		nested.profilePicUrl as string | undefined,
-		nested.profile_pic_url as string | undefined,
-		nested.thumbnailUrl as string | undefined,
-		nested.thumbnail as string | undefined,
-		nested.image as string | undefined,
-		nested.picture as string | undefined,
-		nested.photoUrl as string | undefined,
-		(nested.creator as Record<string, unknown> | undefined)?.avatarUrl as string | undefined,
-		(nested.creator as Record<string, unknown> | undefined)?.profilePicUrl as string | undefined,
-		(nested.creator as Record<string, unknown> | undefined)?.profile_pic_url as string | undefined,
+		getStringProperty(metadataRecord, 'avatarUrl'),
+		getStringProperty(metadataRecord, 'profilePicUrl'),
+		getStringProperty(metadataRecord, 'profile_pic_url'),
+		getStringProperty(metadataRecord, 'thumbnailUrl'),
+		getStringProperty(metadataRecord, 'thumbnail'),
+		getStringProperty(metadataRecord, 'image'),
+		getStringProperty(metadataRecord, 'picture'),
+		getStringProperty(metadataRecord, 'photoUrl'),
+		getStringProperty(nested, 'avatarUrl'),
+		getStringProperty(nested, 'profilePicUrl'),
+		getStringProperty(nested, 'profile_pic_url'),
 	];
 
 	for (const source of candidateSources) {
-		if (typeof source === 'string' && source.trim().length > 0) {
-			return source;
+		if (isString(source) && source.trim().length > 0) {
+			return source.trim();
 		}
 	}
 	return null;
@@ -156,21 +165,23 @@ export function ensureImageUrl(value: string | null | undefined): string {
 }
 
 export function resolveProfileUrl(creator: ListItem['creator']): string | null {
-	const metadata = (creator.metadata ?? {}) as Record<string, unknown>;
+	const fallbackRecord: UnknownRecord = {};
+	const metadataRecord: UnknownRecord = toRecord(creator.metadata) ?? fallbackRecord;
+	const nested = getRecordProperty(metadataRecord, 'creator') ?? fallbackRecord;
 	const metadataCandidates = [
 		creator.url,
-		metadata.profileUrl as string | undefined,
-		metadata.url as string | undefined,
-		metadata.profile_link as string | undefined,
-		metadata.profileLink as string | undefined,
-		metadata.link as string | undefined,
-		(metadata.creator as Record<string, unknown> | undefined)?.profileUrl as string | undefined,
-		(metadata.creator as Record<string, unknown> | undefined)?.url as string | undefined,
+		getStringProperty(metadataRecord, 'profileUrl'),
+		getStringProperty(metadataRecord, 'url'),
+		getStringProperty(metadataRecord, 'profile_link'),
+		getStringProperty(metadataRecord, 'profileLink'),
+		getStringProperty(metadataRecord, 'link'),
+		getStringProperty(nested, 'profileUrl'),
+		getStringProperty(nested, 'url'),
 	];
 
 	for (const candidate of metadataCandidates) {
-		if (typeof candidate === 'string' && candidate.trim().length > 0) {
-			return candidate;
+		if (isString(candidate) && candidate.trim().length > 0) {
+			return candidate.trim();
 		}
 	}
 
@@ -201,32 +212,34 @@ export function resolveProfileUrl(creator: ListItem['creator']): string | null {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function extractEmails(meta: unknown): string[] {
-	if (!meta || typeof meta !== 'object') {
-		return [];
-	}
+	const record = toRecord(meta);
+	if (!record) return [];
+
+	const fallbackRecord: UnknownRecord = {};
 	const set = new Set<string>();
-	const record = meta as Record<string, unknown>;
+	const creatorRecord = getRecordProperty(record, 'creator') ?? fallbackRecord;
+	const contactRecord = getRecordProperty(record, 'contact') ?? fallbackRecord;
 	const candidateLists = [
-		record?.emails,
-		(record?.creator as Record<string, unknown>)?.emails,
-		(record?.contact as Record<string, unknown>)?.emails,
+		getArrayProperty(record, 'emails'),
+		getArrayProperty(creatorRecord, 'emails'),
+		getArrayProperty(contactRecord, 'emails'),
 	];
 	for (const list of candidateLists) {
 		if (Array.isArray(list)) {
 			for (const e of list) {
-				if (typeof e === 'string' && e.trim()) {
+				if (isString(e) && e.trim()) {
 					set.add(e.trim());
 				}
 			}
 		}
 	}
 	const singletons = [
-		record?.email,
-		(record?.creator as Record<string, unknown>)?.email,
-		(record?.contact as Record<string, unknown>)?.email,
+		getStringProperty(record, 'email'),
+		getStringProperty(creatorRecord, 'email'),
+		getStringProperty(contactRecord, 'email'),
 	];
 	for (const e of singletons) {
-		if (typeof e === 'string' && e.trim()) {
+		if (isString(e) && e.trim()) {
 			set.add(e.trim());
 		}
 	}

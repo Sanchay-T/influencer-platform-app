@@ -27,6 +27,7 @@ export default function CustomerPortalButton({
 }: CustomerPortalButtonProps) {
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState('');
+	const buttonSize = size === 'md' ? 'default' : size;
 
 	const handlePortalAccess = async () => {
 		setIsLoading(true);
@@ -84,7 +85,7 @@ export default function CustomerPortalButton({
 			<Button
 				onClick={handlePortalAccess}
 				disabled={isLoading}
-				size={size}
+				size={buttonSize}
 				variant={variant}
 				className={className}
 			>

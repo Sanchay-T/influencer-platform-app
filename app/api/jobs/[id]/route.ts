@@ -7,9 +7,9 @@ import { structuredConsole } from '@/lib/logging/console-proxy';
 // @performance Vercel timeout protection - job queries with results can be slow
 export const maxDuration = 15;
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
 	try {
-		const jobId = params.id;
+		const { id: jobId } = await params;
 
 		// Obtener el job con sus resultados
 		const job = await db.query.scrapingJobs.findFirst({
@@ -45,9 +45,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 	}
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
 	try {
-		const jobId = params.id;
+		const { id: jobId } = await params;
 
 		// Verificar si el job existe
 		const job = await db.query.scrapingJobs.findFirst({

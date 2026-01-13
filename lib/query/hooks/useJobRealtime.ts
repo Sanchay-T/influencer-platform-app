@@ -17,6 +17,7 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
+import { getStringProperty, isNumber, isString } from '@/lib/utils/type-guards';
 
 // Debug logging helper
 const debugLog = (tag: string, msg: string, data?: Record<string, unknown>) => {
@@ -70,16 +71,25 @@ export function useJobRealtime(jobId: string | null | undefined): UseJobRealtime
 
 	// Parse database row to our interface
 	const parseJobRow = useCallback((row: Record<string, unknown>): RealtimeJobData => {
+		const toNumber = (value: unknown): number | null => {
+			if (isNumber(value)) return value;
+			if (isString(value) && value.trim()) {
+				const parsed = Number(value);
+				return Number.isFinite(parsed) ? parsed : null;
+			}
+			return null;
+		};
+
 		return {
-			id: row.id as string,
-			status: row.status as string,
-			progress: parseFloat(row.progress as string) || 0,
-			keywordsDispatched: (row.keywords_dispatched as number) ?? 0,
-			keywordsCompleted: (row.keywords_completed as number) ?? 0,
-			creatorsFound: (row.creators_found as number) ?? 0,
-			creatorsEnriched: (row.creators_enriched as number) ?? 0,
-			enrichmentStatus: (row.enrichment_status as string) ?? 'pending',
-			error: row.error as string | undefined,
+			id: getStringProperty(row, 'id') ?? '',
+			status: getStringProperty(row, 'status') ?? 'unknown',
+			progress: toNumber(row.progress) ?? 0,
+			keywordsDispatched: toNumber(row.keywords_dispatched) ?? 0,
+			keywordsCompleted: toNumber(row.keywords_completed) ?? 0,
+			creatorsFound: toNumber(row.creators_found) ?? 0,
+			creatorsEnriched: toNumber(row.creators_enriched) ?? 0,
+			enrichmentStatus: getStringProperty(row, 'enrichment_status') ?? 'pending',
+			error: getStringProperty(row, 'error') ?? undefined,
 		};
 	}, []);
 

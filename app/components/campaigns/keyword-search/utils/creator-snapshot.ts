@@ -8,6 +8,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 // @why Import and re-export from AddToListButton to ensure type compatibility when saving to lists
 // Previously had a separate type definition missing externalId, causing silent failures
 import type { CreatorSnapshot } from '@/components/lists/add-to-list-button';
+import { isString, toRecord, type UnknownRecord } from '@/lib/utils/type-guards';
 export type { CreatorSnapshot };
 
 export interface EnrichmentTarget {
@@ -20,44 +21,37 @@ export interface EnrichmentTarget {
 	metadata: Record<string, unknown> | null;
 }
 
-interface SnapshotSource {
-	creatorProfileId?: string;
-	creator_profile_id?: string;
-	creatorId?: string;
-	creator_id?: string;
-	profileId?: string;
-	profile_id?: string;
-	id?: string;
-	uuid?: string;
-	externalId?: string;
-	external_id?: string;
-	metadata?: Record<string, unknown>;
-	creator?: Record<string, unknown>;
-	profile?: Record<string, unknown>;
-	account?: Record<string, unknown>;
-	owner?: Record<string, unknown>;
-}
+type SnapshotSource = UnknownRecord;
+
+const getSnapshotSources = (snapshot: unknown): SnapshotSource[] => {
+	const root = toRecord(snapshot);
+	if (!root) return [];
+
+	const sources: SnapshotSource[] = [root];
+	const metadata = toRecord(root.metadata);
+
+	if (metadata) {
+		sources.push(metadata);
+		const creator = toRecord(metadata.creator);
+		const profile = toRecord(metadata.profile);
+		const account = toRecord(metadata.account);
+		const owner = toRecord(metadata.owner);
+
+		if (creator) sources.push(creator);
+		if (profile) sources.push(profile);
+		if (account) sources.push(account);
+		if (owner) sources.push(owner);
+	}
+
+	return sources;
+};
 
 /**
  * Resolves a UUID-format creator ID from various nested paths in a snapshot.
  */
-export const resolveCreatorIdFromSnapshot = (
-	snapshot: SnapshotSource | null | undefined
-): string | null => {
-	if (!snapshot) {
-		return null;
-	}
-
-	const sources = [
-		snapshot,
-		snapshot?.metadata as SnapshotSource | undefined,
-		snapshot?.metadata?.creator as SnapshotSource | undefined,
-		snapshot?.metadata?.profile as SnapshotSource | undefined,
-		snapshot?.metadata?.account as SnapshotSource | undefined,
-		snapshot?.metadata?.owner as SnapshotSource | undefined,
-	];
-
-	const fields = [
+export const resolveCreatorIdFromSnapshot = (snapshot: unknown): string | null => {
+	const sources = getSnapshotSources(snapshot);
+	const fields: ReadonlyArray<string> = [
 		'creatorProfileId',
 		'creator_profile_id',
 		'creatorId',
@@ -66,15 +60,12 @@ export const resolveCreatorIdFromSnapshot = (
 		'profile_id',
 		'id',
 		'uuid',
-	] as const;
+	];
 
 	for (const source of sources) {
-		if (!source || typeof source !== 'object') {
-			continue;
-		}
 		for (const field of fields) {
-			const value = (source as Record<string, unknown>)[field];
-			if (typeof value === 'string') {
+			const value = source[field];
+			if (isString(value)) {
 				const trimmed = value.trim();
 				if (UUID_PATTERN.test(trimmed)) {
 					return trimmed;
@@ -89,30 +80,25 @@ export const resolveCreatorIdFromSnapshot = (
 /**
  * Resolves an external ID from various nested paths in a snapshot.
  */
-export const resolveExternalIdFromSnapshot = (
-	snapshot: SnapshotSource | null | undefined
-): string | null => {
-	if (!snapshot) {
-		return null;
-	}
-
-	const sources = [
-		snapshot,
-		snapshot?.metadata as SnapshotSource | undefined,
-		snapshot?.metadata?.creator as SnapshotSource | undefined,
-		snapshot?.metadata?.profile as SnapshotSource | undefined,
+export const resolveExternalIdFromSnapshot = (snapshot: unknown): string | null => {
+	const sources = getSnapshotSources(snapshot);
+	const fields: ReadonlyArray<string> = [
+		'externalId',
+		'external_id',
+		'profileId',
+		'profile_id',
+		'id',
+		'uuid',
 	];
 
-	const fields = ['externalId', 'external_id', 'profileId', 'profile_id', 'id', 'uuid'] as const;
-
 	for (const source of sources) {
-		if (!source || typeof source !== 'object') {
-			continue;
-		}
 		for (const field of fields) {
-			const value = (source as Record<string, unknown>)[field];
-			if (typeof value === 'string' && value.trim().length > 0) {
-				return value.trim();
+			const value = source[field];
+			if (isString(value)) {
+				const trimmed = value.trim();
+				if (trimmed.length > 0) {
+					return trimmed;
+				}
 			}
 		}
 	}
@@ -130,15 +116,16 @@ export const buildEnrichmentTarget = (
 	const platform = (snapshot?.platform || fallbackPlatform || 'tiktok').toString().toLowerCase();
 	const handle =
 		typeof snapshot?.handle === 'string' ? snapshot.handle.replace(/^@/, '').trim() : '';
+	const metadata = toRecord(snapshot?.metadata);
 
 	return {
 		handle,
 		platform,
-		creatorId: resolveCreatorIdFromSnapshot(snapshot as SnapshotSource),
-		externalId: resolveExternalIdFromSnapshot(snapshot as SnapshotSource),
+		creatorId: resolveCreatorIdFromSnapshot(snapshot),
+		externalId: resolveExternalIdFromSnapshot(snapshot),
 		displayName: snapshot?.displayName || snapshot?.handle || null,
 		profileUrl: typeof snapshot?.url === 'string' ? snapshot.url : null,
-		metadata: (snapshot?.metadata as Record<string, unknown>) ?? null,
+		metadata: metadata ?? null,
 	};
 };
 

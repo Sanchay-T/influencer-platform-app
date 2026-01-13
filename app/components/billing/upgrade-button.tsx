@@ -133,7 +133,7 @@ function UpgradeButtonContent({
 			});
 
 			if (!response.ok) {
-				paymentLogger.error('Checkout upgrade API failed', {
+				paymentLogger.error('Checkout upgrade API failed', undefined, {
 					status: response.status,
 					statusText: response.statusText,
 					errorData: data,
@@ -143,7 +143,7 @@ function UpgradeButtonContent({
 			}
 
 			if (!data?.url) {
-				paymentLogger.error('Invalid checkout session response', {
+				paymentLogger.error('Invalid checkout session response', undefined, {
 					data,
 					hasUrl: !!data?.url,
 					urlValue: data?.url,

@@ -1,3 +1,4 @@
+import { isNumber, toRecord } from '@/lib/utils/type-guards';
 import type { UiScrapingJob } from '../types/campaign-page';
 
 const CACHE_PREFIX = 'campaignRunSnapshot:';
@@ -21,8 +22,8 @@ export function readCachedRunSnapshot(jobId: string, maxAgeMs: number): CachedRu
 			return null;
 		}
 
-		const parsed = JSON.parse(raw) as Partial<CachedRunSnapshot> | null;
-		if (!(parsed && typeof parsed === 'object')) {
+		const parsed = toRecord(JSON.parse(raw));
+		if (!parsed) {
 			return null;
 		}
 
@@ -40,12 +41,24 @@ export function readCachedRunSnapshot(jobId: string, maxAgeMs: number): CachedRu
 			return null;
 		}
 
+		const paginationRecord = toRecord(parsed.pagination);
+		const pagination = paginationRecord
+			? {
+					total: isNumber(paginationRecord.total) ? paginationRecord.total : undefined,
+					limit: isNumber(paginationRecord.limit) ? paginationRecord.limit : undefined,
+					nextOffset:
+						isNumber(paginationRecord.nextOffset) || paginationRecord.nextOffset === null
+							? paginationRecord.nextOffset
+							: undefined,
+				}
+			: undefined;
+
 		return {
 			cachedAt: cachedAt.toISOString(),
 			creatorBuffer: parsed.creatorBuffer,
-			totalCreators: parsed.totalCreators,
-			pagination: parsed.pagination,
-			pageLimit: parsed.pageLimit,
+			totalCreators: isNumber(parsed.totalCreators) ? parsed.totalCreators : undefined,
+			pagination,
+			pageLimit: isNumber(parsed.pageLimit) ? parsed.pageLimit : undefined,
 		};
 	} catch {
 		return null;

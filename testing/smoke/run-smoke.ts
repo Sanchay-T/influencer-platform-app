@@ -4,6 +4,15 @@
  * Run with: AUTH_BYPASS_TOKEN=dev-bypass SMOKE_USER_ID=... SMOKE_EMAIL=... npx tsx testing/smoke/run-smoke.ts
  */
 
+export {}
+
+import {
+  getArrayProperty,
+  getNumberProperty,
+  getStringProperty,
+  toRecord,
+} from '@/lib/utils/type-guards'
+
 const baseUrl = process.env.SMOKE_BASE_URL || 'http://127.0.0.1:3001'
 const bypassToken = process.env.AUTH_BYPASS_TOKEN || 'dev-bypass'
 const ownerUserId = process.env.SMOKE_USER_ID || 'user_33sIjMrYEmLVKd3gvIt4HbtzE57'
@@ -13,7 +22,7 @@ type Check = {
   name: string
   request: () => Promise<Response>
   expectStatus: number
-  onPass?: (res: Response, body: any) => void | Promise<void>
+  onPass?: (res: Response, body: unknown) => void | Promise<void>
 }
 
 function buildHeaders(userId: string, email: string) {
@@ -47,18 +56,29 @@ async function resolveSmokeTargets(headers: HeadersInit) {
     throw new Error(`Failed to list campaigns (status ${campaignsRes.status})`)
   }
   const campaignsPayload = await campaignsRes.json()
-  const campaignsList = campaignsPayload?.campaigns || []
+  const campaignsRecord = toRecord(campaignsPayload)
+  const campaignsList = campaignsRecord ? getArrayProperty(campaignsRecord, 'campaigns') ?? [] : []
 
-  const campaignWithJob = campaignsList.find((campaign: any) => Array.isArray(campaign?.scrapingJobs) && campaign.scrapingJobs.length > 0)
+  const campaignWithJob = campaignsList.find((campaign) => {
+    const campaignRecord = toRecord(campaign)
+    const jobs = campaignRecord ? getArrayProperty(campaignRecord, 'scrapingJobs') : null
+    return Array.isArray(jobs) && jobs.length > 0
+  })
 
   if (!campaignWithJob) {
     throw new Error('No campaigns with scraping jobs found. Seed data or run a scrape before executing the smoke test.')
   }
 
-  resolvedCampaignId = resolvedCampaignId || campaignWithJob.id
+  const campaignRecord = toRecord(campaignWithJob)
+  const campaignId = campaignRecord ? getStringProperty(campaignRecord, 'id') : null
+  if (campaignId) {
+    resolvedCampaignId = resolvedCampaignId || campaignId
+  }
 
   if (!resolvedJobId) {
-    const jobFromList = campaignWithJob.scrapingJobs?.[0]?.id
+    const jobs = campaignRecord ? getArrayProperty(campaignRecord, 'scrapingJobs') : null
+    const jobRecord = jobs && jobs.length > 0 ? toRecord(jobs[0]) : null
+    const jobFromList = jobRecord ? getStringProperty(jobRecord, 'id') : null
     if (jobFromList) {
       resolvedJobId = jobFromList
     }
@@ -70,11 +90,14 @@ async function resolveSmokeTargets(headers: HeadersInit) {
       throw new Error(`Failed to fetch campaign detail for ${resolvedCampaignId} (status ${detailRes.status})`)
     }
     const detailPayload = await detailRes.json()
-    const job = Array.isArray(detailPayload?.scrapingJobs) ? detailPayload.scrapingJobs[0] : null
-    if (!job?.id) {
+    const detailRecord = toRecord(detailPayload)
+    const jobs = detailRecord ? getArrayProperty(detailRecord, 'scrapingJobs') : null
+    const jobRecord = jobs && jobs.length > 0 ? toRecord(jobs[0]) : null
+    const jobId = jobRecord ? getStringProperty(jobRecord, 'id') : null
+    if (!jobId) {
       throw new Error('Campaign detail did not include scraping jobs. Seed data before running the smoke suite.')
     }
-    resolvedJobId = job.id
+    resolvedJobId = jobId
   }
 
   return { campaignId: resolvedCampaignId, jobId: resolvedJobId }
@@ -102,7 +125,9 @@ async function run() {
       expectStatus: 200,
       request: () => fetch(`${baseUrl}/api/campaigns/${campaignId}`, { headers: ownerHeaders }),
       onPass: (_res, body) => {
-        if (!body || body.id !== campaignId) {
+        const record = toRecord(body)
+        const id = record ? getStringProperty(record, 'id') : null
+        if (!id || id !== campaignId) {
           throw new Error('Campaign payload missing expected id')
         }
       },
@@ -117,7 +142,11 @@ async function run() {
       expectStatus: 200,
       request: () => fetch(`${baseUrl}/api/scraping/tiktok?jobId=${jobId}&limit=200`, { headers: ownerHeaders }),
       onPass: (_res, body) => {
-        const count = body?.results?.[0]?.creators?.length ?? 0
+        const record = toRecord(body)
+        const results = record ? getArrayProperty(record, 'results') : null
+        const firstResult = results && results.length > 0 ? toRecord(results[0]) : null
+        const creators = firstResult ? getArrayProperty(firstResult, 'creators') : null
+        const count = creators ? creators.length : 0
         if (count !== 200) {
           throw new Error(`Expected 200 creators in page, received ${count}`)
         }
@@ -133,11 +162,16 @@ async function run() {
       expectStatus: 200,
       request: () => fetch(`${baseUrl}/api/scraping/tiktok?jobId=${jobId}&limit=200&offset=1000`, { headers: ownerHeaders }),
       onPass: (_res, body) => {
-        const count = body?.results?.[0]?.creators?.length ?? 0
+        const record = toRecord(body)
+        const results = record ? getArrayProperty(record, 'results') : null
+        const firstResult = results && results.length > 0 ? toRecord(results[0]) : null
+        const creators = firstResult ? getArrayProperty(firstResult, 'creators') : null
+        const count = creators ? creators.length : 0
         if (count === 0) {
           throw new Error('Expected creators on final page but received none')
         }
-        const nextOffset = body?.pagination?.nextOffset ?? null
+        const pagination = record ? toRecord(record.pagination) : null
+        const nextOffset = pagination ? getNumberProperty(pagination, 'nextOffset') : null
         if (nextOffset !== null) {
           throw new Error(`Expected no nextOffset on final page, received ${nextOffset}`)
         }

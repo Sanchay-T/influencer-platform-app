@@ -36,6 +36,7 @@ import {
 	getCreatorsCount,
 	getStatusVariant,
 	isSimilarSearchJob,
+	resolveScrapingEndpoint,
 } from './utils/campaign-helpers';
 
 export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps) {
@@ -84,6 +85,15 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
 			router.push(`/campaigns/search/${type}?campaignId=${campaign.id}`);
 		},
 		[campaign, router]
+	);
+
+	const handleTabChange = useCallback(
+		(value: string) => {
+			if (value === 'creators' || value === 'activity') {
+				setActiveTab(value);
+			}
+		},
+		[setActiveTab]
 	);
 
 	// Early return for missing campaign
@@ -140,10 +150,7 @@ export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps
 				{/* Right: Content Area */}
 				<div className="space-y-4 min-w-0">
 					{/* Tab Switcher */}
-					<Tabs
-						value={activeTab}
-						onValueChange={(value) => setActiveTab(value as 'creators' | 'activity')}
-					>
+					<Tabs value={activeTab} onValueChange={handleTabChange}>
 						<TabsList className="bg-zinc-900/80 border border-zinc-800/60 flex-wrap gap-1">
 							<TabsTrigger
 								value="creators"
@@ -290,6 +297,7 @@ interface ResultsViewProps {
 	onStartSearch: (type?: 'keyword' | 'similar') => void;
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Orchestrates multiple result states in one view.
 function ResultsView({
 	campaign,
 	selectedJob,
@@ -311,8 +319,11 @@ function ResultsView({
 	}
 
 	const hasCreatorsLoaded = processedCreators.length > 0;
+	const isV2KeywordJob = resolveScrapingEndpoint(selectedJob) === '/api/v2/status';
 	const isInitialLoading =
-		(loadingJobIds.includes(selectedJob.id) || !selectedJob.resultsLoaded) && !hasCreatorsLoaded;
+		!isV2KeywordJob &&
+		(loadingJobIds.includes(selectedJob.id) || !selectedJob.resultsLoaded) &&
+		!hasCreatorsLoaded;
 
 	// Error state
 	if (['failed', 'error', 'timeout'].includes(selectedJob.status ?? '')) {

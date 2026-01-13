@@ -19,6 +19,7 @@ import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { getBillingStatus } from '@/lib/billing';
 import { createUser } from '@/lib/db/queries/user-queries';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
+import { toError } from '@/lib/utils/type-guards';
 
 const logger = createCategoryLogger(LogCategory.BILLING);
 
@@ -85,7 +86,7 @@ export async function GET(request: NextRequest) {
 					billingStatus = await getBillingStatus(userId);
 				} catch (createError) {
 					// If auto-creation fails, return safe defaults
-					logger.error('Failed to auto-create user', createError as Error, {
+					logger.error('Failed to auto-create user', toError(createError), {
 						userId,
 						metadata: { requestId },
 					});
@@ -118,7 +119,7 @@ export async function GET(request: NextRequest) {
 			headers: getResponseHeaders(requestId, startTime, false, false),
 		});
 	} catch (error) {
-		logger.error('Failed to fetch billing status', error as Error, {
+		logger.error('Failed to fetch billing status', toError(error), {
 			metadata: { requestId },
 		});
 
@@ -174,7 +175,7 @@ function getSafeDefaults() {
 		stripeSubscriptionId: null,
 		canManageSubscription: false,
 		billingAmount: 0,
-		billingCycle: 'monthly' as const,
+		billingCycle: 'monthly',
 		lastSyncTime: new Date().toISOString(),
 	};
 }

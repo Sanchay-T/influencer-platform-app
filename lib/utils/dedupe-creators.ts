@@ -6,11 +6,13 @@
  * results aligned end-to-end.
  */
 
+import { toRecord, type UnknownRecord } from '@/lib/utils/type-guards';
+
 export type DedupeOptions = {
 	platformHint?: string | null;
 };
 
-const IDENTIFIER_FIELDS = [
+const IDENTIFIER_FIELDS: ReadonlyArray<string> = [
 	'id',
 	'_id',
 	'uuid',
@@ -52,7 +54,7 @@ const IDENTIFIER_FIELDS = [
 	'shortId',
 	'short_id',
 	'mergeKey',
-] as const;
+];
 
 const normalizeValue = (value: unknown): string | null => {
 	if (value == null) return null;
@@ -72,68 +74,67 @@ const pushCandidate = (collector: Set<string>, value: unknown) => {
 	collector.add(normalized);
 };
 
-type CandidateSource = Record<string, unknown> | undefined | null;
+type CandidateSource = UnknownRecord | undefined | null;
 
 const collectFromObject = (source: CandidateSource, collector: Set<string>) => {
 	if (!source || typeof source !== 'object') return;
 
 	for (const field of IDENTIFIER_FIELDS) {
-		pushCandidate(collector, (source as Record<string, unknown>)[field as string]);
+		pushCandidate(collector, source[field]);
 	}
 
-	const arrayFields: Array<keyof Record<string, unknown>> = ['ids', 'handles', 'urls'];
+	const arrayFields: ReadonlyArray<string> = ['ids', 'handles', 'urls'];
 	for (const field of arrayFields) {
-		const values = (source as Record<string, unknown>)[field];
+		const values = source[field];
 		if (Array.isArray(values)) {
 			values.forEach((value) => pushCandidate(collector, value));
 		}
 	}
 };
 
-const collectCandidates = (creator: Record<string, unknown>): Set<string> => {
+const collectCandidates = (creator: UnknownRecord): Set<string> => {
 	const collector = new Set<string>();
 	const baseSources: CandidateSource[] = [
 		creator,
-		creator.creator as Record<string, unknown> | undefined,
-		creator.profile as Record<string, unknown> | undefined,
-		creator.account as Record<string, unknown> | undefined,
-		creator.author as Record<string, unknown> | undefined,
-		creator.user as Record<string, unknown> | undefined,
-		creator.owner as Record<string, unknown> | undefined,
-		creator.metadata as Record<string, unknown> | undefined,
+		toRecord(creator.creator),
+		toRecord(creator.profile),
+		toRecord(creator.account),
+		toRecord(creator.author),
+		toRecord(creator.user),
+		toRecord(creator.owner),
+		toRecord(creator.metadata),
 	];
 
 	baseSources.forEach((source) => collectFromObject(source, collector));
 
 	const videoSources: CandidateSource[] = [
-		creator.video as Record<string, unknown> | undefined,
-		creator.latestVideo as Record<string, unknown> | undefined,
-		creator.latest_video as Record<string, unknown> | undefined,
-		creator.content as Record<string, unknown> | undefined,
-		creator.post as Record<string, unknown> | undefined,
-		creator.latestPost as Record<string, unknown> | undefined,
-		creator.latest_post as Record<string, unknown> | undefined,
+		toRecord(creator.video),
+		toRecord(creator.latestVideo),
+		toRecord(creator.latest_video),
+		toRecord(creator.content),
+		toRecord(creator.post),
+		toRecord(creator.latestPost),
+		toRecord(creator.latest_post),
 	];
 
 	videoSources.forEach((video) => {
 		collectFromObject(video, collector);
-		if (video && typeof video === 'object') {
-			pushCandidate(collector, (video as Record<string, unknown>).url);
-			pushCandidate(collector, (video as Record<string, unknown>).shareUrl);
-			pushCandidate(collector, (video as Record<string, unknown>).share_url);
-		}
+		if (!video) return;
+		pushCandidate(collector, video.url);
+		pushCandidate(collector, video.shareUrl);
+		pushCandidate(collector, video.share_url);
 	});
 
 	pushCandidate(collector, creator.profileUrl);
-	pushCandidate(collector, (creator as Record<string, unknown>).profile_url);
-	pushCandidate(collector, (creator as Record<string, unknown>).profileLink);
-	pushCandidate(collector, (creator as Record<string, unknown>).profile_link);
+	pushCandidate(collector, creator.profile_url);
+	pushCandidate(collector, creator.profileLink);
+	pushCandidate(collector, creator.profile_link);
 	pushCandidate(collector, creator.url);
 
 	return collector;
 };
 
-export const dedupeCreators = <T extends Record<string, unknown>>(
+export const dedupeCreators = <T extends UnknownRecord>(
 	creators: T[],
 	options: DedupeOptions = {}
 ): T[] => {
@@ -146,13 +147,10 @@ export const dedupeCreators = <T extends Record<string, unknown>>(
 			return;
 		}
 
-		const candidate = rawCandidate as T;
 		const platformValue =
-			normalizeValue((candidate as Record<string, unknown>).platform) ||
-			normalizeValue(platformHint) ||
-			'unknown';
+			normalizeValue(rawCandidate.platform) || normalizeValue(platformHint) || 'unknown';
 
-		const identifiers = collectCandidates(candidate as Record<string, unknown>);
+		const identifiers = collectCandidates(rawCandidate);
 		let matched = false;
 
 		identifiers.forEach((value) => {
@@ -160,7 +158,7 @@ export const dedupeCreators = <T extends Record<string, unknown>>(
 			const key = `${platformValue}|${value}`;
 			if (!seen.has(key)) {
 				seen.add(key);
-				unique.push(candidate);
+				unique.push(rawCandidate);
 			}
 			matched = true;
 		});
@@ -169,10 +167,10 @@ export const dedupeCreators = <T extends Record<string, unknown>>(
 			return;
 		}
 
-		const fallbackKey = `${platformValue}|${JSON.stringify(candidate)}`;
+		const fallbackKey = `${platformValue}|${JSON.stringify(rawCandidate)}`;
 		if (!seen.has(fallbackKey)) {
 			seen.add(fallbackKey);
-			unique.push(candidate);
+			unique.push(rawCandidate);
 		}
 	});
 

@@ -1,6 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { getStringProperty, toRecord } from '@/lib/utils/type-guards';
 
 interface BillingLogEntry {
 	timestamp: string;
@@ -10,7 +11,7 @@ interface BillingLogEntry {
 	eventType: string;
 	action: string;
 	message: string;
-	data?: any;
+	data?: unknown;
 	metadata?: {
 		userAgent?: string;
 		ip?: string;
@@ -135,8 +136,10 @@ export class BillingLogger {
 			if (process.env.NODE_ENV === 'development') {
 				BillingLogger.logToConsole(entry);
 			}
-		} catch (error: any) {
-			if (error?.code === 'EROFS' || error?.code === 'EACCES' || error?.code === 'EPERM') {
+		} catch (error: unknown) {
+			const errorRecord = toRecord(error);
+			const errorCode = errorRecord ? getStringProperty(errorRecord, 'code') : null;
+			if (errorCode === 'EROFS' || errorCode === 'EACCES' || errorCode === 'EPERM') {
 				BillingLogger.fileLoggingDisabled = true;
 				BillingLogger.notifyRuntimeFallback();
 				BillingLogger.logToConsole(entry);
@@ -159,7 +162,7 @@ export class BillingLogger {
 		eventType: string,
 		message: string,
 		userId?: string,
-		data?: any,
+		data?: unknown,
 		sessionId?: string
 	): Promise<void> {
 		await BillingLogger.writeLog({
@@ -207,7 +210,7 @@ export class BillingLogger {
 		action: string,
 		message: string,
 		userId?: string,
-		data?: any,
+		data?: unknown,
 		sessionId?: string
 	): Promise<void> {
 		await BillingLogger.writeLog({
@@ -237,9 +240,12 @@ export class BillingLogger {
 			method?: string;
 			statusCode?: number;
 			requestId?: string;
-			requestBody?: any;
-			responseData?: any;
+			requestBody?: unknown;
+			responseData?: unknown;
 			executionTime?: number;
+			error?: string;
+			eventType?: string;
+			[key: string]: unknown;
 		},
 		requestId?: string
 	): Promise<void> {
@@ -304,7 +310,7 @@ export class BillingLogger {
 			eventId?: string;
 			signature?: string;
 			validationResult?: boolean;
-			processingResult?: any;
+			processingResult?: unknown;
 			error?: string;
 		},
 		requestId?: string
@@ -338,11 +344,13 @@ export class BillingLogger {
 			table?: string;
 			operation?: string;
 			recordId?: string;
-			before?: any;
-			after?: any;
+			before?: unknown;
+			after?: unknown;
 			query?: string;
 			affectedRows?: number;
 			executionTime?: number;
+			metadata?: Record<string, unknown>;
+			[key: string]: unknown;
 		},
 		requestId?: string
 	): Promise<void> {
@@ -365,10 +373,11 @@ export class BillingLogger {
 	/**
 	 * Sanitize sensitive database data for logging
 	 */
-	private static sanitizeDatabaseData(data: any): any {
-		if (!data || typeof data !== 'object') return data;
+	private static sanitizeDatabaseData(data: unknown): unknown {
+		const record = toRecord(data);
+		if (!record) return data;
 
-		const sanitized = { ...data };
+		const sanitized: Record<string, unknown> = { ...record };
 
 		// Remove sensitive fields
 		const sensitiveFields = ['password', 'token', 'secret', 'key', 'signature'];
@@ -380,8 +389,9 @@ export class BillingLogger {
 
 		// Truncate long strings
 		Object.keys(sanitized).forEach((key) => {
-			if (typeof sanitized[key] === 'string' && sanitized[key].length > 200) {
-				sanitized[key] = sanitized[key].substring(0, 200) + '...';
+			const value = sanitized[key];
+			if (typeof value === 'string' && value.length > 200) {
+				sanitized[key] = value.substring(0, 200) + '...';
 			}
 		});
 
@@ -439,6 +449,8 @@ export class BillingLogger {
 			searchType?: string;
 			platform?: string;
 			resultCount?: number;
+			estimatedResults?: number;
+			campaignId?: string;
 		},
 		requestId?: string
 	): Promise<void> {
@@ -471,6 +483,10 @@ export class BillingLogger {
 			currentPlan?: string;
 			trialStatus?: string;
 			subscriptionStatus?: string;
+			searchType?: string;
+			platform?: string;
+			estimatedResults?: number;
+			campaignId?: string;
 		},
 		requestId?: string
 	): Promise<void> {
@@ -500,8 +516,12 @@ export class BillingLogger {
 			errorType?: string;
 			errorMessage?: string;
 			stack?: string;
-			context?: any;
+			context?: unknown;
 			recoverable?: boolean;
+			eventType?: string;
+			eventId?: string;
+			requestId?: string;
+			[key: string]: unknown;
 		},
 		requestId?: string
 	): Promise<void> {

@@ -17,19 +17,20 @@
 // Job Status (scrapingJobs.status) - Database values
 // =============================================================================
 
-export const JOB_STATUS = {
+export type JobStatus = 'pending' | 'processing' | 'completed' | 'error' | 'timeout';
+type JobStatusKey = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'ERROR' | 'TIMEOUT';
+
+export const JOB_STATUS: Record<JobStatusKey, JobStatus> = {
 	PENDING: 'pending',
 	PROCESSING: 'processing',
 	COMPLETED: 'completed',
 	ERROR: 'error',
 	TIMEOUT: 'timeout',
-} as const;
-
-export type JobStatus = (typeof JOB_STATUS)[keyof typeof JOB_STATUS];
+};
 
 // Helper to check if a string is a valid job status
 export function isValidJobStatus(status: string): status is JobStatus {
-	return Object.values(JOB_STATUS).includes(status as JobStatus);
+	return Object.values(JOB_STATUS).some((value) => value === status);
 }
 
 // =============================================================================
@@ -46,7 +47,28 @@ export function isValidJobStatus(status: string): status is JobStatus {
  * - error → error
  * - timeout → timeout
  */
-export const UI_JOB_STATUS = {
+export type UiJobStatus =
+	| 'pending'
+	| 'dispatching'
+	| 'searching'
+	| 'enriching'
+	| 'processing'
+	| 'completed'
+	| 'partial'
+	| 'error'
+	| 'timeout';
+type UiJobStatusKey =
+	| 'PENDING'
+	| 'DISPATCHING'
+	| 'SEARCHING'
+	| 'ENRICHING'
+	| 'PROCESSING'
+	| 'COMPLETED'
+	| 'PARTIAL'
+	| 'ERROR'
+	| 'TIMEOUT';
+
+export const UI_JOB_STATUS: Record<UiJobStatusKey, UiJobStatus> = {
 	// Waiting phase
 	PENDING: 'pending',
 	DISPATCHING: 'dispatching',
@@ -63,9 +85,7 @@ export const UI_JOB_STATUS = {
 	// Terminal phase - failure
 	ERROR: 'error',
 	TIMEOUT: 'timeout',
-} as const;
-
-export type UiJobStatus = (typeof UI_JOB_STATUS)[keyof typeof UI_JOB_STATUS];
+};
 
 // Status phase for grouping behavior
 export type StatusPhase = 'waiting' | 'active' | 'done';
@@ -80,13 +100,13 @@ export interface JobStatusDisplay {
 
 export const JOB_STATUS_DISPLAY: Record<UiJobStatus, JobStatusDisplay> = {
 	// Waiting phase
-	[UI_JOB_STATUS.PENDING]: {
+	pending: {
 		label: 'Queued',
 		phase: 'waiting',
 		badge: 'bg-indigo-500/15 text-indigo-200 border border-indigo-500/40',
 		dot: 'bg-indigo-400 animate-pulse',
 	},
-	[UI_JOB_STATUS.DISPATCHING]: {
+	dispatching: {
 		label: 'Starting',
 		phase: 'waiting',
 		badge: 'bg-indigo-500/15 text-indigo-200 border border-indigo-500/40',
@@ -94,19 +114,19 @@ export const JOB_STATUS_DISPLAY: Record<UiJobStatus, JobStatusDisplay> = {
 	},
 
 	// Active phase
-	[UI_JOB_STATUS.SEARCHING]: {
+	searching: {
 		label: 'Searching',
 		phase: 'active',
 		badge: 'bg-indigo-500/15 text-indigo-200 border border-indigo-500/40',
 		dot: 'bg-indigo-400 animate-pulse',
 	},
-	[UI_JOB_STATUS.ENRICHING]: {
+	enriching: {
 		label: 'Enriching',
 		phase: 'active',
 		badge: 'bg-indigo-500/15 text-indigo-200 border border-indigo-500/40',
 		dot: 'bg-indigo-400 animate-pulse',
 	},
-	[UI_JOB_STATUS.PROCESSING]: {
+	processing: {
 		label: 'Processing',
 		phase: 'active',
 		badge: 'bg-indigo-500/15 text-indigo-200 border border-indigo-500/40',
@@ -114,13 +134,13 @@ export const JOB_STATUS_DISPLAY: Record<UiJobStatus, JobStatusDisplay> = {
 	},
 
 	// Terminal - success
-	[UI_JOB_STATUS.COMPLETED]: {
+	completed: {
 		label: 'Completed',
 		phase: 'done',
 		badge: 'bg-emerald-500/15 text-emerald-200 border border-emerald-500/40',
 		dot: 'bg-emerald-400',
 	},
-	[UI_JOB_STATUS.PARTIAL]: {
+	partial: {
 		label: 'Completed',
 		phase: 'done',
 		badge: 'bg-emerald-500/15 text-emerald-200 border border-emerald-500/40',
@@ -128,13 +148,13 @@ export const JOB_STATUS_DISPLAY: Record<UiJobStatus, JobStatusDisplay> = {
 	},
 
 	// Terminal - failure
-	[UI_JOB_STATUS.ERROR]: {
+	error: {
 		label: 'Failed',
 		phase: 'done',
 		badge: 'bg-red-500/15 text-red-200 border border-red-500/40',
 		dot: 'bg-red-400',
 	},
-	[UI_JOB_STATUS.TIMEOUT]: {
+	timeout: {
 		label: 'Timed out',
 		phase: 'done',
 		badge: 'bg-amber-500/15 text-amber-200 border border-amber-500/40',
@@ -152,7 +172,7 @@ export const DEFAULT_STATUS_DISPLAY: JobStatusDisplay = {
 
 // Helper functions
 export function isValidUiJobStatus(status: string): status is UiJobStatus {
-	return Object.values(UI_JOB_STATUS).includes(status as UiJobStatus);
+	return Object.values(UI_JOB_STATUS).some((value) => value === status);
 }
 
 export function getStatusDisplay(status: string | undefined | null): JobStatusDisplay {
@@ -179,166 +199,195 @@ export function isSuccessStatus(status: string | undefined | null): boolean {
 // Trial Status (userSubscriptions.trialStatus)
 // =============================================================================
 
-export const TRIAL_STATUS = {
+export type TrialStatus = 'pending' | 'active' | 'converted' | 'expired';
+type TrialStatusKey = 'PENDING' | 'ACTIVE' | 'CONVERTED' | 'EXPIRED';
+
+export const TRIAL_STATUS: Record<TrialStatusKey, TrialStatus> = {
 	PENDING: 'pending',
 	ACTIVE: 'active',
 	CONVERTED: 'converted',
 	EXPIRED: 'expired',
-} as const;
-
-export type TrialStatus = (typeof TRIAL_STATUS)[keyof typeof TRIAL_STATUS];
+};
 
 export function isValidTrialStatus(status: string): status is TrialStatus {
-	return Object.values(TRIAL_STATUS).includes(status as TrialStatus);
+	return Object.values(TRIAL_STATUS).some((value) => value === status);
 }
 
 // =============================================================================
 // Plan Keys (userSubscriptions.currentPlan)
 // =============================================================================
 
-export const PLAN_KEY = {
+export type PlanKey = 'free' | 'glow_up' | 'viral_surge' | 'fame_flex';
+type PlanKeyKey = 'FREE' | 'GLOW_UP' | 'VIRAL_SURGE' | 'FAME_FLEX';
+
+export const PLAN_KEY: Record<PlanKeyKey, PlanKey> = {
 	FREE: 'free',
 	GLOW_UP: 'glow_up',
 	VIRAL_SURGE: 'viral_surge',
 	FAME_FLEX: 'fame_flex',
-} as const;
-
-export type PlanKey = (typeof PLAN_KEY)[keyof typeof PLAN_KEY];
+};
 
 export function isValidPlanKey(plan: string): plan is PlanKey {
-	return Object.values(PLAN_KEY).includes(plan as PlanKey);
+	return Object.values(PLAN_KEY).some((value) => value === plan);
 }
 
 // Plan display names (for UI)
 export const PLAN_DISPLAY_NAMES: Record<PlanKey, string> = {
-	[PLAN_KEY.FREE]: 'Free',
-	[PLAN_KEY.GLOW_UP]: 'Glow Up',
-	[PLAN_KEY.VIRAL_SURGE]: 'Viral Surge',
-	[PLAN_KEY.FAME_FLEX]: 'Fame Flex',
+	free: 'Free',
+	glow_up: 'Glow Up',
+	viral_surge: 'Viral Surge',
+	fame_flex: 'Fame Flex',
 };
 
 // =============================================================================
 // Subscription Status (userSubscriptions.subscriptionStatus)
 // =============================================================================
 
-export const SUBSCRIPTION_STATUS = {
+export type SubscriptionStatus = 'none' | 'trialing' | 'active' | 'past_due' | 'canceled';
+type SubscriptionStatusKey = 'NONE' | 'TRIALING' | 'ACTIVE' | 'PAST_DUE' | 'CANCELED';
+
+export const SUBSCRIPTION_STATUS: Record<SubscriptionStatusKey, SubscriptionStatus> = {
 	NONE: 'none',
 	TRIALING: 'trialing',
 	ACTIVE: 'active',
 	PAST_DUE: 'past_due',
 	CANCELED: 'canceled',
-} as const;
-
-export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUS)[keyof typeof SUBSCRIPTION_STATUS];
+};
 
 export function isValidSubscriptionStatus(status: string): status is SubscriptionStatus {
-	return Object.values(SUBSCRIPTION_STATUS).includes(status as SubscriptionStatus);
+	return Object.values(SUBSCRIPTION_STATUS).some((value) => value === status);
 }
 
 // =============================================================================
 // Onboarding Steps (users.onboardingStep)
 // =============================================================================
 
-export const ONBOARDING_STEP = {
+export type OnboardingStep = 'pending' | 'step_1' | 'step_2' | 'completed';
+type OnboardingStepKey = 'PENDING' | 'STEP_1' | 'STEP_2' | 'COMPLETED';
+
+export const ONBOARDING_STEP: Record<OnboardingStepKey, OnboardingStep> = {
 	PENDING: 'pending',
 	STEP_1: 'step_1',
 	STEP_2: 'step_2',
 	COMPLETED: 'completed',
-} as const;
-
-export type OnboardingStep = (typeof ONBOARDING_STEP)[keyof typeof ONBOARDING_STEP];
+};
 
 export function isValidOnboardingStep(step: string): step is OnboardingStep {
-	return Object.values(ONBOARDING_STEP).includes(step as OnboardingStep);
+	return Object.values(ONBOARDING_STEP).some((value) => value === step);
 }
 
 // =============================================================================
 // Campaign Status (campaigns.status)
 // =============================================================================
 
-export const CAMPAIGN_STATUS = {
+export type CampaignStatus = 'draft' | 'active' | 'completed';
+type CampaignStatusKey = 'DRAFT' | 'ACTIVE' | 'COMPLETED';
+
+export const CAMPAIGN_STATUS: Record<CampaignStatusKey, CampaignStatus> = {
 	DRAFT: 'draft',
 	ACTIVE: 'active',
 	COMPLETED: 'completed',
-} as const;
-
-export type CampaignStatus = (typeof CAMPAIGN_STATUS)[keyof typeof CAMPAIGN_STATUS];
+};
 
 export function isValidCampaignStatus(status: string): status is CampaignStatus {
-	return Object.values(CAMPAIGN_STATUS).includes(status as CampaignStatus);
+	return Object.values(CAMPAIGN_STATUS).some((value) => value === status);
 }
 
 // =============================================================================
 // Search Type (campaigns.searchType)
 // =============================================================================
 
-export const SEARCH_TYPE = {
+export type SearchType = 'keyword' | 'similar';
+type SearchTypeKey = 'KEYWORD' | 'SIMILAR';
+
+export const SEARCH_TYPE: Record<SearchTypeKey, SearchType> = {
 	KEYWORD: 'keyword',
 	SIMILAR: 'similar',
-} as const;
-
-export type SearchType = (typeof SEARCH_TYPE)[keyof typeof SEARCH_TYPE];
+};
 
 // =============================================================================
 // Platform (scrapingJobs.platform)
 // =============================================================================
 
-export const PLATFORM = {
+export type Platform = 'instagram' | 'tiktok' | 'youtube';
+type PlatformKey = 'INSTAGRAM' | 'TIKTOK' | 'YOUTUBE';
+
+export const PLATFORM: Record<PlatformKey, Platform> = {
 	INSTAGRAM: 'instagram',
 	TIKTOK: 'tiktok',
 	YOUTUBE: 'youtube',
-} as const;
-
-export type Platform = (typeof PLATFORM)[keyof typeof PLATFORM];
+};
 
 export function isValidPlatform(platform: string): platform is Platform {
-	return Object.values(PLATFORM).includes(platform as Platform);
+	return Object.values(PLATFORM).some((value) => value === platform);
 }
 
 // =============================================================================
 // Creator List Types (creatorLists.type)
 // =============================================================================
 
-export const LIST_TYPE = {
+export type ListType = 'custom' | 'campaign' | 'favorites' | 'industry' | 'contacted';
+type ListTypeKey = 'CUSTOM' | 'CAMPAIGN' | 'FAVORITES' | 'INDUSTRY' | 'CONTACTED';
+
+export const LIST_TYPE: Record<ListTypeKey, ListType> = {
 	CUSTOM: 'custom',
 	CAMPAIGN: 'campaign',
 	FAVORITES: 'favorites',
 	INDUSTRY: 'industry',
 	CONTACTED: 'contacted',
-} as const;
-
-export type ListType = (typeof LIST_TYPE)[keyof typeof LIST_TYPE];
+};
 
 // =============================================================================
 // Creator List Item Buckets (creatorListItems.bucket)
 // =============================================================================
 
-export const LIST_ITEM_BUCKET = {
+export type ListItemBucket = 'backlog' | 'contacted' | 'responded' | 'rejected';
+type ListItemBucketKey = 'BACKLOG' | 'CONTACTED' | 'RESPONDED' | 'REJECTED';
+
+export const LIST_ITEM_BUCKET: Record<ListItemBucketKey, ListItemBucket> = {
 	BACKLOG: 'backlog',
 	CONTACTED: 'contacted',
 	RESPONDED: 'responded',
 	REJECTED: 'rejected',
-} as const;
-
-export type ListItemBucket = (typeof LIST_ITEM_BUCKET)[keyof typeof LIST_ITEM_BUCKET];
+};
 
 // =============================================================================
 // Billing Sync Status (userSubscriptions.billingSyncStatus)
 // =============================================================================
 
-export const BILLING_SYNC_STATUS = {
+export type BillingSyncStatus = 'pending' | 'synced' | 'failed';
+type BillingSyncStatusKey = 'PENDING' | 'SYNCED' | 'FAILED';
+
+export const BILLING_SYNC_STATUS: Record<BillingSyncStatusKey, BillingSyncStatus> = {
 	PENDING: 'pending',
 	SYNCED: 'synced',
 	FAILED: 'failed',
-} as const;
-
-export type BillingSyncStatus = (typeof BILLING_SYNC_STATUS)[keyof typeof BILLING_SYNC_STATUS];
+};
 
 // =============================================================================
 // Log Categories (for structured logging)
 // =============================================================================
 
-export const LOG_CATEGORY = {
+export type LogCategory =
+	| 'api'
+	| 'database'
+	| 'auth'
+	| 'payment'
+	| 'scraping'
+	| 'job'
+	| 'performance'
+	| 'system';
+type LogCategoryKey =
+	| 'API'
+	| 'DATABASE'
+	| 'AUTH'
+	| 'PAYMENT'
+	| 'SCRAPING'
+	| 'JOB'
+	| 'PERFORMANCE'
+	| 'SYSTEM';
+
+export const LOG_CATEGORY: Record<LogCategoryKey, LogCategory> = {
 	API: 'api',
 	DATABASE: 'database',
 	AUTH: 'auth',
@@ -347,9 +396,7 @@ export const LOG_CATEGORY = {
 	JOB: 'job',
 	PERFORMANCE: 'performance',
 	SYSTEM: 'system',
-} as const;
-
-export type LogCategory = (typeof LOG_CATEGORY)[keyof typeof LOG_CATEGORY];
+};
 
 // =============================================================================
 // Usage for agents

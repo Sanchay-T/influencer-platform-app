@@ -13,7 +13,8 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "Gemz - Find The Right Influencer",
-  description: "Connect with top influencers and grow your brand",
+  description:
+    "Gemz is an AI powered influencer discovery tool for finding creators in real time using keywords or similar creator matching. Find influencers relevant to your brand faster and build targeted partnerships.",
   generator: "v0.app",
 }
 

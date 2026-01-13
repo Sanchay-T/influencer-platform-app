@@ -5,7 +5,7 @@ import { structuredConsole } from '@/lib/logging/console-proxy';
 
 function handleError(error: unknown) {
 	structuredConsole.error('[LIST_DETAIL_API]', error);
-	const message = (error as Error).message;
+	const message = error instanceof Error ? error.message : '';
 	if (message === 'USER_NOT_FOUND') {
 		return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
 	}

@@ -20,11 +20,11 @@ export function useApiLogger() {
 	);
 
 	const logApiCall = useCallback(
-		async <T>(
+		async (
 			endpoint: string,
-			options: RequestInit & { body?: any } = {},
+			options: RequestInit & { body?: unknown } = {},
 			context?: LogContext
-		): Promise<T> => {
+		): Promise<unknown> => {
 			const startTime = performance.now();
 			const method = options.method || 'GET';
 
@@ -89,7 +89,7 @@ export function useApiLogger() {
 					);
 				}
 
-				return data as T;
+				return data;
 			} catch (error) {
 				const duration = performance.now() - startTime;
 

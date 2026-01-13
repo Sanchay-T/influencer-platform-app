@@ -12,12 +12,22 @@ import Sidebar from './sidebar';
 const DESKTOP_HEADER_HEIGHT = 64;
 const SIDEBAR_PIN_STORAGE_KEY = 'dashboard-sidebar-pinned';
 
+/**
+ * @typedef {Object} DashboardLayoutProps
+ * @property {import('react').ReactNode} children
+ * @property {boolean} [onboardingStatusLoaded]
+ * @property {boolean} [showOnboarding]
+ * @property {number} [onboardingInitialStep]
+ * @property {{ fullName?: string, businessName?: string, brandDescription?: string } | null} [onboardingData]
+ */
+
+/** @param {DashboardLayoutProps} props */
 export default function DashboardLayout({
 	children,
 	onboardingStatusLoaded = true,
 	showOnboarding = false,
 	onboardingInitialStep = 1,
-	onboardingData,
+	onboardingData = null,
 }) {
 	const pathname = usePathname();
 	const router = useRouter();

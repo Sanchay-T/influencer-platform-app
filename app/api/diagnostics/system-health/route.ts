@@ -7,6 +7,69 @@ import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { backgroundJobs, events } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
+type DiagnosticsChecks = {
+	eventsTable?: { exists: boolean; totalEvents?: number; error?: string };
+	backgroundJobsTable?: { exists: boolean; totalJobs?: number; error?: string };
+	userProfile?: {
+		exists: boolean;
+		onboardingStep?: string;
+		trialStatus?: string;
+		currentPlan?: string | null;
+		subscriptionStatus?: string | null;
+		hasStripeData?: boolean;
+		lastWebhookEvent?: string | null;
+		lastWebhookTimestamp?: string | null;
+		billingSyncStatus?: string | null;
+		inconsistentState?: boolean;
+		error?: string;
+	};
+	userEvents?: {
+		totalEvents?: number;
+		recentEvents?: Array<{
+			id: string;
+			eventType: string;
+			timestamp: string;
+			processingStatus: string | null;
+			sourceSystem: string | null;
+		}>;
+		error?: string;
+	};
+	userBackgroundJobs?: {
+		totalJobs?: number;
+		recentJobs?: Array<{
+			id: string;
+			jobType: string;
+			status: string;
+			createdAt: string;
+			startedAt?: string | null;
+			completedAt?: string | null;
+			failedAt?: string | null;
+			retryCount: number | null;
+			error?: string | null;
+		}>;
+		error?: string;
+	};
+	eventService?: { importable: boolean; functions?: boolean; error?: string };
+	jobProcessor?: { importable: boolean; functions?: boolean; error?: string };
+	environment?: {
+		hasQstashToken: boolean;
+		hasQstashSigningKeys: boolean;
+		hasSiteUrl: boolean;
+		nodeEnv?: string;
+	};
+};
+
+type SystemDiagnostics = {
+	timestamp: string;
+	userId: string;
+	checks: DiagnosticsChecks;
+	overallHealth?: {
+		status: 'healthy' | 'unhealthy';
+		criticalIssues: string[];
+		recommendedActions?: string[];
+	};
+};
+
 export async function GET(request: NextRequest) {
 	try {
 		const { userId } = await getAuthOrTest();
@@ -19,7 +82,7 @@ export async function GET(request: NextRequest) {
 			userId
 		);
 
-		const diagnostics: any = {
+		const diagnostics: SystemDiagnostics = {
 			timestamp: new Date().toISOString(),
 			userId,
 			checks: {},
@@ -75,7 +138,7 @@ export async function GET(request: NextRequest) {
 			// Derive trial status from subscription status + trial end date
 			const trialStatus = deriveTrialStatus(
 				userProfile.subscriptionStatus,
-				userProfile.trialEndDate
+				userProfile.trialEndDate ?? null
 			);
 
 			diagnostics.checks.userProfile = {
@@ -91,7 +154,7 @@ export async function GET(request: NextRequest) {
 				inconsistentState:
 					userProfile.currentPlan !== 'free' &&
 					userProfile.onboardingStep !== 'completed' &&
-					userProfile.stripeSubscriptionId,
+					Boolean(userProfile.stripeSubscriptionId),
 			};
 		} else {
 			diagnostics.checks.userProfile = {
@@ -101,7 +164,7 @@ export async function GET(request: NextRequest) {
 		}
 
 		// 3. Check user events
-		if (diagnostics.checks.eventsTable.exists) {
+		if (diagnostics.checks.eventsTable?.exists) {
 			structuredConsole.log('🔍 [SYSTEM-HEALTH] Checking user events...');
 			try {
 				const userEvents = await db.query.events.findMany({
@@ -128,7 +191,7 @@ export async function GET(request: NextRequest) {
 		}
 
 		// 4. Check user background jobs
-		if (diagnostics.checks.backgroundJobsTable.exists && userProfile) {
+		if (diagnostics.checks.backgroundJobsTable?.exists && userProfile) {
 			structuredConsole.log('🔍 [SYSTEM-HEALTH] Checking user background jobs...');
 			try {
 				const userJobs = await db.query.backgroundJobs.findMany({
@@ -198,14 +261,14 @@ export async function GET(request: NextRequest) {
 
 		// 7. Overall system health assessment
 		const criticalIssues = [];
-		if (!diagnostics.checks.eventsTable.exists) criticalIssues.push('Events table missing');
-		if (!diagnostics.checks.backgroundJobsTable.exists)
+		if (!diagnostics.checks.eventsTable?.exists) criticalIssues.push('Events table missing');
+		if (!diagnostics.checks.backgroundJobsTable?.exists)
 			criticalIssues.push('Background jobs table missing');
-		if (!diagnostics.checks.eventService.importable)
+		if (!diagnostics.checks.eventService?.importable)
 			criticalIssues.push('Event service not importable');
-		if (!diagnostics.checks.jobProcessor.importable)
+		if (!diagnostics.checks.jobProcessor?.importable)
 			criticalIssues.push('Job processor not importable');
-		if (diagnostics.checks.userProfile.inconsistentState)
+		if (diagnostics.checks.userProfile?.inconsistentState)
 			criticalIssues.push('User in inconsistent state');
 
 		diagnostics.overallHealth = {

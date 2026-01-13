@@ -62,9 +62,12 @@ export interface JobStatusData {
 }
 
 // Query key factory for cache operations
-export const jobStatusKeys = {
-	all: ['job-status'] as const,
-	detail: (jobId: string) => ['job-status', jobId] as const,
+export const jobStatusKeys: {
+	all: readonly ['job-status'];
+	detail: (jobId: string) => readonly ['job-status', string];
+} = {
+	all: ['job-status'],
+	detail: (jobId: string) => ['job-status', jobId],
 };
 
 async function fetchJobStatus(jobId: string): Promise<JobStatusData> {

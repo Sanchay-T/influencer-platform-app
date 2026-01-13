@@ -9,7 +9,11 @@ export const maxDuration = 20;
 function errorResponse(error: unknown, status = 500) {
 	structuredConsole.error('[DASHBOARD_OVERVIEW_API]', error);
 	const message =
-		status === 500 ? 'Internal server error' : ((error as Error).message ?? 'Request failed');
+		status === 500
+			? 'Internal server error'
+			: error instanceof Error
+				? error.message
+				: 'Request failed';
 	return NextResponse.json({ error: message }, { status });
 }
 
@@ -25,7 +29,7 @@ export async function GET() {
 
 		return NextResponse.json(data);
 	} catch (error) {
-		if ((error as Error).message === 'USER_NOT_FOUND') {
+		if (error instanceof Error && error.message === 'USER_NOT_FOUND') {
 			return errorResponse('User record not found', 404);
 		}
 		return errorResponse(error);

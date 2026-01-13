@@ -6,8 +6,9 @@ async function check() {
     const result = await db.execute(sql`SELECT COUNT(*)::int as count FROM job_creator_keys`);
     console.log('job_creator_keys table EXISTS');
     console.log('Raw result:', JSON.stringify(result));
-  } catch (e: any) {
-    console.log('Error:', e.message);
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.log('Error:', message);
   }
 }
 

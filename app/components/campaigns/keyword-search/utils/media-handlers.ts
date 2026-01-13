@@ -49,7 +49,7 @@ export const resolveMediaPreview = (
 	creator: Creator | null | undefined,
 	snapshot: CreatorSnapshot | null | undefined,
 	_platformHint?: string
-): string => resolveCreatorPreview(creator, snapshot?.avatarUrl ?? null);
+): string | null => resolveCreatorPreview(creator, snapshot?.avatarUrl ?? null);
 
 /**
  * Image load event handler - used for debugging image loading.

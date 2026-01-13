@@ -2,6 +2,17 @@
 
 import { LogCategory, logger } from '@/lib/logging';
 import { ImageCache } from '@/lib/services/image-cache';
+import {
+	getArrayProperty,
+	getBooleanProperty,
+	getNumberProperty,
+	getRecordProperty,
+	getStringProperty,
+	isString,
+	toRecord,
+	toStringArray,
+	type UnknownRecord,
+} from '@/lib/utils/type-guards';
 import type { SearchJobService } from '../job-service';
 import type {
 	NormalizedCreator,
@@ -17,8 +28,19 @@ const profileEndpoint = 'https://api.scrapecreators.com/v1/tiktok/profile';
 const imageCache = new ImageCache();
 const DEFAULT_CONCURRENCY = Number(process.env.TIKTOK_PROFILE_CONCURRENCY ?? '6');
 
+const getFirstString = (value: unknown): string | null => {
+	if (!Array.isArray(value)) return null;
+	const match = value.find((entry) => isString(entry) && entry.trim().length > 0);
+	return match ?? null;
+};
+
+const getFirstStringFromRecord = (record: UnknownRecord | null, key: string): string | null => {
+	const list = record ? getArrayProperty(record, key) : null;
+	return getFirstString(list);
+};
+
 interface ScrapeCreatorsResponse {
-	search_item_list?: Array<{ aweme_info?: any }>;
+	search_item_list?: Array<{ aweme_info?: unknown }>;
 	has_more?: boolean;
 }
 
@@ -55,9 +77,13 @@ async function fetchKeywordPage(keyword: string, cursor: number, region: string)
 		throw new Error(`TikTok keyword API error ${response.status}: ${body}`);
 	}
 
-	const payload = (await response.json()) as ScrapeCreatorsResponse;
-	const items = Array.isArray(payload.search_item_list) ? payload.search_item_list : [];
-	return { items, hasMore: Boolean(payload?.has_more), apiDurationMs: durationMs };
+	const payload = await response.json();
+	const payloadRecord = toRecord(payload);
+	const items = Array.isArray(payloadRecord?.search_item_list)
+		? (payloadRecord?.search_item_list ?? [])
+		: [];
+	const hasMore = Boolean(payloadRecord?.has_more);
+	return { items, hasMore, apiDurationMs: durationMs };
 }
 
 type KeywordFetchResult = {
@@ -152,17 +178,22 @@ async function fetchKeywordWithPages(
 	}
 }
 
-async function enrichCreator(author: any, awemeInfo: any): Promise<NormalizedCreator | null> {
-	if (!author) return null;
+async function enrichCreator(
+	author: unknown,
+	awemeInfo: unknown
+): Promise<NormalizedCreator | null> {
+	const authorRecord = toRecord(author);
+	if (!authorRecord) return null;
 
-	const baseBio = author.signature ?? '';
-	let bio = typeof baseBio === 'string' ? baseBio : '';
+	const signature = getStringProperty(authorRecord, 'signature') ?? '';
+	let bio = signature;
 	let emails: string[] = bio ? (bio.match(emailRegex) ?? []) : [];
+	const uniqueId = getStringProperty(authorRecord, 'unique_id') ?? '';
 
-	if (!bio && typeof author.unique_id === 'string' && author.unique_id.length > 0) {
+	if (!bio && uniqueId) {
 		try {
 			const enriched = await fetch(
-				`${profileEndpoint}?handle=${encodeURIComponent(author.unique_id)}&region=US`,
+				`${profileEndpoint}?handle=${encodeURIComponent(uniqueId)}&region=US`,
 				{
 					headers: { 'x-api-key': process.env.SCRAPECREATORS_API_KEY! },
 					signal: AbortSignal.timeout(10000),
@@ -170,54 +201,109 @@ async function enrichCreator(author: any, awemeInfo: any): Promise<NormalizedCre
 			);
 			if (enriched.ok) {
 				const data = await enriched.json();
-				const profileUser = data?.user ?? {};
-				bio = profileUser.signature || profileUser.desc || bio;
-				emails = bio ? (bio.match(emailRegex) ?? emails) : emails;
+				const dataRecord = toRecord(data);
+				const profileUser = dataRecord ? getRecordProperty(dataRecord, 'user') : null;
+				const signatureValue = profileUser
+					? (getStringProperty(profileUser, 'signature') ?? getStringProperty(profileUser, 'desc'))
+					: null;
+				if (signatureValue) {
+					bio = signatureValue;
+					emails = bio ? (bio.match(emailRegex) ?? emails) : emails;
+				}
 			}
 		} catch {
 			// swallow profile errors; baseline data is still useful
 		}
 	}
 
-	const avatarUrl = author?.avatar_medium?.url_list?.[0] || '';
+	const nickname = getStringProperty(authorRecord, 'nickname') ?? '';
+	const followerCount = getNumberProperty(authorRecord, 'follower_count') ?? 0;
+	const isVerified =
+		(getBooleanProperty(authorRecord, 'is_verified') ?? false) ||
+		(getBooleanProperty(authorRecord, 'verified') ?? false);
+
+	const avatarRecord = getRecordProperty(authorRecord, 'avatar_medium');
+	const avatarUrl = getFirstStringFromRecord(avatarRecord, 'url_list') ?? '';
 	const cachedImageUrl = await imageCache.getCachedImageUrl(
 		avatarUrl,
 		'TikTok',
-		author.unique_id ?? 'unknown'
+		uniqueId || 'unknown'
 	);
-	const videoAsset = awemeInfo?.video ?? {};
-	const coverCandidates: Array<string | undefined> = [
-		videoAsset?.cover?.url_list?.[0],
-		videoAsset?.dynamic_cover?.url_list?.[0],
-		videoAsset?.origin_cover?.url_list?.[0],
-		videoAsset?.animated_cover?.url_list?.[0],
-		videoAsset?.share_cover?.url_list?.[0],
-		videoAsset?.play_addr?.url_list?.[0],
-		videoAsset?.download_addr?.url_list?.[0],
-	];
+
+	const awemeRecord = toRecord(awemeInfo);
+	const videoRecord = awemeRecord ? getRecordProperty(awemeRecord, 'video') : null;
 	const coverUrl =
-		coverCandidates.find((value) => typeof value === 'string' && value.trim().length > 0) ?? '';
+		getFirstStringFromRecord(
+			videoRecord ? getRecordProperty(videoRecord, 'cover') : null,
+			'url_list'
+		) ??
+		getFirstStringFromRecord(
+			videoRecord ? getRecordProperty(videoRecord, 'dynamic_cover') : null,
+			'url_list'
+		) ??
+		getFirstStringFromRecord(
+			videoRecord ? getRecordProperty(videoRecord, 'origin_cover') : null,
+			'url_list'
+		) ??
+		getFirstStringFromRecord(
+			videoRecord ? getRecordProperty(videoRecord, 'animated_cover') : null,
+			'url_list'
+		) ??
+		getFirstStringFromRecord(
+			videoRecord ? getRecordProperty(videoRecord, 'share_cover') : null,
+			'url_list'
+		) ??
+		getFirstStringFromRecord(
+			videoRecord ? getRecordProperty(videoRecord, 'play_addr') : null,
+			'url_list'
+		) ??
+		getFirstStringFromRecord(
+			videoRecord ? getRecordProperty(videoRecord, 'download_addr') : null,
+			'url_list'
+		) ??
+		'';
 
 	const previewUrl =
-		coverUrl || videoAsset?.thumbnail?.url_list?.[0] || videoAsset?.thumbnail_url || '';
+		coverUrl ||
+		getFirstStringFromRecord(
+			videoRecord ? getRecordProperty(videoRecord, 'thumbnail') : null,
+			'url_list'
+		) ||
+		(videoRecord ? (getStringProperty(videoRecord, 'thumbnail_url') ?? '') : '');
+
+	const description = awemeRecord ? (getStringProperty(awemeRecord, 'desc') ?? '') : '';
+	const shareUrl = awemeRecord ? (getStringProperty(awemeRecord, 'share_url') ?? '') : '';
+	const statisticsRecord = awemeRecord ? getRecordProperty(awemeRecord, 'statistics') : null;
+	const textExtra = awemeRecord ? getArrayProperty(awemeRecord, 'text_extra') : null;
+	const hashtags = Array.isArray(textExtra)
+		? textExtra
+				.map((entry) => {
+					const entryRecord = toRecord(entry);
+					const entryType = entryRecord ? getNumberProperty(entryRecord, 'type') : null;
+					if (entryType !== 1) return null;
+					return entryRecord ? getStringProperty(entryRecord, 'hashtag_name') : null;
+				})
+				.filter((value): value is string => Boolean(value))
+		: [];
+
 	return {
 		platform: 'TikTok',
 		creator: {
-			name: author.nickname || author.unique_id || 'Unknown Creator',
-			followers: author.follower_count || 0,
+			name: nickname || uniqueId || 'Unknown Creator',
+			followers: followerCount,
 			avatarUrl: cachedImageUrl,
 			profilePicUrl: cachedImageUrl,
 			bio,
 			emails,
-			uniqueId: author.unique_id || '',
-			username: author.unique_id || '',
-			verified: Boolean(author.is_verified || author.verified),
+			uniqueId: uniqueId || '',
+			username: uniqueId || '',
+			verified: isVerified,
 		},
 		preview: previewUrl || undefined,
 		previewUrl: previewUrl || undefined,
 		video: {
-			description: awemeInfo?.desc || 'No description',
-			url: awemeInfo?.share_url || '',
+			description: description || 'No description',
+			url: shareUrl,
 			preview: previewUrl || undefined,
 			previewUrl: previewUrl || undefined,
 			cover: coverUrl || undefined,
@@ -225,25 +311,25 @@ async function enrichCreator(author: any, awemeInfo: any): Promise<NormalizedCre
 			thumbnail: previewUrl || undefined,
 			thumbnailUrl: previewUrl || undefined,
 			statistics: {
-				likes: awemeInfo?.statistics?.digg_count || 0,
-				comments: awemeInfo?.statistics?.comment_count || 0,
-				views: awemeInfo?.statistics?.play_count || 0,
-				shares: awemeInfo?.statistics?.share_count || 0,
+				likes: statisticsRecord ? (getNumberProperty(statisticsRecord, 'digg_count') ?? 0) : 0,
+				comments: statisticsRecord
+					? (getNumberProperty(statisticsRecord, 'comment_count') ?? 0)
+					: 0,
+				views: statisticsRecord ? (getNumberProperty(statisticsRecord, 'play_count') ?? 0) : 0,
+				shares: statisticsRecord ? (getNumberProperty(statisticsRecord, 'share_count') ?? 0) : 0,
 			},
 		},
-		hashtags: Array.isArray(awemeInfo?.text_extra)
-			? awemeInfo.text_extra
-					.filter((entry: any) => entry?.type === 1)
-					.map((entry: any) => entry?.hashtag_name)
-			: [],
+		hashtags,
 	};
 }
 
 function creatorKey(creator: NormalizedCreator) {
-	const uniqueId = creator?.creator?.uniqueId;
-	if (typeof uniqueId === 'string' && uniqueId.length > 0) return uniqueId;
-	const username = creator?.creator?.username;
-	if (typeof username === 'string' && username.length > 0) return username;
+	const creatorRecord = toRecord(creator);
+	const nestedCreator = creatorRecord ? getRecordProperty(creatorRecord, 'creator') : null;
+	const uniqueId = nestedCreator ? getStringProperty(nestedCreator, 'uniqueId') : null;
+	if (uniqueId) return uniqueId;
+	const username = nestedCreator ? getStringProperty(nestedCreator, 'username') : null;
+	if (username) return username;
 	return null;
 }
 
@@ -259,13 +345,9 @@ export async function runTikTokKeywordProvider(
 		timings: { startedAt: new Date(startTimestamp).toISOString() },
 	};
 
-	const jobKeywordsRaw = Array.isArray(job.keywords)
-		? (job.keywords as string[]).map((k) => String(k))
-		: [];
-	const searchParams = (job.searchParams ?? {}) as Record<string, unknown>;
-	const paramKeywords = Array.isArray(searchParams?.allKeywords)
-		? (searchParams.allKeywords as string[])
-		: [];
+	const jobKeywordsRaw = (toStringArray(job.keywords) ?? []).map((k) => String(k));
+	const searchParams = toRecord(job.searchParams) ?? {};
+	const paramKeywords = toStringArray(searchParams?.allKeywords) ?? [];
 
 	const keywords = Array.from(
 		new Set(

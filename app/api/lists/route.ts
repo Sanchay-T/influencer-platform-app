@@ -13,7 +13,10 @@ function errorResponse(error: unknown, status = 500) {
 	if (status === 404) {
 		return NextResponse.json({ error: 'Resource not found' }, { status });
 	}
-	return NextResponse.json({ error: (error as Error).message ?? 'Request failed' }, { status });
+	return NextResponse.json(
+		{ error: error instanceof Error ? error.message : 'Request failed' },
+		{ status }
+	);
 }
 
 export async function GET() {
@@ -30,7 +33,7 @@ export async function GET() {
 		return NextResponse.json({ lists });
 	} catch (error) {
 		structuredConsole.error(`[LISTS-API:${requestId}] error`, error);
-		if ((error as Error).message === 'USER_NOT_FOUND') {
+		if (error instanceof Error && error.message === 'USER_NOT_FOUND') {
 			return errorResponse('User record not found', 404);
 		}
 		return errorResponse(error);
@@ -65,7 +68,7 @@ export async function POST(request: Request) {
 
 		return NextResponse.json({ list }, { status: 201 });
 	} catch (error) {
-		if ((error as Error).message === 'USER_NOT_FOUND') {
+		if (error instanceof Error && error.message === 'USER_NOT_FOUND') {
 			return errorResponse('User record not found', 404);
 		}
 		return errorResponse(error);

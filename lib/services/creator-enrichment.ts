@@ -6,6 +6,15 @@ import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { creatorProfiles } from '@/lib/db/schema';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import {
+	getNumberProperty,
+	getStringProperty,
+	isRecord,
+	isString,
+	toArray,
+	toRecord,
+	toStringArray,
+} from '@/lib/utils/type-guards';
 import type {
 	CreatorEnrichmentPlatform,
 	CreatorEnrichmentRecord,
@@ -72,17 +81,55 @@ interface EnrichmentMetadataContainer {
 }
 
 interface EnrichmentApiResponse {
-	result?: Record<string, any> & {
+	result?: Record<string, unknown> & {
 		email?: string;
 		emails?: string[];
 		location?: string;
-		other_links?: Record<string, any>;
-		links_in_bio?: any;
+		other_links?: Record<string, unknown>;
+		links_in_bio?: unknown;
 	};
 	detail?: string;
 	error?: string;
 	message?: string;
 }
+
+const normalizeEnrichmentApiResponse = (payload: unknown): EnrichmentApiResponse => {
+	const record = toRecord(payload);
+	if (!record) {
+		return {};
+	}
+
+	const resultRecord = toRecord(record.result);
+	const result = resultRecord
+		? {
+				...resultRecord,
+				email: isString(resultRecord.email) ? resultRecord.email : undefined,
+				emails: toStringArray(resultRecord.emails) ?? undefined,
+				location: isString(resultRecord.location) ? resultRecord.location : undefined,
+				other_links: isRecord(resultRecord.other_links) ? resultRecord.other_links : undefined,
+				links_in_bio: resultRecord.links_in_bio,
+			}
+		: undefined;
+
+	return {
+		result,
+		detail: isString(record.detail) ? record.detail : undefined,
+		error: isString(record.error) ? record.error : undefined,
+		message: isString(record.message) ? record.message : undefined,
+	};
+};
+
+const isCreatorEnrichmentRecord = (value: unknown): value is CreatorEnrichmentRecord => {
+	const record = toRecord(value);
+	if (!record) return false;
+	return (
+		isString(record.creatorId) &&
+		isString(record.handle) &&
+		isString(record.platform) &&
+		isString(record.enrichedAt) &&
+		isRecord(record.summary)
+	);
+};
 
 interface EnrichCreatorOptions {
 	userId: string;
@@ -107,7 +154,7 @@ export class CreatorEnrichmentService {
 		return apiKey;
 	}
 
-	private static resolveLimit(plan: string | undefined): number {
+	private static resolveLimit(plan: string | null | undefined): number {
 		if (!plan) return PLAN_ENRICHMENT_LIMITS.free;
 		return PLAN_ENRICHMENT_LIMITS[plan] ?? -1;
 	}
@@ -147,45 +194,53 @@ export class CreatorEnrichmentService {
 
 		if (typeof result.location === 'string') {
 			location = result.location;
-		} else if (result.location?.country || result.location?.city) {
-			const pieces = [result.location.city, result.location.state, result.location.country].filter(
-				Boolean
-			);
-			if (pieces.length > 0) {
-				location = pieces.join(', ');
+		} else {
+			const locationRecord = toRecord(result.location);
+			if (locationRecord) {
+				const city = getStringProperty(locationRecord, 'city');
+				const state = getStringProperty(locationRecord, 'state');
+				const country = getStringProperty(locationRecord, 'country');
+				const pieces = [city, state, country].filter((value) => typeof value === 'string');
+				if (pieces.length > 0) {
+					location = pieces.join(', ');
+				}
 			}
 		}
 
 		Object.entries(result).forEach(([key, value]) => {
-			if (!value || typeof value !== 'object') return;
-			const platformData = value as Record<string, any>;
-			if (platformData.email && typeof platformData.email === 'string') {
-				emails.add(platformData.email);
+			const platformData = toRecord(value);
+			if (!platformData) return;
+			const email = getStringProperty(platformData, 'email');
+			if (email) {
+				emails.add(email);
 			}
-			if (typeof platformData.follower_count === 'number') {
-				followerCounts[key] = platformData.follower_count;
+			const followerCount = getNumberProperty(platformData, 'follower_count');
+			if (typeof followerCount === 'number') {
+				followerCounts[key] = followerCount;
 			}
-			if (typeof platformData.engagement_percent === 'number') {
-				engagementRates[key] = platformData.engagement_percent;
+			const engagementRate = getNumberProperty(platformData, 'engagement_percent');
+			if (typeof engagementRate === 'number') {
+				engagementRates[key] = engagementRate;
 			}
-			if (Array.isArray(platformData.brands_found)) {
-				platformData.brands_found.forEach((brand: unknown) => {
-					if (typeof brand === 'string') {
-						brands.add(brand);
+			const brandsFound = toArray(platformData.brands_found) ?? [];
+			brandsFound.forEach((brand) => {
+				if (typeof brand === 'string') {
+					brands.add(brand);
+				}
+			});
+			if (!lastContentTimestamp) {
+				const lastPost = getStringProperty(platformData, 'most_recent_post_date');
+				if (lastPost) {
+					lastContentTimestamp = lastPost;
+				}
+			}
+			const relatedPlatforms = toRecord(platformData.related_platforms);
+			if (relatedPlatforms) {
+				Object.entries(relatedPlatforms).forEach(([platformKey, handle]) => {
+					if (typeof handle === 'string') {
+						crossPlatformHandles[platformKey] = handle;
 					}
 				});
-			}
-			if (!lastContentTimestamp && typeof platformData.most_recent_post_date === 'string') {
-				lastContentTimestamp = platformData.most_recent_post_date;
-			}
-			if (platformData.related_platforms && typeof platformData.related_platforms === 'object') {
-				Object.entries(platformData.related_platforms as Record<string, unknown>).forEach(
-					([platformKey, handle]) => {
-						if (typeof handle === 'string') {
-							crossPlatformHandles[platformKey] = handle;
-						}
-					}
-				);
 			}
 		});
 
@@ -358,8 +413,8 @@ export class CreatorEnrichmentService {
 			);
 		}
 
-		const json = (await response.json()) as EnrichmentApiResponse;
-		return json;
+		const raw = await response.json();
+		return normalizeEnrichmentApiResponse(raw);
 	}
 
 	private static normalizeMetadata(
@@ -403,10 +458,8 @@ export class CreatorEnrichmentService {
 		enrichment: CreatorEnrichmentRecord,
 		currentMetadata?: unknown
 	): Promise<void> {
-		const current: EnrichmentMetadataContainer =
-			currentMetadata && typeof currentMetadata === 'object'
-				? (currentMetadata as EnrichmentMetadataContainer)
-				: {};
+		const currentRecord = toRecord(currentMetadata);
+		const current: EnrichmentMetadataContainer = currentRecord ?? {};
 
 		const summary = enrichment.summary ?? {
 			allEmails: [],
@@ -416,9 +469,7 @@ export class CreatorEnrichmentService {
 		const normalizedEmails = summaryEmails
 			.map((value) => (typeof value === 'string' ? value.trim() : null))
 			.filter((value): value is string => Boolean(value));
-		const existingEmails = Array.isArray((current as any)?.contactEmails)
-			? ((current as any).contactEmails as string[])
-			: [];
+		const existingEmails = (toArray(currentRecord?.contactEmails) ?? []).filter(isString);
 		const combinedEmails = Array.from(
 			new Set(
 				[...existingEmails, ...normalizedEmails].filter(
@@ -429,7 +480,9 @@ export class CreatorEnrichmentService {
 		const primaryEmail =
 			typeof summary.primaryEmail === 'string' && summary.primaryEmail.trim().length
 				? summary.primaryEmail.trim()
-				: ((current as any)?.primaryEmail ?? null);
+				: isString(currentRecord?.primaryEmail)
+					? currentRecord.primaryEmail
+					: null;
 
 		const nextMetadata: EnrichmentMetadataContainer = {
 			...current,
@@ -476,12 +529,7 @@ export class CreatorEnrichmentService {
 						createdAt: new Date().toISOString(),
 					},
 				})
-				.returning({
-					id: creatorProfiles.id,
-					handle: creatorProfiles.handle,
-					platform: creatorProfiles.platform,
-					metadata: creatorProfiles.metadata,
-				});
+				.returning();
 
 			return created ?? null;
 		} catch (error) {
@@ -508,12 +556,13 @@ export class CreatorEnrichmentService {
 			throw new CreatorNotFoundError(creatorId);
 		}
 
-		const metadata = creator.metadata as EnrichmentMetadataContainer | null;
-		if (!metadata?.enrichment) {
+		const metadata = toRecord(creator.metadata);
+		const enrichment = metadata?.enrichment;
+		if (!isCreatorEnrichmentRecord(enrichment)) {
 			return null;
 		}
 
-		return metadata.enrichment;
+		return enrichment;
 	}
 
 	public static async enrichCreator(
@@ -556,10 +605,11 @@ export class CreatorEnrichmentService {
 		const limit = CreatorEnrichmentService.resolveLimit(userProfile.currentPlan);
 		const usage = userProfile.enrichmentsCurrentMonth ?? 0;
 
-		const existingMetadata = creator.metadata as EnrichmentMetadataContainer | null;
-		if (!options.forceRefresh && existingMetadata?.enrichment) {
+		const existingMetadata = toRecord(creator.metadata);
+		const existingEnrichment = existingMetadata?.enrichment;
+		if (!options.forceRefresh && isCreatorEnrichmentRecord(existingEnrichment)) {
 			return {
-				record: existingMetadata.enrichment,
+				record: existingEnrichment,
 				usage: {
 					count: usage,
 					limit,
@@ -568,13 +618,14 @@ export class CreatorEnrichmentService {
 		}
 
 		if (limit >= 0 && usage >= limit) {
+			const planKey = userProfile.currentPlan ?? 'free';
 			logger.warn('Enrichment limit reached', {
 				userId: options.userId,
-				plan: userProfile.currentPlan,
+				plan: planKey,
 				usage,
 				limit,
 			});
-			throw new PlanLimitExceededError(userProfile.currentPlan, usage, limit);
+			throw new PlanLimitExceededError(planKey, usage, limit);
 		}
 
 		logger.info('Calling Influencers.Club enrichment API', {

@@ -15,6 +15,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { jobCreators } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
+import { isString, toRecord } from '@/lib/utils/type-guards';
 import { getAdapter } from '../adapters/interface';
 // Side-effect imports: register adapters with the registry
 import '../adapters/instagram';
@@ -33,6 +34,19 @@ const LOG_PREFIX = '[v2-enrich-worker]';
 
 // Parallel enrichment limit (ScrapeCreators has no rate limits)
 const MAX_PARALLEL_ENRICHMENTS = 5;
+
+const isNormalizedCreator = (value: unknown): value is NormalizedCreator => {
+	const record = toRecord(value);
+	if (!record) return false;
+	return (
+		isString(record.id) &&
+		isString(record.mergeKey) &&
+		isString(record.platform) &&
+		toRecord(record.creator) !== null &&
+		toRecord(record.content) !== null &&
+		Array.isArray(record.hashtags)
+	);
+};
 
 // ============================================================================
 // Main Worker Function
@@ -69,8 +83,8 @@ export async function processEnrich(options: ProcessEnrichOptions): Promise<Enri
 		// Step 1: Get Platform Adapter
 		// ========================================================================
 
-		const adapter = getAdapter(platform as Platform);
-		const config = buildConfig(platform as Platform);
+		const adapter = getAdapter(platform);
+		const config = buildConfig(platform);
 
 		// Check if adapter supports enrichment
 		if (!adapter.enrich) {
@@ -153,8 +167,10 @@ export async function processEnrich(options: ProcessEnrichOptions): Promise<Enri
 		// Step 3: Enrich Creators in Parallel
 		// ========================================================================
 
-		const enrichedResults: Array<{ row: (typeof creatorRows)[0]; enriched: NormalizedCreator }> =
-			[];
+		const enrichedResults: Array<{
+			row: (typeof creatorRows)[0];
+			enriched: NormalizedCreator | null;
+		}> = [];
 		let emailsFound = 0;
 
 		// Process in parallel batches
@@ -162,7 +178,15 @@ export async function processEnrich(options: ProcessEnrichOptions): Promise<Enri
 			const batch = creatorsToEnrich.slice(i, i + MAX_PARALLEL_ENRICHMENTS);
 
 			const enrichPromises = batch.map(async (row) => {
-				const creator = row.creatorData as NormalizedCreator;
+				const creator = isNormalizedCreator(row.creatorData) ? row.creatorData : null;
+				if (!creator) {
+					logger.warn(
+						`${LOG_PREFIX} Invalid creator data in job_creators row`,
+						{ jobId, rowId: row.id },
+						LogCategory.JOB
+					);
+					return { row, enriched: null };
+				}
 				try {
 					const enriched = await adapter.enrich!(creator, config);
 
@@ -193,7 +217,7 @@ export async function processEnrich(options: ProcessEnrichOptions): Promise<Enri
 							...creator,
 							bioEnriched: true,
 							bioEnrichedAt: new Date().toISOString(),
-						} as NormalizedCreator,
+						},
 					};
 				}
 			});
@@ -211,7 +235,7 @@ export async function processEnrich(options: ProcessEnrichOptions): Promise<Enri
 		for (const { row, enriched } of enrichedResults) {
 			await db
 				.update(jobCreators)
-				.set({ creatorData: enriched, enriched: true })
+				.set({ creatorData: enriched ?? row.creatorData, enriched: true })
 				.where(eq(jobCreators.id, row.id));
 		}
 

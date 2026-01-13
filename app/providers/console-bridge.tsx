@@ -4,9 +4,15 @@ import { useEffect } from 'react';
 import { emitClientLog } from '@/lib/logging/react/helpers';
 import { LogCategory, LogLevel } from '@/lib/logging/types';
 
-const BRIDGE_KEY = '__clientConsoleBridgeInstalled__';
+declare global {
+	interface Window {
+		__clientConsoleBridgeInstalled__?: boolean;
+	}
+}
 
-function formatMessage(args: any[]): string {
+type ConsoleMethod = 'log' | 'info' | 'debug' | 'warn' | 'error' | 'trace';
+
+function formatMessage(args: unknown[]): string {
 	if (args.length === 0) {
 		return 'Console log message';
 	}
@@ -25,7 +31,7 @@ function formatMessage(args: any[]): string {
 	}
 }
 
-function serializeArgs(args: any[]): any[] {
+function serializeArgs(args: unknown[]): unknown[] {
 	return args.slice(1).map((value) => {
 		if (value instanceof Error) {
 			return {
@@ -59,17 +65,17 @@ export function ClientConsoleBridge() {
 		if (typeof window === 'undefined') {
 			return;
 		}
-		if ((window as any)[BRIDGE_KEY]) {
+		if (window.__clientConsoleBridgeInstalled__) {
 			return;
 		}
 
-		(window as any)[BRIDGE_KEY] = true;
+		window.__clientConsoleBridgeInstalled__ = true;
 
 		const nativeConsole = { ...window.console };
 
 		const createProxy =
-			(method: keyof Console) =>
-			(...args: any[]) => {
+			(method: ConsoleMethod) =>
+			(...args: unknown[]) => {
 				const level = methodToLevel[String(method)] ?? LogLevel.INFO;
 				const message = formatMessage(args);
 				const contextArgs = serializeArgs(args);
@@ -92,7 +98,7 @@ export function ClientConsoleBridge() {
 					process.env.NODE_ENV === 'development';
 
 				if (allowNative) {
-					const target = (nativeConsole as any)[method] || nativeConsole.log;
+					const target = nativeConsole[method] || nativeConsole.log;
 					if (typeof target === 'function') {
 						target.apply(nativeConsole, args);
 					}

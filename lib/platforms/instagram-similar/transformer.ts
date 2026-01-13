@@ -7,12 +7,15 @@ import type {
 	ApifyInstagramProfileResponse,
 	ApifyRelatedProfile,
 	InstagramSimilarCreator,
+	InstagramSimilarCreatorRecord,
 } from './types';
 
 /**
  * Transform Apify Instagram profile response to Instagram frontend format
  */
-export function transformInstagramProfile(profileData: ApifyInstagramProfileResponse): any[] {
+export function transformInstagramProfile(
+	profileData: ApifyInstagramProfileResponse
+): InstagramSimilarCreatorRecord[] {
 	structuredConsole.log(
 		'🔄 [INSTAGRAM-TRANSFORM] Starting transformation for profile:',
 		profileData.username
@@ -56,7 +59,10 @@ export function transformInstagramProfile(profileData: ApifyInstagramProfileResp
 /**
  * Transform a single Apify related profile to unified frontend format (matches TikTok/YouTube structure)
  */
-export function transformRelatedProfile(profile: ApifyRelatedProfile, order: number = 0): any {
+export function transformRelatedProfile(
+	profile: ApifyRelatedProfile,
+	order: number = 0
+): InstagramSimilarCreatorRecord {
 	const followerCount = resolveFollowerCount(profile);
 
 	// Transform to the UNIFIED format expected by SearchProgress component (same as TikTok/YouTube)
@@ -113,9 +119,9 @@ function resolveFollowerCount(profile: ApifyRelatedProfile): number | null {
  * Transform enhanced profile data to include bio and emails (unified format)
  */
 export function transformEnhancedProfile(
-	baseProfile: any,
+	baseProfile: InstagramSimilarCreatorRecord,
 	enhancedData: ApifyInstagramProfileResponse
-): any {
+): InstagramSimilarCreatorRecord {
 	const bio = enhancedData.biography || '';
 	const emails = extractEmailsFromBio(bio);
 	const followerCount =

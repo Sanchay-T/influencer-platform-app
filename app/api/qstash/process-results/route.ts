@@ -5,6 +5,7 @@ import { db } from '@/lib/db';
 import { scrapingJobs } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { qstash } from '@/lib/queue/qstash';
+import { toError } from '@/lib/utils/type-guards';
 
 // Inicializar el receptor de QStash
 const receiver = new Receiver({
@@ -44,11 +45,12 @@ export async function POST(req: Request) {
 			if (!isValid) {
 				return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
 			}
-		} catch (verifyError: any) {
+		} catch (verifyError: unknown) {
+			const error = toError(verifyError);
 			structuredConsole.error('❌ Error al verificar la firma:', verifyError);
 			return NextResponse.json(
 				{
-					error: `Signature verification error: ${verifyError.message || 'Unknown error'}`,
+					error: `Signature verification error: ${error.message}`,
 				},
 				{ status: 401 }
 			);
@@ -58,11 +60,12 @@ export async function POST(req: Request) {
 			// Parsear el cuerpo como JSON
 			const data = JSON.parse(body);
 			jobId = data.jobId;
-		} catch (error: any) {
-			structuredConsole.error('❌ Error al parsear el cuerpo de la solicitud:', error);
+		} catch (error: unknown) {
+			const parsedError = toError(error);
+			structuredConsole.error('❌ Error al parsear el cuerpo de la solicitud:', parsedError);
 			return NextResponse.json(
 				{
-					error: `Invalid JSON body: ${error.message || 'Unknown error'}`,
+					error: `Invalid JSON body: ${parsedError.message}`,
 				},
 				{ status: 400 }
 			);
@@ -78,11 +81,12 @@ export async function POST(req: Request) {
 			job = await db.query.scrapingJobs.findFirst({
 				where: (jobs, { eq }) => eq(jobs.id, jobId),
 			});
-		} catch (dbError: any) {
-			structuredConsole.error('❌ Error al obtener el job de la base de datos:', dbError);
+		} catch (dbError: unknown) {
+			const error = toError(dbError);
+			structuredConsole.error('❌ Error al obtener el job de la base de datos:', error);
 			return NextResponse.json(
 				{
-					error: `Database error: ${dbError.message || 'Unknown error'}`,
+					error: `Database error: ${error.message}`,
 				},
 				{ status: 500 }
 			);
@@ -122,7 +126,7 @@ export async function POST(req: Request) {
 						updatedAt: new Date(),
 					})
 					.where(eq(scrapingJobs.id, jobId));
-			} catch (dbError: any) {
+			} catch (dbError: unknown) {
 				structuredConsole.error('❌ Error al actualizar el job con timeout:', dbError);
 				// Continuamos con la respuesta de timeout aunque falle la actualización
 			}
@@ -159,7 +163,7 @@ export async function POST(req: Request) {
 				retries: 3,
 				notifyOnFailure: true,
 			});
-		} catch (queueError: any) {
+		} catch (queueError: unknown) {
 			structuredConsole.error('❌ Error al encolar el siguiente monitoreo:', queueError);
 			// No devolvemos error aquí, ya que el job ya se ha verificado correctamente
 		}
@@ -170,7 +174,7 @@ export async function POST(req: Request) {
 			targetResults: job.targetResults,
 			nextCheck: '30 seconds',
 		});
-	} catch (error: any) {
+	} catch (error: unknown) {
 		structuredConsole.error('❌ Error:', error);
 		return NextResponse.json(
 			{

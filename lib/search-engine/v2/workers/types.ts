@@ -247,6 +247,8 @@ export interface StatusResponse {
 	targetResults: number;
 	platform: string;
 	keywords: string[];
+	/** Legacy top-level progress percent (kept for backward compatibility) */
+	progressPercent?: number;
 
 	/** Error message if status is 'error' */
 	error?: string;

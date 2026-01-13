@@ -25,7 +25,15 @@ interface PerformanceDashboardProps {
 
 export function PerformanceDashboard({ className = '' }: PerformanceDashboardProps) {
 	const [summaries, setSummaries] = useState(perfMonitor.getAllSummaries());
-	const [browserMetrics, setBrowserMetrics] = useState<any>({});
+	const [browserMetrics, setBrowserMetrics] = useState<{
+		fcp: number | null;
+		lcp: number | null;
+		navigation: Record<string, number> | null;
+	}>({
+		fcp: null,
+		lcp: null,
+		navigation: null,
+	});
 	const [autoRefresh, setAutoRefresh] = useState(true);
 
 	// Auto-refresh summaries

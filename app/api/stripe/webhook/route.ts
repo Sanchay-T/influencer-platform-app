@@ -24,6 +24,7 @@ import {
 	StripeClient,
 } from '@/lib/billing';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
+import { isString, toError, toRecord } from '@/lib/utils/type-guards';
 import {
 	checkWebhookIdempotency,
 	isEventStale,
@@ -39,6 +40,25 @@ export const maxDuration = 60;
 // @context Stale event threshold in seconds - reject events older than 5 minutes
 // Stripe may retry events for up to 3 days, but we only process recent ones
 const STALE_THRESHOLD_SECONDS = 300;
+
+// Type guards for Stripe objects
+const isStripeObject = (
+	value: Stripe.Event.Data.Object,
+	objectType: string
+): value is Stripe.Event.Data.Object & { object: string; id: string } => {
+	const record = toRecord(value);
+	return !!record && record.object === objectType && isString(record.id);
+};
+
+const isStripeSubscription = (value: Stripe.Event.Data.Object): value is Stripe.Subscription =>
+	isStripeObject(value, 'subscription');
+
+const isStripeCheckoutSession = (
+	value: Stripe.Event.Data.Object
+): value is Stripe.Checkout.Session => isStripeObject(value, 'checkout.session');
+
+const isStripeInvoice = (value: Stripe.Event.Data.Object): value is Stripe.Invoice =>
+	isStripeObject(value, 'invoice');
 
 // ═══════════════════════════════════════════════════════════════
 // WEBHOOK HANDLER
@@ -66,7 +86,7 @@ export async function POST(request: NextRequest) {
 
 		event = StripeClient.constructWebhookEvent(body, signature);
 	} catch (error) {
-		logger.error('Webhook signature validation failed', error as Error);
+		logger.error('Webhook signature validation failed', toError(error));
 		return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 400 });
 	}
 
@@ -127,21 +147,24 @@ export async function POST(request: NextRequest) {
 			// ─────────────────────────────────────────────────────
 
 			case 'customer.subscription.created':
-				result = await handleSubscriptionChange(
-					event.data.object as Stripe.Subscription,
-					event.type
-				);
+				if (!isStripeSubscription(event.data.object)) {
+					throw new Error('Invalid subscription payload');
+				}
+				result = await handleSubscriptionChange(event.data.object, event.type);
 				break;
 
 			case 'customer.subscription.updated':
-				result = await handleSubscriptionChange(
-					event.data.object as Stripe.Subscription,
-					event.type
-				);
+				if (!isStripeSubscription(event.data.object)) {
+					throw new Error('Invalid subscription payload');
+				}
+				result = await handleSubscriptionChange(event.data.object, event.type);
 				break;
 
 			case 'customer.subscription.deleted':
-				result = await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
+				if (!isStripeSubscription(event.data.object)) {
+					throw new Error('Invalid subscription payload');
+				}
+				result = await handleSubscriptionDeleted(event.data.object);
 				break;
 
 			// ─────────────────────────────────────────────────────
@@ -149,7 +172,10 @@ export async function POST(request: NextRequest) {
 			// ─────────────────────────────────────────────────────
 
 			case 'checkout.session.completed': {
-				const session = event.data.object as Stripe.Checkout.Session;
+				if (!isStripeCheckoutSession(event.data.object)) {
+					throw new Error('Invalid checkout session payload');
+				}
+				const session = event.data.object;
 				// Only process subscription checkouts
 				if (session.mode === 'subscription' && session.subscription) {
 					const stripe = StripeClient.getRawStripe();
@@ -170,10 +196,13 @@ export async function POST(request: NextRequest) {
 
 			case 'customer.subscription.trial_will_end':
 				// Could trigger email reminder here
+				if (!isStripeSubscription(event.data.object)) {
+					throw new Error('Invalid subscription payload');
+				}
 				logger.info('Trial ending soon', {
 					metadata: {
-						subscriptionId: (event.data.object as Stripe.Subscription).id,
-						trialEnd: (event.data.object as Stripe.Subscription).trial_end,
+						subscriptionId: event.data.object.id,
+						trialEnd: event.data.object.trial_end,
 					},
 				});
 				result = {
@@ -190,10 +219,13 @@ export async function POST(request: NextRequest) {
 			case 'invoice.payment_succeeded':
 			case 'invoice.payment_failed':
 			case 'invoice.finalized':
+				if (!isStripeInvoice(event.data.object)) {
+					throw new Error('Invalid invoice payload');
+				}
 				logger.info('Invoice event received', {
 					metadata: {
-						invoiceId: (event.data.object as Stripe.Invoice).id,
-						status: (event.data.object as Stripe.Invoice).status,
+						invoiceId: event.data.object.id,
+						status: event.data.object.status,
 					},
 				});
 				result = {
@@ -246,7 +278,7 @@ export async function POST(request: NextRequest) {
 
 		await markWebhookFailed(event.id, errorMessage);
 
-		logger.error('Webhook processing failed', error as Error, {
+		logger.error('Webhook processing failed', toError(error), {
 			metadata: { eventId: event.id, eventType: event.type },
 		});
 

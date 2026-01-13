@@ -35,7 +35,7 @@ export function useFormLogger(formName: string) {
 	);
 
 	const logSubmissionStart = useCallback(
-		(formData: any, context?: LogContext) => {
+		(formData: unknown, context?: LogContext) => {
 			userActionLogger.logFormSubmission(formName, formData, {
 				submissionPhase: 'start',
 				...context,
@@ -45,7 +45,7 @@ export function useFormLogger(formName: string) {
 	);
 
 	const logSubmissionSuccess = useCallback(
-		(responseData?: any, context?: LogContext) => {
+		(responseData?: unknown, context?: LogContext) => {
 			if (!canLogInfo) {
 				return;
 			}

@@ -869,7 +869,7 @@ export type UserProfileComplete = {
 	// Usage data
 	planCampaignsLimit?: number | null;
 	planCreatorsLimit?: number | null;
-	planFeatures: any;
+	planFeatures: unknown;
 	usageCampaignsCurrent: number;
 	usageCreatorsCurrentMonth: number;
 	enrichmentsCurrentMonth: number;
@@ -877,7 +877,7 @@ export type UserProfileComplete = {
 
 	// System data
 	signupTimestamp: Date;
-	emailScheduleStatus: any;
+	emailScheduleStatus: unknown;
 	lastWebhookEvent?: string | null;
 	lastWebhookTimestamp?: Date | null;
 

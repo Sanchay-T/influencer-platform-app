@@ -1,4 +1,13 @@
 import { scrapingLogger } from '@/lib/logging';
+import {
+	getRecordProperty,
+	getStringProperty,
+	isNumber,
+	isString,
+	toArray,
+	toRecord,
+	toStringArray,
+} from '@/lib/utils/type-guards';
 import type { SearchJobService } from '../job-service';
 import type {
 	NormalizedCreator,
@@ -14,14 +23,16 @@ const YOUTUBE_CHANNEL_API_URL = 'https://api.scrapecreators.com/v1/youtube/chann
 const EMAIL_REGEX = /[\w.-]+@[\w.-]+\.[\w-]+/gi;
 const PROFILE_CONCURRENCY = parseInt(process.env.YT_PROFILE_CONCURRENCY || '6', 10);
 
-function assertApiConfig() {
-	if (!process.env.SCRAPECREATORS_API_KEY) {
+function requireApiKey(): string {
+	const apiKey = process.env.SCRAPECREATORS_API_KEY;
+	if (!apiKey) {
 		throw new Error('SCRAPECREATORS_API_KEY is not configured');
 	}
+	return apiKey;
 }
 
 type FetchPageResult = {
-	videos: any[];
+	videos: unknown[];
 	continuationToken: string | null;
 	durationMs: number;
 	error?: string;
@@ -31,14 +42,16 @@ async function fetchYouTubeKeywordPage(
 	keywords: string[],
 	continuationToken?: string | null
 ): Promise<FetchPageResult> {
-	assertApiConfig();
+	const apiKey = requireApiKey();
 	const params = new URLSearchParams({ query: keywords.join(', ') });
-	if (continuationToken) params.set('continuationToken', continuationToken);
+	if (continuationToken) {
+		params.set('continuationToken', continuationToken);
+	}
 
 	const startedAt = Date.now();
 	try {
 		const response = await fetch(`${YOUTUBE_SEARCH_API_URL}?${params.toString()}`, {
-			headers: { 'x-api-key': process.env.SCRAPECREATORS_API_KEY! },
+			headers: { 'x-api-key': apiKey },
 			signal: AbortSignal.timeout(30_000),
 		});
 
@@ -55,8 +68,11 @@ async function fetchYouTubeKeywordPage(
 		}
 
 		const payload = await response.json();
-		const videos = Array.isArray(payload?.videos) ? payload.videos : [];
-		const nextToken = payload?.continuationToken ?? null;
+		const payloadRecord = toRecord(payload);
+		const videos = toArray(payloadRecord?.videos) ?? [];
+		const nextToken = isString(payloadRecord?.continuationToken)
+			? payloadRecord.continuationToken
+			: null;
 
 		return { videos, continuationToken: nextToken, durationMs };
 	} catch (error) {
@@ -71,12 +87,14 @@ async function fetchYouTubeKeywordPage(
 }
 
 async function fetchChannelProfile(handle: string) {
-	assertApiConfig();
-	if (!handle) return null;
+	const apiKey = requireApiKey();
+	if (!handle) {
+		return null;
+	}
 	const cleanHandle = handle.startsWith('@') ? handle.slice(1) : handle;
 	const url = `${YOUTUBE_CHANNEL_API_URL}?handle=${encodeURIComponent(cleanHandle)}`;
 	const response = await fetch(url, {
-		headers: { 'x-api-key': process.env.SCRAPECREATORS_API_KEY! },
+		headers: { 'x-api-key': apiKey },
 		signal: AbortSignal.timeout(10_000),
 	});
 	if (!response.ok) {
@@ -89,9 +107,12 @@ function dedupeYouTubeCreators(creators: NormalizedCreator[]): NormalizedCreator
 	const seen = new Set<string>();
 	const unique: NormalizedCreator[] = [];
 	for (const creator of creators) {
-		const channelId = creator?.creator?.channelId ?? creator?.creator?.handle;
-		const key =
-			typeof channelId === 'string' && channelId.length > 0 ? channelId.toLowerCase() : null;
+		const creatorRecord = toRecord(creator);
+		const nestedCreator = creatorRecord ? getRecordProperty(creatorRecord, 'creator') : null;
+		const channelId =
+			(nestedCreator ? getStringProperty(nestedCreator, 'channelId') : null) ??
+			(nestedCreator ? getStringProperty(nestedCreator, 'handle') : null);
+		const key = channelId ? channelId.toLowerCase() : null;
 		if (key && !seen.has(key)) {
 			seen.add(key);
 			unique.push(creator);
@@ -100,45 +121,79 @@ function dedupeYouTubeCreators(creators: NormalizedCreator[]): NormalizedCreator
 	return unique;
 }
 
-function normalizeCreator(video: any, profile: any, keywords: string[]): NormalizedCreator {
-	const channel = video?.channel ?? {};
-	const descriptionFromVideo = typeof video?.description === 'string' ? video.description : '';
-	const channelDescription = profile?.description ?? '';
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: normalization merges multiple payloads
+function normalizeCreator(video: unknown, profile: unknown, keywords: string[]): NormalizedCreator {
+	const videoRecord = toRecord(video);
+	const profileRecord = toRecord(profile);
+	const channelRecord = toRecord(videoRecord?.channel);
+
+	const descriptionFromVideo = isString(videoRecord?.description) ? videoRecord.description : '';
+	const channelDescription = isString(profileRecord?.description) ? profileRecord.description : '';
 	const bio = channelDescription || descriptionFromVideo;
 	const emails = bio ? (bio.match(EMAIL_REGEX) ?? []) : [];
-	const subscriberCount = profile?.subscriberCount || profile?.subscriberCountInt || 0;
-	const handle = channel?.handle || profile?.handle || '';
-	const channelId = channel?.id || profile?.channelId || '';
+	const subscriberCount =
+		(isNumber(profileRecord?.subscriberCount) ? profileRecord.subscriberCount : undefined) ??
+		(isNumber(profileRecord?.subscriberCountInt) ? profileRecord.subscriberCountInt : undefined) ??
+		0;
+	const handle =
+		(isString(channelRecord?.handle) ? channelRecord.handle : undefined) ??
+		(isString(profileRecord?.handle) ? profileRecord.handle : undefined) ??
+		'';
+	const channelId =
+		(isString(channelRecord?.id) ? channelRecord.id : undefined) ??
+		(isString(profileRecord?.channelId) ? profileRecord.channelId : undefined) ??
+		'';
+
+	const channelTitle =
+		(isString(channelRecord?.title) ? channelRecord.title : undefined) ??
+		(isString(profileRecord?.name) ? profileRecord.name : undefined) ??
+		'Unknown Channel';
+	const avatarUrl =
+		(isString(channelRecord?.thumbnail) ? channelRecord.thumbnail : undefined) ??
+		(isString(profileRecord?.avatarUrl) ? profileRecord.avatarUrl : undefined) ??
+		'';
+	const videoTitle =
+		(isString(videoRecord?.title) ? videoRecord.title : undefined) ??
+		(isString(videoRecord?.description) ? videoRecord.description : undefined) ??
+		'Untitled video';
+	const videoUrl = isString(videoRecord?.url) ? videoRecord.url : '';
+	const viewCount =
+		(isNumber(videoRecord?.viewCountInt) ? videoRecord.viewCountInt : undefined) ?? 0;
+	const hashtags = toStringArray(videoRecord?.hashtags) ?? [];
+	const publishedTime = isString(videoRecord?.publishedTime) ? videoRecord.publishedTime : '';
+	const lengthSeconds =
+		(isNumber(videoRecord?.lengthSeconds) ? videoRecord.lengthSeconds : undefined) ?? 0;
 
 	return {
 		platform: 'YouTube',
 		creator: {
-			name: channel?.title || profile?.name || 'Unknown Channel',
+			name: channelTitle,
 			followers: subscriberCount,
-			avatarUrl: channel?.thumbnail || profile?.avatarUrl || '',
-			profilePicUrl: channel?.thumbnail || profile?.avatarUrl || '',
+			avatarUrl,
+			profilePicUrl: avatarUrl,
 			bio,
 			emails,
 			handle,
 			channelId,
 		},
 		video: {
-			description: video?.title || video?.description || 'Untitled video',
-			url: video?.url || '',
+			description: videoTitle,
+			url: videoUrl,
 			statistics: {
-				views: video?.viewCountInt || 0,
+				views: viewCount,
 				likes: 0,
 				comments: 0,
 				shares: 0,
 			},
 		},
-		hashtags: Array.isArray(video?.hashtags) ? video.hashtags : [],
+		hashtags,
 		keywords,
-		publishedTime: video?.publishedTime || '',
-		lengthSeconds: video?.lengthSeconds || 0,
-	} as NormalizedCreator;
+		publishedTime,
+		lengthSeconds,
+	};
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: provider flow staged for refactor
 export async function runYouTubeKeywordProvider(
 	{ job, config }: ProviderContext,
 	service: SearchJobService
@@ -152,12 +207,10 @@ export async function runYouTubeKeywordProvider(
 		timings: { startedAt: new Date().toISOString() },
 	};
 
-	const keywords = Array.isArray(job.keywords)
-		? (job.keywords as string[]).map((k) => String(k))
-		: [];
+	const keywords = (toStringArray(job.keywords) ?? []).map((k) => String(k));
 	if (!keywords.length) {
 		const error = 'YouTube keyword job is missing keywords';
-		scrapingLogger.error(error, { jobId: job.id });
+		scrapingLogger.error(error, undefined, { jobId: job.id });
 		throw new Error(error);
 	}
 
@@ -170,12 +223,15 @@ export async function runYouTubeKeywordProvider(
 
 	const maxApiCalls = Math.max(config.maxApiCalls, 1);
 	const targetResults = job.targetResults || 0;
-	let continuationToken = (job.searchParams as any)?.continuationToken ?? null;
+	const searchParams = toRecord(job.searchParams);
+	let continuationToken = isString(searchParams?.continuationToken)
+		? searchParams.continuationToken
+		: null;
 	let processedRuns = job.processedRuns || 0;
 	let runningTotal = job.processedResults || 0;
 	let hasMore = true;
 
-	const channelProfileCache = new Map<string, any>();
+	const channelProfileCache = new Map<string, unknown>();
 
 	await service.markProcessing();
 
@@ -184,8 +240,6 @@ export async function runYouTubeKeywordProvider(
 		callIndex < maxApiCalls && hasMore && runningTotal < targetResults;
 		callIndex++
 	) {
-		const fetchStarted = Date.now();
-
 		scrapingLogger.debug('Fetching YouTube keyword page', {
 			jobId: job.id,
 			callIndex,
@@ -203,14 +257,14 @@ export async function runYouTubeKeywordProvider(
 
 		// Handle errors - log and continue
 		if (error) {
-			scrapingLogger.error('YouTube keyword API error', {
+			scrapingLogger.error('YouTube keyword API error', undefined, {
 				jobId: job.id,
 				error,
 				callIndex,
 				durationMs,
 			});
 
-			console.warn(`[STREAMING] YouTube keyword fetch error: ${error}`);
+			scrapingLogger.warn('YouTube keyword fetch error', { jobId: job.id, error });
 
 			// Continue to next iteration instead of throwing
 			continuationToken = null;
@@ -231,8 +285,11 @@ export async function runYouTubeKeywordProvider(
 
 		for (const slice of chunks) {
 			const entries = await Promise.all(
+				// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: enrichment map spans async caching
 				slice.map(async (video) => {
-					const handle = video?.channel?.handle ?? '';
+					const videoRecord = toRecord(video);
+					const channelRecord = videoRecord ? getRecordProperty(videoRecord, 'channel') : null;
+					const handle = channelRecord ? (getStringProperty(channelRecord, 'handle') ?? '') : '';
 					let profile = null;
 					if (handle) {
 						const cacheKey = handle.toLowerCase();
@@ -247,7 +304,9 @@ export async function runYouTubeKeywordProvider(
 				})
 			);
 			for (const entry of entries) {
-				if (entry) enrichedCreators.push(entry);
+				if (entry) {
+					enrichedCreators.push(entry);
+				}
 			}
 		}
 
@@ -255,7 +314,11 @@ export async function runYouTubeKeywordProvider(
 
 		// Stream results: save immediately as batch completes
 		const { total, newCount } = await service.mergeCreators(uniqueCreators, (creator) => {
-			const id = creator?.creator?.channelId || creator?.creator?.handle;
+			const creatorRecord = toRecord(creator);
+			const nestedCreator = creatorRecord ? getRecordProperty(creatorRecord, 'creator') : null;
+			const id =
+				(nestedCreator ? getStringProperty(nestedCreator, 'channelId') : null) ??
+				(nestedCreator ? getStringProperty(nestedCreator, 'handle') : null);
 			return typeof id === 'string' && id.length > 0 ? id : null;
 		});
 
@@ -273,10 +336,15 @@ export async function runYouTubeKeywordProvider(
 			progress,
 		});
 
-		// Streaming console log for diagnostics
-		console.warn(
-			`[STREAMING] YouTube keyword batch complete (${callIndex + 1}/${maxApiCalls}): +${newCount} new (${uniqueCreators.length} fetched), total=${runningTotal}, progress=${progress}%`
-		);
+		scrapingLogger.info('YouTube keyword batch complete', {
+			jobId: job.id,
+			callIndex,
+			maxApiCalls,
+			newCount,
+			fetchedCount: uniqueCreators.length,
+			total: runningTotal,
+			progress,
+		});
 
 		scrapingLogger.info('YouTube keyword batch processed', {
 			jobId: job.id,
@@ -352,9 +420,13 @@ export async function runYouTubeKeywordProvider(
 		totalDurationMs: totalElapsed,
 	});
 
-	console.warn(
-		`[STREAMING] YouTube keyword provider complete: status=${status}, results=${runningTotal}/${targetResults}, elapsed=${totalElapsed}ms`
-	);
+	scrapingLogger.info('YouTube keyword provider complete', {
+		jobId: job.id,
+		status,
+		results: runningTotal,
+		targetResults,
+		elapsedMs: totalElapsed,
+	});
 
 	return {
 		status,

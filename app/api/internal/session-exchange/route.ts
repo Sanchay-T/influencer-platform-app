@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { isString, toError } from '@/lib/utils/type-guards';
 
 // DEV-ONLY: Exchanges a Clerk Admin session for a browser-compatible __session cookie
 // Guarded by SESSION_EXCHANGE_KEY. No route changes elsewhere; this simply sets a real session cookie.
@@ -76,14 +77,13 @@ export async function POST(req: NextRequest) {
 			body: JSON.stringify({}),
 		});
 		const token = await tokRes.json();
-		if (!(tokRes.ok && token?.jwt)) {
+		const jwt = isString(token?.jwt) ? token.jwt : null;
+		if (!(tokRes.ok && jwt)) {
 			return NextResponse.json(
 				{ error: 'Failed to mint session token', detail: token },
 				{ status: 500 }
 			);
 		}
-
-		const jwt = token.jwt as string;
 
 		// Build cookie
 		const requestProtocol = req.nextUrl.protocol || 'https:';
@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
 			});
 			if (devBrowserRes.ok) {
 				const payload = await devBrowserRes.json().catch(() => null);
-				if (payload?.token) devBrowserToken = payload.token as string;
+				if (isString(payload?.token)) devBrowserToken = payload.token;
 			} else {
 				const detail = await devBrowserRes.text().catch(() => '');
 				structuredConsole.warn(
@@ -162,9 +162,10 @@ export async function POST(req: NextRequest) {
 		response.headers.append('Set-Cookie', clientUatCookie.join('; '));
 
 		return response;
-	} catch (err: any) {
+	} catch (err: unknown) {
+		const error = toError(err);
 		return NextResponse.json(
-			{ error: 'Session exchange failed', detail: String(err?.message || err) },
+			{ error: 'Session exchange failed', detail: error.message },
 			{ status: 500 }
 		);
 	}

@@ -1,5 +1,5 @@
 import { clerkMiddleware } from '@clerk/nextjs/server'
-import { NextResponse, NextRequest } from 'next/server'
+import { NextFetchEvent, NextRequest, NextResponse } from 'next/server'
 
 const shouldLogMiddleware = process.env.NEXT_PUBLIC_ENABLE_MIDDLEWARE_LOGS === 'true';
 
@@ -40,29 +40,64 @@ function isBot(userAgent: string | null): boolean {
   return BOT_USER_AGENTS.some(bot => ua.includes(bot.toLowerCase()));
 }
 
+const PUBLIC_ROUTE_PATTERNS = [
+  /^\/$/,
+  /^\/sign-in(\/.*)?$/,
+  /^\/sign-up(\/.*)?$/,
+  /^\/sso-callback(\/.*)?$/,
+  /^\/api\/stripe\/webhook$/,
+  /^\/api\/webhooks\/.*$/,
+  /^\/api\/qstash\/.*$/,
+  /^\/api\/v2\/worker\/.*$/,
+  /^\/api\/proxy\/.*$/,
+  /^\/api\/export\/.*$/,
+  /^\/api\/email\/send-scheduled$/,
+  // E2E test admin routes (dev only - routes check NODE_ENV internally)
+  /^\/api\/admin\/e2e\/.*$/,
+];
+
+function isPublicRoute(pathname: string): boolean {
+  return PUBLIC_ROUTE_PATTERNS.some((pattern) => pattern.test(pathname));
+}
+
+function hasBypassAuthHeader(request: NextRequest): boolean {
+  if (process.env.NODE_ENV === 'production') return false;
+
+  const bypassHeaderName = process.env.AUTH_BYPASS_HEADER?.toLowerCase() || 'x-dev-auth';
+  const bypassToken = process.env.AUTH_BYPASS_TOKEN || 'dev-bypass';
+  const headerValue = request.headers.get(bypassHeaderName);
+  if (headerValue && headerValue === bypassToken) return true;
+
+  if (process.env.ENABLE_TEST_AUTH === 'true') {
+    const testAuth = request.headers.get('x-test-auth');
+    const testSignature = request.headers.get('x-test-signature');
+    if (testAuth && testSignature) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 // Wrap clerkMiddleware to intercept bots BEFORE Clerk processes them
-const clerk = clerkMiddleware((auth, request) => {
+const clerk = clerkMiddleware(async (auth, request) => {
   if (shouldLogMiddleware) {
     console.log('[MIDDLEWARE] path:', request.nextUrl.pathname);
   }
-}, {
-  publicRoutes: [
-    '/',
-    '/sign-in(.*)',
-    '/sign-up(.*)',
-    '/sso-callback(.*)',
-    '/api/stripe/webhook',
-    '/api/webhooks/(.*)',
-    '/api/qstash/(.*)',
-    '/api/proxy/(.*)',
-    '/api/export/(.*)',
-    '/api/email/send-scheduled',
-    // E2E test admin routes (dev only - routes check NODE_ENV internally)
-    '/api/admin/e2e/(.*)',
-  ],
+
+  if (isPublicRoute(request.nextUrl.pathname)) {
+    return NextResponse.next();
+  }
+
+  if (hasBypassAuthHeader(request)) {
+    return NextResponse.next();
+  }
+
+  await auth.protect();
+  return NextResponse.next();
 });
 
-export default async function middleware(request: NextRequest) {
+export default async function middleware(request: NextRequest, event: NextFetchEvent) {
   const userAgent = request.headers.get('user-agent');
   const pathname = request.nextUrl.pathname;
 
@@ -75,7 +110,7 @@ export default async function middleware(request: NextRequest) {
   }
 
   // For all other requests, use Clerk middleware
-  return clerk(request, {} as any);
+  return clerk(request, event);
 }
 
 export const config = {

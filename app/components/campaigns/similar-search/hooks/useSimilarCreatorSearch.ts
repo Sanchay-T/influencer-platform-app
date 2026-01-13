@@ -9,7 +9,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CreatorSnapshot } from '@/components/lists/add-to-list-button';
 import { structuredConsole } from '@/lib/logging/console-proxy';
-import { hasContactEmail, normalizePlatformValue } from '../../keyword-search/utils';
+import { getStringProperty, toRecord } from '@/lib/utils/type-guards';
+import { type Creator, hasContactEmail, normalizePlatformValue } from '../../keyword-search/utils';
 import { buildProfileLink } from '../../keyword-search/utils/profile-link';
 import { dedupeCreators } from '../../utils/dedupe-creators';
 import { useViewPreferences } from '../useViewPreferences';
@@ -32,7 +33,7 @@ export interface ProgressInfo {
 
 export interface UseSimilarCreatorSearchResult {
 	// Core state
-	creators: unknown[];
+	creators: Creator[];
 	isLoading: boolean;
 	stillProcessing: boolean;
 	progressInfo: ProgressInfo | null;
@@ -78,7 +79,7 @@ export interface UseSimilarCreatorSearchResult {
 	handleIntermediateResults: (data: { creators?: unknown[] }) => void;
 
 	// Ref
-	resultsContainerRef: React.RefObject<HTMLDivElement>;
+	resultsContainerRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export function useSimilarCreatorSearch(
@@ -108,7 +109,7 @@ export function useSimilarCreatorSearch(
 	);
 
 	// Core state
-	const [creators, setCreators] = useState<unknown[]>(initialSeed.creators);
+	const [creators, setCreators] = useState<Creator[]>(initialSeed.creators);
 	const [isLoading, setIsLoading] = useState(initialSeed.isLoading);
 	const [stillProcessing, setStillProcessing] = useState(false);
 	const [progressInfo, setProgressInfo] = useState<ProgressInfo | null>(null);
@@ -167,7 +168,7 @@ export function useSimilarCreatorSearch(
 		if (!emailOnly) {
 			return creators;
 		}
-		return creators.filter((c) => hasContactEmail(c as Record<string, unknown>));
+		return creators.filter((c) => hasContactEmail(c));
 	}, [creators, emailOnly]);
 
 	// Pagination calculations
@@ -186,15 +187,15 @@ export function useSimilarCreatorSearch(
 
 	// Build profile link helper
 	const renderProfileLink = useCallback(
-		(creator: Record<string, unknown>) => {
-			if (!creator) {
-				return '#';
-			}
-			if (creator.profileUrl) {
-				return creator.profileUrl as string;
+		(creator: Creator) => {
+			const record = toRecord(creator);
+			if (!record) return '#';
+			const profileUrl = getStringProperty(record, 'profileUrl');
+			if (profileUrl) {
+				return profileUrl;
 			}
 			const platform = normalizePlatformValue(
-				(creator.platform as string) || searchData?.platform || 'tiktok'
+				getStringProperty(record, 'platform') ?? searchData?.platform ?? 'tiktok'
 			);
 			return buildProfileLink(creator, platform || 'tiktok');
 		},
@@ -208,7 +209,7 @@ export function useSimilarCreatorSearch(
 		}
 		const pageCreators = filteredCreators.slice(startIndex, startIndex + itemsPerPage);
 		return transformSimilarCreatorsToRows(
-			pageCreators as Record<string, unknown>[],
+			pageCreators,
 			platformHint,
 			startIndex,
 			renderProfileLink
@@ -372,6 +373,6 @@ export function useSimilarCreatorSearch(
 		handleIntermediateResults,
 
 		// Ref
-		resultsContainerRef: resultsContainerRef as React.RefObject<HTMLDivElement>,
+		resultsContainerRef,
 	};
 }

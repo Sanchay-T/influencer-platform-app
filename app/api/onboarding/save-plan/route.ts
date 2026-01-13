@@ -4,9 +4,11 @@ import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { db } from '@/lib/db';
 import { userSubscriptions, users } from '@/lib/db/schema';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
+import { getStringProperty, toRecord } from '@/lib/utils/type-guards';
 
 const logger = createCategoryLogger(LogCategory.ONBOARDING);
 
+// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function POST(req: Request) {
 	try {
 		const { userId } = await getAuthOrTest();
@@ -15,7 +17,10 @@ export async function POST(req: Request) {
 		}
 
 		const body = await req.json();
-		const { planId } = body;
+		const record = toRecord(body);
+		const planId =
+			(record ? getStringProperty(record, 'planId') : null) ??
+			(record ? getStringProperty(record, 'selectedPlan') : null);
 		// Note: billingInterval is not stored in DB - Stripe is source of truth for billing
 
 		if (!planId) {

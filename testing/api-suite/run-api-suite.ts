@@ -6,6 +6,7 @@
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { buildTestAuthHeaders } from '@/lib/auth/testable-auth'
+import { getArrayProperty, getStringProperty, toRecord } from '@/lib/utils/type-guards'
 
 type TestContext = {
   baseUrl: string
@@ -24,7 +25,7 @@ type ApiTest = {
   path: string | ((ctx: TestContext) => string)
   body?: Record<string, unknown> | ((ctx: TestContext) => Record<string, unknown> | undefined)
   expectStatus?: number
-  onSuccess?: (payload: any, ctx: TestContext) => void | Promise<void>
+  onSuccess?: (payload: unknown, ctx: TestContext) => void | Promise<void>
 }
 
 const automationUserId = process.env.AUTOMATION_USER_ID || 'user_33neqrnH0OrnbvECgCZF9YT4E7F'
@@ -65,7 +66,7 @@ async function loadCookieHeader(): Promise<string> {
   }
 }
 
-function buildHeaders(sessionToken: string, cookieHeader: string) {
+function buildHeaders(sessionToken: string, cookieHeader: string): Record<string, string> {
   const testHeaders = buildTestAuthHeaders(
     {
       userId: automationUserId,
@@ -90,7 +91,7 @@ function resolveBody(body: ApiTest['body'], ctx: TestContext) {
   return typeof body === 'function' ? body(ctx) : body
 }
 
-function summarizePayload(payload: any) {
+function summarizePayload(payload: unknown) {
   if (!payload) return payload
   if (Array.isArray(payload)) return payload.slice(0, 3)
   if (typeof payload === 'object') {
@@ -148,7 +149,8 @@ async function run() {
         searchType: 'keyword',
       }),
       onSuccess: (payload, ctx) => {
-        const campaignId = payload?.id
+        const record = toRecord(payload)
+        const campaignId = record ? getStringProperty(record, 'id') : null
         if (campaignId) {
           ctx.campaignId = campaignId
           console.log(`   ↳ campaignId stored: ${campaignId}`)
@@ -166,7 +168,8 @@ async function run() {
         searchType: 'similar',
       }),
       onSuccess: (payload, ctx) => {
-        const campaignId = payload?.id
+        const record = toRecord(payload)
+        const campaignId = record ? getStringProperty(record, 'id') : null
         if (campaignId) {
           ctx.similarCampaignId = campaignId
           console.log(`   ↳ similar campaign stored: ${campaignId}`)
@@ -197,7 +200,9 @@ async function run() {
         }
       },
       onSuccess: (payload, ctx) => {
-        const listId = payload?.list?.id
+        const record = toRecord(payload)
+        const list = record ? toRecord(record.list) : null
+        const listId = list ? getStringProperty(list, 'id') : null
         if (listId) {
           ctx.listId = listId
           console.log(`   ↳ list stored: ${listId}`)
@@ -211,8 +216,13 @@ async function run() {
       expectStatus: 200,
       onSuccess: (payload, ctx) => {
         if (ctx.listName) {
-          const lists = payload?.lists ?? []
-          const match = lists.find((list: any) => list?.name === ctx.listName)
+          const record = toRecord(payload)
+          const lists = record ? getArrayProperty(record, 'lists') ?? [] : []
+          const match = lists.find((list) => {
+            const listRecord = toRecord(list)
+            const name = listRecord ? getStringProperty(listRecord, 'name') : null
+            return name === ctx.listName
+          })
           console.log(`   ↳ list present: ${Boolean(match)}`)
         }
       },
@@ -231,7 +241,8 @@ async function run() {
         }
       },
       onSuccess: (payload, ctx) => {
-        const jobId = payload?.jobId
+        const record = toRecord(payload)
+        const jobId = record ? getStringProperty(record, 'jobId') : null
         if (jobId) {
           ctx.youtubeJobId = jobId
           console.log(`   ↳ youtube job stored: ${jobId}`)
@@ -261,7 +272,8 @@ async function run() {
         }
       },
       onSuccess: (payload, ctx) => {
-        const jobId = payload?.jobId
+        const record = toRecord(payload)
+        const jobId = record ? getStringProperty(record, 'jobId') : null
         if (jobId) {
           ctx.tiktokJobId = jobId
           console.log(`   ↳ tiktok job stored: ${jobId}`)
@@ -290,7 +302,8 @@ async function run() {
         }
       },
       onSuccess: (payload, ctx) => {
-        const jobId = payload?.jobId
+        const record = toRecord(payload)
+        const jobId = record ? getStringProperty(record, 'jobId') : null
         if (jobId) {
           ctx.instagramJobId = jobId
           console.log(`   ↳ instagram job stored: ${jobId}`)
@@ -317,7 +330,7 @@ async function run() {
     const expectStatus = test.expectStatus ?? 200
     const body = resolveBody(test.body, context)
 
-    const requestHeaders = new Headers(headers as Record<string, string>)
+    const requestHeaders = new Headers(headers)
     if (body) {
       requestHeaders.set('Content-Type', 'application/json')
     }
@@ -330,7 +343,7 @@ async function run() {
     })
 
     const rawText = await res.text()
-    let payload: any = null
+    let payload: unknown = null
     try {
       payload = rawText ? JSON.parse(rawText) : null
     } catch {

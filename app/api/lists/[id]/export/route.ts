@@ -3,17 +3,18 @@ import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { recordExport } from '@/lib/db/queries/list-queries';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+	const { id } = await params;
 	const { userId } = await getAuthOrTest();
 	if (!userId) {
 		return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 	}
 	try {
 		const body = await request.json().catch(() => ({ format: 'csv' }));
-		const exportJob = await recordExport(userId, params.id, body.format ?? 'csv');
+		const exportJob = await recordExport(userId, id, body.format ?? 'csv');
 		return NextResponse.json({ export: exportJob }, { status: 202 });
 	} catch (error) {
-		const message = (error as Error).message;
+		const message = error instanceof Error ? error.message : '';
 		if (message === 'USER_NOT_FOUND' || message === 'LIST_NOT_FOUND') {
 			return NextResponse.json({ error: 'List not found' }, { status: 404 });
 		}

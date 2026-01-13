@@ -6,8 +6,8 @@ import { updateUserProfile } from '@/lib/db/queries/user-queries';
 import { campaigns, scrapingJobs, scrapingResults } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
-export async function GET() {
-	return POST();
+export async function GET(request: Request) {
+	return POST(request);
 }
 
 export async function POST(request: Request) {
@@ -83,7 +83,6 @@ export async function POST(request: Request) {
 				// Trial system - Fresh 7-day trial
 				trialStartDate: now,
 				trialEndDate: trialEndDate,
-				trialStatus: 'active',
 
 				// Plan reset to free tier
 				currentPlan: 'free',

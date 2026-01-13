@@ -1,4 +1,4 @@
-import type { PlatformResult } from '@/lib/db/schema';
+export type PlatformResult = unknown[];
 
 export interface ScrapingResult {
 	id: string;

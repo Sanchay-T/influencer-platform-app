@@ -18,6 +18,7 @@
  */
 
 import 'dotenv/config';
+import { getNumberProperty, getStringProperty, toRecord } from '@/lib/utils/type-guards';
 
 // ============================================================================
 // CONFIGURATION
@@ -67,7 +68,7 @@ async function apiCall(
     body?: Record<string, unknown>;
     headers: Record<string, string>;
   }
-): Promise<{ status: number; data: any; ok: boolean }> {
+): Promise<{ status: number; data: unknown; ok: boolean }> {
   const { method = 'GET', body, headers } = options;
 
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -76,7 +77,7 @@ async function apiCall(
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  let data: any = null;
+  let data: unknown = null;
   const text = await res.text();
   try {
     data = JSON.parse(text);
@@ -206,8 +207,9 @@ async function scenario_FreshUserOnboarding() {
   }
 
   // Validate status shows steps completed
-  const statusData = status.data;
-  console.log(`   ✓ Status: step1=${statusData.step1Completed}, step2=${statusData.step2Completed}`);
+  const statusRecord = toRecord(status.data);
+  const onboardingStep = statusRecord ? getStringProperty(statusRecord, 'onboardingStep') : null;
+  console.log(`   ✓ Status: onboardingStep=${onboardingStep ?? 'unknown'}`);
 
   return {
     passed: true,
@@ -266,20 +268,24 @@ async function scenario_PaymentValidation() {
   const billing = await apiCall('/api/billing/status', { headers });
 
   // Key validation: currentPlan should NOT be a paid plan without payment
-  const hasUnauthorizedPlan = billing.data?.currentPlan &&
-    ['glow_up', 'viral_surge', 'fame_flex'].includes(billing.data.currentPlan) &&
-    !billing.data?.stripeSubscriptionId;
+  const billingRecord = toRecord(billing.data);
+  const currentPlan = billingRecord ? getStringProperty(billingRecord, 'currentPlan') : null;
+  const stripeSubscriptionId = billingRecord
+    ? getStringProperty(billingRecord, 'stripeSubscriptionId')
+    : null;
+  const hasUnauthorizedPlan =
+    !!currentPlan && ['glow_up', 'viral_surge', 'fame_flex'].includes(currentPlan) && !stripeSubscriptionId;
 
   if (hasUnauthorizedPlan) {
     return {
       passed: false,
-      details: `CRITICAL: User has paid plan (${billing.data.currentPlan}) without Stripe subscription!`,
+      details: `CRITICAL: User has paid plan (${currentPlan}) without Stripe subscription!`,
     };
   }
 
   return {
     passed: true,
-    details: `Payment validation working: currentPlan=${billing.data?.currentPlan || 'null'}, stripeId=${billing.data?.stripeSubscriptionId || 'null'}`,
+    details: `Payment validation working: currentPlan=${currentPlan || 'null'}, stripeId=${stripeSubscriptionId || 'null'}`,
   };
 }
 
@@ -357,10 +363,12 @@ async function scenario_IdempotentCompletion() {
 
   // Verify user state is consistent
   const finalStatus = await apiCall('/api/onboarding/status', { headers });
+  const finalRecord = toRecord(finalStatus.data);
+  const finalStep = finalRecord ? getStringProperty(finalRecord, 'onboardingStep') : null;
 
   return {
     passed: true,
-    details: `Onboarding completion is idempotent. Called 3 times with consistent status=${complete1.status}. Final state: onboardingCompleted=${finalStatus.data?.onboardingCompleted}`,
+    details: `Onboarding completion is idempotent. Called 3 times with consistent status=${complete1.status}. Final onboardingStep=${finalStep ?? 'unknown'}`,
   };
 }
 
@@ -387,7 +395,8 @@ async function scenario_NullPlanPreserved() {
   console.log(`   Response: ${JSON.stringify(billing.data)}`);
 
   // Key validation: currentPlan should be NULL, not 'free'
-  const currentPlan = billing.data?.currentPlan;
+  const billingRecord = toRecord(billing.data);
+  const currentPlan = billingRecord ? getStringProperty(billingRecord, 'currentPlan') : null;
 
   if (currentPlan === 'free') {
     return {
@@ -397,7 +406,7 @@ async function scenario_NullPlanPreserved() {
   }
 
   // null, undefined, or no currentPlan field are all acceptable
-  const planIsNullish = currentPlan === null || currentPlan === undefined || !('currentPlan' in billing.data);
+  const planIsNullish = currentPlan === null;
 
   return {
     passed: planIsNullish || billing.status === 404, // 404 is also acceptable for new user
@@ -437,7 +446,14 @@ async function scenario_BillingStatusStructure() {
     };
   }
 
-  const data = billing.data;
+  const data = toRecord(billing.data);
+  if (!data) {
+    return {
+      passed: false,
+      details: 'Billing status did not return an object payload',
+    };
+  }
+
   console.log(`   Response fields: ${Object.keys(data).join(', ')}`);
 
   // Validate structure has required fields
@@ -453,7 +469,7 @@ async function scenario_BillingStatusStructure() {
   }
 
   // Validate usageInfo has limit fields (actual structure)
-  const usageInfo = data.usageInfo;
+  const usageInfo = toRecord(data.usageInfo);
   if (!usageInfo) {
     return {
       passed: false,
@@ -461,19 +477,19 @@ async function scenario_BillingStatusStructure() {
     };
   }
 
-  const limitFields = ['campaignsLimit', 'creatorsLimit'];
-  const hasLimitFields = limitFields.every(f => f in usageInfo);
-
-  if (!hasLimitFields) {
+  const campaignsLimit = getNumberProperty(usageInfo, 'campaignsLimit');
+  const creatorsLimit = getNumberProperty(usageInfo, 'creatorsLimit');
+  if (campaignsLimit === null || creatorsLimit === null) {
     return {
       passed: false,
       details: `usageInfo missing limit fields. Got: ${JSON.stringify(usageInfo)}`,
     };
   }
 
+  const currentPlanLabel = getStringProperty(data, 'currentPlan') || 'none';
   return {
     passed: true,
-    details: `Billing status structure valid. Plan: ${data.currentPlan || 'none'}, Limits: campaigns=${usageInfo.campaignsLimit}, creators=${usageInfo.creatorsLimit}`,
+    details: `Billing status structure valid. Plan: ${currentPlanLabel}, Limits: campaigns=${campaignsLimit}, creators=${creatorsLimit}`,
   };
 }
 
@@ -504,7 +520,13 @@ async function scenario_UserTablesConsistency() {
     };
   }
 
-  const data = profile.data;
+  const data = toRecord(profile.data);
+  if (!data) {
+    return {
+      passed: false,
+      details: 'Profile response did not include an object payload',
+    };
+  }
 
   // Check for fields that come from different tables:
   // - users: fullName, businessName
@@ -513,8 +535,12 @@ async function scenario_UserTablesConsistency() {
   // - user_billing: stripeCustomerId
 
   const tableIndicators = {
-    users: data.fullName || data.businessName || data.email,
-    user_subscriptions: 'trialStatus' in data || 'planKey' in data || 'currentPlan' in data,
+    users:
+      getStringProperty(data, 'fullName') ||
+      getStringProperty(data, 'businessName') ||
+      getStringProperty(data, 'email'),
+    user_subscriptions:
+      'trialStatus' in data || 'planKey' in data || 'currentPlan' in data,
     // user_usage and user_billing might not be populated for new users
   };
 

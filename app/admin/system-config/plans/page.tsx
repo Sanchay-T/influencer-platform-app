@@ -6,6 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import {
+	getArrayProperty,
+	getBooleanProperty,
+	getNumberProperty,
+	getStringProperty,
+	toRecord,
+} from '@/lib/utils/type-guards';
 
 interface PlanItem {
 	planKey: string;
@@ -14,8 +21,35 @@ interface PlanItem {
 	campaignsLimit: number;
 	creatorsLimit: number;
 	isActive: boolean;
-	features: any;
+	features: unknown;
 	updatedAt?: string;
+}
+
+function parsePlanItem(value: unknown): PlanItem | null {
+	const record = toRecord(value);
+	if (!record) return null;
+
+	const planKey = getStringProperty(record, 'planKey');
+	const displayName = getStringProperty(record, 'displayName');
+	if (!(planKey && displayName)) return null;
+
+	const description = typeof record.description === 'string' ? record.description : undefined;
+	const updatedAt = typeof record.updatedAt === 'string' ? record.updatedAt : undefined;
+
+	return {
+		planKey,
+		displayName,
+		description,
+		campaignsLimit: getNumberProperty(record, 'campaignsLimit') ?? 0,
+		creatorsLimit: getNumberProperty(record, 'creatorsLimit') ?? 0,
+		isActive: getBooleanProperty(record, 'isActive') ?? false,
+		features: record.features ?? {},
+		updatedAt,
+	};
+}
+
+function resolveErrorMessage(error: unknown, fallback: string) {
+	return error instanceof Error ? error.message : fallback;
 }
 
 export default function PlansAdminPage() {
@@ -30,9 +64,14 @@ export default function PlansAdminPage() {
 				const res = await fetch('/api/admin/plans');
 				if (!res.ok) throw new Error('Unauthorized or failed to fetch');
 				const data = await res.json();
-				setPlans(data.plans || []);
-			} catch (e: any) {
-				toast.error(e?.message || 'Failed to load plans');
+				const record = toRecord(data);
+				const rawPlans = record ? (getArrayProperty(record, 'plans') ?? []) : [];
+				const parsedPlans = rawPlans
+					.map((plan) => parsePlanItem(plan))
+					.filter((plan): plan is PlanItem => plan !== null);
+				setPlans(parsedPlans);
+			} catch (e: unknown) {
+				toast.error(resolveErrorMessage(e, 'Failed to load plans'));
 			} finally {
 				setLoading(false);
 			}
@@ -58,10 +97,13 @@ export default function PlansAdminPage() {
 				}),
 			});
 			const data = await res.json();
-			if (!(res.ok && data.success)) throw new Error(data.error || 'Save failed');
+			const record = toRecord(data);
+			const success = record ? record.success === true : false;
+			const errorMessage = record ? getStringProperty(record, 'error') : null;
+			if (!(res.ok && success)) throw new Error(errorMessage || 'Save failed');
 			toast.success('Plan updated');
-		} catch (e: any) {
-			toast.error(e?.message || 'Failed to save plan');
+		} catch (e: unknown) {
+			toast.error(resolveErrorMessage(e, 'Failed to save plan'));
 		} finally {
 			setSavingKey(null);
 		}

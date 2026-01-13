@@ -45,7 +45,10 @@ async function validateAccessInternal(userId: string): Promise<AccessResultWithU
 
 	// Derive trial status dynamically instead of trusting DB field
 	// @why DB trial_status can be stale if webhook failed or user abandoned checkout
-	const effectiveTrialStatus = deriveTrialStatus(user.subscriptionStatus, user.trialEndDate);
+	const effectiveTrialStatus = deriveTrialStatus(
+		user.subscriptionStatus,
+		user.trialEndDate ?? null
+	);
 	const hasActiveTrial = effectiveTrialStatus === 'active';
 
 	// Check onboarding
@@ -98,8 +101,9 @@ export async function validateCampaignCreation(userId: string): Promise<AccessRe
 	}
 
 	const user = accessResult.user;
-	const currentPlan = user.currentPlan as PlanKey | null;
-	if (!(currentPlan && isValidPlan(currentPlan))) {
+	const planCandidate = user.currentPlan ?? '';
+	const currentPlan: PlanKey | null = isValidPlan(planCandidate) ? planCandidate : null;
+	if (!currentPlan) {
 		return {
 			allowed: false,
 			reason: 'No active plan found.',
@@ -145,8 +149,9 @@ export async function validateCreatorSearch(
 	}
 
 	const user = accessResult.user;
-	const currentPlan = user.currentPlan as PlanKey | null;
-	if (!(currentPlan && isValidPlan(currentPlan))) {
+	const planCandidate = user.currentPlan ?? '';
+	const currentPlan: PlanKey | null = isValidPlan(planCandidate) ? planCandidate : null;
+	if (!currentPlan) {
 		return {
 			allowed: false,
 			reason: 'No active plan found.',

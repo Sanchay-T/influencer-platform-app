@@ -27,13 +27,21 @@ export interface PerformanceMetrics {
 	/** Custom timing phases */
 	phases?: Record<string, number>;
 	/** Additional metadata */
-	metadata?: Record<string, any>;
+	metadata?: Record<string, unknown>;
 }
 
 /**
  * Performance thresholds for different operation types
  */
-const PERFORMANCE_THRESHOLDS = {
+type PerformanceThresholds = {
+	api: { fast: number; normal: number; slow: number };
+	database: { fast: number; normal: number; slow: number };
+	image: { fast: number; normal: number; slow: number };
+	email: { fast: number; normal: number; slow: number };
+	job: { fast: number; normal: number; slow: number };
+};
+
+const PERFORMANCE_THRESHOLDS: PerformanceThresholds = {
 	api: {
 		fast: 200, // < 200ms is fast
 		normal: 1000, // < 1s is normal
@@ -59,7 +67,7 @@ const PERFORMANCE_THRESHOLDS = {
 		normal: 30000, // < 30s is normal
 		slow: 120000, // > 2 minutes is slow
 	},
-} as const;
+};
 
 /**
  * Performance monitor class for tracking operations
@@ -150,7 +158,7 @@ export class PerformanceMonitor {
 	/**
 	 * Add custom metric to the performance data
 	 */
-	addMetric(key: string, value: any): void {
+	addMetric(key: string, value: unknown): void {
 		if (!this.context.metadata) {
 			this.context.metadata = {};
 		}
@@ -208,7 +216,7 @@ export class PerformanceMonitor {
 
 		const message = `${this.operationName} completed (${performanceLevel}): ${duration}ms`;
 
-		logger.logEntry(level as any, message, logContext, LogCategory.PERFORMANCE);
+		logger.log(level, message, logContext, LogCategory.PERFORMANCE);
 
 		// Alert on very slow operations
 		if (performanceLevel === 'very-slow') {
@@ -369,8 +377,8 @@ export function logSystemMetrics(context: LogContext = {}): void {
 		alert = 'very-high-memory-usage';
 	}
 
-	logger.logEntry(
-		level as any,
+	logger.log(
+		level,
 		'System metrics report',
 		{
 			...context,

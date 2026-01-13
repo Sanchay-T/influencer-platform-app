@@ -16,6 +16,7 @@ import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { type BillingInterval, CheckoutService, isValidPlan, type PlanKey } from '@/lib/billing';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
+import { isString, toError, toRecord } from '@/lib/utils/type-guards';
 
 const logger = createCategoryLogger(LogCategory.BILLING);
 
@@ -38,11 +39,9 @@ export async function POST(request: NextRequest) {
 		// PARSE & VALIDATE REQUEST
 		// ─────────────────────────────────────────────────────────────
 
-		const body = await request.json();
-		const { planId, billing = 'monthly' } = body as {
-			planId?: string;
-			billing?: string;
-		};
+		const body = toRecord(await request.json());
+		const planId = isString(body?.planId) ? body.planId : '';
+		const billing = isString(body?.billing) ? body.billing : 'monthly';
 
 		if (!planId) {
 			return NextResponse.json({ error: 'Plan ID is required' }, { status: 400 });
@@ -55,7 +54,7 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		const interval = billing === 'yearly' ? 'yearly' : 'monthly';
+		const interval: BillingInterval = billing === 'yearly' ? 'yearly' : 'monthly';
 
 		logger.info('Creating checkout session', {
 			userId,
@@ -80,7 +79,7 @@ export async function POST(request: NextRequest) {
 		// Build origin URL for redirects with proper https:// scheme
 		// Priority: origin header > construct from host header > env var
 		let origin = request.headers.get('origin');
-		
+
 		if (!origin) {
 			// Fallback: construct from host header (Vercel provides x-forwarded-host)
 			const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
@@ -90,7 +89,7 @@ export async function POST(request: NextRequest) {
 				origin = `${protocol}://${host}`;
 			}
 		}
-		
+
 		// Ensure origin has a scheme (some edge cases may strip it)
 		if (origin && !origin.startsWith('http://') && !origin.startsWith('https://')) {
 			origin = `https://${origin}`;
@@ -99,8 +98,8 @@ export async function POST(request: NextRequest) {
 		const result = await CheckoutService.createCheckout({
 			userId,
 			email: user.email || '',
-			plan: planId as PlanKey,
-			interval: interval as BillingInterval,
+			plan: planId,
+			interval,
 			redirectOrigin: origin,
 		});
 
@@ -119,7 +118,7 @@ export async function POST(request: NextRequest) {
 		return NextResponse.json(result);
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-		logger.error('Checkout session creation failed', error as Error);
+		logger.error('Checkout session creation failed', toError(error));
 
 		return NextResponse.json(
 			{ error: 'Failed to create checkout session', details: errorMessage },

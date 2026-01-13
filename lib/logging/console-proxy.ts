@@ -1,10 +1,10 @@
 import { logger } from './logger';
 import { type LogCategory, LogLevel } from './types';
 
-type ConsoleMethod = (...args: any[]) => void;
+type ConsoleMethod = (...args: unknown[]) => void;
 
 function createProxy(level: LogLevel, category?: LogCategory): ConsoleMethod {
-	return (...args: any[]) => {
+	return (...args: unknown[]) => {
 		logger.captureConsole(level, args, category);
 	};
 }

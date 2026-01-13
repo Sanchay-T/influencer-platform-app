@@ -3,6 +3,7 @@
 import { AlertCircle, Calendar, CheckCircle, Clock, Mail, Send } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { isRecord, isString } from '@/lib/utils/type-guards';
 
 interface EmailScheduleItem {
 	type: string;
@@ -13,7 +14,7 @@ interface EmailScheduleItem {
 }
 
 interface EmailScheduleDisplayProps {
-	emailScheduleStatus: Record<string, any>;
+	emailScheduleStatus: Record<string, unknown>;
 	className?: string;
 }
 
@@ -33,17 +34,23 @@ export function EmailScheduleDisplay({
 
 		const schedules: EmailScheduleItem[] = [];
 
+		const isScheduleStatus = (value: unknown): value is EmailScheduleItem['status'] => {
+			return (
+				value === 'sent' || value === 'scheduled' || value === 'failed' || value === 'cancelled'
+			);
+		};
+
 		// Process each email type
-		Object.entries(emailScheduleStatus).forEach(([emailType, data]: [string, any]) => {
-			if (data && typeof data === 'object') {
-				schedules.push({
-					type: emailType,
-					status: data.status || 'scheduled',
-					timestamp: data.timestamp,
-					scheduledFor: data.scheduledFor,
-					messageId: data.messageId,
-				});
-			}
+		Object.entries(emailScheduleStatus).forEach(([emailType, data]) => {
+			if (!isRecord(data)) return;
+			const status = isScheduleStatus(data.status) ? data.status : 'scheduled';
+			schedules.push({
+				type: emailType,
+				status,
+				timestamp: isString(data.timestamp) ? data.timestamp : undefined,
+				scheduledFor: isString(data.scheduledFor) ? data.scheduledFor : undefined,
+				messageId: isString(data.messageId) ? data.messageId : undefined,
+			});
 		});
 
 		return schedules;

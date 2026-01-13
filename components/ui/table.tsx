@@ -2,7 +2,7 @@ import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
-interface TableProps extends React.HTMLAttributes<HTMLTableElement> {
+interface TableProps extends React.TableHTMLAttributes<HTMLTableElement> {
 	children: React.ReactNode;
 }
 
@@ -18,11 +18,11 @@ interface TableRowProps extends React.HTMLAttributes<HTMLTableRowElement> {
 	children: React.ReactNode;
 }
 
-interface TableHeadProps extends React.HTMLAttributes<HTMLTableCellElement> {
+interface TableHeadProps extends React.ThHTMLAttributes<HTMLTableCellElement> {
 	children: React.ReactNode;
 }
 
-interface TableCellProps extends React.HTMLAttributes<HTMLTableCellElement> {
+interface TableCellProps extends React.TdHTMLAttributes<HTMLTableCellElement> {
 	children: React.ReactNode;
 }
 
@@ -47,7 +47,10 @@ const TableBody = React.forwardRef<HTMLTableSectionElement, TableBodyProps>(
 );
 TableBody.displayName = 'TableBody';
 
-const TableFooter = React.forwardRef(({ className, ...props }, ref) => (
+const TableFooter = React.forwardRef<
+	HTMLTableSectionElement,
+	React.HTMLAttributes<HTMLTableSectionElement>
+>(({ className, ...props }, ref) => (
 	<tfoot
 		ref={ref}
 		className={cn('border-t bg-muted/50 font-medium [&>tr]:last:border-b-0', className)}
@@ -95,7 +98,10 @@ const TableCell = React.forwardRef<HTMLTableCellElement, TableCellProps>(
 );
 TableCell.displayName = 'TableCell';
 
-const TableCaption = React.forwardRef(({ className, ...props }, ref) => (
+const TableCaption = React.forwardRef<
+	HTMLTableCaptionElement,
+	React.HTMLAttributes<HTMLTableCaptionElement>
+>(({ className, ...props }, ref) => (
 	<caption ref={ref} className={cn('mt-4 text-sm text-muted-foreground', className)} {...props} />
 ));
 TableCaption.displayName = 'TableCaption';

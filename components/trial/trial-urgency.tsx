@@ -15,7 +15,17 @@ interface TrialUrgencyProps {
 }
 
 export default function TrialUrgency({ trialData }: TrialUrgencyProps) {
-	const [currentOffer, setCurrentOffer] = useState<string | null>(null);
+	type OfferKey = 'final24h' | 'last48h' | 'almostExpired' | 'searchLimit';
+	type Offer = {
+		title: string;
+		description: string;
+		discount: string;
+		urgency: string;
+		color: string;
+		cta: string;
+	};
+
+	const [currentOffer, setCurrentOffer] = useState<OfferKey | null>(null);
 
 	useEffect(() => {
 		// Dynamic offers based on trial progress
@@ -30,7 +40,7 @@ export default function TrialUrgency({ trialData }: TrialUrgencyProps) {
 		}
 	}, [trialData]);
 
-	const offers = {
+	const offers: Record<OfferKey, Offer> = {
 		final24h: {
 			title: '🚨 Final 24 Hours',
 			description: 'Your trial expires tomorrow! Save 40% on Premium - today only',
@@ -67,7 +77,7 @@ export default function TrialUrgency({ trialData }: TrialUrgencyProps) {
 
 	if (!currentOffer) return null;
 
-	const offer = offers[currentOffer as keyof typeof offers];
+	const offer = offers[currentOffer];
 
 	return (
 		<Card className="border-2 border-dashed border-gray-300 bg-gradient-to-r from-blue-50 to-purple-50">

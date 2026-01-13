@@ -12,6 +12,7 @@ import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { StripeClient } from '@/lib/billing';
 import { getPlanDisplayConfig } from '@/lib/billing/plan-display-config';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
+import { getNumberProperty, toError, toRecord, type UnknownRecord } from '@/lib/utils/type-guards';
 
 const logger = createCategoryLogger(LogCategory.BILLING);
 
@@ -55,18 +56,18 @@ export async function GET(req: Request) {
 		const planDisplay = getPlanDisplayConfig(planId);
 
 		// Extract subscription details
-		const subscription = session.subscription as {
-			id: string;
-			status: string;
-			current_period_end: number;
-			trial_end: number | null;
-		} | null;
+		const subscription =
+			session.subscription && typeof session.subscription === 'object'
+				? session.subscription
+				: null;
+		const subscriptionRecord: UnknownRecord = subscription ? (toRecord(subscription) ?? {}) : {};
+		const billingInterval = interval === 'yearly' ? 'yearly' : 'monthly';
 
 		// Build response matching SessionData type expected by success-card.tsx
 		const response = {
 			sessionId: session.id,
 			planId,
-			billing: interval as 'monthly' | 'yearly',
+			billing: billingInterval,
 			plan: {
 				name: planDisplay?.name || 'Unknown Plan',
 				monthlyPrice: planDisplay?.monthlyPrice || '$0',
@@ -79,8 +80,8 @@ export async function GET(req: Request) {
 				? {
 						id: subscription.id,
 						status: subscription.status,
-						current_period_end: subscription.current_period_end,
-						trial_end: subscription.trial_end || 0,
+						current_period_end: getNumberProperty(subscriptionRecord, 'current_period_end') ?? 0,
+						trial_end: getNumberProperty(subscriptionRecord, 'trial_end') ?? 0,
 					}
 				: null,
 			customer_email: session.customer_email || '',
@@ -96,7 +97,7 @@ export async function GET(req: Request) {
 		return NextResponse.json(response);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : 'Unknown error';
-		logger.error('Failed to retrieve session', error as Error);
+		logger.error('Failed to retrieve session', toError(error));
 
 		return NextResponse.json(
 			{ error: 'Failed to retrieve session', details: message },

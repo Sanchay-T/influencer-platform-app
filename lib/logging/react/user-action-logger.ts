@@ -41,7 +41,7 @@ export function useUserActionLogger() {
 	);
 
 	const logFormSubmission = useCallback(
-		(formName: string, formData?: any, context?: LogContext) => {
+		(formName: string, formData?: unknown, context?: LogContext) => {
 			if (!canLogInfo) {
 				return;
 			}

@@ -1,4 +1,4 @@
-import { PLAN_ORDER, type PlanKey as BillingPlanKey } from '@/lib/billing/plan-config';
+import { type PlanKey as BillingPlanKey, PLAN_ORDER } from '@/lib/billing/plan-config';
 
 // Client-side PlanKey includes 'free' for non-subscribers
 export type PlanKey = 'free' | BillingPlanKey;
@@ -49,9 +49,12 @@ const planFeatures: Record<
 
 export function buildPlanFns(currentPlan: PlanKey) {
 	const currentPlanIndex = planHierarchy.indexOf(currentPlan);
+	const isPlanKey = (value: string): value is PlanKey =>
+		planHierarchy.some((plan) => plan === value);
 
 	const hasPlan = (plan: string): boolean => {
-		const requiredPlanIndex = planHierarchy.indexOf(plan as PlanKey);
+		if (!isPlanKey(plan)) return plan === 'free';
+		const requiredPlanIndex = planHierarchy.indexOf(plan);
 		if (currentPlanIndex === -1 || requiredPlanIndex === -1) return plan === 'free';
 		return currentPlanIndex >= requiredPlanIndex;
 	};

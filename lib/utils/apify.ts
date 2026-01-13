@@ -1,6 +1,14 @@
 import { ApifyClient as OriginalApifyClient } from 'apify-client';
-import type { CreatorResult } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import {
+	getNumberProperty,
+	getStringProperty,
+	isNumber,
+	isRecord,
+	isString,
+	toArray,
+	toRecord,
+} from '@/lib/utils/type-guards';
 
 interface ApifyRunOptions {
 	keywords: string[];
@@ -18,6 +26,30 @@ type ActorStatus =
 	| 'ABORTED'
 	| 'TIMING-OUT'
 	| 'TIMED-OUT';
+
+const ACTOR_STATUSES: ActorStatus[] = [
+	'SUCCEEDED',
+	'FAILED',
+	'RUNNING',
+	'READY',
+	'ABORTING',
+	'ABORTED',
+	'TIMING-OUT',
+	'TIMED-OUT',
+];
+
+const isActorStatus = (value: unknown): value is ActorStatus =>
+	typeof value === 'string' && ACTOR_STATUSES.some((status) => status === value);
+
+type CreatorResult = {
+	profile: string;
+	keywords: string[];
+	platformName: string;
+	followers: number;
+	region: string;
+	profileUrl: string;
+	creatorCategory: string[];
+};
 
 interface ApifyRunResponse {
 	data: {
@@ -44,7 +76,7 @@ export class ApifyClient {
 			timeoutSecs: 360,
 		});
 
-		const actorId = process.env.APIFY_ACTOR_ID!;
+		const actorId = process.env.APIFY_ACTOR_ID;
 		if (!actorId) {
 			throw new Error('APIFY_ACTOR_ID no está configurado en las variables de entorno');
 		}
@@ -81,11 +113,12 @@ export class ApifyClient {
 			const run = await this.client.actor(this.actorId).start(input);
 
 			structuredConsole.log('✅ Run iniciado:', run);
+			const status = isActorStatus(run.status) ? run.status : 'FAILED';
 			return {
 				data: {
 					id: run.id,
 					actId: run.actId,
-					status: run.status as ActorStatus,
+					status,
 					defaultDatasetId: run.defaultDatasetId,
 					startedAt: run.startedAt.toISOString(),
 					finishedAt: run.finishedAt?.toISOString(),
@@ -103,12 +136,16 @@ export class ApifyClient {
 		try {
 			structuredConsole.log('🔍 Verificando estado del run:', runId);
 			const run = await this.client.run(runId).get();
+			if (!run) {
+				throw new Error(`Run ${runId} not found`);
+			}
 			structuredConsole.log('📊 Estado actual:', run.status);
 
+			const status = isActorStatus(run.status) ? run.status : 'FAILED';
 			return {
 				id: run.id,
 				actId: run.actId,
-				status: run.status as ActorStatus,
+				status,
 				defaultDatasetId: run.defaultDatasetId,
 				startedAt: run.startedAt.toISOString(),
 				finishedAt: run.finishedAt?.toISOString(),
@@ -129,31 +166,35 @@ export class ApifyClient {
 			const { items } = await this.client.dataset(runId).listItems();
 
 			// Transformar los items al formato CreatorResult
-			const results = items
-				.filter((item) => {
-					const i = item as any;
-					return (
-						i &&
-						typeof i === 'object' &&
-						i.channel &&
-						typeof i.channel === 'object' &&
-						typeof i.channel.name === 'string' &&
-						typeof i.channel.followers === 'number' &&
-						typeof i.channel.url === 'string'
-					);
-				})
-				.map((item) => {
-					const i = item as any;
-					return {
-						profile: i.channel.name,
-						keywords: [], // Se llenará después con los keywords del job
-						platformName: 'TikTok',
-						followers: i.channel.followers,
-						region: i.channel.region || 'US',
-						profileUrl: i.channel.url,
-						creatorCategory: i.hashtags || [],
-					} satisfies CreatorResult;
-				});
+			const results = items.flatMap((item) => {
+				const record = toRecord(item);
+				if (!record) return [];
+				const channel = toRecord(record.channel);
+				if (!channel) return [];
+
+				const name = getStringProperty(channel, 'name');
+				const followers = getNumberProperty(channel, 'followers');
+				const url = getStringProperty(channel, 'url');
+				if (!name || followers === null || !url) return [];
+
+				const rawHashtags = toArray(record.hashtags);
+				const creatorCategory = rawHashtags?.filter((tag) => isString(tag)) ?? [];
+				const keywords: string[] = [];
+
+				const region = getStringProperty(channel, 'region') ?? 'US';
+
+				const result: CreatorResult = {
+					profile: name,
+					keywords,
+					platformName: 'TikTok',
+					followers,
+					region,
+					profileUrl: url,
+					creatorCategory,
+				};
+
+				return [result];
+			});
 
 			structuredConsole.log(`✨ Items obtenidos: ${results.length}`);
 			return results;

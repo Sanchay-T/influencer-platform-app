@@ -5,7 +5,18 @@ import { structuredConsole } from '@/lib/logging/console-proxy';
 
 import { ApifyClient } from 'apify-client';
 import { APIFY_COST_PER_CU_USD, APIFY_COST_PER_RESULT_USD } from '@/lib/cost/constants';
-import type { ApifyInstagramProfileResponse, InstagramSimilarSearchResult } from './types';
+import {
+	getNumberProperty,
+	isBoolean,
+	isNumber,
+	isString,
+	toRecord,
+} from '@/lib/utils/type-guards';
+import type {
+	ApifyInstagramProfileResponse,
+	ApifyRelatedProfile,
+	InstagramSimilarSearchResult,
+} from './types';
 
 // Initialize Apify client
 const getApifyClient = () => {
@@ -18,6 +29,96 @@ const getApifyClient = () => {
 
 // Instagram Profile Scraper Actor ID (from test outputs)
 const INSTAGRAM_PROFILE_ACTOR_ID = process.env.INSTAGRAM_SCRAPER_ACTOR_ID || 'dSCLg0C3YEZ83HzYX';
+
+const toRelatedProfile = (value: unknown): ApifyRelatedProfile | null => {
+	const record = toRecord(value);
+	if (!record) return null;
+	if (!(isString(record.id) && isString(record.username) && isString(record.full_name)))
+		return null;
+	if (!isString(record.profile_pic_url)) return null;
+	if (!(isBoolean(record.is_private) && isBoolean(record.is_verified))) return null;
+
+	return {
+		id: record.id,
+		username: record.username,
+		full_name: record.full_name,
+		is_private: record.is_private,
+		is_verified: record.is_verified,
+		profile_pic_url: record.profile_pic_url,
+		follower_count: isNumber(record.follower_count) ? record.follower_count : undefined,
+		followers: isNumber(record.followers) ? record.followers : undefined,
+		followers_count: isNumber(record.followers_count) ? record.followers_count : undefined,
+	};
+};
+
+const toInstagramProfileResponse = (value: unknown): ApifyInstagramProfileResponse | null => {
+	const record = toRecord(value);
+	if (!record) return null;
+
+	const relatedProfiles = Array.isArray(record.relatedProfiles)
+		? record.relatedProfiles
+				.map(toRelatedProfile)
+				.filter((item): item is ApifyRelatedProfile => item !== null)
+		: [];
+
+	if (
+		!(
+			isString(record.inputUrl) &&
+			isString(record.id) &&
+			isString(record.username) &&
+			isString(record.url) &&
+			isString(record.fullName) &&
+			isString(record.biography) &&
+			isNumber(record.followersCount) &&
+			isNumber(record.followsCount) &&
+			isBoolean(record.hasChannel) &&
+			isNumber(record.highlightReelCount) &&
+			isBoolean(record.isBusinessAccount) &&
+			isBoolean(record.joinedRecently) &&
+			isBoolean(record.private) &&
+			isBoolean(record.verified) &&
+			isString(record.profilePicUrl) &&
+			isString(record.profilePicUrlHD) &&
+			isNumber(record.igtvVideoCount)
+		)
+	) {
+		return null;
+	}
+
+	return {
+		inputUrl: record.inputUrl,
+		id: record.id,
+		username: record.username,
+		url: record.url,
+		fullName: record.fullName,
+		biography: record.biography,
+		externalUrl: isString(record.externalUrl) ? record.externalUrl : undefined,
+		externalUrls: Array.isArray(record.externalUrls)
+			? record.externalUrls.filter((item) => toRecord(item) !== null)
+			: undefined,
+		followersCount: record.followersCount,
+		followsCount: record.followsCount,
+		hasChannel: record.hasChannel,
+		highlightReelCount: record.highlightReelCount,
+		isBusinessAccount: record.isBusinessAccount,
+		joinedRecently: record.joinedRecently,
+		businessCategoryName: isString(record.businessCategoryName)
+			? record.businessCategoryName
+			: undefined,
+		private: record.private,
+		verified: record.verified,
+		profilePicUrl: record.profilePicUrl,
+		profilePicUrlHD: record.profilePicUrlHD,
+		igtvVideoCount: record.igtvVideoCount,
+		relatedProfiles,
+		postsCount: isNumber(record.postsCount) ? record.postsCount : undefined,
+		latestIgtvVideos: Array.isArray(record.latestIgtvVideos) ? record.latestIgtvVideos : undefined,
+		latestPosts: Array.isArray(record.latestPosts) ? record.latestPosts : undefined,
+		following: Array.isArray(record.following) ? record.following : undefined,
+		followers: Array.isArray(record.followers) ? record.followers : undefined,
+		similarAccounts: Array.isArray(record.similarAccounts) ? record.similarAccounts : undefined,
+	};
+};
 
 /**
  * Get Instagram profile data including related profiles using Apify
@@ -60,7 +161,11 @@ export async function getInstagramProfile(username: string): Promise<InstagramSi
 			}
 
 			await new Promise((resolve) => setTimeout(resolve, 2000)); // Wait 2 seconds
-			finalRun = await client.run(run.id).get();
+			const fetchedRun = await client.run(run.id).get();
+			if (!fetchedRun) {
+				throw new Error('Apify run not found while polling');
+			}
+			finalRun = fetchedRun;
 			structuredConsole.log('⏳ [INSTAGRAM-API] Checking run status:', finalRun.status);
 		}
 
@@ -73,19 +178,22 @@ export async function getInstagramProfile(username: string): Promise<InstagramSi
 		// Get the results from the dataset
 		const dataset = await client.dataset(finalRun.defaultDatasetId).listItems();
 		const items = dataset.items || [];
-		const computeUnits =
-			typeof finalRun?.stats?.computeUnits === 'number' ? finalRun.stats.computeUnits : 0;
+		const stats = toRecord(finalRun.stats);
+		const pricingInfo = toRecord(finalRun.pricingInfo);
+		const computeUnits = stats ? (getNumberProperty(stats, 'computeUnits') ?? 0) : 0;
 		const pricePerResult =
-			typeof finalRun?.pricingInfo?.pricePerUnitUsd === 'number'
-				? finalRun.pricingInfo.pricePerUnitUsd
-				: APIFY_COST_PER_RESULT_USD;
+			(pricingInfo ? getNumberProperty(pricingInfo, 'pricePerUnitUsd') : null) ??
+			APIFY_COST_PER_RESULT_USD;
 		const totalCostUsd = computeUnits * APIFY_COST_PER_CU_USD + items.length * pricePerResult;
 
 		if (!items || items.length === 0) {
 			throw new Error('No data returned from Apify');
 		}
 
-		const profileData = items[0] as unknown as ApifyInstagramProfileResponse;
+		const profileData = toInstagramProfileResponse(items[0]);
+		if (!profileData) {
+			throw new Error('Invalid profile data returned from Apify');
+		}
 
 		structuredConsole.log('📊 [INSTAGRAM-API] Profile data retrieved:', {
 			username: profileData.username,
@@ -107,11 +215,12 @@ export async function getInstagramProfile(username: string): Promise<InstagramSi
 				pricePerComputeUnitUsd: APIFY_COST_PER_CU_USD,
 			},
 		};
-	} catch (error: any) {
-		structuredConsole.error('❌ [INSTAGRAM-API] Error fetching profile:', error.message);
+	} catch (error: unknown) {
+		const message = error instanceof Error ? error.message : String(error);
+		structuredConsole.error('❌ [INSTAGRAM-API] Error fetching profile:', message);
 		return {
 			success: false,
-			error: error.message || 'Failed to fetch Instagram profile',
+			error: message || 'Failed to fetch Instagram profile',
 		};
 	}
 }
@@ -152,7 +261,11 @@ export async function getEnhancedInstagramProfile(
 			}
 
 			await new Promise((resolve) => setTimeout(resolve, 1000));
-			finalRun = await client.run(run.id).get();
+			const fetchedRun = await client.run(run.id).get();
+			if (!fetchedRun) {
+				throw new Error('Enhanced Apify run not found while polling');
+			}
+			finalRun = fetchedRun;
 		}
 
 		if (finalRun.status === 'FAILED') {
@@ -161,19 +274,22 @@ export async function getEnhancedInstagramProfile(
 
 		const dataset = await client.dataset(finalRun.defaultDatasetId).listItems();
 		const items = dataset.items || [];
-		const computeUnits =
-			typeof finalRun?.stats?.computeUnits === 'number' ? finalRun.stats.computeUnits : 0;
+		const stats = toRecord(finalRun.stats);
+		const pricingInfo = toRecord(finalRun.pricingInfo);
+		const computeUnits = stats ? (getNumberProperty(stats, 'computeUnits') ?? 0) : 0;
 		const pricePerResult =
-			typeof finalRun?.pricingInfo?.pricePerUnitUsd === 'number'
-				? finalRun.pricingInfo.pricePerUnitUsd
-				: APIFY_COST_PER_RESULT_USD;
+			(pricingInfo ? getNumberProperty(pricingInfo, 'pricePerUnitUsd') : null) ??
+			APIFY_COST_PER_RESULT_USD;
 		const totalCostUsd = computeUnits * APIFY_COST_PER_CU_USD + items.length * pricePerResult;
 
 		if (!items || items.length === 0) {
 			throw new Error('No enhanced profile data returned');
 		}
 
-		const profileData = items[0] as unknown as ApifyInstagramProfileResponse;
+		const profileData = toInstagramProfileResponse(items[0]);
+		if (!profileData) {
+			throw new Error('Invalid enhanced profile data returned');
+		}
 
 		structuredConsole.log('📊 [INSTAGRAM-ENHANCED] Enhanced profile retrieved:', {
 			username: profileData.username,
@@ -192,14 +308,12 @@ export async function getEnhancedInstagramProfile(
 				pricePerComputeUnitUsd: APIFY_COST_PER_CU_USD,
 			},
 		};
-	} catch (error: any) {
-		structuredConsole.error(
-			'❌ [INSTAGRAM-ENHANCED] Error fetching enhanced profile:',
-			error.message
-		);
+	} catch (error: unknown) {
+		const message = error instanceof Error ? error.message : String(error);
+		structuredConsole.error('❌ [INSTAGRAM-ENHANCED] Error fetching enhanced profile:', message);
 		return {
 			success: false,
-			error: error.message || 'Failed to fetch enhanced Instagram profile',
+			error: message || 'Failed to fetch enhanced Instagram profile',
 		};
 	}
 }

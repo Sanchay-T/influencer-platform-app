@@ -21,7 +21,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef } from 'react';
 import { isDoneStatus, isSuccessStatus } from '@/lib/types/statuses';
 import { useJobRealtime } from './useJobRealtime';
-import { type JobStatusData, jobStatusKeys, useJobStatus } from './useJobStatus';
+import { type JobStatus, type JobStatusData, jobStatusKeys, useJobStatus } from './useJobStatus';
 
 // Debug logging helper - enable via: localStorage.setItem('debug_job_status', 'true')
 const debugLog = (tag: string, msg: string, data?: Record<string, unknown>) => {
@@ -74,6 +74,21 @@ export interface UseJobPollingResult {
 	refetch: () => void;
 }
 
+const JOB_STATUSES: JobStatus[] = [
+	'pending',
+	'dispatching',
+	'searching',
+	'enriching',
+	'processing',
+	'completed',
+	'partial',
+	'error',
+	'timeout',
+];
+
+const isJobStatus = (value: unknown): value is JobStatus =>
+	typeof value === 'string' && JOB_STATUSES.some((status) => status === value);
+
 /**
  * Unified job status hook - Realtime + Polling fallback
  *
@@ -109,7 +124,7 @@ export function useJobPolling(
 			});
 			return {
 				...jobStatus.data,
-				status: realtime.data.status as JobStatusData['status'],
+				status: isJobStatus(realtime.data.status) ? realtime.data.status : jobStatus.data.status,
 				progress: {
 					...jobStatus.data.progress,
 					keywordsDispatched: realtime.data.keywordsDispatched,

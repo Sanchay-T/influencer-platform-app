@@ -5,7 +5,7 @@ import { emitClientLog, getClientLogGates, mergeContext, safeSerialize } from '.
 
 // Breadcrumb: createConsoleReplacement -> replaces ad-hoc console usage -> funnels through central logger.
 
-function formatConsolePayload(message: any, args: any[]): string {
+function formatConsolePayload(message: unknown, args: unknown[]): string {
 	if (typeof message === 'string') {
 		if (args.length === 0) {
 			return message;
@@ -28,7 +28,7 @@ export function createConsoleReplacement(componentName?: string, category?: LogC
 	const logCategory = category || LogCategory.UI;
 
 	return {
-		log: (message: any, ...args: any[]) => {
+		log: (message: unknown, ...args: unknown[]) => {
 			if (!canLogDebug) {
 				return;
 			}
@@ -40,7 +40,7 @@ export function createConsoleReplacement(componentName?: string, category?: LogC
 				logCategory
 			);
 		},
-		info: (message: any, ...args: any[]) => {
+		info: (message: unknown, ...args: unknown[]) => {
 			if (!canLogInfo) {
 				return;
 			}
@@ -52,7 +52,7 @@ export function createConsoleReplacement(componentName?: string, category?: LogC
 				logCategory
 			);
 		},
-		warn: (message: any, ...args: any[]) => {
+		warn: (message: unknown, ...args: unknown[]) => {
 			if (!canLogWarn) {
 				return;
 			}
@@ -64,7 +64,7 @@ export function createConsoleReplacement(componentName?: string, category?: LogC
 				logCategory
 			);
 		},
-		error: (message: any, ...args: any[]) => {
+		error: (message: unknown, ...args: unknown[]) => {
 			if (!canLogError) {
 				return;
 			}

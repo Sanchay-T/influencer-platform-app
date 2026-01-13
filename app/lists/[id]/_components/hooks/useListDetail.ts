@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { getStringProperty, toRecord } from '@/lib/utils/type-guards';
 import type { ColumnState, ListDetail, ListItem, MetaFormState } from '../types/list-detail';
 import { defaultBucketOrder } from '../types/list-detail';
 import {
@@ -53,6 +54,12 @@ interface UseListDetailResult {
 	handleDelete: () => Promise<void>;
 	handleExport: () => void;
 }
+
+const isListDetailPayload = (value: unknown): value is ListDetail => {
+	const record = toRecord(value);
+	if (!record) return false;
+	return Array.isArray(record.items) && toRecord(record.list) !== null;
+};
 
 export function useListDetail(listId: string, initialDetail: ListDetail): UseListDetailResult {
 	const router = useRouter();
@@ -104,7 +111,10 @@ export function useListDetail(listId: string, initialDetail: ListDetail): UseLis
 				}
 				throw new Error('Failed to fetch list');
 			}
-			const data = (await res.json()) as ListDetail;
+			const data = await res.json();
+			if (!isListDetailPayload(data)) {
+				throw new Error('Invalid list response');
+			}
 			setDetail(data);
 			setColumns(bucketize(data.items));
 			setMetaForm({
@@ -159,19 +169,22 @@ export function useListDetail(listId: string, initialDetail: ListDetail): UseLis
 			if (!over || active.id === over.id) {
 				return;
 			}
-			const sourceItem = findItemById(columns, active.id as string);
+			const activeIdValue = typeof active.id === 'string' ? active.id : String(active.id);
+			const overIdValue = typeof over.id === 'string' ? over.id : String(over.id);
+			const sourceItem = findItemById(columns, activeIdValue);
 			if (!sourceItem) {
 				return;
 			}
 
-			const sourceBucket = findBucketForItem(columns, active.id as string);
+			const sourceBucket = findBucketForItem(columns, activeIdValue);
 			let targetBucket = sourceBucket;
 
-			const overBucket = over.data?.current?.bucket as string | undefined;
+			const overData = toRecord(over.data?.current);
+			const overBucket = overData ? getStringProperty(overData, 'bucket') : null;
 			if (overBucket) {
 				targetBucket = overBucket;
 			} else {
-				const overItem = findItemById(columns, over.id as string);
+				const overItem = findItemById(columns, overIdValue);
 				if (overItem) {
 					targetBucket = overItem.bucket;
 				}
@@ -181,13 +194,16 @@ export function useListDetail(listId: string, initialDetail: ListDetail): UseLis
 				return;
 			}
 
-			const next = structuredClone(columns) as ColumnState;
+			const next: ColumnState = {};
+			for (const [bucket, items] of Object.entries(columns)) {
+				next[bucket] = items.map((item) => ({ ...item }));
+			}
 			const sourceItems = [...(next[sourceBucket] ?? [])];
 			const targetItems =
 				sourceBucket === targetBucket ? sourceItems : [...(next[targetBucket] ?? [])];
 
-			const sourceIndex = sourceItems.findIndex((item) => item.id === active.id);
-			let targetIndex = targetItems.findIndex((item) => item.id === over.id);
+			const sourceIndex = sourceItems.findIndex((item) => item.id === activeIdValue);
+			let targetIndex = targetItems.findIndex((item) => item.id === overIdValue);
 			if (targetIndex === -1) {
 				targetIndex = targetItems.length;
 			}
@@ -373,7 +389,8 @@ export function useListDetail(listId: string, initialDetail: ListDetail): UseLis
 			setEditingMeta(false);
 		} catch (error) {
 			structuredConsole.error(error);
-			toast.error((error as Error).message);
+			const message = error instanceof Error ? error.message : 'Failed to update list';
+			toast.error(message);
 		}
 	}, [detail, metaForm]);
 
@@ -395,7 +412,8 @@ export function useListDetail(listId: string, initialDetail: ListDetail): UseLis
 			router.push('/lists');
 		} catch (error) {
 			structuredConsole.error('[LIST-DELETE]', error);
-			toast.error((error as Error).message);
+			const message = error instanceof Error ? error.message : 'Unable to delete list';
+			toast.error(message);
 			setDeletePending(false);
 		}
 	}, [detail, router]);

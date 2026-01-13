@@ -15,10 +15,54 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table';
+import {
+	getArrayProperty,
+	getBooleanProperty,
+	getStringProperty,
+	toRecord,
+} from '@/lib/utils/type-guards';
+
+type BillingStatus = {
+	currentPlan?: string;
+	isActive?: boolean;
+	isTrialing?: boolean;
+};
+
+type AdminUser = {
+	id?: string;
+	user_id?: string;
+	full_name?: string;
+	fullName?: string;
+	firstName?: string;
+	lastName?: string;
+	imageUrl?: string;
+	email?: string;
+	emailAddress?: string;
+	source?: string;
+	billing?: BillingStatus;
+};
+
+function parseAdminUser(value: unknown): AdminUser | null {
+	const record = toRecord(value);
+	if (!record) return null;
+
+	return {
+		id: getStringProperty(record, 'id') ?? undefined,
+		user_id: getStringProperty(record, 'user_id') ?? undefined,
+		full_name: getStringProperty(record, 'full_name') ?? undefined,
+		fullName: getStringProperty(record, 'fullName') ?? undefined,
+		firstName: getStringProperty(record, 'firstName') ?? undefined,
+		lastName: getStringProperty(record, 'lastName') ?? undefined,
+		imageUrl: getStringProperty(record, 'imageUrl') ?? undefined,
+		email: getStringProperty(record, 'email') ?? undefined,
+		emailAddress: getStringProperty(record, 'emailAddress') ?? undefined,
+		source: getStringProperty(record, 'source') ?? undefined,
+	};
+}
 
 export default function AdminUsersPage() {
 	const [searchQuery, setSearchQuery] = useState('');
-	const [users, setUsers] = useState([]);
+	const [users, setUsers] = useState<AdminUser[]>([]);
 	const [loading, setLoading] = useState(false);
 	const [message, setMessage] = useState('');
 
@@ -30,16 +74,35 @@ export default function AdminUsersPage() {
 				`/api/admin/email-testing/users?q=${encodeURIComponent(searchQuery)}`
 			);
 			const data = await response.json();
+			const record = toRecord(data);
+			const rawUsers = record ? (getArrayProperty(record, 'users') ?? []) : [];
+			const parsedUsers = rawUsers
+				.map((user) => parseAdminUser(user))
+				.filter((user): user is AdminUser => user !== null);
 
 			// Enhance user data with billing status
 			const usersWithBilling = await Promise.all(
-				(data.users || []).map(async (user) => {
+				parsedUsers.map(async (user) => {
+					const userId = user.id ?? user.user_id;
+					if (!userId) {
+						return { ...user, billing: { currentPlan: 'free', isActive: false } };
+					}
 					try {
-						const billingResponse = await fetch(
-							`/api/admin/users/billing-status?userId=${user.id}`
-						);
+						const billingResponse = await fetch(`/api/admin/users/billing-status?userId=${userId}`);
 						const billingData = await billingResponse.json();
-						return { ...user, billing: billingData };
+						const billingRecord = toRecord(billingData);
+						const billing: BillingStatus = {
+							currentPlan: billingRecord
+								? (getStringProperty(billingRecord, 'currentPlan') ?? 'free')
+								: 'free',
+							isActive: billingRecord
+								? (getBooleanProperty(billingRecord, 'isActive') ?? false)
+								: false,
+							isTrialing: billingRecord
+								? (getBooleanProperty(billingRecord, 'isTrialing') ?? false)
+								: false,
+						};
+						return { ...user, billing };
 					} catch {
 						return { ...user, billing: { currentPlan: 'free', isActive: false } };
 					}
@@ -53,18 +116,20 @@ export default function AdminUsersPage() {
 		setLoading(false);
 	};
 
-	const promoteToAdmin = async (userId, userName) => {
+	const promoteToAdmin = async (userId: string, userName: string) => {
 		try {
 			const response = await fetch('/api/admin/users/promote', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ userId }),
 			});
-			const result = await response.json();
-			if (result.success) {
+			const result = toRecord(await response.json());
+			const success = result?.success === true;
+			const errorMessage = result ? getStringProperty(result, 'message') : null;
+			if (success) {
 				setMessage(`✅ ${userName} is now an admin`);
 			} else {
-				setMessage(`❌ Failed: ${result.message}`);
+				setMessage(`❌ Failed: ${errorMessage || 'Unknown error'}`);
 			}
 		} catch (error) {
 			setMessage('❌ Error promoting user');
@@ -127,7 +192,7 @@ export default function AdminUsersPage() {
 										const planName = billing.currentPlan?.replace('_', ' ') || 'free';
 										const isActive = billing.isActive;
 										return (
-											<TableRow key={user.user_id || user.id} className="table-row">
+											<TableRow key={user.user_id || user.id || planName} className="table-row">
 												<TableCell className="px-6 py-4">
 													<div className="flex items-center gap-3">
 														<Avatar className="h-9 w-9">
@@ -190,12 +255,17 @@ export default function AdminUsersPage() {
 														)}
 														<Button
 															size="sm"
-															onClick={() =>
+															onClick={() => {
+																const resolvedUserId = user.user_id || user.id;
+																if (!resolvedUserId) {
+																	setMessage('❌ Missing user ID for promotion');
+																	return;
+																}
 																promoteToAdmin(
-																	user.user_id || user.id,
-																	user.full_name || user.fullName || user.firstName
-																)
-															}
+																	resolvedUserId,
+																	user.full_name || user.fullName || user.firstName || 'User'
+																);
+															}}
 														>
 															Make Admin
 														</Button>

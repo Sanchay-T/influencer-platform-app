@@ -1,15 +1,14 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
-import { db } from '@/lib/db';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { getNumberProperty, toRecord, type UnknownRecord } from '@/lib/utils/type-guards';
 
 const CACHE_TTL_MS = 30_000; // 30 seconds cache
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-	apiVersion: '2024-06-20',
-});
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+const stripe = stripeSecretKey ? new Stripe(stripeSecretKey) : null;
 
 interface CachedSubscription {
 	data: Stripe.Subscription;
@@ -20,7 +19,9 @@ const cache = new Map<string, CachedSubscription>();
 
 function getCache(userId: string): Stripe.Subscription | null {
 	const entry = cache.get(userId);
-	if (!entry) return null;
+	if (!entry) {
+		return null;
+	}
 
 	if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
 		cache.delete(userId);
@@ -40,7 +41,8 @@ function setCache(userId: string, subscription: Stripe.Subscription) {
  * Modern subscription status endpoint
  * Always returns fresh data from Stripe - no hardcoded values
  */
-export async function GET(req: NextRequest) {
+// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
+export async function GET(_req: NextRequest) {
 	try {
 		const startedAt = Date.now();
 		const reqId = `sub_${startedAt}_${Math.random().toString(36).slice(2, 8)}`;
@@ -50,6 +52,17 @@ export async function GET(req: NextRequest) {
 
 		if (!userId) {
 			const res = NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+			res.headers.set('x-request-id', reqId);
+			res.headers.set('x-started-at', ts);
+			res.headers.set('x-duration-ms', String(Date.now() - startedAt));
+			return res;
+		}
+
+		if (!stripe) {
+			const res = NextResponse.json(
+				{ error: 'STRIPE_SECRET_KEY is not configured' },
+				{ status: 500 }
+			);
 			res.headers.set('x-request-id', reqId);
 			res.headers.set('x-started-at', ts);
 			res.headers.set('x-duration-ms', String(Date.now() - startedAt));
@@ -94,23 +107,39 @@ export async function GET(req: NextRequest) {
 
 		// Calculate derived states from Stripe data
 		const now = Math.floor(Date.now() / 1000);
-		const isInTrial =
-			subscription.status === 'trialing' && subscription.trial_end && subscription.trial_end > now;
-		const trialDaysRemaining = isInTrial ? Math.ceil((subscription.trial_end! - now) / 86400) : 0;
+		const trialEnd = subscription.trial_end ?? 0;
+		const isInTrial = subscription.status === 'trialing' && trialEnd > now;
+		const trialDaysRemaining = isInTrial ? Math.ceil((trialEnd - now) / 86400) : 0;
 
 		// Professional access control based on Stripe status
 		const hasAccess = ['active', 'trialing'].includes(subscription.status);
 		const requiresAction = subscription.status === 'past_due' || subscription.status === 'unpaid';
+		const latestInvoice =
+			subscription.latest_invoice && typeof subscription.latest_invoice !== 'string'
+				? subscription.latest_invoice
+				: null;
+		const paymentMethod =
+			subscription.default_payment_method && typeof subscription.default_payment_method !== 'string'
+				? subscription.default_payment_method
+				: null;
+
+		const subscriptionRecord: UnknownRecord = toRecord(subscription) ?? {};
+		const currentPeriodEnd = getNumberProperty(subscriptionRecord, 'current_period_end') ?? 0;
 
 		const payload = {
 			subscription: {
 				id: subscription.id,
 				status: subscription.status,
-				current_period_end: subscription.current_period_end,
+				// biome-ignore lint/style/useNamingConvention: Stripe uses snake_case.
+				current_period_end: currentPeriodEnd,
+				// biome-ignore lint/style/useNamingConvention: Stripe uses snake_case.
 				cancel_at_period_end: subscription.cancel_at_period_end,
+				// biome-ignore lint/style/useNamingConvention: Stripe uses snake_case.
 				canceled_at: subscription.canceled_at,
 				created: subscription.created,
+				// biome-ignore lint/style/useNamingConvention: Stripe uses snake_case.
 				trial_end: subscription.trial_end,
+				// biome-ignore lint/style/useNamingConvention: Stripe uses snake_case.
 				latest_invoice: subscription.latest_invoice,
 			},
 			status: subscription.status,
@@ -125,10 +154,9 @@ export async function GET(req: NextRequest) {
 				reason: hasAccess ? null : subscription.status,
 			},
 			payment: {
-				nextPaymentDate: subscription.current_period_end,
-				lastPaymentStatus: (subscription.latest_invoice as Stripe.Invoice)?.status || null,
-				paymentMethodLast4:
-					(subscription.default_payment_method as Stripe.PaymentMethod)?.card?.last4 || null,
+				nextPaymentDate: currentPeriodEnd,
+				lastPaymentStatus: latestInvoice?.status ?? null,
+				paymentMethodLast4: paymentMethod?.card?.last4 ?? null,
 			},
 		};
 		const duration = Date.now() - startedAt;

@@ -14,6 +14,7 @@
 const { spawn, exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+require('tsx/require');
 
 // ANSI color codes for better output
 const colors = {
@@ -145,7 +146,7 @@ class LoggingSystemTester {
     `;
 
     try {
-      const result = await this.execCommand(`node -e "${testScript}"`);
+      const result = await this.execCommand(`node -r tsx/require -e "${testScript}"`);
       this.recordTest('Logger instantiation successful', true);
     } catch (error) {
       this.recordTest('Logger instantiation successful', false, error.message);
@@ -167,7 +168,7 @@ class LoggingSystemTester {
     `;
 
     try {
-      await this.execCommand(`node -e "${testScript}"`);
+      await this.execCommand(`node -r tsx/require -e "${testScript}"`);
       this.recordTest('All log levels functional', true);
     } catch (error) {
       this.recordTest('All log levels functional', false, error.message);
@@ -189,7 +190,7 @@ class LoggingSystemTester {
     `;
 
     try {
-      await this.execCommand(`node -e "${testScript}"`);
+      await this.execCommand(`node -r tsx/require -e "${testScript}"`);
       this.recordTest('Context enrichment working', true);
     } catch (error) {
       this.recordTest('Context enrichment working', false, error.message);
@@ -224,7 +225,7 @@ class LoggingSystemTester {
     `;
 
     try {
-      await this.execCommand(`node -e "${testScript}"`);
+      await this.execCommand(`node -r tsx/require -e "${testScript}"`);
       this.recordTest(`Environment behavior correct for ${env}`, true);
     } catch (error) {
       this.recordTest(`Environment behavior correct for ${env}`, false, error.message);
@@ -282,7 +283,7 @@ class LoggingSystemTester {
     `;
 
     try {
-      await this.execCommand(`node -e "${testScript}"`);
+      await this.execCommand(`node -r tsx/require -e "${testScript}"`);
       this.recordTest('Sentry error capture integration', true);
     } catch (error) {
       this.recordTest('Sentry error capture integration', false, error.message);
@@ -302,7 +303,7 @@ class LoggingSystemTester {
     `;
 
     try {
-      await this.execCommand(`node -e "${testScript}"`);
+      await this.execCommand(`node -r tsx/require -e "${testScript}"`);
       this.recordTest('Sentry breadcrumbs integration', true);
     } catch (error) {
       this.recordTest('Sentry breadcrumbs integration', false, error.message);
@@ -327,7 +328,7 @@ class LoggingSystemTester {
     `;
 
     try {
-      await this.execCommand(`node -e "${testScript}"`);
+      await this.execCommand(`node -r tsx/require -e "${testScript}"`);
       this.recordTest('Sentry performance tracking', true);
     } catch (error) {
       this.recordTest('Sentry performance tracking', false, error.message);
@@ -371,7 +372,7 @@ class LoggingSystemTester {
     `;
 
     try {
-      const result = await this.execCommand(`node -e "${performanceTest}"`);
+      const result = await this.execCommand(`node -r tsx/require -e "${performanceTest}"`);
       const metrics = JSON.parse(result.trim().split('\n').pop());
       
       const acceptable = metrics.filteredOverhead < TEST_CONFIG.maxPerformanceOverhead;
@@ -410,7 +411,7 @@ class LoggingSystemTester {
     `;
 
     try {
-      await this.execCommand(`node -e "${testConsoleReduction}"`);
+      await this.execCommand(`node -r tsx/require -e "${testConsoleReduction}"`);
       this.recordTest('Console output reduction verified', true);
     } catch (error) {
       this.recordTest('Console output reduction verified', false, error.message);
@@ -494,7 +495,7 @@ class LoggingSystemTester {
         });
       `;
       
-      await this.execCommand(`node -e "${validationScript}"`);
+      await this.execCommand(`node -r tsx/require -e "${validationScript}"`);
       this.recordTest('Environment validation functional', true);
     } catch (error) {
       this.recordTest('Environment validation functional', false, error.message);

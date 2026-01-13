@@ -16,6 +16,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { resolveCreatorPreview } from '@/lib/utils/media-preview';
 import {
+	getNumberProperty,
+	getRecordProperty,
+	getStringArrayProperty,
+	getStringProperty,
+	toRecord,
+} from '@/lib/utils/type-guards';
+import {
 	ensureImageUrl,
 	extractEmails,
 	formatFollowers,
@@ -59,33 +66,45 @@ export const CreatorGalleryCard = memo(function CreatorGalleryCard({
 	const emails = extractEmails(raw);
 	const profileUrl = renderProfileLink(raw);
 	const followerLabel = snapshot.followers != null ? formatFollowers(snapshot.followers) : null;
+	const rawRecord = toRecord(raw) ?? {};
+	const creatorRecord = getRecordProperty(rawRecord, 'creator') ?? {};
+
+	const readNumber = (record: Record<string, unknown> | null, key: string): number | null => {
+		if (!record) return null;
+		const numeric = getNumberProperty(record, key);
+		if (numeric != null) return numeric;
+		const text = getStringProperty(record, key);
+		if (!text) return null;
+		const parsed = Number(text);
+		return Number.isFinite(parsed) ? parsed : null;
+	};
 
 	// Metadata
-	const metadata = (raw.metadata || {}) as Record<string, unknown>;
-	const matchedTermsDisplay = Array.isArray(metadata.matchedTerms)
-		? (metadata.matchedTerms as string[]).slice(0, 4)
-		: [];
-	const snippetText =
-		typeof metadata.snippet === 'string' && (metadata.snippet as string).trim().length > 0
-			? (metadata.snippet as string).trim()
-			: null;
+	const metadataRecord = toRecord(raw.metadata) ?? {};
+	const matchedTermsDisplay = (getStringArrayProperty(metadataRecord, 'matchedTerms') ?? []).slice(
+		0,
+		4
+	);
+	const snippetValue = getStringProperty(metadataRecord, 'snippet');
+	const snippetText = snippetValue && snippetValue.trim().length > 0 ? snippetValue.trim() : null;
 
 	// View count - try multiple paths (TikTok uses stats.playCount, YouTube uses statistics.views)
+	const videoRecord = getRecordProperty(rawRecord, 'video');
+	const videoStatsRecord =
+		getRecordProperty(videoRecord ?? {}, 'statistics') ??
+		getRecordProperty(videoRecord ?? {}, 'stats');
+	const topStatsRecord = getRecordProperty(rawRecord, 'stats');
 	const rawViewCount =
-		raw?.video?.statistics?.views ?? // YouTube path (same as table view)
-		raw?.video?.stats?.playCount ??
-		raw?.video?.stats?.viewCount ??
-		raw?.video?.playCount ??
-		raw?.video?.views ??
-		raw?.stats?.playCount ??
-		raw?.stats?.viewCount ??
+		readNumber(videoStatsRecord, 'views') ??
+		readNumber(videoStatsRecord, 'playCount') ??
+		readNumber(videoStatsRecord, 'viewCount') ??
+		readNumber(videoRecord, 'playCount') ??
+		readNumber(videoRecord, 'views') ??
+		readNumber(topStatsRecord, 'playCount') ??
+		readNumber(topStatsRecord, 'viewCount') ??
 		null;
-	const viewCountNumber =
-		typeof rawViewCount === 'number'
-			? rawViewCount
-			: Number.isFinite(Number(rawViewCount))
-				? Number(rawViewCount)
-				: null;
+	const viewCountNumber = rawViewCount;
+	const videoUrl = getStringProperty(videoRecord ?? {}, 'url');
 	// Only show view count if it's a positive number (hide 0/null)
 	const viewCountLabel =
 		viewCountNumber != null && viewCountNumber > 0
@@ -96,7 +115,10 @@ export const CreatorGalleryCard = memo(function CreatorGalleryCard({
 	const platformLabel = (snapshot.platform ?? 'creator').toString().toUpperCase();
 	const isYouTube = platformLabelNormalized === 'youtube';
 	const secondaryLine =
-		raw?.creator?.location || raw?.creator?.category || snapshot.category || platformLabel;
+		getStringProperty(creatorRecord, 'location') ||
+		getStringProperty(creatorRecord, 'category') ||
+		snapshot.category ||
+		platformLabel;
 
 	return (
 		<Card
@@ -129,7 +151,7 @@ export const CreatorGalleryCard = memo(function CreatorGalleryCard({
 						loading="lazy"
 						className="h-full w-full object-cover"
 						onLoad={(event) => handleImageLoad(event, snapshot.handle)}
-						onError={(event) => handleImageError(event, snapshot.handle, preview)}
+						onError={(event) => handleImageError(event, snapshot.handle, preview ?? undefined)}
 						onLoadStart={(event) => handleImageStart(event, snapshot.handle)}
 					/>
 				) : (
@@ -178,7 +200,10 @@ export const CreatorGalleryCard = memo(function CreatorGalleryCard({
 
 				{/* Bio */}
 				<p className="line-clamp-3 text-xs text-zinc-400">
-					{raw?.creator?.bio || raw?.bio || raw?.description || 'No bio available'}
+					{getStringProperty(creatorRecord, 'bio') ||
+						getStringProperty(rawRecord, 'bio') ||
+						getStringProperty(rawRecord, 'description') ||
+						'No bio available'}
 				</p>
 
 				{/* Matched terms (Instagram US only) */}
@@ -248,14 +273,14 @@ export const CreatorGalleryCard = memo(function CreatorGalleryCard({
 							Profile <ExternalLink className="h-3 w-3" />
 						</a>
 					</Button>
-					{raw?.video?.url && (
+					{videoUrl && (
 						<Button
 							variant="default"
 							size="sm"
 							className="gap-1 bg-pink-500 hover:bg-pink-600 text-white"
 							asChild
 						>
-							<a href={raw.video.url} target="_blank" rel="noopener noreferrer">
+							<a href={videoUrl} target="_blank" rel="noopener noreferrer">
 								View Post <ExternalLink className="h-3 w-3" />
 							</a>
 						</Button>

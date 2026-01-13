@@ -8,6 +8,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { LogCategory, type LogContext, LogLevel, logger } from '../logging';
 import { generateRequestId } from '../logging/constants';
+import { toError, toRecord } from '../utils/type-guards';
 
 /**
  * API Request Context for structured logging
@@ -18,7 +19,7 @@ interface ApiRequestContext extends LogContext {
 	userAgent?: string;
 	ip?: string;
 	contentLength?: number;
-	requestBody?: any;
+	requestBody?: unknown;
 	queryParams?: Record<string, string>;
 }
 
@@ -30,7 +31,7 @@ interface ApiResponseContext {
 	responseTime: number;
 	responseSize?: number;
 	error?: Error;
-	responseBody?: any;
+	responseBody?: unknown;
 }
 
 /**
@@ -185,7 +186,7 @@ export class ApiLogger {
 	/**
 	 * Middleware wrapper for API routes
 	 */
-	public withLogging<T = any>(
+	public withLogging<T = unknown>(
 		handler: (
 			request: NextRequest | Request,
 			context: {
@@ -212,7 +213,7 @@ export class ApiLogger {
 
 				response = await handler(request, context);
 			} catch (err) {
-				error = err as Error;
+				error = toError(err);
 				response = NextResponse.json(
 					{ error: 'Internal server error', requestId },
 					{ status: 500 }
@@ -296,7 +297,7 @@ export class ApiLogger {
 
 			logger.error(
 				`External API call failed: ${operation}`,
-				error as Error,
+				toError(error),
 				{
 					...context,
 					requestId,
@@ -367,7 +368,7 @@ export class ApiLogger {
 
 			logger.error(
 				`Database operation failed: ${operation}`,
-				error as Error,
+				toError(error),
 				{
 					...context,
 					requestId,
@@ -385,13 +386,14 @@ export class ApiLogger {
 	 * Create standardized API response with logging
 	 */
 	public createResponse(
-		data: any,
+		data: unknown,
 		status: number = 200,
 		requestId?: string,
 		headers?: Record<string, string>
 	): NextResponse {
+		const dataRecord = toRecord(data);
 		const response = {
-			...data,
+			...(dataRecord ?? { data }),
 			...(requestId && { requestId }),
 			timestamp: new Date().toISOString(),
 		};
@@ -412,15 +414,16 @@ export class ApiLogger {
 		error: string | Error,
 		status: number = 500,
 		requestId?: string,
-		details?: any
+		details?: unknown
 	): NextResponse {
 		const errorMessage = error instanceof Error ? error.message : error;
+		const detailEntry = details === undefined ? {} : { details };
 		const response = {
 			error: errorMessage,
 			status,
 			timestamp: new Date().toISOString(),
 			...(requestId && { requestId }),
-			...(details && { details }),
+			...detailEntry,
 		};
 
 		return NextResponse.json(response, {
@@ -446,7 +449,14 @@ export const apiLogger = ApiLogger.getInstance();
  * Wrap API handler with automatic logging
  */
 export const withApiLogging = (
-	handler: (req: NextRequest | Request, ctx: any) => Promise<NextResponse>,
+	handler: (
+		req: NextRequest | Request,
+		ctx: {
+			requestId: string;
+			logPhase: (phase: keyof ApiTiming['phases'], ctx?: LogContext) => number;
+			logger: typeof logger;
+		}
+	) => Promise<NextResponse>,
 	category?: LogCategory
 ) => apiLogger.withLogging(handler, category);
 

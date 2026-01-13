@@ -19,6 +19,7 @@ import { db } from '@/lib/db';
 import { scrapingJobs } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
 import { getDeadLetterQueueUrl, qstash } from '@/lib/queue/qstash';
+import { toStringArray } from '@/lib/utils/type-guards';
 import type { SearchWorkerMessage } from '../workers/types';
 import { generateContinuationKeywords } from './ai-expansion';
 import { PLATFORM_TIMEOUTS } from './config';
@@ -41,6 +42,9 @@ const MIN_YIELD_PER_KEYWORD = 3;
 
 /** Buffer multiplier for keyword calculation (request 30% more than needed) */
 const KEYWORD_BUFFER = 1.3;
+
+const isPlatform = (value: unknown): value is Platform =>
+	value === 'tiktok' || value === 'youtube' || value === 'instagram';
 
 // ============================================================================
 // Types
@@ -88,6 +92,7 @@ export async function checkAndReexpand(jobId: string): Promise<ReexpansionResult
 	const target = targetResults ?? 0;
 	const dispatched = keywordsDispatched ?? 0;
 	const completed = keywordsCompleted ?? 0;
+	const normalizedPlatform = isPlatform(platform) ? platform : 'tiktok';
 
 	logger.info(
 		`${LOG_PREFIX} Checking re-expansion`,
@@ -162,10 +167,8 @@ export async function checkAndReexpand(jobId: string): Promise<ReexpansionResult
 	);
 
 	// Step 7: Generate new keywords
-	const existingKeywords = Array.isArray(keywords) ? (keywords as string[]) : [];
-	const allUsedKeywords = Array.isArray(usedKeywords)
-		? (usedKeywords as string[])
-		: existingKeywords;
+	const existingKeywords = toStringArray(keywords) ?? [];
+	const allUsedKeywords = toStringArray(usedKeywords) ?? existingKeywords;
 
 	const newKeywords = await generateContinuationKeywords(
 		existingKeywords.slice(0, 3), // Use first 3 original keywords as seeds
@@ -197,9 +200,7 @@ export async function checkAndReexpand(jobId: string): Promise<ReexpansionResult
 	// Step 9: Dispatch new search workers via QStash
 	const baseUrl = getWorkerBaseUrl();
 	const searchWorkerUrl = `${baseUrl}/api/v2/worker/search`;
-	const workerTimeoutSeconds = Math.ceil(
-		(PLATFORM_TIMEOUTS[platform as Platform] || 120_000) / 1000
-	);
+	const workerTimeoutSeconds = Math.ceil((PLATFORM_TIMEOUTS[normalizedPlatform] || 120_000) / 1000);
 
 	const dispatchPromises: Promise<unknown>[] = [];
 
@@ -209,7 +210,7 @@ export async function checkAndReexpand(jobId: string): Promise<ReexpansionResult
 
 		const message: SearchWorkerMessage = {
 			jobId,
-			platform: platform as Platform,
+			platform: normalizedPlatform,
 			keyword,
 			batchIndex,
 			totalKeywords: updatedKeywords.length,

@@ -89,7 +89,7 @@ export const SubscriptionWelcomeEmail = ({
 	</Html>
 );
 
-SubscriptionWelcomeEmail.PreviewProps = {
+const subscriptionWelcomePreviewProps: SubscriptionWelcomeEmailProps = {
 	fullName: 'Jordan',
 	businessName: 'Northstar Labs',
 	planName: 'Fame Flex',
@@ -100,7 +100,9 @@ SubscriptionWelcomeEmail.PreviewProps = {
 	],
 	dashboardUrl: `${baseUrl}/campaigns`,
 	billingUrl: `${baseUrl}/billing`,
-} as SubscriptionWelcomeEmailProps;
+};
+
+SubscriptionWelcomeEmail.PreviewProps = subscriptionWelcomePreviewProps;
 
 export default SubscriptionWelcomeEmail;
 

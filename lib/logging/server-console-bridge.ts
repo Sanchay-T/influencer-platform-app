@@ -3,10 +3,15 @@
 import { logger } from './logger';
 import { LogCategory, LogLevel } from './types';
 
-const BRIDGE_SYMBOL = Symbol.for('logging.serverConsoleBridge');
+const BRIDGE_KEY = '__loggingServerConsoleBridge__';
+let stdoutFiltered = false;
 
-if (!(globalThis as any)[BRIDGE_SYMBOL]) {
-	(globalThis as any)[BRIDGE_SYMBOL] = true;
+declare global {
+	var __loggingServerConsoleBridge__: boolean | undefined;
+}
+
+if (!globalThis.__loggingServerConsoleBridge__) {
+	globalThis.__loggingServerConsoleBridge__ = true;
 
 	const originalConsole: Console = {
 		...globalThis.console,
@@ -25,7 +30,7 @@ if (!(globalThis as any)[BRIDGE_SYMBOL]) {
 
 	const createProxy =
 		(method: keyof Console) =>
-		(...args: any[]) => {
+		(...args: unknown[]) => {
 			const level = methodToLevel[String(method)] ?? LogLevel.INFO;
 			logger.captureConsole(level, args, LogCategory.SYSTEM);
 		};
@@ -45,25 +50,41 @@ if (!(globalThis as any)[BRIDGE_SYMBOL]) {
 		process.env.NODE_ENV === 'development';
 
 	if (shouldSuppressAccessLogs) {
-		const stdoutSymbol = Symbol.for('logging.stdoutFiltered');
-		if (!(process.stdout as any)[stdoutSymbol]) {
-			(process.stdout as any)[stdoutSymbol] = true;
-
+		if (!stdoutFiltered) {
+			stdoutFiltered = true;
 			const originalWrite = process.stdout.write.bind(process.stdout);
 			const accessLogPattern = /^\s*(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+\//;
 
-			process.stdout.write = (chunk: any, encoding?: any, callback?: any) => {
-				const text = typeof chunk === 'string' ? chunk : chunk?.toString(encoding ?? 'utf8');
+			const overrideWrite = (
+				chunk: string | Uint8Array,
+				encodingOrCallback?: BufferEncoding | ((err?: Error) => void),
+				callback?: (err?: Error) => void
+			): boolean => {
+				const encoding = typeof encodingOrCallback === 'string' ? encodingOrCallback : undefined;
+				const resolvedCallback =
+					typeof encodingOrCallback === 'function' ? encodingOrCallback : callback;
+				const text =
+					typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString(encoding ?? 'utf8');
 
 				if (text && accessLogPattern.test(text)) {
-					if (typeof callback === 'function') {
-						callback();
+					if (resolvedCallback) {
+						resolvedCallback();
 					}
 					return true;
 				}
 
-				return originalWrite(chunk, encoding, callback);
+				if (typeof encodingOrCallback === 'function') {
+					return originalWrite(chunk, encodingOrCallback);
+				}
+
+				if (encoding) {
+					return originalWrite(chunk, encoding, resolvedCallback);
+				}
+
+				return originalWrite(chunk, resolvedCallback);
 			};
+
+			process.stdout.write = overrideWrite;
 		}
 	}
 }

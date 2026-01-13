@@ -12,7 +12,23 @@ type PlanUpdateInput = Partial<{
 	campaignsLimit: number;
 	creatorsLimit: number;
 	isActive: boolean;
-	features: any;
+	features: unknown;
+}>;
+
+type PlanUpdatePayload = Partial<{
+	displayName: string;
+	description: string;
+	campaignsLimit: number;
+	creatorsLimit: number;
+	isActive: boolean;
+	features: unknown;
+	updatedAt: Date;
+}>;
+
+type UserPlanSnapshotUpdate = Partial<{
+	planCampaignsLimit: number;
+	planCreatorsLimit: number;
+	planFeatures: unknown;
 }>;
 
 export async function GET() {
@@ -91,7 +107,7 @@ export async function PUT(req: NextRequest) {
 		}
 
 		// Prepare update payload
-		const setPayload: any = { updatedAt: new Date() };
+		const setPayload: PlanUpdatePayload = { updatedAt: new Date() };
 		if (typeof update.displayName !== 'undefined') setPayload.displayName = update.displayName;
 		if (typeof update.description !== 'undefined') setPayload.description = update.description;
 		if (typeof update.campaignsLimit !== 'undefined')
@@ -109,7 +125,7 @@ export async function PUT(req: NextRequest) {
 
 		// Best-effort propagate snapshot limits/features to users on this plan
 		// (keeps UI usage widgets consistent; enforcement reads from subscription_plans anyway)
-		const userUpdates: any = {};
+		const userUpdates: UserPlanSnapshotUpdate = {};
 		if (typeof update.campaignsLimit !== 'undefined')
 			userUpdates.planCampaignsLimit = update.campaignsLimit;
 		if (typeof update.creatorsLimit !== 'undefined')

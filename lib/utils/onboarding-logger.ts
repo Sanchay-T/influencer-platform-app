@@ -1,4 +1,5 @@
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { toRecord } from '@/lib/utils/type-guards';
 
 interface OnboardingLogEntry {
 	timestamp: string;
@@ -6,7 +7,7 @@ interface OnboardingLogEntry {
 	action: string;
 	description: string;
 	userId?: string;
-	data?: any;
+	data?: unknown;
 	sessionId?: string;
 }
 
@@ -95,7 +96,7 @@ export class OnboardingLogger {
 		action: string,
 		description: string,
 		userId?: string,
-		data?: any,
+		data?: unknown,
 		sessionId?: string
 	): Promise<void> {
 		await OnboardingLogger.log({ step: 'STEP-1', action, description, userId, data, sessionId });
@@ -106,7 +107,7 @@ export class OnboardingLogger {
 		action: string,
 		description: string,
 		userId?: string,
-		data?: any,
+		data?: unknown,
 		sessionId?: string
 	): Promise<void> {
 		await OnboardingLogger.log({ step: 'STEP-2', action, description, userId, data, sessionId });
@@ -117,7 +118,7 @@ export class OnboardingLogger {
 		action: string,
 		description: string,
 		userId?: string,
-		data?: any,
+		data?: unknown,
 		sessionId?: string
 	): Promise<void> {
 		await OnboardingLogger.log({ step: 'STEP-3', action, description, userId, data, sessionId });
@@ -128,7 +129,7 @@ export class OnboardingLogger {
 		action: string,
 		description: string,
 		userId?: string,
-		data?: any,
+		data?: unknown,
 		sessionId?: string
 	): Promise<void> {
 		await OnboardingLogger.log({ step: 'STEP-4', action, description, userId, data, sessionId });
@@ -139,7 +140,7 @@ export class OnboardingLogger {
 		action: string,
 		description: string,
 		userId?: string,
-		data?: any,
+		data?: unknown,
 		sessionId?: string
 	): Promise<void> {
 		await OnboardingLogger.log({ step: 'API', action, description, userId, data, sessionId });
@@ -150,7 +151,7 @@ export class OnboardingLogger {
 		action: string,
 		description: string,
 		userId?: string,
-		data?: any,
+		data?: unknown,
 		sessionId?: string
 	): Promise<void> {
 		await OnboardingLogger.log({
@@ -168,7 +169,7 @@ export class OnboardingLogger {
 		action: string,
 		description: string,
 		userId?: string,
-		data?: any,
+		data?: unknown,
 		sessionId?: string
 	): Promise<void> {
 		await OnboardingLogger.log({ step: 'ERROR', action, description, userId, data, sessionId });
@@ -179,7 +180,7 @@ export class OnboardingLogger {
 		action: string,
 		description: string,
 		userId?: string,
-		data?: any,
+		data?: unknown,
 		sessionId?: string
 	): Promise<void> {
 		await OnboardingLogger.log({ step: 'PAYMENT', action, description, userId, data, sessionId });
@@ -192,16 +193,20 @@ export class OnboardingLogger {
 		event: 'OPEN' | 'CLOSE' | 'STEP_CHANGE',
 		step: number,
 		userId?: string,
-		data?: any,
+		data?: unknown,
 		sessionId?: string
 	): Promise<void> {
+		const dataRecord = toRecord(data);
+		const mergedData = dataRecord
+			? { ...dataRecord, currentStep: step }
+			: { currentStep: step, data };
 		await OnboardingLogger.log({
 			step: 'MODAL',
 			action: event,
 			description:
 				event === 'STEP_CHANGE' ? `Modal moved to step ${step}` : `Modal ${event.toLowerCase()}ed`,
 			userId,
-			data: { ...data, currentStep: step },
+			data: mergedData,
 			sessionId,
 		});
 	}
@@ -213,7 +218,7 @@ export class OnboardingLogger {
 		step: number,
 		success: boolean,
 		userId?: string,
-		data?: any,
+		data?: unknown,
 		sessionId?: string
 	): Promise<void> {
 		const action = success ? 'FORM-SUCCESS' : 'FORM-ERROR';
@@ -234,7 +239,7 @@ export class OnboardingLogger {
 	public static async logUserInput(
 		step: number,
 		fieldName: string,
-		value: any,
+		value: unknown,
 		userId?: string,
 		sessionId?: string
 	): Promise<void> {

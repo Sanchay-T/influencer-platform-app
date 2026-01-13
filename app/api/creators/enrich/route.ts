@@ -9,13 +9,17 @@ import {
 	EnrichmentApiError,
 	PlanLimitExceededError,
 } from '@/lib/services/creator-enrichment';
+import { isRecord, isString, toRecord } from '@/lib/utils/type-guards';
 
 // @performance Vercel timeout protection - external enrichment API calls can be slow
 export const maxDuration = 30;
 
 // Breadcrumb: POST /api/creators/enrich -> validates Clerk/test auth -> delegates to creatorEnrichmentService -> returns usage counters + stored payload.
 
-const ALLOWED_PLATFORMS = new Set(['tiktok', 'instagram', 'youtube']);
+type AllowedPlatform = 'tiktok' | 'instagram' | 'youtube';
+const ALLOWED_PLATFORMS: AllowedPlatform[] = ['tiktok', 'instagram', 'youtube'];
+const isAllowedPlatform = (value: string): value is AllowedPlatform =>
+	ALLOWED_PLATFORMS.some((platform) => platform === value);
 const logger = createCategoryLogger(LogCategory.API);
 
 export async function POST(request: Request) {
@@ -36,7 +40,7 @@ export async function POST(request: Request) {
 		return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 	}
 
-	let body: any;
+	let body: unknown;
 	try {
 		body = await request.json();
 	} catch {
@@ -46,21 +50,22 @@ export async function POST(request: Request) {
 		);
 	}
 
+	const bodyRecord = toRecord(body);
 	const creatorId =
-		typeof body?.creatorId === 'string' && body.creatorId.trim().length
-			? body.creatorId.trim()
+		isString(bodyRecord?.creatorId) && bodyRecord.creatorId.trim().length
+			? bodyRecord.creatorId.trim()
 			: undefined;
 	const externalId =
-		typeof body?.externalId === 'string' && body.externalId.trim().length
-			? body.externalId.trim()
+		isString(bodyRecord?.externalId) && bodyRecord.externalId.trim().length
+			? bodyRecord.externalId.trim()
 			: undefined;
-	const handleInputRaw = typeof body?.handle === 'string' ? body.handle : '';
+	const handleInputRaw = isString(bodyRecord?.handle) ? bodyRecord.handle : '';
 	const handle = handleInputRaw.replace(/^@/, '').trim();
-	const platformInput = typeof body?.platform === 'string' ? body.platform.toLowerCase() : '';
-	const forceRefresh = Boolean(body?.forceRefresh);
-	const displayName = typeof body?.displayName === 'string' ? body.displayName.trim() : undefined;
-	const profileUrl = typeof body?.profileUrl === 'string' ? body.profileUrl.trim() : undefined;
-	const metadata = body?.metadata;
+	const platformInput = isString(bodyRecord?.platform) ? bodyRecord.platform.toLowerCase() : '';
+	const forceRefresh = Boolean(bodyRecord?.forceRefresh);
+	const displayName = isString(bodyRecord?.displayName) ? bodyRecord.displayName.trim() : undefined;
+	const profileUrl = isString(bodyRecord?.profileUrl) ? bodyRecord.profileUrl.trim() : undefined;
+	const metadata = bodyRecord?.metadata;
 
 	if (!(handle && platformInput)) {
 		return NextResponse.json(
@@ -72,11 +77,11 @@ export async function POST(request: Request) {
 		);
 	}
 
-	if (!ALLOWED_PLATFORMS.has(platformInput)) {
+	if (!isAllowedPlatform(platformInput)) {
 		return NextResponse.json(
 			{
 				error: 'UNSUPPORTED_PLATFORM',
-				message: `Platform "${platformInput}" is not supported. Use one of: ${Array.from(ALLOWED_PLATFORMS).join(', ')}.`,
+				message: `Platform "${platformInput}" is not supported. Use one of: ${ALLOWED_PLATFORMS.join(', ')}.`,
 			},
 			{ status: 400 }
 		);
@@ -91,7 +96,7 @@ export async function POST(request: Request) {
 			displayName,
 			profileUrl,
 			metadata,
-			platform: platformInput as 'tiktok' | 'instagram' | 'youtube',
+			platform: platformInput,
 			forceRefresh,
 		});
 
@@ -127,10 +132,10 @@ export async function POST(request: Request) {
 				status: error.status,
 				payload: error.payload,
 			});
-			const payload = error.payload as any;
+			const payload = isRecord(error.payload) ? error.payload : null;
 			const detail =
-				(payload && typeof payload.detail === 'string' && payload.detail) ||
-				(payload && typeof payload.message === 'string' && payload.message) ||
+				(isString(payload?.detail) && payload.detail) ||
+				(isString(payload?.message) && payload.message) ||
 				error.message;
 			return NextResponse.json(
 				{

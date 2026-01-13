@@ -5,6 +5,7 @@
  * Ensures all inputs meet requirements before processing.
  */
 
+import { isString, toRecord, toStringArray } from '@/lib/utils/type-guards';
 import type { Platform } from '../core/types';
 import type {
 	DispatchRequest,
@@ -17,11 +18,18 @@ import type {
 // Constants
 // ============================================================================
 
-const VALID_PLATFORMS: Platform[] = ['tiktok', 'instagram', 'youtube'];
-const VALID_TARGETS = [100, 500, 1000] as const;
+const VALID_PLATFORMS: ReadonlyArray<Platform> = ['tiktok', 'instagram', 'youtube'];
+type TargetResults = 100 | 500 | 1000;
+const VALID_TARGETS: ReadonlyArray<TargetResults> = [100, 500, 1000];
 const MAX_KEYWORDS = 50;
 const MIN_KEYWORD_LENGTH = 2;
 const MAX_KEYWORD_LENGTH = 100;
+
+const isValidPlatform = (value: unknown): value is Platform =>
+	isString(value) && VALID_PLATFORMS.some((platform) => platform === value);
+
+const isValidTarget = (value: unknown): value is TargetResults =>
+	typeof value === 'number' && VALID_TARGETS.some((target) => target === value);
 
 // ============================================================================
 // Dispatch Request Validation
@@ -36,14 +44,13 @@ export function validateDispatchRequest(body: unknown): {
 	data?: DispatchRequest;
 	error?: string;
 } {
-	if (!body || typeof body !== 'object') {
+	const obj = toRecord(body);
+	if (!obj) {
 		return { valid: false, error: 'Request body must be an object' };
 	}
 
-	const obj = body as Record<string, unknown>;
-
 	// Platform validation
-	if (!(obj.platform && VALID_PLATFORMS.includes(obj.platform as Platform))) {
+	if (!isValidPlatform(obj.platform)) {
 		return {
 			valid: false,
 			error: `Invalid platform. Must be one of: ${VALID_PLATFORMS.join(', ')}`,
@@ -81,7 +88,7 @@ export function validateDispatchRequest(body: unknown): {
 	}
 
 	// Target validation
-	if (!VALID_TARGETS.includes(obj.targetResults as 100 | 500 | 1000)) {
+	if (!isValidTarget(obj.targetResults)) {
 		return {
 			valid: false,
 			error: `Invalid targetResults. Must be one of: ${VALID_TARGETS.join(', ')}`,
@@ -89,7 +96,7 @@ export function validateDispatchRequest(body: unknown): {
 	}
 
 	// Campaign ID validation
-	if (!obj.campaignId || typeof obj.campaignId !== 'string') {
+	if (!isString(obj.campaignId)) {
 		return { valid: false, error: 'campaignId is required and must be a string' };
 	}
 
@@ -102,9 +109,9 @@ export function validateDispatchRequest(body: unknown): {
 	return {
 		valid: true,
 		data: {
-			platform: obj.platform as Platform,
+			platform: obj.platform,
 			keywords: sanitizedKeywords,
-			targetResults: obj.targetResults as 100 | 500 | 1000,
+			targetResults: obj.targetResults,
 			campaignId: obj.campaignId,
 			enableExpansion: obj.enableExpansion !== false, // Default true
 		},
@@ -124,17 +131,16 @@ export function validateDispatchWorkerMessage(body: unknown): {
 	data?: DispatchWorkerMessage;
 	error?: string;
 } {
-	if (!body || typeof body !== 'object') {
+	const obj = toRecord(body);
+	if (!obj) {
 		return { valid: false, error: 'Message body must be an object' };
 	}
 
-	const obj = body as Record<string, unknown>;
-
-	if (!obj.jobId || typeof obj.jobId !== 'string') {
+	if (!isString(obj.jobId)) {
 		return { valid: false, error: 'jobId is required' };
 	}
 
-	if (!(obj.platform && VALID_PLATFORMS.includes(obj.platform as Platform))) {
+	if (!isValidPlatform(obj.platform)) {
 		return { valid: false, error: 'Invalid platform' };
 	}
 
@@ -171,7 +177,7 @@ export function validateDispatchWorkerMessage(body: unknown): {
 		return { valid: false, error: 'targetResults must be a positive number' };
 	}
 
-	if (!obj.userId || typeof obj.userId !== 'string') {
+	if (!isString(obj.userId)) {
 		return { valid: false, error: 'userId is required' };
 	}
 
@@ -179,7 +185,7 @@ export function validateDispatchWorkerMessage(body: unknown): {
 		valid: true,
 		data: {
 			jobId: obj.jobId,
-			platform: obj.platform as Platform,
+			platform: obj.platform,
 			keywords: sanitizedKeywords,
 			targetResults: obj.targetResults,
 			userId: obj.userId,
@@ -201,21 +207,20 @@ export function validateSearchWorkerMessage(body: unknown): {
 	data?: SearchWorkerMessage;
 	error?: string;
 } {
-	if (!body || typeof body !== 'object') {
+	const obj = toRecord(body);
+	if (!obj) {
 		return { valid: false, error: 'Message body must be an object' };
 	}
 
-	const obj = body as Record<string, unknown>;
-
-	if (!obj.jobId || typeof obj.jobId !== 'string') {
+	if (!isString(obj.jobId)) {
 		return { valid: false, error: 'jobId is required' };
 	}
 
-	if (!(obj.platform && VALID_PLATFORMS.includes(obj.platform as Platform))) {
+	if (!isValidPlatform(obj.platform)) {
 		return { valid: false, error: 'Invalid platform' };
 	}
 
-	if (!obj.keyword || typeof obj.keyword !== 'string') {
+	if (!isString(obj.keyword)) {
 		return { valid: false, error: 'keyword is required' };
 	}
 
@@ -227,7 +232,7 @@ export function validateSearchWorkerMessage(body: unknown): {
 		return { valid: false, error: 'totalKeywords must be a positive number' };
 	}
 
-	if (!obj.userId || typeof obj.userId !== 'string') {
+	if (!isString(obj.userId)) {
 		return { valid: false, error: 'userId is required' };
 	}
 
@@ -239,7 +244,7 @@ export function validateSearchWorkerMessage(body: unknown): {
 		valid: true,
 		data: {
 			jobId: obj.jobId,
-			platform: obj.platform as Platform,
+			platform: obj.platform,
 			keyword: obj.keyword,
 			batchIndex: obj.batchIndex,
 			totalKeywords: obj.totalKeywords,
@@ -262,28 +267,22 @@ export function validateEnrichWorkerMessage(body: unknown): {
 	data?: EnrichWorkerMessage;
 	error?: string;
 } {
-	if (!body || typeof body !== 'object') {
+	const obj = toRecord(body);
+	if (!obj) {
 		return { valid: false, error: 'Message body must be an object' };
 	}
 
-	const obj = body as Record<string, unknown>;
-
-	if (!obj.jobId || typeof obj.jobId !== 'string') {
+	if (!isString(obj.jobId)) {
 		return { valid: false, error: 'jobId is required' };
 	}
 
-	if (!(obj.platform && VALID_PLATFORMS.includes(obj.platform as Platform))) {
+	if (!isValidPlatform(obj.platform)) {
 		return { valid: false, error: 'Invalid platform' };
 	}
 
-	if (!Array.isArray(obj.creatorIds) || obj.creatorIds.length === 0) {
+	const creatorIds = toStringArray(obj.creatorIds);
+	if (!creatorIds || creatorIds.length === 0) {
 		return { valid: false, error: 'creatorIds must be a non-empty array' };
-	}
-
-	for (const id of obj.creatorIds) {
-		if (typeof id !== 'string') {
-			return { valid: false, error: 'All creatorIds must be strings' };
-		}
 	}
 
 	if (typeof obj.batchIndex !== 'number' || obj.batchIndex < 0) {
@@ -294,7 +293,7 @@ export function validateEnrichWorkerMessage(body: unknown): {
 		return { valid: false, error: 'totalBatches must be a positive number' };
 	}
 
-	if (!obj.userId || typeof obj.userId !== 'string') {
+	if (!isString(obj.userId)) {
 		return { valid: false, error: 'userId is required' };
 	}
 
@@ -302,8 +301,8 @@ export function validateEnrichWorkerMessage(body: unknown): {
 		valid: true,
 		data: {
 			jobId: obj.jobId,
-			platform: obj.platform as Platform,
-			creatorIds: obj.creatorIds as string[],
+			platform: obj.platform,
+			creatorIds,
 			batchIndex: obj.batchIndex,
 			totalBatches: obj.totalBatches,
 			userId: obj.userId,

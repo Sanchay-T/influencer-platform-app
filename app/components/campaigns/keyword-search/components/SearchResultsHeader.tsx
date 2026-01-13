@@ -18,8 +18,8 @@ import ExportButton from '../../export-button';
 import { PinkSpinner } from '../utils';
 import type { CreatorSnapshot } from '../utils/creator-snapshot';
 
-const VIEW_MODES = ['table', 'gallery'] as const;
-type ViewMode = (typeof VIEW_MODES)[number];
+type ViewMode = 'table' | 'gallery';
+const VIEW_MODES: ReadonlyArray<ViewMode> = ['table', 'gallery'];
 
 const VIEW_MODE_META: Record<ViewMode, { label: string; Icon: typeof Table2 }> = {
 	table: { label: 'Table', Icon: Table2 },

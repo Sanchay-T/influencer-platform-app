@@ -9,11 +9,11 @@ export function formatFollowerCount(value: number | null | undefined): string {
 	const absValue = Math.abs(value);
 	const prefix = value < 0 ? '-' : '';
 
-	const thresholds = [
+	const thresholds: Array<{ limit: number; suffix: string; divisor: number }> = [
 		{ limit: 1_000_000_000, suffix: 'B', divisor: 1_000_000_000 },
 		{ limit: 1_000_000, suffix: 'M', divisor: 1_000_000 },
 		{ limit: 1_000, suffix: 'K', divisor: 1_000 },
-	] as const;
+	];
 
 	for (const { limit, suffix, divisor } of thresholds) {
 		if (absValue >= limit) {

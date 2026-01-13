@@ -1,3 +1,4 @@
+import { getNumberProperty, getStringProperty, toRecord } from '@/lib/utils/type-guards';
 import { EMAIL_REGEX, ENDPOINTS } from '../core/config';
 import type { BioEnrichedInfo, NormalizedCreator, SearchConfig } from '../core/types';
 
@@ -12,6 +13,38 @@ interface YouTubeChannelResponse {
 	avatarUrl?: string;
 	links?: Array<{ url?: string; title?: string }>;
 }
+
+const parseChannelResponse = (value: unknown): YouTubeChannelResponse | null => {
+	const record = toRecord(value);
+	if (!record) return null;
+	const links = Array.isArray(record.links)
+		? record.links.flatMap((link) => {
+				const linkRecord = toRecord(link);
+				if (!linkRecord) return [];
+				return [
+					{
+						url: getStringProperty(linkRecord, 'url') ?? undefined,
+						title: getStringProperty(linkRecord, 'title') ?? undefined,
+					},
+				];
+			})
+		: undefined;
+
+	return {
+		name: getStringProperty(record, 'name') ?? undefined,
+		handle: getStringProperty(record, 'handle') ?? undefined,
+		channelId: getStringProperty(record, 'channelId') ?? undefined,
+		description: getStringProperty(record, 'description') ?? undefined,
+		email: getStringProperty(record, 'email') ?? undefined,
+		subscriberCount:
+			typeof record.subscriberCount === 'number' || typeof record.subscriberCount === 'string'
+				? record.subscriberCount
+				: undefined,
+		subscriberCountInt: getNumberProperty(record, 'subscriberCountInt') ?? undefined,
+		avatarUrl: getStringProperty(record, 'avatarUrl') ?? undefined,
+		links,
+	};
+};
 
 function buildAttemptedResult(
 	creator: NormalizedCreator,
@@ -87,7 +120,8 @@ async function fetchChannelProfile(
 		return null;
 	}
 
-	return (await response.json()) as YouTubeChannelResponse;
+	const payload = await response.json();
+	return parseChannelResponse(payload);
 }
 
 export async function enrichYouTubeCreator(
