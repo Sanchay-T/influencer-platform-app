@@ -91,12 +91,18 @@ export const scrapingJobs = pgTable(
 );
 
 // Scraping Results table
-export const scrapingResults = pgTable('scraping_results', {
-	id: uuid('id').primaryKey().defaultRandom(),
-	jobId: uuid('job_id').references(() => scrapingJobs.id),
-	creators: jsonb('creators').notNull(),
-	createdAt: timestamp('created_at').notNull().defaultNow(),
-});
+export const scrapingResults = pgTable(
+	'scraping_results',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		jobId: uuid('job_id').references(() => scrapingJobs.id),
+		creators: jsonb('creators').notNull(),
+		createdAt: timestamp('created_at').notNull().defaultNow(),
+	},
+	(table) => ({
+		jobIdIdx: index('idx_scraping_results_job_id').on(table.jobId),
+	})
+);
 
 // Job Creator Keys - Atomic deduplication via unique constraint
 // Used by v2 workers to prevent duplicate creators across parallel workers

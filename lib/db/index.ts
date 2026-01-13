@@ -118,3 +118,49 @@ if (createdNewClient && process.env.NODE_ENV !== 'production') {
 		},
 	});
 }
+
+/**
+ * Retry wrapper for database operations with exponential backoff.
+ *
+ * @context Handles transient connection failures that occur during cold starts
+ * or traffic spikes when connection pool is exhausted.
+ *
+ * @param fn - Async function that performs the database operation
+ * @param maxRetries - Maximum number of retry attempts (default: 3)
+ * @returns Result of the database operation
+ * @throws Original error after all retries exhausted
+ */
+export async function withDbRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+	const retryableErrors = ['ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT', 'connection_refused'];
+
+	for (let attempt = 0; attempt < maxRetries; attempt++) {
+		try {
+			return await fn();
+		} catch (error: unknown) {
+			const errorCode =
+				error instanceof Error && 'code' in error ? (error as { code: string }).code : '';
+			const errorMessage = error instanceof Error ? error.message : String(error);
+
+			const isRetryable =
+				retryableErrors.some((code) => errorCode === code) ||
+				retryableErrors.some((msg) => errorMessage.toLowerCase().includes(msg));
+
+			if (!isRetryable || attempt === maxRetries - 1) {
+				throw error;
+			}
+
+			const delayMs = 1000 * (attempt + 1); // 1s, 2s, 3s backoff
+			systemLogger.warn(`Database connection failed, retrying in ${delayMs}ms`, {
+				attempt: attempt + 1,
+				maxRetries,
+				errorCode,
+				errorMessage: errorMessage.slice(0, 100),
+			});
+
+			await new Promise((resolve) => setTimeout(resolve, delayMs));
+		}
+	}
+
+	// TypeScript requires this, but we'll never reach here
+	throw new Error('Unexpected: withDbRetry exhausted all attempts');
+}

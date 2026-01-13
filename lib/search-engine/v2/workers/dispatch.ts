@@ -13,7 +13,7 @@ import { validateCreatorSearch } from '@/lib/billing';
 import { db } from '@/lib/db';
 import { campaigns, scrapingJobs } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
-import { qstash } from '@/lib/queue/qstash';
+import { getDeadLetterQueueUrl, qstash } from '@/lib/queue/qstash';
 import { PLATFORM_TIMEOUTS } from '../core/config';
 import { createV2Job, loadJobTracker } from '../core/job-tracker';
 import { expandKeywordsForTarget } from '../core/keyword-expander';
@@ -111,6 +111,7 @@ async function fanoutSearchWorkers(options: {
 			retries: 3,
 			delay: Math.floor(i / 5) * 1,
 			timeout: workerTimeoutSeconds,
+			failureCallback: getDeadLetterQueueUrl(),
 		});
 
 		dispatchPromises.push(publishPromise);
@@ -320,6 +321,7 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 			body: message,
 			retries: 3,
 			timeout: 60,
+			failureCallback: getDeadLetterQueueUrl(),
 		});
 
 		console.log('[GEMZ-DEBUG] ✅ QStash publish SUCCESS', {
