@@ -26,11 +26,19 @@ import {
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
 import {
 	checkWebhookIdempotency,
+	isEventStale,
 	markWebhookCompleted,
 	markWebhookFailed,
 } from '@/lib/webhooks/idempotency';
 
 const logger = createCategoryLogger(LogCategory.BILLING);
+
+// @performance Vercel timeout protection - webhooks can take time for DB operations
+export const maxDuration = 60;
+
+// @context Stale event threshold in seconds - reject events older than 5 minutes
+// Stripe may retry events for up to 3 days, but we only process recent ones
+const STALE_THRESHOLD_SECONDS = 300;
 
 // ═══════════════════════════════════════════════════════════════
 // WEBHOOK HANDLER
@@ -60,6 +68,27 @@ export async function POST(request: NextRequest) {
 	} catch (error) {
 		logger.error('Webhook signature validation failed', error as Error);
 		return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 400 });
+	}
+
+	// ─────────────────────────────────────────────────────────────
+	// STEP 1.5: Check for Stale Events
+	// ─────────────────────────────────────────────────────────────
+	// Reject events that are too old to prevent out-of-order processing issues
+
+	const staleThreshold = new Date(Date.now() - STALE_THRESHOLD_SECONDS * 1000);
+	if (isEventStale(event.created, staleThreshold)) {
+		logger.warn('Rejecting stale webhook event', {
+			metadata: {
+				eventId: event.id,
+				eventType: event.type,
+				eventCreated: new Date(event.created * 1000).toISOString(),
+				threshold: staleThreshold.toISOString(),
+			},
+		});
+		return NextResponse.json(
+			{ received: true, stale: true, eventId: event.id },
+			{ status: 200 } // Return 200 so Stripe doesn't retry
+		);
 	}
 
 	// ─────────────────────────────────────────────────────────────

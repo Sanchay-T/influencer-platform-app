@@ -96,6 +96,24 @@ export async function POST(req: Request) {
 		});
 	}
 
+	// @performance Skip jobs already being processed (prevents concurrent processing)
+	// QStash may deliver duplicate messages - this ensures only one processes at a time
+	if (existingJob.status === 'processing') {
+		logger.info(
+			'Skipping job already in processing status (concurrent delivery)',
+			{
+				jobId,
+				currentStatus: existingJob.status,
+			},
+			LogCategory.JOB
+		);
+		return NextResponse.json({
+			skipped: true,
+			reason: 'already_processing',
+			status: existingJob.status,
+		});
+	}
+
 	// --- FIX 1.3: Timeout Enforcement ---
 	// Check if job has exceeded its timeout before processing
 	if (existingJob.timeoutAt && new Date(existingJob.timeoutAt) < new Date()) {

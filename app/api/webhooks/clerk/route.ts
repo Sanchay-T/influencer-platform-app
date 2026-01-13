@@ -13,6 +13,9 @@ import {
 	markWebhookFailed,
 } from '@/lib/webhooks/idempotency';
 
+// @performance Vercel timeout protection - webhooks can take time for DB operations
+export const maxDuration = 60;
+
 // Clerk webhook event types
 type WebhookEvent = {
 	id: string;

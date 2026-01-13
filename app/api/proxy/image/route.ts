@@ -6,6 +6,9 @@ import { backgroundJobLogger, jobLog } from '@/lib/logging/background-job-logger
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { LogCategory } from '@/lib/logging/types';
 
+// @performance Vercel timeout protection - image fetching with retries can take time
+export const maxDuration = 30;
+
 // Generate placeholder for failed images
 function generatePlaceholderResponse(imageUrl: string, jobId?: string) {
 	// Extract username or create a generic placeholder

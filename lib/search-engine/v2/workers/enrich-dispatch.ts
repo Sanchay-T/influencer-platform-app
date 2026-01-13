@@ -6,7 +6,7 @@
  */
 
 import { LogCategory, logger } from '@/lib/logging';
-import { qstash } from '@/lib/queue/qstash';
+import { getDeadLetterQueueUrl, qstash } from '@/lib/queue/qstash';
 import type { Platform } from '../core/types';
 
 // ============================================================================
@@ -98,6 +98,7 @@ export async function dispatchEnrichmentBatches(
 				userId,
 			},
 			retries: 3,
+			failureCallback: getDeadLetterQueueUrl(),
 		})
 	);
 

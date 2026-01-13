@@ -133,6 +133,23 @@ export async function POST(req: Request) {
 			});
 		}
 
+		// @performance Only schedule continuation if job is STILL in processing status
+		// This prevents exponential message explosion from QStash retries/duplicates
+		// Critical: Check status === 'processing' BEFORE scheduling, not just != completed/error
+		if (job.status !== 'processing') {
+			structuredConsole.log('📊 Job is not in processing status, skipping continuation', {
+				jobId,
+				status: job.status,
+			});
+			return NextResponse.json({
+				status: job.status,
+				processedResults: job.processedResults,
+				targetResults: job.targetResults,
+				skipped: true,
+				reason: 'not_processing',
+			});
+		}
+
 		// Si el job sigue en proceso, encolar otro monitoreo
 		try {
 			await qstash.publishJSON({

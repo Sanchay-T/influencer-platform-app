@@ -18,7 +18,7 @@ import { eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { scrapingJobs } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
-import { qstash } from '@/lib/queue/qstash';
+import { getDeadLetterQueueUrl, qstash } from '@/lib/queue/qstash';
 import type { SearchWorkerMessage } from '../workers/types';
 import { generateContinuationKeywords } from './ai-expansion';
 import { PLATFORM_TIMEOUTS } from './config';
@@ -223,6 +223,7 @@ export async function checkAndReexpand(jobId: string): Promise<ReexpansionResult
 			retries: 3,
 			delay: Math.floor(i / 5) * 1, // Stagger to prevent thundering herd
 			timeout: workerTimeoutSeconds,
+			failureCallback: getDeadLetterQueueUrl(),
 		});
 
 		dispatchPromises.push(publishPromise);

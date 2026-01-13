@@ -1,11 +1,70 @@
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { FeatureGateService } from '@/lib/billing';
 import { db } from '@/lib/db';
-import { scrapingJobs, scrapingResults } from '@/lib/db/schema';
+import { jobCreators, scrapingJobs, scrapingResults } from '@/lib/db/schema';
 import { dedupeCreators, formatEmailsForCsv } from '@/lib/export/csv-utils';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+
+/**
+ * @context V2 jobs store creators in jobCreators table, legacy jobs use scrapingResults.
+ * This helper fetches V2 creators first, falls back to legacy if none found.
+ */
+async function getCreatorsForJobs(
+	jobIds: string[]
+): Promise<{ creators: any[]; source: 'v2' | 'legacy' }> {
+	// Try V2 jobCreators table first
+	const v2Creators = await db.query.jobCreators.findMany({
+		where: inArray(jobCreators.jobId, jobIds),
+	});
+
+	if (v2Creators.length > 0) {
+		structuredConsole.log(
+			`CSV Export: Found ${v2Creators.length} creators in V2 jobCreators table`
+		);
+		// Extract creatorData from each row
+		return {
+			creators: v2Creators.map((c) => c.creatorData),
+			source: 'v2',
+		};
+	}
+
+	// Fall back to legacy scrapingResults
+	structuredConsole.log('CSV Export: No V2 creators found, checking legacy scrapingResults');
+	const legacyResults = await db.query.scrapingResults.findMany({
+		where: inArray(scrapingResults.jobId, jobIds),
+	});
+
+	let allCreators: any[] = [];
+	legacyResults.forEach((result) => {
+		const creatorsData = result.creators as any;
+		if (Array.isArray(creatorsData)) {
+			allCreators = allCreators.concat(creatorsData);
+		} else if (creatorsData && typeof creatorsData === 'object') {
+			if ('results' in creatorsData && Array.isArray(creatorsData.results)) {
+				const nested = creatorsData.results.reduce((acc: any[], r: any) => {
+					if (r.creators && Array.isArray(r.creators)) {
+						return [...acc, ...r.creators];
+					}
+					return acc;
+				}, []);
+				allCreators = allCreators.concat(nested);
+			} else {
+				Object.keys(creatorsData).forEach((key) => {
+					if (Array.isArray(creatorsData[key])) {
+						allCreators = allCreators.concat(creatorsData[key]);
+					}
+				});
+			}
+		}
+	});
+
+	return { creators: allCreators, source: 'legacy' };
+}
+
+// @performance Vercel timeout protection - CSV export can take a long time for large datasets
+export const maxDuration = 60;
 
 export async function GET(req: Request) {
 	try {
@@ -46,90 +105,42 @@ export async function GET(req: Request) {
 			);
 		}
 
-		// Si se recibe campaignId, exportar todos los creadores de todos los jobs de la campaña
+		// Export all creators from all jobs in the campaign
 		if (campaignId) {
 			structuredConsole.log(`CSV Export: Processing campaign ID ${campaignId}`);
-			// Buscar todos los jobs completados de la campaña
+
+			// Get all jobs for the campaign
 			const jobs = await db.query.scrapingJobs.findMany({
 				where: (jobs, { eq }) => eq(jobs.campaignId, String(campaignId)),
-				with: {
-					results: true,
-				},
 			});
 			structuredConsole.log('Jobs found:', jobs.length);
-			let allCreators: any[] = [];
+
+			if (jobs.length === 0) {
+				return NextResponse.json({ error: 'No jobs found in campaign' }, { status: 404 });
+			}
+
+			// Collect keywords from all jobs
 			let keywords: string[] = [];
-			jobs.forEach((job, i) => {
+			jobs.forEach((job) => {
 				if (Array.isArray(job.keywords)) {
 					keywords = keywords.concat(job.keywords);
 				}
-				structuredConsole.log(
-					`Job ${i} (${job.id}) has ${Array.isArray(job.results) ? job.results.length : 0} results`
-				);
-				if (Array.isArray(job.results)) {
-					job.results.forEach((result, j) => {
-						const creatorsData = result.creators;
-						let count = 0;
-						let structure = '';
-						if (Array.isArray(creatorsData)) {
-							count = creatorsData.length;
-							structure = 'array';
-							allCreators = allCreators.concat(creatorsData);
-						} else if (
-							creatorsData &&
-							typeof creatorsData === 'object' &&
-							!Array.isArray(creatorsData)
-						) {
-							if ('results' in creatorsData && Array.isArray((creatorsData as any).results)) {
-								structure = 'object.results[]';
-								const nested = (creatorsData as any).results.reduce((acc: any[], r: any) => {
-									if (r.creators && Array.isArray(r.creators)) {
-										return [...acc, ...r.creators];
-									}
-									return acc;
-								}, []);
-								count = nested.length;
-								allCreators = allCreators.concat(nested);
-							} else {
-								structure = 'object.keys[]';
-								Object.keys(creatorsData).forEach((key) => {
-									if (Array.isArray((creatorsData as any)[key])) {
-										count += (creatorsData as any)[key].length;
-										allCreators = allCreators.concat((creatorsData as any)[key]);
-									}
-								});
-							}
-						}
-						structuredConsole.log(`  Result ${j} has ${count} creators (structure: ${structure})`);
-						if (count > 0) {
-							let example = null;
-							if (Array.isArray(creatorsData) && creatorsData.length > 0) example = creatorsData[0];
-							else if (
-								structure === 'object.results[]' &&
-								creatorsData &&
-								typeof creatorsData === 'object' &&
-								!Array.isArray(creatorsData) &&
-								'results' in creatorsData &&
-								Array.isArray((creatorsData as any).results) &&
-								(creatorsData as any).results.length > 0
-							) {
-								const first = (creatorsData as any).results[0];
-								if (first.creators && Array.isArray(first.creators) && first.creators.length > 0)
-									example = first.creators[0];
-							}
-							if (example) {
-								structuredConsole.log(`    Example creator:`, JSON.stringify(example, null, 2));
-							}
-						}
-					});
-				}
 			});
-			keywords = Array.from(new Set(keywords)); // Unificar keywords
-			structuredConsole.log('Total creators found in campaign:', allCreators.length);
+			keywords = Array.from(new Set(keywords));
+
+			// Get creators using V2/legacy helper
+			const jobIds = jobs.map((j) => j.id);
+			const { creators: allCreators, source } = await getCreatorsForJobs(jobIds);
+
+			structuredConsole.log(
+				`CSV Export: Found ${allCreators.length} creators from ${source} source`
+			);
+
 			const dedupedCampaignCreators = dedupeCreators(allCreators);
 			structuredConsole.log('CSV Export: Deduped campaign creators', {
 				before: allCreators.length,
 				after: dedupedCampaignCreators.length,
+				source,
 			});
 
 			if (dedupedCampaignCreators.length === 0) {
@@ -243,21 +254,16 @@ export async function GET(req: Request) {
 		if (!jobId) {
 			return NextResponse.json({ error: 'Job ID is required' }, { status: 400 });
 		}
-		const result = await db.query.scrapingResults.findFirst({
-			where: eq(scrapingResults.jobId, String(jobId)),
-		});
-
-		if (!result) {
-			structuredConsole.log('CSV Export: No results found in database');
-			return NextResponse.json({ error: 'Results not found' }, { status: 404 });
-		}
-
-		structuredConsole.log('CSV Export: Found results in database');
 
 		// Get job data to include keywords in export
 		const job = await db.query.scrapingJobs.findFirst({
 			where: eq(scrapingJobs.id, jobId),
 		});
+
+		if (!job) {
+			structuredConsole.log('CSV Export: Job not found');
+			return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+		}
 
 		structuredConsole.log('CSV Export: Job data retrieved', {
 			hasKeywords: Boolean(job?.keywords),
@@ -268,47 +274,9 @@ export async function GET(req: Request) {
 		const keywords = (job?.keywords as string[]) || [];
 
 		try {
-			// Get creators directly from result.creators to avoid additional API call
-			// This is more reliable than making another API call
-			let creators: any[] = [];
-			const creatorsData = result.creators as any;
-
-			if (Array.isArray(creatorsData)) {
-				structuredConsole.log('CSV Export: Using creators array directly from database');
-				creators = creatorsData;
-			} else if (creatorsData && typeof creatorsData === 'object') {
-				// Handle possible nested structure
-				if (creatorsData.results && Array.isArray(creatorsData.results)) {
-					structuredConsole.log('CSV Export: Extracting creators from nested results structure');
-					creators = creatorsData.results.reduce((acc: any[], r: any) => {
-						if (r.creators && Array.isArray(r.creators)) {
-							return [...acc, ...r.creators];
-						}
-						return acc;
-					}, []);
-				}
-			}
-
-			if (creators.length === 0) {
-				structuredConsole.log(
-					'CSV Export: No creators found in database, attempting to parse creators from structure:',
-					JSON.stringify(creatorsData).substring(0, 200) + '...'
-				);
-
-				// Last attempt - try to extract creators
-				if (typeof creatorsData === 'object' && creatorsData !== null) {
-					Object.keys(creatorsData).forEach((key) => {
-						if (Array.isArray(creatorsData[key])) {
-							creators = creatorsData[key];
-							structuredConsole.log(
-								`CSV Export: Found potential creators array under key '${key}'`
-							);
-						}
-					});
-				}
-			}
-
-			structuredConsole.log(`CSV Export: Found ${creators.length} creators`);
+			// Use V2/legacy helper to get creators
+			const { creators, source } = await getCreatorsForJobs([jobId]);
+			structuredConsole.log(`CSV Export: Found ${creators.length} creators from ${source} source`);
 
 			const dedupedCreators = dedupeCreators(creators, {
 				platformHint: job?.platform ?? null,

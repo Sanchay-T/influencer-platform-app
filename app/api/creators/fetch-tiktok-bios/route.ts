@@ -6,6 +6,9 @@ import { db } from '@/lib/db';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
 import { extractEmail } from '@/lib/search-engine/utils/email-extractor';
 
+// @performance Vercel timeout protection - batch external API calls can take time
+export const maxDuration = 30;
+
 /**
  * POST /api/creators/fetch-tiktok-bios
  *

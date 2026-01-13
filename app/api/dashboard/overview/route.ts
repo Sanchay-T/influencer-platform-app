@@ -3,6 +3,9 @@ import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { getDashboardOverview } from '@/lib/dashboard/overview';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
+// @performance Vercel timeout protection - dashboard aggregates multiple queries
+export const maxDuration = 20;
+
 function errorResponse(error: unknown, status = 500) {
 	structuredConsole.error('[DASHBOARD_OVERVIEW_API]', error);
 	const message =
