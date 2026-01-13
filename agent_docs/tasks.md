@@ -7,277 +7,133 @@
 
 ## Current Task
 
-**ID:** TASK-010
-**Title:** Fix Search Progress UX — Keyword Search Reliability
-**Status:** 🔍 INVESTIGATION PHASE
-**Branch:** `fix/search-progress-ux` (clean)
-**Started:** Dec 30, 2025
-**Last Updated:** Jan 02, 2026 — 12:32 AM
-**Latest Commits:** Portal fixes (491b7d207) + Clerk webhook email (a52525181) + Trial status removal (f8d8d313e)
+**ID:** TASK-011
+**Title:** Landing Page Redesign + Analytics Integration + Scalability Architecture
+**Status:** 🚧 IN PROGRESS
+**Branch:** `claude/improve-scalability-architecture-ZGB9v`
+**Started:** Jan 13, 2026
+**Last Updated:** Jan 13, 2026 — 01:20 AM
+**Latest Commits:**
+- 0813d0799 — Landing page replaced with v0 design
+- 68dcea6e7 — SEO infrastructure added
+- 55ab8e657 — Google Analytics 4 integration
+- 5cfca99aa — User email added to LogSnag events
+- e84fddc16 — LogSnag tracking await fix for serverless
+- d45fee146 — LogSnag project slug correction
+- 5ad7fe1bc — LogSnag tracking debug logging
+- 396a64d1a — LogSnag project name configurable via env
+- 7a21bda3c — LogSnag event tracking integration
+- ff23e0907 — Meta Pixel with event tracking
 
 ### Goal
-Fix keyword search progress UI reliability issues in production. Backend successfully finds and stores 1000 creators, but frontend fails to display them properly - requires full browser refresh to see correct results. Works perfectly in local dev, breaks only in production (usegems.io) and UAT (sorz.ai).
+Improve platform scalability, conversion tracking, and landing page design. Multiple workstreams converged:
+1. Replace landing page with modern v0 design
+2. Add comprehensive analytics (Google Analytics 4, LogSnag, Meta Pixel)
+3. Improve SEO infrastructure
+4. Investigate scalability architecture improvements (testing/scalability/ folder)
 
-### Problems Identified
+### Work Completed
 
-**Primary Symptoms (Production Only)**
-- Progress freezes at random % during keyword search
-- Loading spinners keep spinning forever after search completes
-- Partial results displayed (200-800 creators instead of 1000)
-- Only full browser refresh fixes the issue
-- Job status stuck on "Processing" even after refresh shows 1000 creators
-- Bio fetch spinners stuck (row-level, global, header spinners all affected)
+- [x] **Landing Page Redesign** (Commit 0813d0799)
+  - Replaced old landing page with v0 design
+  - Modern, conversion-optimized layout
 
-**Environment Comparison**
-- **Local Development:** Works perfectly - all 1000 creators display
-- **Production (usegems.io):** Breaks - partial results, stuck spinners
-- **UAT (sorz.ai):** Breaks - same issues as production
-- **Platforms Affected:** Both TikTok and Instagram equally
-- **Timing:** Breaks at 1-2 minutes into search
+- [x] **SEO Infrastructure** (Commit 68dcea6e7)
+  - Added SEO metadata system
+  - Improved search engine discoverability
 
-### Root Cause Hypotheses (From Investigation)
+- [x] **Google Analytics 4 Integration** (Commit 55ab8e657)
+  - GA4 tracking setup
+  - Event tracking for user behavior
 
-**High Probability (Production-Specific)**
-1. Vercel serverless timing - Polling may hit function timeout limits
-2. Network latency creates race conditions - Longer round-trips in production
-3. QStash webhook latency - Workers complete but status updates delayed
-4. Redis cache serving stale data - Production uses Redis, local uses in-memory
+- [x] **LogSnag Event Tracking** (Commits 7a21bda3c through 5cfca99aa)
+  - Integrated LogSnag for real-time notifications
+  - Added user email to events for better context
+  - Fixed serverless timing issues (await tracking calls)
+  - Fixed project slug configuration
+  - Added debug logging
 
-**Medium Probability (State Management)**
-5. Polling terminates prematurely - `SearchProgress` stops before job truly completes
-6. Terminal state detection broken - Backend returns "completed" but frontend doesn't recognize it
-7. Spinner state not cleaned up - Multiple independent spinners don't coordinate
-
-### User Preferences for Fix
-- Add debug logging: Yes, add console logs
-- Trade-off: Reliability > Real-time updates
-- Polling interval: Slower (3-5s) acceptable if more reliable
-- Manual fallback: No - focus on auto-updates only
-
-### Work Completed So Far
-
-1. ✅ **Initial investigation** (Dec 30, 2025)
-   - Documented symptoms and patterns
-   - Identified environment-specific behavior (local works, production breaks)
-   - Listed root cause hypotheses
-   - Gathered user preferences for fix approach
+- [x] **Meta Pixel Integration** (Commit ff23e0907)
+  - Meta Pixel tracking for Facebook/Instagram ads
+  - Event tracking for conversion optimization
 
 ### Checklist
-- [x] **Phase 1: Investigation & Root Cause Analysis**
-  - [x] Identify 37+ users with expired trials still showing "Active"
-  - [x] Document stuck onboarding case (accounts+appsumotest@usegemz.io)
-  - [x] Analyze frontend trial status display logic
-  - [x] Analyze backend trial expiration handling (or lack thereof)
 
-- [x] **Phase 2: Success Page Fix** (Commit 3f23c3845)
-  - [x] Fix redirect loop for partial onboarding states
-  - [x] Check `billing_sync_status = 'completed'` before requiring `session_id`
+- [x] **Phase 1: Landing Page + Analytics** (COMPLETED)
+  - [x] Replace landing page with v0 design
+  - [x] Add SEO infrastructure
+  - [x] Integrate Google Analytics 4
+  - [x] Integrate LogSnag event tracking
+  - [x] Fix LogSnag configuration issues
+  - [x] Integrate Meta Pixel tracking
 
-- [x] **Phase 3: Tracking Integration** (Commits 6f149185d, 6a73028fd)
-  - [x] Add Google Ads tracking (gtag.js)
-  - [x] Add Meta Pixel tracking
-  - [x] Integrate both into onboarding success page
+- [ ] **Phase 2: Scalability Architecture** (IN PROGRESS)
+  - [ ] Review `testing/scalability/` folder contents
+  - [ ] Understand what scalability improvements are being tested
+  - [ ] Determine if this is load testing, architecture changes, or both
+  - [ ] Document findings and next steps
 
-- [ ] **Phase 4: Trial Status Implementation** (UNCOMMITTED WORK)
-  - [ ] Review uncommitted changes to billing logic
-  - [ ] Verify lib/billing/trial-status.ts implementation
-  - [ ] Verify lib/billing/billing-status.ts changes
-  - [ ] Verify lib/billing/access-validation.ts changes
-  - [ ] Check if Stripe webhook handlers updated correctly
-  - [ ] Test trial expiration detection logic
+- [ ] **Phase 3: Testing & Verification**
+  - [ ] Test landing page in production
+  - [ ] Verify Google Analytics 4 tracking works
+  - [ ] Verify LogSnag events are being sent
+  - [ ] Verify Meta Pixel tracking works
+  - [ ] Test any scalability changes
 
-- [ ] **Phase 5: Database Schema Updates** (UNCOMMITTED WORK)
-  - [ ] Review lib/db/schema.ts changes
-  - [ ] Review lib/db/queries/user-queries.ts changes
-  - [ ] Review lib/db/queries/admin-plan-manager.ts changes
-  - [ ] Verify schema changes are migration-safe
-
-- [ ] **Phase 6: Frontend Integration** (UNCOMMITTED WORK)
-  - [ ] Review app/components/billing/access-guard-overlay.tsx changes
-  - [ ] Review app/dashboard/page.tsx changes
-  - [ ] Review app/onboarding/success/page.tsx changes
-  - [ ] Verify UI correctly displays expired trial status
-
-- [ ] **Phase 7: API Endpoints** (UNCOMMITTED WORK)
-  - [ ] Review new app/api/stripe/verify-session/ endpoint
-  - [ ] Review changes to admin API routes
-  - [ ] Review changes to diagnostics/system-health endpoint
-  - [ ] Test all modified API endpoints
-
-- [ ] **Phase 8: Testing & Verification**
-  - [ ] Test with accounts+appsumotest@usegemz.io
-  - [ ] Test with other users with expired trials
-  - [ ] Verify "Active" → "Expired" status transition works
-  - [ ] Verify stuck onboarding users can proceed
-  - [ ] Run E2E tests (e2e-clerk-sandbox.ts)
-
-- [ ] **Phase 9: Commit & Deploy**
-  - [ ] Run Biome linter on modified files
+- [ ] **Phase 4: Commit & Deploy**
+  - [ ] Review scalability testing files
+  - [ ] Run Biome linter on any modified files
   - [ ] Run type check
-  - [ ] Commit all billing/trial changes
-  - [ ] Push to main
-  - [ ] Verify deployment on usegems.io
-
-- [ ] **Phase 10: Production Verification**
-  - [ ] Check trial status display for 37+ affected users
-  - [ ] Monitor for new trial expirations
-  - [ ] Verify no users stuck in onboarding
-  - [ ] Check Sentry for errors
-
----
-
-## Investigation: Expired Trials & Stuck Onboarding (Jan 1, 2026)
-
-### Issue 1: Trial Status Not Expiring
-
-**Problem:** Users with expired trials still show "Active" status with "0 days left" in the UI.
-
-**Evidence (UAT Database):**
-- 37 users have `trial_status = 'active'` but `trial_end_date < NOW()`
-- Example: Trial ended Nov 28, 2025 but still shows "Active" on Jan 1, 2026
-
-**Production Database - Expired Trials:**
-| Email | Trial End | Status |
-|-------|-----------|--------|
-| (anonymous) | Oct 20, 2025 | trialing/active |
-| (anonymous) | Oct 19, 2025 | trialing/active |
-| (anonymous) | Oct 17, 2025 | trialing/active |
-| accounts+appsumotest@usegemz.io | Oct 9, 2025 | none/active |
-
-**Root Cause:**
-- No scheduled job or webhook to update `trial_status` when trial expires
-- Stripe webhooks may not be triggering for trial end (need to verify webhook configuration)
-- Frontend displays `trial_status` directly without checking `trial_end_date`
-
-**Proposed Fix Options:**
-1. **Frontend Fix (Quick):** Add date check in UI - if `trial_end_date < now`, show "Expired"
-2. **Backend Fix (Proper):** Add scheduled job to mark expired trials as `expired`
-3. **Webhook Fix (Best):** Ensure Stripe `customer.subscription.trial_will_end` webhook updates status
-
----
-
-### Issue 2: Stuck Onboarding - accounts+appsumotest@usegemz.io
-
-**User Data:**
-```
-Email: accounts+appsumotest@usegemz.io
-User ID: edd4b955-66f9-4547-b4e8-9e63ad0174a3
-Created: Oct 2, 2025
-
-user_subscriptions:
-  - trial_status: active (SHOULD BE EXPIRED - trial ended Oct 9, 2025)
-  - subscription_status: none (never paid)
-  - billing_sync_status: plan_selected
-  - intended_plan: glow_up
-  - current_plan: free
-
-user_profiles:
-  - NO RECORD EXISTS (NULL from LEFT JOIN)
-```
-
-**Root Cause:**
-1. User started onboarding, selected "glow_up" plan (`billing_sync_status: plan_selected`)
-2. Never completed Stripe checkout (`subscription_status: none`)
-3. Trial expired Oct 9, 2025 but status never updated
-4. `user_profiles` record was never created (possibly signup flow bug)
-
-**Why Stuck:**
-- No profile record → Onboarding state unknown
-- `billing_sync_status: plan_selected` → Waiting for checkout completion that never happened
-- User may see partial UI or be blocked from dashboard
-
-**Proposed Fix:**
-1. Create missing `user_profiles` record with `onboarding_step: 'pending'` to restart onboarding
-2. Update `trial_status` to `expired`
-3. Or: Delete user and have them re-signup
+  - [ ] Commit scalability testing work
+  - [ ] Push to main and deploy
 
 ---
 
 ### Next Action
 ```
-⚠️ REVIEW UNCOMMITTED BILLING/TRIAL STATUS CHANGES
+🔍 INVESTIGATE SCALABILITY TESTING WORK
 
 Context:
-- Working directly on main branch (no feature branch)
-- 20+ files modified for trial status expiration detection
-- New trial-status.ts module created
-- New Stripe verify-session API endpoint created
-- Changes span billing logic, database queries, frontend UI, API routes
+- Branch: claude/improve-scalability-architecture-ZGB9v (suggests scalability improvements)
+- Untracked folder: testing/scalability/ (new work, not committed)
+- Recent commits: All about landing page + analytics (already committed and deployed)
+- Current state: Clean except for testing/scalability/ folder
 
-CRITICAL: Before continuing, you need to understand what was implemented.
+EXACT NEXT STEP:
 
-STEP 1: Review core billing logic changes
-   Read these files to understand the trial expiration implementation:
-   - lib/billing/trial-status.ts (NEW - core trial expiration logic)
-   - lib/billing/billing-status.ts (MODIFIED - trial status integration)
-   - lib/billing/access-validation.ts (MODIFIED - access control changes)
-   - lib/billing/webhook-handlers.ts (MODIFIED - Stripe webhook handling)
+1. List contents of testing/scalability/ folder:
+   bash: ls -la testing/scalability/
 
-STEP 2: Review database layer changes
-   - lib/db/schema.ts (MODIFIED - schema changes)
-   - lib/db/queries/user-queries.ts (MODIFIED - query updates)
-   - lib/db/queries/admin-plan-manager.ts (MODIFIED - admin operations)
+2. Read any files in that folder to understand:
+   - What scalability improvements are being tested?
+   - Is this load testing scripts?
+   - Is this architecture changes?
+   - Is this performance benchmarking?
 
-STEP 3: Review frontend changes
-   - app/components/billing/access-guard-overlay.tsx (MODIFIED)
-   - app/dashboard/page.tsx (MODIFIED)
-   - app/onboarding/success/page.tsx (MODIFIED)
+3. Based on what you find, decide:
+   - Should these files be committed to the repo?
+   - Do they document architectural improvements?
+   - Are they one-off test scripts to delete?
+   - Do they belong in a different location?
 
-STEP 4: Review API changes
-   - app/api/stripe/verify-session/ (NEW directory - what's in here?)
-   - app/api/admin/e2e/*.ts (MODIFIED - 3 admin test routes)
-   - app/api/admin/email-testing/*.ts (MODIFIED - 2 email test routes)
-   - app/api/admin/users/billing-status/route.ts (MODIFIED)
-   - app/api/debug/whoami/route.ts (MODIFIED)
-   - app/api/diagnostics/system-health/route.ts (MODIFIED)
+4. Update this tasks.md file with:
+   - What the scalability work is about
+   - Whether it should be committed or discarded
+   - Next concrete action
 
-STEP 5: Make a decision
-   After reviewing the changes, either:
-   A) Changes look good → Continue to Phase 4 checklist items (test, lint, commit)
-   B) Changes need work → Identify what needs fixing
-   C) Changes are incomplete → Determine what's missing
-
-IMPORTANT:
-- Do NOT commit blindly - understand what was changed and why
-- Check for any schema migrations needed (lib/db/schema.ts changes)
-- Verify backward compatibility with existing users
-- Test the trial expiration detection logic before deploying
+START HERE: Run `ls -la testing/scalability/` to see what's in that folder.
 ```
-
-### Key Files Modified (Uncommitted)
-| Purpose | File |
-|---------|------|
-| **Trial expiration logic (NEW)** | `lib/billing/trial-status.ts` |
-| **Billing status integration** | `lib/billing/billing-status.ts` |
-| **Access validation** | `lib/billing/access-validation.ts` |
-| **Stripe webhooks** | `lib/billing/webhook-handlers.ts` |
-| **Database schema** | `lib/db/schema.ts` |
-| **User queries** | `lib/db/queries/user-queries.ts` |
-| **Admin plan manager** | `lib/db/queries/admin-plan-manager.ts` |
-| **Job processor** | `lib/jobs/job-processor.ts` |
-| **Access guard UI** | `app/components/billing/access-guard-overlay.tsx` |
-| **Dashboard page** | `app/dashboard/page.tsx` |
-| **Onboarding success** | `app/onboarding/success/page.tsx` |
-| **Stripe verify session (NEW)** | `app/api/stripe/verify-session/` |
-| **Admin E2E test routes** | `app/api/admin/e2e/create-test-user/route.ts` |
-| | `app/api/admin/e2e/set-plan/route.ts` |
-| | `app/api/admin/e2e/user-state/route.ts` |
-| **Admin email test routes** | `app/api/admin/email-testing/users-cached/route.ts` |
-| | `app/api/admin/email-testing/users-fast/route.ts` |
-| **Admin billing status** | `app/api/admin/users/billing-status/route.ts` |
-| **Debug whoami** | `app/api/debug/whoami/route.ts` |
-| **System health diagnostics** | `app/api/diagnostics/system-health/route.ts` |
-| **Test scripts** | `scripts/test-v2-concurrent-users.ts` |
-| **E2E test sandboxes** | `testing/api-suite/sandbox/complete-sandbox.ts` |
-| | `testing/api-suite/sandbox/e2e-clerk-sandbox.ts` |
-| | `testing/api-suite/sandbox/onboarding-sandbox.ts` |
 
 ---
 
-## Paused Task
+## Paused Tasks
 
-**ID:** TASK-006
-**Title:** Tech Debt Cleanup — Monolith Breakup & Code Quality
+### TASK-010: Fix Search Progress UX — Keyword Search Reliability
+**Status:** PAUSED (investigation phase complete, implementation pending)
+**Branch:** `fix/search-progress-ux`
+**Context:** Keyword search works in local dev but breaks in production (usegems.io) and UAT (sorz.ai). Backend finds 1000 creators but frontend shows partial results, stuck spinners. Requires full browser refresh to see correct results. Investigation documented root causes (Vercel serverless timing, network latency, Redis cache issues). Ready for implementation when resumed.
+
+### TASK-006: Tech Debt Cleanup — Monolith Breakup & Code Quality
 **Status:** PAUSED (for TASK-008 hotfix)
 **Branch:** `UAT`
 **Waiting on:** Phase 4 (Legacy Cleanup) after current hotfix
@@ -312,4 +168,4 @@ IMPORTANT:
 
 ---
 
-*Last updated: Jan 01, 2026 — 10:29 PM*
+*Last updated: Jan 13, 2026 — 01:20 AM*

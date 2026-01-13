@@ -28,51 +28,67 @@ export type CreatorListPrivacy = 'private' | 'public' | 'workspace';
 export type CreatorListRole = 'owner' | 'editor' | 'viewer';
 
 // Campaigns table
-export const campaigns = pgTable('campaigns', {
-	id: uuid('id').primaryKey().defaultRandom(),
-	userId: text('user_id').notNull(),
-	name: text('name').notNull(),
-	description: text('description'),
-	searchType: varchar('search_type', { length: 20 }).notNull(),
-	status: varchar('status', { length: 20 }).notNull().default('draft'),
-	createdAt: timestamp('created_at').notNull().defaultNow(),
-	updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+export const campaigns = pgTable(
+	'campaigns',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		userId: text('user_id').notNull(),
+		name: text('name').notNull(),
+		description: text('description'),
+		searchType: varchar('search_type', { length: 20 }).notNull(),
+		status: varchar('status', { length: 20 }).notNull().default('draft'),
+		createdAt: timestamp('created_at').notNull().defaultNow(),
+		updatedAt: timestamp('updated_at').notNull().defaultNow(),
+	},
+	(table) => ({
+		// @performance Indexes for user-scoped queries (dashboard, campaign list)
+		userIdIdx: index('idx_campaigns_user_id').on(table.userId),
+		userStatusIdx: index('idx_campaigns_user_status').on(table.userId, table.status),
+	})
+);
 
 // Scraping Jobs table
-export const scrapingJobs = pgTable('scraping_jobs', {
-	id: uuid('id').primaryKey().defaultRandom(),
-	userId: text('user_id').notNull(),
-	runId: text('run_id'),
-	status: varchar('status', { length: 20 }).notNull().default('pending'),
-	keywords: jsonb('keywords'),
-	platform: varchar('platform', { length: 50 }).notNull().default('Tiktok'),
-	region: varchar('region', { length: 10 }).notNull().default('US'),
-	createdAt: timestamp('created_at').notNull().defaultNow(),
-	startedAt: timestamp('started_at'),
-	completedAt: timestamp('completed_at'),
-	error: text('error'),
-	timeoutAt: timestamp('timeout_at'),
-	campaignId: uuid('campaign_id').references(() => campaigns.id),
-	targetUsername: text('target_username'),
-	searchParams: jsonb('search_params'),
-	qstashMessageId: text('qstash_message_id'),
-	processedRuns: integer('processed_runs').notNull().default(0),
-	processedResults: integer('processed_results').notNull().default(0),
-	targetResults: integer('target_results').notNull().default(1000),
-	updatedAt: timestamp('updated_at').notNull().defaultNow(),
-	cursor: integer('cursor').default(0),
-	progress: numeric('progress').default('0'),
-	// V2 Fan-Out Worker Coordination
-	keywordsDispatched: integer('keywords_dispatched').default(0),
-	keywordsCompleted: integer('keywords_completed').default(0),
-	creatorsFound: integer('creators_found').default(0),
-	creatorsEnriched: integer('creators_enriched').default(0),
-	enrichmentStatus: varchar('enrichment_status', { length: 20 }).default('pending'),
-	// Adaptive re-expansion tracking
-	expansionRound: integer('expansion_round').default(1),
-	usedKeywords: jsonb('used_keywords'), // All keywords tried (for deduplication)
-});
+export const scrapingJobs = pgTable(
+	'scraping_jobs',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		userId: text('user_id').notNull(),
+		runId: text('run_id'),
+		status: varchar('status', { length: 20 }).notNull().default('pending'),
+		keywords: jsonb('keywords'),
+		platform: varchar('platform', { length: 50 }).notNull().default('Tiktok'),
+		region: varchar('region', { length: 10 }).notNull().default('US'),
+		createdAt: timestamp('created_at').notNull().defaultNow(),
+		startedAt: timestamp('started_at'),
+		completedAt: timestamp('completed_at'),
+		error: text('error'),
+		timeoutAt: timestamp('timeout_at'),
+		campaignId: uuid('campaign_id').references(() => campaigns.id),
+		targetUsername: text('target_username'),
+		searchParams: jsonb('search_params'),
+		qstashMessageId: text('qstash_message_id'),
+		processedRuns: integer('processed_runs').notNull().default(0),
+		processedResults: integer('processed_results').notNull().default(0),
+		targetResults: integer('target_results').notNull().default(1000),
+		updatedAt: timestamp('updated_at').notNull().defaultNow(),
+		cursor: integer('cursor').default(0),
+		progress: numeric('progress').default('0'),
+		// V2 Fan-Out Worker Coordination
+		keywordsDispatched: integer('keywords_dispatched').default(0),
+		keywordsCompleted: integer('keywords_completed').default(0),
+		creatorsFound: integer('creators_found').default(0),
+		creatorsEnriched: integer('creators_enriched').default(0),
+		enrichmentStatus: varchar('enrichment_status', { length: 20 }).default('pending'),
+		// Adaptive re-expansion tracking
+		expansionRound: integer('expansion_round').default(1),
+		usedKeywords: jsonb('used_keywords'), // All keywords tried (for deduplication)
+	},
+	(table) => ({
+		// @performance Indexes for user-scoped queries (job list, status filtering)
+		userStatusIdx: index('idx_scraping_jobs_user_status').on(table.userId, table.status),
+		userCreatedIdx: index('idx_scraping_jobs_user_created').on(table.userId, table.createdAt),
+	})
+);
 
 // Scraping Results table
 export const scrapingResults = pgTable('scraping_results', {
@@ -169,19 +185,27 @@ export const searchResults = pgTable('search_results', {
 // =====================================================
 
 // 1. USERS - Core identity and profile information
-export const users = pgTable('users', {
-	id: uuid('id').primaryKey().defaultRandom(),
-	userId: text('user_id').unique().notNull(), // External auth ID (Clerk)
-	email: text('email'),
-	fullName: text('full_name'),
-	businessName: text('business_name'),
-	brandDescription: text('brand_description'),
-	industry: text('industry'),
-	onboardingStep: varchar('onboarding_step', { length: 50 }).default('pending').notNull(),
-	isAdmin: boolean('is_admin').default(false).notNull(),
-	createdAt: timestamp('created_at').defaultNow().notNull(),
-	updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
+export const users = pgTable(
+	'users',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		userId: text('user_id').unique().notNull(), // External auth ID (Clerk)
+		email: text('email'),
+		fullName: text('full_name'),
+		businessName: text('business_name'),
+		brandDescription: text('brand_description'),
+		industry: text('industry'),
+		onboardingStep: varchar('onboarding_step', { length: 50 }).default('pending').notNull(),
+		isAdmin: boolean('is_admin').default(false).notNull(),
+		createdAt: timestamp('created_at').defaultNow().notNull(),
+		updatedAt: timestamp('updated_at').defaultNow().notNull(),
+	},
+	(table) => ({
+		// @performance Index for Clerk user_id lookups (auth middleware, API guards)
+		// Note: unique() constraint creates an index but explicit index is clearer
+		userIdIdx: index('idx_users_user_id').on(table.userId),
+	})
+);
 
 // 2. USER_SUBSCRIPTIONS - Trial and subscription management
 export const userSubscriptions = pgTable('user_subscriptions', {
@@ -361,24 +385,32 @@ export const creatorProfiles = pgTable(
 	})
 );
 
-export const creatorLists = pgTable('creator_lists', {
-	id: uuid('id').primaryKey().defaultRandom(),
-	ownerId: uuid('owner_id')
-		.notNull()
-		.references(() => users.id, { onDelete: 'cascade' }),
-	name: text('name').notNull(),
-	description: text('description'),
-	type: varchar('type', { length: 24 }).notNull().default('custom'),
-	privacy: varchar('privacy', { length: 16 }).notNull().default('private'),
-	tags: jsonb('tags').notNull().default(sql`'[]'::jsonb`),
-	settings: jsonb('settings').notNull().default(sql`'{}'::jsonb`),
-	stats: jsonb('stats').notNull().default(sql`'{}'::jsonb`),
-	isArchived: boolean('is_archived').notNull().default(false),
-	slug: text('slug'),
-	createdAt: timestamp('created_at').notNull().defaultNow(),
-	updatedAt: timestamp('updated_at').notNull().defaultNow(),
-	lastSharedAt: timestamp('last_shared_at'),
-});
+export const creatorLists = pgTable(
+	'creator_lists',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		ownerId: uuid('owner_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		name: text('name').notNull(),
+		description: text('description'),
+		type: varchar('type', { length: 24 }).notNull().default('custom'),
+		privacy: varchar('privacy', { length: 16 }).notNull().default('private'),
+		tags: jsonb('tags').notNull().default(sql`'[]'::jsonb`),
+		settings: jsonb('settings').notNull().default(sql`'{}'::jsonb`),
+		stats: jsonb('stats').notNull().default(sql`'{}'::jsonb`),
+		isArchived: boolean('is_archived').notNull().default(false),
+		slug: text('slug'),
+		createdAt: timestamp('created_at').notNull().defaultNow(),
+		updatedAt: timestamp('updated_at').notNull().defaultNow(),
+		lastSharedAt: timestamp('last_shared_at'),
+	},
+	(table) => ({
+		// @performance Indexes for owner-scoped queries (list view, filtering)
+		ownerIdx: index('idx_creator_lists_owner').on(table.ownerId),
+		ownerArchivedIdx: index('idx_creator_lists_owner_archived').on(table.ownerId, table.isArchived),
+	})
+);
 
 export const creatorListItems = pgTable(
 	'creator_list_items',

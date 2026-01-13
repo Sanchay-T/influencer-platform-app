@@ -7,6 +7,9 @@ import { scrapingJobs, scrapingResults } from '@/lib/db/schema';
 import { dedupeCreators, formatEmailsForCsv } from '@/lib/export/csv-utils';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
+// @performance Vercel timeout protection - CSV export can take a long time for large datasets
+export const maxDuration = 60;
+
 export async function GET(req: Request) {
 	try {
 		structuredConsole.log('CSV Export: Starting export process');

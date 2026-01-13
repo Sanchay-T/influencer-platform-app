@@ -10,6 +10,9 @@ import {
 	PlanLimitExceededError,
 } from '@/lib/services/creator-enrichment';
 
+// @performance Vercel timeout protection - external enrichment API calls can be slow
+export const maxDuration = 30;
+
 // Breadcrumb: POST /api/creators/enrich -> validates Clerk/test auth -> delegates to creatorEnrichmentService -> returns usage counters + stored payload.
 
 const ALLOWED_PLATFORMS = new Set(['tiktok', 'instagram', 'youtube']);

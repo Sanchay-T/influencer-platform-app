@@ -4,6 +4,9 @@ import { db } from '@/lib/db';
 import { scrapingJobs, scrapingResults } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
+// @performance Vercel timeout protection - job queries with results can be slow
+export const maxDuration = 15;
+
 export async function GET(req: Request, { params }: { params: { id: string } }) {
 	try {
 		const jobId = params.id;
