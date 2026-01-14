@@ -9,7 +9,7 @@
  */
 
 import { eq } from 'drizzle-orm';
-import { validateCreatorSearch } from '@/lib/billing';
+import { validateCreatorSearch, validateTrialSearchLimit } from '@/lib/billing';
 import { db } from '@/lib/db';
 import { campaigns, scrapingJobs } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
@@ -264,6 +264,29 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 		return {
 			success: false,
 			error: validation.reason || 'Search limit exceeded',
+			statusCode: 403,
+		};
+	}
+
+	// ============================================================================
+	// Step 2.5: Validate Trial Search Limit
+	// ============================================================================
+
+	const trialValidation = await validateTrialSearchLimit(userId);
+	if (!trialValidation.allowed) {
+		logger.warn(
+			`${LOG_PREFIX} Search blocked by trial limit`,
+			{
+				userId,
+				reason: trialValidation.reason,
+				trialSearchesUsed: trialValidation.trialSearchesUsed,
+			},
+			LogCategory.BILLING
+		);
+
+		return {
+			success: false,
+			error: trialValidation.reason || 'Trial search limit exceeded',
 			statusCode: 403,
 		};
 	}

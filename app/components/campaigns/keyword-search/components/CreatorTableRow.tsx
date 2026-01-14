@@ -73,6 +73,8 @@ export interface CreatorTableRowProps {
 	isSelected: boolean;
 	platformNormalized: string;
 	bioLoading: boolean;
+	// Trial blur state
+	isBlurred?: boolean;
 	// Callbacks
 	toggleSelection: (rowId: string, snapshot: CreatorSnapshot) => void;
 	renderProfileLink: (creator: Creator) => string;
@@ -104,6 +106,7 @@ export const CreatorTableRow = memo(function CreatorTableRow({
 	isSelected,
 	platformNormalized,
 	bioLoading,
+	isBlurred = false,
 	toggleSelection,
 	renderProfileLink,
 	getBioDataForCreator,
@@ -230,7 +233,8 @@ export const CreatorTableRow = memo(function CreatorTableRow({
 		<TableRow
 			className={cn(
 				'table-row transition-colors align-top',
-				isSelected ? 'bg-pink-500/10' : undefined
+				isSelected ? 'bg-pink-500/10' : undefined,
+				isBlurred && 'blur-sm select-none pointer-events-none opacity-60'
 			)}
 			style={style}
 		>

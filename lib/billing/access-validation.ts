@@ -7,10 +7,16 @@
  * based on their subscription status and plan limits.
  */
 
+import { and, eq, gte, sql } from 'drizzle-orm';
+import { db } from '@/lib/db';
+import { scrapingJobs } from '@/lib/db/schema';
 import { getUserProfile, type UserProfileComplete } from '@/lib/db/queries/user-queries';
 import { getPlanConfig, isValidPlan, type PlanKey } from './plan-config';
 import type { AccessResult } from './subscription-types';
 import { deriveTrialStatus } from './trial-status';
+
+// Trial search limit for trial users
+export const TRIAL_SEARCH_LIMIT = 3;
 
 // ═══════════════════════════════════════════════════════════════
 // INTERNAL TYPE FOR PASSING USER THROUGH VALIDATION CHAIN
@@ -178,4 +184,117 @@ export async function validateCreatorSearch(
 	}
 
 	return { allowed: true };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TRIAL SEARCH LIMIT VALIDATION
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Count user's search jobs created since a given date.
+ * Used for trial search limit enforcement.
+ */
+async function countUserJobsSince(clerkUserId: string, sinceDate: Date): Promise<number> {
+	const result = await db
+		.select({ count: sql<number>`count(*)` })
+		.from(scrapingJobs)
+		.where(
+			and(
+				eq(scrapingJobs.userId, clerkUserId),
+				gte(scrapingJobs.createdAt, sinceDate)
+			)
+		);
+	return Number(result[0]?.count ?? 0);
+}
+
+/** Extended result with trial metadata */
+export interface TrialValidationResult extends AccessResult {
+	trialSearchesUsed?: number;
+	trialSearchesRemaining?: number;
+}
+
+/**
+ * Check if a trial user can create another search job.
+ * Trial users are limited to TRIAL_SEARCH_LIMIT total search jobs.
+ *
+ * @returns TrialValidationResult with allowed status, reason, and metadata
+ */
+export async function validateTrialSearchLimit(userId: string): Promise<TrialValidationResult> {
+	const accessResult = await validateAccessInternal(userId);
+	if (!(accessResult.allowed && accessResult.user)) {
+		const { user: _user, ...result } = accessResult;
+		return result;
+	}
+
+	const user = accessResult.user;
+
+	// Derive trial status dynamically
+	const effectiveTrialStatus = deriveTrialStatus(
+		user.subscriptionStatus,
+		user.trialEndDate ?? null
+	);
+
+	// Only apply limit to active trial users
+	if (effectiveTrialStatus !== 'active') {
+		// Not a trial user - no special limit
+		return { allowed: true };
+	}
+
+	// Count jobs created during trial period
+	const trialStartDate = user.trialStartDate ?? user.createdAt;
+	const trialJobCount = await countUserJobsSince(userId, trialStartDate);
+
+	if (trialJobCount >= TRIAL_SEARCH_LIMIT) {
+		return {
+			allowed: false,
+			reason: `You've used all ${TRIAL_SEARCH_LIMIT} trial searches. Upgrade to continue searching.`,
+			upgradeRequired: true,
+			trialSearchesUsed: trialJobCount,
+			trialSearchesRemaining: 0,
+		};
+	}
+
+	return {
+		allowed: true,
+		trialSearchesUsed: trialJobCount,
+		trialSearchesRemaining: TRIAL_SEARCH_LIMIT - trialJobCount,
+	};
+}
+
+/**
+ * Get trial search status for a user (for UI display).
+ * Returns null if user is not on trial.
+ */
+export async function getTrialSearchStatus(userId: string): Promise<{
+	isTrialUser: boolean;
+	searchesUsed: number;
+	searchesRemaining: number;
+	searchesLimit: number;
+} | null> {
+	const user = await getUserProfile(userId);
+	if (!user) return null;
+
+	const effectiveTrialStatus = deriveTrialStatus(
+		user.subscriptionStatus,
+		user.trialEndDate ?? null
+	);
+
+	if (effectiveTrialStatus !== 'active') {
+		return {
+			isTrialUser: false,
+			searchesUsed: 0,
+			searchesRemaining: TRIAL_SEARCH_LIMIT,
+			searchesLimit: TRIAL_SEARCH_LIMIT,
+		};
+	}
+
+	const trialStartDate = user.trialStartDate ?? user.createdAt;
+	const trialJobCount = await countUserJobsSince(userId, trialStartDate);
+
+	return {
+		isTrialUser: true,
+		searchesUsed: trialJobCount,
+		searchesRemaining: Math.max(0, TRIAL_SEARCH_LIMIT - trialJobCount),
+		searchesLimit: TRIAL_SEARCH_LIMIT,
+	};
 }

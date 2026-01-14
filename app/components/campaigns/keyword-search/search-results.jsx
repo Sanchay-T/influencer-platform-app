@@ -11,6 +11,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTrialStatus } from '@/lib/hooks/use-trial-status';
 import { CreatorGalleryView } from './components/CreatorGalleryView';
 import { CreatorTableView } from './components/CreatorTableView';
 import { EmailFilterOverlay } from './components/EmailFilterOverlay';
@@ -18,6 +19,7 @@ import { PaginationControls } from './components/PaginationControls';
 import { ProgressDisplay } from './components/ProgressDisplay';
 import { ResultsContainer } from './components/ResultsContainer';
 import { SearchResultsHeader } from './components/SearchResultsHeader';
+import { TrialUpgradeOverlay } from './components/TrialUpgradeOverlay';
 import { useSearchJob } from './hooks/useSearchJob';
 import { useCreatorEnrichment } from './useCreatorEnrichment';
 import {
@@ -66,12 +68,21 @@ function useEmailFilter(creators, _platformNormalized) {
 }
 
 // ============================================================================
+// Constants
+// ============================================================================
+
+const TRIAL_CLEAR_LIMIT = 25; // Number of results shown clearly to trial users
+
+// ============================================================================
 // Main Component
 // ============================================================================
 
 const SearchResults = ({ searchData }) => {
 	const jobId = searchData?.jobId;
 	const platformNormalized = (searchData?.platform ?? '').toLowerCase().replace(/[-_]/g, '');
+
+	// Trial status for blurring results
+	const { isTrialUser } = useTrialStatus();
 
 	// Single source of truth for job state
 	const {
@@ -328,6 +339,8 @@ const SearchResults = ({ searchData }) => {
 					platformNormalized={platformNormalized}
 					bioLoading={false}
 					viewMode={viewMode}
+					isTrialUser={isTrialUser}
+					trialClearLimit={TRIAL_CLEAR_LIMIT}
 					onSelectPage={handleSelectPage}
 					toggleSelection={toggleSelection}
 					renderProfileLink={renderProfileLink}
@@ -345,6 +358,8 @@ const SearchResults = ({ searchData }) => {
 					platformNormalized={platformNormalized}
 					isInstagramUs={isInstagramUs}
 					viewMode={viewMode}
+					isTrialUser={isTrialUser}
+					trialClearLimit={TRIAL_CLEAR_LIMIT}
 					toggleSelection={toggleSelection}
 					renderProfileLink={renderProfileLink}
 				/>
@@ -363,6 +378,11 @@ const SearchResults = ({ searchData }) => {
 			{/* Show enrichment progress during active search */}
 			{isActive && creatorsFound > 0 && (
 				<div className="text-center text-xs text-zinc-500">{message}</div>
+			)}
+
+			{/* Trial upgrade CTA for blurred results */}
+			{isTrialUser && totalCreators > TRIAL_CLEAR_LIMIT && (
+				<TrialUpgradeOverlay blurredCount={totalCreators - TRIAL_CLEAR_LIMIT} />
 			)}
 		</div>
 	);

@@ -23,6 +23,9 @@ export interface CreatorTableViewProps {
 	platformNormalized: string;
 	bioLoading: boolean;
 	viewMode: string;
+	// Trial blur props
+	isTrialUser?: boolean;
+	trialClearLimit?: number;
 	// Callbacks
 	onSelectPage: (selected: boolean) => void;
 	toggleSelection: (rowId: string, snapshot: unknown) => void;
@@ -56,6 +59,8 @@ export function CreatorTableView({
 	platformNormalized,
 	bioLoading,
 	viewMode,
+	isTrialUser = false,
+	trialClearLimit = 25,
 	onSelectPage,
 	toggleSelection,
 	renderProfileLink,
@@ -77,13 +82,14 @@ export function CreatorTableView({
 						onSelectPage={onSelectPage}
 					/>
 					<TableBody className="divide-y divide-zinc-800">
-						{rows.map((row) => (
+						{rows.map((row, index) => (
 							<CreatorTableRow
 								key={row.id}
 								row={row}
 								isSelected={!!selectedCreators[row.id]}
 								platformNormalized={platformNormalized}
 								bioLoading={bioLoading}
+								isBlurred={isTrialUser && index >= trialClearLimit}
 								toggleSelection={toggleSelection}
 								renderProfileLink={renderProfileLink}
 								getBioDataForCreator={getBioDataForCreator}

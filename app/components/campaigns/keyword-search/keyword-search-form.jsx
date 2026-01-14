@@ -1,10 +1,15 @@
 'use client';
 
 import { useUser } from '@clerk/nextjs';
-import { Check } from 'lucide-react';
+import { Check, Lock } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { Slider } from '@/components/ui/slider';
+import { useTrialStatus } from '@/lib/hooks/use-trial-status';
+import { cn } from '@/lib/utils';
+
+// Trial limit for slider
+const TRIAL_MAX_RESULTS = 100;
 
 export default function KeywordSearchForm({ onSubmit }) {
 	const [selectedPlatform, setSelectedPlatform] = useState('tiktok');
@@ -12,6 +17,7 @@ export default function KeywordSearchForm({ onSubmit }) {
 	const [isLoading, setIsLoading] = useState(false);
 	const [campaignId, setCampaignId] = useState(null);
 	const { user, isLoaded } = useUser();
+	const { isTrialUser, searchesRemaining, isLoading: trialLoading } = useTrialStatus();
 
 	useEffect(() => {
 		// Obtener el campaignId de la URL si existe
@@ -22,11 +28,14 @@ export default function KeywordSearchForm({ onSubmit }) {
 		}
 	}, []);
 
+	// Lock trial users to 100 results
 	useEffect(() => {
-		if (creatorsCount < 100) {
+		if (isTrialUser && creatorsCount !== TRIAL_MAX_RESULTS) {
+			setCreatorsCount(TRIAL_MAX_RESULTS);
+		} else if (creatorsCount < 100) {
 			setCreatorsCount(100);
 		}
-	}, [creatorsCount]);
+	}, [creatorsCount, isTrialUser]);
 
 	if (!(isLoaded && user)) {
 		return (
@@ -94,9 +103,11 @@ export default function KeywordSearchForm({ onSubmit }) {
 		{ value: 'youtube', label: 'YouTube' },
 	];
 	const sliderMin = 100;
-	const sliderMax = 1000;
+	// Lock max to 100 for trial users
+	const sliderMax = isTrialUser ? TRIAL_MAX_RESULTS : 1000;
 	const sliderStep = 100;
-	const sliderMarks = [100, 500, 1000];
+	const sliderMarks = isTrialUser ? [100] : [100, 500, 1000];
+	const sliderDisabled = isTrialUser;
 
 	return (
 		<div className="rounded-lg text-card-foreground shadow-sm bg-zinc-900/80 border border-zinc-700/50">
@@ -156,14 +167,20 @@ export default function KeywordSearchForm({ onSubmit }) {
 					</div>
 
 					<div className="space-y-4">
-						<label className="text-sm font-medium">How many creators do you need?</label>
+						<label className="text-sm font-medium">
+							How many creators do you need?
+							{isTrialUser && (
+								<span className="ml-2 text-xs text-amber-400">(Trial: locked at 100)</span>
+							)}
+						</label>
 						<Slider
 							value={[creatorsCount]}
-							onValueChange={([value]) => setCreatorsCount(value)}
+							onValueChange={([value]) => !sliderDisabled && setCreatorsCount(value)}
 							min={sliderMin}
 							max={sliderMax}
 							step={sliderStep}
-							className="py-4"
+							disabled={sliderDisabled}
+							className={cn('py-4', sliderDisabled && 'opacity-50 cursor-not-allowed')}
 						/>
 						<div className="flex justify-between text-md text-muted-foreground">
 							{sliderMarks.map((value) => (
@@ -172,10 +189,26 @@ export default function KeywordSearchForm({ onSubmit }) {
 								</span>
 							))}
 						</div>
-						<div className="text-sm text-muted-foreground">
-							This will use {getCreditsUsed(creatorsCount)} of your 50 credits
-						</div>
+						{isTrialUser ? (
+							<div className="flex items-center gap-2 text-sm text-amber-400">
+								<Lock className="h-4 w-4" />
+								<span>Upgrade to unlock up to 1,000 results per search</span>
+							</div>
+						) : (
+							<div className="text-sm text-muted-foreground">
+								This will use {getCreditsUsed(creatorsCount)} of your 50 credits
+							</div>
+						)}
 					</div>
+
+					{/* Trial searches remaining banner */}
+					{isTrialUser && !trialLoading && (
+						<div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-md">
+							<p className="text-sm text-amber-200">
+								Trial searches remaining: <span className="font-semibold">{searchesRemaining}</span> of 3
+							</p>
+						</div>
+					)}
 
 					<button
 						type="submit"

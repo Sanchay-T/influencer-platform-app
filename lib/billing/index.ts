@@ -82,6 +82,11 @@ export {
 	validateAccess,
 	validateCampaignCreation,
 	validateCreatorSearch,
+	// Trial search limits
+	validateTrialSearchLimit,
+	getTrialSearchStatus,
+	TRIAL_SEARCH_LIMIT,
+	type TrialValidationResult,
 	// Types
 	type WebhookResult,
 } from './subscription-service';

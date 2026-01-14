@@ -45,6 +45,8 @@ export interface CreatorGalleryCardProps {
 	isSelected: boolean;
 	platformNormalized: string;
 	isInstagramUs: boolean;
+	// Trial blur state
+	isBlurred?: boolean;
 	toggleSelection: (rowId: string, snapshot: CreatorSnapshot) => void;
 	renderProfileLink: (creator: Creator) => string;
 }
@@ -54,6 +56,7 @@ export const CreatorGalleryCard = memo(function CreatorGalleryCard({
 	isSelected,
 	platformNormalized,
 	isInstagramUs,
+	isBlurred = false,
 	toggleSelection,
 	renderProfileLink,
 }: CreatorGalleryCardProps) {
@@ -124,7 +127,8 @@ export const CreatorGalleryCard = memo(function CreatorGalleryCard({
 		<Card
 			className={cn(
 				'relative flex h-full flex-col overflow-hidden border border-zinc-800/70 bg-zinc-900/70 shadow-sm transition-colors duration-200 hover:border-pink-400/50 hover:shadow-lg hover:shadow-pink-500/10',
-				isSelected && 'border-emerald-400/60 ring-2 ring-emerald-500/30'
+				isSelected && 'border-emerald-400/60 ring-2 ring-emerald-500/30',
+				isBlurred && 'blur-sm select-none pointer-events-none opacity-60'
 			)}
 		>
 			{/* Selection checkbox */}

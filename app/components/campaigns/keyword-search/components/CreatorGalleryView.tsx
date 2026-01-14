@@ -14,6 +14,9 @@ export interface CreatorGalleryViewProps {
 	platformNormalized: string;
 	isInstagramUs: boolean;
 	viewMode: string;
+	// Trial blur props
+	isTrialUser?: boolean;
+	trialClearLimit?: number;
 	// Callbacks
 	toggleSelection: (rowId: string, snapshot: CreatorSnapshot) => void;
 	renderProfileLink: (creator: Creator) => string;
@@ -25,19 +28,22 @@ export function CreatorGalleryView({
 	platformNormalized,
 	isInstagramUs,
 	viewMode,
+	isTrialUser = false,
+	trialClearLimit = 25,
 	toggleSelection,
 	renderProfileLink,
 }: CreatorGalleryViewProps) {
 	return (
 		<div className={cn('w-full p-4 md:p-6', viewMode === 'gallery' ? 'block' : 'hidden')}>
 			<div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-				{rows.map((row) => (
+				{rows.map((row, index) => (
 					<CreatorGalleryCard
 						key={row.id}
 						row={row}
 						isSelected={!!selectedCreators[row.id]}
 						platformNormalized={platformNormalized}
 						isInstagramUs={isInstagramUs}
+						isBlurred={isTrialUser && index >= trialClearLimit}
 						toggleSelection={toggleSelection}
 						renderProfileLink={renderProfileLink}
 					/>

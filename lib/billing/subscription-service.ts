@@ -41,6 +41,11 @@ export {
 	validateAccess,
 	validateCampaignCreation,
 	validateCreatorSearch,
+	// Trial search limits
+	validateTrialSearchLimit,
+	getTrialSearchStatus,
+	TRIAL_SEARCH_LIMIT,
+	type TrialValidationResult,
 } from './access-validation';
 // Billing status
 export { getBillingStatus } from './billing-status';
