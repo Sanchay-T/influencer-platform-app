@@ -7,14 +7,73 @@
 
 ## Current Task
 
+**ID:** USE2-34, USE2-36
+**Title:** Trial User Search Limits (Blurred Results + 3 Search Cap)
+**Status:** 🚧 IN PROGRESS
+**Branch:** `claude/consolidate-all-work-BhEyW`
+**Started:** Jan 14, 2026
+**Last Updated:** Jan 14, 2026
+**Latest Commits:**
+- 54ceecb — feat(trial): implement trial user search limits (USE2-34, USE2-36)
+
+### Goal
+Implement trial user restrictions to encourage upgrades:
+1. **USE2-36**: Limit trial users to 3 total search jobs during trial period
+2. **USE2-34**: Show 25 clear results + 75 blurred with "Upgrade to see more" CTA
+
+### Work Completed
+
+- [x] **Backend: Trial Search Limit Validation**
+  - Added `validateTrialSearchLimit()` to `lib/billing/access-validation.ts`
+  - Added `countUserJobsSince()` helper to count jobs since trial start
+  - Integrated validation into `lib/search-engine/v2/workers/dispatch.ts`
+  - `TRIAL_SEARCH_LIMIT = 3` constant
+
+- [x] **API Endpoint**
+  - Created `/api/trial/search-count` endpoint
+  - Returns `isTrialUser`, `searchesUsed`, `searchesRemaining`, `searchesLimit`
+
+- [x] **Frontend: Slider Lock**
+  - Created `useTrialStatus` hook in `lib/hooks/use-trial-status.ts`
+  - Updated `keyword-search-form.jsx` to lock slider at 100 for trial users
+  - Shows "Trial: locked at 100" message
+
+- [x] **Frontend: Blurred Results**
+  - Added `isBlurred` prop to `CreatorTableRow.tsx` and `CreatorGalleryCard.tsx`
+  - Updated `CreatorTableView.tsx` and `CreatorGalleryView.tsx` to pass blur state
+  - Created `TrialUpgradeOverlay.tsx` component with upgrade CTA
+  - Integrated into `search-results.jsx`
+  - `TRIAL_CLEAR_LIMIT = 25` (25 clear + 75 blurred)
+
+### Checklist
+
+- [x] Add `validateTrialSearchLimit()` to access-validation.ts
+- [x] Integrate trial validation into dispatch.ts
+- [x] Create `/api/trial/search-count` endpoint
+- [x] Create `useTrialStatus` hook
+- [x] Update KeywordSearchForm with slider lock at 100
+- [x] Add `isBlurred` prop to CreatorTableRow
+- [x] Update CreatorTableView to pass blur state
+- [x] Add `isBlurred` prop to CreatorGalleryCard
+- [x] Update CreatorGalleryView to pass blur state
+- [x] Create TrialUpgradeOverlay component
+- [x] Integrate trial logic into search-results.jsx
+- [x] Commit and push to branch
+- [ ] Test with trial user account
+- [ ] Verify blur effect works in UI
+- [ ] Verify upgrade CTA links to /pricing
+
+---
+
+## Previous Task (Completed)
+
 **ID:** TASK-011
 **Title:** Landing Page Redesign + Analytics Integration + Scalability Architecture
-**Status:** 🚧 IN PROGRESS
+**Status:** ✅ COMPLETED
 **Branch:** `staging/consolidate-all-work`
-**Started:** Jan 13, 2026
-**Last Updated:** Jan 13, 2026 — 10:45 PM
+**Completed:** Jan 13, 2026
 **Latest Commits:**
-- 4621db293 — Logger method argument order fix in dead-letter route (most recent)
+- 4621db293 — Logger method argument order fix in dead-letter route
 - 0fc273900 — Disposable email blocking in checkout process
 - 82517e79f — Comprehensive TypeScript type fixes across codebase
 - a315f4d3f — Background CSV export with QStash and polling
@@ -137,67 +196,35 @@ Improve platform scalability, conversion tracking, and landing page design. Thre
 
 ### Next Action
 ```
-🎯 RESOLVE UNCOMMITTED FILES & FINALIZE CONSOLIDATION
+🎯 TEST TRIAL USER SEARCH LIMITS (USE2-34, USE2-36)
 
 Context:
-- Branch: staging/consolidate-all-work
-- Phase 1-5: ALL COMPLETED ✅
-  - Landing page + Analytics: COMMITTED ✅
-  - Scalability improvements: COMMITTED ✅
-  - Background CSV export: COMMITTED ✅
-  - TypeScript fixes: COMMITTED (82517e79f) ✅
-  - Disposable email blocking: COMMITTED (0fc273900) ✅
-  - DLQ logger fix: COMMITTED (4621db293) ✅
-- Phase 6: Final cleanup before merging to main
-- Uncommitted files:
-  - agent_docs/monologue.md (modified)
-  - agent_docs/tasks.md (modified - this file)
-  - supabase/migrations/meta/0015_snapshot.json (untracked)
+- Branch: claude/consolidate-all-work-BhEyW
+- Implementation: COMPLETED ✅
+- Commit: 54ceecb — feat(trial): implement trial user search limits
 
-CURRENT STATUS:
-✅ All features committed and working
-✅ TypeScript fixes applied
-✅ Security improvements (disposable email blocking)
-✅ DLQ logger fixed
-❓ Unknown: What is 0015_snapshot.json and should it be committed?
-🎯 Next: Clean up uncommitted files, then merge to main
+WHAT WAS IMPLEMENTED:
+✅ Backend: validateTrialSearchLimit() enforces 3 search cap
+✅ Backend: Integrated into dispatch.ts pipeline
+✅ API: /api/trial/search-count endpoint
+✅ Frontend: useTrialStatus hook with caching
+✅ Frontend: Slider locked at 100 for trial users
+✅ Frontend: 25 clear + 75 blurred results
+✅ Frontend: TrialUpgradeOverlay with upgrade CTA
 
-EXACT NEXT STEPS:
+REMAINING TESTING:
+- [ ] Test with trial user account in dev/staging
+- [ ] Verify blur effect appears on results 26-100
+- [ ] Verify upgrade CTA links to /pricing
+- [ ] Verify slider is locked at 100 for trial users
+- [ ] Verify 4th search attempt shows error message
 
-1. Inspect the uncommitted migration file:
-   bash: cat supabase/migrations/meta/0015_snapshot.json
+TECH DEBT IDENTIFIED (Low Priority):
+- 2 unused functions in lib/billing/trial-status.ts
+- Duplicate trial countdown logic across files
+- Trial constants scattered (intentional, different purposes)
 
-2. Check if there's a corresponding migration SQL file:
-   bash: ls -la supabase/migrations/ | grep 0015
-
-3. Determine migration action:
-
-   IF 0015_snapshot.json is auto-generated metadata:
-   → Check if migration 0015 exists and is committed
-   → If yes, commit the snapshot: git add supabase/migrations/meta/0015_snapshot.json
-   → If no, investigate why snapshot was created
-
-   IF migration is orphaned or test artifact:
-   → Delete it: rm supabase/migrations/meta/0015_snapshot.json
-
-4. Commit agent_docs updates:
-   bash: git add agent_docs/monologue.md agent_docs/tasks.md
-   bash: git commit -m "chore: update agent docs with session state"
-
-5. Commit migration if needed:
-   bash: git add supabase/migrations/meta/0015_snapshot.json
-   bash: git commit -m "chore: add migration snapshot"
-
-6. Push all changes:
-   bash: git push origin staging/consolidate-all-work
-
-7. Prepare for main merge:
-   - Run type check: npm run type-check
-   - Review all changes: git log main..staging/consolidate-all-work --oneline
-   - Merge: git checkout main && git merge staging/consolidate-all-work
-   - Push: git push origin main
-
-START HERE: Inspect supabase/migrations/meta/0015_snapshot.json to understand what it is.
+START HERE: Test the feature with a trial user account
 ```
 
 ---
