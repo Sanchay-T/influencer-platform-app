@@ -114,7 +114,25 @@ function OnboardingSuccessContent() {
 
 	useEffect(() => {
 		const load = async () => {
-			// Always check if user is already completed first (handles direct navigation)
+			// Always fetch session data first if we have a session_id
+			// @why This must happen BEFORE checking webhook status to ensure
+			// sessionData is available for Meta Pixel events (fixes race condition
+			// where fast webhooks caused early return before sessionData was fetched)
+			if (sessionId) {
+				try {
+					const sessionRes = await fetch(`/api/stripe/session?session_id=${sessionId}`);
+					if (sessionRes.ok) {
+						const data = await sessionRes.json();
+						setSessionData(data);
+					} else {
+						structuredConsole.error('Failed to fetch session', sessionRes.status);
+					}
+				} catch (err) {
+					structuredConsole.error('Session fetch error', err);
+				}
+			}
+
+			// Check if user is already completed (handles direct navigation or fast webhooks)
 			const alreadyCompleted = await pollForWebhook();
 			if (alreadyCompleted) {
 				setLoading(false);
@@ -127,23 +145,9 @@ function OnboardingSuccessContent() {
 				return;
 			}
 
-			try {
-				// Fetch session details for display
-				const sessionRes = await fetch(`/api/stripe/session?session_id=${sessionId}`);
-				if (sessionRes.ok) {
-					const data = await sessionRes.json();
-					setSessionData(data);
-				} else {
-					structuredConsole.error('Failed to fetch session', sessionRes.status);
-				}
-
-				// Start polling for webhook completion
-				startPolling();
-			} catch (err) {
-				structuredConsole.error('Success page error', err);
-			} finally {
-				setLoading(false);
-			}
+			// Start polling for webhook completion
+			startPolling();
+			setLoading(false);
 		};
 		load();
 
