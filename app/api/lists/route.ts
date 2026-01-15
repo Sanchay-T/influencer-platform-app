@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { trackListCreated } from '@/lib/analytics/logsnag';
+import { trackServer } from '@/lib/analytics/track';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { createList, getListsForUser } from '@/lib/db/queries/list-queries';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
@@ -57,9 +57,9 @@ export async function POST(request: Request) {
 			settings: body.settings,
 		});
 
-		// Track list creation in LogSnag
+		// Track list creation (GA4 + LogSnag)
 		const user = await getUserProfile(userId);
-		await trackListCreated({
+		await trackServer('list_created', {
 			userId,
 			name: body.name || 'Untitled List',
 			type: body.type || 'custom',

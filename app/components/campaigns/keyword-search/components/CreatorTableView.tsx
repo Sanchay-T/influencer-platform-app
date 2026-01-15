@@ -51,6 +51,9 @@ export interface CreatorTableViewProps {
 	}) => void;
 }
 
+// Number of blurred rows to show before fading out (creates urgency without overwhelming)
+const BLURRED_ROWS_TO_SHOW = 5;
+
 export function CreatorTableView({
 	rows,
 	selectedCreators,
@@ -72,6 +75,9 @@ export function CreatorTableView({
 	applyEnrichmentToCreators,
 	setBioEmailConfirmDialog,
 }: CreatorTableViewProps) {
+	// Limit visible rows for trial users: show clear rows + limited blurred rows
+	const visibleRows = isTrialUser ? rows.slice(0, trialClearLimit + BLURRED_ROWS_TO_SHOW) : rows;
+
 	return (
 		<div className={cn('w-full', viewMode === 'table' ? 'block' : 'hidden')}>
 			<div className="overflow-hidden lg:overflow-visible">
@@ -82,7 +88,7 @@ export function CreatorTableView({
 						onSelectPage={onSelectPage}
 					/>
 					<TableBody className="divide-y divide-zinc-800">
-						{rows.map((row, index) => (
+						{visibleRows.map((row, index) => (
 							<CreatorTableRow
 								key={row.id}
 								row={row}

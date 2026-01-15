@@ -4,6 +4,7 @@ import { useUser } from '@clerk/nextjs';
 import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { Card } from '@/components/ui/card';
+import { trackClient } from '@/lib/analytics/track';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import OnboardingLogger from '@/lib/utils/onboarding-logger';
 import OnboardingProgress from './onboarding-progress';
@@ -151,6 +152,7 @@ export default function OnboardingModal({
 			}
 
 			toast.success('Profile information saved!');
+			trackClient('onboarding_step_completed', { step: 1, stepName: 'profile' });
 			setStep(2);
 		} catch (err) {
 			structuredConsole.error('❌ Error saving step 1:', err);
@@ -197,6 +199,7 @@ export default function OnboardingModal({
 			}
 
 			toast.success('Brand description saved!');
+			trackClient('onboarding_step_completed', { step: 2, stepName: 'brand' });
 			setStep(3);
 		} catch (err) {
 			structuredConsole.error('❌ Error saving step 2:', err);
@@ -279,9 +282,7 @@ export default function OnboardingModal({
 						/>
 					)}
 
-					{step === 3 && (
-						<Step3Plan sessionId={sessionId} userId={user?.id} />
-					)}
+					{step === 3 && <Step3Plan sessionId={sessionId} userId={user?.id} />}
 				</Card>
 			</div>
 		</div>

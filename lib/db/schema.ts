@@ -138,6 +138,9 @@ export const jobCreators = pgTable(
 		// @context Enrichment tracking - proper column instead of JSON extraction
 		// @why Indexed column is faster than JSON->>'bioEnriched' for completion queries
 		enriched: boolean('enriched').notNull().default(false),
+		// @context USE2-17: Track which keyword found this creator
+		// @why Enables filtering/sorting creators by source keyword in results UI
+		keyword: varchar('keyword', { length: 255 }),
 		createdAt: timestamp('created_at').notNull().defaultNow(),
 	},
 	(table) => ({
@@ -147,6 +150,8 @@ export const jobCreators = pgTable(
 		jobIdIdx: index('idx_job_creators_job_id').on(table.jobId),
 		// Index for fast completion queries (COUNT WHERE enriched = true)
 		enrichedIdx: index('idx_job_creators_enriched').on(table.jobId, table.enriched),
+		// Index for fast keyword filtering (USE2-17)
+		keywordIdx: index('idx_job_creators_keyword').on(table.jobId, table.keyword),
 	})
 );
 

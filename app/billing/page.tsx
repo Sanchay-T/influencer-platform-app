@@ -1,21 +1,83 @@
 'use client';
 
-import { ArrowRight, CheckCircle, Crown, Shield, Star, Zap } from 'lucide-react';
+import { ArrowRight, CheckCircle, Crown, Loader2, Shield, Sparkles, Star, Zap } from 'lucide-react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
-import { Suspense, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { toast } from 'react-hot-toast';
+import { StartSubscriptionModal } from '@/app/components/billing/start-subscription-modal';
 import SubscriptionManagement from '@/app/components/billing/subscription-management';
-// Removed Clerk PricingTable - using custom Stripe pricing
 import UpgradeButton from '@/app/components/billing/upgrade-button';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { clearBillingCache, useBilling } from '@/lib/hooks/use-billing';
+import { useStartSubscription } from '@/lib/hooks/use-start-subscription';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import DashboardLayout from '../components/layout/dashboard-layout';
 
+// Plan prices for the modal
+const PLAN_PRICES: Record<string, number> = {
+	glow_up: 99,
+	viral_surge: 249,
+	fame_flex: 499,
+};
+
+const PLAN_NAMES: Record<string, string> = {
+	glow_up: 'Glow Up',
+	viral_surge: 'Viral Surge',
+	fame_flex: 'Fame Flex',
+};
+
 function BillingContent() {
-	const { currentPlan, needsUpgrade } = useBilling();
+	const { currentPlan, needsUpgrade, isTrialing } = useBilling();
 	const searchParams = useSearchParams();
+	const router = useRouter();
+
+	// Modal state for starting subscription
+	const [showStartModal, setShowStartModal] = useState(false);
+	const {
+		startSubscription,
+		openPortal,
+		isLoading: isStartingSubscription,
+	} = useStartSubscription();
+
+	// Handler for trial users to start their subscription (opens modal)
+	const handleOpenStartModal = () => {
+		if (!currentPlan || currentPlan === 'free') {
+			return;
+		}
+		setShowStartModal(true);
+	};
+
+	// Handler for confirming subscription start (from modal)
+	const handleConfirmStartSubscription = async () => {
+		const result = await startSubscription();
+
+		if (result.success) {
+			setShowStartModal(false);
+			toast.success('Subscription started! Welcome aboard.');
+			// Refresh the page to show updated status
+			router.refresh();
+		} else {
+			// Show error with option to update payment method
+			toast.error(
+				<div className="flex flex-col gap-2">
+					<span>{result.error}</span>
+					<button
+						onClick={() => {
+							toast.dismiss();
+							openPortal();
+						}}
+						className="text-pink-400 hover:text-pink-300 text-sm underline text-left"
+					>
+						Update payment method
+					</button>
+				</div>,
+				{ duration: 8000 }
+			);
+		}
+	};
+
 	const upgradeParam = searchParams.get('upgrade');
 	const planParam = searchParams.get('plan');
 	const successParam = searchParams.get('success');
@@ -259,10 +321,25 @@ function BillingContent() {
 										<li>✓ Bio extraction</li>
 									</ul>
 									{currentPlan === 'glow_up' ? (
-										<div className="w-full bg-primary/20 text-primary border border-primary/30 py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2">
-											<CheckCircle className="h-4 w-4" />
-											Your Current Plan
-										</div>
+										isTrialing ? (
+											<Button
+												onClick={handleOpenStartModal}
+												disabled={isStartingSubscription}
+												className="w-full bg-pink-500 hover:bg-pink-600 text-white"
+											>
+												{isStartingSubscription ? (
+													<Loader2 className="h-4 w-4 animate-spin mr-2" />
+												) : (
+													<Sparkles className="h-4 w-4 mr-2" />
+												)}
+												{isStartingSubscription ? 'Processing...' : 'Start Your Subscription'}
+											</Button>
+										) : (
+											<div className="w-full bg-primary/20 text-primary border border-primary/30 py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2">
+												<CheckCircle className="h-4 w-4" />
+												Your Current Plan
+											</div>
+										)
 									) : (
 										<UpgradeButton targetPlan="glow_up" className="w-full" />
 									)}
@@ -325,10 +402,25 @@ function BillingContent() {
 										<li>✓ All Glow Up features</li>
 									</ul>
 									{currentPlan === 'viral_surge' ? (
-										<div className="w-full bg-primary/20 text-primary border border-primary/30 py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2">
-											<CheckCircle className="h-4 w-4" />
-											Your Current Plan
-										</div>
+										isTrialing ? (
+											<Button
+												onClick={handleOpenStartModal}
+												disabled={isStartingSubscription}
+												className="w-full bg-pink-500 hover:bg-pink-600 text-white"
+											>
+												{isStartingSubscription ? (
+													<Loader2 className="h-4 w-4 animate-spin mr-2" />
+												) : (
+													<Sparkles className="h-4 w-4 mr-2" />
+												)}
+												{isStartingSubscription ? 'Processing...' : 'Start Your Subscription'}
+											</Button>
+										) : (
+											<div className="w-full bg-primary/20 text-primary border border-primary/30 py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2">
+												<CheckCircle className="h-4 w-4" />
+												Your Current Plan
+											</div>
+										)
 									) : (
 										<UpgradeButton targetPlan="viral_surge" className="w-full" />
 									)}
@@ -381,10 +473,25 @@ function BillingContent() {
 										<li>✓ Priority support</li>
 									</ul>
 									{currentPlan === 'fame_flex' ? (
-										<div className="w-full bg-primary/20 text-primary border border-primary/30 py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2">
-											<CheckCircle className="h-4 w-4" />
-											Your Current Plan
-										</div>
+										isTrialing ? (
+											<Button
+												onClick={handleOpenStartModal}
+												disabled={isStartingSubscription}
+												className="w-full bg-pink-500 hover:bg-pink-600 text-white"
+											>
+												{isStartingSubscription ? (
+													<Loader2 className="h-4 w-4 animate-spin mr-2" />
+												) : (
+													<Sparkles className="h-4 w-4 mr-2" />
+												)}
+												{isStartingSubscription ? 'Processing...' : 'Start Your Subscription'}
+											</Button>
+										) : (
+											<div className="w-full bg-primary/20 text-primary border border-primary/30 py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2">
+												<CheckCircle className="h-4 w-4" />
+												Your Current Plan
+											</div>
+										)
 									) : (
 										<UpgradeButton targetPlan="fame_flex" className="w-full" />
 									)}
@@ -394,6 +501,18 @@ function BillingContent() {
 					</CardContent>
 				</Card>
 			</div>
+
+			{/* Start Subscription Modal */}
+			{currentPlan && currentPlan !== 'free' && (
+				<StartSubscriptionModal
+					open={showStartModal}
+					onOpenChange={setShowStartModal}
+					planName={PLAN_NAMES[currentPlan] || currentPlan}
+					amount={PLAN_PRICES[currentPlan] || 0}
+					onConfirm={handleConfirmStartSubscription}
+					isLoading={isStartingSubscription}
+				/>
+			)}
 		</div>
 	);
 }

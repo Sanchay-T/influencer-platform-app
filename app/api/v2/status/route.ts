@@ -206,16 +206,24 @@ export async function GET(req: Request) {
 	const actualEnrichedCount = enrichedResult[0]?.count ?? 0;
 
 	// Get paginated creators (DB-level OFFSET/LIMIT)
+	// @context USE2-17: Include keyword to track which keyword found each creator
 	const paginatedRows = await db
-		.select({ creatorData: jobCreators.creatorData })
+		.select({
+			creatorData: jobCreators.creatorData,
+			keyword: jobCreators.keyword,
+		})
 		.from(jobCreators)
 		.where(eq(jobCreators.jobId, jobId))
 		.orderBy(jobCreators.createdAt)
 		.limit(limit)
 		.offset(offset);
 
-	// Extract creator data from rows
-	const paginatedCreators = paginatedRows.map((row) => row.creatorData);
+	// Extract creator data from rows, injecting keyword into each creator object
+	// @context USE2-17: Frontend expects keyword field on creator for filtering/display
+	const paginatedCreators = paginatedRows.map((row) => ({
+		...(row.creatorData as object),
+		keyword: row.keyword || null,
+	}));
 
 	// DEBUG: Log first creator's enrichment data to diagnose bio/email display issues
 	if (paginatedCreators.length > 0) {

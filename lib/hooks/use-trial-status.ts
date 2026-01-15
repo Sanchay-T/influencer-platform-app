@@ -20,6 +20,7 @@ export interface TrialSearchStatus {
 	searchesUsed: number;
 	searchesRemaining: number;
 	searchesLimit: number;
+	currentPlan: string | null;
 }
 
 export interface UseTrialStatusResult extends TrialSearchStatus {
@@ -42,6 +43,7 @@ const defaultStatus: TrialSearchStatus = {
 	searchesUsed: 0,
 	searchesRemaining: 3,
 	searchesLimit: 3,
+	currentPlan: null,
 };
 
 export function useTrialStatus(): UseTrialStatusResult {
@@ -80,7 +82,7 @@ export function useTrialStatus(): UseTrialStatusResult {
 
 	// Load from cache immediately, then fetch fresh data
 	useEffect(() => {
-		if (!isLoaded || !userId) {
+		if (!(isLoaded && userId)) {
 			setIsLoading(false);
 			return;
 		}
@@ -91,8 +93,7 @@ export function useTrialStatus(): UseTrialStatusResult {
 			if (cached) {
 				const parsedCache: CachedTrialStatus = JSON.parse(cached);
 				const isValidCache =
-					parsedCache.userId === userId &&
-					Date.now() - parsedCache.timestamp < CACHE_DURATION;
+					parsedCache.userId === userId && Date.now() - parsedCache.timestamp < CACHE_DURATION;
 
 				if (isValidCache) {
 					setStatus(parsedCache.data);

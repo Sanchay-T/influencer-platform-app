@@ -67,3 +67,4 @@ e2e-*.png
 .env.production
 database-backups/
 schema-comparison-output.json
+.claude/.env

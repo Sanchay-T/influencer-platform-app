@@ -198,6 +198,21 @@ export class StripeClient {
 	}
 
 	/**
+	 * End a subscription's trial immediately, triggering a charge.
+	 *
+	 * @context USE2-40: Used when trial user clicks "Start Subscription"
+	 * @why Charges the card on file without requiring re-entry of payment details
+	 */
+	static async endTrialNow(subscriptionId: string): Promise<Stripe.Subscription> {
+		logger.info('Ending trial immediately', {
+			metadata: { subscriptionId },
+		});
+		return StripeClient.updateSubscription(subscriptionId, {
+			trial_end: 'now',
+		});
+	}
+
+	/**
 	 * List subscriptions for a customer.
 	 */
 	static async listSubscriptions(

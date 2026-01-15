@@ -11,6 +11,8 @@ type SuggestionRequestBody = {
 	existingKeywords?: string[];
 	limit?: number;
 	platform?: string;
+	// @context USE2-23: Previous suggestions for context-aware generation
+	previousSuggestions?: string[];
 };
 
 type SuggestionItem = {
@@ -24,7 +26,8 @@ type CacheEntry = {
 	suggestions: SuggestionItem[];
 };
 
-const CACHE_TTL_MS = Number(process.env.KEYWORD_SUGGESTION_CACHE_TTL_MS ?? 3 * 60 * 1000);
+// @context USE2-21: Increased cache TTL from 3 min to 10 min for faster repeat queries
+const CACHE_TTL_MS = Number(process.env.KEYWORD_SUGGESTION_CACHE_TTL_MS ?? 10 * 60 * 1000);
 const MAX_SUGGESTIONS = Number(process.env.KEYWORD_SUGGESTION_MAX ?? 12);
 const MIN_SEED_LENGTH = 3;
 const suggestionCache = new Map<string, CacheEntry>();
@@ -120,6 +123,7 @@ async function streamOpenAICompletion({
 	limit,
 	platform,
 	planHint,
+	previousSuggestions,
 	emitToken,
 }: {
 	seed: string;
@@ -127,6 +131,8 @@ async function streamOpenAICompletion({
 	limit: number;
 	platform?: string;
 	planHint?: string;
+	// @context USE2-23: Previous suggestions for context-aware generation
+	previousSuggestions?: string[];
 	emitToken?: (token: string) => void;
 }): Promise<SuggestionItem[]> {
 	const anchorTokens = extractAnchorTokens(seed);
@@ -149,6 +155,10 @@ async function streamOpenAICompletion({
 				existingKeywords.length
 					? `Already selected keywords: ${existingKeywords.join(', ')}.`
 					: 'No existing keywords have been selected.',
+				// @context USE2-23: Include previous suggestions for context-aware refinement
+				previousSuggestions?.length
+					? `Previous suggestions shown: ${previousSuggestions.join(', ')}. Build on these with more specific variations.`
+					: '',
 				platform ? `Preferred platform: ${platform}.` : '',
 				planHint ? `Plan tier: ${planHint}.` : '',
 				anchorTokens.length
@@ -161,6 +171,7 @@ async function streamOpenAICompletion({
 		},
 	];
 
+	// @context USE2-21: Optimized for speed - lower temperature + max_tokens cap
 	const body = {
 		model: defaultModel,
 		stream: true,
@@ -170,8 +181,9 @@ async function streamOpenAICompletion({
 			// biome-ignore lint/style/useNamingConvention: OpenAI API expects snake_case.
 			json_schema: schema,
 		},
-		temperature: 0.6,
-		top_p: 0.9,
+		temperature: 0.5, // Reduced from 0.6 for faster convergence
+		// biome-ignore lint/style/useNamingConvention: OpenAI API expects snake_case.
+		max_tokens: 800, // Cap response size to speed up generation
 		messages,
 	};
 
@@ -306,6 +318,10 @@ export async function POST(request: Request) {
 		Math.min(Number.isFinite(body?.limit) ? Number(body.limit) : 8, MAX_SUGGESTIONS)
 	);
 	const platform = typeof body?.platform === 'string' ? body.platform : undefined;
+	// @context USE2-23: Parse previous suggestions for context-aware generation
+	const previousSuggestions = Array.isArray(body.previousSuggestions)
+		? body.previousSuggestions.filter((s): s is string => typeof s === 'string' && s.length > 0)
+		: [];
 	const planHint =
 		typeof (request.headers.get('x-plan-tier') ?? '') === 'string'
 			? (request.headers.get('x-plan-tier') ?? undefined)
@@ -338,6 +354,8 @@ export async function POST(request: Request) {
 					limit,
 					platform,
 					planHint,
+					// @context USE2-23: Pass previous suggestions for context-aware generation
+					previousSuggestions,
 					emitToken: (token) => {
 						if (token && token.trim().length > 0) {
 							send({ type: 'token', payload: token });

@@ -47,12 +47,15 @@ export interface SaveResult {
  *
  * @why Single atomic INSERT instead of INSERT + UPDATE prevents race conditions
  * and data loss when parallel workers save simultaneously.
+ *
+ * @param keyword - USE2-17: Source keyword that found these creators (for filtering/sorting)
  */
 export async function saveCreatorsToJob(
 	jobId: string,
 	creators: NormalizedCreator[],
 	getDedupeKey: (creator: NormalizedCreator) => string,
-	targetResults: number
+	targetResults: number,
+	keyword?: string
 ): Promise<SaveResult> {
 	if (creators.length === 0) {
 		return { total: 0, newCount: 0, creatorIds: [] };
@@ -81,11 +84,13 @@ export async function saveCreatorsToJob(
 	const creatorsToProcess = creators.slice(0, Math.min(creators.length, slotsLeft + 50));
 
 	// Step 2: Prepare rows for batch insert
+	// @context USE2-17: Include keyword for tracking which keyword found each creator
 	const rows = creatorsToProcess.map((c) => ({
 		jobId,
 		platform: c.platform || 'unknown',
 		username: getDedupeKey(c).toLowerCase().trim(),
 		creatorData: c,
+		keyword: keyword || null,
 	}));
 
 	// Step 3: Single atomic INSERT with ON CONFLICT DO NOTHING

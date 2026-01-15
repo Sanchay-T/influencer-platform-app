@@ -17,6 +17,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { trackClient } from '@/lib/analytics/track';
 import { useBilling } from '@/lib/hooks/use-billing';
 import { paymentLogger } from '@/lib/logging';
 import { structuredConsole } from '@/lib/logging/console-proxy';
@@ -94,6 +95,15 @@ function UpgradeButtonContent({
 	const handleUpgrade = async () => {
 		setIsLoading(true);
 		setError('');
+
+		// Track upgrade intent (GA4 + Meta)
+		trackClient('upgrade_clicked', {
+			userId: '',
+			email: '',
+			currentPlan: currentPlan || undefined,
+			targetPlan: targetPlan,
+			source: 'billing_page',
+		});
 
 		try {
 			paymentLogger.info('Starting upgrade process', {

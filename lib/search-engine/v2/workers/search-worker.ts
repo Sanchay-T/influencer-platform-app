@@ -218,11 +218,13 @@ export async function processSearch(options: ProcessSearchOptions): Promise<Sear
 		// Step 4: Deduplicate and Save to DB
 		// ========================================================================
 
+		// @context USE2-17: Pass keyword so we track which keyword found each creator
 		const { newCount, creatorIds } = await saveCreatorsToJob(
 			jobId,
 			normalizedCreators,
 			adapter.getDedupeKey.bind(adapter),
-			targetResults
+			targetResults,
+			keyword
 		);
 
 		// ========================================================================

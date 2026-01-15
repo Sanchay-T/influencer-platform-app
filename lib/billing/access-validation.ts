@@ -9,8 +9,8 @@
 
 import { and, eq, gte, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { scrapingJobs } from '@/lib/db/schema';
 import { getUserProfile, type UserProfileComplete } from '@/lib/db/queries/user-queries';
+import { scrapingJobs } from '@/lib/db/schema';
 import { getPlanConfig, isValidPlan, type PlanKey } from './plan-config';
 import type { AccessResult } from './subscription-types';
 import { deriveTrialStatus } from './trial-status';
@@ -198,12 +198,7 @@ async function countUserJobsSince(clerkUserId: string, sinceDate: Date): Promise
 	const result = await db
 		.select({ count: sql<number>`count(*)` })
 		.from(scrapingJobs)
-		.where(
-			and(
-				eq(scrapingJobs.userId, clerkUserId),
-				gte(scrapingJobs.createdAt, sinceDate)
-			)
-		);
+		.where(and(eq(scrapingJobs.userId, clerkUserId), gte(scrapingJobs.createdAt, sinceDate)));
 	return Number(result[0]?.count ?? 0);
 }
 
@@ -270,6 +265,7 @@ export async function getTrialSearchStatus(userId: string): Promise<{
 	searchesUsed: number;
 	searchesRemaining: number;
 	searchesLimit: number;
+	currentPlan: string | null;
 } | null> {
 	const user = await getUserProfile(userId);
 	if (!user) return null;
@@ -285,6 +281,7 @@ export async function getTrialSearchStatus(userId: string): Promise<{
 			searchesUsed: 0,
 			searchesRemaining: TRIAL_SEARCH_LIMIT,
 			searchesLimit: TRIAL_SEARCH_LIMIT,
+			currentPlan: user.currentPlan ?? null,
 		};
 	}
 
@@ -296,5 +293,6 @@ export async function getTrialSearchStatus(userId: string): Promise<{
 		searchesUsed: trialJobCount,
 		searchesRemaining: Math.max(0, TRIAL_SEARCH_LIMIT - trialJobCount),
 		searchesLimit: TRIAL_SEARCH_LIMIT,
+		currentPlan: user.currentPlan ?? null,
 	};
 }

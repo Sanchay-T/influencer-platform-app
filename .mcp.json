@@ -5,14 +5,16 @@
       "url": "https://mcp.supabase.com/mcp?project_ref=${SUPABASE_PROJECT_REF}&features=docs,database,development,debugging,functions,branching",
       "headers": {
         "Authorization": "Bearer ${SUPABASE_ACCESS_TOKEN}"
-      }
+      },
+      "defer_loading": true
     },
     "linear-server": {
       "type": "http",
       "url": "https://mcp.linear.app/mcp",
       "headers": {
         "Authorization": "Bearer ${LINEAR_API_KEY}"
-      }
+      },
+      "defer_loading": true
     }
   }
 }

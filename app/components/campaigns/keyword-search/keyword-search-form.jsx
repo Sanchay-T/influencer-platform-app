@@ -1,26 +1,39 @@
 'use client';
 
 import { useUser } from '@clerk/nextjs';
-import { Check, Lock } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Check, Crown } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { Slider } from '@/components/ui/slider';
 import { useTrialStatus } from '@/lib/hooks/use-trial-status';
 import { cn } from '@/lib/utils';
 
-// Trial limit for slider
+// Trial limit - only 100 is available
 const TRIAL_MAX_RESULTS = 100;
+// Snap-back delay in ms (lets user "taste" the premium value)
+const SNAPBACK_DELAY = 400;
 
 export default function KeywordSearchForm({ onSubmit }) {
 	const [selectedPlatform, setSelectedPlatform] = useState('tiktok');
 	const [creatorsCount, setCreatorsCount] = useState(100);
 	const [isLoading, setIsLoading] = useState(false);
 	const [campaignId, setCampaignId] = useState(null);
+	const [isSnappingBack, setIsSnappingBack] = useState(false);
+	const snapbackTimeoutRef = useRef(null);
 	const { user, isLoaded } = useUser();
 	const { isTrialUser, searchesRemaining, isLoading: trialLoading } = useTrialStatus();
 
+	// Cleanup timeout on unmount
 	useEffect(() => {
-		// Obtener el campaignId de la URL si existe
+		return () => {
+			if (snapbackTimeoutRef.current) {
+				clearTimeout(snapbackTimeoutRef.current);
+			}
+		};
+	}, []);
+
+	useEffect(() => {
+		// Get campaignId from URL if exists
 		const urlParams = new URLSearchParams(window.location.search);
 		const urlCampaignId = urlParams.get('campaignId');
 		if (urlCampaignId) {
@@ -28,14 +41,42 @@ export default function KeywordSearchForm({ onSubmit }) {
 		}
 	}, []);
 
-	// Lock trial users to 100 results
-	useEffect(() => {
-		if (isTrialUser && creatorsCount !== TRIAL_MAX_RESULTS) {
-			setCreatorsCount(TRIAL_MAX_RESULTS);
-		} else if (creatorsCount < 100) {
-			setCreatorsCount(100);
-		}
-	}, [creatorsCount, isTrialUser]);
+	// Note: Trial user lock is now handled by snap-back in handleSliderChange
+
+	// Slider change handler with snap-back for trial users
+	// Must be defined before early return to satisfy React hooks rules
+	const handleSliderChange = useCallback(
+		([value]) => {
+			// Non-trial users can select any value
+			if (!isTrialUser) {
+				setCreatorsCount(value);
+				return;
+			}
+
+			// Trial users: allow them to "taste" premium values briefly
+			if (value > TRIAL_MAX_RESULTS) {
+				// Show the premium value
+				setCreatorsCount(value);
+				setIsSnappingBack(true);
+
+				// Clear any existing timeout
+				if (snapbackTimeoutRef.current) {
+					clearTimeout(snapbackTimeoutRef.current);
+				}
+
+				// After delay, snap back to 100
+				snapbackTimeoutRef.current = setTimeout(() => {
+					setCreatorsCount(TRIAL_MAX_RESULTS);
+					setIsSnappingBack(false);
+					toast('Upgrade to unlock 500+ creators', { icon: '👑' });
+				}, SNAPBACK_DELAY);
+				return;
+			}
+
+			setCreatorsCount(value);
+		},
+		[isTrialUser]
+	);
 
 	if (!(isLoaded && user)) {
 		return (
@@ -55,11 +96,6 @@ export default function KeywordSearchForm({ onSubmit }) {
 		);
 	}
 
-	const getActualScraperLimit = (uiValue) => {
-		// Retornamos el valor real del slider (1000-5000)
-		return uiValue;
-	};
-
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 
@@ -77,37 +113,33 @@ export default function KeywordSearchForm({ onSubmit }) {
 		}
 
 		try {
-			// Asegurarnos de que creatorsCount sea un número
 			const numericCreatorsCount = Number(creatorsCount);
-			// Pasar el campaignId si existe
-			// Await the onSubmit callback to prevent double submissions
 			await onSubmit({
 				platforms: [selectedPlatform],
 				creatorsCount: numericCreatorsCount,
-				scraperLimit: numericCreatorsCount, // Usamos el valor numérico
+				scraperLimit: numericCreatorsCount,
 				campaignId: campaignId,
 			});
 		} catch (_error) {
 			// Error is handled by parent, just reset loading state
 			setIsLoading(false);
 		}
-		// Note: Don't reset isLoading on success - page navigates away
 	};
 
-	const getCreditsUsed = (count) => count / 100; // 1000 creators = 10 credits, etc.
-
-	// V2 platform values - these map directly to the v2 dispatch API
+	// V2 platform values
 	const platformOptions = [
 		{ value: 'tiktok', label: 'TikTok' },
 		{ value: 'instagram', label: 'Instagram' },
 		{ value: 'youtube', label: 'YouTube' },
 	];
+
 	const sliderMin = 100;
-	// Lock max to 100 for trial users
-	const sliderMax = isTrialUser ? TRIAL_MAX_RESULTS : 1000;
+	const sliderMax = 1000;
 	const sliderStep = 100;
-	const sliderMarks = isTrialUser ? [100] : [100, 500, 1000];
-	const sliderDisabled = isTrialUser;
+	const sliderMarks = [100, 500, 1000];
+
+	// Check if a mark is locked for trial users
+	const isMarkLocked = (value) => isTrialUser && value > TRIAL_MAX_RESULTS;
 
 	return (
 		<div className="rounded-lg text-card-foreground shadow-sm bg-zinc-900/80 border border-zinc-700/50">
@@ -118,6 +150,7 @@ export default function KeywordSearchForm({ onSubmit }) {
 			</div>
 			<div className="p-6 pt-0">
 				<form onSubmit={handleSubmit} className="space-y-8">
+					{/* Platform Selection */}
 					<div className="space-y-4">
 						<label className="text-sm font-medium">Platform</label>
 						<div className="flex flex-wrap gap-4">
@@ -166,48 +199,71 @@ export default function KeywordSearchForm({ onSubmit }) {
 						</div>
 					</div>
 
+					{/* Creator Count Selection */}
 					<div className="space-y-4">
-						<label className="text-sm font-medium">
-							How many creators do you need?
-							{isTrialUser && (
-								<span className="ml-2 text-xs text-amber-400">(Trial: locked at 100)</span>
-							)}
-						</label>
+						<label className="text-sm font-medium">How many creators do you need?</label>
+
+						{/* Slider */}
 						<Slider
 							value={[creatorsCount]}
-							onValueChange={([value]) => !sliderDisabled && setCreatorsCount(value)}
+							onValueChange={handleSliderChange}
 							min={sliderMin}
 							max={sliderMax}
 							step={sliderStep}
-							disabled={sliderDisabled}
-							className={cn('py-4', sliderDisabled && 'opacity-50 cursor-not-allowed')}
 						/>
-						<div className="flex justify-between text-md text-muted-foreground">
-							{sliderMarks.map((value) => (
-								<span key={value} className={creatorsCount === value ? 'font-black' : ''}>
-									{value.toLocaleString('en-US')}
-								</span>
-							))}
+
+						{/* Labels below slider */}
+						<div className="flex text-lg font-semibold">
+							<span
+								className={cn(
+									'tabular-nums transition-all',
+									creatorsCount === 100 ? 'text-white' : 'text-zinc-400'
+								)}
+							>
+								100
+							</span>
+							<span
+								className={cn(
+									'flex items-center gap-1 tabular-nums mx-auto transition-all',
+									creatorsCount === 500
+										? isSnappingBack
+											? 'text-amber-400 scale-110'
+											: 'text-white'
+										: 'text-zinc-500'
+								)}
+							>
+								500
+								{isTrialUser && <Crown className="h-4 w-4 text-amber-400" />}
+							</span>
+							<span
+								className={cn(
+									'flex items-center gap-1 tabular-nums transition-all',
+									creatorsCount === 1000
+										? isSnappingBack
+											? 'text-amber-400 scale-110'
+											: 'text-white'
+										: 'text-zinc-500'
+								)}
+							>
+								1,000
+								{isTrialUser && <Crown className="h-4 w-4 text-amber-400" />}
+							</span>
 						</div>
-						{isTrialUser ? (
-							<div className="flex items-center gap-2 text-sm text-amber-400">
-								<Lock className="h-4 w-4" />
-								<span>Upgrade to unlock up to 1,000 results per search</span>
-							</div>
-						) : (
-							<div className="text-sm text-muted-foreground">
-								This will use {getCreditsUsed(creatorsCount)} of your 50 credits
-							</div>
+
+						{/* Snap-back feedback message */}
+						{isTrialUser && isSnappingBack && (
+							<p className="text-xs text-amber-400 animate-pulse text-center">
+								✨ Nice choice... but you need Pro!
+							</p>
 						)}
 					</div>
 
-					{/* Trial searches remaining banner */}
+					{/* Trial searches remaining - subtle inline */}
 					{isTrialUser && !trialLoading && (
-						<div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-md">
-							<p className="text-sm text-amber-200">
-								Trial searches remaining: <span className="font-semibold">{searchesRemaining}</span> of 3
-							</p>
-						</div>
+						<p className="text-xs text-zinc-500">
+							Trial searches remaining:{' '}
+							<span className="text-amber-400 font-medium">{searchesRemaining}/3</span>
+						</p>
 					)}
 
 					<button

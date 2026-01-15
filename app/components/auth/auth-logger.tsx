@@ -3,7 +3,7 @@
 import { useAuth, useUser } from '@clerk/nextjs';
 
 import { useEffect } from 'react';
-import { trackLead } from '@/lib/analytics/meta-pixel';
+import { trackClient, trackLeadClient } from '@/lib/analytics/track';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { logAuth, logError, logUserAction } from '@/lib/utils/frontend-logger';
 import { toRecord } from '@/lib/utils/type-guards';
@@ -63,11 +63,18 @@ export function AuthLogger() {
 	// Log user data loading and track new signups
 	useEffect(() => {
 		if (userIsLoaded && user && isSignedIn) {
-			// Fire Meta Pixel Lead event for new signups (account created within last 2 minutes)
+			// Track new signups vs returning sign-ins
 			const isNewSignup =
 				user.createdAt && Date.now() - new Date(user.createdAt).getTime() < 2 * 60 * 1000;
 			if (isNewSignup) {
-				trackLead();
+				// Fire Meta Pixel Lead event for new signups
+				trackLeadClient();
+			} else {
+				// Fire GA4 login event for returning users
+				trackClient('user_signed_in', {
+					userId: user.id,
+					email: user.primaryEmailAddress?.emailAddress || '',
+				});
 			}
 
 			const userLoadedPayload = {

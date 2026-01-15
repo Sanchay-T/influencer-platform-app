@@ -12,7 +12,8 @@ import { structuredConsole } from '@/lib/logging/console-proxy';
 
 const MAX_KEYWORDS = 10;
 const MIN_SUGGEST_LENGTH = 3;
-const SUGGESTION_FETCH_DELAY = 350;
+// @context USE2-21: Reduced from 350ms to 250ms for faster perceived response
+const SUGGESTION_FETCH_DELAY = 250;
 const INSTAGRAM_HANDLE_REGEX = /^[a-z0-9._]{1,30}$/;
 
 // [KeywordReview] Rendered by keyword search wizard step 2 to capture keywords/handles prior to submission.
@@ -27,6 +28,10 @@ export default function KeywordReview({ onSubmit, isLoading, platform }) {
 	const suggestionRegistryRef = useRef(new Set());
 	const keywordsRef = useRef([]);
 	const debounceRef = useRef(null);
+	// @context USE2-23: Track previous seed/suggestions for context-aware suggestions
+	const previousSeedRef = useRef('');
+	const previousSuggestionsRef = useRef([]);
+	const currentSuggestionsRef = useRef([]); // Tracks current suggestions for saving to previousRef
 	const normalizedPlatform = useMemo(() => (platform || '').toString().toLowerCase(), [platform]);
 	const isInstagramSimilarMode = useMemo(
 		() =>
@@ -61,6 +66,11 @@ export default function KeywordReview({ onSubmit, isLoading, platform }) {
 	useEffect(() => {
 		keywordsRef.current = keywords;
 	}, [keywords]);
+
+	// @context USE2-23: Sync suggestions to ref for context saving
+	useEffect(() => {
+		currentSuggestionsRef.current = suggestions;
+	}, [suggestions]);
 
 	const abortSuggestionStream = useCallback((reset = false) => {
 		if (streamControllerRef.current) {
@@ -131,8 +141,17 @@ export default function KeywordReview({ onSubmit, isLoading, platform }) {
 				return;
 			}
 
+			// @context USE2-23: Detect if user is extending previous query (e.g., "fitness" → "fitness trainer")
+			const prevSeed = previousSeedRef.current.toLowerCase().trim();
+			const currentSeed = seed.toLowerCase().trim();
+			const isExtending = prevSeed && currentSeed.startsWith(prevSeed) && currentSeed !== prevSeed;
+			const previousContext = isExtending ? previousSuggestionsRef.current : [];
+
 			abortSuggestionStream(true);
-			suggestionRegistryRef.current = new Set();
+			// Only reset registry if NOT extending (keep previous suggestions visible while refining)
+			if (!isExtending) {
+				suggestionRegistryRef.current = new Set();
+			}
 			setIsSuggesting(true);
 
 			const controller = new AbortController();
@@ -147,6 +166,8 @@ export default function KeywordReview({ onSubmit, isLoading, platform }) {
 							seed,
 							existingKeywords: keywordsRef.current,
 							limit: Math.max(0, Math.min(availableSlots, 8)),
+							// @context USE2-23: Pass previous suggestions for context-aware generation
+							previousSuggestions: previousContext.map((s) => s.keyword),
 						}),
 						signal: controller.signal,
 					});
@@ -202,6 +223,11 @@ export default function KeywordReview({ onSubmit, isLoading, platform }) {
 				} finally {
 					if (streamControllerRef.current === controller) {
 						streamControllerRef.current = null;
+					}
+					// @context USE2-23: Save current context for next query adaptation
+					if (!controller.signal.aborted && currentSuggestionsRef.current.length > 0) {
+						previousSeedRef.current = seed;
+						previousSuggestionsRef.current = [...currentSuggestionsRef.current];
 					}
 					setIsSuggesting(false);
 					setStreamingPreview('');
@@ -375,6 +401,93 @@ export default function KeywordReview({ onSubmit, isLoading, platform }) {
 		startSuggestionStream(newKeyword.trim());
 	};
 
+	// @context USE2-22: Load more suggestions without clearing existing ones
+	const handleLoadMoreSuggestions = useCallback(() => {
+		if (isInstagramSimilarMode || isSuggesting || availableSlots <= 0) {
+			return;
+		}
+
+		// Use the previous seed or current input
+		const seed = previousSeedRef.current || newKeyword.trim();
+		if (!seed || seed.length < MIN_SUGGEST_LENGTH) {
+			toast.error('Type at least three characters to get suggestions');
+			return;
+		}
+
+		// Don't reset the suggestion registry - we want to keep existing suggestions
+		setIsSuggesting(true);
+
+		const controller = new AbortController();
+		streamControllerRef.current = controller;
+
+		(async () => {
+			try {
+				// Include all shown suggestions as "existing" to avoid duplicates
+				const allExisting = [
+					...keywordsRef.current,
+					...currentSuggestionsRef.current.map((s) => s.keyword),
+				];
+
+				const response = await fetch('/api/keywords/suggest', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						seed,
+						existingKeywords: allExisting,
+						limit: Math.max(0, Math.min(availableSlots, 8)),
+						previousSuggestions: currentSuggestionsRef.current.map((s) => s.keyword),
+					}),
+					signal: controller.signal,
+				});
+
+				if (!(response.ok && response.body)) {
+					throw new Error('Failed to load more suggestions');
+				}
+
+				const reader = response.body.getReader();
+				const decoder = new TextDecoder();
+				let buffer = '';
+
+				while (true) {
+					const { done, value } = await reader.read();
+					if (done) break;
+					buffer += decoder.decode(value, { stream: true });
+
+					let separatorIndex = buffer.indexOf('\n\n');
+					while (separatorIndex !== -1) {
+						const rawEvent = buffer.slice(0, separatorIndex);
+						buffer = buffer.slice(separatorIndex + 2);
+
+						const trimmed = rawEvent.trim();
+						if (trimmed.startsWith('data:')) {
+							const payload = trimmed.slice(5).trim();
+							if (payload) {
+								try {
+									const event = JSON.parse(payload);
+									// Reuse the same event handler - it appends to suggestions
+									handleSuggestionEvent(event);
+								} catch {
+									// ignore parse errors
+								}
+							}
+						}
+						separatorIndex = buffer.indexOf('\n\n');
+					}
+				}
+			} catch (error) {
+				if (!controller.signal.aborted) {
+					structuredConsole.warn('[KeywordSuggestions] load more failed', error);
+					toast.error('Failed to load more suggestions');
+				}
+			} finally {
+				if (streamControllerRef.current === controller) {
+					streamControllerRef.current = null;
+				}
+				setIsSuggesting(false);
+			}
+		})();
+	}, [availableSlots, isInstagramSimilarMode, isSuggesting, newKeyword, handleSuggestionEvent]);
+
 	const handleInputChange = (value) => {
 		if (isInstagramSimilarMode) {
 			const restricted = value.replace(/[^a-zA-Z0-9._@]/g, '');
@@ -483,6 +596,17 @@ export default function KeywordReview({ onSubmit, isLoading, platform }) {
 										)}
 									</Badge>
 								))}
+								{/* @context USE2-22: Load More button to continue generating suggestions */}
+								{suggestions.length > 0 && !isSuggesting && availableSlots > 0 && (
+									<Badge
+										key="load-more"
+										variant="outline"
+										className="px-3 py-1 cursor-pointer hover:bg-zinc-800 transition-colors border-zinc-600"
+										onClick={handleLoadMoreSuggestions}
+									>
+										<span className="text-zinc-400">+ Load More</span>
+									</Badge>
+								)}
 							</div>
 						</div>
 					)}

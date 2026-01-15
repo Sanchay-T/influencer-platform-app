@@ -7,24 +7,25 @@
 
 ## Current Task
 
-**ID:** TASK-011
-**Title:** Landing Page Redesign + Analytics Integration + Scalability Architecture
+**ID:** TASK-012
+**Title:** Trial User Search Limits + Analytics Tracking
 **Status:** 🚧 IN PROGRESS
-**Branch:** `staging/consolidate-all-work`
-**Started:** Jan 13, 2026
-**Last Updated:** Jan 13, 2026 — 10:45 PM
+**Branch:** `test-trial-feature` (switched from staging/consolidate-all-work)
+**Started:** Jan 15, 2026
+**Last Updated:** Jan 15, 2026 — 03:10 PM
 **Latest Commits:**
-- 4621db293 — Logger method argument order fix in dead-letter route (most recent)
-- 0fc273900 — Disposable email blocking in checkout process
-- 82517e79f — Comprehensive TypeScript type fixes across codebase
-- a315f4d3f — Background CSV export with QStash and polling
-- 1426246ec — Merged scalability improvements branch
+- 54ceecb8c — feat(trial): implement trial user search limits (USE2-34, USE2-36) (most recent)
+- 2c2e753cd — chore: add MCP config with env var auth for Linear and Supabase
+- 649337f0e — chore: add MCP config with Linear and Supabase
+- e75620c76 — chore: add migration snapshot and update agent docs
+- 4621db293 — fix: correct logger method argument order in dead-letter route
 
 ### Goal
-Improve platform scalability, conversion tracking, and landing page design. Three major workstreams:
-1. Landing page redesign + analytics (COMMITTED)
-2. Scalability audit + critical fixes (UNCOMMITTED - in progress)
-3. SEO infrastructure (COMMITTED)
+Implement trial user search limits and comprehensive analytics tracking. Two major workstreams:
+1. **Trial User Search Limits** — Enforce creator search limits for trial users (Linear: USE2-34, USE2-36)
+2. **Full-Funnel Analytics** — Track user journey from signup → search → export across GA4, Meta Pixel, and LogSnag
+
+**Previous Task (TASK-011):** Landing Page Redesign + Analytics + Scalability — All phases completed and committed.
 
 ### Work Completed
 
@@ -85,6 +86,35 @@ Improve platform scalability, conversion tracking, and landing page design. Thre
   - Fixed logging issues in DLQ endpoint
   - Improved error tracking and debugging
 
+- [x] **Migration Snapshot & Agent Docs Update** (Commit e75620c76)
+  - Added database migration snapshot (0015_snapshot.json)
+  - Updated agent documentation with session state
+  - Committed agent_docs/monologue.md and tasks.md
+
+- [x] **MCP Configuration** (Commits 649337f0e, 2c2e753cd)
+  - Added MCP config for Linear and Supabase integration
+  - Configured environment variable authentication
+  - Enabled Claude Code integration with project management tools
+
+- [x] **Trial User Search Limits** (Commit 54ceecb8c)
+  - Implemented search creator limits for trial users (Linear: USE2-34, USE2-36)
+  - Enforced 100 creators per search maximum for trial accounts
+  - Added trial validation in search workflows
+  - Integrated trial status checks across campaign components
+
+- [x] **Full-Funnel Analytics Implementation** (NOT YET COMMITTED)
+  - Created unified tracking layer (lib/analytics/track.ts)
+  - Created type-safe event definitions (lib/analytics/events.ts)
+  - Added tracking to auth flow (auth-logger.tsx)
+  - Added tracking to onboarding (onboarding-modal.tsx, payment-step.tsx)
+  - Added tracking to campaigns (campaigns/route.ts)
+  - Added tracking to lists (lists/route.ts)
+  - Added tracking to search (runner.ts)
+  - Added tracking to billing (upgrade-button.tsx)
+  - Added tracking to CSV export (export/csv/route.ts)
+  - Code type-checks successfully
+  - Ready to commit and deploy
+
 ### Checklist
 
 - [x] **Phase 1: Landing Page + Analytics** (COMPLETED - All Committed)
@@ -125,79 +155,176 @@ Improve platform scalability, conversion tracking, and landing page design. Thre
   - [x] Fix logger method argument order in dead-letter route
   - [x] Consolidate all work into staging branch
 
-- [ ] **Phase 6: Final Cleanup & Deployment** (NEXT)
-  - [ ] Resolve uncommitted migration file (supabase/migrations/meta/0015_snapshot.json)
-  - [ ] Test background CSV export with large dataset
-  - [ ] Verify DLQ endpoint receives failed messages
-  - [ ] Test database query performance with new index
-  - [ ] Merge to main and deploy
-  - [ ] Monitor Sentry for DLQ alerts
+- [x] **Phase 6: Trial User Search Limits** (COMPLETED - Commit 54ceecb8c)
+  - [x] Implement trial validation in access-validation.ts
+  - [x] Add trial limit enforcement in keyword-search-form.jsx
+  - [x] Add trial status display in keyword-review.jsx
+  - [x] Add TrialUpgradeOverlay component to CreatorGalleryView.tsx
+  - [x] Add TrialUpgradeOverlay component to CreatorTableView.tsx
+  - [x] Update search-results.jsx with trial awareness
+  - [x] Add trial status hook in use-trial-status.ts
+  - [x] Update Stripe client with trial support
+  - [x] Test trial limits in dev environment
+  - [x] Commit trial limits implementation
+
+- [ ] **Phase 7: Full-Funnel Analytics Tracking** (NEXT - CODE READY)
+  - [x] Create unified tracking layer (lib/analytics/track.ts)
+  - [x] Create type-safe event definitions (lib/analytics/events.ts)
+  - [x] Add tracking to all user touchpoints
+  - [x] Type check all changes (npm run type-check)
+  - [ ] Run Biome linter on modified files
+  - [ ] Commit analytics tracking implementation
+  - [ ] Push to branch
+  - [ ] Deploy to production
+  - [ ] Verify events in GA4 Realtime dashboard
+  - [ ] Verify events in Meta Test Events dashboard
+
+- [ ] **Phase 8: Final Testing & Deployment** (AFTER ANALYTICS)
+  - [ ] Test trial limits with real user flow
+  - [ ] Test analytics tracking end-to-end
+  - [ ] Verify all events firing correctly
+  - [ ] Merge to main
+  - [ ] Monitor production for errors
+  - [ ] Monitor analytics dashboards
 
 ---
 
 ### Next Action
 ```
-🎯 RESOLVE UNCOMMITTED FILES & FINALIZE CONSOLIDATION
+🚀 COMMIT ANALYTICS TRACKING - Phase 7
+
+BRANCH: test-trial-feature
+STATUS: Code implemented and type-checked ✅ — Ready to commit
+
+CONTEXT:
+- Trial user search limits: COMMITTED ✅ (Commit 54ceecb8c)
+- Full-funnel analytics tracking: IMPLEMENTED but NOT YET COMMITTED ⚠️
+- All files type-check successfully
+- Analytics files created:
+  * lib/analytics/track.ts (new file)
+  * lib/analytics/events.ts (new file)
+- Modified 9 files to add tracking across user journey
+
+EXACT STEPS TO COMPLETE PHASE 7:
+
+1. Run Biome linter on ALL modified files:
+   npx biome check --write lib/analytics/track.ts lib/analytics/events.ts app/components/auth/auth-logger.tsx app/components/onboarding/onboarding-modal.tsx app/components/onboarding/payment-step.tsx app/api/export/csv/route.ts app/api/campaigns/route.ts app/api/lists/route.ts lib/search-engine/runner.ts app/components/billing/upgrade-button.tsx
+
+2. Stage analytics files:
+   git add lib/analytics/track.ts lib/analytics/events.ts
+
+3. Stage modified tracking files:
+   git add app/components/auth/auth-logger.tsx
+   git add app/components/onboarding/onboarding-modal.tsx
+   git add app/components/onboarding/payment-step.tsx
+   git add app/api/export/csv/route.ts
+   git add app/api/campaigns/route.ts
+   git add app/api/lists/route.ts
+   git add lib/search-engine/runner.ts
+   git add app/components/billing/upgrade-button.tsx
+
+4. Commit with descriptive message:
+   git commit -m "feat: add full-funnel analytics tracking (GA4 + Meta + LogSnag)
+
+   - Create unified tracking layer (lib/analytics/track.ts)
+   - Add type-safe event definitions (lib/analytics/events.ts)
+   - Track auth events (sign in, sign up, sign out)
+   - Track onboarding flow (steps, payment initiation)
+   - Track campaign creation and search execution
+   - Track list creation and management
+   - Track CSV exports
+   - Track billing upgrades
+
+   Events sent to: Google Analytics 4, Meta Pixel, LogSnag"
+
+5. Push to remote:
+   git push origin test-trial-feature
+
+6. Update tasks.md:
+   - Mark Phase 7 linting and commit steps as complete
+   - Move to deployment verification steps
+
+AFTER COMMIT:
+- Deploy to production (Vercel auto-deploys from branch)
+- Verify events in GA4 Realtime dashboard
+- Verify events in Meta Test Events dashboard
+- If events not appearing, check browser console for tracking script errors
+
+START HERE: Run Biome linter on all modified files (step 1 above)
+```
+
+---
+
+### Previous Next Action (Resolved)
+```
+🚨 CRITICAL: INVESTIGATE UNCOMMITTED PRODUCTION CODE CHANGES
 
 Context:
 - Branch: staging/consolidate-all-work
-- Phase 1-5: ALL COMPLETED ✅
-  - Landing page + Analytics: COMMITTED ✅
-  - Scalability improvements: COMMITTED ✅
-  - Background CSV export: COMMITTED ✅
-  - TypeScript fixes: COMMITTED (82517e79f) ✅
-  - Disposable email blocking: COMMITTED (0fc273900) ✅
-  - DLQ logger fix: COMMITTED (4621db293) ✅
-- Phase 6: Final cleanup before merging to main
-- Uncommitted files:
-  - agent_docs/monologue.md (modified)
-  - agent_docs/tasks.md (modified - this file)
-  - supabase/migrations/meta/0015_snapshot.json (untracked)
+- Latest commit: e75620c76 (migration snapshot and agent docs)
+- Phase 1-5: ALL COMMITTED ✅
+- Phase 6: Final cleanup — BUT FOUND UNCOMMITTED PRODUCTION CODE
+
+⚠️ ALERT: Git status shows 7 uncommitted files (production code):
+  M .claude/settings.json
+  M app/api/keywords/suggest/route.ts
+  M app/api/v2/status/route.ts
+  M app/components/campaigns/keyword-search/keyword-review.jsx
+  M lib/db/schema.ts
+  M lib/search-engine/v2/workers/save-creators.ts
+  M lib/search-engine/v2/workers/search-worker.ts
 
 CURRENT STATUS:
-✅ All features committed and working
-✅ TypeScript fixes applied
-✅ Security improvements (disposable email blocking)
-✅ DLQ logger fixed
-❓ Unknown: What is 0015_snapshot.json and should it be committed?
-🎯 Next: Clean up uncommitted files, then merge to main
+✅ All Phase 1-5 work committed (landing page, analytics, scalability, CSV export, TypeScript fixes)
+🚨 UNKNOWN: Why are there uncommitted changes to 7 production files?
+❓ UNKNOWN: What do these changes do? Are they part of a new feature or unfinished work?
+🎯 MUST INVESTIGATE before merging to main
 
 EXACT NEXT STEPS:
 
-1. Inspect the uncommitted migration file:
-   bash: cat supabase/migrations/meta/0015_snapshot.json
+1. Check what changed in each file using git diff:
+   bash: git diff .claude/settings.json
+   bash: git diff app/api/keywords/suggest/route.ts
+   bash: git diff app/api/v2/status/route.ts
+   bash: git diff app/components/campaigns/keyword-search/keyword-review.jsx
+   bash: git diff lib/db/schema.ts
+   bash: git diff lib/search-engine/v2/workers/save-creators.ts
+   bash: git diff lib/search-engine/v2/workers/search-worker.ts
 
-2. Check if there's a corresponding migration SQL file:
-   bash: ls -la supabase/migrations/ | grep 0015
+2. Analyze the changes:
+   - Are these related to an ongoing feature?
+   - Are these debug changes that should be reverted?
+   - Are these important fixes that need to be committed?
+   - Check agent_docs/current-task.md for context
 
-3. Determine migration action:
+3. Based on analysis, take ONE of these actions:
 
-   IF 0015_snapshot.json is auto-generated metadata:
-   → Check if migration 0015 exists and is committed
-   → If yes, commit the snapshot: git add supabase/migrations/meta/0015_snapshot.json
-   → If no, investigate why snapshot was created
+   OPTION A: Changes are intentional work-in-progress
+   → Document what these changes do in tasks.md
+   → Add them to a new checklist item in Phase 6
+   → Commit with descriptive message
 
-   IF migration is orphaned or test artifact:
-   → Delete it: rm supabase/migrations/meta/0015_snapshot.json
+   OPTION B: Changes are debug/test code
+   → Revert them: git checkout -- <files>
+   → Verify clean state: git status
 
-4. Commit agent_docs updates:
+   OPTION C: Changes are incomplete feature
+   → Stash them: git stash save "WIP: [description]"
+   → Document in tasks.md that work was stashed
+   → Proceed with Phase 6 cleanup
+
+4. After resolving production code files, then handle agent_docs:
    bash: git add agent_docs/monologue.md agent_docs/tasks.md
-   bash: git commit -m "chore: update agent docs with session state"
-
-5. Commit migration if needed:
-   bash: git add supabase/migrations/meta/0015_snapshot.json
-   bash: git commit -m "chore: add migration snapshot"
-
-6. Push all changes:
+   bash: git commit -m "chore: update agent docs before merge"
    bash: git push origin staging/consolidate-all-work
 
-7. Prepare for main merge:
+5. Final verification before main merge:
    - Run type check: npm run type-check
+   - Run linter: npx biome check --write <modified-files>
    - Review all changes: git log main..staging/consolidate-all-work --oneline
-   - Merge: git checkout main && git merge staging/consolidate-all-work
-   - Push: git push origin main
+   - Test critical paths in dev environment
 
-START HERE: Inspect supabase/migrations/meta/0015_snapshot.json to understand what it is.
+START HERE: Run git diff on all 7 modified files to understand what changed.
 ```
 
 ---
@@ -244,4 +371,4 @@ START HERE: Inspect supabase/migrations/meta/0015_snapshot.json to understand wh
 
 ---
 
-*Last updated: Jan 13, 2026 — 07:27 PM*
+*Last updated: Jan 15, 2026 — 03:10 PM*

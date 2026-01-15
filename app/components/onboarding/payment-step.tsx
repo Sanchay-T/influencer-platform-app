@@ -4,6 +4,7 @@ import { AlertCircle, ArrowRight, CreditCard } from 'lucide-react';
 import { useState } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { trackClient } from '@/lib/analytics/track';
 import { PLAN_DISPLAY_CONFIGS } from '@/lib/billing/plan-display-config';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import OnboardingLogger from '@/lib/utils/onboarding-logger';
@@ -121,6 +122,16 @@ export default function PaymentStep({ sessionId, userId }: PaymentStepProps) {
 				},
 				sessionId
 			);
+
+			// Track step 3 completion and checkout initiation
+			trackClient('onboarding_step_completed', { step: 3, stepName: 'plan' });
+			trackClient('upgrade_clicked', {
+				userId: userId || '',
+				email: '',
+				currentPlan: undefined,
+				targetPlan: selectedPlan || undefined,
+				source: 'upgrade_modal',
+			});
 
 			// Redirect to Stripe checkout
 			window.location.href = checkoutData.url;

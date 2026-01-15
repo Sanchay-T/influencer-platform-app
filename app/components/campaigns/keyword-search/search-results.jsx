@@ -11,6 +11,9 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import toast from 'react-hot-toast';
+import { StartSubscriptionModal } from '@/app/components/billing/start-subscription-modal';
+import { useStartSubscription } from '@/lib/hooks/use-start-subscription';
 import { useTrialStatus } from '@/lib/hooks/use-trial-status';
 import { CreatorGalleryView } from './components/CreatorGalleryView';
 import { CreatorTableView } from './components/CreatorTableView';
@@ -73,6 +76,20 @@ function useEmailFilter(creators, _platformNormalized) {
 
 const TRIAL_CLEAR_LIMIT = 25; // Number of results shown clearly to trial users
 
+// Plan prices for the modal (in dollars)
+const PLAN_PRICES = {
+	glow_up: 99,
+	viral_surge: 249,
+	fame_flex: 499,
+};
+
+// Plan display names
+const PLAN_NAMES = {
+	glow_up: 'Glow Up',
+	viral_surge: 'Viral Surge',
+	fame_flex: 'Fame Flex',
+};
+
 // ============================================================================
 // Main Component
 // ============================================================================
@@ -82,7 +99,7 @@ const SearchResults = ({ searchData }) => {
 	const platformNormalized = (searchData?.platform ?? '').toLowerCase().replace(/[-_]/g, '');
 
 	// Trial status for blurring results
-	const { isTrialUser } = useTrialStatus();
+	const { isTrialUser, currentPlan } = useTrialStatus();
 
 	// Single source of truth for job state
 	const {
@@ -110,6 +127,15 @@ const SearchResults = ({ searchData }) => {
 	const [campaignName, setCampaignName] = useState('Campaign');
 	const [localCreators, setLocalCreators] = useState([]);
 	const resultsHeaderRef = useRef(null);
+
+	// Start subscription modal state (USE2-40)
+	const [showStartModal, setShowStartModal] = useState(false);
+	const {
+		startSubscription,
+		openPortal,
+		isLoading: isStartingSubscription,
+	} = useStartSubscription();
+	const { refetch: refetchTrialStatus } = useTrialStatus();
 
 	// Enrichment hook (for Enrich button only)
 	const {
@@ -256,6 +282,40 @@ const SearchResults = ({ searchData }) => {
 		[setItemsPerPage]
 	);
 
+	// Start subscription handler (USE2-40)
+	const handleConfirmStartSubscription = useCallback(async () => {
+		const result = await startSubscription();
+
+		if (result.success) {
+			setShowStartModal(false);
+			toast.success('Subscription started! Loading all results...');
+
+			// Refresh trial status (isTrialUser will become false)
+			await refetchTrialStatus();
+
+			// Force page refresh to reload with full access
+			window.location.reload();
+		} else {
+			// Show error with option to update payment method
+			toast.error(
+				<div className="flex flex-col gap-2">
+					<span>{result.error}</span>
+					<button
+						type="button"
+						onClick={() => {
+							toast.dismiss();
+							openPortal();
+						}}
+						className="text-pink-400 hover:text-pink-300 text-sm underline text-left"
+					>
+						Update payment method
+					</button>
+				</div>,
+				{ duration: 8000 }
+			);
+		}
+	}, [startSubscription, refetchTrialStatus, openPortal]);
+
 	// Fetch campaign name
 	useEffect(() => {
 		const fetchCampaignName = async () => {
@@ -326,63 +386,85 @@ const SearchResults = ({ searchData }) => {
 				/>
 			)}
 
-			<ResultsContainer
-				stillProcessing={isActive}
-				isPageLoading={isPageLoading}
-				progressInfo={null}
-			>
-				<CreatorTableView
-					rows={currentRows}
-					selectedCreators={selectedCreators}
-					allSelectedOnPage={allSelectedOnPage}
-					someSelectedOnPage={someSelectedOnPage}
-					platformNormalized={platformNormalized}
-					bioLoading={false}
-					viewMode={viewMode}
-					isTrialUser={isTrialUser}
-					trialClearLimit={TRIAL_CLEAR_LIMIT}
-					onSelectPage={handleSelectPage}
-					toggleSelection={toggleSelection}
-					renderProfileLink={renderProfileLink}
-					getBioDataForCreator={(creator) => creator?.bio_enriched || null}
-					getBioEmailForCreator={(creator) => creator?.bio_enriched?.extracted_email || null}
-					getEnrichment={getEnrichment}
-					isEnrichmentLoading={isEnrichmentLoading}
-					enrichCreator={enrichCreator}
-					applyEnrichmentToCreators={applyEnrichmentToCreators}
-					setBioEmailConfirmDialog={() => {}}
-				/>
-				<CreatorGalleryView
-					rows={currentRows}
-					selectedCreators={selectedCreators}
-					platformNormalized={platformNormalized}
-					isInstagramUs={isInstagramUs}
-					viewMode={viewMode}
-					isTrialUser={isTrialUser}
-					trialClearLimit={TRIAL_CLEAR_LIMIT}
-					toggleSelection={toggleSelection}
-					renderProfileLink={renderProfileLink}
-				/>
-			</ResultsContainer>
+			{/* Results container with relative positioning for overlay */}
+			<div className="relative">
+				<ResultsContainer
+					stillProcessing={isActive}
+					isPageLoading={isPageLoading}
+					progressInfo={null}
+				>
+					<CreatorTableView
+						rows={currentRows}
+						selectedCreators={selectedCreators}
+						allSelectedOnPage={allSelectedOnPage}
+						someSelectedOnPage={someSelectedOnPage}
+						platformNormalized={platformNormalized}
+						bioLoading={false}
+						viewMode={viewMode}
+						isTrialUser={isTrialUser}
+						trialClearLimit={TRIAL_CLEAR_LIMIT}
+						onSelectPage={handleSelectPage}
+						toggleSelection={toggleSelection}
+						renderProfileLink={renderProfileLink}
+						getBioDataForCreator={(creator) => creator?.bio_enriched || null}
+						getBioEmailForCreator={(creator) => creator?.bio_enriched?.extracted_email || null}
+						getEnrichment={getEnrichment}
+						isEnrichmentLoading={isEnrichmentLoading}
+						enrichCreator={enrichCreator}
+						applyEnrichmentToCreators={applyEnrichmentToCreators}
+						setBioEmailConfirmDialog={() => {}}
+					/>
+					<CreatorGalleryView
+						rows={currentRows}
+						selectedCreators={selectedCreators}
+						platformNormalized={platformNormalized}
+						isInstagramUs={isInstagramUs}
+						viewMode={viewMode}
+						isTrialUser={isTrialUser}
+						trialClearLimit={TRIAL_CLEAR_LIMIT}
+						toggleSelection={toggleSelection}
+						renderProfileLink={renderProfileLink}
+					/>
+				</ResultsContainer>
 
-			<PaginationControls
-				currentPage={currentPage}
-				totalPages={displayTotalPages}
-				totalResults={displayTotalResults}
-				itemsPerPage={itemsPerPage}
-				isLoading={isPageLoading}
-				onPageChange={handlePageChange}
-				onPageSizeChange={handlePageSizeChange}
-			/>
+				{/* Trial upgrade overlay - positioned over blurred content */}
+				{isTrialUser && totalCreators > TRIAL_CLEAR_LIMIT && (
+					<TrialUpgradeOverlay
+						blurredCount={totalCreators - TRIAL_CLEAR_LIMIT}
+						currentPlan={currentPlan}
+						onStartSubscription={() => setShowStartModal(true)}
+					/>
+				)}
+			</div>
+
+			{/* Start Subscription Modal (USE2-40) */}
+			{isTrialUser && currentPlan && (
+				<StartSubscriptionModal
+					open={showStartModal}
+					onOpenChange={setShowStartModal}
+					planName={PLAN_NAMES[currentPlan] || currentPlan}
+					amount={PLAN_PRICES[currentPlan] || 0}
+					onConfirm={handleConfirmStartSubscription}
+					isLoading={isStartingSubscription}
+				/>
+			)}
+
+			{/* Hide pagination for trial users with blurred content - they can't use it anyway */}
+			{(!isTrialUser || totalCreators <= TRIAL_CLEAR_LIMIT) && (
+				<PaginationControls
+					currentPage={currentPage}
+					totalPages={displayTotalPages}
+					totalResults={displayTotalResults}
+					itemsPerPage={itemsPerPage}
+					isLoading={isPageLoading}
+					onPageChange={handlePageChange}
+					onPageSizeChange={handlePageSizeChange}
+				/>
+			)}
 
 			{/* Show enrichment progress during active search */}
 			{isActive && creatorsFound > 0 && (
 				<div className="text-center text-xs text-zinc-500">{message}</div>
-			)}
-
-			{/* Trial upgrade CTA for blurred results */}
-			{isTrialUser && totalCreators > TRIAL_CLEAR_LIMIT && (
-				<TrialUpgradeOverlay blurredCount={totalCreators - TRIAL_CLEAR_LIMIT} />
 			)}
 		</div>
 	);

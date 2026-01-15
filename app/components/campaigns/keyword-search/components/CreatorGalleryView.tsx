@@ -22,6 +22,9 @@ export interface CreatorGalleryViewProps {
 	renderProfileLink: (creator: Creator) => string;
 }
 
+// Number of blurred cards to show (roughly 1 row in 3-column layout)
+const BLURRED_CARDS_TO_SHOW = 4;
+
 export function CreatorGalleryView({
 	rows,
 	selectedCreators,
@@ -33,10 +36,13 @@ export function CreatorGalleryView({
 	toggleSelection,
 	renderProfileLink,
 }: CreatorGalleryViewProps) {
+	// Limit visible cards for trial users: show clear cards + limited blurred cards
+	const visibleRows = isTrialUser ? rows.slice(0, trialClearLimit + BLURRED_CARDS_TO_SHOW) : rows;
+
 	return (
 		<div className={cn('w-full p-4 md:p-6', viewMode === 'gallery' ? 'block' : 'hidden')}>
 			<div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-				{rows.map((row, index) => (
+				{visibleRows.map((row, index) => (
 					<CreatorGalleryCard
 						key={row.id}
 						row={row}

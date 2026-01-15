@@ -192,6 +192,18 @@ npm run lint:biome:fix   # Auto-fix Biome issues
 
 **Database operations:** Schema changes require human interaction for migration prompts. See `agent_docs/database.md` for the full workflow.
 
+**Browser automation:** Use `ab` wrapper to verify UI changes after coding.
+
+```bash
+ab check                              # Verify CDP ready
+ab go "http://localhost:3001/path"    # Open + snapshot
+ab visible "[data-testid='btn']"      # → true/false
+ab count ".card"                      # → number
+ab click @e1 && ab fp "Email" "x"     # Interact
+```
+
+Quick ref: `~/.claude/docs/browser-automation.md` | Full docs: `agent_docs/browser-automation.md`
+
 ## Folder Structure
 
 ```
@@ -330,3 +342,7 @@ Commit prefixes: `fix:`, `feat:`, `refactor:`, `chore:`
 - `agent_docs/api-patterns.md` — Route conventions, auth guards
 - `agent_docs/testing-verification.md` — Testing workflow, verification checklist
 - `agent_docs/code-patterns.md` — Common code patterns and fixes
+
+**Global tools (work across projects):**
+- `~/.claude/docs/browser-automation.md` — Quick reference (80% of usage)
+- `agent_docs/browser-automation.md` — Full docs (streaming, sessions, troubleshooting)

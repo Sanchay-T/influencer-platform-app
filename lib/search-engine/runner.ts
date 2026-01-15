@@ -1,5 +1,5 @@
 // search-engine/runner.ts — entry point that dispatches jobs to provider adapters
-import { trackSearchRan } from '@/lib/analytics/logsnag';
+import { trackServer } from '@/lib/analytics/track';
 import { SystemConfig } from '@/lib/config/system-config';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { LogCategory, logger } from '@/lib/logging';
@@ -172,14 +172,20 @@ export async function runSearchJob(jobId: string): Promise<SearchExecutionResult
 
 	await service.recordBenchmark(providerResult.metrics);
 
-	// Track search completion in LogSnag
+	// Track search completion (GA4 + LogSnag)
 	// Only track when search completes successfully
 	if (providerResult.status === 'completed') {
 		const searchType = job.keywords ? 'keyword' : 'similar';
+		const platformLower = (job.platform || 'tiktok').toLowerCase();
+		const normalizedPlatform = platformLower.includes('instagram')
+			? 'instagram'
+			: platformLower.includes('youtube')
+				? 'youtube'
+				: 'tiktok';
 		const user = await getUserProfile(job.userId);
-		await trackSearchRan({
+		await trackServer('search_completed', {
 			userId: job.userId,
-			platform: job.platform || 'unknown',
+			platform: normalizedPlatform,
 			type: searchType,
 			creatorCount: providerResult.processedResults || 0,
 			email: user?.email || 'unknown',

@@ -11,6 +11,7 @@
 
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
+import { trackServer } from '@/lib/analytics/track';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { FeatureGateService } from '@/lib/billing';
 import { db } from '@/lib/db';
@@ -103,6 +104,14 @@ export async function GET(req: Request) {
 			exportId: newExportJob.id,
 			workerUrl,
 		});
+
+		// Track export event (fire and forget - don't block response)
+		trackServer('csv_exported', {
+			userId,
+			email: '', // Email not available in this context
+			creatorCount: 0, // Count determined by worker
+			source: campaignId ? 'campaign' : 'list',
+		}).catch(() => {}); // Ignore tracking errors
 
 		return NextResponse.json({
 			exportId: newExportJob.id,
