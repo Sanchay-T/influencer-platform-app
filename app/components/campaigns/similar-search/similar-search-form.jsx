@@ -8,7 +8,8 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "react-hot-toast";
 import { Check, Loader2 } from "lucide-react";
 
-export function SimilarSearchForm({ campaignId, onSuccess }) {
+export function SimilarSearchForm({ campaignId, onSuccess, searchMode = 'similar' }) {
+  const isBrandMode = searchMode === 'brand';
   const [username, setUsername] = useState("");
   const [selectedPlatform, setSelectedPlatform] = useState("instagram"); // instagram or youtube
   const [searchState, setSearchState] = useState({
@@ -97,7 +98,8 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
         });
       }
       
-      toast.success(`${selectedPlatform === 'youtube' ? 'YouTube' : 'Instagram'} similar search started!`);
+      const searchTypeLabel = isBrandMode ? 'brand collaborator' : 'similar';
+      toast.success(`${selectedPlatform === 'youtube' ? 'YouTube' : 'Instagram'} ${searchTypeLabel} search started!`);
       
     } catch (error) {
       structuredConsole.error('💥 [SIMILAR-SEARCH-FORM] Error during submission:', error);
@@ -110,7 +112,9 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
   return (
     <div className="rounded-lg text-card-foreground shadow-sm bg-zinc-900/80 border border-zinc-700/50">
       <div className="flex flex-col space-y-1.5 p-6">
-        <div className="text-2xl font-semibold leading-none tracking-tight">Find Similar Creators</div>
+        <div className="text-2xl font-semibold leading-none tracking-tight">
+          {isBrandMode ? 'Find Creators by Brand' : 'Find Similar Creators'}
+        </div>
         {searchState.message && (
           <div className="space-y-2 pt-2">
             <div className="text-sm text-muted-foreground flex items-center gap-2">
@@ -185,14 +189,18 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
 
           <div className="space-y-4">
             <label className="text-sm font-medium">
-              {selectedPlatform === 'youtube' ? 'YouTube' : 'Instagram'} Username
+              {isBrandMode
+                ? `Brand ${selectedPlatform === 'youtube' ? 'YouTube' : 'Instagram'} Handle`
+                : `${selectedPlatform === 'youtube' ? 'YouTube' : 'Instagram'} Username`
+              }
             </label>
             <Input
               value={username}
               onChange={handleUsernameChange}
               placeholder={
-                selectedPlatform === 'youtube' ? 'e.g. mkbhd' :
-                'e.g. gainsbybrains'
+                isBrandMode
+                  ? (selectedPlatform === 'youtube' ? 'e.g. nike, gopro, redbull' : 'e.g. nike, glossier, gymshark')
+                  : (selectedPlatform === 'youtube' ? 'e.g. mkbhd' : 'e.g. gainsbybrains')
               }
               required
               disabled={searchState.status !== 'idle'}
@@ -207,7 +215,9 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
             type="submit"
             disabled={searchState.status !== 'idle' || !username.trim() || Boolean(error)}
           >
-            {searchState.status === 'idle' ? 'Find Similar Creators' : 'Processing...'}
+            {searchState.status === 'idle'
+              ? (isBrandMode ? 'Find Brand Collaborators' : 'Find Similar Creators')
+              : 'Processing...'}
           </button>
         </form>
       </div>

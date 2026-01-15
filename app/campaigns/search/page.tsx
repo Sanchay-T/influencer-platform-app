@@ -16,6 +16,11 @@ const searchOptions = [
     type: 'similar' as const,
     title: 'Similar Creator Search',
     description: 'Find lookalike creators based on a handle you already know.'
+  },
+  {
+    type: 'brand' as const,
+    title: 'Brand / Competitor Search',
+    description: 'Find creators who collaborate with or mention specific brands.'
   }
 ]
 
@@ -31,9 +36,9 @@ function CampaignSearchChooser() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const campaignId = searchParams?.get('campaignId') ?? ''
-  const [loadingType, setLoadingType] = useState<'keyword' | 'similar' | null>(null)
+  const [loadingType, setLoadingType] = useState<'keyword' | 'similar' | 'brand' | null>(null)
 
-  const handlePick = (type: 'keyword' | 'similar') => {
+  const handlePick = (type: 'keyword' | 'similar' | 'brand') => {
     setLoadingType(type)
     const target = campaignId
       ? `/campaigns/search/${type}?campaignId=${campaignId}`
@@ -44,7 +49,7 @@ function CampaignSearchChooser() {
   return (
     <DashboardLayout>
       <div className="flex min-h-[60vh] items-center justify-center px-4">
-        <Card className="w-full max-w-3xl bg-zinc-900/80 border border-zinc-700/50">
+        <Card className="w-full max-w-4xl bg-zinc-900/80 border border-zinc-700/50">
           <CardHeader className="space-y-2 text-center">
             <CardTitle className="text-2xl font-bold text-zinc-100">How do you want to search?</CardTitle>
             <CardDescription className="text-sm text-zinc-400">
@@ -52,7 +57,7 @@ function CampaignSearchChooser() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               {searchOptions.map((option) => (
                 <button
                   key={option.type}
