@@ -13,6 +13,7 @@
  */
 
 import type Stripe from 'stripe';
+import { trackGA4ServerEvent } from '@/lib/analytics/google-analytics';
 import {
 	trackPaidCustomer,
 	trackSubscriptionCanceled,
@@ -182,22 +183,58 @@ export async function handleSubscriptionChange(
 		// 6. Apply update
 		await updateUserProfile(user.userId, updateData);
 
-		// 7. Track billing events in LogSnag
+		// 7. Track billing events in LogSnag AND GA4
 		const userEmail = user.email || 'unknown';
 		const planName = planConfig.name;
+		const monthlyPrice = planConfig.monthlyPrice / 100; // Convert cents to dollars
 
 		if (subscription.status === 'trialing') {
-			await trackTrialStarted({ email: userEmail, plan: planName });
+			// Track trial start in both LogSnag and GA4
+			await Promise.all([
+				trackTrialStarted({ email: userEmail, plan: planName }),
+				// biome-ignore lint/style/useNamingConvention: GA4 uses snake_case
+				trackGA4ServerEvent(
+					'begin_trial',
+					{ plan_name: planName, value: monthlyPrice, currency: 'USD' },
+					user.userId
+				),
+			]);
 		} else if (subscription.status === 'active') {
-			// Get monthly price value for tracking
-			const monthlyPrice = planConfig.monthlyPrice / 100; // Convert cents to dollars
-
 			// Check if this is a trial conversion (user was previously trialing)
 			const wasTrialing = user.subscriptionStatus === 'trialing';
 			if (wasTrialing) {
-				await trackTrialConverted({ email: userEmail, plan: planName, value: monthlyPrice });
+				// Track trial conversion in both LogSnag and GA4
+				await Promise.all([
+					trackTrialConverted({ email: userEmail, plan: planName, value: monthlyPrice }),
+					trackGA4ServerEvent(
+						'purchase',
+						// biome-ignore lint/style/useNamingConvention: GA4 uses snake_case
+						{
+							plan_name: planName,
+							value: monthlyPrice,
+							currency: 'USD',
+							transaction_id: `trial_conv_${subscription.id}`,
+							is_trial_conversion: true,
+						},
+						user.userId
+					),
+				]);
 			} else {
-				await trackPaidCustomer({ email: userEmail, plan: planName, value: monthlyPrice });
+				// Track new paid customer in both LogSnag and GA4
+				await Promise.all([
+					trackPaidCustomer({ email: userEmail, plan: planName, value: monthlyPrice }),
+					trackGA4ServerEvent(
+						'purchase',
+						// biome-ignore lint/style/useNamingConvention: GA4 uses snake_case
+						{
+							plan_name: planName,
+							value: monthlyPrice,
+							currency: 'USD',
+							transaction_id: `sub_${subscription.id}`,
+						},
+						user.userId
+					),
+				]);
 			}
 		}
 
@@ -272,11 +309,19 @@ export async function handleSubscriptionDeleted(
 		lastWebhookTimestamp: new Date(),
 	});
 
-	// Track cancellation in LogSnag
-	await trackSubscriptionCanceled({
-		email: user.email || 'unknown',
-		plan: user.currentPlan || 'unknown',
-	});
+	// Track cancellation in LogSnag AND GA4
+	await Promise.all([
+		trackSubscriptionCanceled({
+			email: user.email || 'unknown',
+			plan: user.currentPlan || 'unknown',
+		}),
+		// biome-ignore lint/style/useNamingConvention: GA4 uses snake_case
+		trackGA4ServerEvent(
+			'subscription_canceled',
+			{ plan_name: user.currentPlan || 'unknown' },
+			user.userId
+		),
+	]);
 
 	logger.info('Subscription deleted', {
 		userId: user.userId,

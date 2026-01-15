@@ -136,6 +136,23 @@ export async function runSearchJob(jobId: string): Promise<SearchExecutionResult
 		},
 		LogCategory.CONFIG
 	);
+
+	// Track search started (GA4 + LogSnag)
+	const searchType = job.keywords ? 'keyword' : 'similar';
+	const platformLower = (job.platform || 'tiktok').toLowerCase();
+	const normalizedPlatform = platformLower.includes('instagram')
+		? 'instagram'
+		: platformLower.includes('youtube')
+			? 'youtube'
+			: 'tiktok';
+	const userForTracking = await getUserProfile(job.userId);
+	await trackServer('search_started', {
+		userId: job.userId,
+		platform: normalizedPlatform,
+		type: searchType,
+		targetCount: job.targetResults || 0,
+		email: userForTracking?.email || 'unknown',
+	});
 	console.warn(
 		'[search-runner] resolved config',
 		JSON.stringify({

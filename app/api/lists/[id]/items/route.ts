@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { trackCreatorSaved } from '@/lib/analytics/logsnag';
+import { trackServer } from '@/lib/analytics/track';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { addCreatorsToList, removeListItems, updateListItems } from '@/lib/db/queries/list-queries';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
@@ -27,10 +27,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 		const body = await request.json();
 		const result = await addCreatorsToList(userId, id, body.creators ?? []);
 
-		// Track creators saved in LogSnag
+		// Track creators saved (GA4 + LogSnag)
 		if (result.added > 0) {
 			const user = await getUserProfile(userId);
-			await trackCreatorSaved({
+			await trackServer('creator_saved', {
 				userId,
 				listName: id, // Using list ID as name since we don't have it here
 				count: result.added,
