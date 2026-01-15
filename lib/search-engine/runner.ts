@@ -104,16 +104,6 @@ export async function runSearchJob(jobId: string): Promise<SearchExecutionResult
     },
     LogCategory.JOB,
   );
-  // console fallback to surface diagnostics in production where the structured logger may not flush to console
-  console.warn('[search-runner] loaded job snapshot', JSON.stringify({
-    jobId,
-    status: job.status,
-    platform: job.platform,
-    processedResults: job.processedResults,
-    targetResults: job.targetResults,
-    keywordsCount: Array.isArray(job.keywords) ? job.keywords.length : null,
-    hasSearchParams: Boolean(job.searchParams),
-  }));
 
   const config = await resolveConfig((job.platform ?? '').toLowerCase());
   logger.info(
@@ -126,12 +116,6 @@ export async function runSearchJob(jobId: string): Promise<SearchExecutionResult
     },
     LogCategory.CONFIG,
   );
-  console.warn('[search-runner] resolved config', JSON.stringify({
-    jobId,
-    platform: job.platform,
-    maxApiCalls: config.maxApiCalls,
-    continuationDelayMs: config.continuationDelayMs,
-  }));
 
   let providerResult: ProviderRunResult;
   const searchParams = job.searchParams as any;

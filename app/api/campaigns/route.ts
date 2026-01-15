@@ -4,8 +4,16 @@ import { db } from '@/lib/db'
 import { campaigns, scrapingJobs } from '@/lib/db/schema'
 import { NextResponse } from 'next/server'
 import { eq, desc, count } from 'drizzle-orm'
+import { z } from 'zod'
 import { PlanValidator } from '@/lib/services/plan-validator'
 import BillingLogger from '@/lib/loggers/billing-logger'
+
+// Input validation schema for campaign creation
+const CreateCampaignSchema = z.object({
+  name: z.string().min(1, 'Campaign name is required').max(100, 'Campaign name must be under 100 characters'),
+  description: z.string().max(500, 'Description must be under 500 characters').optional(),
+  searchType: z.enum(['keyword', 'similar']).default('keyword'),
+});
 
 export const maxDuration = 10; // Aumentar el tiempo máximo de ejecución a 10 segundos
 
@@ -105,28 +113,29 @@ export async function POST(req: Request) {
       requestId
     );
 
-    // Parse request body
+    // Parse and validate request body
     const body = await req.json();
-    const { name, description, searchType } = body;
-    const normalizedSearchType =
-      searchType === 'similar'
-        ? 'similar'
-        : searchType === 'keyword'
-          ? 'keyword'
-          : 'keyword';
+    const parseResult = CreateCampaignSchema.safeParse(body);
 
-    if (!searchType || !['keyword', 'similar'].includes(searchType)) {
+    if (!parseResult.success) {
+      const errors = parseResult.error.flatten().fieldErrors;
       await BillingLogger.logAPI(
-        'RESPONSE',
-        'Campaign search type defaulted to keyword',
+        'REQUEST_ERROR',
+        'Campaign creation validation failed',
         userId,
         {
-          providedType: searchType,
+          errors,
           requestId
         },
         requestId
       );
+      return NextResponse.json(
+        { error: 'Validation failed', details: errors },
+        { status: 400 }
+      );
     }
+
+    const { name, description, searchType } = parseResult.data;
 
     await BillingLogger.logAPI(
       'RESPONSE',
@@ -148,7 +157,7 @@ export async function POST(req: Request) {
       {
         table: 'campaigns',
         operation: 'insert',
-        data: { name, searchType: normalizedSearchType, status: 'draft' }
+        data: { name, searchType: searchType, status: 'draft' }
       },
       requestId
     );
@@ -157,7 +166,7 @@ export async function POST(req: Request) {
       userId: userId,
       name,
       description,
-      searchType: normalizedSearchType,
+      searchType: searchType,
       status: 'draft'
     }).returning();
 
@@ -169,7 +178,7 @@ export async function POST(req: Request) {
         table: 'campaigns',
         recordId: campaign.id,
         campaignName: campaign.name,
-        searchType: normalizedSearchType
+        searchType: searchType
       },
       requestId
     );
@@ -182,7 +191,7 @@ export async function POST(req: Request) {
       {
         campaignId: campaign.id,
         campaignName: campaign.name,
-        searchType: normalizedSearchType,
+        searchType: searchType,
         usageType: 'campaigns'
       },
       requestId
@@ -207,7 +216,7 @@ export async function POST(req: Request) {
       {
         campaignId: campaign.id,
         campaignName: campaign.name,
-        searchType: normalizedSearchType,
+        searchType: searchType,
         executionTime: Date.now(),
         requestId
       },
