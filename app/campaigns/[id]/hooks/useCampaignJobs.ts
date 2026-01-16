@@ -505,7 +505,9 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 	// Use unified polling hook for active job (SINGLE SOURCE OF TRUTH)
 	// This replaces the custom setInterval polling loop
 	const activeJobId = activeJob?.id;
+	const activeJobPlatform = activeJob?.platform;
 	const { data: polledData } = useJobPolling(activeJobId, {
+		platform: activeJobPlatform,
 		onProgress: useCallback(
 			(progressData: ProgressData) => {
 				if (!activeJobId) {

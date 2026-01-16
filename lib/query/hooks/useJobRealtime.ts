@@ -104,7 +104,7 @@ export function useJobRealtime(jobId: string | null | undefined): UseJobRealtime
 			supabase.removeChannel(channelRef.current);
 		}
 
-		debugLog('REALTIME', 'Subscribing to job updates', { jobId: jobId.slice(0, 8) });
+		debugLog('REALTIME', 'Subscribing to job updates', { jobId: String(jobId).slice(0, 8) });
 
 		const channel = supabase
 			.channel(`job-${jobId}`)
@@ -118,7 +118,7 @@ export function useJobRealtime(jobId: string | null | undefined): UseJobRealtime
 				},
 				(payload) => {
 					debugLog('REALTIME', 'Received update', {
-						jobId: jobId.slice(0, 8),
+						jobId: String(jobId).slice(0, 8),
 						status: payload.new.status,
 						progress: payload.new.progress,
 					});
@@ -177,7 +177,7 @@ export function useJobRealtime(jobId: string | null | undefined): UseJobRealtime
 				clearTimeout(reconnectTimeoutRef.current);
 			}
 			if (channelRef.current) {
-				debugLog('REALTIME', 'Cleaning up subscription', { jobId: jobId.slice(0, 8) });
+				debugLog('REALTIME', 'Cleaning up subscription', { jobId: String(jobId).slice(0, 8) });
 				supabase.removeChannel(channelRef.current);
 				channelRef.current = null;
 			}

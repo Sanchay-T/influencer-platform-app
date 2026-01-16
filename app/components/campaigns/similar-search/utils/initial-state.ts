@@ -19,7 +19,10 @@ export function deriveInitialStateFromSearchData(
 		: [];
 	const status = (data?.status ?? '').toString().toLowerCase();
 
-	if (status === 'completed') {
+	// @why If status is 'completed' but we have no creators, the server didn't pre-load
+	// them (similar search uses scrapingResults table, not job_creators).
+	// Return isLoading=true to trigger client-side fetch and avoid hydration mismatch.
+	if (status === 'completed' && creators.length > 0) {
 		return {
 			creators,
 			isLoading: false,

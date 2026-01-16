@@ -183,10 +183,17 @@ const SearchResults = ({ searchData }) => {
 		[platformNormalized]
 	);
 
+	// @why Server-side pagination: useSearchJob already returns paginated results
+	// We only slice client-side when filtering by email (which is client-side)
 	const startIndex = (currentPage - 1) * itemsPerPage;
 	const currentCreators = useMemo(() => {
-		return filteredCreators.slice(startIndex, startIndex + itemsPerPage);
-	}, [filteredCreators, startIndex, itemsPerPage]);
+		if (showEmailOnly) {
+			// Email filter is client-side, so we need to paginate the filtered results
+			return filteredCreators.slice(startIndex, startIndex + itemsPerPage);
+		}
+		// Server already paginated - use all creators from response
+		return filteredCreators;
+	}, [filteredCreators, startIndex, itemsPerPage, showEmailOnly]);
 
 	const currentRows = useMemo(
 		() =>

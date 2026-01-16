@@ -15,7 +15,7 @@ import { useJobPolling } from '@/lib/query/hooks/useJobPolling';
 const SearchProgress = ({
 	jobId,
 	platform,
-	searchData,
+	searchData: _searchData,
 	onProgress,
 	onIntermediateResults,
 	onComplete,
@@ -72,8 +72,10 @@ const SearchProgress = ({
 	);
 
 	// Use the polling hook
+	// @why Pass platform to determine correct endpoint (similar vs keyword search)
 	useJobPolling({
 		jobId,
+		platform,
 		onProgress: handleProgress,
 		onComplete: handleComplete,
 	});

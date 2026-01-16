@@ -189,7 +189,9 @@ export function useSimilarCreatorSearch(
 	const renderProfileLink = useCallback(
 		(creator: Creator) => {
 			const record = toRecord(creator);
-			if (!record) return '#';
+			if (!record) {
+				return '#';
+			}
 			const profileUrl = getStringProperty(record, 'profileUrl');
 			if (profileUrl) {
 				return profileUrl;
@@ -292,13 +294,25 @@ export function useSimilarCreatorSearch(
 	);
 
 	// Results completion handler
+	// @why SearchProgress sends { results: [{ creators: [...] }] } not { creators: [...] }
 	const handleResultsComplete = useCallback(
-		(data: { status?: string; creators?: unknown[] }) => {
+		(data: {
+			status?: string;
+			creators?: unknown[];
+			results?: Array<{ creators?: unknown[] }>;
+		}) => {
 			if (data?.status !== 'completed') {
 				return;
 			}
-			const normalized = Array.isArray(data.creators) ? data.creators : [];
-			const finalCreators = dedupeCreators(normalized, { platformHint });
+			// Extract creators from either direct creators array or nested results
+			let creatorsArray: unknown[] = [];
+			if (Array.isArray(data.creators) && data.creators.length > 0) {
+				creatorsArray = data.creators;
+			} else if (Array.isArray(data.results)) {
+				// Flatten creators from all result batches
+				creatorsArray = data.results.flatMap((r) => (Array.isArray(r.creators) ? r.creators : []));
+			}
+			const finalCreators = dedupeCreators(creatorsArray, { platformHint });
 			setCreators(finalCreators);
 			setIsLoading(false);
 			setStillProcessing(false);
@@ -307,9 +321,15 @@ export function useSimilarCreatorSearch(
 	);
 
 	// Intermediate results handler
+	// @why SearchProgress calls onIntermediateResults with creators array directly
 	const handleIntermediateResults = useCallback(
-		(data: { creators?: unknown[] }) => {
-			const incoming = Array.isArray(data?.creators) ? data.creators : [];
+		(data: unknown[] | { creators?: unknown[] }) => {
+			// Handle both array format (from SearchProgress) and object format
+			const incoming = Array.isArray(data)
+				? data
+				: Array.isArray((data as { creators?: unknown[] })?.creators)
+					? (data as { creators: unknown[] }).creators
+					: [];
 			if (!incoming.length) {
 				return;
 			}

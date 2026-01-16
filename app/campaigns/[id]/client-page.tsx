@@ -302,7 +302,7 @@ function ResultsView({
 	campaign,
 	selectedJob,
 	processedCreators,
-	loadingJobIds,
+	loadingJobIds: _loadingJobIds,
 	renderKey,
 	onStartSearch,
 }: ResultsViewProps) {
@@ -320,10 +320,14 @@ function ResultsView({
 
 	const hasCreatorsLoaded = processedCreators.length > 0;
 	const isV2KeywordJob = resolveScrapingEndpoint(selectedJob) === '/api/v2/status';
-	const isInitialLoading =
-		!isV2KeywordJob &&
-		(loadingJobIds.includes(selectedJob.id) || !selectedJob.resultsLoaded) &&
-		!hasCreatorsLoaded;
+	// @why Only show loading spinner on initial load, not during background refreshes
+	// This prevents flickering during active job polling
+	const isInitialLoading = !(
+		isV2KeywordJob ||
+		selectedJob.resultsLoaded ||
+		hasCreatorsLoaded ||
+		['completed', 'partial', 'error', 'timeout'].includes(selectedJob.status ?? '')
+	);
 
 	// Error state
 	if (['failed', 'error', 'timeout'].includes(selectedJob.status ?? '')) {

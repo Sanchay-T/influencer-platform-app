@@ -38,6 +38,8 @@ export interface ProgressData {
 	creatorsEnriched: number;
 	keywordsCompleted: number;
 	keywordsDispatched: number;
+	// Results for intermediate updates
+	results?: Array<{ id?: string; creators: unknown[] }>;
 }
 
 export interface CompletionData {
@@ -45,6 +47,8 @@ export interface CompletionData {
 	totalCreators: number;
 	isSuccess: boolean;
 	error?: string;
+	// Results for final data
+	results?: Array<{ id?: string; creators: unknown[] }>;
 }
 
 export interface UseJobPollingOptions {
@@ -54,6 +58,8 @@ export interface UseJobPollingOptions {
 	onComplete?: (data: CompletionData) => void;
 	/** Whether to enable polling (default: true when jobId is provided) */
 	enabled?: boolean;
+	/** Platform hint to determine correct polling endpoint (e.g., 'similar_discovery_instagram') */
+	platform?: string;
 }
 
 export interface UseJobPollingResult {
@@ -104,7 +110,7 @@ export function useJobPolling(
 	jobId: string | null | undefined,
 	options: UseJobPollingOptions = {}
 ): UseJobPollingResult {
-	const { onProgress, onComplete, enabled = true } = options;
+	const { onProgress, onComplete, enabled = true, platform } = options;
 	const queryClient = useQueryClient();
 
 	// Primary: Supabase Realtime for instant updates
@@ -112,7 +118,8 @@ export function useJobPolling(
 
 	// Fallback: React Query polling (only when Realtime disconnected)
 	// @why Realtime may fail due to network issues, tab backgrounding, etc.
-	const jobStatus = useJobStatus(enabled && jobId ? jobId : undefined);
+	// @why Pass platform to determine correct endpoint (similar vs keyword search)
+	const jobStatus = useJobStatus(enabled && jobId ? jobId : undefined, { platform });
 
 	// Merge data: prefer Realtime when connected, fall back to polling
 	const mergedData = useMemo(() => {
@@ -177,7 +184,7 @@ export function useJobPolling(
 		const prevStatus = prevStatusRef.current;
 
 		debugLog('HYBRID', 'State update', {
-			jobId: jobId?.slice(0, 8),
+			jobId: jobId ? String(jobId).slice(0, 8) : undefined,
 			source: realtime.isConnected ? 'realtime' : 'polling',
 			status,
 			prevStatus,
@@ -194,6 +201,8 @@ export function useJobPolling(
 			creatorsEnriched,
 			keywordsCompleted: mergedData.progress?.keywordsCompleted ?? 0,
 			keywordsDispatched: mergedData.progress?.keywordsDispatched ?? 0,
+			// Include results for intermediate updates
+			results: mergedData.results,
 		};
 
 		// Call onProgress for active jobs (using ref to avoid dependency issues)
@@ -201,11 +210,18 @@ export function useJobPolling(
 			onProgressRef.current(progressData);
 		}
 
-		// Detect transition to terminal state
+		// Detect terminal state - either transition OR first load of already-completed job
+		// @why For similar search, job may already be completed but we start with no creators
+		// (because server pre-loads from job_creators, not scrapingResults).
+		// In that case, prevStatus is undefined but we still need to call onComplete.
 		const wasActive = prevStatus && !isDoneStatus(prevStatus);
 		const nowTerminal = isDoneStatus(status);
+		const isFirstLoadAlreadyComplete = !prevStatus && nowTerminal;
 
-		if (wasActive && nowTerminal && !hasCalledCompleteRef.current) {
+		if (
+			(wasActive && nowTerminal && !hasCalledCompleteRef.current) ||
+			(isFirstLoadAlreadyComplete && !hasCalledCompleteRef.current)
+		) {
 			hasCalledCompleteRef.current = true;
 			debugLog('COMPLETE', 'Job completed!', {
 				status,
@@ -220,6 +236,8 @@ export function useJobPolling(
 					totalCreators,
 					isSuccess: isSuccessStatus(status),
 					error: mergedData.error,
+					// Include results for final data
+					results: mergedData.results,
 				});
 			}
 

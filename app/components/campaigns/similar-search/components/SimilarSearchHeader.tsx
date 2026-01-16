@@ -6,6 +6,7 @@
  */
 
 import { LayoutGrid, MailCheck, Table2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { AddToListButton, type CreatorSnapshot } from '@/components/lists/add-to-list-button';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -91,6 +92,12 @@ export function SimilarSearchHeader({
 }: SimilarSearchHeaderProps) {
 	const hasResults = totalResults > 0;
 
+	// Mounted state to avoid hydration mismatch for client-side pagination
+	const [mounted, setMounted] = useState(false);
+	useEffect(() => {
+		setMounted(true);
+	}, []);
+
 	return (
 		<>
 			<Breadcrumbs
@@ -154,12 +161,18 @@ export function SimilarSearchHeader({
 						Email only
 					</Button>
 
-					{/* Results summary */}
+					{/* Results summary - only render after mount to avoid hydration mismatch */}
 					<div className="text-sm text-zinc-400">
-						Page {currentPage} of {totalPages} • Showing{' '}
-						{hasResults
-							? `${startIndex + 1}-${Math.min(startIndex + itemsPerPage, totalResults)} of ${totalResults}`
-							: '0 of 0'}
+						{mounted ? (
+							<>
+								Page {currentPage} of {totalPages} • Showing{' '}
+								{hasResults
+									? `${startIndex + 1}-${Math.min(startIndex + itemsPerPage, totalResults)} of ${totalResults}`
+									: '0 of 0'}
+							</>
+						) : (
+							<span className="invisible">Loading...</span>
+						)}
 					</div>
 
 					{/* Selection actions */}

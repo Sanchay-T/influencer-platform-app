@@ -19,7 +19,7 @@ import {
 	toArray,
 	toRecord,
 } from '@/lib/utils/type-guards';
-import type { HandleQueueState, PlatformResult, UiScrapingJob } from '../types/campaign-page';
+import type { HandleQueueState, UiScrapingJob } from '../types/campaign-page';
 
 // Re-export StatusVariant as an alias for backwards compatibility
 export type StatusVariant = JobStatusDisplay;
@@ -117,6 +117,17 @@ export const resolveScrapingEndpoint = (
 		['tiktok', 'instagram', 'youtube'].includes(normalized)
 	) {
 		return logEndpoint('/api/v2/status');
+	}
+
+	// Handle similar_discovery platforms first (new unified similar search system)
+	if (normalized.startsWith('similar_discovery_')) {
+		return logEndpoint('/api/scraping/similar-discovery');
+	}
+
+	// YouTube similar - check targetUsername since platform='YouTube' (capital Y) from POST
+	// doesn't have _similar suffix, but keyword search has no targetUsername
+	if (normalized === 'youtube' && hasTargetUsername) {
+		return logEndpoint('/api/scraping/youtube-similar');
 	}
 
 	switch (normalized) {
@@ -380,16 +391,31 @@ export function isActiveJob(job?: UiScrapingJob | null) {
 }
 
 /**
- * Determines if a job is a similar search (vs keyword search) based on platform.
- * Similar search platforms: similar_discovery_*, youtube-similar
- * Keyword search platforms: tiktok, instagram, instagram-us, youtube
+ * Determines if a job is a similar search (vs keyword search).
+ * Similar search platforms: similar_discovery_*, youtube-similar, instagram-similar
+ * Also: Jobs with targetUsername but no keywords are similar searches
+ *
+ * @why YouTube similar POST sets platform='YouTube' without _similar suffix,
+ * but has targetUsername. We check both platform pattern and targetUsername.
  */
 export function isSimilarSearchJob(job?: UiScrapingJob | null): boolean {
-	if (!job?.platform) {
+	if (!job) {
 		return false;
 	}
-	const platform = job.platform.toLowerCase();
-	return platform.includes('similar') || platform.startsWith('similar_discovery');
+	const platform = (job.platform ?? '').toLowerCase();
+
+	// Explicit similar platform names
+	if (platform.includes('similar') || platform.startsWith('similar_discovery')) {
+		return true;
+	}
+
+	// Jobs with targetUsername but no keywords are similar searches
+	// This handles YouTube similar which sets platform='YouTube' (no _similar)
+	const hasTargetUsername =
+		typeof job.targetUsername === 'string' && job.targetUsername.trim().length > 0;
+	const hasKeywords = Array.isArray(job.keywords) && job.keywords.length > 0;
+
+	return hasTargetUsername && !hasKeywords;
 }
 
 export function buildKeywords(job?: UiScrapingJob | null) {

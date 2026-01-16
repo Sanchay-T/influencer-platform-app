@@ -59,6 +59,8 @@ export interface JobStatusData {
 		total: number;
 		nextOffset: number | null;
 	};
+	// Results array (for intermediate/final results)
+	results?: Array<{ id?: string; creators: unknown[] }>;
 }
 
 // Query key factory for cache operations
@@ -70,30 +72,144 @@ export const jobStatusKeys: {
 	detail: (jobId: string) => ['job-status', jobId],
 };
 
-async function fetchJobStatus(jobId: string): Promise<JobStatusData> {
-	debugLog('FETCH', `Fetching status for job ${jobId.slice(0, 8)}...`);
+/**
+ * Detect if a platform string indicates a similar search job
+ * @why Similar search jobs store results in scrapingResults table, not job_creators
+ */
+function isSimilarSearchPlatform(platform?: string): boolean {
+	if (!platform) {
+		return false;
+	}
+	const normalized = platform.toLowerCase();
+	return (
+		normalized.includes('similar_discovery') ||
+		normalized.includes('similar') ||
+		normalized === 'instagram_similar' ||
+		normalized === 'youtube_similar'
+	);
+}
+
+/**
+ * Get the correct API endpoint for polling a job based on its platform
+ * @why Different similar search types use different API routes:
+ *   - similar_discovery_* → /api/scraping/similar-discovery
+ *   - youtube_similar or YouTube (capital Y) → /api/scraping/youtube-similar
+ *   - instagram_similar → /api/scraping/instagram
+ *   - v2 keyword search → /api/v2/status
+ *
+ * Note: Platform string varies by search type:
+ *   - YouTube similar POST sets platform='YouTube' (capital Y)
+ *   - YouTube keyword v2 sets platform='youtube' (lowercase)
+ *   - We must differentiate to route to correct endpoint
+ */
+function getStatusEndpoint(jobId: string, platform?: string): string {
+	if (!platform) {
+		return `/api/v2/status?jobId=${jobId}&limit=0`;
+	}
+
+	const normalized = platform.toLowerCase();
+
+	// Similar discovery (unified system) - Instagram/TikTok
+	if (normalized.startsWith('similar_discovery_')) {
+		return `/api/scraping/similar-discovery?jobId=${jobId}`;
+	}
+
+	// YouTube similar - explicit _similar suffix or capital 'YouTube' from POST
+	// Note: 'YouTube' (capital Y) is set by youtube-similar POST, lowercase 'youtube' is keyword
+	if (
+		normalized === 'youtube_similar' ||
+		normalized === 'youtube-similar' ||
+		platform === 'YouTube' // Exact case match - similar search uses capital Y
+	) {
+		return `/api/scraping/youtube-similar?jobId=${jobId}`;
+	}
+
+	// Instagram similar
+	if (normalized === 'instagram_similar' || normalized === 'instagram-similar') {
+		return `/api/scraping/instagram?jobId=${jobId}`;
+	}
+
+	// Default to v2/status for keyword searches (youtube lowercase, tiktok, etc)
+	return `/api/v2/status?jobId=${jobId}&limit=0`;
+}
+
+/**
+ * Normalize similar search API response to match JobStatusData interface
+ * @why Similar search API returns different shape than v2/status
+ */
+function normalizeSimilarResponse(data: Record<string, unknown>): JobStatusData {
+	const status = (data.status as JobStatus) ?? 'pending';
+	const processedResults = (data.processedResults as number) ?? 0;
+	const targetResults = (data.targetResults as number) ?? 100;
+	const progress = (data.progress as number) ?? 0;
+	const totalCreators = (data.totalCreators as number) ?? processedResults;
+
+	// Similar search returns results as [{ creators: [...] }] from paginateCreators
+	// Normalize to match v2/status format: [{ id: jobId, creators: [...] }]
+	const rawResults = data.results as Array<{ creators?: unknown[] }> | undefined;
+	const results: JobStatusData['results'] = rawResults?.map((r) => ({
+		creators: Array.isArray(r.creators) ? r.creators : [],
+	}));
+
+	return {
+		status,
+		progress: {
+			keywordsDispatched: 0,
+			keywordsCompleted: 0,
+			creatorsFound: totalCreators,
+			creatorsEnriched: totalCreators,
+			percentComplete: progress,
+		},
+		processedResults,
+		totalCreators,
+		targetResults,
+		platform: (data.platform as string) ?? '',
+		keywords: [],
+		error: data.error as string | undefined,
+		pagination: data.pagination as JobStatusData['pagination'],
+		results,
+	};
+}
+
+async function fetchJobStatus(jobId: string, platform?: string): Promise<JobStatusData> {
+	debugLog('FETCH', `Fetching status for job ${String(jobId).slice(0, 8)}...`, { platform });
 	const startTime = performance.now();
 
-	const res = await fetch(`/api/v2/status?jobId=${jobId}&limit=0`, {
+	// Use correct endpoint based on job type
+	const isSimilar = isSimilarSearchPlatform(platform);
+	const endpoint = getStatusEndpoint(jobId, platform);
+
+	debugLog('FETCH', `Using endpoint: ${endpoint}`, { isSimilar, platform });
+
+	const res = await fetch(endpoint, {
 		credentials: 'include',
 	});
 
 	if (!res.ok) {
-		debugLog('FETCH', `FAILED: ${res.status}`, { jobId });
+		debugLog('FETCH', `FAILED: ${res.status}`, { jobId, endpoint });
 		throw new Error(`Failed to fetch job status: ${res.status}`);
 	}
 
-	const data = await res.json();
+	const rawData = await res.json();
 	const elapsed = (performance.now() - startTime).toFixed(0);
 
+	// Normalize similar search response to match expected interface
+	const data = isSimilar ? normalizeSimilarResponse(rawData) : rawData;
+
 	debugLog('FETCH', `Response in ${elapsed}ms`, {
-		jobId: jobId.slice(0, 8),
+		jobId: String(jobId).slice(0, 8),
 		status: data.status,
 		totalCreators: data.totalCreators,
 		progress: data.progress?.percentComplete,
+		isSimilar,
 	});
 
 	return data;
+}
+
+export interface UseJobStatusOptions {
+	/** Platform hint to determine correct polling endpoint */
+	platform?: string;
 }
 
 export interface UseJobStatusResult {
@@ -112,7 +228,11 @@ export interface UseJobStatusResult {
 	refetch: () => void;
 }
 
-export function useJobStatus(jobId: string | undefined): UseJobStatusResult {
+export function useJobStatus(
+	jobId: string | undefined,
+	options: UseJobStatusOptions = {}
+): UseJobStatusResult {
+	const { platform } = options;
 	const renderCountRef = useRef(0);
 	const prevStatusRef = useRef<string | undefined>(undefined);
 	renderCountRef.current += 1;
@@ -123,7 +243,7 @@ export function useJobStatus(jobId: string | undefined): UseJobStatusResult {
 			if (!jobId) {
 				throw new Error('jobId is required');
 			}
-			return fetchJobStatus(jobId);
+			return fetchJobStatus(jobId, platform);
 		},
 		enabled: !!jobId,
 		refetchInterval: (query) => {
@@ -131,7 +251,7 @@ export function useJobStatus(jobId: string | undefined): UseJobStatusResult {
 			const status = query.state.data?.status;
 			const shouldPoll = isActiveStatus(status);
 			debugLog('POLL', shouldPoll ? 'Polling enabled (2s)' : 'Polling stopped', {
-				jobId: jobId?.slice(0, 8),
+				jobId: jobId ? String(jobId).slice(0, 8) : undefined,
 				status,
 				shouldPoll,
 			});
@@ -152,7 +272,7 @@ export function useJobStatus(jobId: string | undefined): UseJobStatusResult {
 	// Log state changes
 	if (status !== prevStatusRef.current) {
 		debugLog('STATE', `Status changed: ${prevStatusRef.current} → ${status}`, {
-			jobId: jobId?.slice(0, 8),
+			jobId: jobId ? String(jobId).slice(0, 8) : undefined,
 			totalCreators,
 			progress,
 			isTerminal,
@@ -165,7 +285,7 @@ export function useJobStatus(jobId: string | undefined): UseJobStatusResult {
 	// Log every 10th render to detect render storms
 	if (renderCountRef.current % 10 === 0) {
 		debugLog('RENDER', `Render #${renderCountRef.current}`, {
-			jobId: jobId?.slice(0, 8),
+			jobId: jobId ? String(jobId).slice(0, 8) : undefined,
 			status,
 			totalCreators,
 		});
