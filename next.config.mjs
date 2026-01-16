@@ -1,4 +1,5 @@
-import path from 'path'
+import { withSentryConfig } from '@sentry/nextjs';
+import path from 'path';
 import dotenv from 'dotenv';
 
 dotenv.config({ path: '.env.local' });
@@ -7,10 +8,10 @@ dotenv.config({ path: '.env.development' });
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: {
-    ignoreBuildErrors: true
+    ignoreBuildErrors: true,
   },
   eslint: {
-    ignoreDuringBuilds: true
+    ignoreDuringBuilds: true,
   },
   webpack: (config, { isServer }) => {
     // Suppress warnings
@@ -47,9 +48,46 @@ const nextConfig = {
       {
         source: '/api/video-proxy',
         destination: 'https://tiktok-proxy.jahirjimenez1010.workers.dev/',
-      }
+      },
     ];
-  }
-}
+  },
+};
 
-export default nextConfig;
+/**
+ * Sentry configuration options for build-time integration.
+ * @see https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
+ */
+const sentryWebpackPluginOptions = {
+  // Sentry organization and project (set via environment variables)
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+
+  // Auth token for uploading source maps (set via environment variable)
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+
+  // Only upload source maps in production builds
+  silent: process.env.NODE_ENV !== 'production',
+
+  // Upload a larger set of source maps for prettier stack traces
+  widenClientFileUpload: true,
+
+  // Automatically instrument API routes
+  automaticVercelMonitors: true,
+
+  // Hide source maps from clients (security)
+  hideSourceMaps: true,
+
+  // Disable the Sentry SDK logger (too verbose)
+  disableLogger: true,
+
+  // Tunnel route to bypass ad blockers (optional)
+  // tunnelRoute: '/monitoring',
+};
+
+// Only wrap with Sentry if we have the required environment variables
+const shouldUseSentry =
+  process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN;
+
+export default shouldUseSentry
+  ? withSentryConfig(nextConfig, sentryWebpackPluginOptions)
+  : nextConfig;
