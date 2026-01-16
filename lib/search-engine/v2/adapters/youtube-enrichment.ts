@@ -1,3 +1,4 @@
+import { proxyFetch } from '@/lib/utils/proxy-fetch';
 import { getNumberProperty, getStringProperty, toRecord } from '@/lib/utils/type-guards';
 import { EMAIL_REGEX, ENDPOINTS } from '../core/config';
 import type { BioEnrichedInfo, NormalizedCreator, SearchConfig } from '../core/types';
@@ -111,7 +112,7 @@ async function fetchChannelProfile(
 	const url = new URL(`${config.apiBaseUrl}${ENDPOINTS.youtube.channel}`);
 	url.searchParams.set('handle', cleanHandle);
 
-	const response = await fetch(url.toString(), {
+	const response = await proxyFetch(url.toString(), {
 		headers: { 'x-api-key': config.apiKey },
 		signal: AbortSignal.timeout(config.bioEnrichmentTimeoutMs),
 	});

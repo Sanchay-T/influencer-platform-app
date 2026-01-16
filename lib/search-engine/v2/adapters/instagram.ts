@@ -8,6 +8,7 @@
  * We must enrich creators via the Instagram basic-profile endpoint.
  */
 
+import { proxyFetch } from '@/lib/utils/proxy-fetch';
 import {
 	getNumberProperty,
 	getStringProperty,
@@ -82,7 +83,7 @@ class InstagramAdapter implements SearchAdapter {
 		url.searchParams.set('amount', String(amount));
 
 		try {
-			const response = await fetch(url.toString(), {
+			const response = await proxyFetch(url.toString(), {
 				headers: { 'x-api-key': config.apiKey },
 				signal: AbortSignal.timeout(config.fetchTimeoutMs),
 			});

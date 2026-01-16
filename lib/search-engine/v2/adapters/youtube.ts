@@ -5,6 +5,7 @@
  * Uses ScrapeCreators API - REQUIRES enrichment for followers and bio.
  */
 
+import { proxyFetch } from '@/lib/utils/proxy-fetch';
 import {
 	getNumberProperty,
 	getStringProperty,
@@ -67,7 +68,7 @@ class YouTubeAdapter implements SearchAdapter {
 		}
 
 		try {
-			const response = await fetch(url.toString(), {
+			const response = await proxyFetch(url.toString(), {
 				headers: { 'x-api-key': config.apiKey },
 				signal: AbortSignal.timeout(config.fetchTimeoutMs),
 			});

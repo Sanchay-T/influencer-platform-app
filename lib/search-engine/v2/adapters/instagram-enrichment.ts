@@ -1,3 +1,4 @@
+import { proxyFetch } from '@/lib/utils/proxy-fetch';
 import { getNumberProperty, getStringProperty, toArray, toRecord } from '@/lib/utils/type-guards';
 import { EMAIL_REGEX } from '../core/config';
 import type { BioEnrichedInfo, NormalizedCreator, SearchConfig } from '../core/types';
@@ -51,7 +52,7 @@ export async function enrichInstagramCreator(
 		const url = new URL(`${config.apiBaseUrl}/v1/instagram/basic-profile`);
 		url.searchParams.set('userId', userId);
 
-		const response = await fetch(url.toString(), {
+		const response = await proxyFetch(url.toString(), {
 			headers: { 'x-api-key': config.apiKey },
 			signal: AbortSignal.timeout(config.bioEnrichmentTimeoutMs),
 		});

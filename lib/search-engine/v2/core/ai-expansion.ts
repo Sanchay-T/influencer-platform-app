@@ -4,6 +4,7 @@
  * Uses DeepSeek via OpenRouter to expand keywords dynamically.
  */
 
+import { proxyFetch } from '@/lib/utils/proxy-fetch';
 import { LOG_PREFIX } from './config';
 
 // ============================================================================
@@ -34,7 +35,7 @@ export async function expandKeywordWithAI(
 		const excludeSet = new Set(excludeKeywords.map((k) => k.toLowerCase().trim()));
 		const requestCount = count + excludeKeywords.length + 5;
 
-		const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+		const response = await proxyFetch('https://openrouter.ai/api/v1/chat/completions', {
 			method: 'POST',
 			headers: {
 				Authorization: `Bearer ${apiKey}`,
@@ -122,7 +123,7 @@ export async function generateContinuationKeywords(
 
 		const excludeSet = new Set(processedKeywords.map((k) => k.toLowerCase().trim()));
 
-		const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+		const response = await proxyFetch('https://openrouter.ai/api/v1/chat/completions', {
 			method: 'POST',
 			headers: {
 				Authorization: `Bearer ${apiKey}`,

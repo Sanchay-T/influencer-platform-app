@@ -5,6 +5,7 @@
  * Handles fetching from ScrapeCreators API and normalizing results.
  */
 
+import { proxyFetch } from '@/lib/utils/proxy-fetch';
 import {
 	getNumberProperty,
 	getRecordProperty,
@@ -40,7 +41,7 @@ class TikTokAdapter implements SearchAdapter {
 		url.searchParams.set('region', config.region);
 
 		try {
-			const response = await fetch(url.toString(), {
+			const response = await proxyFetch(url.toString(), {
 				headers: { 'x-api-key': config.apiKey },
 				signal: AbortSignal.timeout(config.fetchTimeoutMs),
 			});
@@ -241,7 +242,7 @@ class TikTokAdapter implements SearchAdapter {
 			url.searchParams.set('handle', handle);
 			url.searchParams.set('region', config.region);
 
-			const response = await fetch(url.toString(), {
+			const response = await proxyFetch(url.toString(), {
 				headers: { 'x-api-key': config.apiKey },
 				signal: AbortSignal.timeout(config.bioEnrichmentTimeoutMs),
 			});
