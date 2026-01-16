@@ -25,7 +25,7 @@ import type {
 	UserSignedInProps,
 	UserSignedUpProps,
 } from './events';
-import { trackGA4Event, trackGA4ServerEvent } from './google-analytics';
+import { trackGA4Event, trackGA4ServerEvent, trackGA4SignUp } from './google-analytics';
 import {
 	trackCampaignCreated,
 	trackCreatorSaved,
@@ -301,12 +301,14 @@ export async function trackServer<E extends AnalyticsEvent>(
 // ============================================================================
 
 /**
- * Client-side tracking for Lead event (signup before payment)
+ * Client-side tracking for Lead/SignUp event (new user created, before payment)
  * Call this when a new user is created on the client
+ * @why Fires both Meta Pixel "Lead" and GA4 "sign_up" for consistent funnel tracking
  */
 export function trackLeadClient(): void {
 	if (typeof window !== 'undefined') {
-		trackLead();
+		trackLead(); // Meta Pixel "Lead"
+		trackGA4SignUp(); // GA4 "sign_up"
 	}
 }
 
