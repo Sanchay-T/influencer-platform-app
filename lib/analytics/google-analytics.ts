@@ -53,6 +53,13 @@ export function trackGA4Purchase(planName: string, value: number): void {
 	});
 }
 
+/**
+ * Track new user signup (client-side)
+ */
+export function trackGA4SignUp(): void {
+	trackGA4Event('sign_up', { method: 'clerk' });
+}
+
 // ============================================================================
 // Server-side tracking (for webhooks via Measurement Protocol)
 // ============================================================================
