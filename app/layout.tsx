@@ -7,6 +7,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import Script from 'next/script';
 import type { ComponentProps, ReactNode } from 'react';
+import { GA4UserIdentifier } from './components/analytics/ga4-user-id';
 import { AuthLogger } from './components/auth/auth-logger';
 import { NavigationLogger } from './components/navigation/navigation-logger';
 import { ClientConsoleBridge } from './providers/console-bridge';
@@ -151,9 +152,13 @@ export default function RootLayout({ children }: RootLayoutProps) {
 		<ClerkProvider appearance={clerkAppearance}>
 			<html lang="en" className="dark">
 				<head>
-					{/* Google Ads + GA4 (gtag.js) */}
+					{/* Google Ads + GA4 (gtag.js)
+					- Uses environment variables for GA4 Measurement ID
+					- Dev: G-ZG4F8W3RJD (test property) - set in .env.local
+					- Prod: G-HQL4LR0B0G (clean property) - set in Vercel
+				*/}
 					<Script
-						src="https://www.googletagmanager.com/gtag/js?id=AW-17841436850"
+						src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID || 'G-ZG4F8W3RJD'}`}
 						strategy="afterInteractive"
 					/>
 					<Script id="google-gtag" strategy="afterInteractive">
@@ -161,12 +166,23 @@ export default function RootLayout({ children }: RootLayoutProps) {
 							window.dataLayer = window.dataLayer || [];
 							function gtag(){dataLayer.push(arguments);}
 							gtag('js', new Date());
-							gtag('config', 'AW-17841436850');
-							gtag('config', 'G-ZG4F8W3RJD');
+
+							var ga4Id = '${process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID || 'G-ZG4F8W3RJD'}';
+							var isProduction = window.location.hostname === 'usegemz.io';
+
+							// Google Ads - only in production
+							if (isProduction) {
+								gtag('config', 'AW-17841436850');
+							}
+
+							// GA4 - always enabled, debug mode for non-production
+							gtag('config', ga4Id, {
+								debug_mode: !isProduction
+							});
 						`}
 					</Script>
 
-					{/* Meta Pixel Code */}
+					{/* Meta Pixel Code - Loads everywhere but only tracks in production */}
 					<Script id="meta-pixel" strategy="afterInteractive">
 						{`
 							!function(f,b,e,v,n,t,s)
@@ -177,22 +193,29 @@ export default function RootLayout({ children }: RootLayoutProps) {
 							t.src=v;s=b.getElementsByTagName(e)[0];
 							s.parentNode.insertBefore(t,s)}(window, document,'script',
 							'https://connect.facebook.net/en_US/fbevents.js');
-							fbq('init', '852153531055002');
-							fbq('track', 'PageView');
+
+							// Only initialize and track in production
+							if (window.location.hostname === 'usegemz.io') {
+								fbq('init', '852153531055002');
+								fbq('track', 'PageView');
+							}
 						`}
 					</Script>
 				</head>
 				<body className={`${inter.variable} font-sans bg-background text-foreground antialiased`}>
-					{/* Meta Pixel noscript fallback */}
-					<noscript>
-						<img
-							height="1"
-							width="1"
-							style={{ display: 'none' }}
-							src="https://www.facebook.com/tr?id=852153531055002&ev=PageView&noscript=1"
-							alt=""
-						/>
-					</noscript>
+					{/* Meta Pixel noscript fallback - Only in production */}
+					{process.env.NODE_ENV === 'production' && (
+						<noscript>
+							{/* biome-ignore lint/performance/noImgElement: Required for Meta Pixel noscript tracking */}
+							<img
+								height="1"
+								width="1"
+								style={{ display: 'none' }}
+								src="https://www.facebook.com/tr?id=852153531055002&ev=PageView&noscript=1"
+								alt=""
+							/>
+						</noscript>
+					)}
 
 					{/* JSON-LD Structured Data for SEO */}
 					<script
@@ -221,6 +244,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
 
 					<ClientConsoleBridge />
 					<AuthLogger />
+					<GA4UserIdentifier />
 					<NavigationLogger />
 					<QueryProvider>{children}</QueryProvider>
 					<ToastProvider />

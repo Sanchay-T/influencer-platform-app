@@ -64,11 +64,18 @@ export function trackGA4SignUp(): void {
 // Server-side tracking (for webhooks via Measurement Protocol)
 // ============================================================================
 
+// GA4 Measurement ID - uses env var, falls back to test property
+// Production (Vercel): Set GA4_MEASUREMENT_ID=G-HQL4LR0B0G
+// Development: Falls back to G-ZG4F8W3RJD (test property)
 const GA4_MEASUREMENT_ID = process.env.GA4_MEASUREMENT_ID || 'G-ZG4F8W3RJD';
 const GA4_API_SECRET = process.env.GA4_API_SECRET;
 
 /**
  * Send a GA4 event from the server using Measurement Protocol
+ *
+ * Events go to whichever GA4 property is configured via GA4_MEASUREMENT_ID:
+ * - Production (Vercel): G-HQL4LR0B0G (clean property)
+ * - Development: G-ZG4F8W3RJD (test property)
  *
  * @see https://developers.google.com/analytics/devguides/collection/protocol/ga4
  */
@@ -78,7 +85,7 @@ export async function trackGA4ServerEvent(
 	userId: string
 ): Promise<void> {
 	if (!GA4_API_SECRET) {
-		structuredConsole.warn('[GA4] Missing GA4_API_SECRET - skipping server-side event');
+		structuredConsole.log(`[GA4] Missing GA4_API_SECRET - skipping: ${eventName}`);
 		return;
 	}
 

@@ -122,7 +122,8 @@ export async function POST(req: NextRequest) {
 				throw new Error('Invalid Clerk webhook payload');
 			}
 
-			const id = getStringProperty(verifiedRecord, 'id');
+			// Use svix-id header as event ID (Clerk doesn't include id in payload body)
+			const id = svixId;
 			const objectValue = getStringProperty(verifiedRecord, 'object');
 			const type = getStringProperty(verifiedRecord, 'type');
 			const numericTimestamp = getNumberProperty(verifiedRecord, 'timestamp');

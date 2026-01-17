@@ -2,7 +2,6 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { trackGA4Purchase, trackGA4TrialStart } from '@/lib/analytics/google-analytics';
 import {
 	trackCompleteRegistration,
 	trackPurchase,
@@ -174,21 +173,18 @@ function OnboardingSuccessContent() {
 					: sessionData.plan.monthlyPrice;
 			const value = parseFloat(priceStr.replace(/[^0-9.]/g, ''));
 
-			// Fire StartTrial if this is a trial subscription
+			// Fire StartTrial if this is a trial subscription (Meta Pixel only)
+			// @why GA4 events are tracked server-side via Stripe webhook (more reliable, not blocked by ad blockers)
 			if (sessionData.subscription?.status === 'trialing') {
 				trackStartTrial(sessionData.planId);
-				if (!Number.isNaN(value)) {
-					trackGA4TrialStart(sessionData.planId, value);
-				}
 			}
 
-			// Fire Purchase with value
+			// Fire Purchase with value (Meta Pixel only)
 			if (!Number.isNaN(value)) {
 				trackPurchase(value, 'USD', sessionData.planId);
-				trackGA4Purchase(sessionData.planId, value);
 			}
 
-			structuredConsole.info('Conversion events fired (Meta Pixel + GA4)', {
+			structuredConsole.info('Conversion events fired (Meta Pixel)', {
 				planId: sessionData.planId,
 				billing: sessionData.billing,
 				value,
