@@ -73,8 +73,7 @@ const SearchProgress = ({
 
 	// Use the polling hook
 	// @why Pass platform to determine correct endpoint (similar vs keyword search)
-	useJobPolling({
-		jobId,
+	useJobPolling(jobId, {
 		platform,
 		onProgress: handleProgress,
 		onComplete: handleComplete,

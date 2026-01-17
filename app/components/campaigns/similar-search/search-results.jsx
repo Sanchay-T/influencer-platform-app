@@ -14,7 +14,7 @@
  * - Rendering pagination
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import SearchProgress from '../keyword-search/search-progress';
@@ -60,6 +60,12 @@ function getPageNumbers(currentPage, totalPages) {
 }
 
 export default function SimilarSearchResults({ searchData }) {
+	// @why Ensure consistent render between server and client to avoid hydration mismatch
+	const [mounted, setMounted] = useState(false);
+	useEffect(() => {
+		setMounted(true);
+	}, []);
+
 	// All state management delegated to custom hook
 	const {
 		// Core state
@@ -135,6 +141,15 @@ export default function SimilarSearchResults({ searchData }) {
 		return (
 			<div className="rounded-lg border border-zinc-800 bg-zinc-900/30 p-6 text-center text-sm text-zinc-400">
 				Missing search context. Re-run the similar search to generate a job.
+			</div>
+		);
+	}
+
+	// @why Show consistent loading state on server to avoid hydration mismatch
+	if (!mounted) {
+		return (
+			<div className="rounded-lg border border-zinc-800 bg-zinc-900/30 p-6 text-center">
+				<div className="h-8 w-8 mx-auto animate-spin rounded-full border-b-2 border-zinc-200" />
 			</div>
 		);
 	}
