@@ -6,6 +6,8 @@ import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { creatorProfiles } from '@/lib/db/schema';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { SentryLogger } from '@/lib/logging/sentry-logger';
+import { apiTracker } from '@/lib/sentry/feature-tracking';
 import {
 	getNumberProperty,
 	getStringProperty,
@@ -406,6 +408,28 @@ export class CreatorEnrichmentService {
 				payload: errorPayload,
 			});
 
+			// Capture API error in Sentry
+			SentryLogger.captureException(
+				new EnrichmentApiError(
+					'Influencers.Club enrichment request failed',
+					response.status,
+					errorPayload
+				),
+				{
+					tags: {
+						feature: 'enrichment',
+						service: 'influencers_club',
+						errorType: 'api_error',
+					},
+					extra: {
+						status: response.status,
+						handle: args.handle,
+						platform: args.platform,
+					},
+					level: 'warning',
+				}
+			);
+
 			throw new EnrichmentApiError(
 				'Influencers.Club enrichment request failed',
 				response.status,
@@ -635,11 +659,22 @@ export class CreatorEnrichmentService {
 			platform: options.platform,
 		});
 
-		const payload = await CreatorEnrichmentService.callEnrichmentApi({
-			handle: requestHandle.toLowerCase(),
-			platform: options.platform,
-			includeLookalikes: false,
-			emailRequired: 'preferred',
+		// Add breadcrumb for enrichment API call
+		SentryLogger.addBreadcrumb({
+			category: 'enrichment',
+			message: `Calling Influencers.Club API for ${requestHandle}`,
+			level: 'info',
+			data: { platform: options.platform, creatorId: creator.id },
+		});
+
+		// Track external API call with Sentry
+		const payload = await apiTracker.trackExternalCall('influencers_club', 'enrich', async () => {
+			return CreatorEnrichmentService.callEnrichmentApi({
+				handle: requestHandle.toLowerCase(),
+				platform: options.platform,
+				includeLookalikes: false,
+				emailRequired: 'preferred',
+			});
 		});
 
 		const record = CreatorEnrichmentService.normalizeMetadata(payload, {

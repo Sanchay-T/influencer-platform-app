@@ -6,6 +6,7 @@
  */
 
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { apiTracker, SentryLogger, searchTracker } from '@/lib/sentry';
 import { type DiscoveryAccount, discoverySearchSimilar } from '@/lib/services/influencers-club';
 import { getRecordProperty, getStringProperty, toRecord } from '@/lib/utils/type-guards';
 import type { SearchJobService } from '../job-service';
@@ -94,6 +95,26 @@ export async function runSimilarDiscoveryProvider(
 	service: SearchJobService
 ): Promise<ProviderRunResult> {
 	const providerStartTime = Date.now();
+
+	// Set Sentry context for this similar discovery search
+	SentryLogger.setContext('similar_discovery', {
+		jobId: job.id,
+		platform: job.platform,
+		targetUsername: job.targetUsername,
+		targetResults: job.targetResults,
+	});
+
+	SentryLogger.addBreadcrumb({
+		category: 'search',
+		message: `Starting similar discovery search for @${job.targetUsername}`,
+		level: 'info',
+		data: {
+			platform: job.platform,
+			targetResults: job.targetResults,
+			jobId: job.id,
+		},
+	});
+
 	structuredConsole.log('[SIMILAR-DISCOVERY-PROVIDER] Starting', {
 		jobId: job.id,
 		platform: job.platform,
@@ -269,6 +290,13 @@ export async function runSimilarDiscoveryProvider(
 	while (pagesFetched < maxPagesToFetch && currentPage < MAX_PAGES && remainingApiBudget > 0) {
 		const batchStart = Date.now();
 
+		SentryLogger.addBreadcrumb({
+			category: 'search',
+			message: `Fetching page ${currentPage} for similar discovery`,
+			level: 'info',
+			data: { jobId: job.id, page: currentPage, pagesFetched },
+		});
+
 		structuredConsole.log('[SIMILAR-DISCOVERY-PROVIDER] Fetching page', {
 			jobId: job.id,
 			page: currentPage,
@@ -276,12 +304,17 @@ export async function runSimilarDiscoveryProvider(
 		});
 
 		try {
-			const result = await discoverySearchSimilar({
-				similarTo: [username],
-				platform: targetPlatform,
-				page: currentPage,
-				limit: RESULTS_PER_PAGE,
-			});
+			const result = await apiTracker.trackExternalCall(
+				'influencers_club',
+				'discovery_similar',
+				async () =>
+					discoverySearchSimilar({
+						similarTo: [username],
+						platform: targetPlatform,
+						page: currentPage,
+						limit: RESULTS_PER_PAGE,
+					})
+			);
 
 			structuredConsole.log('[SIMILAR-DISCOVERY-PROVIDER] Page fetched', {
 				jobId: job.id,
@@ -325,6 +358,13 @@ export async function runSimilarDiscoveryProvider(
 		} catch (error) {
 			// Log error but continue if we have some results
 			structuredConsole.warn('[similar-discovery] API error on page', currentPage, error);
+			searchTracker.trackFailure(error as Error, {
+				platform: targetPlatform,
+				searchType: 'similar',
+				stage: 'fetch',
+				userId: job.userId ?? 'unknown',
+				jobId: job.id,
+			});
 			if (allCreatorsThisRun.length === 0) {
 				throw error;
 			}
@@ -405,6 +445,28 @@ export async function runSimilarDiscoveryProvider(
 			? finishedAt.getTime() - startedAt.getTime()
 			: undefined;
 	}
+
+	// Track search results in Sentry
+	searchTracker.trackResults({
+		platform: targetPlatform,
+		searchType: 'similar',
+		resultsCount: mergedTotal,
+		duration: Date.now() - providerStartTime,
+		jobId: job.id,
+	});
+
+	SentryLogger.addBreadcrumb({
+		category: 'search',
+		message: `Similar discovery completed: ${mergedTotal} creators found`,
+		level: 'info',
+		data: {
+			jobId: job.id,
+			platform: targetPlatform,
+			resultsCount: mergedTotal,
+			hasMore,
+			pagesProcessed: pagesFetched,
+		},
+	});
 
 	structuredConsole.log('[SIMILAR-DISCOVERY-PROVIDER] Completed', {
 		jobId: job.id,

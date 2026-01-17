@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { scrapingJobs } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
+import { SentryLogger } from '@/lib/logging/sentry-logger';
 import { qstash } from '@/lib/queue/qstash';
 import { runSearchJob } from '@/lib/search-engine/runner';
 import { toError } from '@/lib/utils/type-guards';
@@ -64,6 +65,20 @@ export async function POST(req: Request) {
 	if (!jobId || typeof jobId !== 'string') {
 		return NextResponse.json({ error: 'jobId is required' }, { status: 400 });
 	}
+
+	// Set Sentry context for this job processing
+	SentryLogger.setContext('qstash_process_search', {
+		jobId,
+		callbackUrl,
+	});
+
+	// Add breadcrumb for job processing
+	SentryLogger.addBreadcrumb({
+		category: 'search',
+		message: `Processing search job via QStash: ${jobId}`,
+		level: 'info',
+		data: { jobId },
+	});
 
 	// --- FIX 1.2: Idempotency Check ---
 	// Skip if job already completed/errored/timed out (prevents duplicate processing)
@@ -148,9 +163,31 @@ export async function POST(req: Request) {
 	}
 
 	try {
+		// Add breadcrumb for search execution start
+		SentryLogger.addBreadcrumb({
+			category: 'search',
+			message: `Starting search job execution`,
+			level: 'info',
+			data: { jobId },
+		});
+
 		const execution = await runSearchJob(jobId);
 		const { result, service, config } = execution;
 		const snapshot = service.snapshot();
+
+		// Add breadcrumb for search execution result
+		SentryLogger.addBreadcrumb({
+			category: 'search',
+			message: `Search job execution completed`,
+			level: 'info',
+			data: {
+				jobId,
+				status: result.status,
+				hasMore: result.hasMore,
+				processedResults: snapshot.processedResults,
+				targetResults: snapshot.targetResults,
+			},
+		});
 
 		// --- FIX 1.1: Status Override Bug ---
 		// Only mark as completed if provider actually succeeded
@@ -176,6 +213,14 @@ export async function POST(req: Request) {
 				error: 'Provider returned error status',
 			});
 			logger.warn('Job marked as error (provider failed)', { jobId }, LogCategory.JOB);
+
+			// Add breadcrumb for error status
+			SentryLogger.addBreadcrumb({
+				category: 'search',
+				message: `Job marked as error`,
+				level: 'warning',
+				data: { jobId },
+			});
 		} else if (!result.hasMore) {
 			// Provider finished but with partial status (no more results to fetch)
 			// This happens when target wasn't reached but there's nothing more to fetch
@@ -204,6 +249,14 @@ export async function POST(req: Request) {
 				retries: 3,
 				notifyOnFailure: true,
 			});
+
+			// Add breadcrumb for continuation scheduled
+			SentryLogger.addBreadcrumb({
+				category: 'search',
+				message: `Search continuation scheduled`,
+				level: 'info',
+				data: { jobId, delaySeconds },
+			});
 		}
 
 		logger.info('Search runner completed', { jobId }, LogCategory.JOB);
@@ -217,6 +270,18 @@ export async function POST(req: Request) {
 	} catch (error: unknown) {
 		const runnerError = toError(error);
 		logger.error('Search runner failed', runnerError, { jobId }, LogCategory.JOB);
+
+		// Capture error in Sentry
+		SentryLogger.captureException(runnerError, {
+			tags: {
+				feature: 'search',
+				service: 'qstash',
+				stage: 'process_search',
+			},
+			extra: {
+				jobId,
+			},
+		});
 
 		// Attempt to mark job as failed to prevent stuck "processing" status
 		try {

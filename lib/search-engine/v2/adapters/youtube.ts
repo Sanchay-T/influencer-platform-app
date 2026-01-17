@@ -5,6 +5,7 @@
  * Uses ScrapeCreators API - REQUIRES enrichment for followers and bio.
  */
 
+import { apiTracker, SentryLogger } from '@/lib/sentry';
 import {
 	getNumberProperty,
 	getStringProperty,
@@ -60,6 +61,12 @@ class YouTubeAdapter implements SearchAdapter {
 		const startTime = Date.now();
 		const continuationToken = typeof cursor === 'string' ? cursor : undefined;
 
+		// Set Sentry context for this adapter call
+		SentryLogger.setContext('youtube_adapter', {
+			keyword,
+			hasContinuationToken: Boolean(continuationToken),
+		});
+
 		const url = new URL(`${config.apiBaseUrl}${ENDPOINTS.youtube.search}`);
 		url.searchParams.set('query', keyword);
 		if (continuationToken) {
@@ -67,36 +74,63 @@ class YouTubeAdapter implements SearchAdapter {
 		}
 
 		try {
-			const response = await fetch(url.toString(), {
-				headers: { 'x-api-key': config.apiKey },
-				signal: AbortSignal.timeout(config.fetchTimeoutMs),
-			});
+			return await apiTracker.trackExternalCall('scrape_creators', 'youtube_search', async () => {
+				SentryLogger.addBreadcrumb({
+					category: 'api',
+					message: `YouTube search: fetching results${continuationToken ? ' (with continuation)' : ''}`,
+					data: { keyword, hasContinuationToken: Boolean(continuationToken) },
+				});
 
-			const durationMs = Date.now() - startTime;
+				const response = await fetch(url.toString(), {
+					headers: { 'x-api-key': config.apiKey },
+					signal: AbortSignal.timeout(config.fetchTimeoutMs),
+				});
 
-			if (!response.ok) {
-				const body = await response.text().catch(() => '');
+				const durationMs = Date.now() - startTime;
+
+				if (!response.ok) {
+					const body = await response.text().catch(() => '');
+					const error = new Error(`YouTube API error: ${response.status}`);
+					SentryLogger.captureException(error, {
+						tags: {
+							feature: 'search',
+							platform: 'youtube',
+							stage: 'fetch',
+							service: 'scrape_creators',
+						},
+						extra: { responseStatus: response.status, keyword, body },
+					});
+					return {
+						items: [],
+						hasMore: false,
+						nextCursor: continuationToken,
+						durationMs,
+						error: `YouTube API error ${response.status}: ${body}`,
+					};
+				}
+
+				const payload = await response.json();
+				const payloadRecord = toRecord(payload);
+				const items = Array.isArray(payloadRecord?.videos) ? (payloadRecord?.videos ?? []) : [];
+				const nextToken = getStringProperty(payloadRecord ?? {}, 'continuationToken');
+
 				return {
-					items: [],
-					hasMore: false,
-					nextCursor: continuationToken,
+					items,
+					hasMore: Boolean(nextToken) && items.length > 0,
+					nextCursor: nextToken ?? null,
 					durationMs,
-					error: `YouTube API error ${response.status}: ${body}`,
 				};
-			}
-
-			const payload = await response.json();
-			const payloadRecord = toRecord(payload);
-			const items = Array.isArray(payloadRecord?.videos) ? (payloadRecord?.videos ?? []) : [];
-			const nextToken = getStringProperty(payloadRecord ?? {}, 'continuationToken');
-
-			return {
-				items,
-				hasMore: Boolean(nextToken) && items.length > 0,
-				nextCursor: nextToken ?? null,
-				durationMs,
-			};
+			});
 		} catch (error) {
+			SentryLogger.captureException(error, {
+				tags: {
+					feature: 'search',
+					platform: 'youtube',
+					stage: 'fetch',
+					service: 'scrape_creators',
+				},
+				extra: { keyword },
+			});
 			return {
 				items: [],
 				hasMore: false,

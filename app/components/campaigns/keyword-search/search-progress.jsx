@@ -9,6 +9,7 @@
  * @deprecated Use ProgressDisplay + useSearchJob for new implementations
  */
 
+import * as Sentry from '@sentry/nextjs';
 import { useCallback, useEffect, useRef } from 'react';
 import { useJobPolling } from '@/lib/query/hooks/useJobPolling';
 
@@ -78,6 +79,33 @@ const SearchProgress = ({
 		onProgress: handleProgress,
 		onComplete: handleComplete,
 	});
+
+	// Track component mount for debugging
+	// @why This breadcrumb helps trace errors back to where polling was initiated
+	useEffect(() => {
+		Sentry.addBreadcrumb({
+			category: 'component',
+			message: 'SearchProgress mounted',
+			level: 'info',
+			data: {
+				jobId: typeof jobId === 'string' ? jobId?.slice(0, 8) : `[${typeof jobId}]`,
+				jobIdType: typeof jobId,
+				platform,
+			},
+		});
+
+		// Catch invalid props early - this is the exact bug that caused the PostgreSQL error
+		if (jobId && typeof jobId !== 'string') {
+			Sentry.captureMessage('SearchProgress received invalid jobId type', {
+				level: 'error',
+				tags: { component: 'SearchProgress', bugType: 'invalid-jobId-type' },
+				extra: {
+					jobIdType: typeof jobId,
+					jobIdStringified: JSON.stringify(jobId).slice(0, 100),
+				},
+			});
+		}
+	}, [jobId, platform]);
 
 	// Reset completion flag when jobId changes
 	useEffect(() => {

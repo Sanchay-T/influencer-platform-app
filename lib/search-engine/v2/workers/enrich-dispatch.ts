@@ -6,6 +6,7 @@
  */
 
 import { LogCategory, logger } from '@/lib/logging';
+import { SentryLogger } from '@/lib/logging/sentry-logger';
 import { getDeadLetterQueueUrl, qstash } from '@/lib/queue/qstash';
 import type { Platform } from '../core/types';
 
@@ -66,6 +67,14 @@ export async function dispatchEnrichmentBatches(
 		return { batchesDispatched: 0, failedBatches: 0 };
 	}
 
+	// Add breadcrumb for enrichment dispatch
+	SentryLogger.addBreadcrumb({
+		category: 'enrichment',
+		message: `Dispatching enrichment for ${creatorIds.length} creators`,
+		level: 'info',
+		data: { jobId, platform, creatorCount: creatorIds.length },
+	});
+
 	const baseUrl = getWorkerBaseUrl();
 	const enrichWorkerUrl = `${baseUrl}/api/v2/worker/enrich`;
 
@@ -117,6 +126,21 @@ export async function dispatchEnrichmentBatches(
 			},
 			LogCategory.JOB
 		);
+
+		// Capture partial failure in Sentry
+		SentryLogger.captureMessage('Enrichment batches partially failed to dispatch', 'warning', {
+			tags: {
+				feature: 'enrichment',
+				service: 'qstash',
+			},
+			extra: {
+				jobId,
+				platform,
+				batchesDispatched,
+				failedBatches,
+				totalCreators: creatorIds.length,
+			},
+		});
 	}
 
 	return { batchesDispatched, failedBatches };

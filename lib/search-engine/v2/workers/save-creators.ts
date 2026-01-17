@@ -14,6 +14,7 @@ import { eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { jobCreators } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
+import { SentryLogger } from '@/lib/sentry';
 import type { NormalizedCreator } from '../core/types';
 
 // ============================================================================
@@ -60,6 +61,22 @@ export async function saveCreatorsToJob(
 	if (creators.length === 0) {
 		return { total: 0, newCount: 0, creatorIds: [] };
 	}
+
+	// Set Sentry context for save operation
+	SentryLogger.setContext('save_creators', {
+		jobId,
+		creatorCount: creators.length,
+		targetResults,
+		keyword: keyword || 'none',
+	});
+
+	// Add breadcrumb for save operation start
+	SentryLogger.addBreadcrumb({
+		category: 'db',
+		message: `Saving ${creators.length} creators to job`,
+		level: 'info',
+		data: { jobId, targetResults, keyword },
+	});
 
 	// Step 1: Check current count from job_creators table (indexed)
 	const countResult = await db
@@ -115,6 +132,21 @@ export async function saveCreatorsToJob(
 			{ jobId, metadata: { error: String(error), attempted: rows.length } },
 			LogCategory.JOB
 		);
+
+		// Capture DB insert error in Sentry for monitoring
+		SentryLogger.captureException(error, {
+			tags: {
+				feature: 'search',
+				stage: 'save_creators',
+				severity: 'warning',
+			},
+			extra: {
+				jobId,
+				creatorCount: creators.length,
+				attemptedRows: rows.length,
+				keyword: keyword || 'none',
+			},
+		});
 	}
 
 	// Step 4: Get final count from DB (source of truth)
@@ -139,6 +171,20 @@ export async function saveCreatorsToJob(
 		},
 		LogCategory.JOB
 	);
+
+	// Add breadcrumb for save completion
+	SentryLogger.addBreadcrumb({
+		category: 'db',
+		message: `Save complete: ${insertedCount} new creators added`,
+		level: 'info',
+		data: {
+			jobId,
+			totalInDb: finalCount,
+			newCreators: insertedCount,
+			duplicatesSkipped: creatorsToProcess.length - insertedCount,
+			targetReached: finalCount >= targetResults,
+		},
+	});
 
 	return {
 		total: finalCount,

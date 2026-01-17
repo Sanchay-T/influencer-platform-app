@@ -9,6 +9,7 @@
  * - Export query keys for cache invalidation
  */
 
+import * as Sentry from '@sentry/nextjs';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef } from 'react';
 import {
@@ -172,39 +173,96 @@ function normalizeSimilarResponse(data: Record<string, unknown>): JobStatusData 
 }
 
 async function fetchJobStatus(jobId: string, platform?: string): Promise<JobStatusData> {
-	debugLog('FETCH', `Fetching status for job ${String(jobId).slice(0, 8)}...`, { platform });
-	const startTime = performance.now();
-
-	// Use correct endpoint based on job type
-	const isSimilar = isSimilarSearchPlatform(platform);
-	const endpoint = getStatusEndpoint(jobId, platform);
-
-	debugLog('FETCH', `Using endpoint: ${endpoint}`, { isSimilar, platform });
-
-	const res = await fetch(endpoint, {
-		credentials: 'include',
-	});
-
-	if (!res.ok) {
-		debugLog('FETCH', `FAILED: ${res.status}`, { jobId, endpoint });
-		throw new Error(`Failed to fetch job status: ${res.status}`);
+	// Validate jobId type early - catch bugs before they hit the server
+	// @why This exact bug caused a PostgreSQL error: uuid passed as "[object Object]"
+	if (typeof jobId !== 'string') {
+		Sentry.captureMessage('fetchJobStatus received non-string jobId', {
+			level: 'warning',
+			tags: { hook: 'useJobStatus', bugType: 'invalid-jobId-type' },
+			extra: {
+				jobIdType: typeof jobId,
+				jobIdValue: JSON.stringify(jobId).slice(0, 100),
+			},
+		});
 	}
 
-	const rawData = await res.json();
-	const elapsed = (performance.now() - startTime).toFixed(0);
+	return Sentry.startSpan(
+		{
+			name: 'fetch.job-status',
+			op: 'http.client',
+			attributes: {
+				'job.id': typeof jobId === 'string' ? jobId.slice(0, 8) : '[invalid]',
+				'job.platform': platform || 'unknown',
+			},
+		},
+		async () => {
+			debugLog('FETCH', `Fetching status for job ${String(jobId).slice(0, 8)}...`, { platform });
+			const startTime = performance.now();
 
-	// Normalize similar search response to match expected interface
-	const data = isSimilar ? normalizeSimilarResponse(rawData) : rawData;
+			// Use correct endpoint based on job type
+			const isSimilar = isSimilarSearchPlatform(platform);
+			const endpoint = getStatusEndpoint(jobId, platform);
 
-	debugLog('FETCH', `Response in ${elapsed}ms`, {
-		jobId: String(jobId).slice(0, 8),
-		status: data.status,
-		totalCreators: data.totalCreators,
-		progress: data.progress?.percentComplete,
-		isSimilar,
-	});
+			debugLog('FETCH', `Using endpoint: ${endpoint}`, { isSimilar, platform });
 
-	return data;
+			Sentry.addBreadcrumb({
+				category: 'polling',
+				message: 'Fetching job status',
+				level: 'info',
+				data: {
+					jobId: typeof jobId === 'string' ? jobId.slice(0, 8) : `[${typeof jobId}]`,
+					platform,
+					endpoint,
+					isSimilar,
+				},
+			});
+
+			const res = await fetch(endpoint, {
+				credentials: 'include',
+			});
+
+			if (!res.ok) {
+				debugLog('FETCH', `FAILED: ${res.status}`, { jobId, endpoint });
+
+				Sentry.addBreadcrumb({
+					category: 'polling',
+					message: `Job status fetch failed: ${res.status}`,
+					level: 'error',
+					data: { status: res.status, endpoint },
+				});
+
+				throw new Error(`Failed to fetch job status: ${res.status}`);
+			}
+
+			const rawData = await res.json();
+			const elapsed = (performance.now() - startTime).toFixed(0);
+
+			// Normalize similar search response to match expected interface
+			const data = isSimilar ? normalizeSimilarResponse(rawData) : rawData;
+
+			debugLog('FETCH', `Response in ${elapsed}ms`, {
+				jobId: String(jobId).slice(0, 8),
+				status: data.status,
+				totalCreators: data.totalCreators,
+				progress: data.progress?.percentComplete,
+				isSimilar,
+			});
+
+			Sentry.addBreadcrumb({
+				category: 'polling',
+				message: `Job status: ${data.status}`,
+				level: 'info',
+				data: {
+					status: data.status,
+					progress: data.progress?.percentComplete,
+					creatorsFound: data.totalCreators,
+					elapsed: `${elapsed}ms`,
+				},
+			});
+
+			return data;
+		}
+	);
 }
 
 export interface UseJobStatusOptions {

@@ -16,6 +16,7 @@
 
 import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
+import { billingTracker, sessionTracker } from '@/lib/sentry';
 import { getDisposableEmailError, isDisposableEmail } from './disposable-emails';
 import {
 	type BillingInterval,
@@ -70,6 +71,18 @@ export class CheckoutService {
 	 */
 	static async createOnboardingCheckout(params: CheckoutParams): Promise<CheckoutResult> {
 		const { userId, email, plan, interval, existingCustomerId, redirectOrigin } = params;
+
+		// Set user context for Sentry
+		sessionTracker.setUser({ userId, email });
+
+		// Track checkout initiation in Sentry
+		billingTracker.trackCheckout({
+			userId,
+			planId: plan,
+			billingCycle: interval === 'yearly' ? 'yearly' : 'monthly',
+			isUpgrade: false,
+			source: 'onboarding',
+		});
 
 		logger.info('Creating onboarding checkout session', {
 			userId,
@@ -135,6 +148,15 @@ export class CheckoutService {
 	 */
 	static async createUpgradeCheckout(params: CheckoutParams): Promise<UpgradeCheckoutResult> {
 		const { userId, plan, interval, existingCustomerId, redirectOrigin } = params;
+
+		// Track upgrade checkout initiation in Sentry
+		billingTracker.trackCheckout({
+			userId,
+			planId: plan,
+			billingCycle: interval === 'yearly' ? 'yearly' : 'monthly',
+			isUpgrade: true,
+			source: 'upgrade',
+		});
 
 		logger.info('Creating upgrade checkout session', {
 			userId,

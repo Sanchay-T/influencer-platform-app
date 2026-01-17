@@ -8,6 +8,7 @@
  * We must enrich creators via the Instagram basic-profile endpoint.
  */
 
+import { apiTracker, SentryLogger } from '@/lib/sentry';
 import {
 	getNumberProperty,
 	getStringProperty,
@@ -77,52 +78,92 @@ class InstagramAdapter implements SearchAdapter {
 		// Always request 60 to get maximum results per keyword
 		const amount = 60;
 
+		// Set Sentry context for this adapter call
+		SentryLogger.setContext('instagram_adapter', {
+			keyword,
+			amount,
+		});
+
 		const url = new URL(`${config.apiBaseUrl}${ENDPOINTS.instagram.search}`);
 		url.searchParams.set('query', keyword);
 		url.searchParams.set('amount', String(amount));
 
 		try {
-			const response = await fetch(url.toString(), {
-				headers: { 'x-api-key': config.apiKey },
-				signal: AbortSignal.timeout(config.fetchTimeoutMs),
-			});
+			return await apiTracker.trackExternalCall('scrape_creators', 'instagram_search', async () => {
+				SentryLogger.addBreadcrumb({
+					category: 'api',
+					message: `Instagram search: fetching ${amount} results`,
+					data: { keyword, amount },
+				});
 
-			const durationMs = Date.now() - startTime;
+				const response = await fetch(url.toString(), {
+					headers: { 'x-api-key': config.apiKey },
+					signal: AbortSignal.timeout(config.fetchTimeoutMs),
+				});
 
-			if (!response.ok) {
-				const body = await response.text().catch(() => '');
+				const durationMs = Date.now() - startTime;
+
+				if (!response.ok) {
+					const body = await response.text().catch(() => '');
+					const error = new Error(`Instagram API error: ${response.status}`);
+					SentryLogger.captureException(error, {
+						tags: {
+							feature: 'search',
+							platform: 'instagram',
+							stage: 'fetch',
+							service: 'scrape_creators',
+						},
+						extra: { responseStatus: response.status, keyword, body },
+					});
+					return {
+						items: [],
+						hasMore: false,
+						nextCursor: amount,
+						durationMs,
+						error: `Instagram API error ${response.status}: ${body}`,
+					};
+				}
+
+				const payload = await response.json();
+				const payloadRecord = toRecord(payload);
+
+				if (payloadRecord?.success === false) {
+					const errorMsg =
+						getStringProperty(payloadRecord, 'message') || 'Instagram API returned success=false';
+					SentryLogger.addBreadcrumb({
+						category: 'api',
+						message: `Instagram API returned success=false: ${errorMsg}`,
+						level: 'warning',
+						data: { keyword },
+					});
+					return {
+						items: [],
+						hasMore: false,
+						nextCursor: undefined,
+						durationMs,
+						error: errorMsg,
+					};
+				}
+
+				const items = Array.isArray(payloadRecord?.reels) ? (payloadRecord?.reels ?? []) : [];
+
 				return {
-					items: [],
-					hasMore: false,
-					nextCursor: amount,
-					durationMs,
-					error: `Instagram API error ${response.status}: ${body}`,
-				};
-			}
-
-			const payload = await response.json();
-			const payloadRecord = toRecord(payload);
-
-			if (payloadRecord?.success === false) {
-				return {
-					items: [],
-					hasMore: false,
+					items,
+					hasMore: false, // Instagram API doesn't support pagination - one request per keyword
 					nextCursor: undefined,
 					durationMs,
-					error:
-						getStringProperty(payloadRecord, 'message') || 'Instagram API returned success=false',
 				};
-			}
-
-			const items = Array.isArray(payloadRecord?.reels) ? (payloadRecord?.reels ?? []) : [];
-
-			return {
-				items,
-				hasMore: false, // Instagram API doesn't support pagination - one request per keyword
-				nextCursor: undefined,
-				durationMs,
-			};
+			});
 		} catch (error) {
+			SentryLogger.captureException(error, {
+				tags: {
+					feature: 'search',
+					platform: 'instagram',
+					stage: 'fetch',
+					service: 'scrape_creators',
+				},
+				extra: { keyword },
+			});
 			return {
 				items: [],
 				hasMore: false,

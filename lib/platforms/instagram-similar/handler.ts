@@ -1,4 +1,5 @@
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { apiTracker, SentryLogger, searchTracker } from '@/lib/sentry';
 
 /**
  * Instagram Similar Creator Search Background Processing Handler
@@ -77,6 +78,27 @@ export async function processInstagramSimilarJob(
 	job: ScrapingJob,
 	jobId: string
 ): Promise<InstagramSimilarJobResult> {
+	const handlerStartTime = Date.now();
+
+	// Set Sentry context for this Instagram similar job
+	SentryLogger.setContext('instagram_similar_handler', {
+		jobId,
+		platform: 'instagram',
+		targetUsername: job.targetUsername,
+		targetResults: job.targetResults,
+	});
+
+	SentryLogger.addBreadcrumb({
+		category: 'search',
+		message: `Starting Instagram similar handler for @${job.targetUsername}`,
+		level: 'info',
+		data: {
+			platform: 'instagram',
+			targetResults: job.targetResults,
+			jobId,
+		},
+	});
+
 	structuredConsole.log(
 		'📱 [INSTAGRAM-SIMILAR] Processing Instagram similar job for username:',
 		job.targetUsername
@@ -144,7 +166,18 @@ export async function processInstagramSimilarJob(
 		structuredConsole.log(
 			'🔍 [INSTAGRAM-SIMILAR] Step 2: Fetching Instagram profile data from Apify'
 		);
-		const profileResult = await getInstagramProfile(username);
+		SentryLogger.addBreadcrumb({
+			category: 'search',
+			message: `Fetching Instagram profile for @${username}`,
+			level: 'info',
+			data: { jobId, username },
+		});
+
+		const profileResult = await apiTracker.trackExternalCall(
+			'apify',
+			'instagram_profile',
+			async () => getInstagramProfile(username)
+		);
 
 		if (!(profileResult.success && profileResult.data)) {
 			throw new Error(profileResult.error || 'Failed to fetch Instagram profile');
@@ -405,7 +438,11 @@ export async function processInstagramSimilarJob(
 								`🔍 [INSTAGRAM-ENHANCED] Fetching enhanced data for @${creator.username} (${i + 1}/${maxEnhancedProfiles})`
 							);
 
-							const enhancedResult = await getEnhancedInstagramProfile(creator.username);
+							const enhancedResult = await apiTracker.trackExternalCall(
+								'apify',
+								'instagram_enhanced_profile',
+								async () => getEnhancedInstagramProfile(creator.username)
+							);
 
 							if (enhancedResult.success && enhancedResult.data) {
 								// Transform with enhanced data
@@ -435,6 +472,13 @@ export async function processInstagramSimilarJob(
 								`❌ [INSTAGRAM-ENHANCED] Error fetching enhanced data for @${creator.username}:`,
 								resolvedError.message
 							);
+							searchTracker.trackFailure(resolvedError, {
+								platform: 'instagram',
+								searchType: 'similar',
+								stage: 'parse',
+								userId: 'unknown',
+								jobId,
+							});
 							// Continue with basic profile data
 						}
 					}
@@ -685,6 +729,15 @@ export async function processInstagramSimilarJob(
 	} catch (error: unknown) {
 		const resolvedError = toError(error);
 		structuredConsole.error('❌ [INSTAGRAM-SIMILAR] Error processing job:', resolvedError);
+
+		// Track error in Sentry
+		searchTracker.trackFailure(resolvedError, {
+			platform: 'instagram',
+			searchType: 'similar',
+			stage: 'fetch',
+			userId: 'unknown',
+			jobId,
+		});
 
 		// Update job status to error
 		try {

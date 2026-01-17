@@ -5,6 +5,7 @@
  * Handles fetching from ScrapeCreators API and normalizing results.
  */
 
+import { apiTracker, SentryLogger } from '@/lib/sentry';
 import {
 	getNumberProperty,
 	getRecordProperty,
@@ -34,43 +35,77 @@ class TikTokAdapter implements SearchAdapter {
 		const cursorNum = typeof cursor === 'number' ? cursor : 0;
 		const startTime = Date.now();
 
+		// Set Sentry context for this adapter call
+		SentryLogger.setContext('tiktok_adapter', {
+			keyword,
+			cursor: cursorNum,
+			region: config.region,
+		});
+
 		const url = new URL(`${config.apiBaseUrl}${ENDPOINTS.tiktok.search}`);
 		url.searchParams.set('query', keyword);
 		url.searchParams.set('cursor', String(cursorNum));
 		url.searchParams.set('region', config.region);
 
 		try {
-			const response = await fetch(url.toString(), {
-				headers: { 'x-api-key': config.apiKey },
-				signal: AbortSignal.timeout(config.fetchTimeoutMs),
-			});
+			return await apiTracker.trackExternalCall('scrape_creators', 'tiktok_search', async () => {
+				SentryLogger.addBreadcrumb({
+					category: 'api',
+					message: `TikTok search: fetching results at cursor ${cursorNum}`,
+					data: { keyword, cursor: cursorNum },
+				});
 
-			const durationMs = Date.now() - startTime;
+				const response = await fetch(url.toString(), {
+					headers: { 'x-api-key': config.apiKey },
+					signal: AbortSignal.timeout(config.fetchTimeoutMs),
+				});
 
-			if (!response.ok) {
-				const body = await response.text().catch(() => '');
+				const durationMs = Date.now() - startTime;
+
+				if (!response.ok) {
+					const body = await response.text().catch(() => '');
+					const error = new Error(`TikTok API error: ${response.status}`);
+					SentryLogger.captureException(error, {
+						tags: {
+							feature: 'search',
+							platform: 'tiktok',
+							stage: 'fetch',
+							service: 'scrape_creators',
+						},
+						extra: { responseStatus: response.status, keyword, body },
+					});
+					return {
+						items: [],
+						hasMore: false,
+						nextCursor: cursorNum,
+						durationMs,
+						error: `TikTok API error ${response.status}: ${body}`,
+					};
+				}
+
+				const payload = await response.json();
+				const payloadRecord = toRecord(payload);
+				const items = Array.isArray(payloadRecord?.search_item_list)
+					? (payloadRecord?.search_item_list ?? [])
+					: [];
+
 				return {
-					items: [],
-					hasMore: false,
-					nextCursor: cursorNum,
+					items,
+					hasMore: Boolean(payloadRecord?.has_more) && items.length > 0,
+					nextCursor: cursorNum + items.length,
 					durationMs,
-					error: `TikTok API error ${response.status}: ${body}`,
 				};
-			}
-
-			const payload = await response.json();
-			const payloadRecord = toRecord(payload);
-			const items = Array.isArray(payloadRecord?.search_item_list)
-				? (payloadRecord?.search_item_list ?? [])
-				: [];
-
-			return {
-				items,
-				hasMore: Boolean(payloadRecord?.has_more) && items.length > 0,
-				nextCursor: cursorNum + items.length,
-				durationMs,
-			};
+			});
 		} catch (error) {
+			SentryLogger.captureException(error, {
+				tags: {
+					feature: 'search',
+					platform: 'tiktok',
+					stage: 'fetch',
+					service: 'scrape_creators',
+				},
+				extra: { keyword, cursor: cursorNum },
+			});
 			return {
 				items: [],
 				hasMore: false,
@@ -236,70 +271,101 @@ class TikTokAdapter implements SearchAdapter {
 		}
 
 		const fetchedAt = new Date().toISOString();
+
+		// Set Sentry context for enrichment
+		SentryLogger.setContext('tiktok_enrichment', {
+			handle,
+			username: creator.creator.username,
+		});
+
 		try {
-			const url = new URL(`${config.apiBaseUrl}${ENDPOINTS.tiktok.profile}`);
-			url.searchParams.set('handle', handle);
-			url.searchParams.set('region', config.region);
+			return await apiTracker.trackExternalCall('scrape_creators', 'tiktok_profile', async () => {
+				SentryLogger.addBreadcrumb({
+					category: 'api',
+					message: `TikTok enrichment: fetching profile for ${handle}`,
+					data: { handle },
+				});
 
-			const response = await fetch(url.toString(), {
-				headers: { 'x-api-key': config.apiKey },
-				signal: AbortSignal.timeout(config.bioEnrichmentTimeoutMs),
-			});
+				const url = new URL(`${config.apiBaseUrl}${ENDPOINTS.tiktok.profile}`);
+				url.searchParams.set('handle', handle);
+				url.searchParams.set('region', config.region);
 
-			if (!response.ok) {
+				const response = await fetch(url.toString(), {
+					headers: { 'x-api-key': config.apiKey },
+					signal: AbortSignal.timeout(config.bioEnrichmentTimeoutMs),
+				});
+
+				if (!response.ok) {
+					SentryLogger.addBreadcrumb({
+						category: 'api',
+						message: `TikTok profile API failed: ${response.status}`,
+						level: 'warning',
+						data: { handle, status: response.status },
+					});
+					return {
+						...creator,
+						bioEnriched: true,
+						bioEnrichedAt: fetchedAt,
+						bio_enriched: {
+							biography: creator.creator.bio?.trim?.() ? creator.creator.bio : null,
+							bio_links: [],
+							external_url: null,
+							extracted_email: null,
+							fetched_at: fetchedAt,
+							error: `tiktok_profile_failed:${response.status}`,
+						},
+					};
+				}
+
+				const data = await response.json();
+				const dataRecord = toRecord(data);
+				const profileUser = dataRecord ? (toRecord(dataRecord.user) ?? {}) : {};
+				const newBio =
+					getStringProperty(profileUser, 'signature') ??
+					getStringProperty(profileUser, 'desc') ??
+					creator.creator.bio ??
+					'';
+				const bioLink = getRecordProperty(profileUser, 'bioLink');
+				const externalUrl = (() => {
+					const link = bioLink ? getStringProperty(bioLink, 'link') : null;
+					return link && link.trim().length > 0 ? link.trim() : null;
+				})();
+
+				const emailsFromBio = newBio ? (newBio.match(EMAIL_REGEX) ?? []) : [];
+				const mergedEmails = [...new Set([...(creator.creator.emails ?? []), ...emailsFromBio])];
+				const extractedEmail = mergedEmails.length > 0 ? mergedEmails[0] : null;
+				const bioLinks = externalUrl ? [{ url: externalUrl, title: 'Link in bio' }] : [];
+
 				return {
 					...creator,
+					creator: {
+						...creator.creator,
+						bio: newBio,
+						emails: mergedEmails,
+					},
 					bioEnriched: true,
 					bioEnrichedAt: fetchedAt,
 					bio_enriched: {
-						biography: creator.creator.bio?.trim?.() ? creator.creator.bio : null,
-						bio_links: [],
-						external_url: null,
-						extracted_email: null,
+						biography: newBio?.trim?.() ? newBio : null,
+						bio_links: bioLinks,
+						external_url: externalUrl,
+						extracted_email: extractedEmail,
 						fetched_at: fetchedAt,
-						error: `tiktok_profile_failed:${response.status}`,
 					},
 				};
-			}
-
-			const data = await response.json();
-			const dataRecord = toRecord(data);
-			const profileUser = dataRecord ? (toRecord(dataRecord.user) ?? {}) : {};
-			const newBio =
-				getStringProperty(profileUser, 'signature') ??
-				getStringProperty(profileUser, 'desc') ??
-				creator.creator.bio ??
-				'';
-			const bioLink = getRecordProperty(profileUser, 'bioLink');
-			const externalUrl = (() => {
-				const link = bioLink ? getStringProperty(bioLink, 'link') : null;
-				return link && link.trim().length > 0 ? link.trim() : null;
-			})();
-
-			const emailsFromBio = newBio ? (newBio.match(EMAIL_REGEX) ?? []) : [];
-			const mergedEmails = [...new Set([...(creator.creator.emails ?? []), ...emailsFromBio])];
-			const extractedEmail = mergedEmails.length > 0 ? mergedEmails[0] : null;
-			const bioLinks = externalUrl ? [{ url: externalUrl, title: 'Link in bio' }] : [];
-
-			return {
-				...creator,
-				creator: {
-					...creator.creator,
-					bio: newBio,
-					emails: mergedEmails,
-				},
-				bioEnriched: true,
-				bioEnrichedAt: fetchedAt,
-				bio_enriched: {
-					biography: newBio?.trim?.() ? newBio : null,
-					bio_links: bioLinks,
-					external_url: externalUrl,
-					extracted_email: extractedEmail,
-					fetched_at: fetchedAt,
-				},
-			};
-		} catch {
+			});
+		} catch (error) {
 			// Swallow profile errors - baseline data is still useful, but mark as attempted
+			SentryLogger.captureException(error, {
+				tags: {
+					feature: 'search',
+					platform: 'tiktok',
+					stage: 'enrich',
+					service: 'scrape_creators',
+				},
+				extra: { handle },
+				level: 'warning',
+			});
 			return {
 				...creator,
 				bioEnriched: true,

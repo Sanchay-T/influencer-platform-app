@@ -17,6 +17,7 @@
  * - Stops polling on terminal states
  */
 
+import * as Sentry from '@sentry/nextjs';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef } from 'react';
 import { isDoneStatus, isSuccessStatus } from '@/lib/types/statuses';
@@ -174,6 +175,36 @@ export function useJobPolling(
 		prevStatusRef.current = undefined;
 	}, [jobId]);
 
+	// Track hook initialization for debugging
+	// @why This breadcrumb helps trace errors back to the component that started polling
+	useEffect(() => {
+		if (jobId) {
+			Sentry.addBreadcrumb({
+				category: 'polling',
+				message: 'useJobPolling initialized',
+				level: 'info',
+				data: {
+					jobId: typeof jobId === 'string' ? jobId.slice(0, 8) : `[${typeof jobId}]`,
+					jobIdType: typeof jobId,
+					enabled,
+					platform,
+				},
+			});
+
+			// Catch the exact bug we had - jobId passed as object instead of string
+			if (typeof jobId !== 'string') {
+				Sentry.captureMessage('useJobPolling received non-string jobId', {
+					level: 'error',
+					tags: { hook: 'useJobPolling', bugType: 'invalid-jobId-type' },
+					extra: {
+						jobIdType: typeof jobId,
+						jobIdStringified: JSON.stringify(jobId).slice(0, 200),
+					},
+				});
+			}
+		}
+	}, [jobId, enabled, platform]);
+
 	// Handle callbacks
 	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Callback coordination requires multiple branches
 	useEffect(() => {
@@ -207,6 +238,18 @@ export function useJobPolling(
 
 		// Call onProgress for active jobs (using ref to avoid dependency issues)
 		if (isActive && onProgressRef.current) {
+			Sentry.addBreadcrumb({
+				category: 'polling',
+				message: 'Job progress update',
+				level: 'info',
+				data: {
+					status: progressData.status,
+					progress: progressData.progress,
+					creatorsFound: progressData.totalCreators,
+					creatorsEnriched: progressData.creatorsEnriched,
+				},
+			});
+
 			onProgressRef.current(progressData);
 		}
 
@@ -227,6 +270,19 @@ export function useJobPolling(
 				status,
 				totalCreators,
 				source: realtime.isConnected ? 'realtime' : 'polling',
+			});
+
+			Sentry.addBreadcrumb({
+				category: 'polling',
+				message: `Job completed: ${status}`,
+				level: 'info',
+				data: {
+					status,
+					totalCreators,
+					isSuccess: isSuccessStatus(status),
+					source: realtime.isConnected ? 'realtime' : 'polling',
+					hasError: !!mergedData.error,
+				},
 			});
 
 			// Call completion callback (using ref to avoid dependency issues)

@@ -1,7 +1,9 @@
 import { Resend } from 'resend';
 import { clerkBackendClient } from '@/lib/auth/backend-auth';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { SentryLogger } from '@/lib/logging/sentry-logger';
 import { qstash } from '@/lib/queue/qstash';
+import { apiTracker } from '@/lib/sentry/feature-tracking';
 import { getRecordProperty, getStringProperty, toRecord } from '@/lib/utils/type-guards';
 
 const resendApiKey = process.env.RESEND_API_KEY;
@@ -81,43 +83,70 @@ export async function sendEmail(
 	reactComponent: React.ReactElement,
 	from?: string
 ) {
-	try {
-		structuredConsole.log('📧 [EMAIL-SERVICE] Sending email:', {
-			to,
-			subject,
-			from: from || EMAIL_CONFIG.fromAddress,
-		});
+	// Track email send with Sentry
+	return apiTracker.trackExternalCall('resend', 'send', async () => {
+		try {
+			structuredConsole.log('📧 [EMAIL-SERVICE] Sending email:', {
+				to,
+				subject,
+				from: from || EMAIL_CONFIG.fromAddress,
+			});
 
-		const result = await resend.emails.send({
-			from: from || EMAIL_CONFIG.fromAddress,
-			to: [to],
-			subject,
-			react: reactComponent,
-		});
+			const result = await resend.emails.send({
+				from: from || EMAIL_CONFIG.fromAddress,
+				to: [to],
+				subject,
+				react: reactComponent,
+			});
 
-		const resultRecord = toRecord(result);
-		const directId = resultRecord ? getStringProperty(resultRecord, 'id') : null;
-		const dataRecord = resultRecord ? getRecordProperty(resultRecord, 'data') : null;
-		const dataId = dataRecord ? getStringProperty(dataRecord, 'id') : null;
-		const resolvedId = directId ?? dataId ?? 'unknown';
+			const resultRecord = toRecord(result);
+			const directId = resultRecord ? getStringProperty(resultRecord, 'id') : null;
+			const dataRecord = resultRecord ? getRecordProperty(resultRecord, 'data') : null;
+			const dataId = dataRecord ? getStringProperty(dataRecord, 'id') : null;
+			const resolvedId = directId ?? dataId ?? 'unknown';
 
-		structuredConsole.log('✅ [EMAIL-SERVICE] Email sent successfully:', resolvedId);
-		return { success: true, id: resolvedId };
-	} catch (error) {
-		structuredConsole.error('❌ [EMAIL-SERVICE] Failed to send email:', error);
-		return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
-	}
+			// Add breadcrumb for successful email
+			SentryLogger.addBreadcrumb({
+				category: 'email',
+				message: `Email sent: ${subject}`,
+				level: 'info',
+				data: { to, emailId: resolvedId },
+			});
+
+			structuredConsole.log('✅ [EMAIL-SERVICE] Email sent successfully:', resolvedId);
+			return { success: true, id: resolvedId };
+		} catch (error) {
+			structuredConsole.error('❌ [EMAIL-SERVICE] Failed to send email:', error);
+
+			// Capture email error in Sentry
+			SentryLogger.captureException(error, {
+				tags: { feature: 'email', operation: 'send' },
+				extra: { to, subject },
+				level: 'warning',
+			});
+
+			return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+		}
+	});
 }
 
 /**
  * Schedule an email to be sent later using QStash
  */
 export async function scheduleEmail(params: EmailScheduleParams) {
-	try {
-		const { userId, emailType, userEmail, templateProps, delay } = params;
-		const defaultDelay = EMAIL_CONFIG.delays[emailType];
-		const emailDelay = delay && isEmailDelay(delay) ? delay : defaultDelay;
+	const { userId, emailType, userEmail, templateProps, delay } = params;
+	const defaultDelay = EMAIL_CONFIG.delays[emailType];
+	const emailDelay = delay && isEmailDelay(delay) ? delay : defaultDelay;
 
+	// Add breadcrumb for email scheduling
+	SentryLogger.addBreadcrumb({
+		category: 'email',
+		message: `Scheduling ${emailType} email`,
+		level: 'info',
+		data: { userId, emailType, scheduledDelay: emailDelay },
+	});
+
+	try {
 		structuredConsole.log('📅 [EMAIL-SCHEDULER] Scheduling email:', {
 			userId,
 			emailType,
@@ -136,11 +165,13 @@ export async function scheduleEmail(params: EmailScheduleParams) {
 			scheduledAt: new Date().toISOString(),
 		};
 
-		// Schedule with QStash
-		const result = await qstash.publishJSON({
-			url: callbackUrl,
-			body: messageData,
-			delay: emailDelay,
+		// Schedule with QStash - track external call
+		const result = await apiTracker.trackExternalCall('qstash', 'publish_email', async () => {
+			return qstash.publishJSON({
+				url: callbackUrl,
+				body: messageData,
+				delay: emailDelay,
+			});
 		});
 
 		const resultRecord = toRecord(result);
@@ -148,6 +179,14 @@ export async function scheduleEmail(params: EmailScheduleParams) {
 		const dataRecord = resultRecord ? getRecordProperty(resultRecord, 'data') : null;
 		const dataMessageId = dataRecord ? getStringProperty(dataRecord, 'messageId') : null;
 		const resolvedMessageId = messageId ?? dataMessageId ?? 'unknown';
+
+		// Add breadcrumb for successful scheduling
+		SentryLogger.addBreadcrumb({
+			category: 'email',
+			message: `Email scheduled: ${emailType}`,
+			level: 'info',
+			data: { userId, emailType, messageId: resolvedMessageId },
+		});
 
 		structuredConsole.log('✅ [EMAIL-SCHEDULER] Email scheduled successfully:', {
 			messageId: resolvedMessageId,
@@ -158,6 +197,14 @@ export async function scheduleEmail(params: EmailScheduleParams) {
 		return { success: true, messageId: resolvedMessageId };
 	} catch (error) {
 		structuredConsole.error('❌ [EMAIL-SCHEDULER] Failed to schedule email:', error);
+
+		// Capture email scheduling error in Sentry
+		SentryLogger.captureException(error, {
+			tags: { feature: 'email', operation: 'schedule' },
+			extra: { userId, emailType, delay: emailDelay },
+			level: 'warning',
+		});
+
 		return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
 	}
 }
@@ -219,7 +266,11 @@ export async function getUserEmailFromClerk(userId: string): Promise<string | nu
 	try {
 		structuredConsole.log('🔍 [CLERK-EMAIL] Starting Clerk email retrieval for userId:', userId);
 		const clerk = await clerkBackendClient();
-		const user = await clerk.users.getUser(userId);
+
+		// Track Clerk API call with Sentry
+		const user = await apiTracker.trackExternalCall('clerk', 'get_user', async () => {
+			return clerk.users.getUser(userId);
+		});
 
 		if (!user) {
 			structuredConsole.error('❌ [CLERK-EMAIL] User not found:', userId);
@@ -261,6 +312,14 @@ export async function getUserEmailFromClerk(userId: string): Promise<string | nu
 		return resolvedEmail;
 	} catch (error) {
 		structuredConsole.error('❌ [CLERK-EMAIL] Failed to get user email from Clerk:', error);
+
+		// Capture Clerk API error in Sentry
+		SentryLogger.captureException(error, {
+			tags: { feature: 'email', operation: 'clerk_get_user' },
+			extra: { userId },
+			level: 'warning',
+		});
+
 		return null;
 	}
 }

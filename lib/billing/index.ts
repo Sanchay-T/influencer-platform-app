@@ -71,22 +71,22 @@ export {
 	type AccessResult,
 	type BillingStatus,
 	getBillingStatus,
+	getTrialSearchStatus,
 	handleCheckoutCompleted,
 	// Functions
 	handleSubscriptionChange,
 	handleSubscriptionDeleted,
 	// Class
 	SubscriptionService,
+	TRIAL_SEARCH_LIMIT,
 	type TrialTimeDisplay,
+	type TrialValidationResult,
 	type UsageInfo,
 	validateAccess,
 	validateCampaignCreation,
 	validateCreatorSearch,
 	// Trial search limits
 	validateTrialSearchLimit,
-	getTrialSearchStatus,
-	TRIAL_SEARCH_LIMIT,
-	type TrialValidationResult,
 	// Types
 	type WebhookResult,
 } from './subscription-service';
@@ -166,12 +166,12 @@ export {
 export {
 	// Functions
 	getUsageSummary,
+	// Types
+	type IncrementResult,
 	incrementCampaignCount,
 	incrementCreatorCount,
 	resetAllMonthlyUsage,
 	resetMonthlyUsage,
 	shouldResetUsage,
-	// Types
-	type IncrementResult,
 	type UsageSummary,
 } from './usage-tracking';

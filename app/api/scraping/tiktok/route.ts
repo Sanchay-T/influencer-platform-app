@@ -412,14 +412,16 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
 			);
 
 			// Track search started in LogSnag
-			const { getUserProfile } = await import('@/lib/db/queries/user-queries');
-			const user = await getUserProfile(userId);
+			// @why Uses getUserDataForTracking to get fresh data from Clerk if DB has fallback email
+			const { getUserDataForTracking } = await import('@/lib/analytics/track-server-utils');
+			const userData = await getUserDataForTracking(userId);
 			await trackSearchStarted({
 				userId,
 				platform: 'TikTok',
 				type: 'keyword',
 				targetCount: effectiveTargetResults,
-				email: user?.email || 'unknown',
+				email: userData.email || 'unknown',
+				name: userData.name,
 			});
 
 			logPhase('external');

@@ -16,10 +16,12 @@ import { getPlanKeyByPriceId } from '@/lib/billing/plan-config';
 import { StripeClient } from '@/lib/billing/stripe-client';
 import { handleSubscriptionChange } from '@/lib/billing/webhook-handlers';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
+import { billingTracker, sessionTracker } from '@/lib/sentry';
 import { toError } from '@/lib/utils/type-guards';
 
 const logger = createCategoryLogger(LogCategory.BILLING);
 
+// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function GET(request: NextRequest) {
 	const startTime = Date.now();
 
@@ -33,6 +35,9 @@ export async function GET(request: NextRequest) {
 		if (!userId) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
+
+		// Set user context for Sentry
+		sessionTracker.setUser({ userId });
 
 		// ─────────────────────────────────────────────────────────────
 		// PARSE REQUEST
@@ -121,6 +126,13 @@ export async function GET(request: NextRequest) {
 		const priceId = subscription.items.data[0]?.price?.id;
 		const planId = getPlanKeyByPriceId(priceId);
 
+		// Track payment success in Sentry
+		billingTracker.trackPaymentSuccess({
+			userId,
+			planId: planId || 'unknown',
+			stripeSessionId: sessionId,
+		});
+
 		const duration = Date.now() - startTime;
 		logger.info('Session verified and DB updated', {
 			userId,
@@ -140,6 +152,13 @@ export async function GET(request: NextRequest) {
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 		logger.error('Session verification failed', toError(error));
+
+		// Track payment verification failure in Sentry
+		billingTracker.trackPaymentFailure(toError(error), {
+			userId: '', // userId may not be available in catch block
+			stripeSessionId: request.nextUrl.searchParams.get('session_id') || undefined,
+			stage: 'verification',
+		});
 
 		return NextResponse.json(
 			{ error: 'Failed to verify session', details: errorMessage },

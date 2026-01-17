@@ -26,6 +26,8 @@ import {
 	updateUserProfile,
 } from '@/lib/db/queries/user-queries';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
+import { SentryLogger } from '@/lib/logging/sentry-logger';
+import { billingTracker, sessionTracker } from '@/lib/sentry/feature-tracking';
 import { getPlanConfig, getPlanKeyByPriceId, type SubscriptionStatus } from './plan-config';
 import type { WebhookResult } from './subscription-types';
 
@@ -86,6 +88,25 @@ export async function handleSubscriptionChange(
 		},
 	});
 
+	// Set Sentry context for this subscription change
+	SentryLogger.setContext('subscription_change', {
+		handlerId,
+		subscriptionId: subscription.id,
+		eventType,
+		status: subscription.status,
+	});
+
+	// Add breadcrumb for tracking the flow
+	SentryLogger.addBreadcrumb({
+		category: 'billing',
+		message: `Processing subscription change: ${eventType}`,
+		level: 'info',
+		data: {
+			subscriptionId: subscription.id,
+			status: subscription.status,
+		},
+	});
+
 	try {
 		// 1. Find the user
 		const customerId = resolveCustomerId(subscription.customer);
@@ -108,12 +129,24 @@ export async function handleSubscriptionChange(
 
 		if (!user) {
 			logger.warn(`[${handlerId}] User not found for customer: ${customerId}`);
+			SentryLogger.captureMessage('User not found for Stripe customer', 'warning', {
+				tags: { feature: 'billing', stage: 'webhook' },
+				extra: { customerId, eventType, subscriptionId: subscription.id },
+			});
 			return {
 				success: false,
 				action: 'user_not_found',
 				details: { customerId, eventType },
 			};
 		}
+
+		// Set Sentry user context for better error tracking
+		sessionTracker.setUser({
+			userId: user.userId,
+			email: user.email || undefined,
+			plan: user.currentPlan || undefined,
+			subscriptionStatus: user.subscriptionStatus || undefined,
+		});
 
 		// 2. Extract plan from Stripe subscription
 		const priceId = subscription.items.data[0]?.price?.id;
@@ -185,13 +218,19 @@ export async function handleSubscriptionChange(
 
 		// 7. Track billing events in LogSnag AND GA4
 		const userEmail = user.email || 'unknown';
+		const userName = user.fullName || 'Unknown';
 		const planName = planConfig.name;
 		const monthlyPrice = planConfig.monthlyPrice / 100; // Convert cents to dollars
 
 		if (subscription.status === 'trialing') {
 			// Track trial start in both LogSnag and GA4
 			await Promise.all([
-				trackTrialStarted({ email: userEmail, plan: planName }),
+				trackTrialStarted({
+					email: userEmail,
+					name: userName,
+					userId: user.userId,
+					plan: planName,
+				}),
 				// biome-ignore lint/style/useNamingConvention: GA4 uses snake_case
 				trackGA4ServerEvent(
 					'begin_trial',
@@ -199,13 +238,24 @@ export async function handleSubscriptionChange(
 					user.userId
 				),
 			]);
+			// Track in Sentry for billing funnel visibility
+			billingTracker.trackTrialEvent('started', {
+				userId: user.userId,
+				planId: planKey,
+			});
 		} else if (subscription.status === 'active') {
 			// Check if this is a trial conversion (user was previously trialing)
 			const wasTrialing = user.subscriptionStatus === 'trialing';
 			if (wasTrialing) {
 				// Track trial conversion in both LogSnag and GA4
 				await Promise.all([
-					trackTrialConverted({ email: userEmail, plan: planName, value: monthlyPrice }),
+					trackTrialConverted({
+						email: userEmail,
+						name: userName,
+						userId: user.userId,
+						plan: planName,
+						value: monthlyPrice,
+					}),
 					trackGA4ServerEvent(
 						'purchase',
 						// biome-ignore lint/style/useNamingConvention: GA4 uses snake_case
@@ -222,7 +272,13 @@ export async function handleSubscriptionChange(
 			} else {
 				// Track new paid customer in both LogSnag and GA4
 				await Promise.all([
-					trackPaidCustomer({ email: userEmail, plan: planName, value: monthlyPrice }),
+					trackPaidCustomer({
+						email: userEmail,
+						name: userName,
+						userId: user.userId,
+						plan: planName,
+						value: monthlyPrice,
+					}),
 					trackGA4ServerEvent(
 						'purchase',
 						// biome-ignore lint/style/useNamingConvention: GA4 uses snake_case
@@ -260,6 +316,13 @@ export async function handleSubscriptionChange(
 			metadata: { subscriptionId: subscription.id },
 		});
 
+		// Capture error in Sentry with full billing context
+		billingTracker.trackPaymentFailure(normalizedError, {
+			userId: subscription.metadata?.userId || 'unknown',
+			stage: 'webhook',
+			stripeSessionId: subscription.id,
+		});
+
 		return {
 			success: false,
 			action: 'processing_error',
@@ -280,8 +343,20 @@ export async function handleSubscriptionChange(
 export async function handleSubscriptionDeleted(
 	subscription: Stripe.Subscription
 ): Promise<WebhookResult> {
+	// Add breadcrumb for subscription deletion
+	SentryLogger.addBreadcrumb({
+		category: 'billing',
+		message: 'Processing subscription deletion',
+		level: 'info',
+		data: { subscriptionId: subscription.id },
+	});
+
 	const customerId = resolveCustomerId(subscription.customer);
 	if (!customerId) {
+		SentryLogger.captureMessage('Missing customer ID on subscription deletion', 'warning', {
+			tags: { feature: 'billing', stage: 'webhook' },
+			extra: { subscriptionId: subscription.id },
+		});
 		return {
 			success: false,
 			action: 'missing_customer',
@@ -313,6 +388,8 @@ export async function handleSubscriptionDeleted(
 	await Promise.all([
 		trackSubscriptionCanceled({
 			email: user.email || 'unknown',
+			name: user.fullName || 'Unknown',
+			userId: user.userId,
 			plan: user.currentPlan || 'unknown',
 		}),
 		// biome-ignore lint/style/useNamingConvention: GA4 uses snake_case
@@ -326,6 +403,12 @@ export async function handleSubscriptionDeleted(
 	logger.info('Subscription deleted', {
 		userId: user.userId,
 		metadata: { customerId, previousPlan: user.currentPlan },
+	});
+
+	// Track subscription expiry in Sentry
+	billingTracker.trackTrialEvent('expired', {
+		userId: user.userId,
+		planId: user.currentPlan || undefined,
 	});
 
 	return {
@@ -354,6 +437,21 @@ export async function handleCheckoutCompleted(
 			customerId: session.customer,
 			subscriptionId: session.subscription,
 		},
+	});
+
+	// Set Sentry context for checkout
+	SentryLogger.setContext('checkout_completed', {
+		sessionId: session.id,
+		customerId: session.customer,
+		subscriptionId: session.subscription,
+	});
+
+	// Add breadcrumb for checkout processing
+	SentryLogger.addBreadcrumb({
+		category: 'billing',
+		message: 'Processing checkout completion',
+		level: 'info',
+		data: { sessionId: session.id },
 	});
 
 	if (!session.subscription) {

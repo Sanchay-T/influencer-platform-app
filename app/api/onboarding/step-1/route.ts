@@ -1,10 +1,12 @@
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
+import { trackServer } from '@/lib/analytics/track';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { db } from '@/lib/db';
-import { createUser } from '@/lib/db/queries/user-queries';
+import { createUser, getUserProfile } from '@/lib/db/queries/user-queries';
 import { users } from '@/lib/db/schema';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
+import { onboardingTracker, SentryLogger, sessionTracker } from '@/lib/sentry';
 import { createPerfLogger } from '@/lib/utils/perf-logger';
 import { getStringProperty, toRecord } from '@/lib/utils/type-guards';
 
@@ -21,6 +23,10 @@ export async function PATCH(req: Request) {
 		if (!userId) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
+
+		// Set user context early in onboarding flow
+		sessionTracker.setUser({ userId });
+		SentryLogger.setContext('onboarding_step1', { userId });
 
 		const body = await req.json();
 		perf.log('parse-body');
@@ -63,6 +69,27 @@ export async function PATCH(req: Request) {
 			});
 		}
 		perf.log('db-update');
+
+		// Track step completion in Sentry
+		onboardingTracker.trackStep('info_captured', {
+			userId,
+			metadata: { fullName: fullName.trim(), businessName: businessName.trim() },
+		});
+
+		// Track onboarding step 1 in LogSnag (fire and forget)
+		getUserProfile(userId)
+			.then((profile) => {
+				return trackServer('onboarding_step_completed', {
+					step: 1,
+					stepName: 'profile',
+					email: profile?.email || '',
+					name: fullName.trim(),
+					userId,
+				});
+			})
+			.catch(() => {
+				// Ignore tracking errors - fire and forget
+			});
 
 		perf.end();
 		return NextResponse.json({

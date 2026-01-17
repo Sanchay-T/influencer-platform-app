@@ -5,6 +5,8 @@
  */
 
 import { eq } from 'drizzle-orm';
+import { trackServer } from '@/lib/analytics/track';
+import { getUserDataForTracking } from '@/lib/analytics/track-server-utils';
 import { invalidateJobCache } from '@/lib/cache/redis';
 import { db } from '@/lib/db';
 import { scrapingJobs } from '@/lib/db/schema';
@@ -72,6 +74,12 @@ export async function markJobEnriching(jobId: string): Promise<void> {
  * with all enrichment data (bio_enriched, emails, etc.)
  */
 export async function markJobCompleted(jobId: string): Promise<void> {
+	// Get job details before update for tracking
+	const job = await db.query.scrapingJobs.findFirst({
+		where: eq(scrapingJobs.id, jobId),
+		columns: { userId: true, platform: true, creatorsFound: true },
+	});
+
 	await db
 		.update(scrapingJobs)
 		.set({
@@ -87,6 +95,31 @@ export async function markJobCompleted(jobId: string): Promise<void> {
 	await invalidateJobCache(jobId);
 
 	logger.info('Job marked as completed (cache invalidated)', { jobId }, LogCategory.JOB);
+
+	// Track search_completed in LogSnag (fire and forget)
+	// @why Uses getUserDataForTracking to get fresh data from Clerk if DB has fallback email
+	if (job) {
+		const normalizedPlatform = (job.platform || 'tiktok').toLowerCase().includes('instagram')
+			? 'instagram'
+			: (job.platform || 'tiktok').toLowerCase().includes('youtube')
+				? 'youtube'
+				: 'tiktok';
+
+		getUserDataForTracking(job.userId)
+			.then((userData) => {
+				return trackServer('search_completed', {
+					userId: job.userId,
+					platform: normalizedPlatform as 'tiktok' | 'instagram' | 'youtube',
+					type: 'keyword',
+					creatorCount: job.creatorsFound ?? 0,
+					email: userData.email,
+					name: userData.name,
+				});
+			})
+			.catch((err) => {
+				logger.warn('Failed to track search_completed', { error: String(err) }, LogCategory.JOB);
+			});
+	}
 }
 
 /**

@@ -1,12 +1,16 @@
 'use client';
 
 import { useAuth, useUser } from '@clerk/nextjs';
+import * as Sentry from '@sentry/nextjs';
 
 import { useEffect } from 'react';
 import { trackClient, trackLeadClient } from '@/lib/analytics/track';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { logAuth, logError, logUserAction } from '@/lib/utils/frontend-logger';
 import { toRecord } from '@/lib/utils/type-guards';
+
+// Session key to track if we've already fired analytics events this session
+const ANALYTICS_FIRED_KEY = 'gemz_analytics_fired';
 
 /**
  * Authentication logging component that tracks all Clerk auth events
@@ -52,6 +56,9 @@ export function AuthLogger() {
 					structuredConsole.log('🔐 [AUTH-CLIENT] authentication_success', authSuccessPayload);
 				}
 			} else if (isLoaded && !isSignedIn) {
+				// Clear Sentry user context on sign out
+				Sentry.setUser(null);
+
 				logUserAction('authentication_required', {
 					currentPath: window.location.pathname,
 					reason: 'user_not_signed_in',
@@ -60,21 +67,62 @@ export function AuthLogger() {
 		}
 	}, [isLoaded, isSignedIn, userId, sessionId, user, userIsLoaded]);
 
-	// Log user data loading and track new signups
+	// Log user data loading and track new signups (once per session)
 	useEffect(() => {
 		if (userIsLoaded && user && isSignedIn) {
-			// Track new signups vs returning sign-ins
-			const isNewSignup =
-				user.createdAt && Date.now() - new Date(user.createdAt).getTime() < 2 * 60 * 1000;
-			if (isNewSignup) {
-				// Fire Meta Pixel Lead event for new signups
-				trackLeadClient();
-			} else {
-				// Fire GA4 login event for returning users
-				trackClient('user_signed_in', {
-					userId: user.id,
-					email: user.primaryEmailAddress?.emailAddress || '',
-				});
+			// Set Sentry user context for error tracking
+			// @why Without this, errors show no user info, making debugging impossible
+			Sentry.setUser({
+				id: user.id,
+				email: user.primaryEmailAddress?.emailAddress,
+				username:
+					user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || undefined,
+			});
+
+			// Set additional context for debugging
+			Sentry.setContext('clerk_user', {
+				createdAt: user.createdAt?.toISOString(),
+				lastSignInAt: user.lastSignInAt?.toISOString(),
+				emailVerified: user.primaryEmailAddress?.verification?.status === 'verified',
+			});
+
+			// Check if we've already fired analytics this session
+			const sessionKey = `${ANALYTICS_FIRED_KEY}_${user.id}`;
+			const alreadyFired = sessionStorage.getItem(sessionKey);
+
+			if (!alreadyFired) {
+				// Track new signups vs returning sign-ins
+				const isNewSignup =
+					user.createdAt && Date.now() - new Date(user.createdAt).getTime() < 2 * 60 * 1000;
+				if (isNewSignup) {
+					// Fire Meta Pixel Lead + GA4 sign_up event for new signups
+					trackLeadClient();
+				} else {
+					// Fire GA4 login event for returning users (once per session)
+					trackClient('user_signed_in', {
+						userId: user.id,
+						email: user.primaryEmailAddress?.emailAddress || '',
+						name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+					});
+
+					// Also send to LogSnag via API (GA4 is client-only, LogSnag needs server)
+					fetch('/api/analytics/track', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({
+							event: 'user_signed_in',
+							properties: {
+								userId: user.id,
+								email: user.primaryEmailAddress?.emailAddress || '',
+								name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+							},
+						}),
+					}).catch(() => {
+						// Silent fail - analytics shouldn't break the app
+					});
+				}
+				// Mark as fired for this session
+				sessionStorage.setItem(sessionKey, 'true');
 			}
 
 			const userLoadedPayload = {

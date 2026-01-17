@@ -1,3 +1,4 @@
+import { apiTracker, SentryLogger } from '@/lib/sentry';
 import { getNumberProperty, getStringProperty, toRecord } from '@/lib/utils/type-guards';
 import { EMAIL_REGEX, ENDPOINTS } from '../core/config';
 import type { BioEnrichedInfo, NormalizedCreator, SearchConfig } from '../core/types';
@@ -108,6 +109,12 @@ async function fetchChannelProfile(
 		return null;
 	}
 
+	SentryLogger.addBreadcrumb({
+		category: 'api',
+		message: `YouTube enrichment: fetching channel profile for ${cleanHandle}`,
+		data: { handle: cleanHandle },
+	});
+
 	const url = new URL(`${config.apiBaseUrl}${ENDPOINTS.youtube.channel}`);
 	url.searchParams.set('handle', cleanHandle);
 
@@ -117,6 +124,12 @@ async function fetchChannelProfile(
 	});
 
 	if (!response.ok) {
+		SentryLogger.addBreadcrumb({
+			category: 'api',
+			message: `YouTube channel API failed: ${response.status}`,
+			level: 'warning',
+			data: { handle: cleanHandle, status: response.status },
+		});
 		return null;
 	}
 
@@ -141,6 +154,12 @@ export async function enrichYouTubeCreator(
 	const username = creator.creator.username?.trim() ?? '';
 	const expectedChannelId = creator.creator.channelId?.trim() || null;
 
+	// Set Sentry context for enrichment
+	SentryLogger.setContext('youtube_enrichment', {
+		username,
+		channelId: expectedChannelId,
+	});
+
 	const candidates = [
 		username,
 		// Only try channelId if it's different from username, and verify it matches in the response.
@@ -148,79 +167,95 @@ export async function enrichYouTubeCreator(
 	].filter((value): value is string => Boolean(value && value.trim().length > 0));
 
 	try {
-		for (const candidate of candidates) {
-			const profile = await fetchChannelProfile(config, candidate);
-			if (!profile) {
-				continue;
-			}
-
-			// Avoid false positives when the API treats a channelId as a handle and returns a different channel.
-			if (expectedChannelId && typeof profile.channelId === 'string' && profile.channelId.trim()) {
-				if (profile.channelId.trim() !== expectedChannelId) {
+		return await apiTracker.trackExternalCall('scrape_creators', 'youtube_channel', async () => {
+			for (const candidate of candidates) {
+				const profile = await fetchChannelProfile(config, candidate);
+				if (!profile) {
 					continue;
 				}
-			}
 
-			const bio = typeof profile.description === 'string' ? profile.description : '';
-			const bioLinks = Array.isArray(profile.links)
-				? profile.links
-						.map((link) => ({
-							url: typeof link.url === 'string' ? link.url : undefined,
-							title: typeof link.title === 'string' ? link.title : undefined,
-						}))
-						.filter((link) => Boolean(link.url && link.url.trim().length > 0))
-				: [];
-
-			const emails: string[] = [];
-			const bioEmails = bio ? (bio.match(EMAIL_REGEX) ?? []) : [];
-			emails.push(...bioEmails);
-
-			if (typeof profile.email === 'string' && profile.email && !emails.includes(profile.email)) {
-				emails.push(profile.email);
-			}
-
-			for (const link of bioLinks) {
-				const linkUrl = link.url ?? '';
-				if (linkUrl.includes('mailto:')) {
-					const email = linkUrl.replace('mailto:', '').split('?')[0];
-					if (email && !emails.includes(email)) {
-						emails.push(email);
+				// Avoid false positives when the API treats a channelId as a handle and returns a different channel.
+				if (
+					expectedChannelId &&
+					typeof profile.channelId === 'string' &&
+					profile.channelId.trim()
+				) {
+					if (profile.channelId.trim() !== expectedChannelId) {
+						continue;
 					}
 				}
+
+				const bio = typeof profile.description === 'string' ? profile.description : '';
+				const bioLinks = Array.isArray(profile.links)
+					? profile.links
+							.map((link) => ({
+								url: typeof link.url === 'string' ? link.url : undefined,
+								title: typeof link.title === 'string' ? link.title : undefined,
+							}))
+							.filter((link) => Boolean(link.url && link.url.trim().length > 0))
+					: [];
+
+				const emails: string[] = [];
+				const bioEmails = bio ? (bio.match(EMAIL_REGEX) ?? []) : [];
+				emails.push(...bioEmails);
+
+				if (typeof profile.email === 'string' && profile.email && !emails.includes(profile.email)) {
+					emails.push(profile.email);
+				}
+
+				for (const link of bioLinks) {
+					const linkUrl = link.url ?? '';
+					if (linkUrl.includes('mailto:')) {
+						const email = linkUrl.replace('mailto:', '').split('?')[0];
+						if (email && !emails.includes(email)) {
+							emails.push(email);
+						}
+					}
+				}
+
+				const mergedEmails = [...new Set([...(creator.creator.emails ?? []), ...emails])];
+				const extractedEmail = mergedEmails.length > 0 ? mergedEmails[0] : null;
+
+				const followers = parseSubscriberCount(profile);
+
+				const bioEnriched: BioEnrichedInfo = {
+					biography: bio?.trim() ? bio : null,
+					bio_links: bioLinks,
+					external_url: null,
+					extracted_email: extractedEmail,
+					fetched_at: fetchedAt,
+				};
+
+				return {
+					...creator,
+					creator: {
+						...creator.creator,
+						name: profile.name || creator.creator.name,
+						followers: followers || creator.creator.followers,
+						avatarUrl: profile.avatarUrl || creator.creator.avatarUrl,
+						bio,
+						emails: mergedEmails,
+						channelId: expectedChannelId || profile.channelId || creator.creator.channelId,
+					},
+					bioEnriched: true,
+					bioEnrichedAt: fetchedAt,
+					bio_enriched: bioEnriched,
+				};
 			}
 
-			const mergedEmails = [...new Set([...(creator.creator.emails ?? []), ...emails])];
-			const extractedEmail = mergedEmails.length > 0 ? mergedEmails[0] : null;
-
-			const followers = parseSubscriberCount(profile);
-
-			const bioEnriched: BioEnrichedInfo = {
-				biography: bio?.trim() ? bio : null,
-				bio_links: bioLinks,
-				external_url: null,
-				extracted_email: extractedEmail,
-				fetched_at: fetchedAt,
-			};
-
-			return {
-				...creator,
-				creator: {
-					...creator.creator,
-					name: profile.name || creator.creator.name,
-					followers: followers || creator.creator.followers,
-					avatarUrl: profile.avatarUrl || creator.creator.avatarUrl,
-					bio,
-					emails: mergedEmails,
-					channelId: expectedChannelId || profile.channelId || creator.creator.channelId,
-				},
-				bioEnriched: true,
-				bioEnrichedAt: fetchedAt,
-				bio_enriched: bioEnriched,
-			};
-		}
-
-		return buildAttemptedResult(creator, fetchedAt, 'youtube_channel_not_found');
-	} catch {
+			return buildAttemptedResult(creator, fetchedAt, 'youtube_channel_not_found');
+		});
+	} catch (error) {
+		SentryLogger.captureException(error, {
+			tags: {
+				feature: 'search',
+				platform: 'youtube',
+				stage: 'enrich',
+				service: 'scrape_creators',
+			},
+			extra: { username, channelId: expectedChannelId },
+			level: 'warning',
+		});
 		return buildAttemptedResult(creator, fetchedAt, 'youtube_channel_exception');
 	}
 }

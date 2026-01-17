@@ -1,7 +1,7 @@
 // search-engine/runner.ts — entry point that dispatches jobs to provider adapters
 import { trackServer } from '@/lib/analytics/track';
+import { getUserDataForTracking } from '@/lib/analytics/track-server-utils';
 import { SystemConfig } from '@/lib/config/system-config';
-import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { LogCategory, logger } from '@/lib/logging';
 import { isString, toRecord } from '@/lib/utils/type-guards';
 import { SearchJobService } from './job-service';
@@ -152,6 +152,7 @@ export async function runSearchJob(jobId: string): Promise<SearchExecutionResult
 		type: searchType,
 		targetCount: job.targetResults || 0,
 		email: userForTracking?.email || 'unknown',
+		name: userForTracking?.fullName || '',
 	});
 	console.warn(
 		'[search-runner] resolved config',
@@ -199,13 +200,15 @@ export async function runSearchJob(jobId: string): Promise<SearchExecutionResult
 			: platformLower.includes('youtube')
 				? 'youtube'
 				: 'tiktok';
-		const user = await getUserProfile(job.userId);
+		// @why Uses getUserDataForTracking to get fresh data from Clerk if DB has fallback email
+		const userData = await getUserDataForTracking(job.userId);
 		await trackServer('search_completed', {
 			userId: job.userId,
 			platform: normalizedPlatform,
 			type: searchType,
 			creatorCount: providerResult.processedResults || 0,
-			email: user?.email || 'unknown',
+			email: userData.email || 'unknown',
+			name: userData.name || '',
 		});
 	}
 

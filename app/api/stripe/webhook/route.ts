@@ -24,6 +24,8 @@ import {
 	StripeClient,
 } from '@/lib/billing';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
+import { SentryLogger } from '@/lib/logging/sentry-logger';
+import { billingTracker } from '@/lib/sentry/feature-tracking';
 import { isString, toError, toRecord } from '@/lib/utils/type-guards';
 import {
 	checkWebhookIdempotency,
@@ -67,6 +69,11 @@ const isStripeInvoice = (value: Stripe.Event.Data.Object): value is Stripe.Invoi
 export async function POST(request: NextRequest) {
 	const startTime = Date.now();
 
+	// Set up Sentry context for this webhook request
+	SentryLogger.setContext('stripe_webhook', {
+		timestamp: new Date().toISOString(),
+	});
+
 	// ─────────────────────────────────────────────────────────────
 	// STEP 1: Validate Signature
 	// ─────────────────────────────────────────────────────────────
@@ -81,12 +88,19 @@ export async function POST(request: NextRequest) {
 
 		if (!signature) {
 			logger.warn('Webhook received without signature');
+			SentryLogger.captureMessage('Stripe webhook received without signature', 'warning', {
+				tags: { feature: 'billing', stage: 'webhook' },
+			});
 			return NextResponse.json({ error: 'No signature provided' }, { status: 400 });
 		}
 
 		event = StripeClient.constructWebhookEvent(body, signature);
 	} catch (error) {
 		logger.error('Webhook signature validation failed', toError(error));
+		SentryLogger.captureException(error, {
+			tags: { feature: 'billing', stage: 'webhook', errorType: 'signature_validation' },
+			level: 'warning', // Client error, not server error
+		});
 		return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 400 });
 	}
 
@@ -138,117 +152,146 @@ export async function POST(request: NextRequest) {
 		metadata: { eventId: event.id, eventType: event.type },
 	});
 
+	// Update Sentry context with event details
+	SentryLogger.setContext('stripe_webhook', {
+		eventId: event.id,
+		eventType: event.type,
+		timestamp: new Date().toISOString(),
+	});
+
+	// Add breadcrumb for event processing start
+	SentryLogger.addBreadcrumb({
+		category: 'billing',
+		message: `Processing Stripe webhook: ${event.type}`,
+		level: 'info',
+		data: { eventId: event.id, eventType: event.type },
+	});
+
 	try {
-		let result: { success: boolean; action: string; details: Record<string, unknown> };
+		// Wrap the entire event processing with Sentry performance tracking
+		const result = await billingTracker.trackWebhook(event.type, async () => {
+			let innerResult: { success: boolean; action: string; details: Record<string, unknown> };
 
-		switch (event.type) {
-			// ─────────────────────────────────────────────────────
-			// SUBSCRIPTION EVENTS (Primary handlers)
-			// ─────────────────────────────────────────────────────
+			switch (event.type) {
+				// ─────────────────────────────────────────────────────
+				// SUBSCRIPTION EVENTS (Primary handlers)
+				// ─────────────────────────────────────────────────────
 
-			case 'customer.subscription.created':
-				if (!isStripeSubscription(event.data.object)) {
-					throw new Error('Invalid subscription payload');
+				case 'customer.subscription.created':
+					if (!isStripeSubscription(event.data.object)) {
+						throw new Error('Invalid subscription payload');
+					}
+					innerResult = await handleSubscriptionChange(event.data.object, event.type);
+					break;
+
+				case 'customer.subscription.updated':
+					if (!isStripeSubscription(event.data.object)) {
+						throw new Error('Invalid subscription payload');
+					}
+					innerResult = await handleSubscriptionChange(event.data.object, event.type);
+					break;
+
+				case 'customer.subscription.deleted':
+					if (!isStripeSubscription(event.data.object)) {
+						throw new Error('Invalid subscription payload');
+					}
+					innerResult = await handleSubscriptionDeleted(event.data.object);
+					break;
+
+				// ─────────────────────────────────────────────────────
+				// CHECKOUT EVENTS
+				// ─────────────────────────────────────────────────────
+
+				case 'checkout.session.completed': {
+					if (!isStripeCheckoutSession(event.data.object)) {
+						throw new Error('Invalid checkout session payload');
+					}
+					const session = event.data.object;
+					// Only process subscription checkouts
+					if (session.mode === 'subscription' && session.subscription) {
+						const stripe = StripeClient.getRawStripe();
+						innerResult = await handleCheckoutCompleted(session, stripe);
+					} else {
+						innerResult = {
+							success: true,
+							action: 'ignored',
+							details: { reason: 'Not a subscription checkout' },
+						};
+					}
+					break;
 				}
-				result = await handleSubscriptionChange(event.data.object, event.type);
-				break;
 
-			case 'customer.subscription.updated':
-				if (!isStripeSubscription(event.data.object)) {
-					throw new Error('Invalid subscription payload');
-				}
-				result = await handleSubscriptionChange(event.data.object, event.type);
-				break;
+				// ─────────────────────────────────────────────────────
+				// TRIAL EVENTS (Informational)
+				// ─────────────────────────────────────────────────────
 
-			case 'customer.subscription.deleted':
-				if (!isStripeSubscription(event.data.object)) {
-					throw new Error('Invalid subscription payload');
-				}
-				result = await handleSubscriptionDeleted(event.data.object);
-				break;
-
-			// ─────────────────────────────────────────────────────
-			// CHECKOUT EVENTS
-			// ─────────────────────────────────────────────────────
-
-			case 'checkout.session.completed': {
-				if (!isStripeCheckoutSession(event.data.object)) {
-					throw new Error('Invalid checkout session payload');
-				}
-				const session = event.data.object;
-				// Only process subscription checkouts
-				if (session.mode === 'subscription' && session.subscription) {
-					const stripe = StripeClient.getRawStripe();
-					result = await handleCheckoutCompleted(session, stripe);
-				} else {
-					result = {
+				case 'customer.subscription.trial_will_end': {
+					// Could trigger email reminder here
+					if (!isStripeSubscription(event.data.object)) {
+						throw new Error('Invalid subscription payload');
+					}
+					const subscription = event.data.object;
+					logger.info('Trial ending soon', {
+						metadata: {
+							subscriptionId: subscription.id,
+							trialEnd: subscription.trial_end,
+						},
+					});
+					// Track trial ending soon in Sentry
+					billingTracker.trackTrialEvent('ending_soon', {
+						userId: subscription.metadata?.userId || 'unknown',
+						daysRemaining: subscription.trial_end
+							? Math.ceil((subscription.trial_end * 1000 - Date.now()) / (1000 * 60 * 60 * 24))
+							: undefined,
+					});
+					innerResult = {
 						success: true,
-						action: 'ignored',
-						details: { reason: 'Not a subscription checkout' },
+						action: 'logged',
+						details: { eventType: event.type },
 					};
+					break;
 				}
-				break;
+
+				// ─────────────────────────────────────────────────────
+				// INVOICE EVENTS (Informational)
+				// ─────────────────────────────────────────────────────
+
+				case 'invoice.payment_succeeded':
+				case 'invoice.payment_failed':
+				case 'invoice.finalized':
+					if (!isStripeInvoice(event.data.object)) {
+						throw new Error('Invalid invoice payload');
+					}
+					logger.info('Invoice event received', {
+						metadata: {
+							invoiceId: event.data.object.id,
+							status: event.data.object.status,
+						},
+					});
+					innerResult = {
+						success: true,
+						action: 'logged',
+						details: { eventType: event.type },
+					};
+					break;
+
+				// ─────────────────────────────────────────────────────
+				// UNHANDLED EVENTS (Acknowledge but don't process)
+				// ─────────────────────────────────────────────────────
+
+				default:
+					logger.debug('Unhandled webhook event type', {
+						metadata: { eventType: event.type },
+					});
+					innerResult = {
+						success: true,
+						action: 'unhandled',
+						details: { eventType: event.type },
+					};
 			}
 
-			// ─────────────────────────────────────────────────────
-			// TRIAL EVENTS (Informational)
-			// ─────────────────────────────────────────────────────
-
-			case 'customer.subscription.trial_will_end':
-				// Could trigger email reminder here
-				if (!isStripeSubscription(event.data.object)) {
-					throw new Error('Invalid subscription payload');
-				}
-				logger.info('Trial ending soon', {
-					metadata: {
-						subscriptionId: event.data.object.id,
-						trialEnd: event.data.object.trial_end,
-					},
-				});
-				result = {
-					success: true,
-					action: 'logged',
-					details: { eventType: event.type },
-				};
-				break;
-
-			// ─────────────────────────────────────────────────────
-			// INVOICE EVENTS (Informational)
-			// ─────────────────────────────────────────────────────
-
-			case 'invoice.payment_succeeded':
-			case 'invoice.payment_failed':
-			case 'invoice.finalized':
-				if (!isStripeInvoice(event.data.object)) {
-					throw new Error('Invalid invoice payload');
-				}
-				logger.info('Invoice event received', {
-					metadata: {
-						invoiceId: event.data.object.id,
-						status: event.data.object.status,
-					},
-				});
-				result = {
-					success: true,
-					action: 'logged',
-					details: { eventType: event.type },
-				};
-				break;
-
-			// ─────────────────────────────────────────────────────
-			// UNHANDLED EVENTS (Acknowledge but don't process)
-			// ─────────────────────────────────────────────────────
-
-			default:
-				logger.debug('Unhandled webhook event type', {
-					metadata: { eventType: event.type },
-				});
-				result = {
-					success: true,
-					action: 'unhandled',
-					details: { eventType: event.type },
-				};
-		}
+			return innerResult;
+		}); // End billingTracker.trackWebhook
 
 		// ─────────────────────────────────────────────────────
 		// STEP 4: Mark as Processed
@@ -280,6 +323,13 @@ export async function POST(request: NextRequest) {
 
 		logger.error('Webhook processing failed', toError(error), {
 			metadata: { eventId: event.id, eventType: event.type },
+		});
+
+		// Capture error in Sentry with full context
+		billingTracker.trackPaymentFailure(toError(error), {
+			userId: 'unknown', // We may not have the userId at this point
+			stage: 'webhook',
+			stripeSessionId: event.id,
 		});
 
 		return NextResponse.json(

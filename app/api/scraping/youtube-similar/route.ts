@@ -1,10 +1,10 @@
 import { and, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { trackSearchStarted } from '@/lib/analytics/logsnag';
+import { getUserDataForTracking } from '@/lib/analytics/track-server-utils';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { validateCreatorSearch } from '@/lib/billing';
 import { db } from '@/lib/db';
-import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { campaigns, scrapingJobs } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { qstash } from '@/lib/queue/qstash';
@@ -101,13 +101,15 @@ export async function POST(req: Request) {
 			.returning();
 
 		// Track search started in LogSnag
-		const user = await getUserProfile(userId);
+		// @why Uses getUserDataForTracking to get fresh data from Clerk if DB has fallback email
+		const userData = await getUserDataForTracking(userId);
 		await trackSearchStarted({
 			userId,
 			platform: 'YouTube',
 			type: 'similar',
 			targetCount: targetResults,
-			email: user?.email || 'unknown',
+			email: userData.email || 'unknown',
+			name: userData.name,
 		});
 
 		let qstashMessageId: string | null = null;
