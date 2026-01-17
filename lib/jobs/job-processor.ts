@@ -2,7 +2,7 @@ import { Client } from '@upstash/qstash';
 import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
-import { backgroundJobs, events } from '@/lib/db/schema';
+import { backgroundJobs } from '@/lib/db/schema';
 import {
 	AGGREGATE_TYPES,
 	EVENT_TYPES,
@@ -10,6 +10,8 @@ import {
 	SOURCE_SYSTEMS,
 } from '@/lib/events/event-service';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { SentryLogger } from '@/lib/logging/sentry-logger';
+import { apiTracker } from '@/lib/sentry/feature-tracking';
 import { getStringProperty, toRecord } from '@/lib/utils/type-guards';
 
 const qstash = new Client({
@@ -66,6 +68,22 @@ export class JobProcessor {
 	}): Promise<string> {
 		structuredConsole.log('📤 [JOB-PROCESSOR] Queueing job:', { jobType, delay, priority });
 
+		// Set Sentry context for job queueing
+		SentryLogger.setContext('job_queue', {
+			jobType,
+			delay,
+			priority,
+			maxRetries,
+		});
+
+		// Add breadcrumb for job queue start
+		SentryLogger.addBreadcrumb({
+			category: 'job',
+			message: `Queueing background job: ${jobType}`,
+			level: 'info',
+			data: { jobType, delay, priority },
+		});
+
 		try {
 			// Create job record in database first
 			const job = await EventService.createBackgroundJob({
@@ -80,20 +98,35 @@ export class JobProcessor {
 			}
 			const jobId = job.id;
 
-			const delaySeconds = delay > 0 ? Math.ceil(delay / 1000) : undefined;
-			// Queue job via QStash
-			const qstashResponse = await qstash.publishJSON({
-				url: `${process.env.NEXT_PUBLIC_SITE_URL}/api/jobs/process`,
-				body: {
-					jobId,
-					jobType,
-					payload,
-					attempt: 1,
-					maxRetries,
-				},
-				delay: delaySeconds,
-				retries: maxRetries,
+			// Add breadcrumb for job created in database
+			SentryLogger.addBreadcrumb({
+				category: 'job',
+				message: `Job record created in database`,
+				level: 'info',
+				data: { jobId, jobType },
 			});
+
+			const delaySeconds = delay > 0 ? Math.ceil(delay / 1000) : undefined;
+
+			// Queue job via QStash - track external call
+			const qstashResponse = await apiTracker.trackExternalCall(
+				'qstash',
+				'publish_job',
+				async () => {
+					return qstash.publishJSON({
+						url: `${process.env.NEXT_PUBLIC_SITE_URL}/api/jobs/process`,
+						body: {
+							jobId,
+							jobType,
+							payload,
+							attempt: 1,
+							maxRetries,
+						},
+						delay: delaySeconds,
+						retries: maxRetries,
+					});
+				}
+			);
 
 			const qstashMessageId = resolveQstashMessageId(qstashResponse);
 
@@ -110,6 +143,14 @@ export class JobProcessor {
 				});
 			}
 
+			// Add breadcrumb for successful job queue
+			SentryLogger.addBreadcrumb({
+				category: 'job',
+				message: `Job queued successfully via QStash`,
+				level: 'info',
+				data: { jobId, jobType, qstashMessageId: qstashMessageId ?? 'unknown' },
+			});
+
 			structuredConsole.log('✅ [JOB-PROCESSOR] Job queued successfully:', {
 				jobId,
 				qstashMessageId: qstashMessageId ?? 'unknown',
@@ -119,6 +160,13 @@ export class JobProcessor {
 			return jobId;
 		} catch (error) {
 			structuredConsole.error('❌ [JOB-PROCESSOR] Error queueing job:', error);
+
+			// Capture QStash publish failure in Sentry
+			SentryLogger.captureException(error, {
+				tags: { feature: 'job', operation: 'queue', jobType },
+				extra: { jobType, delay, priority, maxRetries },
+			});
+
 			throw error;
 		}
 	}
@@ -128,6 +176,20 @@ export class JobProcessor {
 	 */
 	static async processJob(jobId: string, attempt: number = 1): Promise<JobResult> {
 		structuredConsole.log('🔄 [JOB-PROCESSOR] Processing job:', { jobId, attempt });
+
+		// Set Sentry context for this background job
+		SentryLogger.setContext('background_job', {
+			jobId,
+			attempt,
+		});
+
+		// Add breadcrumb for job processing start
+		SentryLogger.addBreadcrumb({
+			category: 'background_job',
+			message: `Processing job ${jobId} (attempt ${attempt})`,
+			level: 'info',
+			data: { jobId, attempt },
+		});
 
 		try {
 			// Get job from database
@@ -208,6 +270,17 @@ export class JobProcessor {
 			return result;
 		} catch (error) {
 			structuredConsole.error('❌ [JOB-PROCESSOR] Error processing job:', error);
+
+			// Capture error in Sentry
+			SentryLogger.captureException(error, {
+				tags: {
+					feature: 'background_job',
+				},
+				extra: {
+					jobId,
+					attempt,
+				},
+			});
 
 			// Mark job as failed
 			await db
@@ -320,9 +393,15 @@ export class JobProcessor {
 				billingSyncStatus: 'job_onboarding_completed',
 			};
 
-			if (stripeCustomerId) updateData.stripeCustomerId = stripeCustomerId;
-			if (stripeSubscriptionId) updateData.stripeSubscriptionId = stripeSubscriptionId;
-			if (resolvedPlanId) updateData.currentPlan = resolvedPlanId;
+			if (stripeCustomerId) {
+				updateData.stripeCustomerId = stripeCustomerId;
+			}
+			if (stripeSubscriptionId) {
+				updateData.stripeSubscriptionId = stripeSubscriptionId;
+			}
+			if (resolvedPlanId) {
+				updateData.currentPlan = resolvedPlanId;
+			}
 
 			await updateUserProfile(userId, updateData);
 

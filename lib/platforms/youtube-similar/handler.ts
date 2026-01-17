@@ -1,4 +1,5 @@
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { apiTracker, SentryLogger, searchTracker } from '@/lib/sentry';
 
 /**
  * YouTube Similar Creator Search Background Processing Handler
@@ -43,11 +44,30 @@ export async function processYouTubeSimilarJob(
 	job: unknown,
 	jobId: string
 ): Promise<YouTubeSimilarJobResult> {
+	const handlerStartTime = Date.now();
 	const jobRecord = toRecord(job);
 	const targetUsername = jobRecord ? getStringProperty(jobRecord, 'targetUsername') : null;
 	if (!targetUsername) {
 		throw new Error('Missing target username for YouTube similar search');
 	}
+
+	// Set Sentry context for this YouTube similar job
+	SentryLogger.setContext('youtube_similar_handler', {
+		jobId,
+		platform: 'youtube',
+		targetUsername,
+	});
+
+	SentryLogger.addBreadcrumb({
+		category: 'search',
+		message: `Starting YouTube similar handler for @${targetUsername}`,
+		level: 'info',
+		data: {
+			platform: 'youtube',
+			jobId,
+		},
+	});
+
 	structuredConsole.log(
 		'🎬 [YOUTUBE-SIMILAR] Processing YouTube similar job for username:',
 		targetUsername
@@ -71,7 +91,18 @@ export async function processYouTubeSimilarJob(
 
 		// Step 1: Get target channel profile (20% → 40%)
 		structuredConsole.log('🔍 [YOUTUBE-SIMILAR] Step 1: Getting YouTube channel profile');
-		const targetProfile = await getYouTubeChannelProfile(targetUsername);
+		SentryLogger.addBreadcrumb({
+			category: 'search',
+			message: `Fetching YouTube channel profile for @${targetUsername}`,
+			level: 'info',
+			data: { jobId, targetUsername },
+		});
+
+		const targetProfile = await apiTracker.trackExternalCall(
+			'scrapecreators',
+			'youtube_profile',
+			async () => getYouTubeChannelProfile(targetUsername)
+		);
 
 		await db
 			.update(scrapingJobs)
@@ -110,7 +141,18 @@ export async function processYouTubeSimilarJob(
 					`🔍 [YOUTUBE-SIMILAR] Search ${i + 1}/${searchKeywords.length}: "${searchQuery}"`
 				);
 
-				const searchResults = await searchYouTubeWithKeywords([searchQuery]);
+				SentryLogger.addBreadcrumb({
+					category: 'search',
+					message: `YouTube keyword search: "${searchQuery}"`,
+					level: 'info',
+					data: { jobId, searchQuery, searchIndex: i },
+				});
+
+				const searchResults = await apiTracker.trackExternalCall(
+					'scrapecreators',
+					'youtube_search',
+					async () => searchYouTubeWithKeywords([searchQuery])
+				);
 				searchesMade++;
 
 				if (searchResults.videos && searchResults.videos.length > 0) {
@@ -286,6 +328,13 @@ export async function processYouTubeSimilarJob(
 			`📊 [YOUTUBE-SIMILAR] Enhancing ${maxEnhancedProfiles} of ${topChannels.length} channels with bio/email data`
 		);
 
+		SentryLogger.addBreadcrumb({
+			category: 'search',
+			message: `Starting profile enrichment for ${topChannels.length} YouTube channels`,
+			level: 'info',
+			data: { jobId, channelCount: topChannels.length, maxEnhancements: maxEnhancedProfiles },
+		});
+
 		const enhancedChannels: EnhancedChannel[] = [];
 
 		for (let i = 0; i < topChannels.length; i++) {
@@ -298,7 +347,11 @@ export async function processYouTubeSimilarJob(
 					structuredConsole.log(
 						`🔍 [YOUTUBE-ENHANCED] Fetching profile ${i + 1}/${maxEnhancedProfiles}: ${channel.handle}`
 					);
-					enhancedData = await getYouTubeChannelProfile(channel.handle);
+					enhancedData = await apiTracker.trackExternalCall(
+						'scrapecreators',
+						'youtube_profile_enhancement',
+						async () => getYouTubeChannelProfile(channel.handle)
+					);
 
 					structuredConsole.log(`✅ [YOUTUBE-ENHANCED] Enhanced data for ${channel.handle}:`, {
 						email: enhancedData.email || 'None',
@@ -311,6 +364,13 @@ export async function processYouTubeSimilarJob(
 						`❌ [YOUTUBE-ENHANCED] Failed to enhance ${channel.handle}:`,
 						resolvedError.message
 					);
+					searchTracker.trackFailure(resolvedError, {
+						platform: 'youtube',
+						searchType: 'similar',
+						stage: 'parse',
+						userId: 'unknown',
+						jobId,
+					});
 				}
 
 				// Small delay between enhanced fetches
@@ -459,6 +519,27 @@ export async function processYouTubeSimilarJob(
 			.where(eq(scrapingJobs.id, jobId));
 		structuredConsole.log('✅ [YOUTUBE-SIMILAR] Job completed successfully (100%)');
 
+		// Track search results in Sentry
+		searchTracker.trackResults({
+			platform: 'youtube',
+			searchType: 'similar',
+			resultsCount: enhancedChannels.length,
+			duration: Date.now() - handlerStartTime,
+			jobId,
+		});
+
+		SentryLogger.addBreadcrumb({
+			category: 'search',
+			message: `YouTube similar handler completed: ${enhancedChannels.length} creators found`,
+			level: 'info',
+			data: {
+				jobId,
+				platform: 'youtube',
+				resultsCount: enhancedChannels.length,
+				searchesMade,
+			},
+		});
+
 		return {
 			status: 'completed',
 			data: resultData,
@@ -466,6 +547,15 @@ export async function processYouTubeSimilarJob(
 	} catch (error) {
 		const resolvedError = toError(error);
 		structuredConsole.error('❌ [YOUTUBE-SIMILAR] Error during processing:', resolvedError);
+
+		// Track error in Sentry
+		searchTracker.trackFailure(resolvedError, {
+			platform: 'youtube',
+			searchType: 'similar',
+			stage: 'fetch',
+			userId: 'unknown',
+			jobId,
+		});
 
 		// Update job with error status
 		await db

@@ -20,22 +20,21 @@
  * ```
  */
 
-// Re-export feature trackers
-export {
-  apiTracker,
-  billingTracker,
-  campaignTracker,
-  listTracker,
-  onboardingTracker,
-  searchTracker,
-  sessionTracker,
-} from './feature-tracking';
-
 // Re-export Sentry logger utilities
 export {
-  sentry,
-  SentryLogger,
-  setUserFromClerk,
-  trackApiCall,
-  trackFeatureUsage,
+	SentryLogger,
+	sentry,
+	setUserFromClerk,
+	trackApiCall,
+	trackFeatureUsage,
 } from '@/lib/logging/sentry-logger';
+// Re-export feature trackers
+export {
+	apiTracker,
+	billingTracker,
+	campaignTracker,
+	listTracker,
+	onboardingTracker,
+	searchTracker,
+	sessionTracker,
+} from './feature-tracking';

@@ -11,6 +11,7 @@ import { and, eq, gte, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { getUserProfile, type UserProfileComplete } from '@/lib/db/queries/user-queries';
 import { scrapingJobs } from '@/lib/db/schema';
+import { SentryLogger } from '@/lib/sentry';
 import { getPlanConfig, isValidPlan, type PlanKey } from './plan-config';
 import type { AccessResult } from './subscription-types';
 import { deriveTrialStatus } from './trial-status';
@@ -61,12 +62,29 @@ async function validateAccessInternal(userId: string): Promise<AccessResultWithU
 	const onboardingComplete = user.onboardingStep === 'completed';
 
 	if (!(hasActiveSubscription || hasActiveTrial)) {
+		const reason =
+			effectiveTrialStatus === 'expired'
+				? 'Your trial has expired. Please upgrade to continue.'
+				: 'Please subscribe to access this feature.';
+
+		// Track access denial in Sentry
+		SentryLogger.captureMessage(
+			effectiveTrialStatus === 'expired'
+				? 'Trial expired - access denied'
+				: 'No subscription - access denied',
+			'warning',
+			{
+				tags: {
+					feature: 'access_validation',
+					reason: effectiveTrialStatus === 'expired' ? 'trial_expired' : 'no_subscription',
+				},
+				extra: { userId, effectiveTrialStatus, subscriptionStatus: user.subscriptionStatus },
+			}
+		);
+
 		return {
 			allowed: false,
-			reason:
-				effectiveTrialStatus === 'expired'
-					? 'Your trial has expired. Please upgrade to continue.'
-					: 'Please subscribe to access this feature.',
+			reason,
 			upgradeRequired: true,
 		};
 	}
@@ -127,6 +145,12 @@ export async function validateCampaignCreation(userId: string): Promise<AccessRe
 	}
 
 	if (used >= limit) {
+		// Track campaign limit reached in Sentry
+		SentryLogger.captureMessage('Campaign limit reached', 'warning', {
+			tags: { feature: 'access_validation', reason: 'campaign_limit' },
+			extra: { userId, currentPlan, limit, used },
+		});
+
 		return {
 			allowed: false,
 			reason: `You've reached your campaign limit (${limit}). Please upgrade.`,
@@ -176,6 +200,12 @@ export async function validateCreatorSearch(
 
 	const projectedUsage = used + estimatedResults;
 	if (projectedUsage > limit) {
+		// Track creator limit exceeded in Sentry
+		SentryLogger.captureMessage('Creator limit exceeded', 'warning', {
+			tags: { feature: 'access_validation', reason: 'creator_limit' },
+			extra: { userId, currentPlan, limit, used, estimatedResults, projectedUsage },
+		});
+
 		return {
 			allowed: false,
 			reason: `This search would exceed your monthly creator limit (${limit}). You have ${Math.max(0, limit - used)} remaining.`,
@@ -240,6 +270,12 @@ export async function validateTrialSearchLimit(userId: string): Promise<TrialVal
 	const trialJobCount = await countUserJobsSince(userId, trialStartDate);
 
 	if (trialJobCount >= TRIAL_SEARCH_LIMIT) {
+		// Track trial search limit reached in Sentry
+		SentryLogger.captureMessage('Trial search limit reached', 'warning', {
+			tags: { feature: 'access_validation', reason: 'trial_search_limit' },
+			extra: { userId, trialJobCount, trialSearchLimit: TRIAL_SEARCH_LIMIT },
+		});
+
 		return {
 			allowed: false,
 			reason: `You've used all ${TRIAL_SEARCH_LIMIT} trial searches. Upgrade to continue searching.`,
@@ -268,7 +304,9 @@ export async function getTrialSearchStatus(userId: string): Promise<{
 	currentPlan: string | null;
 } | null> {
 	const user = await getUserProfile(userId);
-	if (!user) return null;
+	if (!user) {
+		return null;
+	}
 
 	const effectiveTrialStatus = deriveTrialStatus(
 		user.subscriptionStatus,

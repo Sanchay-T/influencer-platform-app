@@ -5,7 +5,9 @@
  * Sends events to GA4, Meta Pixel, and LogSnag simultaneously.
  *
  * @why Consolidates tracking to ensure consistent event firing across all platforms.
- * Previously, some events only went to LogSnag while others only went to GA4/Meta.
+ * Every event includes email, name, and userId for consistent user identification.
+ *
+ * NOTE: Server-only utilities (getUserDataForTracking) are in track-server-utils.ts
  */
 
 import type {
@@ -29,13 +31,16 @@ import { trackGA4Event, trackGA4ServerEvent, trackGA4SignUp } from './google-ana
 import {
 	trackCampaignCreated,
 	trackCreatorSaved,
+	trackCsvExported,
 	trackListCreated,
+	trackOnboardingStep,
 	trackPaidCustomer,
 	trackSearchRan,
 	trackSearchStarted,
 	trackSubscriptionCanceled,
 	trackTrialConverted,
 	trackTrialStarted,
+	trackUserSignedIn,
 	trackUserSignup,
 } from './logsnag';
 import {
@@ -127,6 +132,38 @@ export async function trackServer<E extends AnalyticsEvent>(
 			break;
 		}
 
+		case 'user_signed_in': {
+			const props = properties as UserSignedInProps;
+			await Promise.all([
+				trackGA4ServerEvent('login', { method: 'clerk' }, props.userId),
+				trackUserSignedIn({
+					email: props.email || '',
+					name: props.name || '',
+					userId: props.userId,
+				}),
+			]);
+			break;
+		}
+
+		case 'onboarding_step_completed': {
+			const props = properties as OnboardingStepProps;
+			await Promise.all([
+				trackGA4ServerEvent(
+					`onboarding_step_${props.step}`,
+					{ step_name: props.stepName },
+					props.userId || ''
+				),
+				trackOnboardingStep({
+					email: props.email || '',
+					name: props.name || '',
+					userId: props.userId || '',
+					step: props.step,
+					stepName: props.stepName,
+				}),
+			]);
+			break;
+		}
+
 		case 'trial_started': {
 			const props = properties as TrialStartedProps;
 			await Promise.all([
@@ -135,7 +172,12 @@ export async function trackServer<E extends AnalyticsEvent>(
 					{ plan_name: props.plan, value: props.value, currency: 'USD' },
 					props.userId
 				),
-				trackTrialStarted({ email: props.email, plan: props.plan }),
+				trackTrialStarted({
+					email: props.email,
+					name: props.name,
+					userId: props.userId,
+					plan: props.plan,
+				}),
 			]);
 			break;
 		}
@@ -153,7 +195,13 @@ export async function trackServer<E extends AnalyticsEvent>(
 					},
 					props.userId
 				),
-				trackTrialConverted({ email: props.email, plan: props.plan, value: props.value }),
+				trackTrialConverted({
+					email: props.email,
+					name: props.name,
+					userId: props.userId,
+					plan: props.plan,
+					value: props.value,
+				}),
 			]);
 			break;
 		}
@@ -171,7 +219,13 @@ export async function trackServer<E extends AnalyticsEvent>(
 					},
 					props.userId
 				),
-				trackPaidCustomer({ email: props.email, plan: props.plan, value: props.value }),
+				trackPaidCustomer({
+					email: props.email,
+					name: props.name,
+					userId: props.userId,
+					plan: props.plan,
+					value: props.value,
+				}),
 			]);
 			break;
 		}
@@ -180,7 +234,12 @@ export async function trackServer<E extends AnalyticsEvent>(
 			const props = properties as SubscriptionCanceledProps;
 			await Promise.all([
 				trackGA4ServerEvent('subscription_canceled', { plan_name: props.plan }, props.userId),
-				trackSubscriptionCanceled({ email: props.email, plan: props.plan }),
+				trackSubscriptionCanceled({
+					email: props.email,
+					name: props.name,
+					userId: props.userId,
+					plan: props.plan,
+				}),
 			]);
 			break;
 		}
@@ -188,8 +247,17 @@ export async function trackServer<E extends AnalyticsEvent>(
 		case 'campaign_created': {
 			const props = properties as CampaignCreatedProps;
 			await Promise.all([
-				trackGA4ServerEvent('campaign_created', { campaign_name: props.name }, props.userId),
-				trackCampaignCreated({ userId: props.userId, name: props.name, email: props.email }),
+				trackGA4ServerEvent(
+					'campaign_created',
+					{ campaign_name: props.campaignName },
+					props.userId
+				),
+				trackCampaignCreated({
+					userId: props.userId,
+					campaignName: props.campaignName,
+					email: props.email,
+					userName: props.userName,
+				}),
 			]);
 			break;
 		}
@@ -212,6 +280,7 @@ export async function trackServer<E extends AnalyticsEvent>(
 					type: props.type,
 					targetCount: props.targetCount,
 					email: props.email,
+					name: props.name,
 				}),
 			]);
 			break;
@@ -235,6 +304,7 @@ export async function trackServer<E extends AnalyticsEvent>(
 					type: props.type,
 					creatorCount: props.creatorCount,
 					email: props.email,
+					name: props.name,
 				}),
 			]);
 			break;
@@ -245,14 +315,15 @@ export async function trackServer<E extends AnalyticsEvent>(
 			await Promise.all([
 				trackGA4ServerEvent(
 					'list_created',
-					{ list_name: props.name, list_type: props.type },
+					{ list_name: props.listName, list_type: props.type },
 					props.userId
 				),
 				trackListCreated({
 					userId: props.userId,
-					name: props.name,
+					listName: props.listName,
 					type: props.type,
 					email: props.email,
+					userName: props.userName,
 				}),
 			]);
 			break;
@@ -271,6 +342,7 @@ export async function trackServer<E extends AnalyticsEvent>(
 					listName: props.listName,
 					count: props.count,
 					email: props.email,
+					userName: props.userName,
 				}),
 			]);
 			break;
@@ -278,16 +350,24 @@ export async function trackServer<E extends AnalyticsEvent>(
 
 		case 'csv_exported': {
 			const props = properties as CsvExportedProps;
-			await trackGA4ServerEvent(
-				'export',
-				{
-					export_type: 'csv',
-					creator_count: props.creatorCount,
+			await Promise.all([
+				trackGA4ServerEvent(
+					'export',
+					{
+						export_type: 'csv',
+						creator_count: props.creatorCount,
+						source: props.source,
+					},
+					props.userId
+				),
+				trackCsvExported({
+					userId: props.userId,
+					email: props.email,
+					name: props.name,
+					creatorCount: props.creatorCount,
 					source: props.source,
-				},
-				props.userId
-			);
-			// LogSnag doesn't have this event yet, but we can add it
+				}),
+			]);
 			break;
 		}
 

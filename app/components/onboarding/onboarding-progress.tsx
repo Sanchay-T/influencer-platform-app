@@ -5,7 +5,7 @@ import { Fragment } from 'react';
 /**
  * Progress indicator for onboarding steps.
  * Shows step numbers with checkmarks for completed steps.
- * 
+ *
  * Steps:
  * 1. Tell us about yourself (info)
  * 2. Tell us about your brand (intent)
@@ -17,11 +17,7 @@ interface OnboardingProgressProps {
 	totalSteps?: number;
 }
 
-const stepLabels = [
-	'Tell us about yourself',
-	'Tell us about your brand',
-	'Choose your plan',
-];
+const stepLabels = ['Tell us about yourself', 'Tell us about your brand', 'Choose your plan'];
 
 export default function OnboardingProgress({
 	currentStep,

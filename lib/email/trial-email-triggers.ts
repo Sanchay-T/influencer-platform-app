@@ -1,4 +1,6 @@
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { SentryLogger } from '@/lib/logging/sentry-logger';
+import { billingTracker } from '@/lib/sentry/feature-tracking';
 import {
 	getUserEmailFromClerk,
 	scheduleEmail,
@@ -15,6 +17,21 @@ export async function scheduleTrialEmails(
 ) {
 	const startTime = Date.now();
 	const requestId = `trial_emails_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
+	// Set Sentry context for trial email scheduling
+	SentryLogger.setContext('trial_emails', {
+		userId,
+		requestId,
+		userInfo,
+	});
+
+	// Add breadcrumb for trial email scheduling
+	SentryLogger.addBreadcrumb({
+		category: 'email',
+		message: 'Scheduling trial email sequence',
+		level: 'info',
+		data: { userId, requestId },
+	});
 
 	structuredConsole.log('📧📧📧 [TRIAL-EMAILS] ===============================');
 	structuredConsole.log('📧📧📧 [TRIAL-EMAILS] SCHEDULING TRIAL EMAIL SEQUENCE');
@@ -148,9 +165,28 @@ export async function scheduleTrialEmails(
 		});
 		structuredConsole.log('📧 [TRIAL-EMAILS] Detailed results:', results);
 
+		// Track trial email sequence started in Sentry
+		SentryLogger.addBreadcrumb({
+			category: 'email',
+			message: 'Trial email sequence scheduled successfully',
+			level: 'info',
+			data: {
+				userId,
+				emailsScheduled: results.filter((r) => r.success).length,
+				requestId,
+			},
+		});
+
 		return { success: true, results };
 	} catch (error) {
 		structuredConsole.error('❌ [TRIAL-EMAILS] Error scheduling trial emails:', error);
+
+		// Capture error in Sentry
+		SentryLogger.captureException(error, {
+			tags: { feature: 'email', operation: 'schedule_trial_emails' },
+			extra: { userId, requestId },
+		});
+
 		return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
 	}
 }

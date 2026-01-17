@@ -204,15 +204,15 @@ export default function RootLayout({ children }: RootLayoutProps) {
 					</Script>
 				</head>
 				<body className={`${inter.variable} font-sans bg-background text-foreground antialiased`}>
-					{/* Meta Pixel noscript fallback - Only in production */}
-					{process.env.NODE_ENV === 'production' && (
+					{/* Meta Pixel noscript fallback - Only if pixel ID is configured */}
+					{process.env.NEXT_PUBLIC_META_PIXEL_ID && (
 						<noscript>
 							{/* biome-ignore lint/performance/noImgElement: Required for Meta Pixel noscript tracking */}
 							<img
 								height="1"
 								width="1"
 								style={{ display: 'none' }}
-								src="https://www.facebook.com/tr?id=852153531055002&ev=PageView&noscript=1"
+								src={`https://www.facebook.com/tr?id=${process.env.NEXT_PUBLIC_META_PIXEL_ID}&ev=PageView&noscript=1`}
 								alt=""
 							/>
 						</noscript>

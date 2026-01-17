@@ -9,10 +9,13 @@
  */
 
 import { eq } from 'drizzle-orm';
+import { trackServer } from '@/lib/analytics/track';
+import { getUserDataForTracking } from '@/lib/analytics/track-server-utils';
 import { validateCreatorSearch, validateTrialSearchLimit } from '@/lib/billing';
 import { db } from '@/lib/db';
 import { campaigns, scrapingJobs } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
+import { SentryLogger } from '@/lib/logging/sentry-logger';
 import { getDeadLetterQueueUrl, qstash } from '@/lib/queue/qstash';
 import { PLATFORM_TIMEOUTS } from '../core/config';
 import { createV2Job, loadJobTracker } from '../core/job-tracker';
@@ -171,19 +174,21 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 	const { userId, request } = options;
 	const { platform, keywords, targetResults, campaignId, enableExpansion = true } = request;
 
-	const startTime = Date.now();
-
-	// 🔍 DEBUG: Log environment check
-	console.log('[GEMZ-DEBUG] 🚀 dispatch() called', {
+	// Set Sentry context for this dispatch
+	SentryLogger.setContext('search_dispatch', {
 		userId,
 		platform,
 		keywordCount: keywords.length,
 		targetResults,
 		campaignId,
-		QSTASH_TOKEN_SET: !!process.env.QSTASH_TOKEN,
-		NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
-		V2_WORKER_URL: process.env.V2_WORKER_URL,
-		NODE_ENV: process.env.NODE_ENV,
+	});
+
+	// Add breadcrumb for dispatch start
+	SentryLogger.addBreadcrumb({
+		category: 'search',
+		message: `Starting search dispatch for ${keywords.length} keywords`,
+		level: 'info',
+		data: { platform, targetResults, campaignId },
 	});
 
 	// If QStash is not configured, we can't fan-out workers (search + enrichment).
@@ -203,204 +208,269 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 		};
 	}
 
-	logger.info(
-		`${LOG_PREFIX} Starting dispatch`,
+	// Wrap entire dispatch in a Sentry span for automatic duration tracking
+	return SentryLogger.startSpanAsync(
 		{
-			userId,
-			platform,
-			keywordCount: keywords.length,
-			targetResults,
-			campaignId,
-			enableExpansion,
-		},
-		LogCategory.JOB
-	);
-
-	// ============================================================================
-	// Step 1: Validate Campaign Ownership
-	// ============================================================================
-
-	const step1Start = Date.now();
-	const campaign = await db.query.campaigns.findFirst({
-		where: eq(campaigns.id, campaignId),
-	});
-	const step1Ms = Date.now() - step1Start;
-
-	if (!campaign) {
-		return {
-			success: false,
-			error: 'Campaign not found',
-			statusCode: 404,
-		};
-	}
-
-	if (campaign.userId !== userId) {
-		return {
-			success: false,
-			error: 'Campaign does not belong to this user',
-			statusCode: 403,
-		};
-	}
-
-	// ============================================================================
-	// Step 2: Validate Billing / Plan Limits
-	// ============================================================================
-
-	const step2Start = Date.now();
-	const validation = await validateCreatorSearch(userId, targetResults);
-	const step2Ms = Date.now() - step2Start;
-
-	if (!validation.allowed) {
-		logger.warn(
-			`${LOG_PREFIX} Search blocked by plan limits`,
-			{
+			name: 'search.dispatch',
+			op: 'function',
+			attributes: {
 				userId,
+				platform,
+				keywordCount: keywords.length,
 				targetResults,
-				reason: validation.reason,
+				campaignId,
 			},
-			LogCategory.BILLING
-		);
-
-		return {
-			success: false,
-			error: validation.reason || 'Search limit exceeded',
-			statusCode: 403,
-		};
-	}
-
-	// ============================================================================
-	// Step 2.5: Validate Trial Search Limit
-	// ============================================================================
-
-	const trialValidation = await validateTrialSearchLimit(userId);
-	if (!trialValidation.allowed) {
-		logger.warn(
-			`${LOG_PREFIX} Search blocked by trial limit`,
-			{
-				userId,
-				reason: trialValidation.reason,
-				trialSearchesUsed: trialValidation.trialSearchesUsed,
-			},
-			LogCategory.BILLING
-		);
-
-		return {
-			success: false,
-			error: trialValidation.reason || 'Trial search limit exceeded',
-			statusCode: 403,
-		};
-	}
-
-	// ============================================================================
-	// Step 3: Create Job in Database (fast path)
-	// ============================================================================
-
-	const step3Start = Date.now();
-	const jobId = await createV2Job({
-		userId,
-		campaignId,
-		platform,
-		keywords,
-		targetResults,
-	});
-	const step3Ms = Date.now() - step3Start;
-
-	// ============================================================================
-	// Step 4: Queue Dispatch Worker (fan-out happens async)
-	// ============================================================================
-
-	const baseUrl = getWorkerBaseUrl();
-	const dispatchWorkerUrl = `${baseUrl}/api/v2/worker/dispatch`;
-
-	// 🔍 DEBUG: Log worker URL
-	console.log('[GEMZ-DEBUG] 📡 QStash publish target', {
-		jobId,
-		baseUrl,
-		dispatchWorkerUrl,
-		getWorkerBaseUrl_result: getWorkerBaseUrl(),
-	});
-
-	const step4Start = Date.now();
-	try {
-		const message: DispatchWorkerMessage = {
-			jobId,
-			platform,
-			keywords,
-			targetResults,
-			userId,
-			enableExpansion,
-		};
-
-		console.log('[GEMZ-DEBUG] 📤 About to publish to QStash', {
-			url: dispatchWorkerUrl,
-			messageKeys: Object.keys(message),
-			jobId,
-		});
-
-		const qstashResult = await qstash.publishJSON({
-			url: dispatchWorkerUrl,
-			body: message,
-			retries: 3,
-			timeout: 60,
-			failureCallback: getDeadLetterQueueUrl(),
-		});
-
-		console.log('[GEMZ-DEBUG] ✅ QStash publish SUCCESS', {
-			jobId,
-			qstashMessageId: qstashResult?.messageId,
-		});
-	} catch (qstashError) {
-		console.error('[GEMZ-DEBUG] ❌ QStash publish FAILED', {
-			jobId,
-			error: qstashError instanceof Error ? qstashError.message : String(qstashError),
-			stack: qstashError instanceof Error ? qstashError.stack : undefined,
-		});
-
-		const tracker = loadJobTracker(jobId);
-		await tracker.markError('Failed to queue dispatch worker');
-		return {
-			success: false,
-			error: 'Failed to queue dispatch worker',
-			statusCode: 500,
-		};
-	}
-	const step4Ms = Date.now() - step4Start;
-
-	const durationMs = Date.now() - startTime;
-
-	// Detailed timing breakdown for diagnostics
-	console.log(`[GEMZ-DISPATCH] ⏱️ Timing breakdown`, {
-		step1_campaignQuery: step1Ms + 'ms',
-		step2_billingValidation: step2Ms + 'ms',
-		step3_createJob: step3Ms + 'ms',
-		step4_qstashPublish: step4Ms + 'ms',
-		total: durationMs + 'ms',
-		jobId,
-	});
-
-	logger.info(
-		`${LOG_PREFIX} Dispatch queued`,
-		{
-			jobId,
-			durationMs,
-			step1Ms,
-			step2Ms,
-			step3Ms,
-			step4Ms,
 		},
-		LogCategory.JOB
+		async () => {
+			const startTime = Date.now();
+
+			logger.info(
+				`${LOG_PREFIX} Starting dispatch`,
+				{
+					userId,
+					platform,
+					keywordCount: keywords.length,
+					targetResults,
+					campaignId,
+					enableExpansion,
+				},
+				LogCategory.JOB
+			);
+
+			// ============================================================================
+			// Step 1: Validate Campaign Ownership (with Sentry span)
+			// ============================================================================
+
+			const campaign = await SentryLogger.startSpanAsync(
+				{ name: 'dispatch.validate_campaign', op: 'db' },
+				async () => {
+					return db.query.campaigns.findFirst({
+						where: eq(campaigns.id, campaignId),
+					});
+				}
+			);
+
+			if (!campaign) {
+				return {
+					success: false,
+					error: 'Campaign not found',
+					statusCode: 404,
+				};
+			}
+
+			if (campaign.userId !== userId) {
+				return {
+					success: false,
+					error: 'Campaign does not belong to this user',
+					statusCode: 403,
+				};
+			}
+
+			// Add breadcrumb for state transition
+			SentryLogger.addBreadcrumb({
+				category: 'dispatch',
+				message: 'Campaign validation passed',
+				level: 'info',
+				data: { campaignId },
+			});
+
+			// ============================================================================
+			// Step 2: Validate Billing / Plan Limits (with Sentry span)
+			// ============================================================================
+
+			const validation = await SentryLogger.startSpanAsync(
+				{ name: 'dispatch.validate_billing', op: 'function' },
+				async () => validateCreatorSearch(userId, targetResults)
+			);
+
+			if (!validation.allowed) {
+				logger.warn(
+					`${LOG_PREFIX} Search blocked by plan limits`,
+					{
+						userId,
+						targetResults,
+						reason: validation.reason,
+					},
+					LogCategory.BILLING
+				);
+
+				return {
+					success: false,
+					error: validation.reason || 'Search limit exceeded',
+					statusCode: 403,
+				};
+			}
+
+			// ============================================================================
+			// Step 2.5: Validate Trial Search Limit
+			// ============================================================================
+
+			const trialValidation = await validateTrialSearchLimit(userId);
+			if (!trialValidation.allowed) {
+				logger.warn(
+					`${LOG_PREFIX} Search blocked by trial limit`,
+					{
+						userId,
+						reason: trialValidation.reason,
+						trialSearchesUsed: trialValidation.trialSearchesUsed,
+					},
+					LogCategory.BILLING
+				);
+
+				return {
+					success: false,
+					error: trialValidation.reason || 'Trial search limit exceeded',
+					statusCode: 403,
+				};
+			}
+
+			// Add breadcrumb for state transition
+			SentryLogger.addBreadcrumb({
+				category: 'dispatch',
+				message: 'Billing validation passed',
+				level: 'info',
+				data: { userId },
+			});
+
+			// ============================================================================
+			// Step 3: Create Job in Database (with Sentry span)
+			// ============================================================================
+
+			const jobId = await SentryLogger.startSpanAsync(
+				{ name: 'dispatch.create_job', op: 'db' },
+				async () =>
+					createV2Job({
+						userId,
+						campaignId,
+						platform,
+						keywords,
+						targetResults,
+					})
+			);
+
+			// Add breadcrumb for state transition
+			SentryLogger.addBreadcrumb({
+				category: 'dispatch',
+				message: `Job created: ${jobId}`,
+				level: 'info',
+				data: { jobId, platform },
+			});
+
+			// ============================================================================
+			// Step 3.5: Track search_started in LogSnag (fire and forget)
+			// ============================================================================
+
+			const normalizedPlatform = platform.toLowerCase().includes('instagram')
+				? 'instagram'
+				: platform.toLowerCase().includes('youtube')
+					? 'youtube'
+					: 'tiktok';
+
+			// Get user data for tracking (don't block on this)
+			// @why Uses getUserDataForTracking to get fresh data from Clerk if DB has fallback email
+			getUserDataForTracking(userId)
+				.then((userData) => {
+					return trackServer('search_started', {
+						userId,
+						platform: normalizedPlatform as 'tiktok' | 'instagram' | 'youtube',
+						type: 'keyword',
+						targetCount: targetResults,
+						email: userData.email,
+						name: userData.name,
+					});
+				})
+				.catch((err) => {
+					logger.warn(
+						`${LOG_PREFIX} Failed to track search_started`,
+						{ error: String(err) },
+						LogCategory.JOB
+					);
+				});
+
+			// ============================================================================
+			// Step 4: Queue Dispatch Worker (with Sentry span)
+			// ============================================================================
+
+			const baseUrl = getWorkerBaseUrl();
+			const dispatchWorkerUrl = `${baseUrl}/api/v2/worker/dispatch`;
+
+			try {
+				const message: DispatchWorkerMessage = {
+					jobId,
+					platform,
+					keywords,
+					targetResults,
+					userId,
+					enableExpansion,
+				};
+
+				await SentryLogger.startSpanAsync(
+					{ name: 'dispatch.queue_worker', op: 'queue' },
+					async () =>
+						qstash.publishJSON({
+							url: dispatchWorkerUrl,
+							body: message,
+							retries: 3,
+							timeout: 60,
+							failureCallback: getDeadLetterQueueUrl(),
+						})
+				);
+
+				// Add breadcrumb for state transition
+				SentryLogger.addBreadcrumb({
+					category: 'dispatch',
+					message: 'Dispatch worker queued',
+					level: 'info',
+					data: { jobId },
+				});
+			} catch (qstashError) {
+				// Capture QStash error in Sentry
+				SentryLogger.captureException(qstashError, {
+					tags: {
+						feature: 'search',
+						service: 'qstash',
+						stage: 'dispatch',
+					},
+					extra: {
+						jobId,
+						platform,
+						keywordCount: keywords.length,
+						targetResults,
+					},
+				});
+
+				const tracker = loadJobTracker(jobId);
+				await tracker.markError('Failed to queue dispatch worker');
+				return {
+					success: false,
+					error: 'Failed to queue dispatch worker',
+					statusCode: 500,
+				};
+			}
+
+			const durationMs = Date.now() - startTime;
+
+			logger.info(
+				`${LOG_PREFIX} Dispatch queued`,
+				{
+					jobId,
+					durationMs,
+				},
+				LogCategory.JOB
+			);
+
+			return {
+				success: true,
+				data: {
+					jobId,
+					keywords,
+					workersDispatched: 0,
+					message: 'Queued dispatch worker',
+				},
+				statusCode: 200,
+			};
+		}
 	);
-
-	return {
-		success: true,
-		data: {
-			jobId,
-			keywords,
-			workersDispatched: 0,
-			message: 'Queued dispatch worker',
-		},
-		statusCode: 200,
-	};
 }
 
 /**
@@ -410,82 +480,151 @@ export async function processDispatchWorker(
 	message: DispatchWorkerMessage
 ): Promise<DispatchWorkerResult> {
 	const { jobId, platform, keywords, targetResults, userId, enableExpansion = true } = message;
-	const startTime = Date.now();
+
+	// Set Sentry context for dispatch worker
+	SentryLogger.setContext('dispatch_worker', {
+		jobId,
+		platform,
+		keywordCount: keywords.length,
+		targetResults,
+		userId,
+		enableExpansion,
+	});
+
+	// Add breadcrumb for dispatch worker start
+	SentryLogger.addBreadcrumb({
+		category: 'search',
+		message: `Dispatch worker starting for job ${jobId}`,
+		level: 'info',
+		data: { platform, keywordCount: keywords.length },
+	});
 
 	if (!process.env.QSTASH_TOKEN) {
+		SentryLogger.captureMessage('QSTASH_TOKEN missing in dispatch worker', 'error', {
+			tags: { feature: 'search', service: 'qstash' },
+			extra: { jobId },
+		});
 		return { success: false, error: 'QSTASH_TOKEN is missing in production environment' };
 	}
 
-	const job = await db.query.scrapingJobs.findFirst({
-		where: eq(scrapingJobs.id, jobId),
-		columns: {
-			id: true,
-			userId: true,
+	// Wrap entire dispatch worker in a Sentry span for automatic duration tracking
+	return SentryLogger.startSpanAsync(
+		{
+			name: 'dispatch.worker',
+			op: 'worker',
+			attributes: {
+				jobId,
+				platform,
+				keywordCount: keywords.length,
+				targetResults,
+			},
 		},
-	});
+		async () => {
+			const startTime = Date.now();
 
-	if (!job) {
-		return { success: false, error: 'Job not found' };
-	}
+			const job = await db.query.scrapingJobs.findFirst({
+				where: eq(scrapingJobs.id, jobId),
+				columns: {
+					id: true,
+					userId: true,
+				},
+			});
 
-	if (job.userId !== userId) {
-		return { success: false, error: 'Job does not belong to this user' };
-	}
+			if (!job) {
+				return { success: false, error: 'Job not found' };
+			}
 
-	let finalKeywords = keywords;
+			if (job.userId !== userId) {
+				return { success: false, error: 'Job does not belong to this user' };
+			}
 
-	if (enableExpansion) {
-		try {
-			const { keywords: expandedKeywords } = await expandKeywordsForTarget(keywords, targetResults);
-			finalKeywords = expandedKeywords;
+			let finalKeywords = keywords;
 
+			if (enableExpansion) {
+				try {
+					const { keywords: expandedKeywords } = await SentryLogger.startSpanAsync(
+						{ name: 'dispatch.expand_keywords', op: 'function' },
+						async () => expandKeywordsForTarget(keywords, targetResults)
+					);
+					finalKeywords = expandedKeywords;
+
+					// Add breadcrumb for state transition
+					SentryLogger.addBreadcrumb({
+						category: 'dispatch',
+						message: `Keywords expanded: ${keywords.length} → ${finalKeywords.length}`,
+						level: 'info',
+						data: { jobId, original: keywords.length, expanded: finalKeywords.length },
+					});
+
+					logger.info(
+						`${LOG_PREFIX} Keywords expanded`,
+						{
+							original: keywords.length,
+							expanded: finalKeywords.length,
+						},
+						LogCategory.JOB
+					);
+				} catch (error) {
+					logger.warn(
+						`${LOG_PREFIX} Keyword expansion failed, using original keywords`,
+						{ error: error instanceof Error ? error.message : String(error) },
+						LogCategory.JOB
+					);
+				}
+			}
+
+			await updateJobKeywords(jobId, finalKeywords);
+
+			const tracker = loadJobTracker(jobId);
+			await tracker.markDispatching(finalKeywords.length);
+
+			// Add breadcrumb for state transition
+			SentryLogger.addBreadcrumb({
+				category: 'dispatch',
+				message: `Job marked as dispatching with ${finalKeywords.length} keywords`,
+				level: 'info',
+				data: { jobId },
+			});
+
+			const { successCount, failCount } = await SentryLogger.startSpanAsync(
+				{ name: 'dispatch.fanout_workers', op: 'queue' },
+				async () =>
+					fanoutSearchWorkers({
+						jobId,
+						platform,
+						keywords: finalKeywords,
+						userId,
+						targetResults,
+					})
+			);
+
+			await tracker.markSearching();
+
+			// Add breadcrumb for state transition
+			SentryLogger.addBreadcrumb({
+				category: 'dispatch',
+				message: `Job marked as searching, ${successCount} workers dispatched`,
+				level: 'info',
+				data: { jobId, successCount, failCount },
+			});
+
+			const durationMs = Date.now() - startTime;
 			logger.info(
-				`${LOG_PREFIX} Keywords expanded`,
+				`${LOG_PREFIX} Dispatch worker complete`,
 				{
-					original: keywords.length,
-					expanded: finalKeywords.length,
+					jobId,
+					keywordsDispatched: successCount,
+					failedDispatches: failCount,
+					durationMs,
 				},
 				LogCategory.JOB
 			);
-		} catch (error) {
-			logger.warn(
-				`${LOG_PREFIX} Keyword expansion failed, using original keywords`,
-				{ error: error instanceof Error ? error.message : String(error) },
-				LogCategory.JOB
-			);
+
+			return {
+				success: true,
+				keywordsDispatched: successCount,
+				failedDispatches: failCount,
+			};
 		}
-	}
-
-	await updateJobKeywords(jobId, finalKeywords);
-
-	const tracker = loadJobTracker(jobId);
-	await tracker.markDispatching(finalKeywords.length);
-
-	const { successCount, failCount } = await fanoutSearchWorkers({
-		jobId,
-		platform,
-		keywords: finalKeywords,
-		userId,
-		targetResults,
-	});
-
-	await tracker.markSearching();
-
-	const durationMs = Date.now() - startTime;
-	logger.info(
-		`${LOG_PREFIX} Dispatch worker complete`,
-		{
-			jobId,
-			keywordsDispatched: successCount,
-			failedDispatches: failCount,
-			durationMs,
-		},
-		LogCategory.JOB
 	);
-
-	return {
-		success: true,
-		keywordsDispatched: successCount,
-		failedDispatches: failCount,
-	};
 }

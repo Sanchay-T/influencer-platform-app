@@ -41,7 +41,13 @@ const formatDate = (timestamp: number) =>
 		day: 'numeric',
 	});
 
-export function SuccessCard({ loading, sessionData, isSubmitting, webhookConfirmed, onContinue }: Props) {
+export function SuccessCard({
+	loading,
+	sessionData,
+	isSubmitting,
+	webhookConfirmed,
+	onContinue,
+}: Props) {
 	if (loading) {
 		return (
 			<div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -54,11 +60,11 @@ export function SuccessCard({ loading, sessionData, isSubmitting, webhookConfirm
 	}
 
 	const buttonDisabled = isSubmitting || !webhookConfirmed;
-	const buttonText = isSubmitting 
-		? 'Finishing…' 
-		: !webhookConfirmed 
-			? 'Activating your plan…' 
-			: 'Go to dashboard';
+	const buttonText = isSubmitting
+		? 'Finishing…'
+		: webhookConfirmed
+			? 'Go to dashboard'
+			: 'Activating your plan…';
 
 	return (
 		<div className="min-h-screen bg-background flex items-center justify-center p-4">

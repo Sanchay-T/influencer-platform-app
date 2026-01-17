@@ -8,6 +8,8 @@
 import { and, eq, sql } from 'drizzle-orm';
 import { clerkBackendClient } from '@/lib/auth/backend-auth';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
+import { SentryLogger } from '@/lib/logging/sentry-logger';
+import { sessionTracker } from '@/lib/sentry/feature-tracking';
 import { getNumberProperty, getStringProperty, toRecord } from '@/lib/utils/type-guards';
 import { db } from '../index';
 import {
@@ -153,6 +155,17 @@ export async function getUserProfile(userId: string): Promise<UserProfileComplet
 		signupTimestamp: userRecord.signupTimestamp || userRecord.createdAt,
 		emailScheduleStatus: userRecord.emailScheduleStatus || {},
 	};
+
+	// Set Sentry user context for better error tracking
+	// Include trialEndDate to track trial status in error reports
+	sessionTracker.setUser({
+		userId: profile.userId,
+		email: profile.email || undefined,
+		plan: profile.currentPlan || undefined,
+		subscriptionStatus: profile.subscriptionStatus || undefined,
+		trialEndsAt: profile.trialEndDate || undefined,
+	});
+
 	return profile;
 }
 
@@ -325,30 +338,23 @@ export async function ensureUserProfile(userId: string): Promise<UserProfileComp
 
 	info('ensureUserProfile creating normalized profile', { userId });
 
-	let email: string | undefined;
-	let fullName: string | undefined;
+	// Get user data from Clerk - this is required, no fallback
+	const clerk = await clerkBackendClient();
+	const clerkUser = await clerk.users.getUser(userId);
+	const email = clerkUser.emailAddresses?.[0]?.emailAddress;
+	const fullName = `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || undefined;
 
-	try {
-		const clerk = await clerkBackendClient();
-		const clerkUser = await clerk.users.getUser(userId);
-		email = clerkUser.emailAddresses?.[0]?.emailAddress ?? undefined;
-		const clerkFullName = `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim();
-		fullName = clerkFullName || undefined;
-	} catch (clerkError) {
-		warn('Failed to fetch Clerk metadata during ensureUserProfile', {
-			userId,
-			errorMessage: clerkError instanceof Error ? clerkError.message : String(clerkError),
-		});
+	if (!email) {
+		// This should never happen - Clerk users always have email
+		throw new Error(`Clerk user ${userId} has no email address`);
 	}
-
-	const fallbackEmail = `user-${userId}@example.com`;
 
 	try {
 		// Note: currentPlan is intentionally not set here
 		// It will be set by Stripe webhook after user completes payment
 		const createdProfile = await createUser({
 			userId,
-			email: email || fallbackEmail,
+			email,
 			fullName: fullName || 'User',
 			onboardingStep: 'pending',
 			// currentPlan: null - not set until Stripe confirms payment

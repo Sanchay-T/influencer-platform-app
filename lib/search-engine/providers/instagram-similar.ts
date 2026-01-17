@@ -8,6 +8,7 @@ import {
 	transformEnhancedProfile,
 	transformInstagramProfile,
 } from '@/lib/platforms/instagram-similar/transformer';
+import { apiTracker, SentryLogger, searchTracker } from '@/lib/sentry';
 import {
 	getNumberProperty,
 	getRecordProperty,
@@ -122,6 +123,27 @@ export async function runInstagramSimilarProvider(
 	{ job, config }: ProviderContext,
 	service: SearchJobService
 ): Promise<ProviderRunResult> {
+	const providerStartTime = Date.now();
+
+	// Set Sentry context for Instagram similar search
+	SentryLogger.setContext('instagram_similar', {
+		jobId: job.id,
+		platform: 'instagram',
+		targetUsername: job.targetUsername,
+		targetResults: job.targetResults,
+	});
+
+	SentryLogger.addBreadcrumb({
+		category: 'search',
+		message: `Starting Instagram similar search for @${job.targetUsername}`,
+		level: 'info',
+		data: {
+			platform: 'instagram',
+			targetResults: job.targetResults,
+			jobId: job.id,
+		},
+	});
+
 	const searchParams = toRecord(job.searchParams) ?? {};
 	const previousBenchmarkRecord = toRecord(searchParams.searchEngineBenchmark);
 
@@ -338,8 +360,17 @@ export async function runInstagramSimilarProvider(
 		throw new Error(queueError);
 	}
 
+	SentryLogger.addBreadcrumb({
+		category: 'search',
+		message: `Fetching Instagram profile for @${username}`,
+		level: 'info',
+		data: { jobId: job.id, username },
+	});
+
 	const profileStarted = Date.now();
-	const profileResult = await getInstagramProfile(username);
+	const profileResult = await apiTracker.trackExternalCall('apify', 'instagram_profile', async () =>
+		getInstagramProfile(username)
+	);
 	metrics.apiCalls += 1;
 	remainingApiBudget = Math.max(remainingApiBudget - 1, 0);
 
@@ -369,6 +400,13 @@ export async function runInstagramSimilarProvider(
 	let enrichedCount = 0;
 	const maxEnhancements = Math.min(enhancementCap, creators.length);
 
+	SentryLogger.addBreadcrumb({
+		category: 'search',
+		message: `Starting profile enrichment for ${maxEnhancements} Instagram profiles`,
+		level: 'info',
+		data: { jobId: job.id, maxEnhancements, totalCreators: creators.length },
+	});
+
 	for (let index = 0; index < maxEnhancements; index += 1) {
 		if (remainingApiBudget <= 0) {
 			break;
@@ -384,7 +422,11 @@ export async function runInstagramSimilarProvider(
 		}
 
 		const enhancementStarted = Date.now();
-		const enhanced = await getEnhancedInstagramProfile(candidateUsername);
+		const enhanced = await apiTracker.trackExternalCall(
+			'apify',
+			'instagram_enhanced_profile',
+			async () => getEnhancedInstagramProfile(candidateUsername)
+		);
 		metrics.apiCalls += 1;
 		remainingApiBudget = Math.max(remainingApiBudget - 1, 0);
 
@@ -537,6 +579,28 @@ export async function runInstagramSimilarProvider(
 			? finishedAt.getTime() - startedAt.getTime()
 			: undefined;
 	}
+
+	// Track search results in Sentry
+	searchTracker.trackResults({
+		platform: 'instagram',
+		searchType: 'similar',
+		resultsCount: mergedTotal,
+		duration: Date.now() - providerStartTime,
+		jobId: job.id,
+	});
+
+	SentryLogger.addBreadcrumb({
+		category: 'search',
+		message: `Instagram similar search ${hasMore ? 'partial' : 'completed'}: ${mergedTotal} creators found`,
+		level: 'info',
+		data: {
+			jobId: job.id,
+			platform: 'instagram',
+			resultsCount: mergedTotal,
+			hasMore,
+			enrichedProfiles: enrichedCount,
+		},
+	});
 
 	return {
 		status: hasMore ? 'partial' : 'completed',

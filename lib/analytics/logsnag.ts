@@ -3,6 +3,8 @@
  *
  * @context Real-time event notifications for user lifecycle and product usage.
  * Events are sent to LogSnag for monitoring signups, trials, payments, and usage.
+ *
+ * @why Every event includes email, name, and userId for consistent user identification.
  */
 
 import { LogSnag } from 'logsnag';
@@ -53,8 +55,48 @@ export async function trackUserSignup(data: { email: string; name: string }): Pr
 		event: 'User Signed Up',
 		icon: '👤',
 		description: `${data.name} (${data.email})`,
-		tags: { email: data.email },
+		tags: { email: data.email, name: data.name },
 		notify: true,
+	});
+}
+
+export async function trackUserSignedIn(data: {
+	email: string;
+	name: string;
+	userId: string;
+}): Promise<void> {
+	await track({
+		channel: 'users',
+		event: 'User Signed In',
+		icon: '🔑',
+		description: `${data.name} (${data.email})`,
+		tags: { email: data.email, name: data.name, userId: data.userId },
+	});
+}
+
+// ============================================================================
+// Onboarding Events
+// ============================================================================
+
+export async function trackOnboardingStep(data: {
+	email: string;
+	name: string;
+	userId: string;
+	step: number;
+	stepName: string;
+}): Promise<void> {
+	await track({
+		channel: 'onboarding',
+		event: `Onboarding Step ${data.step}`,
+		icon: data.step === 3 ? '💳' : '📝',
+		description: `${data.name} (${data.email}) completed ${data.stepName}`,
+		tags: {
+			email: data.email,
+			name: data.name,
+			userId: data.userId,
+			step: data.step,
+			stepName: data.stepName,
+		},
 	});
 }
 
@@ -62,19 +104,26 @@ export async function trackUserSignup(data: { email: string; name: string }): Pr
 // Billing Events
 // ============================================================================
 
-export async function trackTrialStarted(data: { email: string; plan: string }): Promise<void> {
+export async function trackTrialStarted(data: {
+	email: string;
+	name: string;
+	userId: string;
+	plan: string;
+}): Promise<void> {
 	await track({
 		channel: 'billing',
 		event: 'Trial Started',
 		icon: '🎁',
-		description: `${data.email} started ${data.plan} trial`,
-		tags: { email: data.email, plan: data.plan },
+		description: `${data.name} (${data.email}) started ${data.plan} trial`,
+		tags: { email: data.email, name: data.name, userId: data.userId, plan: data.plan },
 		notify: true,
 	});
 }
 
 export async function trackPaidCustomer(data: {
 	email: string;
+	name: string;
+	userId: string;
 	plan: string;
 	value: number;
 }): Promise<void> {
@@ -82,14 +131,22 @@ export async function trackPaidCustomer(data: {
 		channel: 'billing',
 		event: 'New Paid Customer',
 		icon: '💰',
-		description: `${data.email} subscribed to ${data.plan} ($${data.value}/mo)`,
-		tags: { email: data.email, plan: data.plan, value: data.value },
+		description: `${data.name} (${data.email}) subscribed to ${data.plan} ($${data.value}/mo)`,
+		tags: {
+			email: data.email,
+			name: data.name,
+			userId: data.userId,
+			plan: data.plan,
+			value: data.value,
+		},
 		notify: true,
 	});
 }
 
 export async function trackTrialConverted(data: {
 	email: string;
+	name: string;
+	userId: string;
 	plan: string;
 	value: number;
 }): Promise<void> {
@@ -97,22 +154,30 @@ export async function trackTrialConverted(data: {
 		channel: 'billing',
 		event: 'Trial Converted',
 		icon: '🎉',
-		description: `${data.email} converted from trial to ${data.plan} ($${data.value}/mo)`,
-		tags: { email: data.email, plan: data.plan, value: data.value },
+		description: `${data.name} (${data.email}) converted from trial to ${data.plan} ($${data.value}/mo)`,
+		tags: {
+			email: data.email,
+			name: data.name,
+			userId: data.userId,
+			plan: data.plan,
+			value: data.value,
+		},
 		notify: true,
 	});
 }
 
 export async function trackSubscriptionCanceled(data: {
 	email: string;
+	name: string;
+	userId: string;
 	plan: string;
 }): Promise<void> {
 	await track({
 		channel: 'billing',
 		event: 'Subscription Canceled',
 		icon: '😢',
-		description: `${data.email} canceled ${data.plan}`,
-		tags: { email: data.email, plan: data.plan },
+		description: `${data.name} (${data.email}) canceled ${data.plan}`,
+		tags: { email: data.email, name: data.name, userId: data.userId, plan: data.plan },
 		notify: true,
 	});
 }
@@ -127,33 +192,21 @@ export async function trackSearchStarted(data: {
 	type: string;
 	targetCount: number;
 	email: string;
+	name: string;
 }): Promise<void> {
 	await track({
 		channel: 'searches',
 		event: 'Search Started',
 		icon: '🚀',
-		description: `${data.platform} ${data.type}: targeting ${data.targetCount} creators`,
+		description: `${data.name} (${data.email}): ${data.platform} ${data.type} targeting ${data.targetCount} creators`,
 		tags: {
 			userId: data.userId,
 			platform: data.platform,
 			type: data.type,
 			targetCount: data.targetCount,
 			email: data.email,
+			name: data.name,
 		},
-	});
-}
-
-export async function trackCampaignCreated(data: {
-	userId: string;
-	name: string;
-	email: string;
-}): Promise<void> {
-	await track({
-		channel: 'campaigns',
-		event: 'Campaign Created',
-		icon: '📋',
-		description: `Campaign: ${data.name}`,
-		tags: { userId: data.userId, email: data.email },
 	});
 }
 
@@ -163,34 +216,52 @@ export async function trackSearchRan(data: {
 	type: string;
 	creatorCount: number;
 	email: string;
+	name: string;
 }): Promise<void> {
 	await track({
 		channel: 'searches',
 		event: 'Search Completed',
 		icon: '🔍',
-		description: `${data.platform} ${data.type}: ${data.creatorCount} creators found`,
+		description: `${data.name} (${data.email}): ${data.platform} ${data.type} found ${data.creatorCount} creators`,
 		tags: {
 			userId: data.userId,
 			platform: data.platform,
 			type: data.type,
 			creators: data.creatorCount,
 			email: data.email,
+			name: data.name,
 		},
+	});
+}
+
+export async function trackCampaignCreated(data: {
+	userId: string;
+	campaignName: string;
+	email: string;
+	userName: string;
+}): Promise<void> {
+	await track({
+		channel: 'campaigns',
+		event: 'Campaign Created',
+		icon: '📋',
+		description: `${data.userName} (${data.email}): Campaign "${data.campaignName}"`,
+		tags: { userId: data.userId, email: data.email, name: data.userName },
 	});
 }
 
 export async function trackListCreated(data: {
 	userId: string;
-	name: string;
+	listName: string;
 	type: string;
 	email: string;
+	userName: string;
 }): Promise<void> {
 	await track({
 		channel: 'lists',
 		event: 'List Created',
 		icon: '📝',
-		description: `List: ${data.name} (${data.type})`,
-		tags: { userId: data.userId, type: data.type, email: data.email },
+		description: `${data.userName} (${data.email}): List "${data.listName}" (${data.type})`,
+		tags: { userId: data.userId, type: data.type, email: data.email, name: data.userName },
 	});
 }
 
@@ -199,12 +270,35 @@ export async function trackCreatorSaved(data: {
 	listName: string;
 	count: number;
 	email: string;
+	userName: string;
 }): Promise<void> {
 	await track({
 		channel: 'lists',
 		event: 'Creators Saved',
 		icon: '⭐',
-		description: `${data.count} creator(s) saved to ${data.listName}`,
-		tags: { userId: data.userId, count: data.count, email: data.email },
+		description: `${data.userName} (${data.email}): ${data.count} creator(s) saved to "${data.listName}"`,
+		tags: { userId: data.userId, count: data.count, email: data.email, name: data.userName },
+	});
+}
+
+export async function trackCsvExported(data: {
+	userId: string;
+	email: string;
+	name: string;
+	creatorCount: number;
+	source: 'campaign' | 'list';
+}): Promise<void> {
+	await track({
+		channel: 'exports',
+		event: 'CSV Exported',
+		icon: '📊',
+		description: `${data.name} (${data.email}): Exported ${data.creatorCount} creators from ${data.source}`,
+		tags: {
+			userId: data.userId,
+			email: data.email,
+			name: data.name,
+			creatorCount: data.creatorCount,
+			source: data.source,
+		},
 	});
 }

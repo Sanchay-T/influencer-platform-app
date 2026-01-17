@@ -7,6 +7,7 @@ import {
 	extractSearchKeywords,
 	transformToSimilarChannels,
 } from '@/lib/platforms/youtube-similar/transformer';
+import { apiTracker, SentryLogger, searchTracker } from '@/lib/sentry';
 import { getNumberProperty, getStringProperty, toArray, toRecord } from '@/lib/utils/type-guards';
 import type { SearchJobService } from '../job-service';
 import type {
@@ -87,6 +88,27 @@ export async function runYouTubeSimilarProvider(
 	{ job, config }: ProviderContext,
 	service: SearchJobService
 ): Promise<ProviderRunResult> {
+	const providerStartTime = Date.now();
+
+	// Set Sentry context for YouTube similar search
+	SentryLogger.setContext('youtube_similar', {
+		jobId: job.id,
+		platform: 'youtube',
+		targetUsername: job.targetUsername,
+		targetResults: job.targetResults,
+	});
+
+	SentryLogger.addBreadcrumb({
+		category: 'search',
+		message: `Starting YouTube similar search for @${job.targetUsername}`,
+		level: 'info',
+		data: {
+			platform: 'youtube',
+			targetResults: job.targetResults,
+			jobId: job.id,
+		},
+	});
+
 	const metrics: SearchMetricsSnapshot = {
 		apiCalls: 0,
 		processedCreators: job.processedResults || 0,
@@ -100,7 +122,11 @@ export async function runYouTubeSimilarProvider(
 	}
 
 	let channelProfileCalls = 0;
-	const targetProfile = await getYouTubeChannelProfile(targetUsername);
+	const targetProfile = await apiTracker.trackExternalCall(
+		'scrapecreators',
+		'youtube_profile',
+		async () => getYouTubeChannelProfile(targetUsername)
+	);
 	channelProfileCalls += 1;
 	const searchKeywords = extractSearchKeywords(targetProfile);
 
@@ -114,7 +140,18 @@ export async function runYouTubeSimilarProvider(
 		const keyword = keywordsToUse[index];
 		const started = Date.now();
 
-		const searchResponse = await searchYouTubeWithKeywords([keyword]);
+		SentryLogger.addBreadcrumb({
+			category: 'search',
+			message: `YouTube keyword search: "${keyword}"`,
+			level: 'info',
+			data: { jobId: job.id, keyword, searchIndex: index },
+		});
+
+		const searchResponse = await apiTracker.trackExternalCall(
+			'scrapecreators',
+			'youtube_search',
+			async () => searchYouTubeWithKeywords([keyword])
+		);
 		metrics.apiCalls += 1;
 
 		const channels = extractChannelsFromVideos(searchResponse.videos ?? [], targetUsername);
@@ -166,6 +203,17 @@ export async function runYouTubeSimilarProvider(
 	const topChannels = rankedChannels.slice(0, job.targetResults || 100);
 	const enhancedChannels: NormalizedCreator[] = [];
 
+	SentryLogger.addBreadcrumb({
+		category: 'search',
+		message: `Starting profile enrichment for ${topChannels.length} YouTube channels`,
+		level: 'info',
+		data: {
+			jobId: job.id,
+			channelCount: topChannels.length,
+			maxEnhancements: MAX_CHANNEL_ENHANCEMENTS,
+		},
+	});
+
 	for (let i = 0; i < topChannels.length; i += PROFILE_CONCURRENCY) {
 		const slice = topChannels.slice(i, i + PROFILE_CONCURRENCY);
 		const enhancedSlice = await Promise.all(
@@ -174,8 +222,19 @@ export async function runYouTubeSimilarProvider(
 				if (enhancedChannels.length + i < MAX_CHANNEL_ENHANCEMENTS && channel?.handle) {
 					try {
 						channelProfileCalls += 1;
-						profile = await getYouTubeChannelProfile(channel.handle);
-					} catch {
+						profile = await apiTracker.trackExternalCall(
+							'scrapecreators',
+							'youtube_profile_enhancement',
+							async () => getYouTubeChannelProfile(channel.handle)
+						);
+					} catch (error) {
+						searchTracker.trackFailure(error as Error, {
+							platform: 'youtube',
+							searchType: 'similar',
+							stage: 'parse',
+							userId: job.userId ?? 'unknown',
+							jobId: job.id,
+						});
 						profile = null;
 					}
 				}
@@ -221,6 +280,28 @@ export async function runYouTubeSimilarProvider(
 			note: `YouTube similar search (${metrics.apiCalls} searches + ${channelProfileCalls} profile fetches)`,
 		});
 	}
+
+	// Track search results in Sentry
+	searchTracker.trackResults({
+		platform: 'youtube',
+		searchType: 'similar',
+		resultsCount: processedResults,
+		duration: Date.now() - providerStartTime,
+		jobId: job.id,
+	});
+
+	SentryLogger.addBreadcrumb({
+		category: 'search',
+		message: `YouTube similar search completed: ${processedResults} creators found`,
+		level: 'info',
+		data: {
+			jobId: job.id,
+			platform: 'youtube',
+			resultsCount: processedResults,
+			keywordsUsed: keywordsToUse.length,
+			profileEnhancements: channelProfileCalls,
+		},
+	});
 
 	return {
 		status: 'completed',

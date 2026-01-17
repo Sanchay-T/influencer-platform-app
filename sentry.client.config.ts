@@ -24,6 +24,16 @@ if (SENTRY_DSN) {
     // Capture 100% of transactions in development, 10% in production
     tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
 
+    // Distributed Tracing - connect client spans to server spans
+    // @why Without this, errors on the server have no visibility into which client component triggered them
+    tracePropagationTargets: [
+      'localhost',
+      /^https:\/\/usegems\.io/,
+      /^https:\/\/usegemz\.ngrok\.app/,
+      /^https:\/\/.*\.vercel\.app/,
+      /^\/api\//, // All API routes (relative URLs)
+    ],
+
     // Session Replay for debugging user issues
     // Capture 10% of sessions, 100% of sessions with errors
     replaysSessionSampleRate: 0.1,

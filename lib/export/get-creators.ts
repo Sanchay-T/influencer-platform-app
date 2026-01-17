@@ -10,6 +10,7 @@ import { inArray } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { jobCreators, scrapingResults } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { SentryLogger } from '@/lib/sentry';
 
 export interface GetCreatorsResult {
 	creators: any[];
@@ -21,8 +22,19 @@ export interface GetCreatorsResult {
  */
 export async function getCreatorsForJobs(jobIds: string[]): Promise<GetCreatorsResult> {
 	if (jobIds.length === 0) {
+		SentryLogger.addBreadcrumb({
+			category: 'export',
+			message: 'getCreatorsForJobs called with empty jobIds',
+			level: 'warning',
+		});
 		return { creators: [], source: 'v2' };
 	}
+
+	SentryLogger.addBreadcrumb({
+		category: 'export',
+		message: 'Querying V2 jobCreators table',
+		data: { jobCount: jobIds.length },
+	});
 
 	// Try V2 jobCreators table first
 	const v2Creators = await db.query.jobCreators.findMany({
@@ -33,6 +45,11 @@ export async function getCreatorsForJobs(jobIds: string[]): Promise<GetCreatorsR
 		structuredConsole.log(
 			`CSV Export: Found ${v2Creators.length} creators in V2 jobCreators table`
 		);
+		SentryLogger.addBreadcrumb({
+			category: 'export',
+			message: 'Found creators in V2 table',
+			data: { creatorCount: v2Creators.length, source: 'v2' },
+		});
 		return {
 			creators: v2Creators.map((c) => c.creatorData),
 			source: 'v2',
@@ -40,6 +57,10 @@ export async function getCreatorsForJobs(jobIds: string[]): Promise<GetCreatorsR
 	}
 
 	// Fall back to legacy scrapingResults
+	SentryLogger.addBreadcrumb({
+		category: 'export',
+		message: 'No V2 creators found, checking legacy scrapingResults',
+	});
 	structuredConsole.log('CSV Export: No V2 creators found, checking legacy scrapingResults');
 	const legacyResults = await db.query.scrapingResults.findMany({
 		where: inArray(scrapingResults.jobId, jobIds),
@@ -66,6 +87,12 @@ export async function getCreatorsForJobs(jobIds: string[]): Promise<GetCreatorsR
 			}
 		}
 	}
+
+	SentryLogger.addBreadcrumb({
+		category: 'export',
+		message: 'Found creators in legacy table',
+		data: { creatorCount: allCreators.length, source: 'legacy' },
+	});
 
 	return { creators: allCreators, source: 'legacy' };
 }
