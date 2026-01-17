@@ -182,7 +182,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
 						`}
 					</Script>
 
-					{/* Meta Pixel Code - Loads everywhere but only tracks in production */}
+					{/* Meta Pixel Code - Uses env var for pixel ID */}
 					<Script id="meta-pixel" strategy="afterInteractive">
 						{`
 							!function(f,b,e,v,n,t,s)
@@ -194,9 +194,10 @@ export default function RootLayout({ children }: RootLayoutProps) {
 							s.parentNode.insertBefore(t,s)}(window, document,'script',
 							'https://connect.facebook.net/en_US/fbevents.js');
 
-							// Only initialize and track in production
-							if (window.location.hostname === 'usegemz.io') {
-								fbq('init', '852153531055002');
+							// Initialize with environment-specific pixel ID
+							var pixelId = '${process.env.NEXT_PUBLIC_META_PIXEL_ID || ''}';
+							if (pixelId) {
+								fbq('init', pixelId);
 								fbq('track', 'PageView');
 							}
 						`}
