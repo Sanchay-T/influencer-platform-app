@@ -6,7 +6,6 @@
  */
 
 import type { SearchAdapter } from '../adapters/interface';
-import { LOG_PREFIX } from './config';
 import type { NormalizedCreator, PipelineMetrics, SearchConfig } from './types';
 
 // ============================================================================
@@ -58,10 +57,6 @@ export async function enrichCreatorBios(
 		return creators;
 	}
 
-	console.log(
-		`${LOG_PREFIX} Enriching ${needsEnrichment.length}/${creators.length} creators with missing bios`
-	);
-
 	state.bioEnrichmentsAttempted += needsEnrichment.length;
 
 	// Process in parallel batches
@@ -74,7 +69,10 @@ export async function enrichCreatorBios(
 		const results = await Promise.all(
 			batch.map(async (creator) => {
 				try {
-					const enriched = await adapter.enrich!(creator, config);
+					const enriched = await adapter.enrich?.(creator, config);
+					if (!enriched) {
+						return creator;
+					}
 					if (enriched.bioEnriched && enriched.creator.bio) {
 						state.bioEnrichmentsSucceeded++;
 					}

@@ -109,16 +109,10 @@ export default function KeywordSearch() {
 	const handleKeywordsSubmit = async (payload) => {
 		// Prevent double submission
 		if (isSubmitting) {
-			console.log('[GEMZ-SUBMIT] ⚠️ Blocked - already submitting');
 			return;
 		}
 
 		setIsSubmitting(true);
-		const timings = { start: performance.now() };
-		console.log('[GEMZ-SUBMIT] 🚀 Starting submit...', {
-			keywords: payload?.keywords?.length || payload?.usernames?.length,
-			timestamp: new Date().toISOString(),
-		});
 
 		try {
 			// Obtener el campaignId de searchData o del sessionStorage
@@ -148,63 +142,29 @@ export default function KeywordSearch() {
 			const v2PlatformMap = new Map([
 				['tiktok', 'tiktok'],
 				['instagram', 'instagram'],
-				['instagram_scrapecreators', 'instagram'],
 				['youtube', 'youtube'],
 			]);
 
-			// Use V2 dispatch API for all keyword searches (not similar/username searches)
-			const useV2 =
-				!hasUsernames &&
-				['tiktok', 'instagram', 'instagram_scrapecreators', 'youtube'].includes(normalizedPlatform);
-
-			let response;
-			if (useV2) {
-				// V2 Fan-Out API - unified endpoint for all platforms
-				const v2Platform = v2PlatformMap.get(normalizedPlatform) || 'tiktok';
-				timings.beforeFetch = performance.now();
-				console.log('[GEMZ-SUBMIT] 📡 Calling /api/v2/dispatch...', {
-					elapsed: Math.round(timings.beforeFetch - timings.start) + 'ms',
-				});
-
-				response = await fetch('/api/v2/dispatch', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						platform: v2Platform,
-						keywords: submittedKeywords,
-						targetResults: searchData.creatorsCount,
-						campaignId: campaignId,
-						enableExpansion: true,
-					}),
-				});
-
-				timings.afterFetch = performance.now();
-				console.log('[GEMZ-SUBMIT] ✅ Dispatch response received', {
-					status: response.status,
-					fetchDuration: Math.round(timings.afterFetch - timings.beforeFetch) + 'ms',
-					totalElapsed: Math.round(timings.afterFetch - timings.start) + 'ms',
-				});
-			} else {
-				// Legacy API for similar/username searches
-				let apiEndpoint = '/api/scraping/tiktok';
-				if (
-					hasUsernames ||
-					normalizedPlatform === 'instagram-similar' ||
-					normalizedPlatform === 'instagram_similar'
-				) {
-					apiEndpoint = '/api/scraping/instagram';
-				}
-
-				response = await fetch(apiEndpoint, {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						campaignId: campaignId,
-						targetResults: searchData.creatorsCount,
-						...(hasUsernames ? { usernames: submittedUsernames } : { keywords: submittedKeywords }),
-					}),
-				});
+			if (hasUsernames) {
+				throw new Error('Similar searches use the Similar Search flow, not keyword search.');
 			}
+
+			const v2Platform = v2PlatformMap.get(normalizedPlatform);
+			if (!v2Platform) {
+				throw new Error(`Unsupported platform for keyword search: ${normalizedPlatform || 'unknown'}`);
+			}
+
+			const response = await fetch('/api/v2/dispatch', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					platform: v2Platform,
+					keywords: submittedKeywords,
+					targetResults: searchData.creatorsCount,
+					campaignId: campaignId,
+					enableExpansion: true,
+				}),
+			});
 
 			if (!response.ok) {
 				const vercelId =
@@ -245,36 +205,22 @@ export default function KeywordSearch() {
 			const data = json;
 
 			// Map platform for results display
-			const nextPlatform = (() => {
-				if (hasUsernames) {
-					return 'instagram-similar';
-				}
-				if (
-					normalizedPlatform === 'instagram' ||
-					normalizedPlatform === 'instagram_scrapecreators'
-				) {
-					return 'instagram';
-				}
-				if (normalizedPlatform === 'youtube') {
-					return 'youtube';
-				}
-				return 'tiktok';
-			})();
+			const nextPlatform =
+				normalizedPlatform === 'youtube'
+					? 'youtube'
+					: normalizedPlatform === 'instagram'
+						? 'instagram'
+						: 'tiktok';
 
 			setSearchData((prev) => ({
 				...prev,
-				keywords: hasUsernames ? [] : submittedKeywords,
-				usernames: hasUsernames ? submittedUsernames : [],
-				targetUsernames: hasUsernames ? submittedUsernames : [],
-				targetUsername: hasUsernames ? submittedUsernames[0] || null : null,
+				keywords: submittedKeywords,
+				usernames: [],
+				targetUsernames: [],
+				targetUsername: null,
 				jobId: data.jobId,
 				selectedPlatform: nextPlatform,
 			}));
-			timings.beforeNavigate = performance.now();
-			console.log('[GEMZ-SUBMIT] 🎯 Navigating to campaign page', {
-				jobId: data.jobId,
-				totalDuration: Math.round(timings.beforeNavigate - timings.start) + 'ms',
-			});
 
 			toast.success('Campaign started successfully');
 			router.push(`/campaigns/${campaignId}?jobId=${data.jobId}`);

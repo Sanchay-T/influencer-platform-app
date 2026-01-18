@@ -3,8 +3,6 @@
  * Usage: import { extractEmails, buildEnrichmentTarget, ... } from './utils';
  */
 
-// API endpoints
-export { getScrapingEndpoint } from './api-endpoints';
 // Bulk enrichment handler
 export {
 	type BulkEnrichResult,

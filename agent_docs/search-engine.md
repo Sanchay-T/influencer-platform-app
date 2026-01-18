@@ -8,25 +8,19 @@ Two search types across three platforms:
 
 | Search Type | TikTok | Instagram | YouTube |
 |-------------|--------|-----------|---------|
-| **Keyword** | ✅ ScrapeCreators | ✅ ScrapeCreators | ✅ ScrapeCreators |
+| **Keyword** | ✅ V2 fan-out | ✅ V2 fan-out | ✅ V2 fan-out |
 | **Similar** | ✅ Influencers Club | ✅ Apify + Influencers Club | ✅ ScrapeCreators |
 
 ---
 
 ## Keyword Search
 
-All platforms use **ScrapeCreators API** for keyword search.
+Keyword search runs through the **v2 fan-out pipeline** under `lib/search-engine/v2`.
+Adapters live in `lib/search-engine/v2/adapters` and call ScrapeCreators.
 
-| Platform | Provider File | API Used |
-|----------|---------------|----------|
-| TikTok | `lib/search-engine/providers/tiktok-keyword.ts` | ScrapeCreators `/v1/tiktok/search` |
-| Instagram | `lib/search-engine/providers/instagram-reels-scrapecreators.ts` | ScrapeCreators `/v1/instagram/reels/search` |
-| YouTube | `lib/search-engine/providers/youtube-keyword.ts` | ScrapeCreators `/v1/youtube/search` |
-
-**Instagram special features:**
-- Uses AI (OpenRouter) to expand keywords with variations
-- Continuation via QStash if below target
-- See the provider file for `MAX_PARALLEL_SEARCHES`, `KEYWORDS_PER_RUN` constants
+Key entry points:
+- `/api/v2/dispatch` — create job + queue workers
+- `/api/v2/status` — poll status + results
 
 ---
 
@@ -46,7 +40,10 @@ Different APIs depending on platform:
 
 | File | Purpose |
 |------|---------|
-| `lib/search-engine/runner.ts` | Entry point — dispatches to correct provider |
+| `lib/search-engine/v2/` | V2 fan-out keyword search pipeline |
+| `app/api/v2/dispatch/route.ts` | V2 keyword entrypoint |
+| `app/api/v2/status/route.ts` | V2 keyword polling |
+| `lib/search-engine/runner.ts` | Legacy runner (similar search only) |
 | `lib/search-engine/job-service.ts` | Job state, progress, result merging |
 | `lib/search-engine/types.ts` | Shared types (NormalizedCreator, etc.) |
 | `lib/platforms/instagram-similar/api.ts` | Apify client for Instagram |
@@ -58,10 +55,10 @@ Different APIs depending on platform:
 
 | Route | Platform | Search Type |
 |-------|----------|-------------|
-| `/api/scraping/tiktok` | TikTok | Keyword |
-| `/api/scraping/youtube` | YouTube | Keyword |
+| `/api/v2/dispatch` | TikTok/Instagram/YouTube | Keyword |
+| `/api/v2/status` | TikTok/Instagram/YouTube | Keyword |
 | `/api/scraping/youtube-similar` | YouTube | Similar |
-| `/api/scraping/instagram-scrapecreators` | Instagram | Keyword |
+| `/api/scraping/instagram` | Instagram | Similar |
 | `/api/scraping/similar-discovery` | Instagram/TikTok | Similar |
 
 ---
@@ -69,9 +66,9 @@ Different APIs depending on platform:
 ## Architecture
 
 ```
-API Route → Job created in DB → QStash queue → 
-Runner dispatches to provider → Provider fetches from external API → 
-Results saved to scraping_jobs → Frontend polls for status
+Keyword: `/api/v2/dispatch` → QStash workers → v2 adapters → job_creators → `/api/v2/status`
+
+Similar: `/api/scraping/*` → QStash → legacy runner → scraping_jobs → `/api/scraping/*` status
 ```
 
 The runner (`lib/search-engine/runner.ts`) has detection functions that decide which provider to use based on platform and search type.
@@ -82,7 +79,7 @@ The runner (`lib/search-engine/runner.ts`) has detection functions that decide w
 
 | Service | Used For | Config |
 |---------|----------|--------|
-| ScrapeCreators | All keyword + YouTube similar | `SCRAPECREATORS_API_KEY` |
+| ScrapeCreators | Keyword (v2 adapters) + YouTube similar | `SCRAPECREATORS_API_KEY` |
 | Apify | Instagram similar | `APIFY_TOKEN` |
 | Influencers Club | Similar discovery | `INFLUENCERS_CLUB_API_KEY` |
 | OpenRouter | AI keyword expansion | `OPENROUTER_API_KEY` |

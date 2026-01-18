@@ -15,7 +15,6 @@
 import { getCreatorViews, MIN_VIEWS_THRESHOLD } from '../../utils/filter-creators';
 import type { SearchAdapter } from '../adapters/interface';
 import { getAdapter } from '../adapters/interface';
-import { DEFAULT_CONFIG, LOG_PREFIX } from './config';
 import type { KeywordState, PipelineState } from './pipeline-helpers';
 import { buildMetrics, enrichCreatorBios } from './pipeline-helpers';
 import type {
@@ -48,7 +47,6 @@ async function fetchKeyword(
 	state.apiCalls++;
 
 	if (result.error) {
-		console.warn(`${LOG_PREFIX} Fetch error for "${keyword}": ${result.error}`);
 		keywordState.exhausted = true;
 		return { newCreators: [], hasMore: false, filteredCount: 0 };
 	}
@@ -59,7 +57,9 @@ async function fetchKeyword(
 
 	for (const rawItem of result.items) {
 		const creator = adapter.normalize(rawItem);
-		if (!creator) continue;
+		if (!creator) {
+			continue;
+		}
 
 		// @why Filter out low-view content BEFORE deduplication
 		// This ensures we don't mark a creator as "seen" if their first video
@@ -71,22 +71,23 @@ async function fetchKeyword(
 		}
 
 		const key = adapter.getDedupeKey(creator);
-		if (state.seenKeys.has(key)) continue;
+		if (state.seenKeys.has(key)) {
+			continue;
+		}
 
 		state.seenKeys.add(key);
 		normalized.push(creator);
 
 		// Stop if we've hit target
-		if (normalized.length >= targetRemaining) break;
+		if (normalized.length >= targetRemaining) {
+			break;
+		}
 	}
 
 	// Track consecutive empty pages (after filtering)
 	if (normalized.length === 0) {
 		keywordState.consecutiveEmpty++;
 		if (keywordState.consecutiveEmpty >= config.maxConsecutiveEmptyRuns) {
-			console.log(
-				`${LOG_PREFIX} Keyword "${keyword}" exhausted after ${keywordState.consecutiveEmpty} empty pages`
-			);
 			keywordState.exhausted = true;
 		}
 	} else {
@@ -126,13 +127,6 @@ export async function runPipeline(
 	const { platform, keywords, targetResults } = context;
 	const { onBatch, onProgress } = options;
 
-	console.log(`${LOG_PREFIX} Starting pipeline`, {
-		jobId: context.jobId,
-		platform,
-		keywords: keywords.length,
-		target: targetResults,
-	});
-
 	// Get adapter for platform
 	const adapter = getAdapter(platform);
 
@@ -158,9 +152,6 @@ export async function runPipeline(
 		while (state.creators.length < targetResults) {
 			// Safety: max continuation runs
 			if (state.continuationRuns >= config.maxContinuationRuns) {
-				console.log(
-					`${LOG_PREFIX} Hit max continuation runs (${config.maxContinuationRuns}), stopping`
-				);
 				break;
 			}
 
@@ -169,14 +160,10 @@ export async function runPipeline(
 			// Find keywords that still have results
 			const activeKeywords = state.keywords.filter((k) => !k.exhausted);
 			if (activeKeywords.length === 0) {
-				console.log(`${LOG_PREFIX} All keywords exhausted`);
 				break;
 			}
 
 			const remaining = targetResults - state.creators.length;
-			console.log(
-				`${LOG_PREFIX} Run ${state.continuationRuns}: ${remaining} remaining, ${activeKeywords.length} active keywords`
-			);
 
 			// Fetch from all active keywords in parallel (GO FAST!)
 			const batchPromises = activeKeywords.map((kw) =>
@@ -187,9 +174,9 @@ export async function runPipeline(
 
 			// Collect new creators from this round and track filtered count
 			const roundCreators: NormalizedCreator[] = [];
-			let totalFiltered = 0;
+			let _totalFiltered = 0;
 			for (const { newCreators, filteredCount } of batchResults) {
-				totalFiltered += filteredCount;
+				_totalFiltered += filteredCount;
 				for (const creator of newCreators) {
 					if (roundCreators.length + state.creators.length < targetResults) {
 						roundCreators.push(creator);
@@ -197,15 +184,7 @@ export async function runPipeline(
 				}
 			}
 
-			// Log filtering stats if any were filtered
-			if (totalFiltered > 0) {
-				console.log(
-					`${LOG_PREFIX} Filtered ${totalFiltered} creators with <${MIN_VIEWS_THRESHOLD} views`
-				);
-			}
-
 			if (roundCreators.length === 0) {
-				console.log(`${LOG_PREFIX} No new creators this round`);
 				// Check if all keywords exhausted
 				if (state.keywords.every((k) => k.exhausted)) {
 					break;
@@ -234,24 +213,11 @@ export async function runPipeline(
 					`${progress}% - ${state.creators.length}/${targetResults} creators`
 				);
 			}
-
-			console.log(
-				`${LOG_PREFIX} Progress: ${state.creators.length}/${targetResults} (+${enriched.length} this batch)`
-			);
 		}
 
 		// Build final result
 		const metrics = buildMetrics(state);
 		const hasMore = state.keywords.some((k) => !k.exhausted);
-
-		console.log(`${LOG_PREFIX} Pipeline complete`, {
-			jobId: context.jobId,
-			totalCreators: state.creators.length,
-			apiCalls: state.apiCalls,
-			bioEnrichments: `${state.bioEnrichmentsSucceeded}/${state.bioEnrichmentsAttempted}`,
-			durationMs: metrics.totalDurationMs,
-			hasMore,
-		});
 
 		return {
 			status: state.creators.length >= targetResults ? 'completed' : 'partial',
@@ -261,8 +227,6 @@ export async function runPipeline(
 			metrics,
 		};
 	} catch (error) {
-		console.error(`${LOG_PREFIX} Pipeline error`, error);
-
 		return {
 			status: 'error',
 			totalCreators: state.creators.length,
@@ -272,40 +236,4 @@ export async function runPipeline(
 			metrics: buildMetrics(state),
 		};
 	}
-}
-
-// ============================================================================
-// Standalone Runner (for testing without routes)
-// ============================================================================
-
-/**
- * Run a search without database integration
- * Useful for testing the pipeline in isolation
- */
-export async function runStandalone(
-	platform: Platform,
-	keywords: string[],
-	targetResults: number,
-	config: SearchConfig
-): Promise<{ creators: NormalizedCreator[]; metrics: PipelineMetrics }> {
-	const allCreators: NormalizedCreator[] = [];
-
-	const context: PipelineContext = {
-		jobId: `standalone-${Date.now()}`,
-		userId: 'test-user',
-		platform,
-		keywords,
-		targetResults,
-	};
-
-	const result = await runPipeline(context, config, {
-		onBatch: async (creators) => {
-			allCreators.push(...creators);
-		},
-	});
-
-	return {
-		creators: allCreators,
-		metrics: result.metrics,
-	};
 }

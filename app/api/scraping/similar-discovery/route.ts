@@ -28,15 +28,8 @@ const isValidPlatform = (value: string): value is ValidPlatform =>
 	VALID_PLATFORMS.some((platform) => platform === value);
 
 export async function POST(req: NextRequest) {
-	const startTime = Date.now();
-	console.log('[SIMILAR-DISCOVERY] POST started', { timestamp: new Date().toISOString() });
-
 	try {
 		const { userId } = await getAuthOrTest();
-		console.log('[SIMILAR-DISCOVERY] Auth check completed', {
-			userId,
-			elapsed: Date.now() - startTime,
-		});
 
 		if (!userId) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -48,12 +41,6 @@ export async function POST(req: NextRequest) {
 		const platform = isString(bodyRecord?.platform) ? bodyRecord.platform : '';
 		const campaignId = isString(bodyRecord?.campaignId) ? bodyRecord.campaignId : '';
 		const rawTarget = bodyRecord?.targetResults;
-		console.log('[SIMILAR-DISCOVERY] Request body parsed', {
-			username,
-			platform,
-			campaignId,
-			targetResults: rawTarget,
-		});
 
 		// Validate username
 		if (!username || typeof username !== 'string') {
@@ -112,10 +99,6 @@ export async function POST(req: NextRequest) {
 
 		// Create job with platform-specific identifier
 		const jobPlatform = `similar_discovery_${platform}`;
-		console.log('[SIMILAR-DISCOVERY] Creating job...', {
-			jobPlatform,
-			elapsed: Date.now() - startTime,
-		});
 
 		const [job] = await db
 			.insert(scrapingJobs)
@@ -142,12 +125,6 @@ export async function POST(req: NextRequest) {
 			})
 			.returning();
 
-		console.log('[SIMILAR-DISCOVERY] Job created in DB', {
-			jobId: job.id,
-			platform: jobPlatform,
-			elapsed: Date.now() - startTime,
-		});
-
 		// Track search started in LogSnag
 		// @why Uses getUserDataForTracking to get fresh data from Clerk if DB has fallback email
 		const userData = await getUserDataForTracking(userId);
@@ -163,32 +140,13 @@ export async function POST(req: NextRequest) {
 		// Enqueue for processing
 		if (process.env.QSTASH_TOKEN) {
 			const callbackUrl = `${getWebhookUrl()}/api/qstash/process-search`;
-			console.log('[SIMILAR-DISCOVERY] Enqueueing to QStash...', {
-				callbackUrl,
-				elapsed: Date.now() - startTime,
-			});
 
 			await qstash.publishJSON({
 				url: callbackUrl,
 				body: { jobId: job.id },
 				retries: 3,
 			});
-
-			console.log('[SIMILAR-DISCOVERY] QStash enqueued successfully', {
-				jobId: job.id,
-				callbackUrl,
-				elapsed: Date.now() - startTime,
-			});
-		} else {
-			console.warn('[SIMILAR-DISCOVERY] QStash token missing, job will stay pending', {
-				jobId: job.id,
-			});
 		}
-
-		console.log('[SIMILAR-DISCOVERY] POST complete, returning response', {
-			jobId: job.id,
-			totalElapsed: Date.now() - startTime,
-		});
 
 		return NextResponse.json({
 			jobId: job.id,

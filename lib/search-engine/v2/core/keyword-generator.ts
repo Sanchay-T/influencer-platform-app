@@ -5,7 +5,6 @@
  */
 
 import { generateContinuationKeywords } from './ai-expansion';
-import { LOG_PREFIX } from './config';
 import {
 	DEFAULT_EXPANSION_CONFIG,
 	expandKeywordsForTarget,
@@ -151,10 +150,6 @@ export class KeywordGenerator {
 					added.push(kw);
 				}
 			}
-
-			console.log(
-				`${LOG_PREFIX} Expansion run ${this.state.expansionRun}: +${added.length} keywords`
-			);
 
 			return added;
 		} finally {

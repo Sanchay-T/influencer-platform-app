@@ -1,2 +1,0 @@
-Platform,Target,Keyword,Job ID,Status,Keywords Expanded,Creators Found,Creators Enriched,Total Duration (s),Dispatch Duration (s),Accuracy (%),Error
-tiktok,100,"fitness motivation",N/A,error,0,0,0,0.00,0.00,0.0,Failed to create test user: Internal Server Error

@@ -14,7 +14,6 @@
 
 import { getAdapter } from '../adapters/interface';
 import { AsyncQueue, AtomicCounter } from './async-queue';
-import { LOG_PREFIX } from './config';
 import { enrichWorker } from './enrich-worker';
 import { type EnrichTask, fetchWorker, type WorkerMetrics } from './fetch-worker';
 import type {
@@ -27,7 +26,7 @@ import type {
 } from './types';
 
 export type { ExpandedPipelineOptions, ExpandedPipelineResult } from './expanded-pipeline';
-export { runExpandedPipeline, runExpandedStandalone } from './expanded-pipeline';
+export { runExpandedPipeline } from './expanded-pipeline';
 // Re-export for external use
 export type { EnrichTask, WorkerMetrics } from './fetch-worker';
 
@@ -75,14 +74,6 @@ export async function runParallelPipeline(
 		onProgress,
 		enrichWorkers: numEnrichWorkers = 5,
 	} = options;
-
-	console.log(`${LOG_PREFIX} Starting parallel pipeline`, {
-		jobId: context.jobId,
-		platform,
-		keywords: keywords.length,
-		target: targetResults,
-		enrichWorkers: numEnrichWorkers,
-	});
 
 	// Get adapter for platform
 	const adapter = getAdapter(platform);
@@ -172,13 +163,6 @@ export async function runParallelPipeline(
 		const finalMetrics = buildMetrics(startTime, allCreators.length, metrics);
 		const hasMore = !counter.isComplete() && keywords.length > 0;
 
-		console.log(`${LOG_PREFIX} Parallel pipeline complete`, {
-			jobId: context.jobId,
-			totalCreators: allCreators.length,
-			apiCalls: metrics.apiCalls,
-			durationMs: finalMetrics.totalDurationMs,
-		});
-
 		return {
 			status: allCreators.length >= targetResults ? 'completed' : 'partial',
 			totalCreators: allCreators.length,
@@ -187,7 +171,6 @@ export async function runParallelPipeline(
 			metrics: finalMetrics,
 		};
 	} catch (error) {
-		console.error(`${LOG_PREFIX} Parallel pipeline error`, error);
 		abortSignal.aborted = true;
 		enrichQueue.close();
 
@@ -220,40 +203,5 @@ function buildMetrics(
 		creatorsPerSecond: durationSec > 0 ? creatorCount / durationSec : 0,
 		bioEnrichmentsAttempted: workerMetrics.bioEnrichmentsAttempted,
 		bioEnrichmentsSucceeded: workerMetrics.bioEnrichmentsSucceeded,
-	};
-}
-
-// ============================================================================
-// Standalone Runner (for testing)
-// ============================================================================
-
-/**
- * Run a parallel search without database integration
- */
-export async function runParallelStandalone(
-	platform: Platform,
-	keywords: string[],
-	targetResults: number,
-	config: SearchConfig
-): Promise<{ creators: NormalizedCreator[]; metrics: PipelineMetrics }> {
-	const allCreators: NormalizedCreator[] = [];
-
-	const context: PipelineContext = {
-		jobId: `standalone-parallel-${Date.now()}`,
-		userId: 'test-user',
-		platform,
-		keywords,
-		targetResults,
-	};
-
-	const result = await runParallelPipeline(context, config, {
-		onCreator: async (creator) => {
-			allCreators.push(creator);
-		},
-	});
-
-	return {
-		creators: allCreators,
-		metrics: result.metrics,
 	};
 }

@@ -5,12 +5,8 @@
  * Recommended entry point for production use.
  */
 
-import { DEFAULT_CONFIG, LOG_PREFIX } from './config';
-import {
-	createKeywordGenerator,
-	DEFAULT_EXPANSION_CONFIG,
-	type KeywordExpansionConfig,
-} from './keyword-expander';
+import { DEFAULT_CONFIG } from './config';
+import { createKeywordGenerator, type KeywordExpansionConfig } from './keyword-expander';
 import { type ParallelPipelineOptions, runParallelPipeline } from './parallel-pipeline';
 import type {
 	NormalizedCreator,
@@ -56,16 +52,8 @@ export async function runExpandedPipeline(
 	config: SearchConfig,
 	options: ExpandedPipelineOptions = {}
 ): Promise<ExpandedPipelineResult> {
-	const { platform, keywords: seedKeywords, targetResults } = context;
+	const { keywords: seedKeywords, targetResults } = context;
 	const enableExpansion = options.enableKeywordExpansion ?? config.enableKeywordExpansion ?? true;
-
-	console.log(`${LOG_PREFIX} Starting expanded pipeline`, {
-		jobId: context.jobId,
-		platform,
-		seedKeywords: seedKeywords.length,
-		target: targetResults,
-		enableExpansion,
-	});
 
 	// Build expansion config from SearchConfig
 	const expansionConfig: KeywordExpansionConfig = {
@@ -80,12 +68,6 @@ export async function runExpandedPipeline(
 
 	// Initialize with expanded keywords
 	const initialKeywords = await keywordGenerator.initialize();
-
-	console.log(`${LOG_PREFIX} Keywords initialized`, {
-		seedCount: seedKeywords.length,
-		expandedCount: initialKeywords.length,
-		keywords: initialKeywords.slice(0, 10),
-	});
 
 	// Create modified context with expanded keywords
 	const expandedContext: PipelineContext = {
@@ -107,14 +89,10 @@ export async function runExpandedPipeline(
 		keywordGenerator.canExpand()
 	) {
 		expansionRun++;
-		console.log(
-			`${LOG_PREFIX} Expansion round ${expansionRun}: ${currentResult.totalCreators}/${targetResults} creators, generating more keywords`
-		);
 
 		// Generate more keywords
 		const newKeywords = await keywordGenerator.expandMore();
 		if (newKeywords.length === 0) {
-			console.log(`${LOG_PREFIX} No more keywords could be generated, stopping`);
 			break;
 		}
 
@@ -141,15 +119,6 @@ export async function runExpandedPipeline(
 			: currentResult.status === 'error'
 				? 'error'
 				: 'partial';
-
-	console.log(`${LOG_PREFIX} Expanded pipeline complete`, {
-		jobId: context.jobId,
-		status: finalStatus,
-		totalCreators: currentResult.totalCreators,
-		target: targetResults,
-		keywordsUsed: allKeywordsUsed.length,
-		expansionRuns: expansionRun,
-	});
 
 	return {
 		...currentResult,
@@ -179,47 +148,5 @@ function mergeResults(current: PipelineResult, continuation: PipelineResult): Pi
 			bioEnrichmentsSucceeded:
 				current.metrics.bioEnrichmentsSucceeded + continuation.metrics.bioEnrichmentsSucceeded,
 		},
-	};
-}
-
-// ============================================================================
-// Standalone Runner (for testing)
-// ============================================================================
-
-/**
- * Standalone runner with keyword expansion (for testing)
- */
-export async function runExpandedStandalone(
-	platform: Platform,
-	keywords: string[],
-	targetResults: number,
-	config: SearchConfig
-): Promise<{
-	creators: NormalizedCreator[];
-	metrics: PipelineMetrics;
-	keywordsUsed: string[];
-	expansionRuns: number;
-}> {
-	const allCreators: NormalizedCreator[] = [];
-
-	const context: PipelineContext = {
-		jobId: `standalone-expanded-${Date.now()}`,
-		userId: 'test-user',
-		platform,
-		keywords,
-		targetResults,
-	};
-
-	const result = await runExpandedPipeline(context, config, {
-		onCreator: async (creator) => {
-			allCreators.push(creator);
-		},
-	});
-
-	return {
-		creators: allCreators,
-		metrics: result.metrics,
-		keywordsUsed: result.keywordsUsed,
-		expansionRuns: result.expansionRuns,
 	};
 }

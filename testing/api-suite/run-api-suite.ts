@@ -228,13 +228,14 @@ async function run() {
       },
     },
     {
-      name: 'Start YouTube scrape',
+      name: 'Start YouTube v2 dispatch',
       method: 'POST',
-      path: '/api/scraping/youtube',
+      path: '/api/v2/dispatch',
       expectStatus: 200,
       body: (ctx) => {
-        if (!ctx.campaignId) throw new Error('campaignId missing for YouTube scrape')
+        if (!ctx.campaignId) throw new Error('campaignId missing for YouTube dispatch')
         return {
+          platform: 'youtube',
           keywords: ['smoke test keyword'],
           targetResults: 100,
           campaignId: ctx.campaignId,
@@ -250,22 +251,23 @@ async function run() {
       },
     },
     {
-      name: 'YouTube scrape status',
+      name: 'YouTube v2 status',
       method: 'GET',
       path: (ctx) => {
         if (!ctx.youtubeJobId) throw new Error('youtubeJobId missing for status check')
-        return `/api/scraping/youtube?jobId=${ctx.youtubeJobId}`
+        return `/api/v2/status?jobId=${ctx.youtubeJobId}&limit=0`
       },
       expectStatus: 200,
     },
     {
-      name: 'Start TikTok scrape',
+      name: 'Start TikTok v2 dispatch',
       method: 'POST',
-      path: '/api/scraping/tiktok',
+      path: '/api/v2/dispatch',
       expectStatus: 200,
       body: (ctx) => {
-        if (!ctx.campaignId) throw new Error('campaignId missing for TikTok scrape')
+        if (!ctx.campaignId) throw new Error('campaignId missing for TikTok dispatch')
         return {
+          platform: 'tiktok',
           keywords: ['automation smoke keyword'],
           targetResults: 100,
           campaignId: ctx.campaignId,
@@ -281,11 +283,11 @@ async function run() {
       },
     },
     {
-      name: 'TikTok scrape status',
+      name: 'TikTok v2 status',
       method: 'GET',
       path: (ctx) => {
         if (!ctx.tiktokJobId) throw new Error('tiktokJobId missing for status check')
-        return `/api/scraping/tiktok?jobId=${ctx.tiktokJobId}`
+        return `/api/v2/status?jobId=${ctx.tiktokJobId}&limit=0`
       },
       expectStatus: 200,
     },

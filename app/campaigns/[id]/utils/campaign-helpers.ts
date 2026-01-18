@@ -94,7 +94,6 @@ export const resolveScrapingEndpoint = (
 	const normalized = (job?.platform || '').toLowerCase();
 	const hasTargetUsername =
 		typeof job?.targetUsername === 'string' && job.targetUsername.trim().length > 0;
-	const hasKeywords = Array.isArray(job?.keywords) && job.keywords.length > 0;
 	const debugPolling =
 		typeof window !== 'undefined' && window.localStorage.getItem('gemz_debug_polling') === 'true';
 
@@ -104,65 +103,27 @@ export const resolveScrapingEndpoint = (
 				jobId: job?.id ?? null,
 				platform: job?.platform ?? null,
 				hasTargetUsername,
-				hasKeywords,
 				endpoint,
 			});
 		}
 		return endpoint;
 	};
 
-	if (
-		!hasTargetUsername &&
-		hasKeywords &&
-		['tiktok', 'instagram', 'youtube'].includes(normalized)
-	) {
-		return logEndpoint('/api/v2/status');
-	}
-
 	// Handle similar_discovery platforms first (new unified similar search system)
 	if (normalized.startsWith('similar_discovery_')) {
 		return logEndpoint('/api/scraping/similar-discovery');
 	}
 
-	// YouTube similar - check targetUsername since platform='YouTube' (capital Y) from POST
-	// doesn't have _similar suffix, but keyword search has no targetUsername
-	if (normalized === 'youtube' && hasTargetUsername) {
-		return logEndpoint('/api/scraping/youtube-similar');
+	if (hasTargetUsername) {
+		if (['youtube', 'youtube-similar', 'youtube_similar'].includes(normalized)) {
+			return logEndpoint('/api/scraping/youtube-similar');
+		}
+		if (['instagram', 'instagram-similar', 'instagram_similar'].includes(normalized)) {
+			return logEndpoint('/api/scraping/instagram');
+		}
 	}
 
-	switch (normalized) {
-		case 'instagram_scrapecreators':
-			return logEndpoint('/api/scraping/instagram-scrapecreators');
-		case 'instagram_us_reels':
-		case 'instagram-us-reels':
-		case 'instagram us reels':
-		case 'instagram-1.0':
-		case 'instagram_1.0':
-			return logEndpoint('/api/scraping/instagram-us-reels');
-		case 'instagram_reels':
-		case 'instagram-reels':
-			return logEndpoint('/api/scraping/instagram-reels');
-		case 'instagram-2.0':
-		case 'instagram_2.0':
-		case 'instagram-v2':
-		case 'instagram_v2':
-			return logEndpoint('/api/scraping/instagram-v2');
-		case 'instagram-similar':
-		case 'instagram_similar':
-			return logEndpoint('/api/scraping/instagram');
-		case 'instagram':
-			return logEndpoint('/api/scraping/instagram');
-		case 'google-serp':
-		case 'google_serp':
-			return logEndpoint('/api/scraping/google-serp');
-		case 'youtube-similar':
-		case 'youtube_similar':
-			return logEndpoint('/api/scraping/youtube-similar');
-		case 'youtube':
-			return logEndpoint('/api/scraping/youtube');
-		default:
-			return logEndpoint('/api/scraping/tiktok');
-	}
+	return logEndpoint('/api/v2/status');
 };
 
 // Handle queue parsing

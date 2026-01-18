@@ -65,14 +65,7 @@ function getStatusMessage(
 export async function GET(req: Request) {
 	const startTime = Date.now();
 
-	// 🔍 DEBUG: Log incoming request
 	const { searchParams } = new URL(req.url);
-	console.log('[GEMZ-DEBUG] 📊 /api/v2/status HIT', {
-		timestamp: new Date().toISOString(),
-		jobId: searchParams.get('jobId'),
-		offset: searchParams.get('offset'),
-		limit: searchParams.get('limit'),
-	});
 
 	// ========================================================================
 	// Step 1: Authenticate User
@@ -80,12 +73,10 @@ export async function GET(req: Request) {
 
 	const auth = await getAuthOrTest();
 	if (!auth.userId) {
-		console.log('[GEMZ-DEBUG] ❌ /api/v2/status UNAUTHORIZED');
 		return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 	}
 
 	const userId = auth.userId;
-	console.log('[GEMZ-DEBUG] ✅ /api/v2/status AUTH OK', { userId });
 	logger.debug(`[v2-status] Auth completed in ${Date.now() - startTime}ms`, {}, LogCategory.JOB);
 
 	// ========================================================================
@@ -369,16 +360,6 @@ export async function GET(req: Request) {
 		await cacheSet(cacheKey, response, CacheTTL.COMPLETED_JOB);
 		logger.info(`[v2-status] Cached results for ${jobId}`, {}, LogCategory.JOB);
 	}
-
-	// 🔍 DEBUG: Log response
-	console.log('[GEMZ-DEBUG] 📤 /api/v2/status RESPONSE', {
-		jobId,
-		status,
-		totalCreators,
-		creatorsInResponse: paginatedCreators.length,
-		percentComplete: Math.round(percentComplete * 100) / 100,
-		totalTime: `${Date.now() - startTime}ms`,
-	});
 
 	logger.info(
 		'[v2-status] Response built',
