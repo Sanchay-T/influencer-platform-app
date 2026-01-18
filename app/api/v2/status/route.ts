@@ -18,10 +18,12 @@ import { jobCreators, scrapingJobs } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
 import { loadJobTracker } from '@/lib/search-engine/v2/core/job-tracker';
 import type { StatusResponse } from '@/lib/search-engine/v2/workers/types';
-import { isNumber, isRecord, isString, toRecord, toStringArray } from '@/lib/utils/type-guards';
+import { isNumber, isRecord, toRecord, toStringArray } from '@/lib/utils/type-guards';
 
 // Increased timeout for large result sets
 export const maxDuration = 30;
+const enableStatusDebug =
+	process.env.STATUS_DEBUG === 'true' || process.env.NODE_ENV !== 'production';
 
 // ============================================================================
 // Helper Functions
@@ -62,6 +64,8 @@ function getStatusMessage(
 // Route Handler
 // ============================================================================
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Status handler coordinates multiple query paths.
+// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function GET(req: Request) {
 	const startTime = Date.now();
 
@@ -217,11 +221,11 @@ export async function GET(req: Request) {
 	}));
 
 	// DEBUG: Log first creator's enrichment data to diagnose bio/email display issues
-	if (paginatedCreators.length > 0) {
+	if (enableStatusDebug && paginatedCreators.length > 0) {
 		const firstCreator = toRecord(paginatedCreators[0]);
 		const creatorObj = toRecord(firstCreator?.creator);
 		const bioEnriched = toRecord(firstCreator?.bio_enriched);
-		logger.info(
+		logger.debug(
 			'[v2-status] DEBUG: First creator data structure',
 			{
 				jobId,
@@ -232,10 +236,6 @@ export async function GET(req: Request) {
 				hasBioEnriched: !!firstCreator?.bioEnriched,
 				hasBioEnrichedObj: !!firstCreator?.bio_enriched,
 				bioEnrichedKeys: bioEnriched ? Object.keys(bioEnriched) : [],
-				extractedEmail: isString(bioEnriched?.extracted_email)
-					? bioEnriched.extracted_email
-					: undefined,
-				sampleBio: creatorObj?.bio ? String(creatorObj.bio).substring(0, 100) + '...' : null,
 			},
 			LogCategory.JOB
 		);

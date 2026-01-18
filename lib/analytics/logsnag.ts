@@ -8,14 +8,18 @@
  */
 
 import { LogSnag } from 'logsnag';
+import { LogCategory, logger } from '@/lib/logging';
 
 // Project name can be configured via env var, defaults to 'usegemz'
 const PROJECT_NAME = process.env.LOGSNAG_PROJECT || 'usegemz';
 
-const logsnag = new LogSnag({
-	token: process.env.LOGSNAG_TOKEN!,
-	project: PROJECT_NAME,
-});
+const logsnagToken = process.env.LOGSNAG_TOKEN;
+const logsnag = logsnagToken
+	? new LogSnag({
+			token: logsnagToken,
+			project: PROJECT_NAME,
+		})
+	: null;
 
 interface TrackOptions {
 	channel: string;
@@ -30,18 +34,31 @@ interface TrackOptions {
  * Safely track an event without blocking the request
  */
 async function track(options: TrackOptions): Promise<void> {
-	if (!process.env.LOGSNAG_TOKEN) {
-		console.warn('[LogSnag] LOGSNAG_TOKEN not set, skipping event:', options.event);
+	if (!(logsnagToken && logsnag)) {
+		logger.warn(
+			'LogSnag token missing; skipping event',
+			{ event: options.event },
+			LogCategory.SYSTEM
+		);
 		return;
 	}
 
 	try {
-		console.log('[LogSnag] Tracking event:', options.event, 'to project:', PROJECT_NAME);
+		logger.debug(
+			'LogSnag tracking event',
+			{ event: options.event, project: PROJECT_NAME },
+			LogCategory.SYSTEM
+		);
 		await logsnag.track(options);
-		console.log('[LogSnag] Event sent successfully:', options.event);
+		logger.debug('LogSnag event sent', { event: options.event }, LogCategory.SYSTEM);
 	} catch (error) {
 		// Log but don't throw - analytics shouldn't break the app
-		console.error('[LogSnag] Failed to track event:', options.event, error);
+		logger.error(
+			'LogSnag failed to track event',
+			error instanceof Error ? error : new Error(String(error)),
+			{ event: options.event },
+			LogCategory.SYSTEM
+		);
 	}
 }
 

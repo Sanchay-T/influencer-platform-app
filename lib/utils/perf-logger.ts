@@ -3,6 +3,8 @@
  * Usage: const perf = createPerfLogger('route-name'); ... perf.log('step'); ... perf.end();
  */
 
+import { LogCategory, logger } from '@/lib/logging';
+
 export function createPerfLogger(routeName: string) {
 	const start = performance.now();
 	let lastMark = start;
@@ -23,7 +25,11 @@ export function createPerfLogger(routeName: string) {
 			const summary = marks.map((m) => `${m.step}: ${m.sinceLast}ms`).join(' → ');
 			// Only log if slow (>200ms) or in verbose mode
 			if (total > 200 || process.env.PERF_VERBOSE === 'true') {
-				console.log(`⏱️ [${routeName}] ${total}ms total | ${summary}`);
+				logger.warn(
+					`[perf] ${routeName}`,
+					{ executionTime: total, metadata: { totalMs: total, summary, marks } },
+					LogCategory.PERFORMANCE
+				);
 			}
 			return { total, marks };
 		},

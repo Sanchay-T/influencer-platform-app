@@ -20,6 +20,7 @@
  * });
  */
 
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import type { MockCampaign, MockJob, MockUser } from './mock-factories';
 import {
 	createMockCampaign,
@@ -96,7 +97,7 @@ export class TestContext {
 		}
 
 		if (this.options.debug) {
-			console.log('[TestContext] Setup complete');
+			structuredConsole.debug('[TestContext] Setup complete');
 		}
 	}
 
@@ -111,7 +112,7 @@ export class TestContext {
 				await fn();
 			} catch (error) {
 				if (this.options.debug) {
-					console.error('[TestContext] Cleanup error:', error);
+					structuredConsole.error('[TestContext] Cleanup error', error);
 				}
 			}
 		}
@@ -123,7 +124,7 @@ export class TestContext {
 		this.createdJobs = [];
 
 		if (this.options.debug) {
-			console.log('[TestContext] Teardown complete');
+			structuredConsole.debug('[TestContext] Teardown complete');
 		}
 	}
 
@@ -147,7 +148,7 @@ export class TestContext {
 		this.createdUsers.push(user);
 
 		if (this.options.debug) {
-			console.log(`[TestContext] Created user: ${user.userId}`);
+			structuredConsole.debug(`[TestContext] Created user: ${user.userId}`);
 		}
 
 		return user;
@@ -167,7 +168,7 @@ export class TestContext {
 		this.createdCampaigns.push(campaign);
 
 		if (this.options.debug) {
-			console.log(`[TestContext] Created campaign: ${campaign.id}`);
+			structuredConsole.debug(`[TestContext] Created campaign: ${campaign.id}`);
 		}
 
 		return campaign;
@@ -188,7 +189,7 @@ export class TestContext {
 		this.createdJobs.push(job);
 
 		if (this.options.debug) {
-			console.log(`[TestContext] Created job: ${job.id}`);
+			structuredConsole.debug(`[TestContext] Created job: ${job.id}`);
 		}
 
 		return job;
