@@ -1,6 +1,17 @@
 'use client';
 
-import { ArrowRight, CheckCircle, Crown, Loader2, Shield, Sparkles, Star, Zap } from 'lucide-react';
+import {
+	ArrowRight,
+	CheckCircle,
+	Crown,
+	Loader2,
+	Rocket,
+	Shield,
+	Sparkles,
+	Star,
+	TrendingUp,
+	Zap,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
@@ -10,19 +21,30 @@ import SubscriptionManagement from '@/app/components/billing/subscription-manage
 import UpgradeButton from '@/app/components/billing/upgrade-button';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { getPlanDisplayConfig, getVisiblePlanConfigs } from '@/lib/billing/plan-display-config';
 import { clearBillingCache, useBilling } from '@/lib/hooks/use-billing';
 import { useStartSubscription } from '@/lib/hooks/use-start-subscription';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import DashboardLayout from '../components/layout/dashboard-layout';
 
-// Plan prices for the modal
+// Plan prices for the modal (includes both new and legacy plans)
 const PLAN_PRICES: Record<string, number> = {
+	// New plans (Jan 2026)
+	growth: 199,
+	scale: 599,
+	pro: 1999,
+	// Legacy plans (grandfathered)
 	glow_up: 99,
 	viral_surge: 249,
 	fame_flex: 499,
 };
 
 const PLAN_NAMES: Record<string, string> = {
+	// New plans (Jan 2026)
+	growth: 'Growth',
+	scale: 'Scale',
+	pro: 'Pro',
+	// Legacy plans (grandfathered)
 	glow_up: 'Glow Up',
 	viral_surge: 'Viral Surge',
 	fame_flex: 'Fame Flex',
@@ -273,230 +295,89 @@ function BillingContent() {
 				</div>
 
 				<Card className="bg-zinc-900/80 border border-zinc-700/50">
-					<CardContent className="p-6">
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-							{/* Glow Up Plan */}
-							<div
-								className={`rounded-lg p-6 border transition-all relative bg-zinc-900/80 ${
-									currentPlan === 'glow_up'
-										? 'border-primary/50 ring-1 ring-primary/30 shadow-[0_0_0_1px_rgba(255,46,204,0.12)]'
-										: 'border-zinc-700/50 hover:border-zinc-600'
-								}`}
-							>
-								{currentPlan === 'glow_up' && (
-									<div className="absolute top-2 right-2 sm:top-3 sm:right-3">
-										<span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium bg-pink-600 text-white shadow-md ring-1 ring-pink-400/40 flex items-center gap-1 max-w-full">
-											<CheckCircle className="h-3 w-3" />
-											<span className="truncate">Current Plan</span>
-										</span>
-									</div>
-								)}
-								<div className="text-center">
-									<div className="flex items-center justify-center mb-3">
-										<Star
-											className={`h-6 w-6 mr-2 ${
-												currentPlan === 'glow_up' ? 'text-primary' : 'text-zinc-100'
-											}`}
-										/>
-										<h3
-											className={`text-xl font-semibold ${
-												currentPlan === 'glow_up' ? 'text-zinc-100' : 'text-zinc-100'
-											}`}
-										>
-											Glow Up
-										</h3>
-									</div>
-									<div
-										className={`text-3xl font-bold mb-1 ${
-											currentPlan === 'glow_up' ? 'text-primary' : 'text-zinc-100'
-										}`}
-									>
-										$99
-									</div>
-									<div className="text-sm text-zinc-500 mb-6">per month</div>
-									<ul className="space-y-2 text-sm text-zinc-500 mb-6">
-										<li>✓ 3 campaigns</li>
-										<li>✓ 1,000 creators</li>
-										<li>✓ CSV export</li>
-										<li>✓ Bio extraction</li>
-									</ul>
-									{currentPlan === 'glow_up' ? (
-										isTrialing ? (
-											<Button
-												onClick={handleOpenStartModal}
-												disabled={isStartingSubscription}
-												className="w-full bg-pink-500 hover:bg-pink-600 text-white"
-											>
-												{isStartingSubscription ? (
-													<Loader2 className="h-4 w-4 animate-spin mr-2" />
-												) : (
-													<Sparkles className="h-4 w-4 mr-2" />
-												)}
-												{isStartingSubscription ? 'Processing...' : 'Start Your Subscription'}
-											</Button>
-										) : (
-											<div className="w-full bg-primary/20 text-primary border border-primary/30 py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2">
-												<CheckCircle className="h-4 w-4" />
-												Your Current Plan
-											</div>
-										)
-									) : (
-										<UpgradeButton targetPlan="glow_up" className="w-full" />
-									)}
-								</div>
-							</div>
+					<CardContent className="p-4 sm:p-6">
+						<div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+							{/* Dynamic Plan Cards - New Plans (Growth, Scale, Pro) */}
+							{getVisiblePlanConfigs().map((plan) => {
+								const isCurrentPlan = currentPlan === plan.id;
+								const PlanIcon =
+									plan.id === 'growth' ? Rocket : plan.id === 'scale' ? TrendingUp : Crown;
 
-							{/* Viral Surge Plan */}
-							<div
-								className={`rounded-lg p-6 border transition-all relative bg-zinc-900/80 ${
-									currentPlan === 'viral_surge'
-										? 'border-primary/50 ring-1 ring-primary/30 shadow-[0_0_0_1px_rgba(255,46,204,0.12)]'
-										: 'border-zinc-700/50 hover:border-zinc-600'
-								}`}
-							>
-								<div className="absolute top-2 right-2 sm:top-3 sm:right-3">
-									<span
-										className={`rounded-full text-[10px] sm:text-xs font-medium flex items-center gap-1 shadow-sm ring-1 ${
-											currentPlan === 'viral_surge'
-												? 'px-2 py-0.5 sm:px-2.5 sm:py-1 bg-pink-600 text-white ring-pink-400/40'
-												: 'px-2 py-0.5 bg-zinc-800 text-zinc-200 ring-zinc-700/50 border border-zinc-700/50'
-										}`}
-									>
-										{currentPlan === 'viral_surge' ? (
-											<>
-												<CheckCircle className="h-3 w-3" />
-												<span className="truncate">Current Plan</span>
-											</>
-										) : (
-											<span className="truncate">Most Popular</span>
-										)}
-									</span>
-								</div>
-								<div className="text-center">
-									<div className="flex items-center justify-center mb-3">
-										<Zap
-											className={`h-6 w-6 mr-2 ${
-												currentPlan === 'viral_surge' ? 'text-primary' : 'text-zinc-300'
-											}`}
-										/>
-										<h3
-											className={`text-xl font-semibold ${
-												currentPlan === 'viral_surge' ? 'text-zinc-100' : 'text-zinc-100'
-											}`}
-										>
-											Viral Surge
-										</h3>
-									</div>
+								return (
 									<div
-										className={`text-3xl font-bold mb-1 ${
-											currentPlan === 'viral_surge' ? 'text-primary' : 'text-zinc-100'
+										key={plan.id}
+										className={`rounded-lg p-6 border transition-all relative bg-zinc-900/80 ${
+											isCurrentPlan
+												? 'border-primary/50 ring-1 ring-primary/30 shadow-[0_0_0_1px_rgba(255,46,204,0.12)]'
+												: 'border-zinc-700/50 hover:border-zinc-600'
 										}`}
 									>
-										$249
-									</div>
-									<div className="text-sm text-zinc-500 mb-6">per month</div>
-									<ul className="space-y-2 text-sm text-zinc-500 mb-6">
-										<li>✓ 10 campaigns</li>
-										<li>✓ 10,000 creators</li>
-										<li>✓ Advanced analytics</li>
-										<li>✓ All Glow Up features</li>
-									</ul>
-									{currentPlan === 'viral_surge' ? (
-										isTrialing ? (
-											<Button
-												onClick={handleOpenStartModal}
-												disabled={isStartingSubscription}
-												className="w-full bg-pink-500 hover:bg-pink-600 text-white"
-											>
-												{isStartingSubscription ? (
-													<Loader2 className="h-4 w-4 animate-spin mr-2" />
-												) : (
-													<Sparkles className="h-4 w-4 mr-2" />
-												)}
-												{isStartingSubscription ? 'Processing...' : 'Start Your Subscription'}
-											</Button>
-										) : (
-											<div className="w-full bg-primary/20 text-primary border border-primary/30 py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2">
-												<CheckCircle className="h-4 w-4" />
-												Your Current Plan
-											</div>
-										)
-									) : (
-										<UpgradeButton targetPlan="viral_surge" className="w-full" />
-									)}
-								</div>
-							</div>
+										{/* Badge: Current Plan or Most Popular */}
+										<div className="absolute top-2 right-2 sm:top-3 sm:right-3">
+											{isCurrentPlan ? (
+												<span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium bg-pink-600 text-white shadow-md ring-1 ring-pink-400/40 flex items-center gap-1">
+													<CheckCircle className="h-3 w-3" />
+													<span className="truncate">Current Plan</span>
+												</span>
+											) : plan.popular ? (
+												<span className="px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium bg-zinc-800 text-zinc-200 ring-1 ring-zinc-700/50 border border-zinc-700/50">
+													Most Popular
+												</span>
+											) : null}
+										</div>
 
-							{/* Fame Flex Plan */}
-							<div
-								className={`rounded-lg p-6 border transition-all relative bg-zinc-900/80 ${
-									currentPlan === 'fame_flex'
-										? 'border-primary/50 ring-1 ring-primary/30 shadow-[0_0_0_1px_rgba(255,46,204,0.12)]'
-										: 'border-zinc-700/50 hover:border-zinc-600'
-								}`}
-							>
-								{currentPlan === 'fame_flex' && (
-									<div className="absolute top-2 right-2 sm:top-3 sm:right-3">
-										<span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium bg-pink-600 text-white shadow-md ring-1 ring-pink-400/40 flex items-center gap-1 max-w-full">
-											<CheckCircle className="h-3 w-3" />
-											<span className="truncate">Current Plan</span>
-										</span>
-									</div>
-								)}
-								<div className="text-center">
-									<div className="flex items-center justify-center mb-3">
-										<Crown
-											className={`h-6 w-6 mr-2 ${
-												currentPlan === 'fame_flex' ? 'text-primary' : 'text-zinc-300'
-											}`}
-										/>
-										<h3
-											className={`text-xl font-semibold ${
-												currentPlan === 'fame_flex' ? 'text-zinc-100' : 'text-zinc-100'
-											}`}
-										>
-											Fame Flex
-										</h3>
-									</div>
-									<div
-										className={`text-3xl font-bold mb-1 ${
-											currentPlan === 'fame_flex' ? 'text-primary' : 'text-zinc-100'
-										}`}
-									>
-										$499
-									</div>
-									<div className="text-sm text-zinc-500 mb-6">per month</div>
-									<ul className="space-y-2 text-sm text-zinc-500 mb-6">
-										<li>✓ Unlimited campaigns</li>
-										<li>✓ Unlimited creators</li>
-										<li>✓ API access</li>
-										<li>✓ Priority support</li>
-									</ul>
-									{currentPlan === 'fame_flex' ? (
-										isTrialing ? (
-											<Button
-												onClick={handleOpenStartModal}
-												disabled={isStartingSubscription}
-												className="w-full bg-pink-500 hover:bg-pink-600 text-white"
-											>
-												{isStartingSubscription ? (
-													<Loader2 className="h-4 w-4 animate-spin mr-2" />
-												) : (
-													<Sparkles className="h-4 w-4 mr-2" />
-												)}
-												{isStartingSubscription ? 'Processing...' : 'Start Your Subscription'}
-											</Button>
-										) : (
-											<div className="w-full bg-primary/20 text-primary border border-primary/30 py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2">
-												<CheckCircle className="h-4 w-4" />
-												Your Current Plan
+										<div className="text-center">
+											{/* Plan Name & Icon */}
+											<div className="flex items-center justify-center mb-3">
+												<PlanIcon
+													className={`h-6 w-6 mr-2 ${isCurrentPlan ? 'text-primary' : 'text-zinc-300'}`}
+												/>
+												<h3 className="text-xl font-semibold text-zinc-100">{plan.name}</h3>
 											</div>
-										)
-									) : (
-										<UpgradeButton targetPlan="fame_flex" className="w-full" />
-									)}
-								</div>
-							</div>
+
+											{/* Price */}
+											<div
+												className={`text-3xl font-bold mb-1 ${isCurrentPlan ? 'text-primary' : 'text-zinc-100'}`}
+											>
+												{plan.monthlyPrice}
+											</div>
+											<div className="text-sm text-zinc-500 mb-6">per month</div>
+
+											{/* Features */}
+											<ul className="space-y-2 text-sm text-zinc-500 mb-6">
+												{plan.features.slice(0, 4).map((feature, idx) => (
+													<li key={idx}>✓ {feature}</li>
+												))}
+											</ul>
+
+											{/* CTA Button */}
+											{isCurrentPlan ? (
+												isTrialing ? (
+													<Button
+														onClick={handleOpenStartModal}
+														disabled={isStartingSubscription}
+														className="w-full bg-pink-500 hover:bg-pink-600 text-white"
+													>
+														{isStartingSubscription ? (
+															<Loader2 className="h-4 w-4 animate-spin mr-2" />
+														) : (
+															<Sparkles className="h-4 w-4 mr-2" />
+														)}
+														{isStartingSubscription ? 'Processing...' : 'Start Your Subscription'}
+													</Button>
+												) : (
+													<div className="w-full bg-primary/20 text-primary border border-primary/30 py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2">
+														<CheckCircle className="h-4 w-4" />
+														Your Current Plan
+													</div>
+												)
+											) : (
+												<UpgradeButton targetPlan={plan.id} className="w-full" />
+											)}
+										</div>
+									</div>
+								);
+							})}
 						</div>
 					</CardContent>
 				</Card>

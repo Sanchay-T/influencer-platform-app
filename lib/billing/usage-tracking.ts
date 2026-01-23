@@ -41,21 +41,18 @@ async function getInternalUserId(clerkUserId: string): Promise<string | null> {
 // TYPES
 // ═══════════════════════════════════════════════════════════════
 
+export interface UsageMetric {
+	used: number;
+	limit: number;
+	remaining: number;
+	isUnlimited: boolean;
+	percentUsed: number;
+}
+
 export interface UsageSummary {
-	campaigns: {
-		used: number;
-		limit: number;
-		remaining: number;
-		isUnlimited: boolean;
-		percentUsed: number;
-	};
-	creatorsThisMonth: {
-		used: number;
-		limit: number;
-		remaining: number;
-		isUnlimited: boolean;
-		percentUsed: number;
-	};
+	campaigns: UsageMetric;
+	creatorsThisMonth: UsageMetric;
+	enrichmentsThisMonth: UsageMetric;
 	currentPlan: PlanKey | null;
 	lastResetDate: Date | null;
 }
@@ -85,12 +82,15 @@ export async function getUsageSummary(userId: string): Promise<UsageSummary | nu
 
 	const campaignLimit = planConfig?.limits.campaigns ?? 0;
 	const creatorLimit = planConfig?.limits.creatorsPerMonth ?? 0;
+	const enrichmentLimit = planConfig?.limits.enrichmentsPerMonth ?? 0;
 
 	const campaignsUsed = profile.usageCampaignsCurrent || 0;
 	const creatorsUsed = profile.usageCreatorsCurrentMonth || 0;
+	const enrichmentsUsed = profile.enrichmentsCurrentMonth || 0;
 
 	const campaignsUnlimited = campaignLimit === -1;
 	const creatorsUnlimited = creatorLimit === -1;
+	const enrichmentsUnlimited = enrichmentLimit === -1;
 
 	return {
 		campaigns: {
@@ -106,6 +106,13 @@ export async function getUsageSummary(userId: string): Promise<UsageSummary | nu
 			remaining: creatorsUnlimited ? -1 : Math.max(0, creatorLimit - creatorsUsed),
 			isUnlimited: creatorsUnlimited,
 			percentUsed: creatorsUnlimited ? 0 : Math.round((creatorsUsed / creatorLimit) * 100),
+		},
+		enrichmentsThisMonth: {
+			used: enrichmentsUsed,
+			limit: enrichmentLimit,
+			remaining: enrichmentsUnlimited ? -1 : Math.max(0, enrichmentLimit - enrichmentsUsed),
+			isUnlimited: enrichmentsUnlimited,
+			percentUsed: enrichmentsUnlimited ? 0 : Math.round((enrichmentsUsed / enrichmentLimit) * 100),
 		},
 		currentPlan,
 		lastResetDate: profile.usageResetDate ? new Date(profile.usageResetDate) : null,
@@ -250,13 +257,87 @@ export async function incrementCreatorCount(
 	}
 }
 
+/**
+ * Increment the enrichment count for a user.
+ * Call this AFTER successfully enriching a creator profile.
+ *
+ * @param clerkUserId - The Clerk user ID (not internal UUID)
+ * @param count - Number of enrichments to add (default: 1)
+ */
+export async function incrementEnrichmentCount(
+	clerkUserId: string,
+	count: number = 1
+): Promise<IncrementResult> {
+	if (count <= 0) {
+		return { success: true, newCount: 0 };
+	}
+
+	try {
+		// Resolve Clerk ID to internal UUID
+		const internalUserId = await getInternalUserId(clerkUserId);
+		if (!internalUserId) {
+			logger.warn('User not found for enrichment increment', {
+				userId: clerkUserId,
+				metadata: { count },
+			});
+			return { success: false, newCount: 0, error: 'User not found' };
+		}
+
+		const result = await db
+			.update(userUsage)
+			.set({
+				enrichmentsCurrentMonth: sql`COALESCE(${userUsage.enrichmentsCurrentMonth}, 0) + ${count}`,
+				updatedAt: new Date(),
+			})
+			.where(eq(userUsage.userId, internalUserId))
+			.returning({ newCount: userUsage.enrichmentsCurrentMonth });
+
+		if (result.length === 0) {
+			// User usage record doesn't exist, create it
+			const inserted = await db
+				.insert(userUsage)
+				.values({
+					userId: internalUserId,
+					usageCampaignsCurrent: 0,
+					usageCreatorsCurrentMonth: 0,
+					enrichmentsCurrentMonth: count,
+					usageResetDate: new Date(),
+				})
+				.returning({ newCount: userUsage.enrichmentsCurrentMonth });
+
+			logger.info('Created new usage record for user', {
+				userId: clerkUserId,
+				metadata: { enrichments: count },
+			});
+			return { success: true, newCount: inserted[0]?.newCount || count };
+		}
+
+		logger.info('Incremented enrichment count', {
+			userId: clerkUserId,
+			metadata: { added: count, newCount: result[0].newCount },
+		});
+		return { success: true, newCount: result[0].newCount || count };
+	} catch (error) {
+		logger.error(
+			'Failed to increment enrichment count',
+			error instanceof Error ? error : new Error(String(error)),
+			{ userId: clerkUserId, metadata: { count } }
+		);
+		return {
+			success: false,
+			newCount: 0,
+			error: error instanceof Error ? error.message : 'Unknown error',
+		};
+	}
+}
+
 // ═══════════════════════════════════════════════════════════════
 // USAGE RESET FUNCTIONS
 // ═══════════════════════════════════════════════════════════════
 
 /**
  * Reset monthly usage for a single user.
- * This resets `usageCreatorsCurrentMonth` to 0.
+ * This resets `usageCreatorsCurrentMonth` and `enrichmentsCurrentMonth` to 0.
  */
 export async function resetMonthlyUsage(userId: string): Promise<boolean> {
 	try {
@@ -264,6 +345,7 @@ export async function resetMonthlyUsage(userId: string): Promise<boolean> {
 			.update(userUsage)
 			.set({
 				usageCreatorsCurrentMonth: 0,
+				enrichmentsCurrentMonth: 0,
 				usageResetDate: new Date(),
 				updatedAt: new Date(),
 			})
@@ -293,6 +375,7 @@ export async function resetAllMonthlyUsage(): Promise<number> {
 			.update(userUsage)
 			.set({
 				usageCreatorsCurrentMonth: 0,
+				enrichmentsCurrentMonth: 0,
 				usageResetDate: new Date(),
 				updatedAt: new Date(),
 			})

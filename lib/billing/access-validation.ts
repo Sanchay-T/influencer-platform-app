@@ -217,6 +217,59 @@ export async function validateCreatorSearch(
 }
 
 // ═══════════════════════════════════════════════════════════════
+// ENRICHMENT VALIDATION
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Check if user can perform an enrichment action.
+ * Enrichments reveal additional creator data (email, contact info, etc.)
+ */
+export async function validateEnrichment(userId: string, count: number = 1): Promise<AccessResult> {
+	const accessResult = await validateAccessInternal(userId);
+	if (!(accessResult.allowed && accessResult.user)) {
+		const { user: _user, ...result } = accessResult;
+		return result;
+	}
+
+	const user = accessResult.user;
+	const planCandidate = user.currentPlan ?? '';
+	const currentPlan: PlanKey | null = isValidPlan(planCandidate) ? planCandidate : null;
+	if (!currentPlan) {
+		return {
+			allowed: false,
+			reason: 'No active plan found.',
+			upgradeRequired: true,
+		};
+	}
+
+	const planConfig = getPlanConfig(currentPlan);
+	const limit = planConfig.limits.enrichmentsPerMonth;
+	const used = user.enrichmentsCurrentMonth || 0;
+
+	// Unlimited
+	if (limit === -1) {
+		return { allowed: true };
+	}
+
+	const projectedUsage = used + count;
+	if (projectedUsage > limit) {
+		// Track enrichment limit exceeded in Sentry
+		SentryLogger.captureMessage('Enrichment limit exceeded', 'warning', {
+			tags: { feature: 'access_validation', reason: 'enrichment_limit' },
+			extra: { userId, currentPlan, limit, used, count, projectedUsage },
+		});
+
+		return {
+			allowed: false,
+			reason: `You've reached your monthly enrichment limit (${limit}). You have ${Math.max(0, limit - used)} remaining.`,
+			upgradeRequired: true,
+		};
+	}
+
+	return { allowed: true };
+}
+
+// ═══════════════════════════════════════════════════════════════
 // TRIAL SEARCH LIMIT VALIDATION
 // ═══════════════════════════════════════════════════════════════
 

@@ -5,13 +5,20 @@
  *
  * Display configuration for plans shown in the UI.
  * Separate from plan-config.ts which has backend validation logic.
+ *
+ * PRICING TIERS (Jan 2026):
+ * - NEW: Growth ($199), Scale ($599), Pro ($1,999) - for new users
+ * - LEGACY: Glow Up ($99), Viral Surge ($249), Fame Flex ($499) - grandfathered
  */
 
 import type { LucideIcon } from 'lucide-react';
-import { Crown, Star, Zap } from 'lucide-react';
+import { Crown, Rocket, Star, TrendingUp, Zap } from 'lucide-react';
+
+// All plan keys (new + legacy)
+export type PlanDisplayId = 'growth' | 'scale' | 'pro' | 'glow_up' | 'viral_surge' | 'fame_flex';
 
 export interface PlanDisplayConfig {
-	id: string;
+	id: PlanDisplayId;
 	name: string;
 	monthlyPrice: string;
 	yearlyPrice: string;
@@ -21,9 +28,86 @@ export interface PlanDisplayConfig {
 	color: string;
 	features: string[];
 	popular: boolean;
+	isLegacy?: boolean;
 }
 
-export const PLAN_DISPLAY_CONFIGS: PlanDisplayConfig[] = [
+// ═══════════════════════════════════════════════════════════════
+// NEW PLANS - Shown to new users (Jan 2026)
+// ═══════════════════════════════════════════════════════════════
+
+export const NEW_PLAN_DISPLAY_CONFIGS: PlanDisplayConfig[] = [
+	{
+		id: 'growth',
+		name: 'Growth',
+		monthlyPrice: '$199',
+		yearlyPrice: '$159',
+		yearlyTotal: '$1,908',
+		description: 'For growing businesses discovering creators',
+		icon: Rocket,
+		color: 'text-indigo-400 bg-zinc-800',
+		features: [
+			'6,000 creators per month',
+			'500 enrichments per month',
+			'Unlimited campaigns',
+			'CSV export',
+			'Bio & email extraction',
+			'Basic analytics',
+		],
+		popular: false,
+		isLegacy: false,
+	},
+	{
+		id: 'scale',
+		name: 'Scale',
+		monthlyPrice: '$599',
+		yearlyPrice: '$479',
+		yearlyTotal: '$5,748',
+		description: 'For scaling brands with serious creator needs',
+		icon: TrendingUp,
+		color: 'text-violet-400 bg-zinc-800',
+		features: [
+			'30,000 creators per month',
+			'1,000 enrichments per month',
+			'Unlimited campaigns',
+			'CSV export',
+			'Bio & email extraction',
+			'Advanced analytics',
+			'API access',
+			'Real-time updates',
+		],
+		popular: true,
+		isLegacy: false,
+	},
+	{
+		id: 'pro',
+		name: 'Pro',
+		monthlyPrice: '$1,999',
+		yearlyPrice: '$1,599',
+		yearlyTotal: '$19,188',
+		description: 'Unlimited power for agencies and enterprises',
+		icon: Crown,
+		color: 'text-amber-400 bg-zinc-800',
+		features: [
+			'75,000 creators per month',
+			'10,000 enrichments per month',
+			'Unlimited campaigns',
+			'CSV export',
+			'Bio & email extraction',
+			'Advanced analytics',
+			'API access',
+			'Priority support',
+			'Real-time updates',
+		],
+		popular: false,
+		isLegacy: false,
+	},
+];
+
+// ═══════════════════════════════════════════════════════════════
+// LEGACY PLANS - For grandfathered users only
+// ═══════════════════════════════════════════════════════════════
+
+export const LEGACY_PLAN_DISPLAY_CONFIGS: PlanDisplayConfig[] = [
 	{
 		id: 'glow_up',
 		name: 'Glow Up',
@@ -36,12 +120,13 @@ export const PLAN_DISPLAY_CONFIGS: PlanDisplayConfig[] = [
 		features: [
 			'Up to 3 active campaigns',
 			'Up to 1,000 creators per month',
-			'Unlimited search',
+			'50 enrichments per month',
 			'CSV export',
 			'Bio & email extraction',
 			'Basic analytics',
 		],
-		popular: true,
+		popular: false,
+		isLegacy: true,
 	},
 	{
 		id: 'viral_surge',
@@ -55,13 +140,14 @@ export const PLAN_DISPLAY_CONFIGS: PlanDisplayConfig[] = [
 		features: [
 			'Up to 10 active campaigns',
 			'Up to 10,000 creators per month',
-			'Unlimited search',
+			'200 enrichments per month',
 			'CSV export',
 			'Bio & email extraction',
 			'Advanced analytics',
 			'Priority support',
 		],
 		popular: false,
+		isLegacy: true,
 	},
 	{
 		id: 'fame_flex',
@@ -75,18 +161,60 @@ export const PLAN_DISPLAY_CONFIGS: PlanDisplayConfig[] = [
 		features: [
 			'Unlimited campaigns',
 			'Unlimited creators',
-			'Unlimited search',
+			'Unlimited enrichments',
 			'CSV export',
 			'Bio & email extraction',
 			'Advanced analytics',
 			'API access',
 			'Priority support',
-			'Custom integrations',
 		],
 		popular: false,
+		isLegacy: true,
 	},
 ];
 
+// ═══════════════════════════════════════════════════════════════
+// EXPORTS
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Plans shown in onboarding/pricing pages (new users)
+ * @deprecated Use getVisiblePlanConfigs() instead for explicit intent
+ */
+export const PLAN_DISPLAY_CONFIGS: PlanDisplayConfig[] = NEW_PLAN_DISPLAY_CONFIGS;
+
+/**
+ * All plans including legacy (for admin/reference)
+ */
+export const ALL_PLAN_DISPLAY_CONFIGS: PlanDisplayConfig[] = [
+	...NEW_PLAN_DISPLAY_CONFIGS,
+	...LEGACY_PLAN_DISPLAY_CONFIGS,
+];
+
+/**
+ * Get display config for any plan (new or legacy)
+ */
 export function getPlanDisplayConfig(planId: string): PlanDisplayConfig | undefined {
-	return PLAN_DISPLAY_CONFIGS.find((p) => p.id === planId);
+	return ALL_PLAN_DISPLAY_CONFIGS.find((p) => p.id === planId);
+}
+
+/**
+ * Get only new plans for pricing/onboarding pages
+ */
+export function getVisiblePlanConfigs(): PlanDisplayConfig[] {
+	return NEW_PLAN_DISPLAY_CONFIGS;
+}
+
+/**
+ * Get only legacy plans (for admin view)
+ */
+export function getLegacyPlanConfigs(): PlanDisplayConfig[] {
+	return LEGACY_PLAN_DISPLAY_CONFIGS;
+}
+
+/**
+ * Check if a plan is legacy (grandfathered)
+ */
+export function isLegacyPlanId(planId: string): boolean {
+	return LEGACY_PLAN_DISPLAY_CONFIGS.some((p) => p.id === planId);
 }
