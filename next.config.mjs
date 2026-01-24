@@ -84,9 +84,15 @@ const sentryWebpackPluginOptions = {
   // tunnelRoute: '/monitoring',
 };
 
-// Only wrap with Sentry if we have the required environment variables
-const shouldUseSentry =
-  process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN;
+// Only wrap with Sentry if we have ALL required environment variables
+// Missing SENTRY_ORG/PROJECT/AUTH_TOKEN will cause build failures
+const hasSentryDsn = process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN;
+const hasSentryUploadConfig =
+  process.env.SENTRY_ORG &&
+  process.env.SENTRY_PROJECT &&
+  process.env.SENTRY_AUTH_TOKEN;
+
+const shouldUseSentry = hasSentryDsn && hasSentryUploadConfig;
 
 export default shouldUseSentry
   ? withSentryConfig(nextConfig, sentryWebpackPluginOptions)
