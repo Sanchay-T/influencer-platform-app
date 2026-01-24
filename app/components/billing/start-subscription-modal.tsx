@@ -49,13 +49,15 @@ export function StartSubscriptionModal({
 						<Sparkles className="h-5 w-5 text-pink-500" />
 						Start Your Subscription?
 					</AlertDialogTitle>
-					<AlertDialogDescription className="space-y-3 pt-2">
-						<p>
-							Your card on file will be charged{' '}
-							<span className="font-semibold text-foreground">${amount}/month</span> for your{' '}
-							<span className="font-semibold text-foreground">{planName}</span> plan.
-						</p>
-						<p className="text-xs">Your subscription will begin immediately.</p>
+					<AlertDialogDescription asChild>
+						<div className="text-sm text-muted-foreground space-y-3 pt-2">
+							<p>
+								Your card on file will be charged{' '}
+								<span className="font-semibold text-foreground">${amount}/month</span> for your{' '}
+								<span className="font-semibold text-foreground">{planName}</span> plan.
+							</p>
+							<p className="text-xs">Your subscription will begin immediately.</p>
+						</div>
 					</AlertDialogDescription>
 				</AlertDialogHeader>
 				<AlertDialogFooter className="gap-2 sm:gap-0">
