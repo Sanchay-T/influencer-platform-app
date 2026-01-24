@@ -195,9 +195,6 @@ async function refreshListStats(listId: string) {
 
 export async function getListsForUser(clerkUserId: string): Promise<CreatorListSummary[]> {
 	const user = await findInternalUser(clerkUserId);
-
-	// Use cached stats from the list's stats JSON field instead of expensive JOINs
-	// Stats are kept up-to-date by refreshListStats() when creators are added/removed
 	const collaboratorSubquery = db
 		.select({ listId: creatorListCollaborators.listId })
 		.from(creatorListCollaborators)
@@ -208,28 +205,34 @@ export async function getListsForUser(clerkUserId: string): Promise<CreatorListS
 			)
 		);
 
-	// Simple query without expensive aggregation JOINs
 	const rows = await db
-		.select()
+		.select({
+			list: creatorLists,
+			creatorCount: sql<number>`COALESCE(COUNT(${creatorListItems.id}), 0)`,
+			followerSum: sql<number>`COALESCE(SUM(${creatorProfiles.followers}), 0)`,
+			collaboratorCount: sql<number>`COALESCE(COUNT(DISTINCT ${creatorListCollaborators.id}), 0)`,
+		})
 		.from(creatorLists)
+		.leftJoin(creatorListItems, eq(creatorListItems.listId, creatorLists.id))
+		.leftJoin(creatorProfiles, eq(creatorProfiles.id, creatorListItems.creatorId))
+		.leftJoin(
+			creatorListCollaborators,
+			and(
+				eq(creatorListCollaborators.listId, creatorLists.id),
+				eq(creatorListCollaborators.status, 'accepted')
+			)
+		)
 		.where(or(eq(creatorLists.ownerId, user.id), inArray(creatorLists.id, collaboratorSubquery)))
+		.groupBy(creatorLists.id)
 		.orderBy(desc(creatorLists.updatedAt));
 
-	return rows.map((list) => {
-		// Extract stats from cached JSON field
-		const cachedStats = toRecord(list.stats);
-		const creatorCount =
-			typeof cachedStats?.creatorCount === 'number' ? cachedStats.creatorCount : 0;
-		const followerSum = typeof cachedStats?.followerSum === 'number' ? cachedStats.followerSum : 0;
-
-		return {
-			...list,
-			creatorCount,
-			followerSum,
-			collaboratorCount: 0, // Not cached, default to 0 for list view
-			viewerRole: list.ownerId === user.id ? 'owner' : ('viewer' as CreatorListRole),
-		};
-	});
+	return rows.map((row) => ({
+		...row.list,
+		creatorCount: Number(row.creatorCount ?? 0),
+		followerSum: Number(row.followerSum ?? 0),
+		collaboratorCount: Number(row.collaboratorCount ?? 0),
+		viewerRole: row.list.ownerId === user.id ? 'owner' : 'viewer',
+	}));
 }
 
 export async function getListDetail(
