@@ -60,9 +60,13 @@ export async function GET(_: Request, context: { params: Promise<{ id: string }>
 // biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
 	const { id } = await context.params;
+	const startTime = performance.now();
 
 	return apiTracker.trackRoute('list', 'update', async () => {
+		const authStart = performance.now();
 		const { userId } = await getAuthOrTest();
+		const authMs = performance.now() - authStart;
+
 		if (!userId) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
@@ -73,12 +77,25 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
 		try {
 			const body = await request.json();
+
+			const dbStart = performance.now();
 			const updated = await updateList(userId, id, body);
+			const dbMs = performance.now() - dbStart;
 
 			// Track list update in Sentry
 			listTracker.trackOperation('update', { userId, listId: id });
 
-			return NextResponse.json({ list: updated });
+			const totalMs = performance.now() - startTime;
+
+			// Add timing headers for debugging (visible in DevTools Network tab)
+			return NextResponse.json(
+				{ list: updated },
+				{
+					headers: {
+						'Server-Timing': `auth;dur=${authMs.toFixed(1)}, db;dur=${dbMs.toFixed(1)}, total;dur=${totalMs.toFixed(1)}`,
+					},
+				}
+			);
 		} catch (error) {
 			return handleError(error, { userId, listId: id, action: 'update' });
 		}

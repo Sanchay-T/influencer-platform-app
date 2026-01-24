@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { trackServer } from '@/lib/analytics/track';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { db } from '@/lib/db';
-import { getUserProfile } from '@/lib/db/queries/user-queries';
+import { ensureUserProfile, getUserProfile } from '@/lib/db/queries/user-queries';
 import { userSubscriptions, users } from '@/lib/db/schema';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
 import { billingTracker, onboardingTracker, SentryLogger, sessionTracker } from '@/lib/sentry';
@@ -33,6 +33,9 @@ export async function POST(req: Request) {
 		if (!planId) {
 			return NextResponse.json({ error: 'Plan ID is required' }, { status: 400 });
 		}
+
+		// Ensure user exists in database (handles race condition with Clerk webhook)
+		await ensureUserProfile(userId);
 
 		// Get the user's internal UUID
 		const user = await db.query.users.findFirst({

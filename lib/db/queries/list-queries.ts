@@ -376,30 +376,18 @@ export async function updateList(
 		payload: updates,
 	});
 
-	const [stats] = await db
-		.select({
-			creatorCount: sql<number>`COALESCE(COUNT(${creatorListItems.id}), 0)`,
-			followerSum: sql<number>`COALESCE(SUM(${creatorProfiles.followers}), 0)`,
-			collaboratorCount: sql<number>`COALESCE(COUNT(DISTINCT ${creatorListCollaborators.id}), 0)`,
-		})
-		.from(creatorLists)
-		.leftJoin(creatorListItems, eq(creatorListItems.listId, creatorLists.id))
-		.leftJoin(creatorProfiles, eq(creatorProfiles.id, creatorListItems.creatorId))
-		.leftJoin(
-			creatorListCollaborators,
-			and(
-				eq(creatorListCollaborators.listId, creatorLists.id),
-				eq(creatorListCollaborators.status, 'accepted')
-			)
-		)
-		.where(eq(creatorLists.id, listId))
-		.groupBy(creatorLists.id);
+	// Skip expensive stats recalc for metadata-only updates (name, description, type, etc.)
+	// Stats are only recalculated when creators/collaborators change (in addCreatorsToList, removeListItems, etc.)
+	// Use cached stats from the list's stats JSON field instead
+	const cachedStats = toRecord(updated.stats);
+	const creatorCount = typeof cachedStats?.creatorCount === 'number' ? cachedStats.creatorCount : 0;
+	const followerSum = typeof cachedStats?.followerSum === 'number' ? cachedStats.followerSum : 0;
 
 	return {
 		...updated,
-		creatorCount: Number(stats?.creatorCount ?? 0),
-		followerSum: Number(stats?.followerSum ?? 0),
-		collaboratorCount: Number(stats?.collaboratorCount ?? 0),
+		creatorCount,
+		followerSum,
+		collaboratorCount: 0, // Collaborator count not cached in stats, default to 0 for metadata updates
 		viewerRole: access.role,
 	};
 }
