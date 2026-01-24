@@ -51,16 +51,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 			const body = await request.json();
 			const result = await addCreatorsToList(userId, id, body.creators ?? []);
 
-			// Track creators saved (GA4 + LogSnag + Sentry)
+			// Track creators saved (GA4 + LogSnag + Sentry) - fire and forget
 			if (result.added > 0) {
-				const user = await getUserProfile(userId);
-				await trackServer('creator_saved', {
-					userId,
-					listName: id, // Using list ID as name since we don't have it here
-					count: result.added,
-					email: user?.email || 'unknown',
-					userName: user?.fullName || '',
-				});
+				getUserProfile(userId)
+					.then((user) =>
+						trackServer('creator_saved', {
+							userId,
+							listName: id,
+							count: result.added,
+							email: user?.email || 'unknown',
+							userName: user?.fullName || '',
+						})
+					)
+					.catch((err) =>
+						structuredConsole.error('[ANALYTICS] creator_saved tracking failed', err)
+					);
 
 				// Track add creators operation in Sentry
 				listTracker.trackOperation('add_creator', {
