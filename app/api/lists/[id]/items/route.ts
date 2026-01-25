@@ -51,23 +51,29 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 			const body = await request.json();
 			const result = await addCreatorsToList(userId, id, body.creators ?? []);
 
-			// Track creators saved (GA4 + LogSnag + Sentry)
+			// Fire-and-forget: Analytics tracking (don't block response)
 			if (result.added > 0) {
-				const user = await getUserProfile(userId);
-				await trackServer('creator_saved', {
-					userId,
-					listName: id, // Using list ID as name since we don't have it here
-					count: result.added,
-					email: user?.email || 'unknown',
-					userName: user?.fullName || '',
-				});
-
-				// Track add creators operation in Sentry
+				// Sentry tracking is fast, keep it sync
 				listTracker.trackOperation('add_creator', {
 					userId,
 					listId: id,
 					creatorCount: result.added,
 				});
+
+				// GA4 + LogSnag tracking - fire and forget (async HTTP calls)
+				getUserProfile(userId)
+					.then((user) =>
+						trackServer('creator_saved', {
+							userId,
+							listName: id,
+							count: result.added,
+							email: user?.email || 'unknown',
+							userName: user?.fullName || '',
+						})
+					)
+					.catch((err) =>
+						structuredConsole.error('[LIST_ITEMS_API] Analytics tracking failed', err)
+					);
 			}
 
 			return NextResponse.json(result, { status: 201 });
