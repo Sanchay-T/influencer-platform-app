@@ -80,9 +80,13 @@ const sentryWebpackPluginOptions = {
   // Disable the Sentry SDK logger (too verbose)
   disableLogger: true,
 
-  // Temporarily disable source map uploads to unblock builds
+  // Temporarily disable source map uploads and release creation to unblock builds
   sourcemaps: {
     disable: true,
+  },
+  release: {
+    create: false,
+    finalize: false,
   },
 
   // Tunnel route to bypass ad blockers (optional)
