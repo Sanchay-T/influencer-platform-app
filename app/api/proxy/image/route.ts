@@ -1,4 +1,6 @@
+import { head, list } from '@vercel/blob';
 import convert from 'heic-convert';
+import { createHash } from 'crypto';
 import { NextResponse } from 'next/server';
 import sharp from 'sharp';
 import { logger } from '@/lib/logging';
@@ -68,6 +70,55 @@ function generatePlaceholderResponse(imageUrl: string, jobId?: string) {
 			'X-Image-Original-Format': 'failed',
 		},
 	});
+}
+
+/**
+ * Detect platform from image URL
+ */
+function detectPlatformFromUrl(url: string): string {
+	if (url.includes('instagram') || url.includes('cdninstagram') || url.includes('fbcdn')) {
+		return 'instagram';
+	}
+	if (url.includes('tiktok') || url.includes('tiktokcdn')) {
+		return 'tiktok';
+	}
+	if (url.includes('youtube') || url.includes('ytimg') || url.includes('ggpht')) {
+		return 'youtube';
+	}
+	return 'unknown';
+}
+
+/**
+ * Try to find a cached version of an image in Vercel Blob
+ * Uses the same cache key format as ImageCache service
+ */
+async function findCachedImage(originalUrl: string): Promise<string | null> {
+	try {
+		const platform = detectPlatformFromUrl(originalUrl);
+		const urlHash = createHash('md5').update(originalUrl).digest('hex').slice(0, 8);
+
+		// Search in both avatars and thumbnails directories
+		const prefixes = [`images/avatars/${platform}/`, `images/thumbnails/${platform}/`];
+
+		for (const prefix of prefixes) {
+			try {
+				const { blobs } = await list({ prefix, limit: 500 });
+				// Find blob that ends with the URL hash
+				const match = blobs.find((blob) => blob.pathname.includes(urlHash));
+				if (match) {
+					structuredConsole.log(`✅ [IMAGE-PROXY] Found cached version: ${match.pathname}`);
+					return match.url;
+				}
+			} catch {
+				// Continue to next prefix
+			}
+		}
+
+		return null;
+	} catch (error) {
+		structuredConsole.warn(`[IMAGE-PROXY] Cache lookup failed: ${error}`);
+		return null;
+	}
 }
 
 export async function GET(request: Request) {
@@ -171,6 +222,20 @@ export async function GET(request: Request) {
 		} catch (fetchError: unknown) {
 			const error = toError(fetchError);
 			structuredConsole.error('❌ [IMAGE-PROXY] Network error:', error.message);
+
+			// Check for cached version first
+			structuredConsole.log('🔍 [IMAGE-PROXY] Checking for cached version after network error...');
+			const cachedUrl = await findCachedImage(imageUrl);
+			if (cachedUrl) {
+				structuredConsole.log('✅ [IMAGE-PROXY] Found cached version, redirecting');
+				return NextResponse.redirect(cachedUrl, {
+					status: 302,
+					headers: {
+						'Cache-Control': 'public, max-age=3600',
+						'X-Image-Proxy-Source': 'blob-cache-network-fallback',
+					},
+				});
+			}
 
 			// Handle DNS resolution errors (common with Instagram CDN)
 			const causeMessage =
@@ -292,6 +357,21 @@ export async function GET(request: Request) {
 				response.statusText
 			);
 			structuredConsole.error('📍 [IMAGE-PROXY] Final URL attempted:', imageUrl);
+
+			// Strategy: Check if we have a cached version in Vercel Blob
+			structuredConsole.log('🔍 [IMAGE-PROXY] Checking for cached version...');
+			const cachedUrl = await findCachedImage(imageUrl);
+			if (cachedUrl) {
+				structuredConsole.log('✅ [IMAGE-PROXY] Found cached version, redirecting');
+				return NextResponse.redirect(cachedUrl, {
+					status: 302,
+					headers: {
+						'Cache-Control': 'public, max-age=3600',
+						'X-Image-Proxy-Source': 'blob-cache-fallback',
+					},
+				});
+			}
+			structuredConsole.log('❌ [IMAGE-PROXY] No cached version found');
 
 			// For TikTok CDN failures, serve a placeholder instead of failing
 			if (imageUrl.includes('tiktokcdn') && response.status === 403) {

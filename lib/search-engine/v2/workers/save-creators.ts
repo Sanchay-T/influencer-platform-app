@@ -15,6 +15,7 @@ import { db } from '@/lib/db';
 import { jobCreators } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
 import { SentryLogger } from '@/lib/sentry';
+import { imageCache } from '@/lib/services/image-cache';
 import type { NormalizedCreator } from '../core/types';
 
 // ============================================================================
@@ -22,6 +23,76 @@ import type { NormalizedCreator } from '../core/types';
 // ============================================================================
 
 const LOG_PREFIX = '[v2-save-creators]';
+
+// ============================================================================
+// Image Caching Helper
+// ============================================================================
+
+/**
+ * Extract image URLs from a NormalizedCreator for caching
+ */
+function extractImageUrls(creator: NormalizedCreator): {
+	platform: string;
+	username: string;
+	contentId: string;
+	avatarUrl: string | null;
+	thumbnailUrl: string | null;
+} {
+	return {
+		platform: creator.platform || 'unknown',
+		username: creator.creator?.username || 'unknown',
+		contentId: creator.content?.id || creator.id || 'unknown',
+		avatarUrl: creator.creator?.avatarUrl || null,
+		thumbnailUrl:
+			creator.content?.thumbnail ||
+			creator.video?.thumbnail ||
+			creator.video?.cover ||
+			creator.preview ||
+			creator.previewUrl ||
+			null,
+	};
+}
+
+/**
+ * Fire-and-forget: Cache images for creators in background
+ * Does not block the save operation or propagate errors
+ */
+function triggerBackgroundImageCache(creators: NormalizedCreator[]): void {
+	// Extract URLs for all creators
+	const creatorsWithUrls = creators.map(extractImageUrls);
+
+	// Filter to only creators with at least one image URL
+	const creatorsToCache = creatorsWithUrls.filter((c) => c.avatarUrl || c.thumbnailUrl);
+
+	if (creatorsToCache.length === 0) {
+		return;
+	}
+
+	// Fire-and-forget - don't await
+	imageCache
+		.batchCacheCreators(creatorsToCache)
+		.then((result) => {
+			logger.info(
+				`${LOG_PREFIX} Background image caching complete`,
+				{
+					metadata: {
+						processed: result.processed,
+						cached: result.cached,
+						failed: result.failed,
+					},
+				},
+				LogCategory.JOB
+			);
+		})
+		.catch((error) => {
+			// Log but don't throw - caching failure shouldn't affect search
+			logger.warn(
+				`${LOG_PREFIX} Background image caching failed`,
+				{ metadata: { error: String(error) } },
+				LogCategory.JOB
+			);
+		});
+}
 
 // ============================================================================
 // Types
@@ -185,6 +256,13 @@ export async function saveCreatorsToJob(
 			targetReached: finalCount >= targetResults,
 		},
 	});
+
+	// Step 5: Fire-and-forget image caching
+	// Cache images to Vercel Blob before CDN URLs expire
+	// @context Solves "old runs don't show images" problem
+	if (insertedCount > 0) {
+		triggerBackgroundImageCache(creatorsToProcess);
+	}
 
 	return {
 		total: finalCount,
