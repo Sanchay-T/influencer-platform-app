@@ -2,9 +2,11 @@ import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { trackServer } from '@/lib/analytics/track';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
+import { queueOnboardingEmails } from '@/lib/billing';
 import { db } from '@/lib/db';
 import { createUser, getUserProfile } from '@/lib/db/queries/user-queries';
 import { users } from '@/lib/db/schema';
+import { getUserEmailFromClerk } from '@/lib/email/email-service';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
 import { onboardingTracker, SentryLogger, sessionTracker } from '@/lib/sentry';
 import { createPerfLogger } from '@/lib/utils/perf-logger';
@@ -75,6 +77,31 @@ export async function PATCH(req: Request) {
 			userId,
 			metadata: { fullName: fullName.trim(), businessName: businessName.trim() },
 		});
+
+		// Queue welcome + abandonment emails (fire and forget)
+		getUserEmailFromClerk(userId)
+			.then((email) => {
+				if (email) {
+					return queueOnboardingEmails(userId, email, fullName.trim(), businessName.trim());
+				}
+				logger.warn('No email found for user, skipping onboarding emails', { userId });
+				return null;
+			})
+			.then((result) => {
+				if (result) {
+					logger.info('Onboarding emails queued', {
+						userId,
+						metadata: { welcome: result.welcome.success, abandonment: result.abandonment.success },
+					});
+				}
+			})
+			.catch((error) => {
+				logger.error(
+					'Failed to queue onboarding emails',
+					error instanceof Error ? error : new Error(String(error)),
+					{ userId }
+				);
+			});
 
 		// Track onboarding step 1 in LogSnag (fire and forget)
 		getUserProfile(userId)

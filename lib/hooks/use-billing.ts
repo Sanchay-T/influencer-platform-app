@@ -47,7 +47,7 @@ const getBillingCache = (): BillingCache => {
 
 export interface BillingStatus {
 	isLoaded: boolean;
-	currentPlan: 'free' | 'glow_up' | 'viral_surge' | 'fame_flex';
+	currentPlan: PlanKey;
 	hasFeature: (feature: string) => boolean;
 	hasPlan: (plan: string) => boolean;
 	canAccessFeature: (feature: string) => boolean;

@@ -217,11 +217,17 @@ export function isValidTrialStatus(status: string): status is TrialStatus {
 // Plan Keys (userSubscriptions.currentPlan)
 // =============================================================================
 
-export type PlanKey = 'free' | 'glow_up' | 'viral_surge' | 'fame_flex';
-type PlanKeyKey = 'FREE' | 'GLOW_UP' | 'VIRAL_SURGE' | 'FAME_FLEX';
+// New plans (Jan 2026) + Legacy plans (grandfathered)
+export type PlanKey = 'free' | 'growth' | 'scale' | 'pro' | 'glow_up' | 'viral_surge' | 'fame_flex';
+type PlanKeyKey = 'FREE' | 'GROWTH' | 'SCALE' | 'PRO' | 'GLOW_UP' | 'VIRAL_SURGE' | 'FAME_FLEX';
 
 export const PLAN_KEY: Record<PlanKeyKey, PlanKey> = {
 	FREE: 'free',
+	// New plans (Jan 2026)
+	GROWTH: 'growth',
+	SCALE: 'scale',
+	PRO: 'pro',
+	// Legacy plans (grandfathered)
 	GLOW_UP: 'glow_up',
 	VIRAL_SURGE: 'viral_surge',
 	FAME_FLEX: 'fame_flex',
@@ -234,6 +240,11 @@ export function isValidPlanKey(plan: string): plan is PlanKey {
 // Plan display names (for UI)
 export const PLAN_DISPLAY_NAMES: Record<PlanKey, string> = {
 	free: 'Free',
+	// New plans (Jan 2026)
+	growth: 'Growth',
+	scale: 'Scale',
+	pro: 'Pro',
+	// Legacy plans (grandfathered)
 	glow_up: 'Glow Up',
 	viral_surge: 'Viral Surge',
 	fame_flex: 'Fame Flex',

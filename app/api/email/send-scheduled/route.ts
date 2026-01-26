@@ -77,6 +77,35 @@ export async function POST(request: Request) {
 			LogCategory.EMAIL
 		);
 
+		// Check if email was cancelled before sending (skip for admin tests)
+		if (source !== 'admin-testing') {
+			const { getUserProfile } = await import('@/lib/db/queries/user-queries');
+			const userProfile = await getUserProfile(userId);
+
+			if (userProfile?.emailScheduleStatus) {
+				const emailStatus = userProfile.emailScheduleStatus as Record<string, { status?: string }>;
+				const thisEmailStatus = emailStatus[emailType]?.status;
+
+				if (thisEmailStatus === 'cancelled' || thisEmailStatus === 'cancelled_subscription') {
+					logger.info(
+						'Skipping cancelled email',
+						{
+							jobId,
+							userId,
+							emailType,
+							status: thisEmailStatus,
+						},
+						LogCategory.EMAIL
+					);
+					return NextResponse.json({
+						skipped: true,
+						reason: `Email was ${thisEmailStatus}`,
+						emailType,
+					});
+				}
+			}
+		}
+
 		// Get the appropriate email template and subject
 		let emailComponent: React.ReactElement;
 		let subject: string;

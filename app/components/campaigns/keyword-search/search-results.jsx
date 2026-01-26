@@ -76,8 +76,13 @@ function useEmailFilter(creators, _platformNormalized) {
 
 const TRIAL_CLEAR_LIMIT = 25; // Number of results shown clearly to trial users
 
-// Plan prices for the modal (in dollars)
+// Plan prices for the modal (in dollars) - includes both new and legacy plans
 const PLAN_PRICES = {
+	// New plans (Jan 2026)
+	growth: 199,
+	scale: 599,
+	pro: 1999,
+	// Legacy plans (grandfathered)
 	glow_up: 99,
 	viral_surge: 249,
 	fame_flex: 499,
@@ -85,6 +90,11 @@ const PLAN_PRICES = {
 
 // Plan display names
 const PLAN_NAMES = {
+	// New plans (Jan 2026)
+	growth: 'Growth',
+	scale: 'Scale',
+	pro: 'Pro',
+	// Legacy plans (grandfathered)
 	glow_up: 'Glow Up',
 	viral_surge: 'Viral Surge',
 	fame_flex: 'Fame Flex',

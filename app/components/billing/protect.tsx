@@ -233,6 +233,11 @@ export function PlanBadge({ className }: { className?: string }) {
 
 	const badgeStyles: Record<PlanKey, string> = {
 		free: 'bg-gray-100 text-gray-800',
+		// New plans (Jan 2026)
+		growth: 'bg-emerald-100 text-emerald-800',
+		scale: 'bg-purple-100 text-purple-800',
+		pro: 'bg-yellow-100 text-yellow-800',
+		// Legacy plans (grandfathered)
 		glow_up: 'bg-blue-100 text-blue-800',
 		viral_surge: 'bg-purple-100 text-purple-800',
 		fame_flex: 'bg-yellow-100 text-yellow-800',
@@ -240,6 +245,11 @@ export function PlanBadge({ className }: { className?: string }) {
 
 	const planNames: Record<PlanKey, string> = {
 		free: 'Free',
+		// New plans (Jan 2026)
+		growth: 'Growth',
+		scale: 'Scale',
+		pro: 'Pro',
+		// Legacy plans (grandfathered)
 		glow_up: 'Glow Up',
 		viral_surge: 'Viral Surge',
 		fame_flex: 'Fame Flex',

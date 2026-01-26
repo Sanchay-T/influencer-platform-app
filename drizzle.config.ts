@@ -3,10 +3,21 @@ import * as dotenv from 'dotenv';
 import path from 'path';
 
 // Environment-aware config loading
-const envFile = '.env.local';
+// Usage: DRIZZLE_ENV=development npx drizzle-kit push
+// Defaults to .env.local if DRIZZLE_ENV is not set
+const envMap: Record<string, string> = {
+  local: '.env.local',
+  development: '.env.development',
+  production: '.env.production',
+};
+
+const targetEnv = process.env.DRIZZLE_ENV || 'local';
+const envFile = envMap[targetEnv] || '.env.local';
+
 dotenv.config({ path: path.resolve(process.cwd(), envFile) });
 
-console.log(`🔧 [DRIZZLE CONFIG] Loading environment from: ${envFile}`);
+console.log(`🔧 [DRIZZLE CONFIG] Target environment: ${targetEnv}`);
+console.log(`🔧 [DRIZZLE CONFIG] Loading from: ${envFile}`);
 console.log(`🔧 [DRIZZLE CONFIG] Database URL: ${process.env.DATABASE_URL?.replace(/\/\/.*@/, '//***@')}`);
 
 export default defineConfig({
