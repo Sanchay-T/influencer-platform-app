@@ -317,7 +317,7 @@ export class JobProcessor {
 				? getStringProperty(payloadRecord, 'stripeCustomerId')
 				: null;
 			const planId = payloadRecord ? getStringProperty(payloadRecord, 'planId') : null;
-			const resolvedPlanId = planId ?? 'glow_up';
+			const resolvedPlanId = planId ?? 'growth';
 
 			if (!userId) {
 				return { success: false, error: 'Missing userId in payload', retryable: false };

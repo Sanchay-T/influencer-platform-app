@@ -17,7 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 
 interface SubscriptionStatusCardProps {
-	currentPlan: 'free' | 'glow_up' | 'viral_surge' | 'fame_flex';
+	currentPlan: 'free' | 'growth' | 'scale' | 'pro' | 'glow_up' | 'viral_surge' | 'fame_flex';
 	subscriptionStatus: 'none' | 'trialing' | 'active' | 'past_due' | 'canceled';
 	isTrialing: boolean;
 	hasActiveSubscription: boolean;
@@ -43,10 +43,13 @@ export default function SubscriptionStatusCard({
 		switch (plan) {
 			case 'free':
 				return Shield;
+			case 'growth':
 			case 'glow_up':
 				return Star;
+			case 'scale':
 			case 'viral_surge':
 				return Zap;
+			case 'pro':
 			case 'fame_flex':
 				return Crown;
 			default:
@@ -60,6 +63,9 @@ export default function SubscriptionStatusCard({
 
 	const planNames: Record<SubscriptionStatusCardProps['currentPlan'], string> = {
 		free: 'Free Trial',
+		growth: 'Growth',
+		scale: 'Scale',
+		pro: 'Pro',
 		glow_up: 'Glow Up',
 		viral_surge: 'Viral Surge',
 		fame_flex: 'Fame Flex',

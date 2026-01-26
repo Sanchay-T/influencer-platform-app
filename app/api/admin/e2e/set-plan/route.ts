@@ -22,7 +22,7 @@ const isTestMode =
 	process.env.NODE_ENV === 'development' || process.env.ENABLE_AUTH_BYPASS === 'true';
 
 type PaidPlan = Exclude<PlanKey, 'free'>;
-const VALID_PLANS: readonly PaidPlan[] = ['glow_up', 'viral_surge', 'fame_flex'];
+const VALID_PLANS: readonly PaidPlan[] = ['growth', 'scale', 'pro', 'glow_up', 'viral_surge', 'fame_flex'];
 const VALID_SUBSCRIPTION_STATUSES: readonly SubscriptionStatus[] = [
 	'none',
 	'active',

@@ -48,7 +48,7 @@ export async function GET(req: Request) {
 		}
 
 		// Extract plan info from metadata
-		const planId = session.metadata?.plan || 'glow_up';
+		const planId = session.metadata?.plan || 'growth';
 		const interval = session.metadata?.interval || 'monthly';
 		const isUpgrade = session.metadata?.source === 'upgrade';
 
