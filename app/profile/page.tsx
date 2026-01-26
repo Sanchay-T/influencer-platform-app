@@ -7,7 +7,6 @@ import {
 	CircleCheckBig,
 	CreditCard,
 	Crown,
-	ExternalLink,
 	Factory,
 	Mail,
 	Settings,
@@ -31,6 +30,7 @@ import { useBilling } from '@/lib/hooks/use-billing';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { isValidPlanKey } from '@/lib/types/statuses';
 import DashboardLayout from '../components/layout/dashboard-layout';
+import { UserProfileModal } from '../components/profile/user-profile-modal';
 
 export default function ProfileSettingsPage() {
 	const { user, isLoaded } = useUser();
@@ -38,6 +38,7 @@ export default function ProfileSettingsPage() {
 	const { currentPlan, hasActiveSubscription, isPaidUser, isTrialing, needsUpgrade } = useBilling();
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState('');
+	const [showUserProfile, setShowUserProfile] = useState(false);
 	const [userProfile, setUserProfile] = useState({
 		name: '',
 		companyName: '',
@@ -114,11 +115,7 @@ export default function ProfileSettingsPage() {
 	}, [isLoaded, user]);
 
 	const handleManageAccount = () => {
-		// Redirect to Clerk's user management interface
-		if (user) {
-			// You can customize this URL based on your Clerk setup
-			window.open(`${window.location.origin}/sign-in#/user`, '_blank');
-		}
+		setShowUserProfile(true);
 	};
 
 	if (!isLoaded || loading) {
@@ -287,7 +284,6 @@ export default function ProfileSettingsPage() {
 											>
 												<Settings className="h-4 w-4" />
 												Manage Account
-												<ExternalLink className="h-4 w-4" />
 											</Button>
 										</div>
 									</CardContent>
@@ -302,6 +298,8 @@ export default function ProfileSettingsPage() {
 					</section>
 				</div>
 			</div>
+
+			<UserProfileModal isOpen={showUserProfile} onClose={() => setShowUserProfile(false)} />
 		</DashboardLayout>
 	);
 }

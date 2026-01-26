@@ -8,6 +8,10 @@
  * - Stripe price ID mappings
  * - Plan validation helpers
  *
+ * PRICING TIERS (Jan 2026):
+ * - NEW: Growth ($199), Scale ($599), Pro ($1,999) - for new users
+ * - LEGACY: Glow Up ($99), Viral Surge ($249), Fame Flex ($499) - grandfathered
+ *
  * BUSINESS MODEL:
  * - NO free plan (all users must subscribe)
  * - 7-day trial on all plans (Stripe-managed)
@@ -20,7 +24,15 @@
 // TYPES
 // ═══════════════════════════════════════════════════════════════
 
-export type PlanKey = 'glow_up' | 'viral_surge' | 'fame_flex';
+// New plans + legacy plans
+export type PlanKey =
+	| 'growth'
+	| 'scale'
+	| 'pro' // New plans (Jan 2026)
+	| 'glow_up'
+	| 'viral_surge'
+	| 'fame_flex'; // Legacy plans (grandfathered)
+
 export type BillingInterval = 'monthly' | 'yearly';
 export type SubscriptionStatus =
 	| 'none'
@@ -34,6 +46,7 @@ export type TrialStatus = 'pending' | 'active' | 'expired' | 'converted' | 'canc
 export interface PlanLimits {
 	campaigns: number; // -1 for unlimited
 	creatorsPerMonth: number; // -1 for unlimited
+	enrichmentsPerMonth: number; // -1 for unlimited (new in Jan 2026)
 }
 
 export interface PlanFeatures {
@@ -55,6 +68,7 @@ export interface PlanConfig {
 	limits: PlanLimits;
 	features: PlanFeatures;
 	popular?: boolean; // For UI badge
+	isLegacy?: boolean; // True for grandfathered plans
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -62,13 +76,105 @@ export interface PlanConfig {
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Plan order from lowest to highest tier.
- * Used for comparisons, recommendations, and hierarchy checks.
- * Note: Does not include 'free' since all users must have a paid subscription.
+ * New plans - visible to new users (Jan 2026 pricing)
  */
-export const PLAN_ORDER: PlanKey[] = ['glow_up', 'viral_surge', 'fame_flex'];
+export const NEW_PLAN_KEYS: PlanKey[] = ['growth', 'scale', 'pro'];
+
+/**
+ * Legacy plans - for grandfathered users only
+ */
+export const LEGACY_PLAN_KEYS: PlanKey[] = ['glow_up', 'viral_surge', 'fame_flex'];
+
+/**
+ * All plan keys ordered from lowest to highest tier.
+ * Used for comparisons, recommendations, and hierarchy checks.
+ */
+export const PLAN_ORDER: PlanKey[] = [
+	// Legacy plans (lower tier)
+	'glow_up',
+	'viral_surge',
+	'fame_flex',
+	// New plans (higher tier)
+	'growth',
+	'scale',
+	'pro',
+];
 
 export const PLANS: Record<PlanKey, PlanConfig> = {
+	// ═══════════════════════════════════════════════════════════
+	// NEW PLANS (Jan 2026) - Visible to new users
+	// ═══════════════════════════════════════════════════════════
+	growth: {
+		key: 'growth',
+		name: 'Growth',
+		description: 'For growing businesses discovering creators',
+		monthlyPrice: 19900, // $199
+		yearlyPrice: 190800, // $1,908/year ($159/mo)
+		monthlyPriceId: process.env.STRIPE_GROWTH_MONTHLY_PRICE_ID || '',
+		yearlyPriceId: process.env.STRIPE_GROWTH_YEARLY_PRICE_ID || '',
+		limits: {
+			campaigns: -1, // Unlimited
+			creatorsPerMonth: 6000,
+			enrichmentsPerMonth: 500,
+		},
+		features: {
+			csvExport: true,
+			analytics: 'basic',
+			apiAccess: false,
+			prioritySupport: false,
+			realtimeUpdates: false,
+		},
+		isLegacy: false,
+	},
+	scale: {
+		key: 'scale',
+		name: 'Scale',
+		description: 'For scaling brands with serious creator needs',
+		monthlyPrice: 59900, // $599
+		yearlyPrice: 574800, // $5,748/year ($479/mo)
+		monthlyPriceId: process.env.STRIPE_SCALE_MONTHLY_PRICE_ID || '',
+		yearlyPriceId: process.env.STRIPE_SCALE_YEARLY_PRICE_ID || '',
+		limits: {
+			campaigns: -1, // Unlimited
+			creatorsPerMonth: 30000,
+			enrichmentsPerMonth: 1000,
+		},
+		features: {
+			csvExport: true,
+			analytics: 'advanced',
+			apiAccess: true,
+			prioritySupport: false,
+			realtimeUpdates: true,
+		},
+		popular: true,
+		isLegacy: false,
+	},
+	pro: {
+		key: 'pro',
+		name: 'Pro',
+		description: 'Unlimited power for agencies and enterprises',
+		monthlyPrice: 199900, // $1,999
+		yearlyPrice: 1918800, // $19,188/year ($1,599/mo)
+		monthlyPriceId: process.env.STRIPE_PRO_MONTHLY_PRICE_ID || '',
+		yearlyPriceId: process.env.STRIPE_PRO_YEARLY_PRICE_ID || '',
+		limits: {
+			campaigns: -1, // Unlimited
+			creatorsPerMonth: 75000,
+			enrichmentsPerMonth: 10000,
+		},
+		features: {
+			csvExport: true,
+			analytics: 'advanced',
+			apiAccess: true,
+			prioritySupport: true,
+			realtimeUpdates: true,
+		},
+		isLegacy: false,
+	},
+
+	// ═══════════════════════════════════════════════════════════
+	// LEGACY PLANS - For grandfathered users only
+	// ═══════════════════════════════════════════════════════════
 	glow_up: {
 		key: 'glow_up',
 		name: 'Glow Up',
@@ -80,6 +186,7 @@ export const PLANS: Record<PlanKey, PlanConfig> = {
 		limits: {
 			campaigns: 3,
 			creatorsPerMonth: 1000,
+			enrichmentsPerMonth: 50,
 		},
 		features: {
 			csvExport: true,
@@ -88,6 +195,7 @@ export const PLANS: Record<PlanKey, PlanConfig> = {
 			prioritySupport: false,
 			realtimeUpdates: true,
 		},
+		isLegacy: true,
 	},
 	viral_surge: {
 		key: 'viral_surge',
@@ -100,6 +208,7 @@ export const PLANS: Record<PlanKey, PlanConfig> = {
 		limits: {
 			campaigns: 10,
 			creatorsPerMonth: 10000,
+			enrichmentsPerMonth: 200,
 		},
 		features: {
 			csvExport: true,
@@ -108,7 +217,7 @@ export const PLANS: Record<PlanKey, PlanConfig> = {
 			prioritySupport: true,
 			realtimeUpdates: true,
 		},
-		popular: true,
+		isLegacy: true,
 	},
 	fame_flex: {
 		key: 'fame_flex',
@@ -121,6 +230,7 @@ export const PLANS: Record<PlanKey, PlanConfig> = {
 		limits: {
 			campaigns: -1, // Unlimited
 			creatorsPerMonth: -1, // Unlimited
+			enrichmentsPerMonth: -1, // Unlimited
 		},
 		features: {
 			csvExport: true,
@@ -129,6 +239,7 @@ export const PLANS: Record<PlanKey, PlanConfig> = {
 			prioritySupport: true,
 			realtimeUpdates: true,
 		},
+		isLegacy: true,
 	},
 };
 
@@ -191,10 +302,24 @@ export function getPlanConfig(plan: PlanKey): PlanConfig {
 }
 
 /**
- * Check if a plan key is valid.
+ * Check if a plan key is valid (includes both new and legacy plans).
  */
 export function isValidPlan(plan: string): plan is PlanKey {
 	return plan in PLANS;
+}
+
+/**
+ * Check if a plan is a legacy (grandfathered) plan.
+ */
+export function isLegacyPlan(plan: string): boolean {
+	return LEGACY_PLAN_KEYS.includes(plan as PlanKey);
+}
+
+/**
+ * Check if a plan is a new plan (Jan 2026+).
+ */
+export function isNewPlan(plan: string): boolean {
+	return NEW_PLAN_KEYS.includes(plan as PlanKey);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -215,7 +340,7 @@ export interface LimitCheckResult {
  */
 export function checkLimit(
 	plan: PlanKey,
-	limitType: 'campaigns' | 'creatorsPerMonth',
+	limitType: 'campaigns' | 'creatorsPerMonth' | 'enrichmentsPerMonth',
 	currentUsage: number,
 	additionalAmount: number = 0
 ): LimitCheckResult {
@@ -236,19 +361,21 @@ export function checkLimit(
 
 /**
  * Get recommended plan based on required usage.
+ * Prioritizes new plans for recommendations.
  */
 export function getRecommendedPlan(
-	requirement: 'campaigns' | 'creatorsPerMonth',
+	requirement: 'campaigns' | 'creatorsPerMonth' | 'enrichmentsPerMonth',
 	amount: number
 ): PlanKey {
-	for (const planKey of PLAN_ORDER) {
+	// Check new plans first (recommended for new users)
+	for (const planKey of NEW_PLAN_KEYS) {
 		const limit = PLANS[planKey].limits[requirement];
 		if (limit === -1 || amount <= limit) {
 			return planKey;
 		}
 	}
 
-	return 'fame_flex'; // Default to highest plan
+	return 'pro'; // Default to highest new plan
 }
 
 /**
@@ -324,8 +451,24 @@ export function getAllPlans(): PlanConfig[] {
 }
 
 /**
- * Get plans sorted by price (ascending).
+ * Get only new plans (for pricing pages, onboarding).
  */
-export function getPlansByPrice(): PlanConfig[] {
-	return getAllPlans().sort((a, b) => a.monthlyPrice - b.monthlyPrice);
+export function getNewPlans(): PlanConfig[] {
+	return NEW_PLAN_KEYS.map((key) => PLANS[key]);
+}
+
+/**
+ * Get only legacy plans (for admin, reference).
+ */
+export function getLegacyPlans(): PlanConfig[] {
+	return LEGACY_PLAN_KEYS.map((key) => PLANS[key]);
+}
+
+/**
+ * Get plans sorted by price (ascending).
+ * By default only returns new plans (for pricing pages).
+ */
+export function getPlansByPrice(includeLegacy = false): PlanConfig[] {
+	const plans = includeLegacy ? getAllPlans() : getNewPlans();
+	return plans.sort((a, b) => a.monthlyPrice - b.monthlyPrice);
 }

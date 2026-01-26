@@ -20,6 +20,7 @@ const planFeatures: Record<
 	{ campaigns: number; creators: number; features: string[]; price: number }
 > = {
 	free: { campaigns: 0, creators: 0, features: ['trial_access'], price: 0 },
+	// Legacy plans (grandfathered)
 	glow_up: {
 		campaigns: 3,
 		creators: 1000,
@@ -45,6 +46,38 @@ const planFeatures: Record<
 		],
 		price: 499,
 	},
+	// New plans (Jan 2026)
+	growth: {
+		campaigns: -1,
+		creators: 6000,
+		features: ['unlimited_search', 'csv_export', 'bio_extraction'],
+		price: 199,
+	},
+	scale: {
+		campaigns: -1,
+		creators: 30000,
+		features: [
+			'unlimited_search',
+			'csv_export',
+			'bio_extraction',
+			'advanced_analytics',
+			'api_access',
+		],
+		price: 599,
+	},
+	pro: {
+		campaigns: -1,
+		creators: 75000,
+		features: [
+			'unlimited_search',
+			'csv_export',
+			'bio_extraction',
+			'advanced_analytics',
+			'api_access',
+			'priority_support',
+		],
+		price: 1999,
+	},
 };
 
 export function buildPlanFns(currentPlan: PlanKey) {
@@ -53,15 +86,21 @@ export function buildPlanFns(currentPlan: PlanKey) {
 		planHierarchy.some((plan) => plan === value);
 
 	const hasPlan = (plan: string): boolean => {
-		if (!isPlanKey(plan)) return plan === 'free';
+		if (!isPlanKey(plan)) {
+			return plan === 'free';
+		}
 		const requiredPlanIndex = planHierarchy.indexOf(plan);
-		if (currentPlanIndex === -1 || requiredPlanIndex === -1) return plan === 'free';
+		if (currentPlanIndex === -1 || requiredPlanIndex === -1) {
+			return plan === 'free';
+		}
 		return currentPlanIndex >= requiredPlanIndex;
 	};
 
 	const canAccessFeature = (feature: string): boolean => {
 		const requiredPlanIndex = featureMinimumPlans[feature];
-		if (requiredPlanIndex === undefined) return true;
+		if (requiredPlanIndex === undefined) {
+			return true;
+		}
 		return currentPlanIndex >= requiredPlanIndex;
 	};
 

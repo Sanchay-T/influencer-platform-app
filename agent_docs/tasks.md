@@ -7,9 +7,40 @@
 
 ## Current Task
 
+**ID:** TASK-013
+**Title:** Tech Junk Cleanup
+**Status:** ✅ COMPLETE (ready to commit)
+**Branch:** `main` (or create `chore/tech-junk-cleanup`)
+**Started:** Jan 18, 2026
+**Last Updated:** Jan 18, 2026
+
+### Summary
+Comprehensive codebase cleanup removing ~9,000 lines of debug code, unused files, and technical debt.
+
+**What was done:**
+- Removed dead mock function in `openrouter-service.ts`
+- Deleted 14 test/debug API routes
+- Removed ~70 debug console.log statements from API routes, search engine, UI
+- Deleted debug files, wishlink scripts, old test data
+- Created `scripts/scan-tech-junk.sh` scanner tool
+
+**Documentation:** `agent_docs/tech-junk-cleanup-2026-01-18.md`
+
+### Next Action
+```
+COMMIT THE CLEANUP:
+git add -A
+git commit -m "chore: remove tech junk (~9K lines)"
+git push origin HEAD
+```
+
+---
+
+## Previous Task
+
 **ID:** TASK-012
 **Title:** Trial User Search Limits + Analytics Tracking
-**Status:** 🚧 IN PROGRESS
+**Status:** 🚧 IN PROGRESS (paused for cleanup)
 **Branch:** `test-trial-feature` (switched from staging/consolidate-all-work)
 **Started:** Jan 15, 2026
 **Last Updated:** Jan 15, 2026 — 03:10 PM

@@ -7,7 +7,9 @@ import {
 	CreditCard,
 	Crown,
 	Loader2,
+	Rocket,
 	Star,
+	TrendingUp,
 	Zap,
 } from 'lucide-react';
 
@@ -24,8 +26,11 @@ import { structuredConsole } from '@/lib/logging/console-proxy';
 import { useComponentLogger, useUserActionLogger } from '@/lib/logging/react-logger';
 import { ErrorBoundary } from '../error-boundary';
 
+// All plan keys (new + legacy)
+type PlanKey = 'growth' | 'scale' | 'pro' | 'glow_up' | 'viral_surge' | 'fame_flex';
+
 interface UpgradeButtonProps {
-	targetPlan: 'glow_up' | 'viral_surge' | 'fame_flex';
+	targetPlan: PlanKey;
 	size?: 'sm' | 'md' | 'lg';
 	variant?: 'default' | 'outline' | 'secondary';
 	className?: string;
@@ -51,7 +56,47 @@ function UpgradeButtonContent({
 	const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>(billingDefault);
 	const { currentPlan, hasActiveSubscription, isPaidUser, isTrialing } = useBilling();
 
-	const planConfig = {
+	const planConfig: Record<
+		PlanKey,
+		{
+			name: string;
+			priceMonthly: string;
+			priceYearly: string;
+			period: string;
+			icon: typeof Star;
+			color: string;
+			description: string;
+		}
+	> = {
+		// New plans (Jan 2026)
+		growth: {
+			name: 'Growth',
+			priceMonthly: '$199',
+			priceYearly: '$159',
+			period: 'month',
+			icon: Rocket,
+			color: 'text-indigo-400',
+			description: '6,000 creators, 500 enrichments',
+		},
+		scale: {
+			name: 'Scale',
+			priceMonthly: '$599',
+			priceYearly: '$479',
+			period: 'month',
+			icon: TrendingUp,
+			color: 'text-violet-400',
+			description: '30,000 creators, 1,000 enrichments',
+		},
+		pro: {
+			name: 'Pro',
+			priceMonthly: '$1,999',
+			priceYearly: '$1,599',
+			period: 'month',
+			icon: Crown,
+			color: 'text-amber-400',
+			description: '75,000 creators, 10,000 enrichments',
+		},
+		// Legacy plans (grandfathered)
 		glow_up: {
 			name: 'Glow Up',
 			priceMonthly: '$99',
@@ -84,7 +129,16 @@ function UpgradeButtonContent({
 	const plan = planConfig[targetPlan];
 
 	// Don't show upgrade button if user already has this plan or higher
-	const planHierarchy = ['free', 'glow_up', 'viral_surge', 'fame_flex'];
+	// Combined hierarchy ordered by price: free < glow_up < growth < viral_surge < fame_flex < scale < pro
+	const planHierarchy = [
+		'free',
+		'glow_up', // $99 (legacy)
+		'growth', // $199 (new)
+		'viral_surge', // $249 (legacy)
+		'fame_flex', // $499 (legacy)
+		'scale', // $599 (new)
+		'pro', // $1,999 (new)
+	];
 	const currentPlanIndex = planHierarchy.indexOf(currentPlan);
 	const targetPlanIndex = planHierarchy.indexOf(targetPlan);
 
@@ -125,8 +179,8 @@ function UpgradeButtonContent({
 				structuredConsole.log('📡 [UPGRADE-AUDIT] Using checkout for new subscription');
 			}
 
-			// Use checkout-upgrade for all scenarios (better UX than programmatic updates)
-			const response = await fetch('/api/stripe/checkout-upgrade', {
+			// Use checkout for all scenarios (handles both new subscriptions and upgrades)
+			const response = await fetch('/api/stripe/checkout', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ planId: targetPlan, billing: billingCycle }),
@@ -214,18 +268,18 @@ function UpgradeButtonContent({
 		return (
 			<div className={`w-full space-y-3 ${className}`}>
 				{allowBillingToggle && (
-					<div className="flex items-center justify-between">
+					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
 						<div className="text-xs text-zinc-400">Billing</div>
-						<div className="inline-flex rounded-full bg-zinc-800 p-1 border border-zinc-700">
+						<div className="inline-flex rounded-full bg-zinc-800 p-1 border border-zinc-700 self-start sm:self-auto">
 							<button
 								onClick={() => setBillingCycle('monthly')}
-								className={`px-3 py-1 text-xs rounded-full transition-colors ${billingCycle === 'monthly' ? 'bg-pink-600 text-white shadow' : 'text-zinc-300 hover:text-white'}`}
+								className={`px-2.5 py-1 text-[11px] sm:px-3 sm:text-xs rounded-full transition-colors ${billingCycle === 'monthly' ? 'bg-pink-600 text-white shadow' : 'text-zinc-300 hover:text-white'}`}
 							>
 								Monthly
 							</button>
 							<button
 								onClick={() => setBillingCycle('yearly')}
-								className={`px-3 py-1 text-xs rounded-full transition-colors ${billingCycle === 'yearly' ? 'bg-pink-600 text-white shadow' : 'text-zinc-300 hover:text-white'}`}
+								className={`px-2.5 py-1 text-[11px] sm:px-3 sm:text-xs rounded-full transition-colors ${billingCycle === 'yearly' ? 'bg-pink-600 text-white shadow' : 'text-zinc-300 hover:text-white'}`}
 							>
 								Yearly
 							</button>
@@ -233,8 +287,8 @@ function UpgradeButtonContent({
 					</div>
 				)}
 
-				<div className="flex items-center justify-between">
-					<div className="flex items-center gap-2 text-xs text-zinc-400">
+				<div className="flex items-center">
+					<div className="text-xs text-zinc-400">
 						<PriceLabel />
 					</div>
 				</div>
@@ -243,7 +297,7 @@ function UpgradeButtonContent({
 					onClick={handleButtonClick}
 					disabled={isLoading}
 					variant={variant}
-					className={`h-11 px-6 text-sm font-medium w-full`}
+					className="h-10 sm:h-11 px-4 sm:px-6 text-xs sm:text-sm font-medium w-full"
 				>
 					{isLoading ? (
 						<Loader2 className="h-4 w-4 animate-spin mr-2" />

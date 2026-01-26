@@ -374,25 +374,44 @@ export function useListDetail(listId: string, initialDetail: ListDetail): UseLis
 		if (!detail) {
 			return;
 		}
+
+		// 1. Save for rollback
+		const previousDetail = detail;
+		const previousMetaForm = { ...metaForm };
+
+		// 2. Optimistic update
+		setDetail((prev) =>
+			prev
+				? {
+						...prev,
+						list: { ...prev.list, ...metaForm },
+					}
+				: prev
+		);
+		setEditingMeta(false);
+
+		// 3. API call in background
 		try {
 			const res = await fetch(`/api/lists/${detail.list.id}`, {
 				method: 'PATCH',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(metaForm),
+				body: JSON.stringify(previousMetaForm),
 			});
 			if (!res.ok) {
 				throw new Error('Failed to update list');
 			}
-			const data = await res.json();
-			setDetail((prev) => (prev ? { ...prev, list: data.list } : prev));
 			toast.success('List updated');
-			setEditingMeta(false);
+			router.refresh();
 		} catch (error) {
+			// 4. Rollback
 			structuredConsole.error(error);
+			setDetail(previousDetail);
+			setMetaForm(previousMetaForm);
+			setEditingMeta(true);
 			const message = error instanceof Error ? error.message : 'Failed to update list';
 			toast.error(message);
 		}
-	}, [detail, metaForm]);
+	}, [detail, metaForm, router]);
 
 	// Delete handler
 	const handleDelete = useCallback(async () => {

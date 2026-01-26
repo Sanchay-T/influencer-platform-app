@@ -12,6 +12,7 @@
 import * as Sentry from '@sentry/nextjs';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef } from 'react';
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import {
 	isActiveStatus,
 	isDoneStatus,
@@ -22,7 +23,7 @@ import {
 const debugLog = (tag: string, msg: string, data?: Record<string, unknown>) => {
 	if (typeof window !== 'undefined' && localStorage.getItem('debug_job_status') === 'true') {
 		const timestamp = new Date().toISOString().slice(11, 23);
-		console.log(`%c[${tag}][${timestamp}] ${msg}`, 'color: #00bcd4', data ?? '');
+		structuredConsole.debug(`[${tag}][${timestamp}] ${msg}`, data ?? {});
 	}
 };
 

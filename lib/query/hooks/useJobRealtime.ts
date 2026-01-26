@@ -16,6 +16,7 @@
 
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { supabase } from '@/lib/supabase/client';
 import { getStringProperty, isNumber, isString } from '@/lib/utils/type-guards';
 
@@ -23,7 +24,7 @@ import { getStringProperty, isNumber, isString } from '@/lib/utils/type-guards';
 const debugLog = (tag: string, msg: string, data?: Record<string, unknown>) => {
 	if (typeof window !== 'undefined' && localStorage.getItem('debug_job_status') === 'true') {
 		const timestamp = new Date().toISOString().slice(11, 23);
-		console.log(`%c[${tag}][${timestamp}] ${msg}`, 'color: #4caf50', data ?? '');
+		structuredConsole.debug(`[${tag}][${timestamp}] ${msg}`, data ?? {});
 	}
 };
 
@@ -57,7 +58,7 @@ export interface UseJobRealtimeResult {
  * ```tsx
  * const { data, isConnected } = useJobRealtime(jobId);
  * if (data) {
- *   console.log('Status:', data.status, 'Progress:', data.progress);
+ *   structuredConsole.debug('Status update', { status: data.status, progress: data.progress });
  * }
  * ```
  */
@@ -72,7 +73,9 @@ export function useJobRealtime(jobId: string | null | undefined): UseJobRealtime
 	// Parse database row to our interface
 	const parseJobRow = useCallback((row: Record<string, unknown>): RealtimeJobData => {
 		const toNumber = (value: unknown): number | null => {
-			if (isNumber(value)) return value;
+			if (isNumber(value)) {
+				return value;
+			}
 			if (isString(value) && value.trim()) {
 				const parsed = Number(value);
 				return Number.isFinite(parsed) ? parsed : null;
@@ -126,6 +129,7 @@ export function useJobRealtime(jobId: string | null | undefined): UseJobRealtime
 					setData(parsed);
 				}
 			)
+			// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Realtime status handling is branchy.
 			.subscribe((status, err) => {
 				debugLog('REALTIME', 'Subscription status changed', { status, error: err?.message });
 

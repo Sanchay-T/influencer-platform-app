@@ -9,11 +9,13 @@ import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { userBilling, userSubscriptions, users, userUsage } from '@/lib/db/schema';
+import { structuredConsole } from '@/lib/logging/console-proxy';
 
 // Only allow in development mode
 const isTestMode =
 	process.env.NODE_ENV === 'development' || process.env.ENABLE_AUTH_BYPASS === 'true';
 
+// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function POST(request: Request) {
 	if (!isTestMode) {
 		return NextResponse.json(
@@ -109,7 +111,7 @@ export async function POST(request: Request) {
 			email,
 		});
 	} catch (error) {
-		console.error('E2E create user error:', error);
+		structuredConsole.error('E2E create user error', error);
 		return NextResponse.json(
 			{ error: 'Failed to create test user', details: String(error) },
 			{ status: 500 }

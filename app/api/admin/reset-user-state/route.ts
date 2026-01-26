@@ -1,15 +1,19 @@
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
+import { isAdminUser } from '@/lib/auth/admin-utils';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { db } from '@/lib/db';
 import { updateUserProfile } from '@/lib/db/queries/user-queries';
 import { campaigns, scrapingJobs, scrapingResults } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
+// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function GET(request: Request) {
 	return POST(request);
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Admin reset flow includes multiple guarded steps.
+// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function POST(request: Request) {
 	try {
 		const { userId: adminUserId } = await getAuthOrTest();
@@ -18,11 +22,28 @@ export async function POST(request: Request) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
 
+		if (!(await isAdminUser())) {
+			return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+		}
+
 		structuredConsole.log('⚠️ [ADMIN-RESET] Running user reset as admin:', adminUserId);
 
 		// Get target user ID from query params or body
 		const url = new URL(request.url);
-		const targetUserId = url.searchParams.get('userId') || 'user_2zRnraoVNDAegfHnci1xUMWybwz';
+		let targetUserId = url.searchParams.get('userId');
+		if (!targetUserId && request.method !== 'GET') {
+			const body = await request.json().catch(() => null);
+			if (body && typeof body === 'object' && 'userId' in body) {
+				const userIdValue = (body as { userId?: unknown }).userId;
+				if (typeof userIdValue === 'string') {
+					targetUserId = userIdValue;
+				}
+			}
+		}
+
+		if (!targetUserId) {
+			return NextResponse.json({ error: 'userId is required' }, { status: 400 });
+		}
 
 		structuredConsole.log('🔧 [ADMIN-RESET] Resetting user to fresh state:', targetUserId);
 

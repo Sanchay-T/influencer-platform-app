@@ -56,10 +56,18 @@ function requireString(record: Record<string, unknown>, key: string, label: stri
 function parseJobStatusPayload(value: unknown, label: string): JobStatusPayload {
   const record = requireRecord(value, label)
   const status = requireString(record, 'status', label)
-  const processedResults = getNumberProperty(record, 'processedResults')
+  const progressRecord = toRecord(record.progress)
+  const processedResults =
+    getNumberProperty(record, 'processedResults') ??
+    (progressRecord ? getNumberProperty(progressRecord, 'creatorsFound') : null) ??
+    getNumberProperty(record, 'totalCreators')
   if (processedResults === null) {
     throw new Error(`${label}: Missing processedResults`)
   }
+  const progressPercent =
+    (progressRecord ? getNumberProperty(progressRecord, 'percentComplete') : null) ??
+    getNumberProperty(record, 'progressPercent') ??
+    getNumberProperty(record, 'progress')
 
   return {
     status,
@@ -67,7 +75,7 @@ function parseJobStatusPayload(value: unknown, label: string): JobStatusPayload 
     targetResults: getNumberProperty(record, 'targetResults') ?? undefined,
     results: getArrayProperty(record, 'results') ?? undefined,
     error: record.error,
-    progress: getNumberProperty(record, 'progress') ?? undefined,
+    progress: progressPercent ?? undefined,
     benchmark: record.benchmark,
   }
 }
@@ -222,7 +230,7 @@ export async function pollJob(
       `   [${params.label}] attempt ${attempt} → status=${payload.status} processed=${payload.processedResults}`
     )
 
-    if (payload.status === 'completed') {
+    if (payload.status === 'completed' || payload.status === 'partial') {
       const results = payload.results || []
       console.log(`✅ ${params.label} completed. Creators returned: ${results.length}`)
       if (results.length > 0 && params.showSample !== false) {

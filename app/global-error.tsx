@@ -1,5 +1,6 @@
 'use client';
 
+import * as Sentry from '@sentry/nextjs';
 import { useEffect } from 'react';
 
 export default function GlobalError({
@@ -10,22 +11,27 @@ export default function GlobalError({
 	reset: () => void;
 }) {
 	useEffect(() => {
-		// Log error to console (Sentry removed)
-		console.error('[GLOBAL_ERROR]', {
-			message: error.message,
-			digest: error.digest,
-			stack: error.stack,
+		Sentry.withScope((scope) => {
+			if (error.digest) {
+				scope.setTag('error.digest', error.digest);
+			}
+			scope.setContext('global_error', {
+				message: error.message,
+				stack: error.stack,
+			});
+			Sentry.captureException(error);
 		});
 	}, [error]);
 
 	return (
-		<html>
+		<html lang="en">
 			<body>
 				<div className="flex items-center justify-center min-h-screen bg-gray-100">
 					<div className="text-center">
 						<h2 className="text-2xl font-bold text-gray-800 mb-4">Something went wrong!</h2>
 						<p className="text-gray-600 mb-4">An error occurred. Please try again.</p>
 						<button
+							type="button"
 							className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
 							onClick={() => reset()}
 						>

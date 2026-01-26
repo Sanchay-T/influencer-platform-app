@@ -571,6 +571,47 @@ export const backgroundJobs = pgTable(
 	})
 );
 
+// =====================================================
+// PLAN LIMITS - Dynamic plan configuration (DB-driven)
+// =====================================================
+// @context New pricing migration (Jan 2026)
+// @why Enables changing plan limits without code deploys
+// Source of truth for all plan limits and features
+export const planLimits = pgTable(
+	'plan_limits',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		planKey: varchar('plan_key', { length: 50 }).notNull().unique(), // 'growth', 'scale', 'pro', 'glow_up', etc.
+		displayName: varchar('display_name', { length: 100 }).notNull(),
+
+		// Pricing (in cents)
+		monthlyPrice: integer('monthly_price').notNull(),
+		yearlyPrice: integer('yearly_price').notNull(),
+
+		// Limits (-1 = unlimited)
+		creatorsPerMonth: integer('creators_per_month').notNull(),
+		enrichmentsPerMonth: integer('enrichments_per_month').notNull(),
+		campaignsLimit: integer('campaigns_limit').notNull(),
+
+		// Features as JSONB: { csvExport: true, analytics: 'basic'|'advanced', apiAccess: boolean, prioritySupport: boolean }
+		features: jsonb('features').notNull(),
+
+		// Metadata for UI and filtering
+		isLegacy: boolean('is_legacy').notNull().default(false), // true for grandfathered plans (glow_up, viral_surge, fame_flex)
+		isVisible: boolean('is_visible').notNull().default(true), // false hides from pricing pages
+		displayOrder: integer('display_order').notNull().default(0), // For sorting in UI
+
+		createdAt: timestamp('created_at').notNull().defaultNow(),
+		updatedAt: timestamp('updated_at').notNull().defaultNow(),
+	},
+	(table) => ({
+		// @performance Index for quick plan lookups by key
+		planKeyIdx: index('idx_plan_limits_plan_key').on(table.planKey),
+		// @performance Index for visible plans query (pricing page)
+		visibleIdx: index('idx_plan_limits_visible').on(table.isVisible, table.displayOrder),
+	})
+);
+
 // DEPRECATED: subscription_plans table - Plan configuration is now in lib/billing/plan-config.ts
 // This table is only used by admin API (/api/admin/plans/) and seed scripts.
 // Source of truth for billing logic is the static PLANS config.
@@ -813,6 +854,8 @@ export type BackgroundJob = typeof backgroundJobs.$inferSelect;
 export type NewBackgroundJob = typeof backgroundJobs.$inferInsert;
 export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
 export type NewSubscriptionPlan = typeof subscriptionPlans.$inferInsert;
+export type PlanLimit = typeof planLimits.$inferSelect;
+export type NewPlanLimit = typeof planLimits.$inferInsert;
 export type CreatorProfile = typeof creatorProfiles.$inferSelect;
 export type NewCreatorProfile = typeof creatorProfiles.$inferInsert;
 export type CreatorList = typeof creatorLists.$inferSelect;

@@ -93,9 +93,20 @@ const sentryWebpackPluginOptions = {
   // tunnelRoute: '/monitoring',
 };
 
-// Only wrap with Sentry if we have the required environment variables
-const shouldUseSentry =
-  process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN;
+// Only wrap with Sentry if we have ALL required environment variables
+// AND we're in production (not Preview/Development)
+const isProduction = process.env.VERCEL_ENV === 'production';
+const hasSentryDsn = process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN;
+const hasSentryUploadConfig =
+  process.env.SENTRY_ORG &&
+  process.env.SENTRY_PROJECT &&
+  process.env.SENTRY_AUTH_TOKEN;
+
+// Only enable Sentry source map uploads in production with all config
+const shouldUseSentry = isProduction && hasSentryDsn && hasSentryUploadConfig;
+
+// Log for debugging Vercel builds
+console.log(`[next.config] VERCEL_ENV=${process.env.VERCEL_ENV}, shouldUseSentry=${shouldUseSentry}`);
 
 export default shouldUseSentry
   ? withSentryConfig(nextConfig, sentryWebpackPluginOptions)

@@ -57,7 +57,7 @@ export class OpenRouterService {
 				if (Array.isArray(keywords)) {
 					return keywords.slice(0, count);
 				}
-			} catch (parseError) {
+			} catch {
 				// Fallback: extract keywords from text
 				const matches = responseText.match(/"([^"]+)"/g);
 				if (matches) {
@@ -70,65 +70,6 @@ export class OpenRouterService {
 		} catch (error) {
 			structuredConsole.error('AI keyword generation failed:', error);
 			return [originalQuery];
-		}
-	}
-
-	async bulkSearchInstagramReels(
-		originalQuery: string,
-		maxResults: number
-	): Promise<{
-		totalResults: number;
-		totalFetched: number;
-		duplicatesRemoved: number;
-		results: unknown[];
-		expandedKeywords: string[];
-		keywordStats: Record<string, number>;
-		totalApiCalls: number;
-		pagination: unknown;
-	}> {
-		try {
-			// Generate keywords
-			const expandedKeywords = await this.generateKeywordExpansions(originalQuery, 6);
-
-			// Mock implementation - in real usage this would call Instagram APIs
-			const mockResults = Array.from({ length: Math.min(maxResults, 50) }, (_, i) => ({
-				id: `mock_${i}`,
-				username: `creator_${i}`,
-				fullName: `Creator ${i}`,
-				caption: `Mock caption for ${originalQuery} content ${i}`,
-				sourceKeyword: expandedKeywords[i % expandedKeywords.length],
-			}));
-
-			const keywordStats: Record<string, number> = {};
-			expandedKeywords.forEach((keyword) => {
-				keywordStats[keyword] = Math.floor(Math.random() * 10) + 1;
-			});
-
-			return {
-				totalResults: mockResults.length,
-				totalFetched: mockResults.length,
-				duplicatesRemoved: 0,
-				results: mockResults,
-				expandedKeywords,
-				keywordStats,
-				totalApiCalls: expandedKeywords.length,
-				pagination: {
-					requested: maxResults,
-					delivered: mockResults.length,
-				},
-			};
-		} catch (error) {
-			structuredConsole.error('Bulk search failed:', error);
-			return {
-				totalResults: 0,
-				totalFetched: 0,
-				duplicatesRemoved: 0,
-				results: [],
-				expandedKeywords: [originalQuery],
-				keywordStats: { [originalQuery]: 0 },
-				totalApiCalls: 0,
-				pagination: { requested: maxResults, delivered: 0 },
-			};
 		}
 	}
 }

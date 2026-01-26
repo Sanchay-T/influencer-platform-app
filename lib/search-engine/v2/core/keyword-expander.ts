@@ -6,7 +6,6 @@
  */
 
 import { expandKeywordWithAI, generateContinuationKeywords } from './ai-expansion';
-import { LOG_PREFIX } from './config';
 
 // Re-export for external use
 export {
@@ -77,10 +76,6 @@ export async function expandKeywordsForTarget(
 	const processedSet = new Set<string>();
 	const expandedKeywords: string[] = [];
 
-	console.log(
-		`${LOG_PREFIX} Expanding keywords for target ${targetCreators} (need ~${keywordsNeeded})`
-	);
-
 	// Start with original keywords
 	for (const kw of originalKeywords) {
 		if (!processedSet.has(kw.toLowerCase().trim())) {
@@ -91,7 +86,9 @@ export async function expandKeywordsForTarget(
 
 	// Expand each original keyword
 	for (const kw of originalKeywords) {
-		if (expandedKeywords.length >= keywordsNeeded) break;
+		if (expandedKeywords.length >= keywordsNeeded) {
+			break;
+		}
 
 		const remainingNeeded = keywordsNeeded - expandedKeywords.length;
 		const requestCount = Math.min(Math.ceil(remainingNeeded * 1.5), 30);
@@ -104,7 +101,9 @@ export async function expandKeywordsForTarget(
 				expandedKeywords.push(expKw);
 				processedSet.add(normalized);
 			}
-			if (expandedKeywords.length >= keywordsNeeded) break;
+			if (expandedKeywords.length >= keywordsNeeded) {
+				break;
+			}
 		}
 	}
 
@@ -114,8 +113,6 @@ export async function expandKeywordsForTarget(
 		expansionRun++;
 		const remainingNeeded = keywordsNeeded - expandedKeywords.length;
 		const requestCount = Math.min(Math.ceil(remainingNeeded * 1.5), 20);
-
-		console.log(`${LOG_PREFIX} Expansion run ${expansionRun}, need ${remainingNeeded} more`);
 
 		const moreKeywords = await generateContinuationKeywords(
 			originalKeywords,
@@ -130,15 +127,15 @@ export async function expandKeywordsForTarget(
 				expandedKeywords.push(kw);
 				processedSet.add(normalized);
 			}
-			if (expandedKeywords.length >= keywordsNeeded) break;
+			if (expandedKeywords.length >= keywordsNeeded) {
+				break;
+			}
 		}
 
-		if (moreKeywords.length === 0) break;
+		if (moreKeywords.length === 0) {
+			break;
+		}
 	}
-
-	console.log(
-		`${LOG_PREFIX} Expanded ${originalKeywords.length} → ${expandedKeywords.length} keywords`
-	);
 
 	return {
 		keywords: expandedKeywords,

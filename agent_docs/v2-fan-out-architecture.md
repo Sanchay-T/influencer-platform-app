@@ -453,13 +453,9 @@ scripts/
 ├── test-v2-e2e.ts                  # E2E test runner (all scenarios)
 └── test-v2-platform.ts             # Single platform test
 
-[TO DELETE after migration]
-├── lib/search-engine/providers/    # Old provider files
-├── lib/search-engine/runner.ts     # Old dispatch logic
-├── app/api/scraping/tiktok/        # Old routes
-├── app/api/scraping/instagram-*/   # Old routes
-├── app/api/scraping/youtube*/      # Old routes
-└── app/api/qstash/process-search/  # Old QStash handler
+[Legacy cleanup status]
+├── Removed (keyword): legacy keyword providers + `/api/scraping/{tiktok,youtube,instagram-*}`
+└── Still in use (similar): `lib/search-engine/runner.ts` + `/api/qstash/process-search` + similar routes
 ```
 
 ---

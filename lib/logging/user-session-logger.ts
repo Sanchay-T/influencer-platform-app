@@ -10,11 +10,16 @@
  *   logger.log('STRIPE_WEBHOOK', 'Payment completed', { plan: 'glow_up' });
  */
 
-import crypto from 'crypto';
-import * as fs from 'fs';
-import * as path from 'path';
+import crypto from 'node:crypto';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { logger } from './logger';
+import { LogCategory } from './types';
 
 const LOGS_BASE_DIR = path.join(process.cwd(), 'logs', 'users');
+const ENABLE_SESSION_LOGS =
+	process.env.ENABLE_SESSION_LOGS === 'true' ||
+	(process.env.NODE_ENV !== 'production' && process.env.ENABLE_SESSION_LOGS !== 'false');
 
 export interface LogEntry {
 	timestamp: string;
@@ -25,6 +30,7 @@ export interface LogEntry {
 }
 
 export class UserSessionLogger {
+	private enabled: boolean;
 	private emailHash: string;
 	private userId?: string;
 	private userDir: string;
@@ -32,9 +38,16 @@ export class UserSessionLogger {
 	private sessionId: string;
 
 	constructor(email: string, userId?: string) {
+		this.enabled = ENABLE_SESSION_LOGS;
 		this.emailHash = UserSessionLogger.hashEmail(email);
 		this.userId = userId;
 		this.sessionId = `session_${Date.now()}`;
+		this.userDir = '';
+		this.sessionFile = '';
+
+		if (!this.enabled) {
+			return;
+		}
 
 		// Create user directory
 		this.userDir = path.join(LOGS_BASE_DIR, this.emailHash);
@@ -48,11 +61,6 @@ export class UserSessionLogger {
 		this.initSession();
 	}
 
-	private sanitizeEmail(email: string): string {
-		// Replace special chars for filesystem safety
-		return email.toLowerCase().replace(/[^a-z0-9@._-]/g, '_');
-	}
-
 	private ensureDir(dir: string): void {
 		if (!fs.existsSync(dir)) {
 			fs.mkdirSync(dir, { recursive: true });
@@ -60,6 +68,10 @@ export class UserSessionLogger {
 	}
 
 	private initSession(): void {
+		if (!this.enabled) {
+			return;
+		}
+
 		const logs: LogEntry[] = [];
 		const sessionData = {
 			emailHash: this.emailHash,
@@ -81,6 +93,10 @@ export class UserSessionLogger {
 	}
 
 	log(event: string, message: string, data?: unknown, source?: string): void {
+		if (!this.enabled) {
+			return;
+		}
+
 		const entry: LogEntry = {
 			timestamp: new Date().toISOString(),
 			event,
@@ -95,25 +111,43 @@ export class UserSessionLogger {
 		// Append to master log
 		this.appendToMasterLog(entry);
 
-		// Also log to console for real-time visibility
-		const label = this.emailHash.slice(0, 8);
-		console.log(`[user:${label}] [${event}] ${message}`, data ? JSON.stringify(data, null, 2) : '');
+		logger.info(
+			`[user:${this.emailHash.slice(0, 8)}] [${event}] ${message}`,
+			{
+				userId: this.userId,
+				metadata: data ? { data, source } : { source },
+			},
+			LogCategory.ONBOARDING
+		);
 	}
 
 	private appendToSessionFile(entry: LogEntry): void {
+		if (!this.enabled) {
+			return;
+		}
+
 		try {
 			const content = JSON.parse(fs.readFileSync(this.sessionFile, 'utf-8'));
 			content.logs.push(entry);
 			content.lastUpdated = new Date().toISOString();
 			fs.writeFileSync(this.sessionFile, JSON.stringify(content, null, 2));
 		} catch (e) {
-			console.error('Failed to append to session file:', e);
+			logger.error(
+				'Failed to append to session file',
+				e instanceof Error ? e : new Error(String(e)),
+				{ metadata: { sessionFile: this.sessionFile } },
+				LogCategory.ONBOARDING
+			);
 		}
 	}
 
 	private appendToMasterLog(entry: LogEntry): void {
+		if (!this.enabled) {
+			return;
+		}
+
 		const masterLogFile = path.join(this.userDir, 'all_activity.jsonl');
-		const line = JSON.stringify({ ...entry, sessionId: this.sessionId }) + '\n';
+		const line = `${JSON.stringify({ ...entry, sessionId: this.sessionId })}\n`;
 		fs.appendFileSync(masterLogFile, line);
 	}
 
@@ -158,60 +192,65 @@ export class UserSessionLogger {
 	// Print formatted logs for a user
 	static printUserLogs(email: string): void {
 		const { sessions, masterLog } = UserSessionLogger.getUserLogs(email);
+		const logLine = (message: string) => {
+			logger.info(message, undefined, LogCategory.SYSTEM);
+		};
 
-		console.log('\n' + '='.repeat(60));
-		console.log(`📋 LOGS FOR: ${email}`);
-		console.log('='.repeat(60));
+		logLine(`\n${'='.repeat(60)}`);
+		logLine(`📋 LOGS FOR: ${email}`);
+		logLine('='.repeat(60));
 
 		if (masterLog.length === 0) {
-			console.log('\n   No logs found for this user.\n');
+			logLine('\n   No logs found for this user.\n');
 			return;
 		}
 
-		console.log(`\n📁 Sessions: ${sessions.length}`);
-		console.log(`📝 Total log entries: ${masterLog.length}\n`);
+		logLine(`\n📁 Sessions: ${sessions.length}`);
+		logLine(`📝 Total log entries: ${masterLog.length}\n`);
 
 		// Group by event type
 		const byEvent: Record<string, LogEntry[]> = {};
 		for (const entry of masterLog) {
-			if (!byEvent[entry.event]) byEvent[entry.event] = [];
+			if (!byEvent[entry.event]) {
+				byEvent[entry.event] = [];
+			}
 			byEvent[entry.event].push(entry);
 		}
 
 		// Print timeline
-		console.log('📅 TIMELINE:\n');
+		logLine('📅 TIMELINE:\n');
 		for (const entry of masterLog) {
 			const time = new Date(entry.timestamp).toLocaleTimeString();
 			const icon = getEventIcon(entry.event);
-			console.log(`   ${time} ${icon} [${entry.event}] ${entry.message}`);
+			logLine(`   ${time} ${icon} [${entry.event}] ${entry.message}`);
 			if (entry.data) {
 				const dataStr = JSON.stringify(entry.data, null, 2)
 					.split('\n')
-					.map((line) => '            ' + line)
+					.map((line) => `            ${line}`)
 					.join('\n');
-				console.log(dataStr);
+				logLine(dataStr);
 			}
 		}
 
-		console.log('\n' + '='.repeat(60) + '\n');
+		logLine(`\n${'='.repeat(60)}\n`);
 	}
 }
 
 function getEventIcon(event: string): string {
-	const icons: Record<string, string> = {
-		SESSION_START: '🚀',
-		CLERK_WEBHOOK: '👤',
-		USER_CREATED: '✨',
-		PLAN_SELECTED: '📋',
-		STRIPE_CHECKOUT: '💳',
-		STRIPE_WEBHOOK: '💰',
-		PAYMENT_SUCCESS: '✅',
-		PAYMENT_FAILED: '❌',
-		ONBOARDING_COMPLETE: '🎉',
-		TRIAL_STARTED: '⏱️',
-		ERROR: '🚨',
-	};
-	return icons[event] || '📌';
+	const icons = new Map<string, string>([
+		['SESSION_START', '🚀'],
+		['CLERK_WEBHOOK', '👤'],
+		['USER_CREATED', '✨'],
+		['PLAN_SELECTED', '📋'],
+		['STRIPE_CHECKOUT', '💳'],
+		['STRIPE_WEBHOOK', '💰'],
+		['PAYMENT_SUCCESS', '✅'],
+		['PAYMENT_FAILED', '❌'],
+		['ONBOARDING_COMPLETE', '🎉'],
+		['TRIAL_STARTED', '⏱️'],
+		['ERROR', '🚨'],
+	]);
+	return icons.get(event) ?? '📌';
 }
 
 // Export a singleton for the current request (will need middleware to set)

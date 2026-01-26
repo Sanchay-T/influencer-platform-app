@@ -10,6 +10,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { trackUserSignedIn } from '@/lib/analytics/logsnag';
+import { LogCategory, logger } from '@/lib/logging';
 
 // Events that can be tracked via this endpoint
 type TrackableEvent = 'user_signed_in';
@@ -23,6 +24,7 @@ interface TrackRequest {
 	};
 }
 
+// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function POST(request: Request) {
 	try {
 		// Verify the user is authenticated
@@ -60,7 +62,12 @@ export async function POST(request: Request) {
 
 		return NextResponse.json({ success: true });
 	} catch (error) {
-		console.error('[Analytics API] Error tracking event:', error);
+		logger.error(
+			'[Analytics API] Error tracking event',
+			error instanceof Error ? error : new Error(String(error)),
+			undefined,
+			LogCategory.API
+		);
 		return NextResponse.json({ error: 'Failed to track event' }, { status: 500 });
 	}
 }

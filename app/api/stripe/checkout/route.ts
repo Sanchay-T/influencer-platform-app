@@ -49,7 +49,9 @@ export async function POST(request: NextRequest) {
 
 		if (!isValidPlan(planId)) {
 			return NextResponse.json(
-				{ error: `Invalid plan: ${planId}. Valid plans: glow_up, viral_surge, fame_flex` },
+				{
+					error: `Invalid plan: ${planId}. Valid plans: growth, scale, pro (legacy: glow_up, viral_surge, fame_flex)`,
+				},
 				{ status: 400 }
 			);
 		}

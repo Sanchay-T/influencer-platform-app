@@ -4,8 +4,6 @@
  * Uses DeepSeek via OpenRouter to expand keywords dynamically.
  */
 
-import { LOG_PREFIX } from './config';
-
 // ============================================================================
 // Constants
 // ============================================================================
@@ -27,7 +25,6 @@ export async function expandKeywordWithAI(
 	try {
 		const apiKey = process.env.OPEN_ROUTER || process.env.OPENROUTER_API_KEY;
 		if (!apiKey) {
-			console.warn(`${LOG_PREFIX} OpenRouter API key not configured, using original keyword`);
 			return [keyword];
 		}
 
@@ -95,11 +92,8 @@ Return as JSON array with ${requestCount} items: ["keyword1", "keyword2", ...]`,
 			.filter((k) => k.length > 2 && k.length < 100)
 			.filter((k) => !excludeSet.has(k.toLowerCase().trim()));
 
-		console.log(`${LOG_PREFIX} AI expanded "${keyword}" → ${filtered.length} keywords`);
-
 		return filtered.length > 0 ? filtered.slice(0, count) : [keyword];
-	} catch (error) {
-		console.warn(`${LOG_PREFIX} AI keyword expansion failed:`, error);
+	} catch {
 		return [keyword];
 	}
 }
@@ -116,7 +110,6 @@ export async function generateContinuationKeywords(
 	try {
 		const apiKey = process.env.OPEN_ROUTER || process.env.OPENROUTER_API_KEY;
 		if (!apiKey) {
-			console.warn(`${LOG_PREFIX} OpenRouter API key not configured`);
 			return generateFallbackKeywords(originalKeywords, processedKeywords, count);
 		}
 
@@ -172,13 +165,8 @@ Return ONLY ${count} keywords, one per line, no numbering or explanation.`,
 			.filter((line: string) => !line.match(/^\d+[.)]/))
 			.filter((line: string) => !excludeSet.has(line.toLowerCase().trim()));
 
-		console.log(
-			`${LOG_PREFIX} Generated ${keywords.length} continuation keywords (run ${runNumber})`
-		);
-
 		return keywords.slice(0, count);
-	} catch (error) {
-		console.warn(`${LOG_PREFIX} Continuation keyword generation failed:`, error);
+	} catch {
 		return generateFallbackKeywords(originalKeywords, processedKeywords, count);
 	}
 }
@@ -216,10 +204,14 @@ export function generateFallbackKeywords(
 			const combo = `${kw} ${mod}`;
 			if (!excludeSet.has(combo.toLowerCase())) {
 				fallbackKeywords.push(combo);
-				if (fallbackKeywords.length >= count) break;
+				if (fallbackKeywords.length >= count) {
+					break;
+				}
 			}
 		}
-		if (fallbackKeywords.length >= count) break;
+		if (fallbackKeywords.length >= count) {
+			break;
+		}
 	}
 
 	return fallbackKeywords.slice(0, count);

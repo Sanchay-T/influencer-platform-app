@@ -5,11 +5,8 @@ import { SystemConfig } from '@/lib/config/system-config';
 import { LogCategory, logger } from '@/lib/logging';
 import { isString, toRecord } from '@/lib/utils/type-guards';
 import { SearchJobService } from './job-service';
-import { runInstagramScrapeCreatorsProvider } from './providers/instagram-reels-scrapecreators';
 import { runInstagramSimilarProvider } from './providers/instagram-similar';
 import { runSimilarDiscoveryProvider } from './providers/similar-discovery';
-import { runTikTokKeywordProvider } from './providers/tiktok-keyword';
-import { runYouTubeKeywordProvider } from './providers/youtube-keyword';
 import { runYouTubeSimilarProvider } from './providers/youtube-similar';
 import type { ProviderRunResult, SearchRuntimeConfig } from './types';
 
@@ -49,18 +46,6 @@ async function resolveConfig(platform?: string): Promise<SearchRuntimeConfig> {
 	};
 }
 
-function isTikTokKeyword(jobPlatform?: string, keywords?: unknown): boolean {
-	if (!(keywords && Array.isArray(keywords))) return false;
-	const platform = (jobPlatform ?? '').toLowerCase();
-	return platform === 'tiktok' || platform === 'tiktok_keyword' || platform === 'tiktokkeyword';
-}
-
-function isYouTubeKeyword(jobPlatform?: string, keywords?: unknown): boolean {
-	if (!(keywords && Array.isArray(keywords))) return false;
-	const platform = (jobPlatform ?? '').toLowerCase();
-	return platform === 'youtube' || platform === 'youtube_keyword' || platform === 'youtubekeyword';
-}
-
 function isYouTubeSimilar(jobPlatform?: string, targetUsername?: unknown): boolean {
 	const platform = (jobPlatform ?? '').toLowerCase();
 	return !!targetUsername && (platform === 'youtube' || platform === 'youtube_similar');
@@ -69,13 +54,6 @@ function isYouTubeSimilar(jobPlatform?: string, targetUsername?: unknown): boole
 function isInstagramSimilar(jobPlatform?: string, targetUsername?: unknown): boolean {
 	const platform = (jobPlatform ?? '').toLowerCase();
 	return !!targetUsername && (platform === 'instagram' || platform === 'instagram_similar');
-}
-
-function isInstagramScrapeCreators(jobPlatform?: string, searchParams?: unknown): boolean {
-	const platform = (jobPlatform ?? '').toLowerCase();
-	const paramsRecord = toRecord(searchParams);
-	const runner = isString(paramsRecord?.runner) ? paramsRecord.runner.toLowerCase() : '';
-	return runner === 'instagram_scrapecreators' || platform === 'instagram_scrapecreators';
 }
 
 function isSimilarDiscovery(jobPlatform?: string, searchParams?: unknown): boolean {
@@ -111,19 +89,6 @@ export async function runSearchJob(jobId: string): Promise<SearchExecutionResult
 		},
 		LogCategory.JOB
 	);
-	// console fallback to surface diagnostics in production where the structured logger may not flush to console
-	console.warn(
-		'[search-runner] loaded job snapshot',
-		JSON.stringify({
-			jobId,
-			status: job.status,
-			platform: job.platform,
-			processedResults: job.processedResults,
-			targetResults: job.targetResults,
-			keywordsCount: Array.isArray(job.keywords) ? job.keywords.length : null,
-			hasSearchParams: Boolean(job.searchParams),
-		})
-	);
 
 	const config = await resolveConfig((job.platform ?? '').toLowerCase());
 	logger.info(
@@ -145,42 +110,22 @@ export async function runSearchJob(jobId: string): Promise<SearchExecutionResult
 		: platformLower.includes('youtube')
 			? 'youtube'
 			: 'tiktok';
-	const userForTracking = await getUserProfile(job.userId);
+	const userForTracking = await getUserDataForTracking(job.userId);
 	await trackServer('search_started', {
 		userId: job.userId,
 		platform: normalizedPlatform,
 		type: searchType,
 		targetCount: job.targetResults || 0,
-		email: userForTracking?.email || 'unknown',
-		name: userForTracking?.fullName || '',
+		email: userForTracking.email || 'unknown',
+		name: userForTracking.name || '',
 	});
-	console.warn(
-		'[search-runner] resolved config',
-		JSON.stringify({
-			jobId,
-			platform: job.platform,
-			maxApiCalls: config.maxApiCalls,
-			continuationDelayMs: config.continuationDelayMs,
-		})
-	);
 
 	let providerResult: ProviderRunResult;
-	if (isTikTokKeyword(job.platform, job.keywords)) {
-		providerResult = await runTikTokKeywordProvider({ job, config }, service);
-	} else if (isYouTubeKeyword(job.platform, job.keywords)) {
-		providerResult = await runYouTubeKeywordProvider({ job, config }, service);
-	} else if (isYouTubeSimilar(job.platform, job.targetUsername)) {
+	if (isYouTubeSimilar(job.platform, job.targetUsername)) {
 		providerResult = await runYouTubeSimilarProvider({ job, config }, service);
 	} else if (isInstagramSimilar(job.platform, job.targetUsername)) {
 		providerResult = await runInstagramSimilarProvider({ job, config }, service);
-	} else if (isInstagramScrapeCreators(job.platform, job.searchParams)) {
-		providerResult = await runInstagramScrapeCreatorsProvider({ job, config }, service);
 	} else if (isSimilarDiscovery(job.platform, job.searchParams)) {
-		console.log('[SEARCH-RUNNER] Dispatching to runSimilarDiscoveryProvider', {
-			jobId: job.id,
-			platform: job.platform,
-			targetUsername: job.targetUsername,
-		});
 		providerResult = await runSimilarDiscoveryProvider({ job, config }, service);
 	} else {
 		throw new Error(

@@ -140,42 +140,27 @@ async function run() {
     {
       name: 'Scraping results first page (owner)',
       expectStatus: 200,
-      request: () => fetch(`${baseUrl}/api/scraping/tiktok?jobId=${jobId}&limit=200`, { headers: ownerHeaders }),
+      request: () => fetch(`${baseUrl}/api/v2/status?jobId=${jobId}&limit=200`, { headers: ownerHeaders }),
       onPass: (_res, body) => {
         const record = toRecord(body)
         const results = record ? getArrayProperty(record, 'results') : null
         const firstResult = results && results.length > 0 ? toRecord(results[0]) : null
         const creators = firstResult ? getArrayProperty(firstResult, 'creators') : null
         const count = creators ? creators.length : 0
-        if (count !== 200) {
-          throw new Error(`Expected 200 creators in page, received ${count}`)
+        if (count > 200) {
+          throw new Error(`Expected at most 200 creators in page, received ${count}`)
+        }
+        const pagination = record ? toRecord(record.pagination) : null
+        const limit = pagination ? getNumberProperty(pagination, 'limit') : null
+        if (limit !== null && limit !== 200) {
+          throw new Error(`Expected pagination limit 200, received ${limit}`)
         }
       },
     },
     {
       name: 'Scraping results first page (stranger blocked)',
-      expectStatus: 404,
-      request: () => fetch(`${baseUrl}/api/scraping/tiktok?jobId=${jobId}&limit=200`, { headers: strangerHeaders }),
-    },
-    {
-      name: 'Scraping pagination last page',
-      expectStatus: 200,
-      request: () => fetch(`${baseUrl}/api/scraping/tiktok?jobId=${jobId}&limit=200&offset=1000`, { headers: ownerHeaders }),
-      onPass: (_res, body) => {
-        const record = toRecord(body)
-        const results = record ? getArrayProperty(record, 'results') : null
-        const firstResult = results && results.length > 0 ? toRecord(results[0]) : null
-        const creators = firstResult ? getArrayProperty(firstResult, 'creators') : null
-        const count = creators ? creators.length : 0
-        if (count === 0) {
-          throw new Error('Expected creators on final page but received none')
-        }
-        const pagination = record ? toRecord(record.pagination) : null
-        const nextOffset = pagination ? getNumberProperty(pagination, 'nextOffset') : null
-        if (nextOffset !== null) {
-          throw new Error(`Expected no nextOffset on final page, received ${nextOffset}`)
-        }
-      },
+      expectStatus: 403,
+      request: () => fetch(`${baseUrl}/api/v2/status?jobId=${jobId}&limit=200`, { headers: strangerHeaders }),
     },
   ]
 

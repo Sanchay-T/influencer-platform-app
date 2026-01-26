@@ -9,7 +9,7 @@
 import { getCreatorViews, MIN_VIEWS_THRESHOLD } from '../../utils/filter-creators';
 import type { SearchAdapter } from '../adapters/interface';
 import type { AsyncQueue, AtomicCounter } from './async-queue';
-import { LOG_PREFIX } from './config';
+
 import type { NormalizedCreator, SearchConfig } from './types';
 
 // ============================================================================
@@ -35,7 +35,7 @@ export interface WorkerMetrics {
  * Runs until target reached or keyword exhausted
  */
 export async function fetchWorker(
-	workerId: number,
+	_workerId: number,
 	keyword: string,
 	adapter: SearchAdapter,
 	config: SearchConfig,
@@ -49,8 +49,6 @@ export async function fetchWorker(
 	let consecutiveEmpty = 0;
 	let exhausted = false;
 
-	console.log(`${LOG_PREFIX} [Fetch-${workerId}] Starting keyword: "${keyword}"`);
-
 	while (!(counter.isComplete() || abortSignal.aborted || exhausted)) {
 		try {
 			// Fetch from API
@@ -58,14 +56,12 @@ export async function fetchWorker(
 			metrics.apiCalls++;
 
 			if (result.error) {
-				console.warn(`${LOG_PREFIX} [Fetch-${workerId}] Error for "${keyword}": ${result.error}`);
 				exhausted = true;
 				break;
 			}
 
 			// Process items
 			let addedThisBatch = 0;
-			let filteredThisBatch = 0;
 			for (const rawItem of result.items) {
 				// Check if we've hit target
 				if (counter.isComplete() || abortSignal.aborted) {
@@ -73,19 +69,22 @@ export async function fetchWorker(
 				}
 
 				const creator = adapter.normalize(rawItem);
-				if (!creator) continue;
+				if (!creator) {
+					continue;
+				}
 
 				// @why Filter out low-view content BEFORE deduplication
 				// This ensures we don't mark a creator as "seen" if their first video
 				// has low views - we want to accept them if they have a higher-view video later
 				const views = getCreatorViews(creator);
 				if (views < MIN_VIEWS_THRESHOLD) {
-					filteredThisBatch++;
 					continue;
 				}
 
 				const key = adapter.getDedupeKey(creator);
-				if (seenKeys.has(key)) continue;
+				if (seenKeys.has(key)) {
+					continue;
+				}
 
 				// Try to claim a slot
 				if (!counter.tryIncrement()) {
@@ -100,20 +99,10 @@ export async function fetchWorker(
 				await enrichQueue.push({ creator });
 			}
 
-			// Log filtering stats if any were filtered
-			if (filteredThisBatch > 0) {
-				console.log(
-					`${LOG_PREFIX} [Fetch-${workerId}] Filtered ${filteredThisBatch} creators with <${MIN_VIEWS_THRESHOLD} views`
-				);
-			}
-
 			// Track consecutive empty batches (after filtering)
 			if (addedThisBatch === 0) {
 				consecutiveEmpty++;
 				if (consecutiveEmpty >= config.maxConsecutiveEmptyRuns) {
-					console.log(
-						`${LOG_PREFIX} [Fetch-${workerId}] Keyword "${keyword}" exhausted after ${consecutiveEmpty} empty pages`
-					);
 					exhausted = true;
 					break;
 				}
@@ -124,22 +113,14 @@ export async function fetchWorker(
 			// Update cursor for next page
 			cursor = result.nextCursor;
 			if (!result.hasMore) {
-				console.log(
-					`${LOG_PREFIX} [Fetch-${workerId}] Keyword "${keyword}" reached end of results`
-				);
 				exhausted = true;
 				break;
 			}
-		} catch (error) {
-			console.error(`${LOG_PREFIX} [Fetch-${workerId}] Exception for "${keyword}":`, error);
+		} catch (_error) {
 			exhausted = true;
 			break;
 		}
 	}
-
-	console.log(
-		`${LOG_PREFIX} [Fetch-${workerId}] Finished keyword "${keyword}" (exhausted: ${exhausted}, counter: ${counter.get()}/${counter.getTarget()})`
-	);
 
 	return { exhausted, lastCursor: cursor };
 }

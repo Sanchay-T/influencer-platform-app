@@ -46,13 +46,11 @@ export type {
 // Parallel streaming pipeline (recommended)
 export {
 	runExpandedPipeline,
-	runExpandedStandalone,
 	runParallelPipeline,
-	runParallelStandalone,
 } from './core/parallel-pipeline';
 export type { PipelineOptions } from './core/pipeline';
 // Sequential pipeline (legacy)
-export { runPipeline, runStandalone } from './core/pipeline';
+export { runPipeline } from './core/pipeline';
 // Core types and config
 export * from './core/types';
 

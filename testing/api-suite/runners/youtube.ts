@@ -26,9 +26,10 @@ export async function runYoutubeKeywordE2E(
   })
 
   const { jobId } = await startScrape(ctx, {
-    path: '/api/scraping/youtube',
-    label: 'YouTube keyword',
+    path: '/api/v2/dispatch',
+    label: 'YouTube keyword (v2)',
     body: {
+      platform: 'youtube',
       keywords: options.keywords ?? ['automation testing youtube'],
       targetResults: options.targetResults ?? 100,
       campaignId,
@@ -36,8 +37,8 @@ export async function runYoutubeKeywordE2E(
   })
 
   const status = await pollJob(ctx, {
-    statusPath: `/api/scraping/youtube?jobId=${jobId}`,
-    label: 'YouTube keyword',
+    statusPath: `/api/v2/status?jobId=${jobId}&limit=0`,
+    label: 'YouTube keyword (v2)',
   })
 
   return { campaignId, jobId, status }

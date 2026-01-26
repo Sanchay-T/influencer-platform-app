@@ -6,7 +6,6 @@
 
 import type { SearchAdapter } from '../adapters/interface';
 import type { AsyncQueue } from './async-queue';
-import { LOG_PREFIX } from './config';
 import type { EnrichTask, WorkerMetrics } from './fetch-worker';
 import type { NormalizedCreator, SearchConfig } from './types';
 
@@ -18,7 +17,7 @@ import type { NormalizedCreator, SearchConfig } from './types';
  * Enrich worker - consumes from queue, enriches bio, emits creator
  */
 export async function enrichWorker(
-	workerId: number,
+	_workerId: number,
 	adapter: SearchAdapter,
 	config: SearchConfig,
 	enrichQueue: AsyncQueue<EnrichTask>,
@@ -26,8 +25,6 @@ export async function enrichWorker(
 	onCreator: (creator: NormalizedCreator) => Promise<void>
 ): Promise<NormalizedCreator[]> {
 	const results: NormalizedCreator[] = [];
-
-	console.log(`${LOG_PREFIX} [Enrich-${workerId}] Starting`);
 
 	while (true) {
 		const task = await enrichQueue.pop();
@@ -60,12 +57,10 @@ export async function enrichWorker(
 		// Emit creator immediately
 		try {
 			await onCreator(enrichedCreator);
-		} catch (error) {
-			console.error(`${LOG_PREFIX} [Enrich-${workerId}] Error in onCreator callback:`, error);
+		} catch {
+			// Silently ignore callback errors
 		}
 	}
-
-	console.log(`${LOG_PREFIX} [Enrich-${workerId}] Finished (processed: ${results.length})`);
 
 	return results;
 }

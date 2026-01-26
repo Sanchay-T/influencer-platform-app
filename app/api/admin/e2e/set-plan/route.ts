@@ -9,6 +9,7 @@ import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { userBilling, userSubscriptions, users } from '@/lib/db/schema';
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import {
 	isValidPlanKey,
 	isValidSubscriptionStatus,
@@ -21,8 +22,8 @@ const isTestMode =
 	process.env.NODE_ENV === 'development' || process.env.ENABLE_AUTH_BYPASS === 'true';
 
 type PaidPlan = Exclude<PlanKey, 'free'>;
-const VALID_PLANS: ReadonlyArray<PaidPlan> = ['glow_up', 'viral_surge', 'fame_flex'];
-const VALID_SUBSCRIPTION_STATUSES: ReadonlyArray<SubscriptionStatus> = [
+const VALID_PLANS: readonly PaidPlan[] = ['glow_up', 'viral_surge', 'fame_flex'];
+const VALID_SUBSCRIPTION_STATUSES: readonly SubscriptionStatus[] = [
 	'none',
 	'active',
 	'trialing',
@@ -32,6 +33,8 @@ const VALID_SUBSCRIPTION_STATUSES: ReadonlyArray<SubscriptionStatus> = [
 
 const isPaidPlan = (plan: PlanKey): plan is PaidPlan => plan !== 'free';
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: E2E guard logic and validation branches.
+// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function PATCH(request: Request) {
 	if (!isTestMode) {
 		return NextResponse.json(
@@ -127,7 +130,7 @@ export async function PATCH(request: Request) {
 		await db
 			.update(userBilling)
 			.set({
-				stripeSubscriptionId: 'sub_e2e_test_' + Date.now(),
+				stripeSubscriptionId: `sub_e2e_test_${Date.now()}`,
 				updatedAt: now,
 			})
 			.where(eq(userBilling.userId, user.id));
@@ -141,7 +144,7 @@ export async function PATCH(request: Request) {
 			onboardingStep: 'completed',
 		});
 	} catch (error) {
-		console.error('E2E set plan error:', error);
+		structuredConsole.error('E2E set plan error', error);
 		return NextResponse.json(
 			{ error: 'Failed to set plan', details: String(error) },
 			{ status: 500 }

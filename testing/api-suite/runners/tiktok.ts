@@ -26,9 +26,10 @@ export async function runTiktokKeywordE2E(
   })
 
   const { jobId } = await startScrape(ctx, {
-    path: '/api/scraping/tiktok',
-    label: 'TikTok keyword',
+    path: '/api/v2/dispatch',
+    label: 'TikTok keyword (v2)',
     body: {
+      platform: 'tiktok',
       keywords: options.keywords ?? ['automation testing tiktok'],
       targetResults: options.targetResults ?? 100,
       campaignId,
@@ -36,8 +37,8 @@ export async function runTiktokKeywordE2E(
   })
 
   const status = await pollJob(ctx, {
-    statusPath: `/api/scraping/tiktok?jobId=${jobId}`,
-    label: 'TikTok keyword',
+    statusPath: `/api/v2/status?jobId=${jobId}&limit=0`,
+    label: 'TikTok keyword (v2)',
   })
 
   return { campaignId, jobId, status }

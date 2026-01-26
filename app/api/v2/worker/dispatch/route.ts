@@ -64,20 +64,8 @@ function getCallbackUrl(req: Request): string {
 export async function POST(req: Request) {
 	const startTime = Date.now();
 
-	// 🔍 DEBUG: Log incoming request
-	console.log('[GEMZ-DEBUG] 🔔 /api/v2/worker/dispatch HIT', {
-		timestamp: new Date().toISOString(),
-		headers: {
-			host: req.headers.get('host'),
-			'user-agent': req.headers.get('user-agent'),
-			'upstash-signature': req.headers.get('Upstash-Signature') ? '***SET***' : '***MISSING***',
-		},
-	});
-
 	const rawBody = await req.text();
 	const signature = req.headers.get('Upstash-Signature');
-
-	console.log('[GEMZ-DEBUG] 📥 Request body length:', rawBody.length);
 
 	if (shouldVerifySignature()) {
 		if (!signature) {

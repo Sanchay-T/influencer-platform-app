@@ -20,6 +20,7 @@
 import * as Sentry from '@sentry/nextjs';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef } from 'react';
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { isDoneStatus, isSuccessStatus } from '@/lib/types/statuses';
 import { useJobRealtime } from './useJobRealtime';
 import { type JobStatus, type JobStatusData, jobStatusKeys, useJobStatus } from './useJobStatus';
@@ -28,7 +29,7 @@ import { type JobStatus, type JobStatusData, jobStatusKeys, useJobStatus } from 
 const debugLog = (tag: string, msg: string, data?: Record<string, unknown>) => {
 	if (typeof window !== 'undefined' && localStorage.getItem('debug_job_status') === 'true') {
 		const timestamp = new Date().toISOString().slice(11, 23);
-		console.log(`%c[${tag}][${timestamp}] ${msg}`, 'color: #ff9800', data ?? '');
+		structuredConsole.debug(`[${tag}][${timestamp}] ${msg}`, data ?? {});
 	}
 };
 
@@ -102,7 +103,7 @@ const isJobStatus = (value: unknown): value is JobStatus =>
  * @example
  * ```tsx
  * const { status, progress, totalCreators, isTerminal } = useJobPolling(jobId, {
- *   onProgress: (data) => console.log('Progress:', data.progress),
+ *   onProgress: (data) => structuredConsole.debug('Progress update', data),
  *   onComplete: (data) => toast.success(`Found ${data.totalCreators} creators`),
  * });
  * ```

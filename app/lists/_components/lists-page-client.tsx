@@ -1,9 +1,9 @@
 'use client';
 
 import clsx from 'clsx';
-import { ListTree, Loader2, MoreHorizontal, Plus, Trash2, Users } from 'lucide-react';
+import { Check, ListTree, Loader2, Plus, Trash2, Users, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { type MouseEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { type MouseEvent, useCallback, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import DashboardLayout from '@/app/components/layout/dashboard-layout';
 import { Badge } from '@/components/ui/badge';
@@ -39,7 +39,7 @@ export default function ListsPageClient({ initialLists }: ListsPageClientProps) 
 		description: '',
 		type: 'custom',
 	});
-	const [actionMenuId, setActionMenuId] = useState<string | null>(null);
+	const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 	const [deletingId, setDeletingId] = useState<string | null>(null);
 
 	const filteredLists = useMemo(() => {
@@ -59,14 +59,34 @@ export default function ListsPageClient({ initialLists }: ListsPageClientProps) 
 		}
 		setCreateError(null);
 		setCreating(true);
+
+		// 1. Create optimistic list with temp ID (partial - will be replaced with real data)
+		const tempId = `temp-${Date.now()}`;
+		const optimisticList = {
+			id: tempId,
+			name: form.name,
+			description: form.description,
+			type: form.type,
+			creatorCount: 0,
+			followerSum: 0,
+			collaboratorCount: 0,
+			tags: [],
+			viewerRole: 'owner' as const,
+		} as ListSummary;
+
+		// 2. Optimistic update
+		setLists((prev) => [optimisticList, ...prev]);
+		setForm({ name: '', description: '', type: form.type });
+
+		// 3. API call in background
 		try {
 			const res = await fetch('/api/lists', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					name: form.name,
-					description: form.description,
-					type: form.type,
+					name: optimisticList.name,
+					description: optimisticList.description,
+					type: optimisticList.type,
 				}),
 			});
 			if (!res.ok) {
@@ -74,11 +94,15 @@ export default function ListsPageClient({ initialLists }: ListsPageClientProps) 
 				throw new Error(payload?.error ?? 'Failed to create list');
 			}
 			const data = await res.json();
-			setLists((prev) => [data.list, ...prev]);
-			setForm({ name: '', description: '', type: form.type });
+
+			// 4. Replace temp with real list
+			setLists((prev) => prev.map((item) => (item.id === tempId ? data.list : item)));
 			toast.success('List created');
+			router.refresh();
 		} catch (error) {
+			// 5. Rollback - remove temp list
 			structuredConsole.error(error);
+			setLists((prev) => prev.filter((item) => item.id !== tempId));
 			const message = error instanceof Error ? error.message : 'Failed to create list';
 			toast.error(message);
 		} finally {
@@ -86,52 +110,52 @@ export default function ListsPageClient({ initialLists }: ListsPageClientProps) 
 		}
 	};
 
-	useEffect(() => {
-		if (!actionMenuId) return;
-		const closeMenu = () => setActionMenuId(null);
-		const handleKeydown = (event: KeyboardEvent) => {
-			if (event.key === 'Escape') {
-				setActionMenuId(null);
-			}
-		};
-		document.addEventListener('click', closeMenu);
-		document.addEventListener('keydown', handleKeydown);
-		return () => {
-			document.removeEventListener('click', closeMenu);
-			document.removeEventListener('keydown', handleKeydown);
-		};
-	}, [actionMenuId]);
-
-	const handleDeleteList = useCallback(
-		async (event: MouseEvent, list: ListSummary) => {
+	const handleDeleteClick = useCallback(
+		(event: MouseEvent, listId: string) => {
 			event.stopPropagation();
 			if (deletingId) return;
+			setConfirmDeleteId(listId);
+		},
+		[deletingId]
+	);
 
-			const confirmed = window.confirm(`Delete "${list.name}"?`);
-			if (!confirmed) {
-				setActionMenuId(null);
-				return;
-			}
+	const handleCancelDelete = useCallback((event: MouseEvent) => {
+		event.stopPropagation();
+		setConfirmDeleteId(null);
+	}, []);
 
-			setDeletingId(list.id);
+	const handleConfirmDelete = useCallback(
+		async (event: MouseEvent, listId: string) => {
+			event.stopPropagation();
+
+			// 1. Save current state for rollback
+			const previousLists = lists;
+
+			// 2. Optimistic update IMMEDIATELY
+			setLists((prev) => prev.filter((item) => item.id !== listId));
+			setConfirmDeleteId(null);
+			setDeletingId(listId);
+
+			// 3. API call in background
 			try {
-				const res = await fetch(`/api/lists/${list.id}`, { method: 'DELETE' });
+				const res = await fetch(`/api/lists/${listId}`, { method: 'DELETE' });
 				if (!res.ok) {
 					const payload = await res.json().catch(() => ({}));
 					throw new Error(payload?.error ?? 'Unable to delete list');
 				}
-				setLists((prev) => prev.filter((item) => item.id !== list.id));
 				toast.success('List deleted');
+				router.refresh();
 			} catch (error) {
+				// 4. Rollback on failure
 				structuredConsole.error('[LISTS-DELETE]', error);
+				setLists(previousLists);
 				const message = error instanceof Error ? error.message : 'Unable to delete list';
 				toast.error(message);
 			} finally {
 				setDeletingId(null);
-				setActionMenuId(null);
 			}
 		},
-		[deletingId]
+		[lists, router]
 	);
 
 	return (
@@ -250,41 +274,50 @@ export default function ListsPageClient({ initialLists }: ListsPageClientProps) 
 													</CardDescription>
 												)}
 											</div>
-											<div className="relative flex items-center gap-2">
+											<div className="flex items-center gap-2">
 												<Badge variant="secondary" className="bg-zinc-800/80 text-zinc-200">
 													{list.type}
 												</Badge>
-												<button
-													type="button"
-													className="rounded-full border border-zinc-700/50 bg-zinc-900/80 px-2 py-1.5 text-zinc-500 transition hover:border-pink-500/50 hover:text-pink-200"
-													onClick={(event) => {
-														event.stopPropagation();
-														setActionMenuId((prev) => (prev === list.id ? null : list.id));
-													}}
-													aria-label="List actions"
-												>
-													<MoreHorizontal className="h-4 w-4" />
-												</button>
-												{actionMenuId === list.id ? (
+												{confirmDeleteId === list.id ? (
+													/* Inline delete confirmation */
 													<div
-														className="absolute right-0 top-9 z-20 w-40 rounded-xl border border-zinc-700/50 bg-zinc-950/95 p-2 shadow-lg"
+														className="flex items-center gap-1"
 														onClick={(event) => event.stopPropagation()}
 													>
 														<button
 															type="button"
-															className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-200 transition hover:bg-pink-500/10 hover:text-pink-200"
-															onClick={(event) => handleDeleteList(event, list)}
+															onClick={handleCancelDelete}
+															className="rounded-full p-1.5 text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"
+															aria-label="Cancel delete"
+														>
+															<X className="h-4 w-4" />
+														</button>
+														<button
+															type="button"
+															onClick={(event) => handleConfirmDelete(event, list.id)}
 															disabled={deletingId === list.id}
+															className="rounded-full p-1.5 text-pink-400 transition hover:bg-pink-500/20 hover:text-pink-300 disabled:opacity-50"
+															aria-label="Confirm delete"
 														>
 															{deletingId === list.id ? (
 																<Loader2 className="h-4 w-4 animate-spin" />
 															) : (
-																<Trash2 className="h-4 w-4 text-pink-300" />
+																<Check className="h-4 w-4" />
 															)}
-															Delete list
 														</button>
 													</div>
-												) : null}
+												) : (
+													/* Delete button */
+													<button
+														type="button"
+														className="rounded-full p-1.5 text-zinc-500 transition hover:bg-zinc-800 hover:text-pink-400"
+														onClick={(event) => handleDeleteClick(event, list.id)}
+														disabled={!!deletingId}
+														aria-label="Delete list"
+													>
+														<Trash2 className="h-4 w-4" />
+													</button>
+												)}
 											</div>
 										</div>
 									</CardHeader>
