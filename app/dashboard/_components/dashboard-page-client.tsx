@@ -1,11 +1,13 @@
 'use client';
 
-import { BarChart3 } from 'lucide-react';
+import { BarChart3, Plus, Rocket } from 'lucide-react';
+import Link from 'next/link';
 import AnimatedBarChart from '@/app/components/dashboard/animated-bar-chart';
 import AnimatedSparkline from '@/app/components/dashboard/animated-sparkline';
 import { FavoriteInfluencersGrid } from '@/app/components/dashboard/favorite-influencers-grid';
 import { RecentListsSection } from '@/app/components/dashboard/recent-lists';
 import DashboardLayout from '@/app/components/layout/dashboard-layout';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type {
 	DashboardFavorite,
@@ -43,7 +45,11 @@ export default function DashboardPageClient({
 		searchCount: metrics.searchesLast30Days ?? 0,
 		searchLimit: metrics.searchLimit,
 		totalFavorites: metrics.totalFavorites ?? favorites.length,
+		campaignCount: metrics.campaignCount ?? 0,
 	};
+
+	const isNewUser = normalizedMetrics.campaignCount === 0;
+	const hasSearchActivity = normalizedMetrics.searchCount > 0;
 
 	return (
 		<DashboardLayout
@@ -61,6 +67,31 @@ export default function DashboardPageClient({
 					</div>
 					{/* Primary CTA already lives in the global header; remove duplicate here */}
 				</div>
+
+				{/* Get Started CTA for new users */}
+				{isNewUser && (
+					<Card className="bg-gradient-to-r from-pink-500/10 via-purple-500/10 to-blue-500/10 border border-pink-500/20">
+						<CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4 py-6">
+							<div className="flex items-center gap-4">
+								<div className="rounded-full bg-pink-500/20 p-3">
+									<Rocket className="h-6 w-6 text-pink-400" />
+								</div>
+								<div>
+									<h3 className="font-semibold text-zinc-100">Create your first campaign</h3>
+									<p className="text-sm text-zinc-400">
+										Start discovering influencers by creating a campaign and running your first search.
+									</p>
+								</div>
+							</div>
+							<Button asChild className="w-full sm:w-auto">
+								<Link href="/campaigns/new">
+									<Plus className="h-4 w-4 mr-2" />
+									New Campaign
+								</Link>
+							</Button>
+						</CardContent>
+					</Card>
+				)}
 
 				{/* Key metrics overview */}
 				<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
@@ -153,11 +184,17 @@ export default function DashboardPageClient({
 							</div>
 						</CardHeader>
 						<CardContent>
-							<AnimatedSparkline
-								data={[5, 6, 7, 8, 6, 9, 11, 10, 12, 13, 12, 14, 13, 15]}
-								width={520}
-								height={96}
-							/>
+							{hasSearchActivity ? (
+								<AnimatedSparkline
+									data={[normalizedMetrics.searchCount]}
+									width={520}
+									height={96}
+								/>
+							) : (
+								<div className="flex items-center justify-center h-24 text-sm text-zinc-500">
+									No search activity yet. Run your first search to see activity here.
+								</div>
+							)}
 						</CardContent>
 					</Card>
 
@@ -171,7 +208,13 @@ export default function DashboardPageClient({
 							</div>
 						</CardHeader>
 						<CardContent>
-							<AnimatedBarChart />
+							{hasSearchActivity ? (
+								<AnimatedBarChart items={[]} />
+							) : (
+								<div className="flex items-center justify-center h-24 text-sm text-zinc-500">
+									Platform breakdown will appear after your first search.
+								</div>
+							)}
 						</CardContent>
 					</Card>
 				</div>
