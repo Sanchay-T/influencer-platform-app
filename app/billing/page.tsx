@@ -24,6 +24,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { getPlanDisplayConfig, getVisiblePlanConfigs } from '@/lib/billing/plan-display-config';
 import { clearBillingCache, useBilling } from '@/lib/hooks/use-billing';
 import { useStartSubscription } from '@/lib/hooks/use-start-subscription';
+import { trackLeadConversion } from '@/lib/analytics/google-ads';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import DashboardLayout from '../components/layout/dashboard-layout';
 
@@ -171,6 +172,12 @@ function BillingContent() {
 					e
 				);
 			}
+
+			// Google Ads: Fire lead conversion for successful upgrade
+			trackLeadConversion();
+			structuredConsole.log(
+				`✅ [BILLING-CHECKOUT-TEST] ${checkoutTestId} - Google Ads conversion fired`
+			);
 
 			// ★ REMOVE: No more automatic reload - let the cleared cache refresh the data naturally
 			structuredConsole.log(
