@@ -2,6 +2,7 @@ import { unstable_noStore as noStore } from 'next/cache';
 import { getBillingStatus } from '@/lib/billing';
 import type { DashboardFavoriteInfluencer } from '@/lib/db/queries/dashboard-queries';
 import {
+	getCampaignCountForDashboard,
 	getFavoriteInfluencersForDashboard,
 	getSearchTelemetryForDashboard,
 } from '@/lib/db/queries/dashboard-queries';
@@ -27,6 +28,7 @@ export interface DashboardOverviewMetrics {
 	completedSearchesLast30Days: number;
 	searchLimit: number | null | undefined;
 	totalFavorites: number;
+	campaignCount: number;
 }
 
 export interface DashboardOverviewData {
@@ -58,11 +60,12 @@ export async function getDashboardOverview(clerkUserId: string): Promise<Dashboa
 	noStore();
 	// Ensure normalized profile exists before downstream queries (first dashboard load happens pre-billing).
 	await ensureUserProfile(clerkUserId);
-	const [favorites, lists, searchTelemetry, planStatus] = await Promise.all([
+	const [favorites, lists, searchTelemetry, planStatus, campaignCount] = await Promise.all([
 		getFavoriteInfluencersForDashboard(clerkUserId, 10),
 		getListsForUser(clerkUserId),
 		getSearchTelemetryForDashboard(clerkUserId),
 		getBillingStatus(clerkUserId),
+		getCampaignCountForDashboard(clerkUserId),
 	]);
 
 	const normalizedLists = normalizeRecentLists(lists);
@@ -78,6 +81,7 @@ export async function getDashboardOverview(clerkUserId: string): Promise<Dashboa
 			completedSearchesLast30Days: searchTelemetry.completedJobs,
 			searchLimit: normalizedLimit,
 			totalFavorites: favorites.length,
+			campaignCount,
 		},
 	};
 }

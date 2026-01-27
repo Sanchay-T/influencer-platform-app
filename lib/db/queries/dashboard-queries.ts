@@ -1,8 +1,9 @@
-import { and, desc, eq, gte, inArray, or, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gte, inArray, or, sql } from 'drizzle-orm';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { getRecordProperty, getStringProperty, isString, toRecord } from '@/lib/utils/type-guards';
 import { db } from '../index';
 import {
+	campaigns,
 	creatorListCollaborators,
 	creatorListItems,
 	creatorLists,
@@ -212,4 +213,14 @@ export async function getSearchTelemetryForDashboard(
 		completedJobs,
 		averageDurationMs,
 	};
+}
+
+// Dashboard overview → campaign count for empty state detection
+export async function getCampaignCountForDashboard(clerkUserId: string): Promise<number> {
+	const result = await db
+		.select({ count: count() })
+		.from(campaigns)
+		.where(eq(campaigns.userId, clerkUserId));
+
+	return result[0]?.count ?? 0;
 }
