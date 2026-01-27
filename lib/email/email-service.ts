@@ -36,7 +36,7 @@ const isEmailDelay = (value: string): value is EmailDelay => /^\d+[smhd]$/.test(
 
 // Email service configuration
 export const EMAIL_CONFIG = {
-	fromAddress: process.env.EMAIL_FROM_ADDRESS || 'hello@gemz.io',
+	fromAddress: process.env.EMAIL_FROM_ADDRESS || 'support@usegems.io',
 	siteUrl: resolvedSiteUrl,
 	delays: {
 		welcome: '10m', // 10 minutes after signup
