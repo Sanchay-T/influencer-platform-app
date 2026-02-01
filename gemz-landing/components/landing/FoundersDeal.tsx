@@ -17,25 +17,25 @@ export function FoundersDeal() {
                 </p>
 
                 <div className="px-3 py-1.5 rounded-lg bg-pink-500/20 border border-pink-500/30 inline-block">
-                    <span className="text-pink-400 text-sm font-semibold">💥 50% Off Scale Plan</span>
+                    <span className="text-pink-400 text-sm font-semibold">💥 50% Off Viral Surge Plan</span>
                 </div>
 
                 <div className="space-y-2">
                     <div className="text-4xl font-bold text-white">
-                        $299
+                        $124
                         <span className="text-lg font-normal text-white/70"> / Per Month</span>
                     </div>
-                    <div className="text-sm text-white/50 line-through">(normally $599/mo)</div>
+                    <div className="text-sm text-white/50 line-through">(normally $249/mo)</div>
                 </div>
 
                 <div className="space-y-3">
                     <div className="flex items-center space-x-3">
                         <Check className="h-4 w-4 text-white" />
-                        <span className="text-white/90 text-sm">Unlimited Campaigns</span>
+                        <span className="text-white/90 text-sm">10 Campaigns</span>
                     </div>
                     <div className="flex items-center space-x-3">
                         <Check className="h-4 w-4 text-white" />
-                        <span className="text-white/90 text-sm">30,000 Creators/month</span>
+                        <span className="text-white/90 text-sm">10,000 Creators</span>
                     </div>
                     <div className="flex items-center space-x-3">
                         <Check className="h-4 w-4 text-white" />
@@ -43,7 +43,7 @@ export function FoundersDeal() {
                     </div>
                     <div className="flex items-center space-x-3">
                         <Check className="h-4 w-4 text-white" />
-                        <span className="text-white/90 text-sm">API Access</span>
+                        <span className="text-white/90 text-sm">All Glow Up Features</span>
                     </div>
                 </div>
 
