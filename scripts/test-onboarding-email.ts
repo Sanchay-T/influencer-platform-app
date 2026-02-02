@@ -26,7 +26,7 @@ dotenv.config({ path: '.env.local' });
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const TEST_EMAIL = 'sanchaythalnerkar@gmail.com';
-const FROM_EMAIL = process.env.EMAIL_FROM_ADDRESS || 'hello@usegemz.io';
+const FROM_EMAIL = process.env.EMAIL_FROM_ADDRESS || 'support@usegemz.io';
 
 // Make it replyable by using a real email address
 const FROM_WITH_NAME = `Ramon from Gemz <${FROM_EMAIL}>`;
