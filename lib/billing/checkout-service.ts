@@ -111,9 +111,39 @@ export class CheckoutService {
 		// Use redirectOrigin if provided (from request), fallback to env var
 		const baseUrl = redirectOrigin || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
+		// BELT & SUSPENDERS: If no customer ID in DB, check Stripe directly by email
+		// This prevents creating duplicate customers if the webhook failed to save the customer ID
+		let resolvedCustomerId = existingCustomerId;
+		if (!resolvedCustomerId && email) {
+			try {
+				const stripe = StripeClient.getRawStripe();
+				const existingCustomers = await stripe.customers.list({
+					email: email,
+					limit: 1,
+				});
+				if (existingCustomers.data.length > 0) {
+					resolvedCustomerId = existingCustomers.data[0].id;
+					logger.info('Found existing Stripe customer by email fallback', {
+						userId,
+						metadata: {
+							customerId: resolvedCustomerId,
+							email,
+							reason: 'DB had no customer ID but Stripe had one',
+						},
+					});
+				}
+			} catch (err) {
+				// Don't fail checkout if Stripe lookup fails - just log and continue
+				logger.warn('Failed to check for existing Stripe customer', {
+					userId,
+					metadata: { email, error: String(err) },
+				});
+			}
+		}
+
 		const session = await StripeClient.createCheckoutSession({
-			customerId: existingCustomerId,
-			customerEmail: existingCustomerId ? undefined : email,
+			customerId: resolvedCustomerId,
+			customerEmail: resolvedCustomerId ? undefined : email,
 			priceId,
 			successUrl: `${baseUrl}/onboarding/success?session_id={CHECKOUT_SESSION_ID}`,
 			cancelUrl: `${baseUrl}/dashboard`,

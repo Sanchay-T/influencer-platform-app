@@ -517,29 +517,25 @@ export async function updateUserProfile(
 			);
 		}
 
-		// Update or insert billing record
+		// Update or insert billing record using UPSERT (atomic operation)
+		// This prevents race conditions when concurrent webhooks try to insert/update
 		if (Object.values(billingUpdates).some((val) => val !== undefined)) {
 			const filteredUpdates = Object.fromEntries(
 				Object.entries(billingUpdates).filter(([_, v]) => v !== undefined)
 			);
-			// Try update first, insert if doesn't exist
-			const existingBilling = await tx
-				.select({ id: userBilling.id })
-				.from(userBilling)
-				.where(eq(userBilling.userId, internalUserId));
 
-			if (existingBilling[0]) {
-				promises.push(
-					tx
-						.update(userBilling)
-						.set({ ...filteredUpdates, updatedAt: new Date() })
-						.where(eq(userBilling.userId, internalUserId))
-				);
-			} else {
-				promises.push(
-					tx.insert(userBilling).values({ userId: internalUserId, ...filteredUpdates })
-				);
-			}
+			// Use upsert to atomically insert or update
+			// This prevents the race condition where two webhooks both see no record
+			// and both try to insert, causing a unique constraint violation
+			promises.push(
+				tx
+					.insert(userBilling)
+					.values({ userId: internalUserId, ...filteredUpdates })
+					.onConflictDoUpdate({
+						target: userBilling.userId,
+						set: { ...filteredUpdates, updatedAt: new Date() },
+					})
+			);
 		}
 
 		// Update usage record
