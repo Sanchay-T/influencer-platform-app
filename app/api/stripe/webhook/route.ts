@@ -294,9 +294,43 @@ export async function POST(request: NextRequest) {
 		}); // End billingTracker.trackWebhook
 
 		// ─────────────────────────────────────────────────────
-		// STEP 4: Mark as Processed
+		// STEP 4: Handle Processing Result
 		// ─────────────────────────────────────────────────────
 
+		// CRITICAL FIX: If processing failed, return 500 so Stripe retries
+		// Previously we returned 200 even on failure, causing lost webhooks
+		if (!result.success && result.action !== 'ignored') {
+			const duration = Date.now() - startTime;
+
+			// Mark as failed, not completed
+			await markWebhookFailed(
+				event.id,
+				`Processing failed: ${result.action} - ${JSON.stringify(result.details || {})}`
+			);
+
+			logger.error('Webhook processing returned failure', undefined, {
+				metadata: {
+					eventId: event.id,
+					eventType: event.type,
+					action: result.action,
+					details: result.details,
+					durationMs: duration,
+				},
+			});
+
+			// Return 500 so Stripe will retry this webhook
+			return NextResponse.json(
+				{
+					error: 'Webhook processing failed',
+					eventId: event.id,
+					eventType: event.type,
+					action: result.action,
+				},
+				{ status: 500 }
+			);
+		}
+
+		// Success path: mark as completed and return 200
 		await markWebhookCompleted(event.id);
 
 		const duration = Date.now() - startTime;
