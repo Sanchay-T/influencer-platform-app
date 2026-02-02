@@ -172,7 +172,8 @@ export default function RootLayout({ children }: RootLayoutProps) {
 
 							// Google Ads - only in production
 							if (isProduction) {
-								gtag('config', 'AW-17841436850');
+								gtag('config', 'AW-17841436850'); // Analytics/remarketing
+								gtag('config', 'AW-17893774225'); // Ads + conversions
 							}
 
 							// GA4 - always enabled, debug mode for non-production

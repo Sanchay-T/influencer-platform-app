@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { trackLeadConversion } from '@/lib/analytics/google-ads';
 import {
 	trackCompleteRegistration,
 	trackPurchase,
@@ -158,13 +159,16 @@ function OnboardingSuccessContent() {
 		};
 	}, [sessionId, pollForWebhook, startPolling, router]);
 
-	// Fire Meta Pixel events when onboarding completes
+	// Fire conversion events when onboarding completes
 	useEffect(() => {
 		if (webhookConfirmed && sessionData && !eventsFiredRef.current) {
 			eventsFiredRef.current = true;
 
 			// Always fire CompleteRegistration for successful onboarding
 			trackCompleteRegistration();
+
+			// Google Ads: Fire lead conversion
+			trackLeadConversion();
 
 			// Parse price for event values
 			const priceStr =

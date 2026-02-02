@@ -24,6 +24,11 @@ import { ManageSubscriptionButton } from './customer-portal-button';
 
 const planMeta: Record<string, { label: string; price: string; Icon: typeof Shield }> = {
 	free: { label: 'Free Trial', price: '$0', Icon: Shield },
+	// New plans (Jan 2026)
+	growth: { label: 'Growth', price: '$199', Icon: Star },
+	scale: { label: 'Scale', price: '$599', Icon: Zap },
+	pro: { label: 'Pro', price: '$1,999', Icon: Crown },
+	// Legacy plans (grandfathered)
 	glow_up: { label: 'Glow Up', price: '$99', Icon: Star },
 	viral_surge: { label: 'Viral Surge', price: '$249', Icon: Zap },
 	fame_flex: { label: 'Fame Flex', price: '$499', Icon: Crown },

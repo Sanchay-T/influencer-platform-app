@@ -28,7 +28,14 @@ export type EmailType =
 	| 'abandonment'
 	| 'trial_day2'
 	| 'trial_day5'
-	| 'subscription_welcome';
+	| 'subscription_welcome'
+	// New onboarding drip sequence (for users who sign up but don't start trial)
+	| 'onboarding_1_welcome'
+	| 'onboarding_2_keyword'
+	| 'onboarding_3_similar'
+	| 'onboarding_4_database'
+	| 'onboarding_5_cost'
+	| 'onboarding_6_final';
 
 export type EmailDelay = `${bigint}s` | `${bigint}m` | `${bigint}h` | `${bigint}d`;
 
@@ -36,7 +43,7 @@ const isEmailDelay = (value: string): value is EmailDelay => /^\d+[smhd]$/.test(
 
 // Email service configuration
 export const EMAIL_CONFIG = {
-	fromAddress: process.env.EMAIL_FROM_ADDRESS || 'hello@gemz.io',
+	fromAddress: process.env.EMAIL_FROM_ADDRESS || 'support@usegemz.io',
 	siteUrl: resolvedSiteUrl,
 	delays: {
 		welcome: '10m', // 10 minutes after signup
@@ -44,6 +51,13 @@ export const EMAIL_CONFIG = {
 		trial_day2: '2d', // 2 days after trial starts
 		trial_day5: '5d', // 5 days after trial starts
 		subscription_welcome: '30s', // Quick confirmation after subscription activation
+		// Onboarding drip sequence (for users who sign up but don't start trial)
+		onboarding_1_welcome: '10m', // Immediate (with slight delay for reliability)
+		onboarding_2_keyword: '1d', // Day 1
+		onboarding_3_similar: '2d', // Day 2
+		onboarding_4_database: '4d', // Day 4
+		onboarding_5_cost: '6d', // Day 6
+		onboarding_6_final: '8d', // Day 8
 	} satisfies Record<EmailType, EmailDelay>,
 };
 

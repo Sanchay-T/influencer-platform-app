@@ -347,7 +347,7 @@ function SubscriptionPlanCard() {
 		);
 	}
 
-	type PlanKey = 'free' | 'glow_up' | 'viral_surge' | 'fame_flex';
+	type PlanKey = 'free' | 'growth' | 'scale' | 'pro' | 'glow_up' | 'viral_surge' | 'fame_flex';
 	const planConfig: Record<
 		PlanKey,
 		{
@@ -368,6 +368,35 @@ function SubscriptionPlanCard() {
 			description: 'Basic features',
 			limits: 'Limited searches',
 		},
+		// New plans (Jan 2026)
+		growth: {
+			name: 'Growth',
+			icon: Star,
+			color: 'text-emerald-400',
+			priceMonthly: '$199',
+			priceYearly: '$159',
+			description: 'Unlimited campaigns, 6,000 creators',
+			limits: 'Unlimited campaigns',
+		},
+		scale: {
+			name: 'Scale',
+			icon: Zap,
+			color: 'text-purple-400',
+			priceMonthly: '$599',
+			priceYearly: '$479',
+			description: 'Unlimited campaigns, 30,000 creators',
+			limits: 'Unlimited campaigns',
+		},
+		pro: {
+			name: 'Pro',
+			icon: Crown,
+			color: 'text-yellow-400',
+			priceMonthly: '$1,999',
+			priceYearly: '$1,599',
+			description: 'Unlimited campaigns, 75,000 creators',
+			limits: 'Unlimited campaigns',
+		},
+		// Legacy plans (grandfathered)
 		glow_up: {
 			name: 'Glow Up',
 			icon: Star,

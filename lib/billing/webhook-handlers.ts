@@ -25,6 +25,12 @@ import {
 	getUserProfile,
 	updateUserProfile,
 } from '@/lib/db/queries/user-queries';
+import {
+	cancelAbandonmentEmail,
+	cancelTrialEmailsOnSubscription,
+	scheduleSubscriptionWelcomeEmail,
+	scheduleTrialEmails,
+} from '@/lib/email/trial-email-triggers';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
 import { SentryLogger } from '@/lib/logging/sentry-logger';
 import { billingTracker, sessionTracker } from '@/lib/sentry/feature-tracking';
@@ -243,10 +249,44 @@ export async function handleSubscriptionChange(
 				userId: user.userId,
 				planId: planKey,
 			});
+
+			// Schedule trial emails (day 2 and day 5 reminders)
+			scheduleTrialEmails(user.userId, {
+				fullName: userName,
+				businessName: user.businessName || 'your business',
+			}).catch((error) => {
+				logger.error(
+					'Failed to schedule trial emails',
+					error instanceof Error ? error : new Error(String(error)),
+					{
+						userId: user.userId,
+					}
+				);
+			});
+
+			// Cancel abandonment email since user started trial
+			cancelAbandonmentEmail(user.userId).catch((error) => {
+				logger.error(
+					'Failed to cancel abandonment email',
+					error instanceof Error ? error : new Error(String(error)),
+					{ userId: user.userId }
+				);
+			});
 		} else if (subscription.status === 'active') {
 			// Check if this is a trial conversion (user was previously trialing)
 			const wasTrialing = user.subscriptionStatus === 'trialing';
 			if (wasTrialing) {
+				// Cancel trial reminder emails since user converted
+				cancelTrialEmailsOnSubscription(user.userId).catch((error) => {
+					logger.error(
+						'Failed to cancel trial emails',
+						error instanceof Error ? error : new Error(String(error)),
+						{
+							userId: user.userId,
+						}
+					);
+				});
+
 				// Track trial conversion in both LogSnag and GA4
 				await Promise.all([
 					trackTrialConverted({
@@ -292,6 +332,21 @@ export async function handleSubscriptionChange(
 					),
 				]);
 			}
+
+			// Send subscription welcome email for all new active subscriptions
+			scheduleSubscriptionWelcomeEmail(user.userId, {
+				plan: planKey,
+				fullName: userName,
+				businessName: user.businessName || 'your business',
+			}).catch((error) => {
+				logger.error(
+					'Failed to schedule subscription welcome email',
+					error instanceof Error ? error : new Error(String(error)),
+					{
+						userId: user.userId,
+					}
+				);
+			});
 		}
 
 		logger.info(`[${handlerId}] Successfully processed ${eventType}`, {

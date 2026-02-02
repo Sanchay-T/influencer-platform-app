@@ -69,7 +69,7 @@ export const Step2Schema = z.object({
 });
 
 export const PlanSelectionSchema = z.object({
-	planId: z.enum(['glow_up', 'viral_surge', 'fame_flex']),
+	planId: z.enum(['growth', 'scale', 'pro', 'glow_up', 'viral_surge', 'fame_flex']),
 	interval: z.enum(['monthly', 'yearly']),
 });
 

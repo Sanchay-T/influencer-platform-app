@@ -33,6 +33,11 @@ const INFLUENCERS_CLUB_ENDPOINT =
 
 const PLAN_ENRICHMENT_LIMITS: Record<string, number> = {
 	free: 5,
+	// New plans (Jan 2026)
+	growth: 500,
+	scale: 1000,
+	pro: 10000,
+	// Legacy plans (grandfathered)
 	glow_up: 50,
 	viral_surge: 200,
 	fame_flex: -1,
