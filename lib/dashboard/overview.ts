@@ -58,15 +58,42 @@ function normalizeRecentLists(
 
 export async function getDashboardOverview(clerkUserId: string): Promise<DashboardOverviewData> {
 	noStore();
+	const overviewStart = Date.now();
+	console.log('[OVERVIEW] Starting getDashboardOverview...');
+
 	// Ensure normalized profile exists before downstream queries (first dashboard load happens pre-billing).
+	const ensureStart = Date.now();
 	await ensureUserProfile(clerkUserId);
+	console.log(`[OVERVIEW] ensureUserProfile completed in ${Date.now() - ensureStart}ms`);
+
+	// Run queries with individual timing
+	const queryStart = Date.now();
+	console.log('[OVERVIEW] Starting parallel queries...');
+
 	const [favorites, lists, searchTelemetry, planStatus, campaignCount] = await Promise.all([
-		getFavoriteInfluencersForDashboard(clerkUserId, 10),
-		getListsForUser(clerkUserId),
-		getSearchTelemetryForDashboard(clerkUserId),
-		getBillingStatus(clerkUserId),
-		getCampaignCountForDashboard(clerkUserId),
+		getFavoriteInfluencersForDashboard(clerkUserId, 10).then((r) => {
+			console.log(`[OVERVIEW] getFavoriteInfluencers completed in ${Date.now() - queryStart}ms`);
+			return r;
+		}),
+		getListsForUser(clerkUserId).then((r) => {
+			console.log(`[OVERVIEW] getListsForUser completed in ${Date.now() - queryStart}ms`);
+			return r;
+		}),
+		getSearchTelemetryForDashboard(clerkUserId).then((r) => {
+			console.log(`[OVERVIEW] getSearchTelemetry completed in ${Date.now() - queryStart}ms`);
+			return r;
+		}),
+		getBillingStatus(clerkUserId).then((r) => {
+			console.log(`[OVERVIEW] getBillingStatus completed in ${Date.now() - queryStart}ms`);
+			return r;
+		}),
+		getCampaignCountForDashboard(clerkUserId).then((r) => {
+			console.log(`[OVERVIEW] getCampaignCount completed in ${Date.now() - queryStart}ms`);
+			return r;
+		}),
 	]);
+
+	console.log(`[OVERVIEW] All queries completed. Total time: ${Date.now() - overviewStart}ms`);
 
 	const normalizedLists = normalizeRecentLists(lists);
 	const searchLimit = planStatus?.usageInfo?.creatorsLimit ?? null;

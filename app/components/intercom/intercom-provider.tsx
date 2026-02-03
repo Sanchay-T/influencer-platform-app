@@ -20,19 +20,31 @@ export function IntercomProvider() {
 	const initializedRef = useRef(false);
 
 	useEffect(() => {
+		console.log(
+			`[INTERCOM] useEffect triggered - isLoaded: ${isLoaded}, isSignedIn: ${isSignedIn}, appId: ${INTERCOM_APP_ID ? 'present' : 'missing'}`
+		);
+
 		if (!(INTERCOM_APP_ID && isLoaded)) {
+			console.log('[INTERCOM] Skipping - missing appId or not loaded');
 			return;
 		}
 
 		// Only initialize once per session
 		if (initializedRef.current) {
+			console.log('[INTERCOM] Skipping - already initialized');
 			return;
 		}
 
 		const initIntercom = async () => {
+			console.log('[INTERCOM] initIntercom() starting...');
 			if (isSignedIn && user) {
 				// Logged-in user - include identity verification
+				console.log('[INTERCOM] Fetching user hash...');
+				const hashStart = Date.now();
 				const userHash = await getIntercomUserHash(user.id);
+				console.log(
+					`[INTERCOM] User hash fetched in ${Date.now() - hashStart}ms, hash: ${userHash ? 'present' : 'null'}`
+				);
 				const createdAt = user.createdAt ? Math.floor(user.createdAt.getTime() / 1000) : undefined;
 
 				Intercom({
@@ -47,15 +59,18 @@ export function IntercomProvider() {
 					// biome-ignore lint/style/useNamingConvention: Intercom API uses snake_case
 					...(userHash && { user_hash: userHash }),
 				});
+				console.log('[INTERCOM] Initialized for authenticated user');
 			} else {
 				// Anonymous visitor
 				Intercom({
 					// biome-ignore lint/style/useNamingConvention: Intercom API uses snake_case
 					app_id: INTERCOM_APP_ID,
 				});
+				console.log('[INTERCOM] Initialized for anonymous visitor');
 			}
 
 			initializedRef.current = true;
+			console.log('[INTERCOM] Initialization complete');
 		};
 
 		initIntercom();

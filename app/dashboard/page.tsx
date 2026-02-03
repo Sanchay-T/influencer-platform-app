@@ -9,16 +9,28 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export default async function DashboardPage() {
+	const startTime = Date.now();
+	console.log('[DASHBOARD] Starting page load...');
+
 	const { userId } = await auth();
+	console.log(
+		`[DASHBOARD] auth() completed in ${Date.now() - startTime}ms, userId: ${userId ? 'present' : 'null'}`
+	);
+
 	if (!userId) {
 		redirect('/sign-in');
 	}
 
 	// Ensure user exists FIRST (fixes race condition with Clerk webhook)
+	const profileStart = Date.now();
 	const userProfile = await ensureUserProfile(userId);
+	console.log(`[DASHBOARD] ensureUserProfile() completed in ${Date.now() - profileStart}ms`);
 
 	const onboardingStep = userProfile.onboardingStep;
 	const subscriptionStatus = userProfile.subscriptionStatus;
+	console.log(
+		`[DASHBOARD] onboardingStep: ${onboardingStep}, subscriptionStatus: ${subscriptionStatus}`
+	);
 
 	// Only redirect to success page if webhook is pending (subscription exists but onboarding not complete)
 	// @why If plan_selected + subscription_status='none', user abandoned checkout and should retry
@@ -27,11 +39,15 @@ export default async function DashboardPage() {
 		(subscriptionStatus === 'trialing' || subscriptionStatus === 'active');
 
 	if (hasPendingWebhook) {
+		console.log('[DASHBOARD] Redirecting to /onboarding/success (pending webhook)');
 		redirect('/onboarding/success');
 	}
 
 	// Now safe to fetch dashboard data
+	const overviewStart = Date.now();
+	console.log('[DASHBOARD] Starting getDashboardOverview()...');
 	const { favorites, recentLists, metrics } = await getDashboardOverview(userId);
+	console.log(`[DASHBOARD] getDashboardOverview() completed in ${Date.now() - overviewStart}ms`);
 
 	const showOnboarding = onboardingStep !== 'completed';
 
