@@ -9,6 +9,7 @@ import Script from 'next/script';
 import type { ComponentProps, ReactNode } from 'react';
 import { GA4UserIdentifier } from './components/analytics/ga4-user-id';
 import { AuthLogger } from './components/auth/auth-logger';
+import { IntercomProvider } from './components/intercom/intercom-provider';
 import { NavigationLogger } from './components/navigation/navigation-logger';
 import { ClientConsoleBridge } from './providers/console-bridge';
 import { QueryProvider } from './providers/query-provider';
@@ -247,6 +248,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
 					<ClientConsoleBridge />
 					<AuthLogger />
 					<GA4UserIdentifier />
+					<IntercomProvider />
 					<NavigationLogger />
 					<QueryProvider>{children}</QueryProvider>
 					<ToastProvider />
