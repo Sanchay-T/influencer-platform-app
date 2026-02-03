@@ -76,6 +76,10 @@ function summarizeConnection(target: string) {
 
 const createdNewClient = !global.__queryClient;
 
+// Detect if using PgBouncer (Supabase connection pooler)
+const usesPgBouncer =
+	connectionString.includes('pgbouncer=true') || connectionString.includes('pooler.supabase.com');
+
 // Re-use or create a single query client (uses Postgres.js built-in pooling)
 const queryClient =
 	global.__queryClient ??
@@ -85,6 +89,9 @@ const queryClient =
 		max_lifetime: isLocal ? 60 * 60 * 2 : 60 * 5, // 5min max lifetime in serverless (prevents stale connections)
 		max: isLocal ? 10 : 1, // CRITICAL: 1 connection per serverless instance (many instances = many connections)
 		connect_timeout: 30, // Always 30s - handles cross-region latency (Vercel → US East Supabase)
+		// CRITICAL: Disable prepared statements when using PgBouncer
+		// PgBouncer in transaction mode doesn't support prepared statements across connections
+		prepare: !usesPgBouncer,
 	});
 
 if (!global.__queryClient) global.__queryClient = queryClient;
