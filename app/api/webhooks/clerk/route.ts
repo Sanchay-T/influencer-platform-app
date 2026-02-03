@@ -4,6 +4,7 @@ import { Webhook } from 'svix';
 import { trackGA4ServerSignup } from '@/lib/analytics/google-analytics';
 import { trackUserSignup } from '@/lib/analytics/logsnag';
 import { createUser, getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
+import { ResendAudienceService } from '@/lib/email/resend-audience-service';
 import BillingLogger from '@/lib/loggers/billing-logger';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { UserSessionLogger } from '@/lib/logging/user-session-logger';
@@ -492,6 +493,17 @@ async function handleUserCreated(userData: unknown, requestId: string) {
 		await trackUserSignup({ email: email || 'unknown', name: fullName });
 		await trackGA4ServerSignup(userId);
 
+		// Sync to Resend audience (fire-and-forget, don't block user creation)
+		if (email) {
+			ResendAudienceService.addContact({
+				email,
+				firstName: firstName || undefined,
+				lastName: lastName || undefined,
+			}).catch((err) => {
+				structuredConsole.error('❌ [CLERK-WEBHOOK] Resend audience sync failed:', err);
+			});
+		}
+
 		userLogger?.log('USER_CREATED', 'User profile created successfully', {
 			userId,
 			currentPlan: null,
@@ -566,6 +578,17 @@ async function handleUserUpdated(userData: unknown, requestId: string) {
 
 		await updateUserProfile(userId, updateData);
 
+		// Sync updates to Resend audience (fire-and-forget)
+		if (email) {
+			ResendAudienceService.updateContact({
+				email,
+				firstName: firstName || undefined,
+				lastName: lastName || undefined,
+			}).catch((err) => {
+				structuredConsole.error('❌ [CLERK-WEBHOOK] Resend contact update failed:', err);
+			});
+		}
+
 		await BillingLogger.logDatabase(
 			'UPDATE',
 			'User profile updated successfully',
@@ -625,6 +648,12 @@ async function handleUserDeleted(userData: unknown, requestId: string) {
 			},
 			requestId
 		);
+
+		// Get user email before deletion for Resend removal
+		const userProfile = await getUserProfile(userId);
+		if (userProfile?.email) {
+			await ResendAudienceService.removeContact(userProfile.email);
+		}
 
 		// For user deletion, we need to use the raw database operations as we don't have a delete function
 		// This is intentionally limited since user deletion should be rare
