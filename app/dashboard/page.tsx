@@ -23,8 +23,15 @@ export default async function DashboardPage() {
 
 	// Ensure user exists FIRST (fixes race condition with Clerk webhook)
 	const profileStart = Date.now();
-	const userProfile = await ensureUserProfile(userId);
-	console.log(`[DASHBOARD] ensureUserProfile() completed in ${Date.now() - profileStart}ms`);
+	console.log('[DASHBOARD] About to call ensureUserProfile...');
+	let userProfile;
+	try {
+		userProfile = await ensureUserProfile(userId);
+		console.log(`[DASHBOARD] ensureUserProfile() completed in ${Date.now() - profileStart}ms`);
+	} catch (err) {
+		console.error('[DASHBOARD] ensureUserProfile FAILED:', err);
+		throw err;
+	}
 
 	const onboardingStep = userProfile.onboardingStep;
 	const subscriptionStatus = userProfile.subscriptionStatus;
@@ -46,8 +53,17 @@ export default async function DashboardPage() {
 	// Now safe to fetch dashboard data
 	const overviewStart = Date.now();
 	console.log('[DASHBOARD] Starting getDashboardOverview()...');
-	const { favorites, recentLists, metrics } = await getDashboardOverview(userId);
-	console.log(`[DASHBOARD] getDashboardOverview() completed in ${Date.now() - overviewStart}ms`);
+	let favorites, recentLists, metrics;
+	try {
+		const overview = await getDashboardOverview(userId);
+		favorites = overview.favorites;
+		recentLists = overview.recentLists;
+		metrics = overview.metrics;
+		console.log(`[DASHBOARD] getDashboardOverview() completed in ${Date.now() - overviewStart}ms`);
+	} catch (err) {
+		console.error('[DASHBOARD] getDashboardOverview FAILED:', err);
+		throw err;
+	}
 
 	const showOnboarding = onboardingStep !== 'completed';
 
