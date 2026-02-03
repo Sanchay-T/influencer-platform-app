@@ -14,7 +14,11 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { getPlanKeyByPriceId } from '@/lib/billing/plan-config';
 import { StripeClient } from '@/lib/billing/stripe-client';
-import { handleSubscriptionChange } from '@/lib/billing/webhook-handlers';
+import {
+	handleSubscriptionChange,
+	mapStripeSubscriptionStatus,
+} from '@/lib/billing/webhook-handlers';
+import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
 import { billingTracker, sessionTracker } from '@/lib/sentry';
 import { toError } from '@/lib/utils/type-guards';
@@ -103,7 +107,30 @@ export async function GET(request: NextRequest) {
 			'items.data.price',
 		]);
 
-		// Use the same handler as the webhook
+		// Check if webhook already processed this subscription
+		const user = await getUserProfile(userId);
+		const expectedStatus = mapStripeSubscriptionStatus(subscription.status);
+		const alreadyProcessed =
+			user?.stripeSubscriptionId === subscription.id && user?.subscriptionStatus === expectedStatus;
+
+		if (alreadyProcessed) {
+			logger.info('Subscription already processed by webhook, skipping', {
+				userId,
+				metadata: { subscriptionId, status: subscription.status },
+			});
+
+			const priceId = subscription.items.data[0]?.price?.id;
+			const planId = getPlanKeyByPriceId(priceId);
+
+			return NextResponse.json({
+				verified: true,
+				planId: planId || user?.currentPlan,
+				status: subscription.status,
+				source: 'cached', // Indicates webhook already handled it
+			});
+		}
+
+		// Webhook hasn't processed yet - we'll do it
 		const result = await handleSubscriptionChange(subscription, 'verify-session-fallback');
 
 		if (!result.success) {

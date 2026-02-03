@@ -20,6 +20,7 @@ import {
 	trackTrialConverted,
 	trackTrialStarted,
 } from '@/lib/analytics/logsnag';
+import { StripeClient } from '@/lib/billing/stripe-client';
 import {
 	getUserByStripeCustomerId,
 	getUserProfile,
@@ -31,7 +32,6 @@ import {
 	scheduleSubscriptionWelcomeEmail,
 	scheduleTrialEmails,
 } from '@/lib/email/trial-email-triggers';
-import { StripeClient } from '@/lib/billing/stripe-client';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
 import { SentryLogger } from '@/lib/logging/sentry-logger';
 import { billingTracker, sessionTracker } from '@/lib/sentry/feature-tracking';
@@ -53,7 +53,9 @@ const resolveCustomerId = (customer: Stripe.Subscription['customer']): string | 
 	return null;
 };
 
-const mapStripeSubscriptionStatus = (status: Stripe.Subscription.Status): SubscriptionStatus => {
+export const mapStripeSubscriptionStatus = (
+	status: Stripe.Subscription.Status
+): SubscriptionStatus => {
 	switch (status) {
 		case 'trialing':
 			return 'trialing';
@@ -154,6 +156,27 @@ export async function handleSubscriptionChange(
 			plan: user.currentPlan || undefined,
 			subscriptionStatus: user.subscriptionStatus || undefined,
 		});
+
+		// Check if already processed (idempotent - prevents duplicate events)
+		const expectedStatus = mapStripeSubscriptionStatus(subscription.status);
+		if (
+			user.stripeSubscriptionId === subscription.id &&
+			user.subscriptionStatus === expectedStatus
+		) {
+			logger.info(`[${handlerId}] Subscription state already matches, skipping processing`, {
+				metadata: {
+					subscriptionId: subscription.id,
+					status: subscription.status,
+					source: eventType,
+				},
+			});
+
+			return {
+				success: true,
+				action: 'already_current',
+				details: { eventType, subscriptionId: subscription.id },
+			};
+		}
 
 		// 2. Extract plan from Stripe subscription
 		const priceId = subscription.items.data[0]?.price?.id;
