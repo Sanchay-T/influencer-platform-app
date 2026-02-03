@@ -7,6 +7,7 @@ import {
 	shouldSendEmail,
 	updateEmailScheduleStatus,
 } from './email-service';
+import { cancelOnboardingEmails } from './onboarding-email-triggers';
 
 /**
  * Schedule trial-related emails when user starts their trial
@@ -40,6 +41,10 @@ export async function scheduleTrialEmails(
 	structuredConsole.log('⏰ [TRIAL-EMAILS] Timestamp:', new Date().toISOString());
 	structuredConsole.log('📧 [TRIAL-EMAILS] Target user:', userId);
 	structuredConsole.log('📧 [TRIAL-EMAILS] User info:', userInfo);
+
+	// Cancel any pending onboarding drip emails (user has now started trial)
+	structuredConsole.log('🚫 [TRIAL-EMAILS] Cancelling onboarding drip sequence...');
+	await cancelOnboardingEmails(userId);
 
 	try {
 		structuredConsole.log('🔍 [TRIAL-EMAILS] Getting user email from Clerk...');

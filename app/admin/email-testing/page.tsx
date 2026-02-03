@@ -71,7 +71,8 @@ function AdminEmailTestingPageContent() {
 	const [showBulkMode, setShowBulkMode] = useState(false);
 
 	const emailTypes = [
-		{ value: 'welcome', label: 'Welcome Email', description: 'Initial welcome message' },
+		// Legacy emails
+		{ value: 'welcome', label: 'Welcome Email (Legacy)', description: 'Initial welcome message' },
 		{ value: 'trial_day2', label: 'Trial Day 2 Reminder', description: 'Check-in after 2 days' },
 		{ value: 'trial_day5', label: 'Trial Day 5 Reminder', description: 'Mid-trial engagement' },
 		{
@@ -79,7 +80,42 @@ function AdminEmailTestingPageContent() {
 			label: 'Trial Expiry Notice',
 			description: 'Final reminder before expiry',
 		},
-		{ value: 'abandonment', label: 'Trial Abandonment', description: 'Re-engagement email' },
+		{
+			value: 'abandonment',
+			label: 'Trial Abandonment (Legacy)',
+			description: 'Re-engagement email',
+		},
+		// New onboarding drip sequence (replaces welcome/abandonment)
+		{
+			value: 'onboarding_1_welcome',
+			label: 'Onboarding 1: Welcome',
+			description: "Day 0 - What you're unlocking",
+		},
+		{
+			value: 'onboarding_2_keyword',
+			label: 'Onboarding 2: Keyword Search',
+			description: 'Day 1 - Find by topic',
+		},
+		{
+			value: 'onboarding_3_similar',
+			label: 'Onboarding 3: Similar Creator',
+			description: 'Day 2 - Find 50 more',
+		},
+		{
+			value: 'onboarding_4_database',
+			label: 'Onboarding 4: Not a Database',
+			description: 'Day 4 - Why databases lie',
+		},
+		{
+			value: 'onboarding_5_cost',
+			label: 'Onboarding 5: Cost Comparison',
+			description: 'Day 6 - $99 vs $500',
+		},
+		{
+			value: 'onboarding_6_final',
+			label: 'Onboarding 6: Final Push',
+			description: 'Day 8 - Last email',
+		},
 	];
 
 	const presetDelays = [

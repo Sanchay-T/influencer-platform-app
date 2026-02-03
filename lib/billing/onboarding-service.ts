@@ -23,6 +23,7 @@ import {
 	shouldSendEmail,
 	updateEmailScheduleStatus,
 } from '@/lib/email/email-service';
+import { scheduleOnboardingEmails } from '@/lib/email/onboarding-email-triggers';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
 import { toError } from '@/lib/utils/type-guards';
 import type { BillingInterval, PlanKey } from './plan-config';
@@ -344,27 +345,40 @@ export class OnboardingService {
 	}
 
 	/**
-	 * Queue both welcome and abandonment emails.
-	 * Used after step 1 completion.
+	 * Queue the onboarding drip sequence.
+	 * Used after step 1 completion (when user provides their name).
+	 * This schedules 6 emails over 8 days for users who haven't started their trial.
 	 */
 	static async queueOnboardingEmails(
 		userId: string,
-		email: string,
+		_email: string, // Unused - email is fetched from Clerk in the trigger
 		fullName: string,
-		businessName: string
+		_businessName: string // Unused - not needed for onboarding sequence
 	): Promise<{
 		welcome: { success: boolean; messageId?: string; error?: string };
 		abandonment: { success: boolean; messageId?: string; error?: string };
 	}> {
-		const [welcomeResult, abandonmentResult] = await Promise.all([
-			OnboardingService.queueWelcomeEmail(userId, email, fullName, businessName),
-			OnboardingService.queueAbandonmentEmail(userId, email, fullName, businessName),
-		]);
+		try {
+			const result = await scheduleOnboardingEmails(userId, fullName);
 
-		return {
-			welcome: welcomeResult,
-			abandonment: abandonmentResult,
-		};
+			// Return in the old format for backwards compatibility
+			return {
+				welcome: {
+					success: result.success,
+					error: result.error,
+				},
+				abandonment: {
+					success: result.success,
+					error: result.error,
+				},
+			};
+		} catch (error) {
+			logger.error('Failed to queue onboarding emails', toError(error), { userId });
+			return {
+				welcome: { success: false, error: 'Failed to queue emails' },
+				abandonment: { success: false, error: 'Failed to queue emails' },
+			};
+		}
 	}
 }
 

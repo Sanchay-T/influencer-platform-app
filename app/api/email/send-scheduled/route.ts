@@ -1,10 +1,16 @@
 import { Receiver } from '@upstash/qstash';
 import { NextResponse } from 'next/server';
+// Email templates
+import OnboardingWelcomeEmail from '@/components/email-templates/onboarding-1-welcome';
+import OnboardingKeywordEmail from '@/components/email-templates/onboarding-2-keyword-search';
+import OnboardingSimilarCreatorEmail from '@/components/email-templates/onboarding-3-similar-creator';
+import OnboardingNotDatabaseEmail from '@/components/email-templates/onboarding-4-not-database';
+import OnboardingCostComparisonEmail from '@/components/email-templates/onboarding-5-cost-comparison';
+import OnboardingFinalPushEmail from '@/components/email-templates/onboarding-6-final-push';
 import SubscriptionWelcomeEmail from '@/components/email-templates/subscription-welcome-email';
 import TrialAbandonmentEmail from '@/components/email-templates/trial-abandonment-email';
 import TrialDay2Email from '@/components/email-templates/trial-day2-email';
 import TrialDay5Email from '@/components/email-templates/trial-day5-email';
-// Import email templates (will be created next)
 import WelcomeEmail from '@/components/email-templates/welcome-email';
 import { EMAIL_CONFIG, sendEmail, updateEmailScheduleStatus } from '@/lib/email/email-service';
 import { logger } from '@/lib/logging';
@@ -116,7 +122,7 @@ export async function POST(request: Request) {
 		switch (emailType) {
 			case 'welcome':
 				emailComponent = WelcomeEmail(templateProps);
-				subject = subjectPrefix + `Welcome to ${templateProps.businessName || 'our platform'}! 🎉`;
+				subject = subjectPrefix + `Welcome to Gemz! 🎉`;
 				break;
 
 			case 'abandonment':
@@ -151,6 +157,61 @@ export async function POST(request: Request) {
 			case 'trial_expiry':
 				emailComponent = TrialDay5Email(templateProps); // Reuse day5 template for now
 				subject = subjectPrefix + "Your trial expires tomorrow - Don't lose your progress! 🔔";
+				break;
+
+			// Onboarding drip sequence (for users who sign up but don't start trial)
+			case 'onboarding_1_welcome':
+				emailComponent = OnboardingWelcomeEmail({
+					fullName: templateProps.fullName,
+					dashboardUrl: templateProps.dashboardUrl,
+					unsubscribeUrl: templateProps.unsubscribeUrl,
+				});
+				subject = subjectPrefix + "Welcome to Gemz — here's what you're unlocking";
+				break;
+
+			case 'onboarding_2_keyword':
+				emailComponent = OnboardingKeywordEmail({
+					fullName: templateProps.fullName,
+					dashboardUrl: templateProps.dashboardUrl,
+					unsubscribeUrl: templateProps.unsubscribeUrl,
+				});
+				subject = subjectPrefix + 'How to find creators by what they actually talk about';
+				break;
+
+			case 'onboarding_3_similar':
+				emailComponent = OnboardingSimilarCreatorEmail({
+					fullName: templateProps.fullName,
+					dashboardUrl: templateProps.dashboardUrl,
+					unsubscribeUrl: templateProps.unsubscribeUrl,
+				});
+				subject = subjectPrefix + "Found one good creator? Here's how to find 50 more";
+				break;
+
+			case 'onboarding_4_database':
+				emailComponent = OnboardingNotDatabaseEmail({
+					fullName: templateProps.fullName,
+					dashboardUrl: templateProps.dashboardUrl,
+					unsubscribeUrl: templateProps.unsubscribeUrl,
+				});
+				subject = subjectPrefix + 'Why influencer databases are lying to you';
+				break;
+
+			case 'onboarding_5_cost':
+				emailComponent = OnboardingCostComparisonEmail({
+					fullName: templateProps.fullName,
+					dashboardUrl: templateProps.dashboardUrl,
+					unsubscribeUrl: templateProps.unsubscribeUrl,
+				});
+				subject = subjectPrefix + "You don't need a $500/mo influencer tool";
+				break;
+
+			case 'onboarding_6_final':
+				emailComponent = OnboardingFinalPushEmail({
+					fullName: templateProps.fullName,
+					dashboardUrl: templateProps.dashboardUrl,
+					unsubscribeUrl: templateProps.unsubscribeUrl,
+				});
+				subject = subjectPrefix + "Last thing — then I'll stop emailing";
 				break;
 
 			default:

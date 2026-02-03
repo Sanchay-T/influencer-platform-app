@@ -48,7 +48,8 @@ export const OnboardingKeywordEmail = ({
 	dashboardUrl,
 	unsubscribeUrl,
 }: OnboardingKeywordEmailProps) => {
-	const greetingText = fullName ? `Hey ${fullName},` : 'Hey there,';
+	const firstName = fullName?.split(' ')[0];
+	const greetingText = firstName ? `Hey ${firstName},` : 'Hey there,';
 
 	return (
 		<Html>
