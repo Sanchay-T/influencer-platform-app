@@ -273,6 +273,15 @@ export class CheckoutService {
 			});
 		}
 
+		// Prevent trial abuse: if user already had a trial, force upgrade flow (no new trial)
+		if (user?.trialStartDate) {
+			return CheckoutService.createUpgradeCheckout({
+				...params,
+				existingCustomerId: user?.stripeCustomerId || undefined,
+				redirectOrigin,
+			});
+		}
+
 		// New user or no subscription - onboarding flow
 		return CheckoutService.createOnboardingCheckout({
 			...params,
