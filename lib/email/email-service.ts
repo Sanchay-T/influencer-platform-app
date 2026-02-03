@@ -111,6 +111,7 @@ export async function sendEmail(
 				to: [to],
 				subject,
 				react: reactComponent,
+				replyTo: EMAIL_CONFIG.fromAddress, // Ensures replies go to support@usegemz.io
 			});
 
 			const resultRecord = toRecord(result);
