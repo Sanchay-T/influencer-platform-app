@@ -513,9 +513,9 @@ export async function addCreatorsToList(
 	}
 	assertListRole(access.role, ['owner', 'editor']);
 
-	// OPTIMIZED: Batch operations instead of sequential loops
+	// SIMPLE: Just insert profiles (if new) and link to list - no updates, no extra operations
 	const summary = await db.transaction(async (tx) => {
-		// Step 1: Batch upsert ALL creator profiles in ONE query
+		// Step 1: Insert profiles as-is (DO NOTHING if exists - don't update anything)
 		const profileValues = creators.map((c) => ({
 			platform: c.platform,
 			externalId: c.externalId,
@@ -529,38 +529,39 @@ export async function addCreatorsToList(
 			metadata: c.metadata ?? {},
 		}));
 
-		const upsertedProfiles = await tx
+		// Insert new profiles, skip existing ones (frozen state)
+		await tx
 			.insert(creatorProfiles)
 			.values(profileValues)
-			.onConflictDoUpdate({
-				target: [creatorProfiles.platform, creatorProfiles.externalId],
-				set: {
-					handle: sql`EXCLUDED.handle`,
-					displayName: sql`COALESCE(EXCLUDED.display_name, ${creatorProfiles.displayName})`,
-					avatarUrl: sql`COALESCE(EXCLUDED.avatar_url, ${creatorProfiles.avatarUrl})`,
-					url: sql`COALESCE(EXCLUDED.url, ${creatorProfiles.url})`,
-					followers: sql`COALESCE(EXCLUDED.followers, ${creatorProfiles.followers})`,
-					engagementRate: sql`COALESCE(EXCLUDED.engagement_rate, ${creatorProfiles.engagementRate})`,
-					category: sql`COALESCE(EXCLUDED.category, ${creatorProfiles.category})`,
-					updatedAt: new Date(),
-				},
-			})
-			.returning();
+			.onConflictDoNothing({ target: [creatorProfiles.platform, creatorProfiles.externalId] });
 
-		// Build lookup map: platform:externalId -> profile
-		const profileMap = new Map<string, (typeof upsertedProfiles)[0]>();
-		for (const profile of upsertedProfiles) {
-			profileMap.set(`${profile.platform}:${profile.externalId}`, profile);
+		// Step 2: Get profile IDs for linking (single query)
+		const conditions = creators.map((c) =>
+			and(eq(creatorProfiles.platform, c.platform), eq(creatorProfiles.externalId, c.externalId))
+		);
+		const existingProfiles = await tx
+			.select({
+				id: creatorProfiles.id,
+				platform: creatorProfiles.platform,
+				externalId: creatorProfiles.externalId,
+				followers: creatorProfiles.followers,
+			})
+			.from(creatorProfiles)
+			.where(or(...conditions));
+
+		const profileMap = new Map<string, { id: string; followers: number | null }>();
+		for (const p of existingProfiles) {
+			profileMap.set(`${p.platform}:${p.externalId}`, { id: p.id, followers: p.followers });
 		}
 
-		// Step 2: Get max position (single query)
+		// Step 3: Get max position
 		const [{ maxPosition }] = await tx
 			.select({ maxPosition: sql<number>`COALESCE(MAX(${creatorListItems.position}), 0)` })
 			.from(creatorListItems)
 			.where(eq(creatorListItems.listId, listId));
 		const startPosition = Number(maxPosition ?? 0) + 1;
 
-		// Step 3: Batch insert ALL list items in ONE query
+		// Step 4: Insert list items
 		const itemValues = creators
 			.map((creator, idx) => {
 				const profile = profileMap.get(`${creator.platform}:${creator.externalId}`);
@@ -585,7 +586,7 @@ export async function addCreatorsToList(
 			.onConflictDoNothing({ target: [creatorListItems.listId, creatorListItems.creatorId] })
 			.returning({ creatorId: creatorListItems.creatorId });
 
-		// Track skipped creators (already in list)
+		// Track skipped (already in list)
 		const insertedCreatorIds = new Set(insertedItems.map((i) => i.creatorId));
 		const skipped: Array<{ externalId: string; handle: string; platform: string }> = [];
 		for (const creator of creators) {
@@ -599,10 +600,9 @@ export async function addCreatorsToList(
 			}
 		}
 
-		// Step 4: Increment stats (NOT recalculate) - much faster
+		// Step 5: Increment stats
 		const addedCount = insertedItems.length;
 		if (addedCount > 0) {
-			// Calculate followers sum for newly added creators only
 			const addedFollowers = creators.reduce((sum, c) => {
 				const profile = profileMap.get(`${c.platform}:${c.externalId}`);
 				if (profile && insertedCreatorIds.has(profile.id)) {
@@ -611,7 +611,6 @@ export async function addCreatorsToList(
 				return sum;
 			}, 0);
 
-			// Increment existing stats instead of full recalculation
 			await tx
 				.update(creatorLists)
 				.set({
