@@ -31,6 +31,7 @@ import {
 	scheduleSubscriptionWelcomeEmail,
 	scheduleTrialEmails,
 } from '@/lib/email/trial-email-triggers';
+import { StripeClient } from '@/lib/billing/stripe-client';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
 import { SentryLogger } from '@/lib/logging/sentry-logger';
 import { billingTracker, sessionTracker } from '@/lib/sentry/feature-tracking';
@@ -229,6 +230,14 @@ export async function handleSubscriptionChange(
 		const monthlyPrice = planConfig.monthlyPrice / 100; // Convert cents to dollars
 
 		if (subscription.status === 'trialing') {
+			// Tag customer as trial in Stripe
+			await StripeClient.updateCustomer(customerId, {
+				metadata: {
+					status: 'trial',
+					trial_started_at: new Date().toISOString(),
+				},
+			});
+
 			// Track trial start in both LogSnag and GA4
 			await Promise.all([
 				trackTrialStarted({
@@ -276,6 +285,14 @@ export async function handleSubscriptionChange(
 			// Check if this is a trial conversion (user was previously trialing)
 			const wasTrialing = user.subscriptionStatus === 'trialing';
 			if (wasTrialing) {
+				// Tag customer as paying in Stripe
+				await StripeClient.updateCustomer(customerId, {
+					metadata: {
+						status: 'paying',
+						converted_at: new Date().toISOString(),
+					},
+				});
+
 				// Cancel trial reminder emails since user converted
 				cancelTrialEmailsOnSubscription(user.userId).catch((error) => {
 					logger.error(
@@ -437,6 +454,14 @@ export async function handleSubscriptionDeleted(
 		billingSyncStatus: 'webhook_deleted',
 		lastWebhookEvent: 'customer.subscription.deleted',
 		lastWebhookTimestamp: new Date(),
+	});
+
+	// Tag customer as canceled in Stripe
+	await StripeClient.updateCustomer(customerId, {
+		metadata: {
+			status: 'canceled',
+			canceled_at: new Date().toISOString(),
+		},
 	});
 
 	// Track cancellation in LogSnag AND GA4
