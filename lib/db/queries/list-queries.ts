@@ -498,97 +498,6 @@ export async function duplicateList(clerkUserId: string, listId: string, name?: 
 	});
 }
 
-/**
- * Batch upsert creator profiles - single query instead of N queries
- * Returns a map of "platform:externalId" -> profileId
- */
-async function batchUpsertCreatorProfiles(
-	tx: typeof db,
-	creators: CreatorInput[]
-): Promise<Map<string, string>> {
-	if (creators.length === 0) {
-		return new Map();
-	}
-
-	// Build keys for lookup
-	const creatorKeys = creators.map((c) => `${c.platform}:${c.externalId}`);
-
-	// Step 1: Fetch all existing profiles in one query
-	// Build OR conditions for all platform/externalId pairs
-	const conditions = creators.map((c) =>
-		and(eq(creatorProfiles.platform, c.platform), eq(creatorProfiles.externalId, c.externalId))
-	);
-	const existing = await tx
-		.select()
-		.from(creatorProfiles)
-		.where(or(...conditions));
-
-	// Build map of existing profiles
-	const existingMap = new Map<string, CreatorProfile>();
-	for (const profile of existing) {
-		existingMap.set(`${profile.platform}:${profile.externalId}`, profile);
-	}
-
-	// Step 2: Identify new creators (not in DB yet)
-	const newCreators = creators.filter((c) => !existingMap.has(`${c.platform}:${c.externalId}`));
-
-	// Step 3: Batch insert new creators with ON CONFLICT DO UPDATE
-	if (newCreators.length > 0) {
-		const insertValues = newCreators.map((c) => ({
-			platform: c.platform,
-			externalId: c.externalId,
-			handle: c.handle,
-			displayName: c.displayName ?? null,
-			avatarUrl: c.avatarUrl ?? null,
-			url: c.url ?? null,
-			followers: c.followers ?? null,
-			engagementRate: normalizeEngagementRate(c.engagementRate),
-			category: c.category ?? null,
-			metadata: mergeMetadata({}, c.metadata),
-		}));
-
-		const inserted = await tx
-			.insert(creatorProfiles)
-			.values(insertValues)
-			.onConflictDoUpdate({
-				target: [creatorProfiles.platform, creatorProfiles.externalId],
-				set: {
-					handle: sql`EXCLUDED.handle`,
-					displayName: sql`COALESCE(EXCLUDED.display_name, ${creatorProfiles.displayName})`,
-					avatarUrl: sql`COALESCE(EXCLUDED.avatar_url, ${creatorProfiles.avatarUrl})`,
-					url: sql`COALESCE(EXCLUDED.url, ${creatorProfiles.url})`,
-					followers: sql`COALESCE(EXCLUDED.followers, ${creatorProfiles.followers})`,
-					engagementRate: sql`COALESCE(EXCLUDED.engagement_rate, ${creatorProfiles.engagementRate})`,
-					category: sql`COALESCE(EXCLUDED.category, ${creatorProfiles.category})`,
-					metadata: sql`COALESCE(EXCLUDED.metadata, ${creatorProfiles.metadata})`,
-					updatedAt: new Date(),
-				},
-			})
-			.returning();
-
-		// Add newly inserted profiles to the map
-		for (const profile of inserted) {
-			existingMap.set(`${profile.platform}:${profile.externalId}`, profile);
-		}
-	}
-
-	// Step 4: For existing profiles that need updates, batch update them
-	// Skip for now since the ON CONFLICT handles the common case
-	// The previous sequential approach updated if displayName/avatar/followers changed
-	// With batch insert ON CONFLICT DO UPDATE, we use COALESCE to preserve existing values
-
-	// Step 5: Build result map of "platform:externalId" -> profileId
-	const resultMap = new Map<string, string>();
-	for (const key of creatorKeys) {
-		const profile = existingMap.get(key);
-		if (profile) {
-			resultMap.set(key, profile.id);
-		}
-	}
-
-	return resultMap;
-}
-
 export async function addCreatorsToList(
 	clerkUserId: string,
 	listId: string,
@@ -606,28 +515,59 @@ export async function addCreatorsToList(
 
 	// OPTIMIZED: Batch operations instead of sequential loops
 	const summary = await db.transaction(async (tx) => {
-		// Step 1: Get max position (1 query)
+		// Step 1: Batch upsert ALL creator profiles in ONE query
+		const profileValues = creators.map((c) => ({
+			platform: c.platform,
+			externalId: c.externalId,
+			handle: c.handle,
+			displayName: c.displayName ?? null,
+			avatarUrl: c.avatarUrl ?? null,
+			url: c.url ?? null,
+			followers: c.followers ?? null,
+			engagementRate: normalizeEngagementRate(c.engagementRate),
+			category: c.category ?? null,
+			metadata: c.metadata ?? {},
+		}));
+
+		const upsertedProfiles = await tx
+			.insert(creatorProfiles)
+			.values(profileValues)
+			.onConflictDoUpdate({
+				target: [creatorProfiles.platform, creatorProfiles.externalId],
+				set: {
+					handle: sql`EXCLUDED.handle`,
+					displayName: sql`COALESCE(EXCLUDED.display_name, ${creatorProfiles.displayName})`,
+					avatarUrl: sql`COALESCE(EXCLUDED.avatar_url, ${creatorProfiles.avatarUrl})`,
+					url: sql`COALESCE(EXCLUDED.url, ${creatorProfiles.url})`,
+					followers: sql`COALESCE(EXCLUDED.followers, ${creatorProfiles.followers})`,
+					engagementRate: sql`COALESCE(EXCLUDED.engagement_rate, ${creatorProfiles.engagementRate})`,
+					category: sql`COALESCE(EXCLUDED.category, ${creatorProfiles.category})`,
+					updatedAt: new Date(),
+				},
+			})
+			.returning();
+
+		// Build lookup map: platform:externalId -> profile
+		const profileMap = new Map<string, (typeof upsertedProfiles)[0]>();
+		for (const profile of upsertedProfiles) {
+			profileMap.set(`${profile.platform}:${profile.externalId}`, profile);
+		}
+
+		// Step 2: Get max position (single query)
 		const [{ maxPosition }] = await tx
 			.select({ maxPosition: sql<number>`COALESCE(MAX(${creatorListItems.position}), 0)` })
 			.from(creatorListItems)
 			.where(eq(creatorListItems.listId, listId));
 		const startPosition = Number(maxPosition ?? 0) + 1;
 
-		// Step 2: Batch upsert all creator profiles (2-3 queries total instead of N*2)
-		const profileIdMap = await batchUpsertCreatorProfiles(tx, creators);
-
-		// Step 3: Batch insert all list items (1 query instead of N)
+		// Step 3: Batch insert ALL list items in ONE query
 		const itemValues = creators
 			.map((creator, idx) => {
-				const key = `${creator.platform}:${creator.externalId}`;
-				const profileId = profileIdMap.get(key);
-				if (!profileId) {
-					// This shouldn't happen, but skip if profile wasn't created
-					return null;
-				}
+				const profile = profileMap.get(`${creator.platform}:${creator.externalId}`);
+				if (!profile) return null;
 				return {
 					listId,
-					creatorId: profileId,
+					creatorId: profile.id,
 					position: startPosition + idx,
 					bucket: creator.bucket ?? 'backlog',
 					addedBy: user.id,
@@ -639,21 +579,18 @@ export async function addCreatorsToList(
 			})
 			.filter((v): v is NonNullable<typeof v> => v !== null);
 
-		// Insert all items at once with ON CONFLICT DO NOTHING for duplicates
 		const insertedItems = await tx
 			.insert(creatorListItems)
 			.values(itemValues)
 			.onConflictDoNothing({ target: [creatorListItems.listId, creatorListItems.creatorId] })
-			.returning({ id: creatorListItems.id, creatorId: creatorListItems.creatorId });
+			.returning({ creatorId: creatorListItems.creatorId });
 
-		// Build set of inserted creator IDs to identify skipped ones
-		const insertedCreatorIds = new Set(insertedItems.map((item) => item.creatorId));
+		// Track skipped creators (already in list)
+		const insertedCreatorIds = new Set(insertedItems.map((i) => i.creatorId));
 		const skipped: Array<{ externalId: string; handle: string; platform: string }> = [];
-
 		for (const creator of creators) {
-			const key = `${creator.platform}:${creator.externalId}`;
-			const profileId = profileIdMap.get(key);
-			if (!(profileId && insertedCreatorIds.has(profileId))) {
+			const profile = profileMap.get(`${creator.platform}:${creator.externalId}`);
+			if (profile && !insertedCreatorIds.has(profile.id)) {
 				skipped.push({
 					externalId: creator.externalId,
 					handle: creator.handle,
@@ -662,10 +599,37 @@ export async function addCreatorsToList(
 			}
 		}
 
-		// Step 4: Refresh stats (2 queries)
-		await refreshListStats(listId);
+		// Step 4: Increment stats (NOT recalculate) - much faster
+		const addedCount = insertedItems.length;
+		if (addedCount > 0) {
+			// Calculate followers sum for newly added creators only
+			const addedFollowers = creators.reduce((sum, c) => {
+				const profile = profileMap.get(`${c.platform}:${c.externalId}`);
+				if (profile && insertedCreatorIds.has(profile.id)) {
+					return sum + (profile.followers ?? 0);
+				}
+				return sum;
+			}, 0);
 
-		return { inserted: insertedItems.length, skipped };
+			// Increment existing stats instead of full recalculation
+			await tx
+				.update(creatorLists)
+				.set({
+					stats: sql`jsonb_set(
+						jsonb_set(
+							COALESCE(${creatorLists.stats}, '{"creatorCount": 0, "followerSum": 0}'::jsonb),
+							'{creatorCount}',
+							(COALESCE((${creatorLists.stats}->>'creatorCount')::int, 0) + ${addedCount})::text::jsonb
+						),
+						'{followerSum}',
+						(COALESCE((${creatorLists.stats}->>'followerSum')::bigint, 0) + ${addedFollowers})::text::jsonb
+					)`,
+					updatedAt: new Date(),
+				})
+				.where(eq(creatorLists.id, listId));
+		}
+
+		return { inserted: addedCount, skipped };
 	});
 
 	// Fire-and-forget: Activity logging (don't block response)
