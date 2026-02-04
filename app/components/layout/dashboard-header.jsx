@@ -104,7 +104,7 @@ export default function DashboardHeader({ onToggleSidebar, isSidebarOpen }) {
 						) : (
 							<Link href="/billing" className="w-full sm:w-auto">
 								<Button size="sm" className="w-full bg-pink-600 text-white hover:bg-pink-500">
-									Upgrade
+									Subscribe
 								</Button>
 							</Link>
 						)}

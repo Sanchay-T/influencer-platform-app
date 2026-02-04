@@ -180,7 +180,7 @@ export default function TrialSidebarCompact() {
 				)}
 
 				<Link href="/billing?upgrade=1" className="block">
-					<Button className="w-full text-sm">Upgrade Now</Button>
+					<Button className="w-full text-sm">Start Subscription</Button>
 				</Link>
 				<Link href="/billing" className="block">
 					<Button variant="outline" className="w-full text-sm">
