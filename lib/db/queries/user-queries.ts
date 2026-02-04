@@ -334,7 +334,7 @@ export async function ensureUserProfile(userId: string): Promise<UserProfileComp
     const createdProfile = await createUser({
       userId,
       email: email || fallbackEmail,
-      fullName: fullName || 'User',
+      fullName: fullName || undefined,
       onboardingStep: 'pending',
       // currentPlan: null - not set until Stripe confirms payment
     });
