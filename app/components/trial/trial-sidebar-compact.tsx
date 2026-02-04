@@ -2,10 +2,33 @@
 
 import { AlertTriangle, Calendar } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
+import { StartSubscriptionModal } from '@/app/components/billing/start-subscription-modal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { clearBillingCache } from '@/lib/hooks/use-billing';
+import { useStartSubscription } from '@/lib/hooks/use-start-subscription';
+
+const PLAN_PRICES: Record<string, number> = {
+	growth: 199,
+	scale: 599,
+	pro: 1999,
+	glow_up: 99,
+	viral_surge: 249,
+	fame_flex: 499,
+};
+
+const PLAN_NAMES: Record<string, string> = {
+	growth: 'Growth',
+	scale: 'Scale',
+	pro: 'Pro',
+	glow_up: 'Glow Up',
+	viral_surge: 'Viral Surge',
+	fame_flex: 'Fame Flex',
+};
 
 type Status = {
 	isLoaded: boolean;
@@ -21,10 +44,46 @@ type Status = {
 		campaignsUsed: number;
 		campaignsLimit: number;
 	};
+	currentPlan?: string;
 };
 
 export default function TrialSidebarCompact() {
 	const [status, setStatus] = useState<Status>({ isLoaded: false, isTrialing: false });
+	const [showStartModal, setShowStartModal] = useState(false);
+	const router = useRouter();
+	const {
+		startSubscription,
+		openPortal,
+		isLoading: isStartingSubscription,
+	} = useStartSubscription();
+
+	const handleConfirmStartSubscription = async () => {
+		const result = await startSubscription();
+
+		if (result.success) {
+			setShowStartModal(false);
+			toast.success('Subscription started! Welcome aboard.');
+			clearBillingCache();
+			router.refresh();
+		} else {
+			toast.error(
+				<div className="flex flex-col gap-2">
+					<span>{result.error}</span>
+					<button
+						type="button"
+						onClick={() => {
+							toast.dismiss();
+							openPortal();
+						}}
+						className="text-pink-400 hover:text-pink-300 text-sm underline text-left"
+					>
+						Update payment method
+					</button>
+				</div>,
+				{ duration: 8000 }
+			);
+		}
+	};
 
 	useEffect(() => {
 		let mounted = true;
@@ -65,6 +124,7 @@ export default function TrialSidebarCompact() {
 								campaignsLimit: data.usageInfo.campaignsLimit || 0,
 							}
 						: undefined,
+					currentPlan: data.currentPlan,
 				};
 
 				setStatus(newStatus);
@@ -179,15 +239,30 @@ export default function TrialSidebarCompact() {
 					</div>
 				)}
 
-				<Link href="/billing?upgrade=1" className="block">
-					<Button className="w-full text-sm">Upgrade Now</Button>
-				</Link>
+				<Button
+					className="w-full text-sm"
+					onClick={() => setShowStartModal(true)}
+					disabled={isStartingSubscription}
+				>
+					Start Subscription
+				</Button>
 				<Link href="/billing" className="block">
 					<Button variant="outline" className="w-full text-sm">
 						View Billing Details
 					</Button>
 				</Link>
 			</div>
+
+			{status.currentPlan && status.currentPlan !== 'free' && (
+				<StartSubscriptionModal
+					open={showStartModal}
+					onOpenChange={setShowStartModal}
+					planName={PLAN_NAMES[status.currentPlan] || status.currentPlan}
+					amount={PLAN_PRICES[status.currentPlan] || 0}
+					onConfirm={handleConfirmStartSubscription}
+					isLoading={isStartingSubscription}
+				/>
+			)}
 		</div>
 	);
 }
