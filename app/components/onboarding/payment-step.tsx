@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertCircle, ArrowRight, CreditCard } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { useState } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { PLAN_DISPLAY_CONFIGS } from '@/lib/billing/plan-display-config';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import OnboardingLogger from '@/lib/utils/onboarding-logger';
 import BillingCycleToggle from './billing-cycle-toggle';
-import { PaymentSecurityCard, TrialInfoCard } from './payment-info-cards';
+import { FreeTrialBanner, PaymentSecurityCard, TrialInfoCard } from './payment-info-cards';
 import PlanCard from './plan-card';
 
 interface PaymentStepProps {
@@ -155,12 +155,12 @@ export default function PaymentStep({ sessionId, userId }: PaymentStepProps) {
 
 	return (
 		<div className="space-y-6">
-			{/* Header text */}
-			<div className="text-center">
-				<p className="text-zinc-400 mb-6">
-					Select a plan to start your 7-day free trial. You won't be charged until the trial ends.
-				</p>
+			{/* Prominent Free Trial Banner - FIRST */}
+			<FreeTrialBanner />
 
+			{/* Simplified header */}
+			<div className="text-center">
+				<p className="text-zinc-400 mb-4">Choose the plan that works for you:</p>
 				<BillingCycleToggle billingCycle={billingCycle} onToggle={handleBillingCycleToggle} />
 			</div>
 
@@ -177,38 +177,38 @@ export default function PaymentStep({ sessionId, userId }: PaymentStepProps) {
 				))}
 			</div>
 
-			{/* Info Cards */}
-			<TrialInfoCard />
-			<PaymentSecurityCard />
+			{/* Sticky CTA Section */}
+			<div className="sticky bottom-0 bg-gradient-to-t from-zinc-900 via-zinc-900 to-transparent pt-4 pb-2 -mx-4 px-4">
+				{error && (
+					<Alert variant="destructive" className="mb-3">
+						<AlertCircle className="h-4 w-4" />
+						<AlertDescription>{error}</AlertDescription>
+					</Alert>
+				)}
 
-			{/* Error Display */}
-			{error && (
-				<Alert variant="destructive">
-					<AlertCircle className="h-4 w-4" />
-					<AlertDescription>{error}</AlertDescription>
-				</Alert>
-			)}
-
-			{/* Action Button */}
-			<div className="space-y-3">
 				<Button
 					onClick={handleStartTrial}
-					className="w-full h-12 text-lg font-semibold"
+					className="w-full h-14 text-lg font-bold bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600"
 					disabled={isLoading || !selectedPlan}
 				>
 					{isLoading ? (
 						<div className="flex items-center gap-2">
 							<div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-							Redirecting to secure checkout...
+							Redirecting...
 						</div>
 					) : (
-						<div className="flex items-center gap-2">
-							<CreditCard className="h-5 w-5" />
-							Continue to Secure Checkout
-							<ArrowRight className="h-5 w-5" />
+						<div className="flex flex-col items-center">
+							<span>Start Free Trial →</span>
+							<span className="text-xs font-normal">No charge today • Cancel anytime</span>
 						</div>
 					)}
 				</Button>
+			</div>
+
+			{/* Info Cards - secondary */}
+			<div className="space-y-4 pt-2">
+				<TrialInfoCard />
+				<PaymentSecurityCard />
 			</div>
 
 			{/* Footer */}
