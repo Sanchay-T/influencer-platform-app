@@ -330,7 +330,7 @@ async function handleUserCreated(userData: unknown, requestId: string) {
 	const email = getPrimaryEmail(userRecord);
 	const firstName = getStringProperty(userRecord, 'first_name') ?? '';
 	const lastName = getStringProperty(userRecord, 'last_name') ?? '';
-	const fullName = `${firstName} ${lastName}`.trim() || 'New User';
+	const fullName = `${firstName} ${lastName}`.trim() || null;
 
 	// Initialize user session logger for debugging
 	const userLogger = email ? UserSessionLogger.forUser(email, userId) : null;

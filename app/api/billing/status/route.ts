@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
 					const clerkUser = await client.users.getUser(userId);
 					const email = clerkUser.emailAddresses?.[0]?.emailAddress;
 					const fullName =
-						`${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || 'User';
+						`${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || null;
 
 					// Create user in database
 					await createUser({

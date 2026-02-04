@@ -69,7 +69,7 @@ async function syncUsers() {
 					VALUES (
 						${user.id},
 						${email},
-						${fullName || 'User'},
+						${fullName || null},
 						'completed',
 						${createdAt}::timestamptz,
 						NOW()
