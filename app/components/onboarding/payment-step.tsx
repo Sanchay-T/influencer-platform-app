@@ -1,7 +1,7 @@
 'use client';
 
 import { AlertCircle, ArrowRight, CreditCard } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { trackClient } from '@/lib/analytics/track';
@@ -23,6 +23,9 @@ export default function PaymentStep({ sessionId, userId }: PaymentStepProps) {
 	const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
 	const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
 
+	// Ref for auto-scrolling to checkout button after plan selection
+	const checkoutButtonRef = useRef<HTMLDivElement>(null);
+
 	const handlePlanSelect = (planId: string) => {
 		OnboardingLogger.logStep3(
 			'PLAN-SELECT',
@@ -37,6 +40,14 @@ export default function PaymentStep({ sessionId, userId }: PaymentStepProps) {
 		);
 		setSelectedPlan(planId);
 		setError('');
+
+		// Auto-scroll to checkout button after plan selection
+		setTimeout(() => {
+			checkoutButtonRef.current?.scrollIntoView({
+				behavior: 'smooth',
+				block: 'center',
+			});
+		}, 100);
 	};
 
 	const handleBillingCycleToggle = (cycle: 'monthly' | 'yearly') => {
@@ -190,7 +201,7 @@ export default function PaymentStep({ sessionId, userId }: PaymentStepProps) {
 			)}
 
 			{/* Action Button */}
-			<div className="space-y-3">
+			<div ref={checkoutButtonRef} className="space-y-3">
 				<Button
 					onClick={handleStartTrial}
 					className="w-full h-12 text-lg font-semibold"
