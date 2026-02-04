@@ -249,7 +249,7 @@ async function handleUserCreated(userData: any, requestId: string) {
   const email = userData.email_addresses?.[0]?.email_address;
   const firstName = userData.first_name;
   const lastName = userData.last_name;
-  const fullName = `${firstName || ''} ${lastName || ''}`.trim() || 'New User';
+  const fullName = `${firstName || ''} ${lastName || ''}`.trim() || undefined;
 
   // Initialize user session logger for debugging
   const userLogger = email ? UserSessionLogger.forUser(email, userId) : null;

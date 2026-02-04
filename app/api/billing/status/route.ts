@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
           const email = clerkUser.emailAddresses?.[0]?.emailAddress;
           const firstName = clerkUser.firstName || '';
           const lastName = clerkUser.lastName || '';
-          const fullName = `${firstName} ${lastName}`.trim() || 'User';
+          const fullName = `${firstName} ${lastName}`.trim() || undefined;
 
           info('Creating user with Clerk data', {
             userId,
