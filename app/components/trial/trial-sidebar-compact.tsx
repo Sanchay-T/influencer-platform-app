@@ -3,9 +3,12 @@
 import { AlertTriangle, Calendar } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { StartSubscriptionModal } from '@/app/components/billing/start-subscription-modal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { PLANS, type PlanKey } from '@/lib/billing/plan-config';
+import { useStartSubscription } from '@/lib/hooks/use-start-subscription';
 
 type Status = {
 	isLoaded: boolean;
@@ -21,10 +24,14 @@ type Status = {
 		campaignsUsed: number;
 		campaignsLimit: number;
 	};
+	currentPlan?: string;
+	billingAmount?: number;
 };
 
 export default function TrialSidebarCompact() {
 	const [status, setStatus] = useState<Status>({ isLoaded: false, isTrialing: false });
+	const [showStartModal, setShowStartModal] = useState(false);
+	const { startSubscription, isLoading: isStarting } = useStartSubscription();
 
 	useEffect(() => {
 		let mounted = true;
@@ -65,6 +72,8 @@ export default function TrialSidebarCompact() {
 								campaignsLimit: data.usageInfo.campaignsLimit || 0,
 							}
 						: undefined,
+					currentPlan: data.currentPlan || undefined,
+					billingAmount: data.billingAmount || 0,
 				};
 
 				setStatus(newStatus);
@@ -179,15 +188,31 @@ export default function TrialSidebarCompact() {
 					</div>
 				)}
 
-				<Link href="/billing?upgrade=1" className="block">
-					<Button className="w-full text-sm">Upgrade Now</Button>
-				</Link>
+				<Button className="w-full text-sm" onClick={() => setShowStartModal(true)}>
+					Start Subscription
+				</Button>
 				<Link href="/billing" className="block">
 					<Button variant="outline" className="w-full text-sm">
 						View Billing Details
 					</Button>
 				</Link>
 			</div>
+
+			{status.currentPlan && (
+				<StartSubscriptionModal
+					open={showStartModal}
+					onOpenChange={setShowStartModal}
+					planName={PLANS[status.currentPlan as PlanKey]?.name || status.currentPlan}
+					amount={status.billingAmount || 0}
+					onConfirm={async () => {
+						const result = await startSubscription();
+						if (result.success) {
+							setShowStartModal(false);
+						}
+					}}
+					isLoading={isStarting}
+				/>
+			)}
 		</div>
 	);
 }

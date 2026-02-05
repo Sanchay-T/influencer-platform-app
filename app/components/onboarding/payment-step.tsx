@@ -1,7 +1,7 @@
 'use client';
 
-import { AlertCircle, ArrowRight, CreditCard } from 'lucide-react';
-import { useState } from 'react';
+import { AlertCircle, ArrowRight, CreditCard, Shield } from 'lucide-react';
+import { useRef, useState } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { trackClient } from '@/lib/analytics/track';
@@ -22,6 +22,7 @@ export default function PaymentStep({ sessionId, userId }: PaymentStepProps) {
 	const [error, setError] = useState('');
 	const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
 	const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+	const checkoutRef = useRef<HTMLDivElement>(null);
 
 	const handlePlanSelect = (planId: string) => {
 		OnboardingLogger.logStep3(
@@ -37,6 +38,10 @@ export default function PaymentStep({ sessionId, userId }: PaymentStepProps) {
 		);
 		setSelectedPlan(planId);
 		setError('');
+
+		setTimeout(() => {
+			checkoutRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		}, 150);
 	};
 
 	const handleBillingCycleToggle = (cycle: 'monthly' | 'yearly') => {
@@ -157,11 +162,18 @@ export default function PaymentStep({ sessionId, userId }: PaymentStepProps) {
 		<div className="space-y-6">
 			{/* Header text */}
 			<div className="text-center">
-				<p className="text-zinc-400 mb-6">
-					Select a plan to start your 7-day free trial. You won't be charged until the trial ends.
-				</p>
-
 				<BillingCycleToggle billingCycle={billingCycle} onToggle={handleBillingCycleToggle} />
+			</div>
+
+			{/* FREE TRIAL Banner */}
+			<div className="bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 border-2 border-emerald-500/50 rounded-xl p-4 text-center">
+				<div className="flex items-center justify-center gap-2 mb-1">
+					<Shield className="h-5 w-5 text-emerald-400" />
+					<span className="text-lg font-bold text-emerald-400">7-DAY FREE TRIAL</span>
+				</div>
+				<p className="text-zinc-300 text-sm">
+					You won&apos;t be charged today. Cancel anytime during your trial.
+				</p>
 			</div>
 
 			{/* Plan Selection */}
@@ -190,10 +202,10 @@ export default function PaymentStep({ sessionId, userId }: PaymentStepProps) {
 			)}
 
 			{/* Action Button */}
-			<div className="space-y-3">
+			<div ref={checkoutRef} className="space-y-3">
 				<Button
 					onClick={handleStartTrial}
-					className="w-full h-12 text-lg font-semibold"
+					className="w-full h-14 text-lg font-semibold"
 					disabled={isLoading || !selectedPlan}
 				>
 					{isLoading ? (
@@ -202,10 +214,13 @@ export default function PaymentStep({ sessionId, userId }: PaymentStepProps) {
 							Redirecting to secure checkout...
 						</div>
 					) : (
-						<div className="flex items-center gap-2">
-							<CreditCard className="h-5 w-5" />
-							Continue to Secure Checkout
-							<ArrowRight className="h-5 w-5" />
+						<div className="flex flex-col items-center">
+							<span className="flex items-center gap-2">
+								<CreditCard className="h-5 w-5" />
+								Start Free Trial
+								<ArrowRight className="h-5 w-5" />
+							</span>
+							<span className="text-xs font-normal opacity-75">No charge today</span>
 						</div>
 					)}
 				</Button>

@@ -114,7 +114,9 @@ export default function AccessGuardOverlay({
 					</p>
 					<div className="flex gap-3 justify-center">
 						<Link href="/billing?upgrade=1">
-							<Button className="bg-pink-600 hover:bg-pink-500 text-white">Upgrade Now</Button>
+							<Button className="bg-pink-600 hover:bg-pink-500 text-white">
+								Start Subscription
+							</Button>
 						</Link>
 						<Link href="/billing">
 							<Button variant="outline">View Billing</Button>
