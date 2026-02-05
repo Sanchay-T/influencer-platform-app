@@ -5,15 +5,19 @@ import { useCallback, useEffect, useState } from 'react';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { isValidPlanKey } from '@/lib/types/statuses';
 import { type LoggedApiResponse, loggedApiCall, logTiming } from '@/lib/utils/frontend-logger';
-import { isBoolean, isNumber, isRecord, isString, toRecord } from '@/lib/utils/type-guards';
+import { isBoolean, isNumber, isString, toRecord } from '@/lib/utils/type-guards';
 import { buildPlanFns, type PlanKey } from './billing-plan';
 
 const BILLING_DEBUG = false;
 const debugLog = (...args: unknown[]) => {
-	if (BILLING_DEBUG) structuredConsole.log(...args);
+	if (BILLING_DEBUG) {
+		structuredConsole.log(...args);
+	}
 };
-const debugWarn = (...args: unknown[]) => {
-	if (BILLING_DEBUG) structuredConsole.warn(...args);
+const _debugWarn = (...args: unknown[]) => {
+	if (BILLING_DEBUG) {
+		structuredConsole.warn(...args);
+	}
 };
 
 const BILLING_CACHE_KEY = 'gemz_entitlements_v1';
@@ -205,7 +209,9 @@ export function useBilling(): BillingStatus {
 	// Fetch billing status from our API (with simple cache + inflight guard)
 	const fetchBillingStatus = useCallback(
 		async (skipCache = false) => {
-			if (!userId) return;
+			if (!userId) {
+				return;
+			}
 			try {
 				// 1) Try persisted snapshot first for instant UX (no spinner on refresh)
 				try {
@@ -220,7 +226,9 @@ export function useBilling(): BillingStatus {
 							setFromData(cachedData);
 						}
 					}
-				} catch {}
+				} catch {
+					// Ignore localStorage read failures (e.g. privacy mode).
+				}
 
 				const now = Date.now();
 				if (!skipCache && cacheRef.data && now - cacheRef.ts < CACHE_TTL_MS) {
@@ -241,7 +249,9 @@ export function useBilling(): BillingStatus {
 					{ action: 'fetch_billing_status', userId }
 				)
 					.then(async (res: LoggedApiResponse<unknown>) => {
-						if (!res.ok) throw new Error(`Failed to fetch billing status (status ${res.status})`);
+						if (!res.ok) {
+							throw new Error(`Failed to fetch billing status (status ${res.status})`);
+						}
 						const reqId = res.headers.get('x-request-id') || 'none';
 						const serverDuration = res.headers.get('x-duration-ms') || 'n/a';
 						const rawData = res.data ?? (await res.json());
@@ -260,7 +270,9 @@ export function useBilling(): BillingStatus {
 						// persist snapshot for fast subsequent loads
 						try {
 							localStorage.setItem(BILLING_CACHE_KEY, JSON.stringify({ ts: Date.now(), data }));
-						} catch {}
+						} catch {
+							// Ignore localStorage write failures.
+						}
 						return data;
 					})
 					.catch((e: unknown) => {
@@ -281,7 +293,9 @@ export function useBilling(): BillingStatus {
 	);
 
 	useEffect(() => {
-		if (!(isLoaded && userId)) return;
+		if (!(isLoaded && userId)) {
+			return;
+		}
 		fetchBillingStatus();
 	}, [fetchBillingStatus, isLoaded, userId]);
 
@@ -296,7 +310,9 @@ export function useBilling(): BillingStatus {
 			cache.data = null;
 			cache.ts = 0;
 			cache.inflight = null;
-		} catch (e) {}
+		} catch (_e) {
+			// Ignore cache clearing failures.
+		}
 
 		// Trigger a fresh fetch
 		fetchBillingStatus(true);
@@ -315,13 +331,17 @@ export function clearBillingCache() {
 		localStorage.removeItem(BILLING_CACHE_KEY); // gemz_entitlements_v1
 		localStorage.removeItem('gemz_trial_status_v1'); // trial-sidebar-compact.tsx
 		localStorage.removeItem('gemz_trial_status_cache'); // use-trial-status.ts (blur overlay)
-	} catch {}
+	} catch {
+		// Ignore localStorage access issues.
+	}
 	try {
 		const cache = getBillingCache();
 		cache.data = null;
 		cache.ts = 0;
 		cache.inflight = null;
-	} catch {}
+	} catch {
+		// Ignore in-memory cache reset failures.
+	}
 }
 
 /**

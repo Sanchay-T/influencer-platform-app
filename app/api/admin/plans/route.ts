@@ -1,8 +1,7 @@
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { isAdminUser } from '@/lib/auth/admin-utils';
 import { db } from '@/lib/db';
-import { updateUserProfile } from '@/lib/db/queries/user-queries';
 import { subscriptionPlans } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
@@ -108,14 +107,24 @@ export async function PUT(req: NextRequest) {
 
 		// Prepare update payload
 		const setPayload: PlanUpdatePayload = { updatedAt: new Date() };
-		if (typeof update.displayName !== 'undefined') setPayload.displayName = update.displayName;
-		if (typeof update.description !== 'undefined') setPayload.description = update.description;
-		if (typeof update.campaignsLimit !== 'undefined')
+		if (typeof update.displayName !== 'undefined') {
+			setPayload.displayName = update.displayName;
+		}
+		if (typeof update.description !== 'undefined') {
+			setPayload.description = update.description;
+		}
+		if (typeof update.campaignsLimit !== 'undefined') {
 			setPayload.campaignsLimit = update.campaignsLimit;
-		if (typeof update.creatorsLimit !== 'undefined')
+		}
+		if (typeof update.creatorsLimit !== 'undefined') {
 			setPayload.creatorsLimit = update.creatorsLimit;
-		if (typeof update.isActive !== 'undefined') setPayload.isActive = update.isActive;
-		if (typeof update.features !== 'undefined') setPayload.features = update.features;
+		}
+		if (typeof update.isActive !== 'undefined') {
+			setPayload.isActive = update.isActive;
+		}
+		if (typeof update.features !== 'undefined') {
+			setPayload.features = update.features;
+		}
 
 		// Apply update to subscription_plans
 		await db
@@ -126,11 +135,15 @@ export async function PUT(req: NextRequest) {
 		// Best-effort propagate snapshot limits/features to users on this plan
 		// (keeps UI usage widgets consistent; enforcement reads from subscription_plans anyway)
 		const userUpdates: UserPlanSnapshotUpdate = {};
-		if (typeof update.campaignsLimit !== 'undefined')
+		if (typeof update.campaignsLimit !== 'undefined') {
 			userUpdates.planCampaignsLimit = update.campaignsLimit;
-		if (typeof update.creatorsLimit !== 'undefined')
+		}
+		if (typeof update.creatorsLimit !== 'undefined') {
 			userUpdates.planCreatorsLimit = update.creatorsLimit;
-		if (typeof update.features !== 'undefined') userUpdates.planFeatures = update.features;
+		}
+		if (typeof update.features !== 'undefined') {
+			userUpdates.planFeatures = update.features;
+		}
 		if (Object.keys(userUpdates).length > 0) {
 			// Note: This is a bulk update - for production, consider individual updates
 			// For now, skip individual user updates to avoid complexity

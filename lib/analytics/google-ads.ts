@@ -38,7 +38,6 @@ export function trackGoogleAdsConversion(value = 1.0, callback?: () => void): vo
 		send_to: GOOGLE_ADS_SEND_TO,
 		value: value,
 		currency: 'USD',
-		// biome-ignore lint/style/useNamingConvention: Google Ads API uses snake_case
 		event_callback: callback,
 	});
 }
@@ -68,7 +67,6 @@ export function trackGoogleAdsConversionWithRedirect(url: string, value = 1.0): 
 		send_to: GOOGLE_ADS_SEND_TO,
 		value: value,
 		currency: 'USD',
-		// biome-ignore lint/style/useNamingConvention: Google Ads API uses snake_case
 		event_callback: callback,
 	});
 

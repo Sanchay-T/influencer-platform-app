@@ -22,14 +22,14 @@ import { enrichYouTubeCreator } from './youtube-enrichment';
 // Types for YouTube API Response
 // ============================================================================
 
-interface YouTubeChannel {
+export interface YouTubeChannel {
 	id?: string;
 	handle?: string;
 	title?: string;
 	thumbnail?: string;
 }
 
-interface YouTubeVideo {
+export interface YouTubeVideo {
 	url?: string;
 	title?: string;
 	description?: string;
@@ -42,7 +42,7 @@ interface YouTubeVideo {
 	channel?: YouTubeChannel;
 }
 
-interface YouTubeSearchResponse {
+export interface YouTubeSearchResponse {
 	videos?: YouTubeVideo[];
 	continuationToken?: string;
 }
@@ -167,7 +167,9 @@ class YouTubeAdapter implements SearchAdapter {
 			getNumberProperty(video ?? {}, 'viewCountInt') ??
 			(() => {
 				const viewCountRaw = getStringProperty(video ?? {}, 'viewCount');
-				if (!viewCountRaw) return 0;
+				if (!viewCountRaw) {
+					return 0;
+				}
 				return Number.parseInt(viewCountRaw.replace(/[^0-9]/g, ''), 10) || 0;
 			})();
 

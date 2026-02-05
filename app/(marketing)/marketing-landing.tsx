@@ -25,6 +25,28 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
+const INFLUENCER_SPARK_BARS = [
+	{ id: 'influencers-1', height: 30 },
+	{ id: 'influencers-2', height: 45 },
+	{ id: 'influencers-3', height: 35 },
+	{ id: 'influencers-4', height: 50 },
+	{ id: 'influencers-5', height: 40 },
+	{ id: 'influencers-6', height: 55 },
+	{ id: 'influencers-7', height: 45 },
+	{ id: 'influencers-8', height: 60 },
+];
+
+const ENGAGEMENT_SPARK_BARS = [
+	{ id: 'engagement-1', height: 40 },
+	{ id: 'engagement-2', height: 35 },
+	{ id: 'engagement-3', height: 50 },
+	{ id: 'engagement-4', height: 45 },
+	{ id: 'engagement-5', height: 55 },
+	{ id: 'engagement-6', height: 50 },
+	{ id: 'engagement-7', height: 60 },
+	{ id: 'engagement-8', height: 55 },
+];
+
 export default function MarketingLanding() {
 	const [activeStep, setActiveStep] = useState(1);
 	const { isSignedIn, isLoaded } = useAuth();
@@ -58,16 +80,15 @@ export default function MarketingLanding() {
 					</div>
 
 					<nav className="hidden md:flex items-center">
-						<a
-							href="#pricing"
+						<button
+							type="button"
 							className="text-white/90 hover:text-white transition-colors"
-							onClick={(e) => {
-								e.preventDefault();
+							onClick={() => {
 								document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
 							}}
 						>
 							Pricing
-						</a>
+						</button>
 					</nav>
 
 					<div className="flex items-center space-x-3">
@@ -514,6 +535,7 @@ export default function MarketingLanding() {
 					</div>
 					<div className="grid grid-cols-3 gap-4 mb-12 max-w-4xl mx-auto">
 						<button
+							type="button"
 							onClick={() => setActiveStep(1)}
 							className={`py-4 px-6 rounded-lg border transition-all ${
 								activeStep === 1
@@ -524,6 +546,7 @@ export default function MarketingLanding() {
 							<span className="text-white/70 text-sm font-medium">STEP 1</span>
 						</button>
 						<button
+							type="button"
 							onClick={() => setActiveStep(2)}
 							className={`py-4 px-6 rounded-lg border transition-all ${
 								activeStep === 2
@@ -534,6 +557,7 @@ export default function MarketingLanding() {
 							<span className="text-white/70 text-sm font-medium">STEP 2</span>
 						</button>
 						<button
+							type="button"
 							onClick={() => setActiveStep(3)}
 							className={`py-4 px-6 rounded-lg border transition-all ${
 								activeStep === 3
@@ -560,11 +584,11 @@ export default function MarketingLanding() {
 												</div>
 												<div className="text-3xl font-bold text-white">80%</div>
 												<div className="mt-2 h-12 flex items-end space-x-1">
-													{[30, 45, 35, 50, 40, 55, 45, 60].map((height, i) => (
+													{INFLUENCER_SPARK_BARS.map((bar) => (
 														<div
-															key={i}
+															key={bar.id}
 															className="flex-1 bg-white/20 rounded-t"
-															style={{ height: `${height}%` }}
+															style={{ height: `${bar.height}%` }}
 														/>
 													))}
 												</div>
@@ -576,11 +600,11 @@ export default function MarketingLanding() {
 												</div>
 												<div className="text-3xl font-bold text-white">6.5%</div>
 												<div className="mt-2 h-12 flex items-end space-x-1">
-													{[40, 35, 50, 45, 55, 50, 60, 55].map((height, i) => (
+													{ENGAGEMENT_SPARK_BARS.map((bar) => (
 														<div
-															key={i}
+															key={bar.id}
 															className="flex-1 bg-white/20 rounded-t"
-															style={{ height: `${height}%` }}
+															style={{ height: `${bar.height}%` }}
 														/>
 													))}
 												</div>
@@ -912,6 +936,7 @@ export default function MarketingLanding() {
 								{isLoaded && isSignedIn ? (
 									<a href="/dashboard">
 										<button
+											type="button"
 											className="w-full py-3 px-4 rounded-xl border border-white/10 bg-transparent hover:bg-white/5 transition-all text-white font-medium flex items-center justify-center space-x-2"
 											style={{
 												boxShadow:
@@ -925,6 +950,7 @@ export default function MarketingLanding() {
 								) : (
 									<SignUpButton mode="modal">
 										<button
+											type="button"
 											className="w-full py-3 px-4 rounded-xl border border-white/10 bg-transparent hover:bg-white/5 transition-all text-white font-medium flex items-center justify-center space-x-2"
 											style={{
 												boxShadow:
@@ -979,6 +1005,7 @@ export default function MarketingLanding() {
 								{isLoaded && isSignedIn ? (
 									<a href="/dashboard">
 										<button
+											type="button"
 											className="w-full py-3 px-4 rounded-xl border border-white/10 bg-transparent hover:bg-white/5 transition-all text-white font-medium flex items-center justify-center space-x-2 relative"
 											style={{
 												boxShadow:
@@ -992,6 +1019,7 @@ export default function MarketingLanding() {
 								) : (
 									<SignUpButton mode="modal">
 										<button
+											type="button"
 											className="w-full py-3 px-4 rounded-xl border border-white/10 bg-transparent hover:bg-white/5 transition-all text-white font-medium flex items-center justify-center space-x-2 relative"
 											style={{
 												boxShadow:
@@ -1043,6 +1071,7 @@ export default function MarketingLanding() {
 								{isLoaded && isSignedIn ? (
 									<a href="/dashboard">
 										<button
+											type="button"
 											className="w-full py-3 px-4 rounded-xl border border-white/10 bg-transparent hover:bg-white/5 transition-all text-white font-medium flex items-center justify-center space-x-2"
 											style={{
 												boxShadow:
@@ -1056,6 +1085,7 @@ export default function MarketingLanding() {
 								) : (
 									<SignUpButton mode="modal">
 										<button
+											type="button"
 											className="w-full py-3 px-4 rounded-xl border border-white/10 bg-transparent hover:bg-white/5 transition-all text-white font-medium flex items-center justify-center space-x-2"
 											style={{
 												boxShadow:
@@ -1262,6 +1292,7 @@ export default function MarketingLanding() {
 						{isLoaded && isSignedIn ? (
 							<a href="/dashboard">
 								<button
+									type="button"
 									className="py-4 px-8 rounded-xl border border-white/10 bg-transparent hover:bg-white/5 transition-all text-white text-lg font-medium flex items-center space-x-3"
 									style={{
 										boxShadow:
@@ -1275,6 +1306,7 @@ export default function MarketingLanding() {
 						) : (
 							<SignUpButton mode="modal">
 								<button
+									type="button"
 									className="py-4 px-8 rounded-xl border border-white/10 bg-transparent hover:bg-white/5 transition-all text-white text-lg font-medium flex items-center space-x-3"
 									style={{
 										boxShadow:
@@ -1308,16 +1340,15 @@ export default function MarketingLanding() {
 					</div>
 					<div className="py-8 border-t border-white/10">
 						<nav className="flex flex-wrap items-center justify-center gap-x-8 gap-y-4">
-							<a
-								href="#pricing"
+							<button
+								type="button"
 								className="text-zinc-400 hover:text-white transition-colors text-sm"
-								onClick={(e) => {
-									e.preventDefault();
+								onClick={() => {
 									document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
 								}}
 							>
 								Pricing
-							</a>
+							</button>
 							<a
 								href="#privacy"
 								className="text-zinc-400 hover:text-white transition-colors text-sm"

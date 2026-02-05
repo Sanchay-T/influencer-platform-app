@@ -184,13 +184,17 @@ export function extractChannelsFromVideos(
 	const channelMap = new Map<string, ExtractedChannel>();
 
 	videos.forEach((video) => {
-		if (!video.channel) return;
+		if (!video.channel) {
+			return;
+		}
 
 		const channelId = video.channel.id;
 		const channelHandle = video.channel.handle;
 
 		// Skip the target channel itself
-		if (channelHandle === excludeHandle) return;
+		if (channelHandle === excludeHandle) {
+			return;
+		}
 
 		if (!channelMap.has(channelId)) {
 			channelMap.set(channelId, {
@@ -204,7 +208,9 @@ export function extractChannelsFromVideos(
 
 		// Add video info to channel
 		const entry = channelMap.get(channelId);
-		if (!entry) return;
+		if (!entry) {
+			return;
+		}
 		entry.videos.push({
 			title: video.title,
 			url: video.url,
@@ -273,7 +279,9 @@ function calculateNameSimilarity(
 	targetName: string,
 	keywords: string[]
 ): number {
-	if (!(candidateName && targetName)) return 0;
+	if (!(candidateName && targetName)) {
+		return 0;
+	}
 
 	const candidate = candidateName.toLowerCase();
 	const target = targetName.toLowerCase();
@@ -301,7 +309,9 @@ function calculateNameSimilarity(
  * Calculate content relevance based on video titles
  */
 function calculateContentRelevance(videos: VideoSummary[], keywords: string[]): number {
-	if (!videos || videos.length === 0) return 0;
+	if (!videos || videos.length === 0) {
+		return 0;
+	}
 
 	let totalRelevance = 0;
 	let relevantVideos = 0;
@@ -319,7 +329,9 @@ function calculateContentRelevance(videos: VideoSummary[], keywords: string[]): 
 		}
 	});
 
-	if (relevantVideos === 0) return 0;
+	if (relevantVideos === 0) {
+		return 0;
+	}
 
 	const avgRelevance = totalRelevance / relevantVideos;
 	const coverageBonus = (relevantVideos / Math.min(videos.length, 10)) * 20; // Bonus for consistent relevance
@@ -331,7 +343,9 @@ function calculateContentRelevance(videos: VideoSummary[], keywords: string[]): 
  * Calculate activity score based on video count and recency
  */
 function calculateActivityScore(videos: VideoSummary[]): number {
-	if (!videos || videos.length === 0) return 0;
+	if (!videos || videos.length === 0) {
+		return 0;
+	}
 
 	// Score based on number of videos and recency
 	const videoCount = Math.min(videos.length, 20); // Cap at 20 for scoring
@@ -339,7 +353,9 @@ function calculateActivityScore(videos: VideoSummary[]): number {
 
 	// Check for recent activity (published times)
 	const recentVideos = videos.filter((video) => {
-		if (!video.publishedTime) return false;
+		if (!video.publishedTime) {
+			return false;
+		}
 		const publishDate = new Date(video.publishedTime);
 		const sixMonthsAgo = new Date();
 		sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
@@ -355,7 +371,9 @@ function calculateActivityScore(videos: VideoSummary[]): number {
  * Calculate keyword match score in channel context
  */
 function calculateKeywordMatch(channel: ExtractedChannel, keywords: string[]): number {
-	if (!keywords || keywords.length === 0) return 0;
+	if (!keywords || keywords.length === 0) {
+		return 0;
+	}
 
 	// Combine channel name and video titles for keyword matching
 	const textToAnalyze = [channel.name || '', ...channel.videos.map((v) => v.title || '')]

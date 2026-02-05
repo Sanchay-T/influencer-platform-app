@@ -22,13 +22,15 @@ export interface DiscoveryAccount {
 	profile: DiscoveryProfile;
 }
 
-interface DiscoveryResponse {
+export interface DiscoveryResponse {
 	accounts?: DiscoveryAccount[];
 }
 
 const toDiscoveryProfile = (value: unknown): DiscoveryProfile => {
 	const record = toRecord(value);
-	if (!record) return {};
+	if (!record) {
+		return {};
+	}
 
 	return {
 		full_name: isString(record.full_name) ? record.full_name : undefined,
@@ -41,7 +43,9 @@ const toDiscoveryProfile = (value: unknown): DiscoveryProfile => {
 
 const toDiscoveryAccount = (value: unknown): DiscoveryAccount | null => {
 	const record = toRecord(value);
-	if (!(record && isString(record.user_id))) return null;
+	if (!(record && isString(record.user_id))) {
+		return null;
+	}
 
 	return {
 		user_id: record.user_id,
@@ -103,7 +107,7 @@ export async function searchCreators(params: {
 		.filter((account): account is DiscoveryAccount => account !== null);
 }
 
-interface DiscoverySimilarResponse {
+export interface DiscoverySimilarResponse {
 	accounts?: DiscoveryAccount[];
 	total?: number;
 	credits_used?: number;
@@ -201,7 +205,7 @@ export interface EnrichCreator {
 	post_data?: Record<string, EnrichPost>;
 }
 
-interface EnrichResponse {
+export interface EnrichResponse {
 	result?: {
 		instagram?: EnrichCreator;
 	};
@@ -209,7 +213,9 @@ interface EnrichResponse {
 
 const toEnrichPost = (value: unknown): EnrichPost | null => {
 	const record = toRecord(value);
-	if (!(record && isString(record.post_id) && isString(record.created_at))) return null;
+	if (!(record && isString(record.post_id) && isString(record.created_at))) {
+		return null;
+	}
 
 	const engagement = toRecord(record.engagement);
 	const location = toRecord(record.location);
@@ -217,7 +223,9 @@ const toEnrichPost = (value: unknown): EnrichPost | null => {
 	const media = mediaList
 		.map((item) => {
 			const mediaRecord = toRecord(item);
-			if (!mediaRecord) return null;
+			if (!mediaRecord) {
+				return null;
+			}
 			if (
 				!(isString(mediaRecord.media_id) && isString(mediaRecord.type) && isString(mediaRecord.url))
 			) {
@@ -252,7 +260,9 @@ const toEnrichPost = (value: unknown): EnrichPost | null => {
 
 const toEnrichCreator = (value: unknown): EnrichCreator | null => {
 	const record = toRecord(value);
-	if (!(record && isString(record.username))) return null;
+	if (!(record && isString(record.username))) {
+		return null;
+	}
 
 	const postData = toRecord(record.post_data);
 	let parsedPostData: Record<string, EnrichPost> | undefined;
@@ -320,13 +330,15 @@ interface PostDetailsResult {
 	};
 }
 
-interface PostDetailsResponse {
+export interface PostDetailsResponse {
 	result?: PostDetailsResult;
 }
 
 const toPostDetailsResult = (value: unknown): PostDetailsResult | null => {
 	const record = toRecord(value);
-	if (!record) return null;
+	if (!record) {
+		return null;
+	}
 
 	const captionRecord = toRecord(record.caption);
 	const metricsRecord = toRecord(record.metrics);
@@ -378,7 +390,7 @@ export async function fetchPostDetails(postId: string): Promise<PostDetailsResul
 	return data ? toPostDetailsResult(data.result) : null;
 }
 
-interface TranscriptResponse {
+export interface TranscriptResponse {
 	result?: {
 		transcript?: string;
 		audio_url?: string;
@@ -432,9 +444,13 @@ export async function fetchPostTranscript(
 }
 
 function extractErrorHint(raw: string | null | undefined): string | null {
-	if (!raw) return null;
+	if (!raw) {
+		return null;
+	}
 	const trimmed = raw.trim();
-	if (!trimmed) return null;
+	if (!trimmed) {
+		return null;
+	}
 
 	try {
 		const parsed = toRecord(JSON.parse(trimmed));

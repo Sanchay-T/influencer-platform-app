@@ -27,7 +27,9 @@ export function AnimatedCounter({
 
 	useEffect(() => {
 		// Skip animation on initial mount or if value hasn't changed
-		if (previousValue.current === value) return;
+		if (previousValue.current === value) {
+			return;
+		}
 
 		const startValue = previousValue.current;
 		const endValue = value;

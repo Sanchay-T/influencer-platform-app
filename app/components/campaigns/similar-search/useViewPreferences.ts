@@ -18,12 +18,18 @@ export function useViewPreferences(jobId?: string) {
 	const stableKey = jobId ? `${STORAGE_KEY}:${jobId}` : STORAGE_KEY;
 
 	useEffect(() => {
-		if (typeof window === 'undefined') return;
+		if (typeof window === 'undefined') {
+			return;
+		}
 		try {
 			const raw = window.localStorage.getItem(stableKey);
-			if (!raw) return;
+			if (!raw) {
+				return;
+			}
 			const parsed = JSON.parse(raw);
-			if (!parsed || typeof parsed !== 'object') return;
+			if (!parsed || typeof parsed !== 'object') {
+				return;
+			}
 			setPreferences({
 				viewMode: parsed.viewMode === 'gallery' ? 'gallery' : 'table',
 				emailOnly: Boolean(parsed.emailOnly),
@@ -34,7 +40,9 @@ export function useViewPreferences(jobId?: string) {
 	}, [stableKey]);
 
 	useEffect(() => {
-		if (typeof window === 'undefined') return;
+		if (typeof window === 'undefined') {
+			return;
+		}
 		try {
 			window.localStorage.setItem(stableKey, JSON.stringify(preferences));
 		} catch (error) {

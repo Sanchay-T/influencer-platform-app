@@ -3,7 +3,6 @@ import { NextResponse } from 'next/server';
 
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { db } from '@/lib/db';
-import { scrapingResults } from '@/lib/db/schema';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
 import { extractEmail } from '@/lib/search-engine/utils/email-extractor';
 
@@ -204,7 +203,9 @@ export async function POST(request: Request) {
 			// Update scraping_results: for each creator, add bio_enriched data
 			// This uses a single SQL update with jsonb_set for each userId
 			const updatePromises = Object.entries(bioResults).map(([creatorUserId, bioData]) => {
-				if (bioData.error) return Promise.resolve(); // Skip failed fetches
+				if (bioData.error) {
+					return Promise.resolve(); // Skip failed fetches
+				}
 
 				const bioEnrichedPayload = JSON.stringify({
 					biography: bioData.biography,

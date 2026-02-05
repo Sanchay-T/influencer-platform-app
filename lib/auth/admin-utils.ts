@@ -24,9 +24,13 @@ export async function isAdminUser(): Promise<boolean> {
 					const isHeaderAdmin =
 						!!payload.admin || (!!payload.email && adminEmails.includes(payload.email));
 					structuredConsole.log('🔍 [ADMIN-CHECK] Header-based admin (pre-check):', isHeaderAdmin);
-					if (isHeaderAdmin) return true;
+					if (isHeaderAdmin) {
+						return true;
+					}
 				}
-			} catch {}
+			} catch {
+				// Ignore test auth header parsing failures.
+			}
 		}
 
 		if (!process.env.CLERK_SECRET_KEY) {
@@ -106,7 +110,9 @@ export async function getCurrentUserAdminInfo() {
 			return { isAdmin: false, user: null };
 		}
 		const { userId } = await auth();
-		if (!userId) return { isAdmin: false, user: null };
+		if (!userId) {
+			return { isAdmin: false, user: null };
+		}
 
 		const clerk = await clerkBackendClient();
 		const user = await clerk.users.getUser(userId);
@@ -231,7 +237,7 @@ export async function getAllAdminUsers() {
 				},
 			});
 			result.databaseAdmins = dbAdmins;
-		} catch (dbError) {
+		} catch (_dbError) {
 			structuredConsole.warn(
 				'⚠️ [ADMIN-LIST] Database admin query failed (field may not exist yet)'
 			);

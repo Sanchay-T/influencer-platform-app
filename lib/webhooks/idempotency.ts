@@ -20,7 +20,7 @@
 
 import { eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { type WebhookSource, type WebhookStatus, webhookEvents } from '@/lib/db/schema';
+import { type WebhookSource, webhookEvents } from '@/lib/db/schema';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
 
 const logger = createCategoryLogger(LogCategory.BILLING);

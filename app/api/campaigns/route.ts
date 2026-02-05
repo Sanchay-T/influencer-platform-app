@@ -12,7 +12,6 @@ import { apiTracker, campaignTracker, SentryLogger, sessionTracker } from '@/lib
 // Increased timeout for cold starts + cross-region DB latency
 export const maxDuration = 30;
 
-// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function POST(req: Request) {
 	return apiTracker.trackRoute('campaign', 'create', async () => {
 		try {
@@ -102,7 +101,6 @@ export async function POST(req: Request) {
 	});
 }
 
-// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function GET(request: Request) {
 	return apiTracker.trackRoute('campaign', 'list', async () => {
 		const startTime = Date.now();

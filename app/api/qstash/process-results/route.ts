@@ -76,7 +76,7 @@ export async function POST(req: Request) {
 		}
 
 		// Obtener job de la base de datos
-		let job;
+		let job: Awaited<ReturnType<typeof db.query.scrapingJobs.findFirst>> | undefined;
 		try {
 			job = await db.query.scrapingJobs.findFirst({
 				where: (jobs, { eq }) => eq(jobs.id, jobId),

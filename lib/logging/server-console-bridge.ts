@@ -3,7 +3,7 @@
 import { logger } from './logger';
 import { LogCategory, LogLevel } from './types';
 
-const BRIDGE_KEY = '__loggingServerConsoleBridge__';
+const _BRIDGE_KEY = '__loggingServerConsoleBridge__';
 let stdoutFiltered = false;
 
 declare global {

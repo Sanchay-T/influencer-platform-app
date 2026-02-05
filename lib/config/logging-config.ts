@@ -396,8 +396,12 @@ export class LoggingConfigManager {
 
 		// Determine value type
 		let valueType = 'string';
-		if (typeof value === 'number') valueType = 'number';
-		if (typeof value === 'boolean') valueType = 'boolean';
+		if (typeof value === 'number') {
+			valueType = 'number';
+		}
+		if (typeof value === 'boolean') {
+			valueType = 'boolean';
+		}
 
 		const stringValue = typeof value === 'string' ? value : String(value);
 		await SystemConfig.set('logging', configKey, stringValue, valueType);

@@ -8,9 +8,7 @@ import {
 	Rocket,
 	Shield,
 	Sparkles,
-	Star,
 	TrendingUp,
-	Zap,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -21,10 +19,10 @@ import SubscriptionManagement from '@/app/components/billing/subscription-manage
 import UpgradeButton from '@/app/components/billing/upgrade-button';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { getPlanDisplayConfig, getVisiblePlanConfigs } from '@/lib/billing/plan-display-config';
+import { trackLeadConversion } from '@/lib/analytics/google-ads';
+import { getVisiblePlanConfigs } from '@/lib/billing/plan-display-config';
 import { clearBillingCache, useBilling } from '@/lib/hooks/use-billing';
 import { useStartSubscription } from '@/lib/hooks/use-start-subscription';
-import { trackLeadConversion } from '@/lib/analytics/google-ads';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import DashboardLayout from '../components/layout/dashboard-layout';
 
@@ -87,6 +85,7 @@ function BillingContent() {
 				<div className="flex flex-col gap-2">
 					<span>{result.error}</span>
 					<button
+						type="button"
 						onClick={() => {
 							toast.dismiss();
 							openPortal();
@@ -222,6 +221,7 @@ function BillingContent() {
 										viewBox="0 0 24 24"
 										stroke="currentColor"
 									>
+										<title>Info</title>
 										<path
 											strokeLinecap="round"
 											strokeLinejoin="round"
@@ -352,8 +352,8 @@ function BillingContent() {
 
 											{/* Features */}
 											<ul className="space-y-2 text-sm text-zinc-500 mb-6">
-												{plan.features.slice(0, 4).map((feature, idx) => (
-													<li key={idx}>✓ {feature}</li>
+												{plan.features.slice(0, 4).map((feature) => (
+													<li key={`${plan.id}-${feature}`}>✓ {feature}</li>
 												))}
 											</ul>
 

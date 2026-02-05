@@ -53,7 +53,9 @@ function OnboardingSuccessContent() {
 
 	// Verify session directly with Stripe (fallback when webhook is delayed)
 	const verifySession = useCallback(async (): Promise<boolean> => {
-		if (!sessionId) return false;
+		if (!sessionId) {
+			return false;
+		}
 
 		try {
 			structuredConsole.info('Attempting Stripe session verification', { sessionId });

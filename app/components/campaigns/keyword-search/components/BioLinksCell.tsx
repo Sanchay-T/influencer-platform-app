@@ -111,7 +111,7 @@ export function BioLinksCell({
 					)}
 
 					{/* Bio links */}
-					{bioLinks.slice(0, isExpanded ? bioLinks.length : 3).map((link, idx) => {
+					{bioLinks.slice(0, isExpanded ? bioLinks.length : 3).map((link) => {
 						const url = link.url || link.lynx_url;
 						if (!url) {
 							return null;
@@ -119,7 +119,7 @@ export function BioLinksCell({
 						const title = link.title || extractDomain(url);
 						return (
 							<a
-								key={idx}
+								key={url}
 								href={url.startsWith('http') ? url : `https://${url}`}
 								target="_blank"
 								rel="noopener noreferrer"

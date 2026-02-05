@@ -55,7 +55,6 @@ function normalizeCreatorPayload(creator: Record<string, unknown>): NormalizedCr
 			getNumberProperty(creatorRecord, 'followers') ??
 			getNumberProperty(creatorRecord, 'followers_count') ??
 			null,
-		// biome-ignore lint/style/useNamingConvention: external payload uses snake_case
 		followers_count: followerCount ?? getNumberProperty(creatorRecord, 'followers_count') ?? null,
 		creator: {
 			...(creatorNested ?? {}),
@@ -118,7 +117,6 @@ function instagramDedupeKey(creator: Record<string, unknown>): string | null {
 	return null;
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: legacy flow staged for refactor
 export async function runInstagramSimilarProvider(
 	{ job, config }: ProviderContext,
 	service: SearchJobService
@@ -246,7 +244,6 @@ export async function runInstagramSimilarProvider(
 	const username = extractUsername(String(job.targetUsername));
 	const normalizedCurrentHandle = username.toLowerCase();
 
-	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: handles sanitization across mixed data sources
 	const sanitizeHandles = (values: unknown): string[] => {
 		if (!Array.isArray(values)) {
 			return [];

@@ -12,7 +12,9 @@ export async function getAuthOrTest() {
 	const isProd = process.env.NODE_ENV === 'production';
 	const emitConsoleTrace = process.env.AUTH_TRACE_CONSOLE === 'true';
 	const emitDevTrace = (message: string, extra: Record<string, unknown>) => {
-		if (isProd) return;
+		if (isProd) {
+			return;
+		}
 		const context = { requestId, ...extra };
 		// Breadcrumb: Surface raw auth resolver payloads during local debugging.
 		if (emitConsoleTrace) {
@@ -24,7 +26,9 @@ export async function getAuthOrTest() {
 	let headerStore: Headers | null = null;
 	try {
 		headerStore = await headers();
-	} catch {}
+	} catch {
+		// Ignore headers lookup failures (non-request contexts).
+	}
 
 	// 1) Explicit test headers (CLI scripts with x-test-user-id)
 	if (headerStore) {
@@ -82,8 +86,8 @@ export async function getAuthOrTest() {
 					})
 				)
 			: undefined;
-		const emailClaimValue = sessionClaims ? sessionClaims['email'] : undefined;
-		const emailVerifiedClaimValue = sessionClaims ? sessionClaims['email_verified'] : undefined;
+		const emailClaimValue = sessionClaims ? sessionClaims.email : undefined;
+		const emailVerifiedClaimValue = sessionClaims ? sessionClaims.email_verified : undefined;
 
 		emitDevTrace('Auth resolved via Clerk backendAuth()', {
 			resolver: 'clerkAuth',

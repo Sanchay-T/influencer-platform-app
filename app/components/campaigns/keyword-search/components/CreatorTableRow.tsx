@@ -187,11 +187,17 @@ export const CreatorTableRow = memo(function CreatorTableRow({
 
 	// Enrich click handler
 	const readNumber = (record: Record<string, unknown> | null, key: string): number | null => {
-		if (!record) return null;
+		if (!record) {
+			return null;
+		}
 		const numeric = getNumberProperty(record, key);
-		if (numeric != null) return numeric;
+		if (numeric != null) {
+			return numeric;
+		}
 		const text = getStringProperty(record, key);
-		if (!text) return null;
+		if (!text) {
+			return null;
+		}
 		const parsed = Number(text);
 		return Number.isFinite(parsed) ? parsed : null;
 	};
@@ -207,7 +213,7 @@ export const CreatorTableRow = memo(function CreatorTableRow({
 
 	const videoUrl = getStringProperty(videoRecord ?? {}, 'url') ?? null;
 
-	const handleEnrichClick = () => {
+	const handleEnrichClick = async () => {
 		const hasExistingEmail = displayEmailEntries.length > 0;
 		if (bioEmail && !enrichment && !hasExistingEmail) {
 			setBioEmailConfirmDialog({
@@ -218,15 +224,13 @@ export const CreatorTableRow = memo(function CreatorTableRow({
 			});
 			return;
 		}
-		void (async () => {
-			const record = await enrichCreator({
-				...enrichmentTarget,
-				forceRefresh: Boolean(enrichment),
-			});
-			if (record) {
-				applyEnrichmentToCreators(record, enrichmentTarget, creator, 'interactive');
-			}
-		})();
+		const record = await enrichCreator({
+			...enrichmentTarget,
+			forceRefresh: Boolean(enrichment),
+		});
+		if (record) {
+			applyEnrichmentToCreators(record, enrichmentTarget, creator, 'interactive');
+		}
 	};
 
 	return (
@@ -396,6 +400,7 @@ export const CreatorTableRow = memo(function CreatorTableRow({
 // Helper components
 const ExternalLinkIcon = () => (
 	<svg className="h-3 w-3 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+		<title>External link</title>
 		<path
 			strokeLinecap="round"
 			strokeLinejoin="round"
@@ -450,6 +455,7 @@ function EmailDisplay({ emails }: EmailDisplayProps) {
 						stroke="currentColor"
 						viewBox="0 0 24 24"
 					>
+						<title>Email</title>
 						<path
 							strokeLinecap="round"
 							strokeLinejoin="round"

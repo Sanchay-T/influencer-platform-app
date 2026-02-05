@@ -27,7 +27,9 @@ export const isNumber = (value: unknown): value is number =>
 export const isBoolean = (value: unknown): value is boolean => typeof value === 'boolean';
 
 export const toStringArray = (value: unknown): string[] | null => {
-	if (!Array.isArray(value)) return null;
+	if (!Array.isArray(value)) {
+		return null;
+	}
 	return value.every((item) => typeof item === 'string') ? value : null;
 };
 

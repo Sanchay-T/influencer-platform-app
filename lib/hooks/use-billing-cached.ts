@@ -40,7 +40,9 @@ export function useBillingCached(): BillingStatus & { isLoading: boolean } {
 
 	// Load cached data immediately on mount with performance tracking
 	useEffect(() => {
-		if (!userId) return;
+		if (!userId) {
+			return;
+		}
 
 		const cacheTimer = perfMonitor.startTimer('billing.cache.load', { userId });
 
@@ -99,7 +101,9 @@ export function useBillingCached(): BillingStatus & { isLoading: boolean } {
 	}, [userId]);
 
 	useEffect(() => {
-		if (!(isLoaded && userId)) return;
+		if (!(isLoaded && userId)) {
+			return;
+		}
 
 		// Fetch fresh data (in background if we have cache) with performance tracking
 		const fetchBillingStatus = async () => {

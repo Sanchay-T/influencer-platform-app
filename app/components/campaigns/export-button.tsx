@@ -71,14 +71,16 @@ function ExportButtonContent({
 				// Still processing, poll again
 				pollTimeoutRef.current = setTimeout(() => pollExportStatus(exportId), POLL_INTERVAL);
 			}
-		} catch (error) {
+		} catch (_error) {
 			toast.error('Error checking export status', { id: 'export-progress' });
 			setIsExporting(false);
 		}
 	};
 
 	const handleExport = async () => {
-		if (isExporting) return;
+		if (isExporting) {
+			return;
+		}
 
 		try {
 			setIsExporting(true);

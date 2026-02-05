@@ -18,9 +18,9 @@ import type {
 // Constants
 // ============================================================================
 
-const VALID_PLATFORMS: ReadonlyArray<Platform> = ['tiktok', 'instagram', 'youtube'];
+const VALID_PLATFORMS: readonly Platform[] = ['tiktok', 'instagram', 'youtube'];
 type TargetResults = 100 | 500 | 1000;
-const VALID_TARGETS: ReadonlyArray<TargetResults> = [100, 500, 1000];
+const VALID_TARGETS: readonly TargetResults[] = [100, 500, 1000];
 const MAX_KEYWORDS = 50;
 const MIN_KEYWORD_LENGTH = 2;
 const MAX_KEYWORD_LENGTH = 100;
@@ -38,7 +38,6 @@ const isValidTarget = (value: unknown): value is TargetResults =>
 /**
  * Validate and sanitize dispatch request
  */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: validation is intentionally explicit.
 export function validateDispatchRequest(body: unknown): {
 	valid: boolean;
 	data?: DispatchRequest;
@@ -125,7 +124,6 @@ export function validateDispatchRequest(body: unknown): {
 /**
  * Validate dispatch worker message
  */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: validation is intentionally explicit.
 export function validateDispatchWorkerMessage(body: unknown): {
 	valid: boolean;
 	data?: DispatchWorkerMessage;
@@ -201,7 +199,6 @@ export function validateDispatchWorkerMessage(body: unknown): {
 /**
  * Validate search worker message
  */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: validation is intentionally explicit.
 export function validateSearchWorkerMessage(body: unknown): {
 	valid: boolean;
 	data?: SearchWorkerMessage;
@@ -261,7 +258,6 @@ export function validateSearchWorkerMessage(body: unknown): {
 /**
  * Validate enrich worker message
  */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: validation is intentionally explicit.
 export function validateEnrichWorkerMessage(body: unknown): {
 	valid: boolean;
 	data?: EnrichWorkerMessage;

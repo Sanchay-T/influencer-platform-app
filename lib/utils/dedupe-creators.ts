@@ -12,7 +12,7 @@ export type DedupeOptions = {
 	platformHint?: string | null;
 };
 
-const IDENTIFIER_FIELDS: ReadonlyArray<string> = [
+const IDENTIFIER_FIELDS: readonly string[] = [
 	'id',
 	'_id',
 	'uuid',
@@ -57,7 +57,9 @@ const IDENTIFIER_FIELDS: ReadonlyArray<string> = [
 ];
 
 const normalizeValue = (value: unknown): string | null => {
-	if (value == null) return null;
+	if (value == null) {
+		return null;
+	}
 	if (typeof value === 'string') {
 		const trimmed = value.trim();
 		return trimmed ? trimmed.toLowerCase() : null;
@@ -70,24 +72,30 @@ const normalizeValue = (value: unknown): string | null => {
 
 const pushCandidate = (collector: Set<string>, value: unknown) => {
 	const normalized = normalizeValue(value);
-	if (!normalized) return;
+	if (!normalized) {
+		return;
+	}
 	collector.add(normalized);
 };
 
 type CandidateSource = UnknownRecord | undefined | null;
 
 const collectFromObject = (source: CandidateSource, collector: Set<string>) => {
-	if (!source || typeof source !== 'object') return;
+	if (!source || typeof source !== 'object') {
+		return;
+	}
 
 	for (const field of IDENTIFIER_FIELDS) {
 		pushCandidate(collector, source[field]);
 	}
 
-	const arrayFields: ReadonlyArray<string> = ['ids', 'handles', 'urls'];
+	const arrayFields: readonly string[] = ['ids', 'handles', 'urls'];
 	for (const field of arrayFields) {
 		const values = source[field];
 		if (Array.isArray(values)) {
-			values.forEach((value) => pushCandidate(collector, value));
+			values.forEach((value) => {
+				pushCandidate(collector, value);
+			});
 		}
 	}
 };
@@ -105,7 +113,9 @@ const collectCandidates = (creator: UnknownRecord): Set<string> => {
 		toRecord(creator.metadata),
 	];
 
-	baseSources.forEach((source) => collectFromObject(source, collector));
+	baseSources.forEach((source) => {
+		collectFromObject(source, collector);
+	});
 
 	const videoSources: CandidateSource[] = [
 		toRecord(creator.video),
@@ -119,7 +129,9 @@ const collectCandidates = (creator: UnknownRecord): Set<string> => {
 
 	videoSources.forEach((video) => {
 		collectFromObject(video, collector);
-		if (!video) return;
+		if (!video) {
+			return;
+		}
 		pushCandidate(collector, video.url);
 		pushCandidate(collector, video.shareUrl);
 		pushCandidate(collector, video.share_url);
@@ -154,7 +166,9 @@ export const dedupeCreators = <T extends UnknownRecord>(
 		let matched = false;
 
 		identifiers.forEach((value) => {
-			if (matched) return;
+			if (matched) {
+				return;
+			}
 			const key = `${platformValue}|${value}`;
 			if (!seen.has(key)) {
 				seen.add(key);

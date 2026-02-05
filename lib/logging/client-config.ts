@@ -18,7 +18,9 @@ const LEVEL_MAP: Record<string, LogLevel> = {
 let cachedConfig: ClientLoggingConfig | null = null;
 
 function parseLevel(rawLevel: string | undefined, fallback: LogLevel): LogLevel {
-	if (!rawLevel) return fallback;
+	if (!rawLevel) {
+		return fallback;
+	}
 	const normalized = rawLevel.trim().toUpperCase();
 	return LEVEL_MAP[normalized] ?? fallback;
 }

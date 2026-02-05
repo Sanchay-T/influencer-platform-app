@@ -213,7 +213,9 @@ export async function POST(request: Request) {
 			// Update scraping_results: for each creator, add bio_enriched data
 			// TikTok uses creator.uniqueId or creator.username as the key
 			const updatePromises = Object.entries(bioResults).map(([creatorHandle, bioData]) => {
-				if (bioData.error) return Promise.resolve(); // Skip failed fetches
+				if (bioData.error) {
+					return Promise.resolve(); // Skip failed fetches
+				}
 
 				const bioEnrichedPayload = JSON.stringify({
 					biography: bioData.biography,

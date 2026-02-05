@@ -41,7 +41,9 @@ import type { WebhookResult } from './subscription-types';
 const logger = createCategoryLogger(LogCategory.BILLING);
 
 const resolveCustomerId = (customer: Stripe.Subscription['customer']): string | null => {
-	if (typeof customer === 'string') return customer;
+	if (typeof customer === 'string') {
+		return customer;
+	}
 	if (
 		customer &&
 		typeof customer === 'object' &&
@@ -269,7 +271,6 @@ export async function handleSubscriptionChange(
 					userId: user.userId,
 					plan: planName,
 				}),
-				// biome-ignore lint/style/useNamingConvention: GA4 uses snake_case
 				trackGA4ServerEvent(
 					'begin_trial',
 					{ plan_name: planName, value: monthlyPrice, currency: 'USD' },
@@ -338,7 +339,6 @@ export async function handleSubscriptionChange(
 					}),
 					trackGA4ServerEvent(
 						'purchase',
-						// biome-ignore lint/style/useNamingConvention: GA4 uses snake_case
 						{
 							plan_name: planName,
 							value: monthlyPrice,
@@ -361,7 +361,6 @@ export async function handleSubscriptionChange(
 					}),
 					trackGA4ServerEvent(
 						'purchase',
-						// biome-ignore lint/style/useNamingConvention: GA4 uses snake_case
 						{
 							plan_name: planName,
 							value: monthlyPrice,
@@ -495,7 +494,6 @@ export async function handleSubscriptionDeleted(
 			userId: user.userId,
 			plan: user.currentPlan || 'unknown',
 		}),
-		// biome-ignore lint/style/useNamingConvention: GA4 uses snake_case
 		trackGA4ServerEvent(
 			'subscription_canceled',
 			{ plan_name: user.currentPlan || 'unknown' },

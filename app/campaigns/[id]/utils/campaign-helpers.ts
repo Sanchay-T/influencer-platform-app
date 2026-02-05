@@ -40,7 +40,9 @@ export { isSuccessStatus };
 // Creator extraction helpers
 export const extractCreatorsArray = (result: unknown): unknown[] => {
 	const record = toRecord(result);
-	if (!record) return [];
+	if (!record) {
+		return [];
+	}
 	const creators = record.creators;
 	return Array.isArray(creators) ? creators : [];
 };
@@ -146,7 +148,9 @@ export function parseHandleQueueState(raw: unknown): HandleQueueState | null {
 	if (rawMetrics) {
 		Object.entries(rawMetrics).forEach(([key, value]) => {
 			const metric = toRecord(value);
-			if (!metric) return;
+			if (!metric) {
+				return;
+			}
 			const handle = getStringProperty(metric, 'handle');
 			metricsRecord[key] = {
 				handle: handle && handle.trim().length > 0 ? handle : key,
@@ -227,7 +231,9 @@ export const createJobUpdateFromPayload = (
 				limit: getNumberProperty(paginationRecord, 'limit') ?? undefined,
 				nextOffset: (() => {
 					const raw = paginationRecord.nextOffset;
-					if (raw === null) return null;
+					if (raw === null) {
+						return null;
+					}
 					return isNumber(raw) ? raw : undefined;
 				})(),
 			}
@@ -398,7 +404,9 @@ export function getCreatorsSample(job?: UiScrapingJob | null): string[] {
 		.slice(0, 3)
 		.map((item: unknown) => {
 			const creator = toRecord(item);
-			if (!creator) return null;
+			if (!creator) {
+				return null;
+			}
 			const nested = getRecordProperty(creator, 'creator');
 			return getStringProperty(nested ?? {}, 'username') ?? getStringProperty(creator, 'username');
 		})

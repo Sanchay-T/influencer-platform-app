@@ -23,7 +23,9 @@ export function getClientLogGates(): ClientLogGates {
 }
 
 export function safeSerialize(value: unknown, maxLength = 200): string | undefined {
-	if (value == null) return undefined;
+	if (value == null) {
+		return undefined;
+	}
 	try {
 		const serialized = JSON.stringify(value);
 		return serialized.length > maxLength ? `${serialized.slice(0, maxLength)}...` : serialized;

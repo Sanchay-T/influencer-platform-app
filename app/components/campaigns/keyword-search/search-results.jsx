@@ -113,21 +113,17 @@ const SearchResults = ({ searchData }) => {
 
 	// Single source of truth for job state
 	const {
-		status,
 		message,
 		progress,
 		creatorsFound,
-		creatorsEnriched,
 		creators,
 		totalCreators,
 		currentPage,
-		totalPages,
 		itemsPerPage,
 		setPage,
 		setItemsPerPage,
 		isComplete,
 		isActive,
-		isLoading,
 		isPageLoading,
 	} = useSearchJob(jobId, platformNormalized);
 
@@ -163,7 +159,6 @@ const SearchResults = ({ searchData }) => {
 		setShowEmailOnly,
 		filteredCreators,
 		emailCount,
-		emailOverlayDismissed,
 		setEmailOverlayDismissed,
 		shouldShowEmailOverlay,
 	} = useEmailFilter(localCreators, platformNormalized);
@@ -348,7 +343,9 @@ const SearchResults = ({ searchData }) => {
 				if (data?.name) {
 					setCampaignName(data.name);
 				}
-			} catch (_error) {}
+			} catch (_error) {
+				// Ignore campaign name fetch errors.
+			}
 		};
 		fetchCampaignName();
 	}, [searchData?.campaignId]);
@@ -429,7 +426,7 @@ const SearchResults = ({ searchData }) => {
 						isEnrichmentLoading={isEnrichmentLoading}
 						enrichCreator={enrichCreator}
 						applyEnrichmentToCreators={applyEnrichmentToCreators}
-						setBioEmailConfirmDialog={() => {}}
+						setBioEmailConfirmDialog={() => undefined}
 					/>
 					<CreatorGalleryView
 						rows={currentRows}

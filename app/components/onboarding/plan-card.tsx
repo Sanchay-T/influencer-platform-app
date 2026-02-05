@@ -15,21 +15,8 @@ interface PlanCardProps {
 export default function PlanCard({ plan, isSelected, billingCycle, onSelect }: PlanCardProps) {
 	const IconComponent = plan.icon;
 
-	const handleKeyDown = (e: React.KeyboardEvent) => {
-		if (e.key === 'Enter' || e.key === ' ') {
-			e.preventDefault();
-			onSelect();
-		}
-	};
-
 	return (
-		<div
-			role="button"
-			tabIndex={0}
-			className="cursor-pointer"
-			onClick={onSelect}
-			onKeyDown={handleKeyDown}
-		>
+		<button type="button" className="cursor-pointer text-left w-full" onClick={onSelect}>
 			<Card
 				className={`transition-all duration-200 ${
 					isSelected
@@ -77,6 +64,6 @@ export default function PlanCard({ plan, isSelected, billingCycle, onSelect }: P
 					</div>
 				</CardContent>
 			</Card>
-		</div>
+		</button>
 	);
 }

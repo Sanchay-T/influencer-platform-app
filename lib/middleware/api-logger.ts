@@ -6,7 +6,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { LogCategory, type LogContext, LogLevel, logger } from '../logging';
+import { LogCategory, type LogContext, logger } from '../logging';
 import { generateRequestId } from '../logging/constants';
 import { toError, toRecord } from '../utils/type-guards';
 
@@ -101,7 +101,9 @@ export class ApiLogger {
 		context?: LogContext
 	): number {
 		const timing = this.activeRequests.get(requestId);
-		if (!timing) return 0;
+		if (!timing) {
+			return 0;
+		}
 
 		const phaseTime = Date.now() - timing.start;
 		timing.phases[phase] = phaseTime;
@@ -186,7 +188,7 @@ export class ApiLogger {
 	/**
 	 * Middleware wrapper for API routes
 	 */
-	public withLogging<T = unknown>(
+	public withLogging<_T = unknown>(
 		handler: (
 			request: NextRequest | Request,
 			context: {
@@ -198,7 +200,7 @@ export class ApiLogger {
 		category: LogCategory = LogCategory.API
 	) {
 		return async (request: NextRequest | Request): Promise<NextResponse> => {
-			const { requestId, timing } = this.startRequest(request, category);
+			const { requestId } = this.startRequest(request, category);
 			let response: NextResponse;
 			let error: Error | undefined;
 
@@ -241,7 +243,7 @@ export class ApiLogger {
 			userAgent: request.headers.get('user-agent') || undefined,
 			ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined,
 			contentLength: request.headers.get('content-length')
-				? parseInt(request.headers.get('content-length')!)
+				? parseInt(request.headers.get('content-length')!, 10)
 				: undefined,
 		};
 

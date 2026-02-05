@@ -5,19 +5,15 @@
  * =====================================================
  */
 
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { clerkBackendClient } from '@/lib/auth/backend-auth';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
-import { SentryLogger } from '@/lib/logging/sentry-logger';
 import { sessionTracker } from '@/lib/sentry/feature-tracking';
 import { getNumberProperty, getStringProperty, toRecord } from '@/lib/utils/type-guards';
 import { db } from '../index';
 import {
-	type User,
 	type UserBilling,
 	type UserProfileComplete,
-	type UserSubscription,
-	type UserSystemData,
 	type UserUsage,
 	userBilling,
 	userSubscriptions,
@@ -31,7 +27,9 @@ export type { UserProfileComplete };
 const userQueryLogger = createCategoryLogger(LogCategory.DATABASE);
 
 const toContext = (extra?: Record<string, unknown>) => {
-	if (!extra) return undefined;
+	if (!extra) {
+		return undefined;
+	}
 	const context: { userId?: string; metadata: Record<string, unknown> } = {
 		metadata: extra,
 	};
@@ -293,8 +291,6 @@ export async function createUser(userData: {
 				lastWebhookEvent: newSystemData.lastWebhookEvent,
 				lastWebhookTimestamp: newSystemData.lastWebhookTimestamp,
 			};
-			return profile;
-
 			info('User created successfully across normalized tables', {
 				userId: newUser.userId,
 				internalId: newUser.id,
@@ -303,6 +299,7 @@ export async function createUser(userData: {
 				// trialStatus removed - derive via deriveTrialStatus()
 				onboardingStep: newUser.onboardingStep,
 			});
+			return profile;
 		} catch (transactionError: unknown) {
 			const errorRecord = toRecord(transactionError);
 			const message = errorRecord ? getStringProperty(errorRecord, 'message') : null;
@@ -320,7 +317,9 @@ export async function createUser(userData: {
 					userId: userData.userId,
 				});
 				const existing = await getUserProfile(userData.userId);
-				if (existing) return existing;
+				if (existing) {
+					return existing;
+				}
 			}
 
 			logError('User creation transaction failed', transactionError, { userId: userData.userId });
@@ -678,7 +677,7 @@ export async function getUserByStripeCustomerId(
 
 	const userRecord = result[0];
 
-	if (!(userRecord && userRecord.id)) {
+	if (!userRecord?.id) {
 		return null;
 	}
 

@@ -40,7 +40,7 @@ const DefaultErrorFallback: React.FC<{
 	errorInfo: React.ErrorInfo;
 	resetError: () => void;
 	componentName?: string;
-}> = ({ error, errorInfo, resetError, componentName }) => {
+}> = ({ error, errorInfo: _errorInfo, resetError, componentName }) => {
 	return (
 		<Card className="bg-red-50 border-red-200">
 			<CardHeader>
@@ -305,7 +305,11 @@ export const InlineErrorFallback: React.FC<{
 	<div className="inline-flex items-center gap-2 px-3 py-1 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
 		<AlertTriangle className="h-4 w-4" />
 		<span>Error occurred</span>
-		<button onClick={resetError} className="text-red-600 hover:text-red-800 underline text-xs">
+		<button
+			type="button"
+			onClick={resetError}
+			className="text-red-600 hover:text-red-800 underline text-xs"
+		>
 			Retry
 		</button>
 	</div>

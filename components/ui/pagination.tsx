@@ -8,7 +8,6 @@ type PaginationProps = React.ComponentPropsWithoutRef<'nav'>;
 
 const Pagination = ({ className, ...props }: PaginationProps) => (
 	<nav
-		role="navigation"
 		aria-label="pagination"
 		className={cn('mx-auto flex w-full justify-center', className)}
 		{...props}

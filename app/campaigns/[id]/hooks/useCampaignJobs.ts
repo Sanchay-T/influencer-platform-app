@@ -159,7 +159,6 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 
 	// Fetch job snapshot
 	const fetchJobSnapshot = useCallback(
-		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Snapshot fetch handles multiple error states.
 		async (job: UiScrapingJob) => {
 			const endpoint = resolveScrapingEndpoint(job);
 
@@ -230,7 +229,6 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 
 	// Load more results (pagination)
 	const loadMoreResults = useCallback(
-		// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Pagination flow has multiple guard paths.
 		async (job: UiScrapingJob) => {
 			if (!job.pagination || job.pagination.nextOffset == null) {
 				return;

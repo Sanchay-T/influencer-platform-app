@@ -16,7 +16,6 @@ import { structuredConsole } from '@/lib/logging/console-proxy';
 const isTestMode =
 	process.env.NODE_ENV === 'development' || process.env.ENABLE_AUTH_BYPASS === 'true';
 
-// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function GET(request: Request) {
 	if (!isTestMode) {
 		return NextResponse.json(
@@ -81,7 +80,6 @@ export async function GET(request: Request) {
 	}
 }
 
-// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function DELETE(request: Request) {
 	if (!isTestMode) {
 		return NextResponse.json(

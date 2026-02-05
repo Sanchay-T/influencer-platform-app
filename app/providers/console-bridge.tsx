@@ -6,7 +6,7 @@ import { LogCategory, LogLevel } from '@/lib/logging/types';
 
 declare global {
 	interface Window {
-		__clientConsoleBridgeInstalled__?: boolean;
+		clientConsoleBridgeInstalled?: boolean;
 	}
 }
 
@@ -65,11 +65,11 @@ export function ClientConsoleBridge() {
 		if (typeof window === 'undefined') {
 			return;
 		}
-		if (window.__clientConsoleBridgeInstalled__) {
+		if (window.clientConsoleBridgeInstalled) {
 			return;
 		}
 
-		window.__clientConsoleBridgeInstalled__ = true;
+		window.clientConsoleBridgeInstalled = true;
 
 		const nativeConsole = { ...window.console };
 

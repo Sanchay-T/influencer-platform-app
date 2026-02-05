@@ -43,18 +43,26 @@ export default function TrialSidebarCompact() {
 					if (cached) {
 						const parsed = JSON.parse(cached);
 						// Use cached data if less than 30 seconds old
-						if (parsed && parsed.ts && Date.now() - parsed.ts < 30_000) {
-							if (!mounted) return;
+						if (parsed?.ts && Date.now() - parsed.ts < 30_000) {
+							if (!mounted) {
+								return;
+							}
 							setStatus(parsed.data);
 							// Still fetch fresh data in background
 						}
 					}
-				} catch {}
+				} catch {
+					// Ignore localStorage access issues (e.g. privacy mode).
+				}
 
 				const res = await fetch('/api/billing/status', { cache: 'no-store' });
-				if (!res.ok) throw new Error('Failed to fetch status');
+				if (!res.ok) {
+					throw new Error('Failed to fetch status');
+				}
 				const data = await res.json();
-				if (!mounted) return;
+				if (!mounted) {
+					return;
+				}
 
 				const newStatus = {
 					isLoaded: true,
@@ -87,9 +95,13 @@ export default function TrialSidebarCompact() {
 							data: newStatus,
 						})
 					);
-				} catch {}
-			} catch (e) {
-				if (!mounted) return;
+				} catch {
+					// Ignore localStorage write failures.
+				}
+			} catch (_e) {
+				if (!mounted) {
+					return;
+				}
 				setStatus((s) => ({ ...s, isLoaded: true }));
 			}
 		};

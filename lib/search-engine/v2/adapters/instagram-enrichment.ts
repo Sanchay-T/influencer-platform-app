@@ -12,16 +12,11 @@ function buildAttemptedResult(
 		...creator,
 		bioEnriched: true,
 		bioEnrichedAt: fetchedAt,
-		// biome-ignore lint/style/useNamingConvention: API payload uses snake_case
 		bio_enriched: {
 			biography: creator.creator.bio?.trim() ? creator.creator.bio : null,
-			// biome-ignore lint/style/useNamingConvention: API payload uses snake_case
 			bio_links: [],
-			// biome-ignore lint/style/useNamingConvention: API payload uses snake_case
 			external_url: null,
-			// biome-ignore lint/style/useNamingConvention: API payload uses snake_case
 			extracted_email: null,
-			// biome-ignore lint/style/useNamingConvention: API payload uses snake_case
 			fetched_at: fetchedAt,
 			error,
 		} satisfies BioEnrichedInfo,
@@ -57,7 +52,6 @@ export async function enrichInstagramCreator(
 		return await apiTracker.trackExternalCall(
 			'scrape_creators',
 			'instagram_basic_profile',
-			// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: v2 adapter awaiting refactor
 			async () => {
 				SentryLogger.addBreadcrumb({
 					category: 'api',
@@ -98,7 +92,6 @@ export async function enrichInstagramCreator(
 				const rawLinks = toArray(profileRecord.bio_links) ?? [];
 				type BioLink = {
 					url?: string;
-					// biome-ignore lint/style/useNamingConvention: API payload uses snake_case
 					lynx_url?: string;
 					title?: string;
 				};
@@ -112,7 +105,6 @@ export async function enrichInstagramCreator(
 							getStringProperty(linkRecord, 'url') ?? getStringProperty(linkRecord, 'lynx_url');
 						return {
 							url: linkUrl ?? undefined,
-							// biome-ignore lint/style/useNamingConvention: API payload uses snake_case
 							lynx_url: getStringProperty(linkRecord, 'lynx_url') ?? undefined,
 							title: getStringProperty(linkRecord, 'title') ?? undefined,
 						};
@@ -149,13 +141,9 @@ export async function enrichInstagramCreator(
 
 				const bioEnriched: BioEnrichedInfo = {
 					biography: biography ? biography : null,
-					// biome-ignore lint/style/useNamingConvention: API payload uses snake_case
 					bio_links: bioLinks,
-					// biome-ignore lint/style/useNamingConvention: API payload uses snake_case
 					external_url: externalUrl,
-					// biome-ignore lint/style/useNamingConvention: API payload uses snake_case
 					extracted_email: extractedEmail,
-					// biome-ignore lint/style/useNamingConvention: API payload uses snake_case
 					fetched_at: fetchedAt,
 				};
 
@@ -170,7 +158,6 @@ export async function enrichInstagramCreator(
 					},
 					bioEnriched: true,
 					bioEnrichedAt: fetchedAt,
-					// biome-ignore lint/style/useNamingConvention: API payload uses snake_case
 					bio_enriched: bioEnriched,
 				};
 			}

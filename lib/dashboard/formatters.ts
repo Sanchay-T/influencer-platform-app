@@ -32,14 +32,18 @@ export function formatRelativeTime(
 	value: string | Date | null | undefined,
 	referenceDate: Date = new Date()
 ): string {
-	if (!value) return '--';
+	if (!value) {
+		return '--';
+	}
 	const target = value instanceof Date ? value : new Date(value);
-	if (Number.isNaN(target.getTime())) return '--';
+	if (Number.isNaN(target.getTime())) {
+		return '--';
+	}
 
 	const diffMs = target.getTime() - referenceDate.getTime();
 	const diffMinutes = Math.round(diffMs / 60000);
 
-	const units: Array<[Intl.RelativeTimeFormatUnit, number]> = [
+	const units: [Intl.RelativeTimeFormatUnit, number][] = [
 		['year', 60 * 24 * 365],
 		['month', 60 * 24 * 30],
 		['week', 60 * 24 * 7],

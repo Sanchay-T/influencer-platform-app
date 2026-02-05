@@ -2,7 +2,6 @@
 
 import {
 	AlertCircle,
-	ArrowRight,
 	CheckCircle,
 	CreditCard,
 	Crown,
@@ -41,15 +40,15 @@ interface UpgradeButtonProps {
 
 function UpgradeButtonContent({
 	targetPlan,
-	size = 'md',
+	size: _size = 'md',
 	variant = 'default',
 	className = '',
 	showModal = false,
 	allowBillingToggle = true,
 	billingDefault = 'monthly',
 }: UpgradeButtonProps) {
-	const componentLogger = useComponentLogger('UpgradeButton', { targetPlan });
-	const userActionLogger = useUserActionLogger();
+	const _componentLogger = useComponentLogger('UpgradeButton', { targetPlan });
+	const _userActionLogger = useUserActionLogger();
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState('');
 	const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -227,7 +226,9 @@ function UpgradeButtonContent({
 						billing: billingCycle,
 					});
 				}
-			} catch {}
+			} catch {
+				// Ignore optional audit logging errors.
+			}
 			window.location.href = data.url;
 		} catch (err) {
 			paymentLogger.error('Upgrade failed', err instanceof Error ? err : new Error(String(err)), {
@@ -272,12 +273,14 @@ function UpgradeButtonContent({
 						<div className="text-xs text-zinc-400">Billing</div>
 						<div className="inline-flex rounded-full bg-zinc-800 p-1 border border-zinc-700 self-start sm:self-auto">
 							<button
+								type="button"
 								onClick={() => setBillingCycle('monthly')}
 								className={`px-2.5 py-1 text-[11px] sm:px-3 sm:text-xs rounded-full transition-colors ${billingCycle === 'monthly' ? 'bg-pink-600 text-white shadow' : 'text-zinc-300 hover:text-white'}`}
 							>
 								Monthly
 							</button>
 							<button
+								type="button"
 								onClick={() => setBillingCycle('yearly')}
 								className={`px-2.5 py-1 text-[11px] sm:px-3 sm:text-xs rounded-full transition-colors ${billingCycle === 'yearly' ? 'bg-pink-600 text-white shadow' : 'text-zinc-300 hover:text-white'}`}
 							>

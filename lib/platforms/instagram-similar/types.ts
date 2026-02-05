@@ -13,10 +13,8 @@ export interface ApifyInstagramProfileResponse {
 	externalUrl?: string;
 	externalUrls?: Array<{
 		title: string;
-		// biome-ignore lint/style/useNamingConvention: API response uses snake_case
 		lynx_url: string;
 		url: string;
-		// biome-ignore lint/style/useNamingConvention: API response uses snake_case
 		link_type: string;
 	}>;
 	followersCount: number;
@@ -43,18 +41,12 @@ export interface ApifyInstagramProfileResponse {
 export interface ApifyRelatedProfile {
 	id: string;
 	username: string;
-	// biome-ignore lint/style/useNamingConvention: API response uses snake_case
 	full_name: string;
-	// biome-ignore lint/style/useNamingConvention: API response uses snake_case
 	is_private: boolean;
-	// biome-ignore lint/style/useNamingConvention: API response uses snake_case
 	is_verified: boolean;
-	// biome-ignore lint/style/useNamingConvention: API response uses snake_case
 	profile_pic_url: string;
-	// biome-ignore lint/style/useNamingConvention: API response uses snake_case
 	follower_count?: number;
 	followers?: number;
-	// biome-ignore lint/style/useNamingConvention: API response uses snake_case
 	followers_count?: number;
 }
 
@@ -109,17 +101,12 @@ export interface InstagramSimilarCreatorRecord extends Record<string, unknown> {
 	platform: 'Instagram';
 	id: string;
 	username: string;
-	// biome-ignore lint/style/useNamingConvention: API response uses snake_case
 	full_name: string;
-	// biome-ignore lint/style/useNamingConvention: API response uses snake_case
 	is_private: boolean;
-	// biome-ignore lint/style/useNamingConvention: API response uses snake_case
 	is_verified: boolean;
-	// biome-ignore lint/style/useNamingConvention: API response uses snake_case
 	profile_pic_url: string;
 	profileUrl: string;
 	followers: number | null;
-	// biome-ignore lint/style/useNamingConvention: API response uses snake_case
 	followers_count: number | null;
 	bio?: string;
 	emails?: string[];

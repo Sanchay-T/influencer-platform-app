@@ -86,7 +86,9 @@ class ConfigCache {
 
 	get(key: string): unknown | null {
 		const item = this.cache.get(key);
-		if (!item) return null;
+		if (!item) {
+			return null;
+		}
 
 		if (Date.now() - item.timestamp > item.ttl) {
 			this.cache.delete(key);
@@ -136,7 +138,7 @@ function validateValue(value: string, type: string): unknown {
 	switch (type) {
 		case 'number': {
 			const num = parseInt(value, 10);
-			if (isNaN(num) || num < 0) {
+			if (Number.isNaN(num) || num < 0) {
 				throw new Error(`Invalid number value: ${value}`);
 			}
 			return num;

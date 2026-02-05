@@ -71,18 +71,22 @@ function PlatformBadge({ platform }: { platform: string }) {
 
 function FavoriteInfluencerCard({ influencer }: { influencer: FavoriteInfluencer }) {
 	const followerDisplay = formatFollowerCount(influencer.followers ?? undefined);
-	const normalizedPlatform = influencer.platform?.toLowerCase() ?? '';
+	const _normalizedPlatform = influencer.platform?.toLowerCase() ?? '';
 	const isPinned = Boolean(influencer.pinned);
 	const profileUrl = resolveProfileUrl(influencer);
 	const canNavigate = Boolean(profileUrl);
 
 	const handleOpenProfile = () => {
-		if (!profileUrl) return;
+		if (!profileUrl) {
+			return;
+		}
 		window.open(profileUrl, '_blank', 'noopener,noreferrer');
 	};
 
 	const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-		if (!profileUrl) return;
+		if (!profileUrl) {
+			return;
+		}
 		if (event.key === 'Enter' || event.key === ' ') {
 			event.preventDefault();
 			handleOpenProfile();

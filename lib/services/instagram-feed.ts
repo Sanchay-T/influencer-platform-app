@@ -59,9 +59,13 @@ async function collectCreators(keyword: string): Promise<DiscoveryAccount[]> {
 			break;
 		}
 		for (const account of pageResults) {
-			if (!account.profile?.username) continue;
+			if (!account.profile?.username) {
+				continue;
+			}
 			creators.push(account);
-			if (creators.length >= MAX_CREATORS) break;
+			if (creators.length >= MAX_CREATORS) {
+				break;
+			}
 		}
 		page += 1;
 	}
@@ -83,19 +87,25 @@ async function runBatches<T, R>(items: T[], fn: (item: T) => Promise<R | null>):
 			})
 		);
 		for (const value of chunkResults) {
-			if (value) results.push(value);
+			if (value) {
+				results.push(value);
+			}
 		}
 	}
 	return results;
 }
 
 function extractPosts(enrich: EnrichCreator | null): EnrichPost[] {
-	if (!enrich?.post_data) return [];
+	if (!enrich?.post_data) {
+		return [];
+	}
 	return Object.values(enrich.post_data)
 		.filter((post) => post && Array.isArray(post.media))
 		.filter((post) => post.media?.some((asset) => asset.type === 'video'))
 		.filter((post) => {
-			if (!post.created_at) return false;
+			if (!post.created_at) {
+				return false;
+			}
 			const days = diffInDays(new Date(post.created_at));
 			return days <= MAX_POST_AGE_DAYS;
 		})
@@ -104,7 +114,9 @@ function extractPosts(enrich: EnrichCreator | null): EnrichPost[] {
 }
 
 function keywordMatches(text: string | undefined, keyword: string): string[] {
-	if (!text) return [];
+	if (!text) {
+		return [];
+	}
 	const lower = text.toLowerCase();
 	const seed = [
 		keyword.toLowerCase(),
@@ -143,9 +155,13 @@ export async function buildInstagramFeed(keyword: string): Promise<FeedRunResult
 	const discovered = await collectCreators(keyword);
 	const creatorDetails = await runBatches(discovered, async (account) => {
 		const username = account.profile?.username;
-		if (!username) return null;
+		if (!username) {
+			return null;
+		}
 		const enriched = await enrichCreator(username);
-		if (!enriched) return null;
+		if (!enriched) {
+			return null;
+		}
 		return {
 			account,
 			enriched,
@@ -169,12 +185,16 @@ export async function buildInstagramFeed(keyword: string): Promise<FeedRunResult
 	const trimmed = candidates.slice(0, Math.min(TARGET_REELS * 2, candidates.length));
 
 	const enrichedPosts = await runBatches(trimmed, async ({ post }) => {
-		if (!post.post_id) return null;
+		if (!post.post_id) {
+			return null;
+		}
 		const [details, transcript] = await Promise.all([
 			fetchPostDetails(post.post_id),
 			fetchPostTranscript(post.post_id),
 		]);
-		if (!details) return null;
+		if (!details) {
+			return null;
+		}
 		return { details, transcript, postId: post.post_id };
 	});
 
@@ -194,7 +214,9 @@ export async function buildInstagramFeed(keyword: string): Promise<FeedRunResult
 
 	for (const candidate of trimmed) {
 		const postExtra = postDetailMap.get(candidate.post.post_id);
-		if (!postExtra?.details) continue;
+		if (!postExtra?.details) {
+			continue;
+		}
 
 		const metrics = {
 			plays: postExtra.details.metrics?.play_count ?? postExtra.details.metrics?.ig_play_count ?? 0,
@@ -224,7 +246,9 @@ export async function buildInstagramFeed(keyword: string): Promise<FeedRunResult
 
 		const creatorKey = candidate.account.profile?.username ?? candidate.account.user_id;
 		const already = seenCreators.get(creatorKey) ?? 0;
-		if (already >= 2) continue;
+		if (already >= 2) {
+			continue;
+		}
 		seenCreators.set(creatorKey, already + 1);
 
 		items.push({
@@ -248,7 +272,9 @@ export async function buildInstagramFeed(keyword: string): Promise<FeedRunResult
 			},
 		});
 
-		if (items.length >= TARGET_REELS) break;
+		if (items.length >= TARGET_REELS) {
+			break;
+		}
 	}
 
 	items.sort((a, b) => b.score - a.score);

@@ -1,6 +1,6 @@
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import '@/lib/config/load-env';
-import { asc, desc, ilike, or } from 'drizzle-orm';
+import { desc, ilike, or } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { isAdminUser } from '@/lib/auth/admin-utils';
 import { clerkBackendClient } from '@/lib/auth/backend-auth';
@@ -109,34 +109,30 @@ export async function GET(req: NextRequest) {
 					const clerkClient = await clerkBackendClient();
 
 					// Try different search approaches
-					let clerkUsers;
-					if (query.includes('@')) {
-						// Email search
-						clerkUsers = await clerkClient.users.getUserList({
-							emailAddress: [query],
-							limit: 10,
-						});
-					} else {
-						// Name search - get recent users and filter
-						clerkUsers = await clerkClient.users.getUserList({
-							limit: 50,
-							orderBy: '-created_at',
-						});
+					const clerkUsers = query.includes('@')
+						? await clerkClient.users.getUserList({
+								emailAddress: [query],
+								limit: 10,
+							})
+						: await clerkClient.users.getUserList({
+								limit: 50,
+								orderBy: '-created_at',
+							});
 
-						// Filter by name
-						clerkUsers.data = clerkUsers.data.filter((user) => {
-							const fullName = `${user.firstName || ''} ${user.lastName || ''}`.toLowerCase();
-							return (
-								fullName.includes(query.toLowerCase()) ||
-								(user.firstName && user.firstName.toLowerCase().includes(query.toLowerCase())) ||
-								(user.lastName && user.lastName.toLowerCase().includes(query.toLowerCase()))
-							);
-						});
-					}
+					const clerkUserData = query.includes('@')
+						? clerkUsers.data
+						: clerkUsers.data.filter((user) => {
+								const fullName = `${user.firstName || ''} ${user.lastName || ''}`.toLowerCase();
+								return (
+									fullName.includes(query.toLowerCase()) ||
+									user.firstName?.toLowerCase().includes(query.toLowerCase()) ||
+									user.lastName?.toLowerCase().includes(query.toLowerCase())
+								);
+							});
 
-					structuredConsole.log(`🔍 [CLERK-SEARCH] Found ${clerkUsers.data.length} Clerk users`);
+					structuredConsole.log(`🔍 [CLERK-SEARCH] Found ${clerkUserData.length} Clerk users`);
 
-					const clerkResults: AdminSearchUser[] = clerkUsers.data.map((user) => ({
+					const clerkResults: AdminSearchUser[] = clerkUserData.map((user) => ({
 						user_id: user.id,
 						full_name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
 						business_name: null,

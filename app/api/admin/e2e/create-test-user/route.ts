@@ -15,7 +15,6 @@ import { structuredConsole } from '@/lib/logging/console-proxy';
 const isTestMode =
 	process.env.NODE_ENV === 'development' || process.env.ENABLE_AUTH_BYPASS === 'true';
 
-// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function POST(request: Request) {
 	if (!isTestMode) {
 		return NextResponse.json(

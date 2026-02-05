@@ -53,7 +53,9 @@ export function useTrialStatus(): UseTrialStatusResult {
 	const [error, setError] = useState<string | null>(null);
 
 	const fetchStatus = useCallback(async () => {
-		if (!userId) return;
+		if (!userId) {
+			return;
+		}
 
 		try {
 			setError(null);
@@ -106,7 +108,7 @@ export function useTrialStatus(): UseTrialStatusResult {
 		}
 
 		// Fetch fresh data
-		void fetchStatus();
+		fetchStatus().catch(() => undefined);
 	}, [isLoaded, userId, fetchStatus]);
 
 	const refetch = useCallback(async () => {

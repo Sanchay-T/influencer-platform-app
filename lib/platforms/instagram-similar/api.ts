@@ -32,11 +32,18 @@ const INSTAGRAM_PROFILE_ACTOR_ID = process.env.INSTAGRAM_SCRAPER_ACTOR_ID || 'dS
 
 const toRelatedProfile = (value: unknown): ApifyRelatedProfile | null => {
 	const record = toRecord(value);
-	if (!record) return null;
-	if (!(isString(record.id) && isString(record.username) && isString(record.full_name)))
+	if (!record) {
 		return null;
-	if (!isString(record.profile_pic_url)) return null;
-	if (!(isBoolean(record.is_private) && isBoolean(record.is_verified))) return null;
+	}
+	if (!(isString(record.id) && isString(record.username) && isString(record.full_name))) {
+		return null;
+	}
+	if (!isString(record.profile_pic_url)) {
+		return null;
+	}
+	if (!(isBoolean(record.is_private) && isBoolean(record.is_verified))) {
+		return null;
+	}
 
 	return {
 		id: record.id,
@@ -53,7 +60,9 @@ const toRelatedProfile = (value: unknown): ApifyRelatedProfile | null => {
 
 const toInstagramProfileResponse = (value: unknown): ApifyInstagramProfileResponse | null => {
 	const record = toRecord(value);
-	if (!record) return null;
+	if (!record) {
+		return null;
+	}
 
 	const relatedProfiles = Array.isArray(record.relatedProfiles)
 		? record.relatedProfiles
@@ -293,7 +302,7 @@ export async function getEnhancedInstagramProfile(
 
 		structuredConsole.log('📊 [INSTAGRAM-ENHANCED] Enhanced profile retrieved:', {
 			username: profileData.username,
-			biography: profileData.biography?.substring(0, 100) + '...',
+			biography: `${profileData.biography?.substring(0, 100)}...`,
 			followersCount: profileData.followersCount,
 		});
 
@@ -322,13 +331,15 @@ export async function getEnhancedInstagramProfile(
  * Extract emails from Instagram bio text (same as TikTok pattern)
  */
 export function extractEmailsFromBio(bio: string): string[] {
-	if (!bio) return [];
+	if (!bio) {
+		return [];
+	}
 
 	const emailRegex = /[\w.-]+@[\w.-]+\.\w+/g;
 	const extractedEmails = bio.match(emailRegex) || [];
 
 	structuredConsole.log('📧 [INSTAGRAM-EMAIL] Email extraction:', {
-		bioInput: bio.substring(0, 100) + '...',
+		bioInput: `${bio.substring(0, 100)}...`,
 		emailsFound: extractedEmails,
 		emailCount: extractedEmails.length,
 	});

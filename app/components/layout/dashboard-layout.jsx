@@ -29,7 +29,7 @@ export default function DashboardLayout({
 	onboardingInitialStep = 1,
 	onboardingData = null,
 }) {
-	const pathname = usePathname();
+	const _pathname = usePathname();
 	const router = useRouter();
 	const [isOnboardingOpen, setIsOnboardingOpen] = useState(showOnboarding);
 	const [isLarge, setIsLarge] = useState(false);
@@ -55,8 +55,12 @@ export default function DashboardLayout({
 		try {
 			const stored =
 				typeof window !== 'undefined' ? window.localStorage.getItem(SIDEBAR_PIN_STORAGE_KEY) : null;
-			if (stored === 'true') setSidebarPinned(true);
-			if (stored === 'false') setSidebarPinned(false);
+			if (stored === 'true') {
+				setSidebarPinned(true);
+			}
+			if (stored === 'false') {
+				setSidebarPinned(false);
+			}
 		} catch {
 			// ignore
 		}
@@ -71,7 +75,9 @@ export default function DashboardLayout({
 	);
 
 	useEffect(() => {
-		if (typeof window === 'undefined') return;
+		if (typeof window === 'undefined') {
+			return;
+		}
 		try {
 			window.localStorage.setItem(SIDEBAR_PIN_STORAGE_KEY, sidebarPinned ? 'true' : 'false');
 		} catch {
@@ -81,7 +87,9 @@ export default function DashboardLayout({
 
 	// Track breakpoint to auto-open on large screens and close on small screens
 	useEffect(() => {
-		if (typeof window === 'undefined') return;
+		if (typeof window === 'undefined') {
+			return;
+		}
 		const mq = window.matchMedia('(min-width: 1024px)'); // lg breakpoint
 		const update = () => {
 			const matches = mq.matches;
@@ -104,15 +112,21 @@ export default function DashboardLayout({
 
 	// Auto-close sidebar on route change when on mobile
 	useEffect(() => {
-		if (!isLarge) setSidebarSheetOpen(false);
+		if (!isLarge) {
+			setSidebarSheetOpen(false);
+		}
 		setDesktopPeekOpen(false);
-	}, [pathname, isLarge]);
+	}, [isLarge]);
 
 	// Close on Escape when open on mobile
 	useEffect(() => {
-		if (isLarge || !sidebarSheetOpen) return;
+		if (isLarge || !sidebarSheetOpen) {
+			return;
+		}
 		const onKey = (e) => {
-			if (e.key === 'Escape') setSidebarSheetOpen(false);
+			if (e.key === 'Escape') {
+				setSidebarSheetOpen(false);
+			}
 		};
 		window.addEventListener('keydown', onKey);
 		return () => window.removeEventListener('keydown', onKey);
@@ -139,27 +153,37 @@ export default function DashboardLayout({
 	}, [isLarge]);
 
 	const openDesktopPeek = useCallback(() => {
-		if (!isLarge || sidebarPinned) return;
+		if (!isLarge || sidebarPinned) {
+			return;
+		}
 		setDesktopPeekOpen(true);
 	}, [isLarge, sidebarPinned]);
 
 	const closeDesktopPeek = useCallback(() => {
-		if (!isLarge || sidebarPinned) return;
+		if (!isLarge || sidebarPinned) {
+			return;
+		}
 		setDesktopPeekOpen(false);
 	}, [isLarge, sidebarPinned]);
 
 	const isSidebarVisible = useMemo(() => {
-		if (!isLarge) return sidebarSheetOpen;
+		if (!isLarge) {
+			return sidebarSheetOpen;
+		}
 		return sidebarPinned || desktopPeekOpen;
 	}, [isLarge, sidebarPinned, sidebarSheetOpen, desktopPeekOpen]);
 
 	return (
 		<div className="flex h-screen bg-zinc-900 text-zinc-100">
 			{/* Desktop hover target for auto-hide */}
-			<div
+			<button
+				type="button"
+				aria-label="Show sidebar"
 				className={`hidden lg:block fixed left-0 z-20 w-3 ${sidebarPinned ? 'pointer-events-none' : ''}`}
 				style={desktopSidebarStyle}
 				onMouseEnter={openDesktopPeek}
+				onFocus={openDesktopPeek}
+				onBlur={closeDesktopPeek}
 			/>
 
 			{/* Mobile sidebar (overlay) */}
@@ -182,7 +206,9 @@ export default function DashboardLayout({
 
 			{/* Overlay for mobile when sidebar is open */}
 			{sidebarSheetOpen && !isLarge && (
-				<div
+				<button
+					type="button"
+					aria-label="Close sidebar"
 					className="fixed inset-0 z-[70] bg-black/50"
 					onClick={() => setSidebarSheetOpen(false)}
 				/>
@@ -207,7 +233,8 @@ export default function DashboardLayout({
 
 			{/* Desktop sidebar hover peek */}
 			{!sidebarPinned && (
-				<div
+				<aside
+					aria-label="Sidebar preview"
 					className={`hidden lg:block fixed left-0 z-30 w-64 transform transition-transform duration-150 ${desktopPeekOpen ? 'translate-x-0' : '-translate-x-full'}`}
 					style={desktopSidebarStyle}
 					onMouseEnter={openDesktopPeek}
@@ -219,7 +246,7 @@ export default function DashboardLayout({
 						isPinned={false}
 						showAutoHideHint
 					/>
-				</div>
+				</aside>
 			)}
 
 			{/* Main content */}

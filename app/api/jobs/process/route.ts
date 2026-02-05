@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
 
 		// Parse job data
 		const jobData = JSON.parse(body);
-		const { jobId, jobType, payload, attempt = 1, maxRetries = 3 } = jobData;
+		const { jobId, jobType, attempt = 1, maxRetries = 3 } = jobData;
 
 		structuredConsole.log('🔄 [JOB-PROCESSOR-API] Processing job:', {
 			jobId,

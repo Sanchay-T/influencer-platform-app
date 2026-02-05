@@ -133,7 +133,7 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
 			<div className="p-6 pt-0">
 				<form onSubmit={handleSubmit} className="space-y-6">
 					<div className="space-y-4">
-						<label className="text-sm font-medium">Platform</label>
+						<p className="text-sm font-medium">Platform</p>
 						<div className="flex flex-wrap gap-4">
 							{[
 								{ value: 'tiktok', label: 'TikTok', disabled: true, badge: 'Coming Soon' },
@@ -146,10 +146,8 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
 									<div key={platform.value} className="flex items-center">
 										<button
 											type="button"
-											role="checkbox"
-											aria-checked={isActive}
+											aria-pressed={isActive}
 											data-state={isActive ? 'checked' : 'unchecked'}
-											value="on"
 											disabled={platform.disabled}
 											onClick={() => {
 												if (platform.disabled) {
@@ -169,14 +167,6 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
 												</span>
 											)}
 										</button>
-										<input
-											aria-hidden="true"
-											tabIndex={-1}
-											type="checkbox"
-											className="sr-only"
-											checked={isActive}
-											readOnly
-										/>
 										<span className="ml-2">
 											{platform.label}
 											{platform.badge && (
@@ -192,10 +182,11 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
 					</div>
 
 					<div className="space-y-4">
-						<label className="text-sm font-medium">
+						<label htmlFor="similar-search-username" className="text-sm font-medium">
 							{selectedPlatform === 'youtube' ? 'YouTube' : 'Instagram'} Username
 						</label>
 						<Input
+							id="similar-search-username"
 							value={username}
 							onChange={handleUsernameChange}
 							placeholder={selectedPlatform === 'youtube' ? 'e.g. mkbhd' : 'e.g. gainsbybrains'}

@@ -53,8 +53,8 @@ export const SubscriptionWelcomeEmail = ({
 					<Section style={featureSection}>
 						<Text style={featureHeadline}>What you unlocked with the {planName} plan:</Text>
 						<ul style={featureList}>
-							{planFeatures.map((feature, idx) => (
-								<li key={idx} style={featureItem}>
+							{planFeatures.map((feature) => (
+								<li key={`${planName}-${feature}`} style={featureItem}>
 									{feature}
 								</li>
 							))}

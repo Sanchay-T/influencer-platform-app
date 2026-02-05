@@ -27,7 +27,9 @@ const LOG_LEVEL_MAP: Record<string, LogLevel> = {
 };
 
 function parseLogLevel(rawLevel: string | undefined): LogLevel | undefined {
-	if (!rawLevel) return undefined;
+	if (!rawLevel) {
+		return undefined;
+	}
 	return LOG_LEVEL_MAP[rawLevel.trim().toUpperCase()];
 }
 
@@ -41,16 +43,24 @@ function resolveLogLevel(defaultLevel: LogLevel): LogLevel {
 }
 
 function parseBooleanFlag(value: string | undefined): boolean | undefined {
-	if (value == null) return undefined;
+	if (value == null) {
+		return undefined;
+	}
 	const normalized = value.trim().toLowerCase();
-	if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
-	if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+	if (['1', 'true', 'yes', 'on'].includes(normalized)) {
+		return true;
+	}
+	if (['0', 'false', 'no', 'off'].includes(normalized)) {
+		return false;
+	}
 	return undefined;
 }
 
 function resolveCategoryOverrides(): Partial<Record<LogCategory, LogLevel>> {
 	const raw = process.env.SERVER_CATEGORY_LOG_LEVELS;
-	if (!raw) return {};
+	if (!raw) {
+		return {};
+	}
 
 	return raw.split(',').reduce<Partial<Record<LogCategory, LogLevel>>>((acc, pair) => {
 		const [rawCategory, rawLevel] = pair.split(':').map((value) => value?.trim());
@@ -198,7 +208,7 @@ const FILE_PATTERNS: Record<LogCategory | 'default', string> = {
 };
 
 export const FILE_LOGGING_CONFIG = {
-	LOG_DIRECTORY: process.cwd() + '/logs',
+	LOG_DIRECTORY: `${process.cwd()}/logs`,
 
 	// File rotation settings
 	MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
@@ -235,7 +245,7 @@ export const PERFORMANCE_CONFIG = {
  * Data sanitization configuration
  * Defines sensitive fields that should be redacted from logs
  */
-export const SENSITIVE_FIELDS: ReadonlyArray<string> = [
+export const SENSITIVE_FIELDS: readonly string[] = [
 	// Authentication & security
 	'password',
 	'token',

@@ -11,7 +11,9 @@ export default function CampaignCard({ campaign }) {
 	const router = useRouter();
 
 	const handleCardClick = async () => {
-		if (isLoading) return;
+		if (isLoading) {
+			return;
+		}
 		setIsLoading(true);
 		router.push(`/campaigns/${campaign.id}`);
 	};

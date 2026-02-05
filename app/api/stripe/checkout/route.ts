@@ -13,7 +13,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
-import { type BillingInterval, CheckoutService, isValidPlan, type PlanKey } from '@/lib/billing';
+import { type BillingInterval, CheckoutService, isValidPlan } from '@/lib/billing';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
 import { isString, toError, toRecord } from '@/lib/utils/type-guards';

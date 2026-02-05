@@ -33,7 +33,6 @@ function errorToResponse(
 	return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
 }
 
-// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
 	const { id } = await params;
 
@@ -83,7 +82,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 	});
 }
 
-// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
 	const { id } = await params;
 
@@ -107,7 +105,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 	});
 }
 
-// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
 	const { id } = await params;
 

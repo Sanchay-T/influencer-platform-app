@@ -3,7 +3,6 @@
 import { AlertCircle, CheckCircle, Clock, Mail, Rocket, Send, TestTube } from 'lucide-react';
 
 import { useState } from 'react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -266,9 +265,9 @@ export function DevEmailControls({
 					<div className="space-y-2">
 						<h4 className="text-sm font-medium text-purple-800">Recent Results:</h4>
 						<div className="space-y-2 max-h-40 overflow-y-auto">
-							{results.map((result, index) => (
+							{results.map((result) => (
 								<div
-									key={index}
+									key={`${result.timestamp}-${result.type}`}
 									className={`text-xs p-2 rounded-lg flex items-start gap-2 ${
 										result.status === 'success'
 											? 'bg-green-50 text-green-800 border border-green-200'

@@ -1,7 +1,6 @@
 'use client';
 
 import { ExternalLink } from 'lucide-react';
-import React from 'react';
 import { AddToListButton } from '@/components/lists/add-to-list-button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -9,12 +8,16 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 
 const normalizePlatform = (value) => {
-	if (!value) return '';
+	if (!value) {
+		return '';
+	}
 	return value.toString().toLowerCase();
 };
 
 export default function SimilarResultsGallery({ rows, selectedCreators, onToggleSelection }) {
-	if (!rows.length) return null;
+	if (!rows.length) {
+		return null;
+	}
 
 	return (
 		<div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">

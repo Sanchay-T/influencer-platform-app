@@ -43,7 +43,9 @@ const isCreatorEnrichmentUsage = (value: unknown): value is CreatorEnrichmentUsa
 
 const isCreatorEnrichmentRecord = (value: unknown): value is CreatorEnrichmentRecord => {
 	const record = toRecord(value);
-	if (!record) return false;
+	if (!record) {
+		return false;
+	}
 	const summary = toRecord(record.summary);
 	const allEmails = summary ? toStringArray(summary.allEmails) : null;
 	return (
@@ -70,10 +72,14 @@ export function useCreatorEnrichment(initial?: Record<string, CreatorEnrichmentR
 	const setLoading = useCallback((key: string, value: boolean) => {
 		setLoadingMap((prev) => {
 			if (value) {
-				if (prev[key]) return prev;
+				if (prev[key]) {
+					return prev;
+				}
 				return { ...prev, [key]: true };
 			}
-			if (!prev[key]) return prev;
+			if (!prev[key]) {
+				return prev;
+			}
 			const next = { ...prev };
 			delete next[key];
 			return next;
@@ -100,11 +106,21 @@ export function useCreatorEnrichment(initial?: Record<string, CreatorEnrichmentR
 					forceRefresh: Boolean(target.forceRefresh),
 				};
 
-				if (target.creatorId) payload.creatorId = target.creatorId;
-				if (target.externalId) payload.externalId = target.externalId;
-				if (target.displayName) payload.displayName = target.displayName;
-				if (target.profileUrl) payload.profileUrl = target.profileUrl;
-				if (target.metadata) payload.metadata = target.metadata;
+				if (target.creatorId) {
+					payload.creatorId = target.creatorId;
+				}
+				if (target.externalId) {
+					payload.externalId = target.externalId;
+				}
+				if (target.displayName) {
+					payload.displayName = target.displayName;
+				}
+				if (target.profileUrl) {
+					payload.profileUrl = target.profileUrl;
+				}
+				if (target.metadata) {
+					payload.metadata = target.metadata;
+				}
 
 				const response = await fetch('/api/creators/enrich', {
 					method: 'POST',
@@ -202,7 +218,9 @@ export function useCreatorEnrichment(initial?: Record<string, CreatorEnrichmentR
 	const getEnrichment = useCallback(
 		(platform: string, handle: string) => {
 			const sanitized = sanitizeHandle(handle);
-			if (!sanitized) return null;
+			if (!sanitized) {
+				return null;
+			}
 			return enrichments[buildKey(platform, sanitized)] ?? null;
 		},
 		[enrichments]
@@ -211,7 +229,9 @@ export function useCreatorEnrichment(initial?: Record<string, CreatorEnrichmentR
 	const isLoading = useCallback(
 		(platform: string, handle: string) => {
 			const sanitized = sanitizeHandle(handle);
-			if (!sanitized) return false;
+			if (!sanitized) {
+				return false;
+			}
 			return Boolean(loadingMap[buildKey(platform, sanitized)]);
 		},
 		[loadingMap]

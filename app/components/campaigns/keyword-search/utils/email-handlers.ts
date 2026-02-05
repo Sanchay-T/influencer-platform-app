@@ -35,12 +35,14 @@ const getCreatorRecord = (creator: Creator): UnknownRecord | null =>
 	toRecord(creator.creator ?? creator);
 
 const resolveBio = (record: UnknownRecord | null): string | null => {
-	if (!record) return null;
+	if (!record) {
+		return null;
+	}
 	const candidate =
 		getStringProperty(record, 'bio') ??
 		getStringProperty(record, 'signature') ??
 		getStringProperty(record, 'description');
-	return candidate && candidate.trim() ? candidate : null;
+	return candidate?.trim() ? candidate : null;
 };
 
 /**

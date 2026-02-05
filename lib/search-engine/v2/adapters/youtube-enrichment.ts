@@ -17,11 +17,15 @@ interface YouTubeChannelResponse {
 
 const parseChannelResponse = (value: unknown): YouTubeChannelResponse | null => {
 	const record = toRecord(value);
-	if (!record) return null;
+	if (!record) {
+		return null;
+	}
 	const links = Array.isArray(record.links)
 		? record.links.flatMap((link) => {
 				const linkRecord = toRecord(link);
-				if (!linkRecord) return [];
+				if (!linkRecord) {
+					return [];
+				}
 				return [
 					{
 						url: getStringProperty(linkRecord, 'url') ?? undefined,

@@ -46,7 +46,7 @@ class PerformanceMonitor {
 			metadata,
 		};
 
-		this.metrics.get(operation)!.push(metric);
+		this.metrics.get(operation)?.push(metric);
 
 		structuredConsole.log(`⏱️ [PERF] Started: ${operation}`, { metadata, timerId });
 		return timerId;
@@ -96,19 +96,19 @@ class PerformanceMonitor {
 		fn: () => T | Promise<T>,
 		metadata?: Record<string, unknown>
 	): Promise<T> {
-		return new Promise(async (resolve, reject) => {
-			const timerId = this.startTimer(operation, metadata);
+		const timerId = this.startTimer(operation, metadata);
 
+		return (async () => {
 			try {
 				const result = await fn();
 				this.endTimer(timerId);
-				resolve(result);
+				return result;
 			} catch (error) {
 				const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 				this.endTimer(timerId, { error: errorMessage });
-				reject(error);
+				throw error;
 			}
-		});
+		})();
 	}
 
 	/**
@@ -116,10 +116,14 @@ class PerformanceMonitor {
 	 */
 	getSummary(operation: string): PerformanceSummary | null {
 		const metrics = this.metrics.get(operation);
-		if (!metrics || metrics.length === 0) return null;
+		if (!metrics || metrics.length === 0) {
+			return null;
+		}
 
 		const completedMetrics = metrics.filter((m) => m.duration !== undefined);
-		if (completedMetrics.length === 0) return null;
+		if (completedMetrics.length === 0) {
+			return null;
+		}
 
 		const durations = completedMetrics.map((m) => m.duration!);
 		const cacheHits = completedMetrics.filter((m) => m.metadata?.cached).length;

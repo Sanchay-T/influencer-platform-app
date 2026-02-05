@@ -302,7 +302,9 @@ export function isValidLogLevel(value: unknown): value is LogLevel {
  * Type guard for checking if a value is a valid LogCategory
  */
 export function isValidLogCategory(value: unknown): value is LogCategory {
-	if (typeof value !== 'string') return false;
+	if (typeof value !== 'string') {
+		return false;
+	}
 	return Object.values(LogCategory).some((category) => category === value);
 }
 

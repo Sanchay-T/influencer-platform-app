@@ -1,6 +1,5 @@
 'use client';
 
-import { Crown, Shield, Zap } from 'lucide-react';
 import { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -44,7 +43,9 @@ type AdminUser = {
 
 function parseAdminUser(value: unknown): AdminUser | null {
 	const record = toRecord(value);
-	if (!record) return null;
+	if (!record) {
+		return null;
+	}
 
 	return {
 		id: getStringProperty(record, 'id') ?? undefined,
@@ -67,7 +68,9 @@ export default function AdminUsersPage() {
 	const [message, setMessage] = useState('');
 
 	const searchUsers = async () => {
-		if (!searchQuery.trim()) return;
+		if (!searchQuery.trim()) {
+			return;
+		}
 		setLoading(true);
 		try {
 			const response = await fetch(
@@ -110,7 +113,7 @@ export default function AdminUsersPage() {
 			);
 
 			setUsers(usersWithBilling);
-		} catch (error) {
+		} catch (_error) {
 			setMessage('Error searching users');
 		}
 		setLoading(false);
@@ -131,7 +134,7 @@ export default function AdminUsersPage() {
 			} else {
 				setMessage(`❌ Failed: ${errorMessage || 'Unknown error'}`);
 			}
-		} catch (error) {
+		} catch (_error) {
 			setMessage('❌ Error promoting user');
 		}
 	};

@@ -107,7 +107,9 @@ export function AddToListButton({
 	const overlayRef = useRef<HTMLDivElement | null>(null);
 
 	const filteredLists = useMemo(() => {
-		if (!filter.trim()) return lists;
+		if (!filter.trim()) {
+			return lists;
+		}
 		const query = filter.toLowerCase();
 		return lists.filter((list) => list.name.toLowerCase().includes(query));
 	}, [filter, lists]);
@@ -142,12 +144,16 @@ export function AddToListButton({
 	}, [hasNoLists, showCreate]);
 
 	useEffect(() => {
-		if (!open || lists.length) return;
+		if (!open || lists.length) {
+			return;
+		}
 		const loadLists = async () => {
 			setLoadingLists(true);
 			try {
 				const res = await fetch('/api/lists');
-				if (!res.ok) throw new Error('Failed to load lists');
+				if (!res.ok) {
+					throw new Error('Failed to load lists');
+				}
 				const data = await res.json();
 				setLists(data.lists ?? []);
 			} catch (error) {
@@ -161,16 +167,22 @@ export function AddToListButton({
 	}, [open, lists.length]);
 
 	useEffect(() => {
-		if (!open) return;
+		if (!open) {
+			return;
+		}
 		setShowCreate(false);
 	}, [open]);
 
 	useEffect(() => {
-		if (!open) return;
+		if (!open) {
+			return;
+		}
 
 		const handleClick = (event: MouseEvent) => {
 			const target = event.target;
-			if (!(overlayRef.current && target instanceof HTMLElement)) return;
+			if (!(overlayRef.current && target instanceof HTMLElement)) {
+				return;
+			}
 
 			const clickedInsideOverlay = overlayRef.current.contains(target);
 			const clickedInsideSelect = !!target.closest('[data-radix-popper-content-wrapper]');
@@ -200,7 +212,9 @@ export function AddToListButton({
 	}, [open, resetPanel]);
 
 	const handleCreateList = async () => {
-		if (!newListName.trim()) return;
+		if (!newListName.trim()) {
+			return;
+		}
 		setCreating(true);
 		try {
 			const res = await fetch('/api/lists', {
@@ -208,7 +222,9 @@ export function AddToListButton({
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ name: newListName, type: newListType }),
 			});
-			if (!res.ok) throw new Error('Unable to create list');
+			if (!res.ok) {
+				throw new Error('Unable to create list');
+			}
 			const data = await res.json();
 			setLists((prev) => [data.list, ...prev]);
 			setSelectedList(data.list.id);

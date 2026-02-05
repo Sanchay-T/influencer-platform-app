@@ -26,7 +26,7 @@ import { registerAdapter } from './interface';
 // Types for Instagram API Response
 // ============================================================================
 
-interface InstagramOwner {
+export interface InstagramOwner {
 	id?: string | number;
 	username?: string;
 	full_name?: string;
@@ -36,7 +36,7 @@ interface InstagramOwner {
 	post_count?: number;
 }
 
-interface InstagramReel {
+export interface InstagramReel {
 	id?: string;
 	shortcode?: string;
 	url?: string;
@@ -53,7 +53,7 @@ interface InstagramReel {
 	owner?: InstagramOwner;
 }
 
-interface InstagramSearchResponse {
+export interface InstagramSearchResponse {
 	success?: boolean;
 	credits_remaining?: number;
 	reels?: InstagramReel[];
@@ -206,7 +206,9 @@ class InstagramAdapter implements SearchAdapter {
 			shortcode || getStringProperty(reel ?? {}, 'id') || `${username}-${Date.now()}`;
 
 		const toNumberValue = (value: unknown): number => {
-			if (isNumber(value)) return value;
+			if (isNumber(value)) {
+				return value;
+			}
 			if (isString(value)) {
 				const parsed = Number.parseInt(value, 10);
 				return Number.isFinite(parsed) ? parsed : 0;

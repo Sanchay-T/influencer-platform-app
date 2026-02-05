@@ -466,7 +466,7 @@ export class SearchJobService {
 
 		const completedHandles = [...state.completedHandles];
 		const normalizedCompleted = completedHandles.map((handle) => normalizeHandleKey(handle));
-		const completedIndex = normalizedCompleted.findIndex((value) => value === normalizedHandle);
+		const completedIndex = normalizedCompleted.indexOf(normalizedHandle);
 		if (completedIndex === -1) {
 			completedHandles.push(displayHandle);
 		} else {

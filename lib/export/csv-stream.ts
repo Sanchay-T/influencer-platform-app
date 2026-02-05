@@ -18,7 +18,7 @@ export function createCsvStream(
 	return new ReadableStream({
 		async start(controller) {
 			// Write headers first
-			controller.enqueue(encoder.encode(headers.join(',') + '\n'));
+			controller.enqueue(encoder.encode(`${headers.join(',')}\n`));
 		},
 		async pull(controller) {
 			try {
@@ -30,7 +30,7 @@ export function createCsvStream(
 				}
 
 				// Format and enqueue the row
-				const csvRow = row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',') + '\n';
+				const csvRow = `${row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')}\n`;
 				controller.enqueue(encoder.encode(csvRow));
 			} catch (error) {
 				controller.error(error);

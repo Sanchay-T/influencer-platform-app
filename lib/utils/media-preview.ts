@@ -89,9 +89,13 @@ const EXCLUDED_KEYS = new Set([
 ]);
 
 const normalizeCandidateUrl = (value: string | null | undefined): string | null => {
-	if (!value) return null;
+	if (!value) {
+		return null;
+	}
 	const raw = value.trim();
-	if (!raw) return null;
+	if (!raw) {
+		return null;
+	}
 
 	if (raw.startsWith('//')) {
 		return `https:${raw}`;
@@ -111,7 +115,9 @@ const normalizeCandidateUrl = (value: string | null | undefined): string | null 
 };
 
 const extractFirstUrl = (candidate: unknown, depth = 0): string | null => {
-	if (candidate == null || depth > MAX_DEPTH) return null;
+	if (candidate == null || depth > MAX_DEPTH) {
+		return null;
+	}
 
 	if (typeof candidate === 'string') {
 		return normalizeCandidateUrl(candidate);
@@ -120,26 +126,36 @@ const extractFirstUrl = (candidate: unknown, depth = 0): string | null => {
 	if (Array.isArray(candidate)) {
 		for (const entry of candidate) {
 			const resolved = extractFirstUrl(entry, depth + 1);
-			if (resolved) return resolved;
+			if (resolved) {
+				return resolved;
+			}
 		}
 		return null;
 	}
 
 	if (typeof candidate === 'object') {
 		const record = toRecord(candidate);
-		if (!record) return null;
+		if (!record) {
+			return null;
+		}
 
 		for (const key of PRIMARY_IMAGE_KEYS) {
 			if (Object.hasOwn(record, key)) {
 				const resolved = extractFirstUrl(record[key], depth + 1);
-				if (resolved) return resolved;
+				if (resolved) {
+					return resolved;
+				}
 			}
 		}
 
 		for (const [key, value] of Object.entries(record)) {
-			if (PRIMARY_IMAGE_KEYS.includes(key) || EXCLUDED_KEYS.has(key)) continue;
+			if (PRIMARY_IMAGE_KEYS.includes(key) || EXCLUDED_KEYS.has(key)) {
+				continue;
+			}
 			const resolved = extractFirstUrl(value, depth + 1);
-			if (resolved) return resolved;
+			if (resolved) {
+				return resolved;
+			}
 		}
 	}
 
@@ -147,9 +163,13 @@ const extractFirstUrl = (candidate: unknown, depth = 0): string | null => {
 };
 
 const getFirstEdgeNode = (record: UnknownRecord | null): unknown => {
-	if (!record) return null;
+	if (!record) {
+		return null;
+	}
 	const edges = getArrayProperty(record, 'edges');
-	if (!edges || edges.length === 0) return null;
+	if (!edges || edges.length === 0) {
+		return null;
+	}
 	const firstEdge = toRecord(edges[0]);
 	return firstEdge ? firstEdge.node : null;
 };
@@ -158,10 +178,14 @@ export const resolveCreatorPreview = (
 	creator: unknown,
 	fallback?: string | null
 ): string | null => {
-	if (!creator) return fallback ?? null;
+	if (!creator) {
+		return fallback ?? null;
+	}
 
 	const subject = toRecord(creator);
-	if (!subject) return fallback ?? null;
+	if (!subject) {
+		return fallback ?? null;
+	}
 
 	const aweme = getRecordProperty(subject, 'aweme');
 	const awemeInfo = aweme ? getRecordProperty(aweme, 'aweme_info') : null;

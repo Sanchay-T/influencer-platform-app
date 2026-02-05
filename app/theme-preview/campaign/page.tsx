@@ -67,8 +67,8 @@ function CampaignContent() {
 										</TableRow>
 									</TableHeader>
 									<TableBody>
-										{rows.map((r, idx) => (
-											<TableRow key={idx} className="table-row">
+										{rows.map((r) => (
+											<TableRow key={`${r.name}-${r.platform}`} className="table-row">
 												<TableCell className="font-medium text-primary">{r.name}</TableCell>
 												<TableCell>{r.platform}</TableCell>
 												<TableCell>

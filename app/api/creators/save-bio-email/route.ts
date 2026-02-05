@@ -92,7 +92,7 @@ export async function POST(request: Request) {
 	try {
 		// Update the creator in the JSONB array where owner.id matches
 		// Set contact_email field to indicate this email came from bio extraction
-		const result = await db.execute(sql`
+		const _result = await db.execute(sql`
       UPDATE scraping_results
       SET creators = (
         SELECT jsonb_agg(

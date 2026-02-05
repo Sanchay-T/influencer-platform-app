@@ -112,7 +112,7 @@ function NavigationLoggerInner() {
 		logPageSpecificAction();
 
 		// Log search parameters if present
-		if (searchParams && searchParams.toString()) {
+		if (searchParams?.toString()) {
 			logUserAction(
 				'page_with_parameters',
 				{
@@ -126,7 +126,7 @@ function NavigationLoggerInner() {
 				}
 			);
 		}
-	}, [pathname, searchParams, userId, user]);
+	}, [pathname, searchParams, userId, resolvedUserEmail, resolvedUserId]);
 
 	// This component doesn't render anything - it's just for logging
 	return null;

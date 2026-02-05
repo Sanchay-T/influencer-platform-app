@@ -25,7 +25,9 @@ type SnapshotSource = UnknownRecord;
 
 const getSnapshotSources = (snapshot: unknown): SnapshotSource[] => {
 	const root = toRecord(snapshot);
-	if (!root) return [];
+	if (!root) {
+		return [];
+	}
 
 	const sources: SnapshotSource[] = [root];
 	const metadata = toRecord(root.metadata);
@@ -37,10 +39,18 @@ const getSnapshotSources = (snapshot: unknown): SnapshotSource[] => {
 		const account = toRecord(metadata.account);
 		const owner = toRecord(metadata.owner);
 
-		if (creator) sources.push(creator);
-		if (profile) sources.push(profile);
-		if (account) sources.push(account);
-		if (owner) sources.push(owner);
+		if (creator) {
+			sources.push(creator);
+		}
+		if (profile) {
+			sources.push(profile);
+		}
+		if (account) {
+			sources.push(account);
+		}
+		if (owner) {
+			sources.push(owner);
+		}
 	}
 
 	return sources;
@@ -51,7 +61,7 @@ const getSnapshotSources = (snapshot: unknown): SnapshotSource[] => {
  */
 export const resolveCreatorIdFromSnapshot = (snapshot: unknown): string | null => {
 	const sources = getSnapshotSources(snapshot);
-	const fields: ReadonlyArray<string> = [
+	const fields: readonly string[] = [
 		'creatorProfileId',
 		'creator_profile_id',
 		'creatorId',
@@ -82,7 +92,7 @@ export const resolveCreatorIdFromSnapshot = (snapshot: unknown): string | null =
  */
 export const resolveExternalIdFromSnapshot = (snapshot: unknown): string | null => {
 	const sources = getSnapshotSources(snapshot);
-	const fields: ReadonlyArray<string> = [
+	const fields: readonly string[] = [
 		'externalId',
 		'external_id',
 		'profileId',

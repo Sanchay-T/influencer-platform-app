@@ -128,7 +128,9 @@ const normalizeEnrichmentApiResponse = (payload: unknown): EnrichmentApiResponse
 
 const isCreatorEnrichmentRecord = (value: unknown): value is CreatorEnrichmentRecord => {
 	const record = toRecord(value);
-	if (!record) return false;
+	if (!record) {
+		return false;
+	}
 	return (
 		isString(record.creatorId) &&
 		isString(record.handle) &&
@@ -162,7 +164,9 @@ export class CreatorEnrichmentService {
 	}
 
 	private static resolveLimit(plan: string | null | undefined): number {
-		if (!plan) return PLAN_ENRICHMENT_LIMITS.free;
+		if (!plan) {
+			return PLAN_ENRICHMENT_LIMITS.free;
+		}
 		return PLAN_ENRICHMENT_LIMITS[plan] ?? -1;
 	}
 
@@ -216,7 +220,9 @@ export class CreatorEnrichmentService {
 
 		Object.entries(result).forEach(([key, value]) => {
 			const platformData = toRecord(value);
-			if (!platformData) return;
+			if (!platformData) {
+				return;
+			}
 			const email = getStringProperty(platformData, 'email');
 			if (email) {
 				emails.add(email);
@@ -269,12 +275,10 @@ export class CreatorEnrichmentService {
 		return raw?.replace(/^@/, '').trim();
 	}
 
-	private static normalizeHandleForComparison(raw: string): string {
-		return CreatorEnrichmentService.normalizeHandle(raw).toLowerCase();
-	}
-
 	private static isValidUuid(value: string | null | undefined): value is string {
-		if (typeof value !== 'string') return false;
+		if (typeof value !== 'string') {
+			return false;
+		}
 		return UUID_PATTERN.test(value);
 	}
 

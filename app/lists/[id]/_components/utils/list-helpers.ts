@@ -213,7 +213,9 @@ export function resolveProfileUrl(creator: ListItem['creator']): string | null {
 
 export function extractEmails(meta: unknown): string[] {
 	const record = toRecord(meta);
-	if (!record) return [];
+	if (!record) {
+		return [];
+	}
 
 	const fallbackRecord: UnknownRecord = {};
 	const set = new Set<string>();

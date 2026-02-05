@@ -9,7 +9,7 @@ import {
 	RefreshCw,
 } from 'lucide-react';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -163,6 +163,11 @@ export default function CampaignList() {
 		return pageNumbers;
 	};
 
+	const skeletonKeys = useMemo(() => {
+		const count = pagination.limit || 9;
+		return Array.from({ length: count }, (_, idx) => `skeleton-${count}-${idx + 1}`);
+	}, [pagination.limit]);
+
 	if (error) {
 		return (
 			<Card className="bg-zinc-900/80 border border-zinc-700/50">
@@ -187,14 +192,20 @@ export default function CampaignList() {
 	const filtered = campaigns
 		.filter((c) => (filterStatus === 'all' ? true : c.status === filterStatus))
 		.filter((c) => {
-			if (!query) return true;
+			if (!query) {
+				return true;
+			}
 			const q = normalized(query);
 			return normalized(c.name).includes(q) || normalized(c.description).includes(q);
 		});
 
 	const sorted = [...filtered].sort((a, b) => {
-		if (sortBy === 'alpha') return a.name.localeCompare(b.name);
-		if (sortBy === 'updated') return new Date(b.updatedAt) - new Date(a.updatedAt);
+		if (sortBy === 'alpha') {
+			return a.name.localeCompare(b.name);
+		}
+		if (sortBy === 'updated') {
+			return new Date(b.updatedAt) - new Date(a.updatedAt);
+		}
 		// default newest by createdAt
 		return new Date(b.createdAt) - new Date(a.createdAt);
 	});
@@ -203,8 +214,8 @@ export default function CampaignList() {
 		if (loading) {
 			return (
 				<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-					{[...Array(pagination.limit || 9)].map((_, index) => (
-						<CampaignCardSkeleton key={index} />
+					{skeletonKeys.map((key) => (
+						<CampaignCardSkeleton key={key} />
 					))}
 				</div>
 			);
@@ -309,28 +320,35 @@ export default function CampaignList() {
 					</Button>
 
 					<div className="flex items-center space-x-1">
-						{getPageNumbers().map((pageNum, index) =>
-							pageNum === '...' ? (
-								<span key={`ellipsis-${index}`} className="px-2">
-									...
-								</span>
-							) : (
-								<Button
-									key={pageNum}
-									variant="outline"
-									size="sm"
-									className={
-										pageNum === pagination.currentPage
-											? 'min-w-[32px] relative bg-secondary/70 text-zinc-100 shadow-sm border-l-2 border-l-primary'
-											: 'min-w-[32px] border-input text-zinc-300 hover:bg-secondary/60'
-									}
-									onClick={() => handlePageChange(pageNum)}
-									disabled={loading}
-								>
-									{pageNum}
-								</Button>
-							)
-						)}
+						{(() => {
+							let ellipsisCount = 0;
+							return getPageNumbers().map((pageNum) => {
+								if (pageNum === '...') {
+									ellipsisCount += 1;
+									return (
+										<span key={`ellipsis-${ellipsisCount}`} className="px-2">
+											...
+										</span>
+									);
+								}
+								return (
+									<Button
+										key={pageNum}
+										variant="outline"
+										size="sm"
+										className={
+											pageNum === pagination.currentPage
+												? 'min-w-[32px] relative bg-secondary/70 text-zinc-100 shadow-sm border-l-2 border-l-primary'
+												: 'min-w-[32px] border-input text-zinc-300 hover:bg-secondary/60'
+										}
+										onClick={() => handlePageChange(pageNum)}
+										disabled={loading}
+									>
+										{pageNum}
+									</Button>
+								);
+							});
+						})()}
 					</div>
 
 					<Button

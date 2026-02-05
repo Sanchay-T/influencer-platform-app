@@ -48,7 +48,7 @@ export default function TrialTestingPage() {
 		// Auto-refresh every 10 seconds
 		const interval = setInterval(fetchTrialStatus, 10000);
 		return () => clearInterval(interval);
-	}, []);
+	}, [fetchTrialStatus]);
 
 	const executeTestAction = async (action: string, testDate?: string) => {
 		setIsLoading(true);

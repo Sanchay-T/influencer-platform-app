@@ -138,34 +138,19 @@ export interface UpgradeClickedProps {
 // ============================================================================
 
 export interface EventPropertiesMap {
-	// biome-ignore lint/style/useNamingConvention: Analytics events use snake_case
 	user_signed_up: UserSignedUpProps;
-	// biome-ignore lint/style/useNamingConvention: Analytics events use snake_case
 	user_signed_in: UserSignedInProps;
-	// biome-ignore lint/style/useNamingConvention: Analytics events use snake_case
 	onboarding_step_completed: OnboardingStepProps;
-	// biome-ignore lint/style/useNamingConvention: Analytics events use snake_case
 	onboarding_completed: Record<string, never>;
-	// biome-ignore lint/style/useNamingConvention: Analytics events use snake_case
 	trial_started: TrialStartedProps;
-	// biome-ignore lint/style/useNamingConvention: Analytics events use snake_case
 	trial_converted: SubscriptionCreatedProps;
-	// biome-ignore lint/style/useNamingConvention: Analytics events use snake_case
 	subscription_created: SubscriptionCreatedProps;
-	// biome-ignore lint/style/useNamingConvention: Analytics events use snake_case
 	subscription_canceled: SubscriptionCanceledProps;
-	// biome-ignore lint/style/useNamingConvention: Analytics events use snake_case
 	campaign_created: CampaignCreatedProps;
-	// biome-ignore lint/style/useNamingConvention: Analytics events use snake_case
 	search_started: SearchStartedProps;
-	// biome-ignore lint/style/useNamingConvention: Analytics events use snake_case
 	search_completed: SearchCompletedProps;
-	// biome-ignore lint/style/useNamingConvention: Analytics events use snake_case
 	list_created: ListCreatedProps;
-	// biome-ignore lint/style/useNamingConvention: Analytics events use snake_case
 	creator_saved: CreatorSavedProps;
-	// biome-ignore lint/style/useNamingConvention: Analytics events use snake_case
 	csv_exported: CsvExportedProps;
-	// biome-ignore lint/style/useNamingConvention: Analytics events use snake_case
 	upgrade_clicked: UpgradeClickedProps;
 }

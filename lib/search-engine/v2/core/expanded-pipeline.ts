@@ -8,14 +8,7 @@
 import { DEFAULT_CONFIG } from './config';
 import { createKeywordGenerator, type KeywordExpansionConfig } from './keyword-expander';
 import { type ParallelPipelineOptions, runParallelPipeline } from './parallel-pipeline';
-import type {
-	NormalizedCreator,
-	PipelineContext,
-	PipelineMetrics,
-	PipelineResult,
-	Platform,
-	SearchConfig,
-} from './types';
+import type { PipelineContext, PipelineResult, SearchConfig } from './types';
 
 // ============================================================================
 // Types

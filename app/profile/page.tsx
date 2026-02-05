@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { PlanBadge } from '@/app/components/billing/protect';
 import EmailScheduleDisplay from '@/components/trial/email-schedule-display';
 import TrialStatusCard from '@/components/trial/trial-status-card';
 import TrialStatusCardUser from '@/components/trial/trial-status-card-user';
@@ -24,7 +23,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import { useAdmin } from '@/lib/hooks/use-admin';
 import { useBilling } from '@/lib/hooks/use-billing';
 import { structuredConsole } from '@/lib/logging/console-proxy';
@@ -35,7 +33,7 @@ import { UserProfileModal } from '../components/profile/user-profile-modal';
 export default function ProfileSettingsPage() {
 	const { user, isLoaded } = useUser();
 	const { isAdmin } = useAdmin();
-	const { currentPlan, hasActiveSubscription, isPaidUser, isTrialing, needsUpgrade } = useBilling();
+	const { hasActiveSubscription, isTrialing } = useBilling();
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState('');
 	const [showUserProfile, setShowUserProfile] = useState(false);

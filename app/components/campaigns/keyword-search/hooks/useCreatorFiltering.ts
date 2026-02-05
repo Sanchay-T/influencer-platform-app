@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { toRecord } from '@/lib/utils/type-guards';
 
 export interface UseCreatorFilteringOptions {
-	creators: Array<Record<string, unknown>>;
+	creators: Record<string, unknown>[];
 	platformNormalized: string;
 	viewMode: 'table' | 'gallery';
 	hasAnyEmailFn: (creator: Record<string, unknown>) => boolean;
@@ -27,8 +27,8 @@ export interface UseCreatorFilteringResult {
 	setItemsPerPage: (size: number) => void;
 
 	// Computed values
-	filteredCreators: Array<Record<string, unknown>>;
-	currentCreators: Array<Record<string, unknown>>;
+	filteredCreators: Record<string, unknown>[];
+	currentCreators: Record<string, unknown>[];
 	totalResults: number;
 	totalPages: number;
 	startIndex: number;
@@ -47,11 +47,13 @@ export interface UseCreatorFilteringResult {
  * Filters Instagram creators by minimum view count (1000+ views).
  */
 function filterByViews(
-	creators: Array<Record<string, unknown>>,
+	creators: Record<string, unknown>[],
 	platformNormalized: string
-): Array<Record<string, unknown>> {
+): Record<string, unknown>[] {
 	const isInstagramKeyword = platformNormalized?.includes('instagram');
-	if (!isInstagramKeyword) return creators;
+	if (!isInstagramKeyword) {
+		return creators;
+	}
 
 	return creators.filter((creator) => {
 		const video = toRecord(creator?.video);
@@ -91,7 +93,7 @@ export function useCreatorFiltering({
 	// Reset page when filters or page size change
 	useEffect(() => {
 		setCurrentPage(1);
-	}, [showEmailOnly, viewMode, itemsPerPage]);
+	}, []);
 
 	// Apply Instagram view filter first (always applied)
 	const viewFilteredCreators = useMemo(
@@ -136,7 +138,7 @@ export function useCreatorFiltering({
 		if (totalResults > 0 && currentPage > totalPages) {
 			setCurrentPage(totalPages);
 		}
-	}, [totalPages]); // Only depend on totalPages, not length or currentPage
+	}, [totalPages, currentPage, totalResults]); // Only depend on totalPages, not length or currentPage
 
 	const startIndex = (currentPage - 1) * effectiveItemsPerPage;
 	const endIndex = startIndex + effectiveItemsPerPage;

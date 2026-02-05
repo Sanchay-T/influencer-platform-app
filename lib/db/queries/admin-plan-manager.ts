@@ -8,7 +8,7 @@ import {
 	users,
 	userUsage,
 } from '@/lib/db/schema';
-import { getUserProfile, updateUserProfile } from './user-queries';
+import { getUserProfile } from './user-queries';
 
 export type AdminUserSummary = {
 	id: string;
@@ -26,7 +26,9 @@ export type AdminUserSummary = {
 
 export async function searchUsersByEmail(query: string, limit = 10): Promise<AdminUserSummary[]> {
 	const normalizedQuery = query.trim();
-	if (!normalizedQuery) return [];
+	if (!normalizedQuery) {
+		return [];
+	}
 
 	const results = await db
 		.select({

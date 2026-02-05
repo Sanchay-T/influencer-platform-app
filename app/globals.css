@@ -3,79 +3,79 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    /* Base: Neutral dark (black-first) */
-    --background: 240 10% 3.9%;     /* near-black */
-    --foreground: 0 0% 98%;
-    --card: 240 6% 7%;              /* slightly lifted from bg */
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
+	:root {
+		/* Base: Neutral dark (black-first) */
+		--background: 240 10% 3.9%; /* near-black */
+		--foreground: 0 0% 98%;
+		--card: 240 6% 7%; /* slightly lifted from bg */
+		--card-foreground: 0 0% 98%;
+		--popover: 240 10% 3.9%;
+		--popover-foreground: 0 0% 98%;
 
-    /* Primary accent (Magenta) and shades */
-    --primary: 315 100% 59%;        /* #FF2ECC */
-    --primary-foreground: 0 0% 100%;
-    --primary-300: 315 100% 72%;
-    --primary-400: 315 100% 66%;
-    --primary-500: 315 100% 59%;
-    --primary-600: 315 100% 52%;
-    --primary-700: 315 100% 45%;
-    --primary-800: 315 85% 35%;
-    --primary-900: 315 75% 25%;
+		/* Primary accent (Magenta) and shades */
+		--primary: 315 100% 59%; /* #FF2ECC */
+		--primary-foreground: 0 0% 100%;
+		--primary-300: 315 100% 72%;
+		--primary-400: 315 100% 66%;
+		--primary-500: 315 100% 59%;
+		--primary-600: 315 100% 52%;
+		--primary-700: 315 100% 45%;
+		--primary-800: 315 85% 35%;
+		--primary-900: 315 75% 25%;
 
-    /* Secondary surfaces */
-    --secondary: 240 4% 12%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 5% 16%;
-    --muted-foreground: 0 0% 80%;
+		/* Secondary surfaces */
+		--secondary: 240 4% 12%;
+		--secondary-foreground: 0 0% 98%;
+		--muted: 240 5% 16%;
+		--muted-foreground: 0 0% 80%;
 
-    /* Additional accent */
-    --accent: 315 82% 35%;          /* Fandango */
-    --accent-foreground: 0 0% 98%;
+		/* Additional accent */
+		--accent: 315 82% 35%; /* Fandango */
+		--accent-foreground: 0 0% 98%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 4% 16%;
-    --input: 240 4% 16%;
-    --ring: 315 100% 59%;           /* focus ring = primary */
+		--destructive: 0 84% 60%;
+		--destructive-foreground: 0 0% 98%;
+		--border: 240 4% 16%;
+		--input: 240 4% 16%;
+		--ring: 315 100% 59%; /* focus ring = primary */
 
-    /* Brand green (replaces chartreuse) */
-    --brand-green-300: 145 90% 60%;
-    --brand-green-400: 145 90% 52%;
-    --brand-green-500: 145 97% 46%; /* #04E762 */
-    --brand-green-600: 145 90% 38%;
-    --brand-green-700: 145 80% 30%;
-    --brand-green-800: 145 60% 22%;
-    --brand-green-900: 145 60% 16%;
+		/* Brand green (replaces chartreuse) */
+		--brand-green-300: 145 90% 60%;
+		--brand-green-400: 145 90% 52%;
+		--brand-green-500: 145 97% 46%; /* #04E762 */
+		--brand-green-600: 145 90% 38%;
+		--brand-green-700: 145 80% 30%;
+		--brand-green-800: 145 60% 22%;
+		--brand-green-900: 145 60% 16%;
 
-    /* Charts mapping to palette */
-    --chart-1: var(--brand-green-500);
-    --chart-2: 1 100% 69%;   /* coral */
-    --chart-3: 315 100% 59%; /* magenta */
-    --chart-4: 315 82% 35%;  /* fandango */
-    --chart-5: 200 70% 55%;
-    --radius: 0.75rem;
-  }
+		/* Charts mapping to palette */
+		--chart-1: var(--brand-green-500);
+		--chart-2: 1 100% 69%; /* coral */
+		--chart-3: 315 100% 59%; /* magenta */
+		--chart-4: 315 82% 35%; /* fandango */
+		--chart-5: 200 70% 55%;
+		--radius: 0.75rem;
+	}
 }
 
 /* Brand surface utilities for targeted green boxes */
 @layer utilities {
-  .surface-brand {
-    background-color: hsl(var(--brand-green-500) / 0.07) !important;
-    border-color: hsl(var(--brand-green-500) / 0.24) !important;
-  }
-  .surface-brand:hover {
-    background-color: hsl(var(--brand-green-500) / 0.10) !important;
-  }
+	.surface-brand {
+		background-color: hsl(var(--brand-green-500) / 0.07);
+		border-color: hsl(var(--brand-green-500) / 0.24);
+	}
+	.surface-brand:hover {
+		background-color: hsl(var(--brand-green-500) / 0.1);
+	}
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground antialiased;
-  }
+	* {
+		@apply border-border outline-ring/50;
+	}
+	body {
+		@apply bg-background text-foreground antialiased;
+	}
 }
 
 /* THEME PREVIEWS
@@ -84,76 +84,82 @@
    without changing the global theme. Pages can wrap their
    content with <div class="theme-neon ..."> to preview. */
 @layer base {
-  .theme-neon {
-    /* Base: Gunmetal */
-    --background: 186 100% 8%;           /* #00272B */
-    --foreground: 0 0% 98%;
-    --card: 186 100% 8%;
-    --card-foreground: 0 0% 98%;
-    --popover: 186 100% 8%;
-    --popover-foreground: 0 0% 98%;
+	.theme-neon {
+		/* Base: Gunmetal */
+		--background: 186 100% 8%; /* #00272B */
+		--foreground: 0 0% 98%;
+		--card: 186 100% 8%;
+		--card-foreground: 0 0% 98%;
+		--popover: 186 100% 8%;
+		--popover-foreground: 0 0% 98%;
 
-    /* Primary accent: Razzle Dazzle Rose */
-    --primary: 315 100% 59%;             /* #FF2ECC */
-    --primary-foreground: 0 0% 100%;
+		/* Primary accent: Razzle Dazzle Rose */
+		--primary: 315 100% 59%; /* #FF2ECC */
+		--primary-foreground: 0 0% 100%;
 
-    /* Secondary surfaces (slightly raised gunmetal) */
-    --secondary: 186 40% 14%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 186 30% 16%;
-    --muted-foreground: 0 0% 80%;
+		/* Secondary surfaces (slightly raised gunmetal) */
+		--secondary: 186 40% 14%;
+		--secondary-foreground: 0 0% 98%;
+		--muted: 186 30% 16%;
+		--muted-foreground: 0 0% 80%;
 
-    /* Additional accent: Fandango */
-    --accent: 315 82% 35%;               /* #A51080 */
-    --accent-foreground: 0 0% 98%;
+		/* Additional accent: Fandango */
+		--accent: 315 82% 35%; /* #A51080 */
+		--accent-foreground: 0 0% 98%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 186 30% 18%;
-    --input: 186 30% 18%;
-    --ring: 315 100% 59%;               /* focus ring = primary */
+		--destructive: 0 84% 60%;
+		--destructive-foreground: 0 0% 98%;
+		--border: 186 30% 18%;
+		--input: 186 30% 18%;
+		--ring: 315 100% 59%; /* focus ring = primary */
 
-    /* Charts map to client palette; chart-1 is the green slot */
-    --chart-1: 85 97% 62%;               /* default green = #AFFC41 */
-    --chart-2: 1 100% 69%;               /* bittersweet  #FF6663 */
-    --chart-3: 315 100% 59%;             /* razzle rose #FF2ECC */
-    --chart-4: 315 82% 35%;              /* fandango     #A51080 */
-    --chart-5: 200 70% 55%;              /* spare accent */
-  }
+		/* Charts map to client palette; chart-1 is the green slot */
+		--chart-1: 85 97% 62%; /* default green = #AFFC41 */
+		--chart-2: 1 100% 69%; /* bittersweet  #FF6663 */
+		--chart-3: 315 100% 59%; /* razzle rose #FF2ECC */
+		--chart-4: 315 82% 35%; /* fandango     #A51080 */
+		--chart-5: 200 70% 55%; /* spare accent */
+	}
 
-  /* Client asked to try alternative greens; switch via class */
-  .theme-neon.green-affc41 { --chart-1: 85 97% 62%; }   /* #AFFC41 */
-  .theme-neon.green-89fc00 { --chart-1: 87 100% 49%; }  /* #89FC00 */
-  .theme-neon.green-04e762 { --chart-1: 145 97% 46%; }  /* #04E762 */
+	/* Client asked to try alternative greens; switch via class */
+	.theme-neon.green-affc41 {
+		--chart-1: 85 97% 62%;
+	} /* #AFFC41 */
+	.theme-neon.green-89fc00 {
+		--chart-1: 87 100% 49%;
+	} /* #89FC00 */
+	.theme-neon.green-04e762 {
+		--chart-1: 145 97% 46%;
+	} /* #04E762 */
 }
 
 /* Utility classes from project design */
 .gradient-text {
-  background: linear-gradient(135deg, #10b981, #3b82f6);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+	background: linear-gradient(135deg, #10b981, #3b82f6);
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	background-clip: text;
 }
 
 .table-row {
-  @apply hover:bg-zinc-800/30 transition-all duration-200 cursor-pointer border-b border-zinc-800/40;
+	@apply hover:bg-zinc-800/30 transition-all duration-200 cursor-pointer border-b border-zinc-800/40;
 }
 
 .table-row:last-child {
-  @apply border-b-0;
+	@apply border-b-0;
 }
 
 /* Parity alias with project table */
 .table-row-hover {
-  @apply hover:bg-zinc-800/30 transition-all duration-200 cursor-pointer;
+	@apply hover:bg-zinc-800/30 transition-all duration-200 cursor-pointer;
 }
 
 .search-pill {
-  @apply inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium;
-  @apply bg-zinc-800/50 text-zinc-300 border border-zinc-700/50;
-  @apply hover:bg-zinc-700/50 hover:border-zinc-600/50 transition-all duration-200;
+	@apply inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium;
+	@apply bg-zinc-800/50 text-zinc-300 border border-zinc-700/50;
+	@apply hover:bg-zinc-700/50 hover:border-zinc-600/50 transition-all duration-200;
 }
 
 .logo-icon {
-  @apply w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white;
+	@apply w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white;
 }

@@ -175,14 +175,11 @@ async function streamOpenAICompletion({
 	const body = {
 		model: defaultModel,
 		stream: true,
-		// biome-ignore lint/style/useNamingConvention: OpenAI API expects snake_case.
 		response_format: {
 			type: 'json_schema',
-			// biome-ignore lint/style/useNamingConvention: OpenAI API expects snake_case.
 			json_schema: schema,
 		},
 		temperature: 0.5, // Reduced from 0.6 for faster convergence
-		// biome-ignore lint/style/useNamingConvention: OpenAI API expects snake_case.
 		max_tokens: 800, // Cap response size to speed up generation
 		messages,
 	};
@@ -288,7 +285,6 @@ async function streamOpenAICompletion({
 	}
 }
 
-// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function POST(request: Request) {
 	if (!process.env.OPENAI_API_KEY) {
 		return NextResponse.json({ error: 'OPENAI_API_KEY is not configured' }, { status: 500 });
@@ -334,7 +330,7 @@ export async function POST(request: Request) {
 			const send = (event: unknown) => writeEvent(controller, event);
 			send({ type: 'start' });
 
-			if (cached && cached.length) {
+			if (cached?.length) {
 				for (const item of cached) {
 					if (existingKeywords.includes(item.keyword.toLowerCase())) {
 						continue;

@@ -17,7 +17,7 @@ export interface BioEmailDialogState {
 
 export interface UseBioEmailDialogOptions {
 	jobId?: string;
-	setCreators: React.Dispatch<React.SetStateAction<Array<Record<string, unknown>>>>;
+	setCreators: React.Dispatch<React.SetStateAction<Record<string, unknown>[]>>;
 	enrichCreator: (target: Record<string, unknown>) => Promise<Record<string, unknown> | null>;
 	applyEnrichmentToCreators: (
 		record: Record<string, unknown>,
@@ -103,20 +103,18 @@ export function useBioEmailDialog({
 		closeDialog();
 	}, [dialogState, jobId, setCreators, closeDialog]);
 
-	const handleEnrichAnyway = useCallback(() => {
+	const handleEnrichAnyway = useCallback(async () => {
 		const { enrichmentTarget, creator } = dialogState;
 		closeDialog();
 
 		if (enrichmentTarget) {
-			void (async () => {
-				const record = await enrichCreator({
-					...enrichmentTarget,
-					forceRefresh: false,
-				});
-				if (record) {
-					applyEnrichmentToCreators(record, enrichmentTarget, creator, 'interactive');
-				}
-			})();
+			const record = await enrichCreator({
+				...enrichmentTarget,
+				forceRefresh: false,
+			});
+			if (record) {
+				applyEnrichmentToCreators(record, enrichmentTarget, creator, 'interactive');
+			}
 		}
 	}, [dialogState, enrichCreator, applyEnrichmentToCreators, closeDialog]);
 

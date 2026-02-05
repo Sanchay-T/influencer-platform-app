@@ -25,8 +25,12 @@ type RecentListsProps = {
 const MAX_DESCRIPTION_LENGTH = 82;
 
 function truncate(text: string | null | undefined): string {
-	if (!text) return '';
-	if (text.length <= MAX_DESCRIPTION_LENGTH) return text;
+	if (!text) {
+		return '';
+	}
+	if (text.length <= MAX_DESCRIPTION_LENGTH) {
+		return text;
+	}
 	return `${text.slice(0, MAX_DESCRIPTION_LENGTH).trimEnd()}...`;
 }
 
@@ -65,7 +69,7 @@ function RecentListCard({ list }: { list: RecentList }) {
 
 // Exported for app/dashboard/page.jsx to embed under the metrics grid
 export function RecentListsSection({
-	title = 'Recent Lists',
+	title: _title = 'Recent Lists',
 	lists,
 	emptyMessage = 'No lists to show yet.',
 }: RecentListsProps) {

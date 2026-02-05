@@ -25,19 +25,35 @@ const MAX_CHANNEL_ENHANCEMENTS = parseInt(process.env.YT_SIMILAR_PROFILE_ENHANCE
 type ExtractedChannel = ReturnType<typeof extractChannelsFromVideos>[number];
 
 function parseFollowers(value: unknown): number | null {
-	if (value == null) return null;
-	if (typeof value === 'number') return value;
+	if (value == null) {
+		return null;
+	}
+	if (typeof value === 'number') {
+		return value;
+	}
 	if (typeof value === 'string') {
 		const trimmed = value.trim();
-		if (!trimmed) return null;
+		if (!trimmed) {
+			return null;
+		}
 		const match = trimmed.match(/([\d,.]+)\s*(k|m|b)?/i);
-		if (!match) return Number.parseInt(trimmed.replace(/[,]/g, ''), 10) || null;
+		if (!match) {
+			return Number.parseInt(trimmed.replace(/[,]/g, ''), 10) || null;
+		}
 		const base = Number.parseFloat(match[1].replace(/,/g, ''));
-		if (Number.isNaN(base)) return null;
+		if (Number.isNaN(base)) {
+			return null;
+		}
 		const unit = match[2]?.toLowerCase();
-		if (unit === 'k') return Math.round(base * 1_000);
-		if (unit === 'm') return Math.round(base * 1_000_000);
-		if (unit === 'b') return Math.round(base * 1_000_000_000);
+		if (unit === 'k') {
+			return Math.round(base * 1_000);
+		}
+		if (unit === 'm') {
+			return Math.round(base * 1_000_000);
+		}
+		if (unit === 'b') {
+			return Math.round(base * 1_000_000_000);
+		}
 		return Math.round(base);
 	}
 	return null;
@@ -156,7 +172,9 @@ export async function runYouTubeSimilarProvider(
 
 		const channels = extractChannelsFromVideos(searchResponse.videos ?? [], targetUsername);
 		for (const channel of channels) {
-			if (!channel?.id) continue;
+			if (!channel?.id) {
+				continue;
+			}
 			const existing = aggregatedChannels.get(channel.id);
 			if (existing) {
 				existing.videos = [...existing.videos, ...channel.videos];
@@ -242,7 +260,9 @@ export async function runYouTubeSimilarProvider(
 			})
 		);
 		for (const creator of enhancedSlice) {
-			if (creator) enhancedChannels.push(creator);
+			if (creator) {
+				enhancedChannels.push(creator);
+			}
 		}
 	}
 

@@ -76,7 +76,6 @@ export function trackClient<E extends AnalyticsEvent>(
 			const props = properties as UserSignedInProps;
 			trackGA4Event('login', {
 				method: 'clerk',
-				// biome-ignore lint/style/useNamingConvention: GA4 expects snake_case keys.
 				user_id: props.userId,
 			});
 			break;
@@ -85,7 +84,6 @@ export function trackClient<E extends AnalyticsEvent>(
 		case 'onboarding_step_completed': {
 			const props = properties as OnboardingStepProps;
 			trackGA4Event(`onboarding_step_${props.step}`, {
-				// biome-ignore lint/style/useNamingConvention: GA4 expects snake_case keys.
 				step_name: props.stepName,
 			});
 			break;
@@ -101,15 +99,11 @@ export function trackClient<E extends AnalyticsEvent>(
 			const props = properties as UpgradeClickedProps;
 			trackGA4Event('begin_checkout', {
 				source: props.source,
-				// biome-ignore lint/style/useNamingConvention: GA4 expects snake_case keys.
 				current_plan: props.currentPlan,
-				// biome-ignore lint/style/useNamingConvention: GA4 expects snake_case keys.
 				target_plan: props.targetPlan,
 			});
 			trackMetaEvent('InitiateCheckout', {
-				// biome-ignore lint/style/useNamingConvention: Meta Pixel expects snake_case keys.
 				content_name: props.targetPlan,
-				// biome-ignore lint/style/useNamingConvention: Meta Pixel expects snake_case keys.
 				content_category: 'subscription',
 			});
 			break;
@@ -163,7 +157,6 @@ export async function trackServer<E extends AnalyticsEvent>(
 				trackGA4ServerEvent(
 					`onboarding_step_${props.step}`,
 					{
-						// biome-ignore lint/style/useNamingConvention: GA4 expects snake_case keys.
 						step_name: props.stepName,
 					},
 					props.userId || ''
@@ -185,7 +178,6 @@ export async function trackServer<E extends AnalyticsEvent>(
 				trackGA4ServerEvent(
 					'begin_trial',
 					{
-						// biome-ignore lint/style/useNamingConvention: GA4 expects snake_case keys.
 						plan_name: props.plan,
 						value: props.value,
 						currency: 'USD',
@@ -208,11 +200,9 @@ export async function trackServer<E extends AnalyticsEvent>(
 				trackGA4ServerEvent(
 					'purchase',
 					{
-						// biome-ignore lint/style/useNamingConvention: GA4 expects snake_case keys.
 						plan_name: props.plan,
 						value: props.value,
 						currency: 'USD',
-						// biome-ignore lint/style/useNamingConvention: GA4 expects snake_case keys.
 						transaction_id: `trial_conv_${Date.now()}`,
 					},
 					props.userId
@@ -234,11 +224,9 @@ export async function trackServer<E extends AnalyticsEvent>(
 				trackGA4ServerEvent(
 					'purchase',
 					{
-						// biome-ignore lint/style/useNamingConvention: GA4 expects snake_case keys.
 						plan_name: props.plan,
 						value: props.value,
 						currency: 'USD',
-						// biome-ignore lint/style/useNamingConvention: GA4 expects snake_case keys.
 						transaction_id: `sub_${Date.now()}`,
 					},
 					props.userId
@@ -260,7 +248,6 @@ export async function trackServer<E extends AnalyticsEvent>(
 				trackGA4ServerEvent(
 					'subscription_canceled',
 					{
-						// biome-ignore lint/style/useNamingConvention: GA4 expects snake_case keys.
 						plan_name: props.plan,
 					},
 					props.userId
@@ -281,7 +268,6 @@ export async function trackServer<E extends AnalyticsEvent>(
 				trackGA4ServerEvent(
 					'campaign_created',
 					{
-						// biome-ignore lint/style/useNamingConvention: GA4 expects snake_case keys.
 						campaign_name: props.campaignName,
 					},
 					props.userId
@@ -303,9 +289,7 @@ export async function trackServer<E extends AnalyticsEvent>(
 					'search_started',
 					{
 						platform: props.platform,
-						// biome-ignore lint/style/useNamingConvention: GA4 expects snake_case keys.
 						search_type: props.type,
-						// biome-ignore lint/style/useNamingConvention: GA4 expects snake_case keys.
 						target_count: props.targetCount,
 					},
 					props.userId
@@ -329,9 +313,7 @@ export async function trackServer<E extends AnalyticsEvent>(
 					'search',
 					{
 						platform: props.platform,
-						// biome-ignore lint/style/useNamingConvention: GA4 expects snake_case keys.
 						search_type: props.type,
-						// biome-ignore lint/style/useNamingConvention: GA4 expects snake_case keys.
 						creator_count: props.creatorCount,
 					},
 					props.userId
@@ -354,9 +336,7 @@ export async function trackServer<E extends AnalyticsEvent>(
 				trackGA4ServerEvent(
 					'list_created',
 					{
-						// biome-ignore lint/style/useNamingConvention: GA4 expects snake_case keys.
 						list_name: props.listName,
-						// biome-ignore lint/style/useNamingConvention: GA4 expects snake_case keys.
 						list_type: props.type,
 					},
 					props.userId
@@ -378,9 +358,7 @@ export async function trackServer<E extends AnalyticsEvent>(
 				trackGA4ServerEvent(
 					'add_to_list',
 					{
-						// biome-ignore lint/style/useNamingConvention: GA4 expects snake_case keys.
 						list_name: props.listName,
-						// biome-ignore lint/style/useNamingConvention: GA4 expects snake_case keys.
 						item_count: props.count,
 					},
 					props.userId
@@ -402,9 +380,7 @@ export async function trackServer<E extends AnalyticsEvent>(
 				trackGA4ServerEvent(
 					'export',
 					{
-						// biome-ignore lint/style/useNamingConvention: GA4 expects snake_case keys.
 						export_type: 'csv',
-						// biome-ignore lint/style/useNamingConvention: GA4 expects snake_case keys.
 						creator_count: props.creatorCount,
 						source: props.source,
 					},
@@ -454,7 +430,6 @@ export function trackPurchaseClient(value: number, planId: string, isTrial: bool
 	if (isTrial) {
 		trackStartTrial(planId);
 		trackGA4Event('begin_trial', {
-			// biome-ignore lint/style/useNamingConvention: GA4 expects snake_case keys.
 			plan_name: planId,
 			value: value,
 			currency: 'USD',
@@ -462,11 +437,9 @@ export function trackPurchaseClient(value: number, planId: string, isTrial: bool
 	} else {
 		trackPurchase(value, 'USD', planId);
 		trackGA4Event('purchase', {
-			// biome-ignore lint/style/useNamingConvention: GA4 expects snake_case keys.
 			plan_name: planId,
 			value: value,
 			currency: 'USD',
-			// biome-ignore lint/style/useNamingConvention: GA4 expects snake_case keys.
 			transaction_id: `txn_${Date.now()}`,
 		});
 	}
