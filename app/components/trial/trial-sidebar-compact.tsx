@@ -165,33 +165,27 @@ export default function TrialSidebarCompact() {
 					<Progress value={progress} className="h-2 bg-zinc-800" />
 				</div>
 
-				<div className="grid grid-cols-2 gap-2 text-xs text-zinc-500">
-					<div className="flex items-center gap-1">
-						<Calendar className="h-3 w-3 text-zinc-400" />
-						<span>Started:</span>
-						<span className="text-zinc-300">
-							{status.trialStartDate
-								? new Date(status.trialStartDate).toLocaleDateString('en-US', {
-										month: 'short',
-										day: 'numeric',
-										year: 'numeric',
-									})
-								: '—'}
-						</span>
-					</div>
-					<div className="flex items-center gap-1 justify-end">
-						<Calendar className="h-3 w-3 text-zinc-400" />
-						<span>Expires:</span>
-						<span className="text-zinc-300">
-							{status.trialEndDate
-								? new Date(status.trialEndDate).toLocaleDateString('en-US', {
-										month: 'short',
-										day: 'numeric',
-										year: 'numeric',
-									})
-								: '—'}
-						</span>
-					</div>
+				<div className="flex items-center justify-center gap-1.5 text-xs text-zinc-500 mb-1">
+					<Calendar className="h-3 w-3 text-zinc-400 flex-shrink-0" />
+					<span className="text-zinc-300 whitespace-nowrap">
+						{status.trialStartDate
+							? new Date(status.trialStartDate).toLocaleDateString('en-US', {
+									month: 'short',
+									day: 'numeric',
+									year: 'numeric',
+								})
+							: '—'}
+					</span>
+					<span className="text-zinc-600">&rarr;</span>
+					<span className="text-zinc-300 whitespace-nowrap">
+						{status.trialEndDate
+							? new Date(status.trialEndDate).toLocaleDateString('en-US', {
+									month: 'short',
+									day: 'numeric',
+									year: 'numeric',
+								})
+							: '—'}
+					</span>
 				</div>
 
 				{status.usageInfo && status.usageInfo.campaignsLimit > 0 && (
@@ -200,7 +194,7 @@ export default function TrialSidebarCompact() {
 					</div>
 				)}
 
-				<Button className="w-full text-sm" onClick={() => setShowStartModal(true)}>
+				<Button className="w-full text-sm mt-8 mb-4" onClick={() => setShowStartModal(true)}>
 					Start Subscription
 				</Button>
 				<Link href="/billing" className="block">

@@ -117,16 +117,18 @@ export default function CustomerPortalButton({
 export function ManageSubscriptionButton({
 	className = '',
 	size = 'md',
+	variant = 'default',
 	returnUrl,
 }: {
 	className?: string;
 	size?: 'sm' | 'md' | 'lg';
+	variant?: 'default' | 'outline' | 'secondary';
 	returnUrl?: string;
 }) {
 	return (
 		<CustomerPortalButton
 			size={size}
-			variant="default"
+			variant={variant}
 			className={className}
 			returnUrl={returnUrl}
 			showIcon={false}
