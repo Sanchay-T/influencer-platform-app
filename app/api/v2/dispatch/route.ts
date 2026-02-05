@@ -27,7 +27,6 @@ import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { LogCategory, logger } from '@/lib/logging';
 import { dispatch, validateDispatchRequest } from '@/lib/search-engine/v2/workers';
 
-// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function POST(req: Request) {
 	const startTime = Date.now();
 	const vercelId = req.headers.get('x-vercel-id') ?? req.headers.get('x-vercel-trace');

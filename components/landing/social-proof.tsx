@@ -45,8 +45,8 @@ export default function SocialProof() {
 			</div>
 
 			<div className="grid md:grid-cols-3 gap-8">
-				{testimonials.map((testimonial, index) => (
-					<Card key={index} className="h-full">
+				{testimonials.map((testimonial) => (
+					<Card key={testimonial.name} className="h-full">
 						<CardContent className="p-6">
 							<div className="flex items-start space-x-4 mb-4">
 								<img

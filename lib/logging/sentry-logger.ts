@@ -68,7 +68,9 @@ export class SentryLogger {
 	 * Initialize Sentry (called automatically on first use)
 	 */
 	private static initialize(): void {
-		if (SentryLogger.isInitialized) return;
+		if (SentryLogger.isInitialized) {
+			return;
+		}
 		SentryLogger.isInitialized = true;
 	}
 
@@ -215,7 +217,7 @@ export class SentryLogger {
 	 * Start a performance transaction for monitoring
 	 * @deprecated Use startSpan instead for the new Sentry API
 	 */
-	public static startTransaction(context: { name: string; op?: string; description?: string }): {
+	public static startTransaction(_context: { name: string; op?: string; description?: string }): {
 		finish: () => void;
 		setStatus: (status: string) => void;
 	} {
@@ -223,8 +225,8 @@ export class SentryLogger {
 
 		// Fallback for compatibility
 		return {
-			finish: () => {},
-			setStatus: () => {},
+			finish: () => undefined,
+			setStatus: () => undefined,
 		};
 	}
 
@@ -301,7 +303,7 @@ export class SentryLogger {
 	 * Log entry to Sentry
 	 * Bridge method to convert LogEntry to Sentry event
 	 */
-	public static logToSentry(entry: LogEntry, sentryContext?: unknown): void {
+	public static logToSentry(entry: LogEntry, _sentryContext?: unknown): void {
 		SentryLogger.initialize();
 
 		const level = mapLogLevelToSeverity(entry.level?.toString());

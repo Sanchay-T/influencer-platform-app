@@ -209,7 +209,6 @@ export default function RootLayout({ children }: RootLayoutProps) {
 					{/* Meta Pixel noscript fallback - Only if pixel ID is configured */}
 					{process.env.NEXT_PUBLIC_META_PIXEL_ID && (
 						<noscript>
-							{/* biome-ignore lint/performance/noImgElement: Required for Meta Pixel noscript tracking */}
 							<img
 								height="1"
 								width="1"
@@ -225,6 +224,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
 						type="application/ld+json"
 						// biome-ignore lint/security/noDangerouslySetInnerHtml: Required for JSON-LD
 						dangerouslySetInnerHTML={{
+							// biome-ignore lint/style/useNamingConvention: React requires __html for JSON-LD.
 							__html: JSON.stringify({
 								'@context': 'https://schema.org',
 								'@type': 'SoftwareApplication',

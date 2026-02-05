@@ -1,5 +1,5 @@
-import fs from 'fs/promises';
-import path from 'path';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { getStringProperty, toRecord } from '@/lib/utils/type-guards';
 
@@ -124,11 +124,10 @@ export class BillingLogger {
 		try {
 			await fs.mkdir(logDirectory, { recursive: true });
 
-			const logLine =
-				JSON.stringify({
-					...entry,
-					timestamp: new Date().toISOString(),
-				}) + '\n';
+			const logLine = `${JSON.stringify({
+				...entry,
+				timestamp: new Date().toISOString(),
+			})}\n`;
 
 			const logPath = BillingLogger.getLogFilePath(logDirectory);
 			await fs.appendFile(logPath, logLine);
@@ -324,7 +323,7 @@ export class BillingLogger {
 			data,
 			metadata: {
 				stripeEventId: data?.eventId,
-				webhookSignature: data?.signature?.substring(0, 20) + '...', // Only first 20 chars for security
+				webhookSignature: `${data?.signature?.substring(0, 20)}...`, // Only first 20 chars for security
 			},
 		});
 	}
@@ -375,7 +374,9 @@ export class BillingLogger {
 	 */
 	private static sanitizeDatabaseData(data: unknown): unknown {
 		const record = toRecord(data);
-		if (!record) return data;
+		if (!record) {
+			return data;
+		}
 
 		const sanitized: Record<string, unknown> = { ...record };
 
@@ -391,7 +392,7 @@ export class BillingLogger {
 		Object.keys(sanitized).forEach((key) => {
 			const value = sanitized[key];
 			if (typeof value === 'string' && value.length > 200) {
-				sanitized[key] = value.substring(0, 200) + '...';
+				sanitized[key] = `${value.substring(0, 200)}...`;
 			}
 		});
 
@@ -608,7 +609,7 @@ export class BillingLogger {
 							}
 						}
 					}
-				} catch (e) {
+				} catch (_e) {
 					// Skip invalid JSON lines
 				}
 			}

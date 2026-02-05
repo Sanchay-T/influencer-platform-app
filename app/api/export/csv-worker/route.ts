@@ -240,7 +240,15 @@ export async function POST(req: Request) {
 /**
  * Generate CSV content from creators array
  */
-function generateCsvContent(creators: any[], keywords: string[]): string {
+type CreatorItem = {
+	creator?: Record<string, unknown>;
+	video?: Record<string, unknown>;
+	hashtags?: unknown;
+	platform?: string;
+	[key: string]: unknown;
+};
+
+function generateCsvContent(creators: CreatorItem[], keywords: string[]): string {
 	if (creators.length === 0) {
 		return '';
 	}

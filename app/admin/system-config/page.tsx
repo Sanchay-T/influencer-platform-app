@@ -1,15 +1,6 @@
 'use client';
 
-import {
-	AlertTriangle,
-	CheckCircle,
-	Clock,
-	Database,
-	RefreshCw,
-	Save,
-	Settings,
-	Zap,
-} from 'lucide-react';
+import { AlertTriangle, Clock, Database, RefreshCw, Save, Settings, Zap } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ErrorBoundary } from '@/app/components/error-boundary';
 import { Badge } from '@/components/ui/badge';
@@ -24,7 +15,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { adminLogger } from '@/lib/logging';
 import { useComponentLogger, useUserActionLogger } from '@/lib/logging/react-logger';
@@ -197,7 +187,7 @@ function SystemConfigPageContent() {
 
 	useEffect(() => {
 		loadConfigurations();
-	}, []);
+	}, [loadConfigurations]);
 
 	if (loading) {
 		return (

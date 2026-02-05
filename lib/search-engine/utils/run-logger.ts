@@ -1,5 +1,5 @@
-import { promises as fs } from 'fs';
-import path from 'path';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
 
 // Lightweight per-run debug logger for scraping jobs.
 // Toggle with SEARCH_DEBUG_LOGS=1 (safe to leave off in prod). Files land under logs/runs/<platform>/<jobId>.log
@@ -40,7 +40,9 @@ export function createRunLogger(
 	const startTime = Date.now();
 
 	const log = async (event: string, payload: Record<string, unknown> = {}) => {
-		if (!LOG_ENABLED) return;
+		if (!LOG_ENABLED) {
+			return;
+		}
 		try {
 			await fs.mkdir(directory, { recursive: true });
 			const elapsed = Date.now() - startTime;
@@ -54,7 +56,7 @@ export function createRunLogger(
 				event,
 				...payload,
 			};
-			await fs.appendFile(filePath, JSON.stringify(entry) + '\n', 'utf8');
+			await fs.appendFile(filePath, `${JSON.stringify(entry)}\n`, 'utf8');
 		} catch {
 			// Swallow logging errors to avoid impacting the main flow
 		}

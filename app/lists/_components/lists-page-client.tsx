@@ -43,12 +43,14 @@ export default function ListsPageClient({ initialLists }: ListsPageClientProps) 
 	const [deletingId, setDeletingId] = useState<string | null>(null);
 
 	const filteredLists = useMemo(() => {
-		if (!search.trim()) return lists;
+		if (!search.trim()) {
+			return lists;
+		}
 		const query = search.toLowerCase();
 		return lists.filter((list) =>
 			[list.name, list.description, list.type]
 				.filter(Boolean)
-				.some((value) => value!.toString().toLowerCase().includes(query))
+				.some((value) => value?.toString().toLowerCase().includes(query))
 		);
 	}, [lists, search]);
 
@@ -113,7 +115,9 @@ export default function ListsPageClient({ initialLists }: ListsPageClientProps) 
 	const handleDeleteClick = useCallback(
 		(event: MouseEvent, listId: string) => {
 			event.stopPropagation();
-			if (deletingId) return;
+			if (deletingId) {
+				return;
+			}
 			setConfirmDeleteId(listId);
 		},
 		[deletingId]
@@ -200,8 +204,11 @@ export default function ListsPageClient({ initialLists }: ListsPageClientProps) 
 					</CardHeader>
 					<CardContent className="grid grid-cols-1 md:grid-cols-6 gap-4">
 						<div className="md:col-span-3 space-y-2">
-							<label className="text-xs uppercase tracking-wide text-zinc-500">List name</label>
+							<label htmlFor="list-name" className="text-xs uppercase tracking-wide text-zinc-500">
+								List name
+							</label>
 							<Input
+								id="list-name"
 								value={form.name}
 								onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
 								placeholder="Influencer shortlist"
@@ -210,7 +217,7 @@ export default function ListsPageClient({ initialLists }: ListsPageClientProps) 
 							{createError && <p className="text-xs text-red-500">{createError}</p>}
 						</div>
 						<div className="md:col-span-3 space-y-2">
-							<label className="text-xs uppercase tracking-wide text-zinc-500">List type</label>
+							<p className="text-xs uppercase tracking-wide text-zinc-500">List type</p>
 							<div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
 								{listTypeOptions.map((option) => (
 									<button
@@ -230,8 +237,14 @@ export default function ListsPageClient({ initialLists }: ListsPageClientProps) 
 							</div>
 						</div>
 						<div className="md:col-span-6 space-y-2">
-							<label className="text-xs uppercase tracking-wide text-zinc-500">Description</label>
+							<label
+								htmlFor="list-description"
+								className="text-xs uppercase tracking-wide text-zinc-500"
+							>
+								Description
+							</label>
 							<Input
+								id="list-description"
 								value={form.description}
 								onChange={(event) =>
 									setForm((prev) => ({ ...prev, description: event.target.value }))
@@ -280,13 +293,13 @@ export default function ListsPageClient({ initialLists }: ListsPageClientProps) 
 												</Badge>
 												{confirmDeleteId === list.id ? (
 													/* Inline delete confirmation */
-													<div
-														className="flex items-center gap-1"
-														onClick={(event) => event.stopPropagation()}
-													>
+													<div className="flex items-center gap-1">
 														<button
 															type="button"
-															onClick={handleCancelDelete}
+															onClick={(event) => {
+																event.stopPropagation();
+																handleCancelDelete();
+															}}
 															className="rounded-full p-1.5 text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"
 															aria-label="Cancel delete"
 														>
@@ -294,7 +307,10 @@ export default function ListsPageClient({ initialLists }: ListsPageClientProps) 
 														</button>
 														<button
 															type="button"
-															onClick={(event) => handleConfirmDelete(event, list.id)}
+															onClick={(event) => {
+																event.stopPropagation();
+																handleConfirmDelete(event, list.id);
+															}}
 															disabled={deletingId === list.id}
 															className="rounded-full p-1.5 text-pink-400 transition hover:bg-pink-500/20 hover:text-pink-300 disabled:opacity-50"
 															aria-label="Confirm delete"

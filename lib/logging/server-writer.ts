@@ -7,8 +7,8 @@
  * so that browser bundles never pull in Node-only dependencies like `fs`.
  */
 
-import { promises as fs } from 'fs';
-import path from 'path';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
 import { FILE_LOGGING_CONFIG } from './constants';
 import type { LogCategory, LogEntry } from './types';
 
@@ -49,5 +49,5 @@ export async function writeStructuredLog(
 	const destination = resolveLogFile(entry.category, environment, now);
 	await ensureDirectory(path.dirname(destination));
 	const payload = JSON.stringify(entry);
-	await fs.appendFile(destination, payload + '\n', 'utf8');
+	await fs.appendFile(destination, `${payload}\n`, 'utf8');
 }

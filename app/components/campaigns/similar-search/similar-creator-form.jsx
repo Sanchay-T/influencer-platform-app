@@ -13,9 +13,8 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import { mockNBACreators } from './mock-nba-data';
 
-export default function SimilarCreatorForm({ onSearch }) {
+export default function SimilarCreatorForm({ onSearch: _onSearch }) {
 	const [platform, setPlatform] = useState('');
 	const [username, setUsername] = useState('');
 	const [isSearching, setIsSearching] = useState(false);
@@ -43,7 +42,7 @@ export default function SimilarCreatorForm({ onSearch }) {
 				<CardContent>
 					<form onSubmit={handleSubmit} className="space-y-6">
 						<div className="space-y-4">
-							<label className="text-sm font-medium">Platform</label>
+							<p className="text-sm font-medium">Platform</p>
 							<Select value={platform} onValueChange={setPlatform}>
 								<SelectTrigger>
 									<SelectValue placeholder="Select a platform" />
@@ -56,9 +55,12 @@ export default function SimilarCreatorForm({ onSearch }) {
 						</div>
 
 						<div className="space-y-4">
-							<label className="text-sm font-medium">Username</label>
+							<label htmlFor="similar-creator-username" className="text-sm font-medium">
+								Username
+							</label>
 							<div className="flex gap-2">
 								<Input
+									id="similar-creator-username"
 									placeholder={platform === 'instagram' ? '@username' : '@tiktokuser'}
 									value={username}
 									onChange={(e) => setUsername(e.target.value)}

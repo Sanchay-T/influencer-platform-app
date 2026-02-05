@@ -57,7 +57,9 @@ interface UseListDetailResult {
 
 const isListDetailPayload = (value: unknown): value is ListDetail => {
 	const record = toRecord(value);
-	if (!record) return false;
+	if (!record) {
+		return false;
+	}
 	return Array.isArray(record.items) && toRecord(record.list) !== null;
 };
 
@@ -161,91 +163,51 @@ export function useListDetail(listId: string, initialDetail: ListDetail): UseLis
 		[columns]
 	);
 
-	// Drag end handler
-	const handleDragEnd = useCallback(
-		async (event: DragEndEvent) => {
-			const { active, over } = event;
-			setActiveId(null);
-			if (!over || active.id === over.id) {
+	// Core operation: move one item from its current bucket to a target bucket
+	const moveItemToBucket = useCallback(
+		async (itemId: string, targetBucket: string) => {
+			if (!listId) {
 				return;
 			}
-			const activeIdValue = typeof active.id === 'string' ? active.id : String(active.id);
-			const overIdValue = typeof over.id === 'string' ? over.id : String(over.id);
-			const sourceItem = findItemById(columns, activeIdValue);
-			if (!sourceItem) {
+			const sourceBucket = findBucketForItem(columns, itemId);
+			if (!sourceBucket || sourceBucket === targetBucket) {
 				return;
 			}
-
-			const sourceBucket = findBucketForItem(columns, activeIdValue);
-			let targetBucket = sourceBucket;
-
-			const overData = toRecord(over.data?.current);
-			const overBucket = overData ? getStringProperty(overData, 'bucket') : null;
-			if (overBucket) {
-				targetBucket = overBucket;
-			} else {
-				const overItem = findItemById(columns, overIdValue);
-				if (overItem) {
-					targetBucket = overItem.bucket;
-				}
-			}
-
-			if (!targetBucket) {
+			const item = findItemById(columns, itemId);
+			if (!item) {
 				return;
 			}
 
-			const next: ColumnState = {};
-			for (const [bucket, items] of Object.entries(columns)) {
-				next[bucket] = items.map((item) => ({ ...item }));
-			}
-			const sourceItems = [...(next[sourceBucket] ?? [])];
-			const targetItems =
-				sourceBucket === targetBucket ? sourceItems : [...(next[targetBucket] ?? [])];
+			// Optimistic UI: move item between columns
+			const nextColumns: ColumnState = { ...columns };
+			nextColumns[sourceBucket] = (columns[sourceBucket] ?? []).filter((i) => i.id !== itemId);
+			nextColumns[targetBucket] = [
+				...(columns[targetBucket] ?? []),
+				{ ...item, bucket: targetBucket },
+			];
+			setColumns(nextColumns);
 
-			const sourceIndex = sourceItems.findIndex((item) => item.id === activeIdValue);
-			let targetIndex = targetItems.findIndex((item) => item.id === overIdValue);
-			if (targetIndex === -1) {
-				targetIndex = targetItems.length;
-			}
-
-			const [moved] = sourceItems.splice(sourceIndex, 1);
-			const updatedItem = { ...moved, bucket: targetBucket };
-
-			if (sourceBucket === targetBucket) {
-				sourceItems.splice(targetIndex, 0, updatedItem);
-				next[sourceBucket] = sourceItems;
-			} else {
-				targetItems.splice(targetIndex, 0, updatedItem);
-				next[sourceBucket] = sourceItems;
-				next[targetBucket] = targetItems;
-			}
-
-			for (const bucket of new Set([sourceBucket, targetBucket])) {
-				next[bucket] = (next[bucket] ?? []).map((item, index) => ({ ...item, position: index }));
-			}
-
-			setColumns(next);
-
+			// Persist the single-item update
 			try {
 				setSavingOrder(true);
-				const updates: { id: string; position: number; bucket: string }[] = [];
-				for (const bucket of new Set([sourceBucket, targetBucket])) {
-					(next[bucket] ?? []).forEach((item, index) => {
-						updates.push({ id: item.id, bucket, position: index });
-					});
-				}
-				if (!listId) {
-					return;
-				}
 				await fetch(`/api/lists/${listId}/items`, {
 					method: 'PATCH',
 					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ items: updates }),
+					body: JSON.stringify({ items: [{ id: itemId, bucket: targetBucket }] }),
 				});
-				setDetail((prev) => (prev ? { ...prev, items: flattenColumnsForDetail(next) } : prev));
+				setDetail((prev) =>
+					prev
+						? {
+								...prev,
+								items: prev.items.map((i) =>
+									i.id === itemId ? { ...i, bucket: targetBucket } : i
+								),
+							}
+						: prev
+				);
 			} catch (error) {
 				structuredConsole.error(error);
-				toast.error('Unable to update ordering, refreshing list.');
+				toast.error('Failed to move creator, reverting.');
 				setColumns(bucketize(detail?.items ?? []));
 			} finally {
 				setSavingOrder(false);
@@ -254,63 +216,40 @@ export function useListDetail(listId: string, initialDetail: ListDetail): UseLis
 		[columns, detail?.items, listId]
 	);
 
-	// Status change handler
-	const handleStatusChange = useCallback(
-		async (itemId: string, bucket: string) => {
-			if (!listId) {
+	// Drag end: resolve target bucket from drop zone, then move
+	const handleDragEnd = useCallback(
+		async (event: DragEndEvent) => {
+			const { active, over } = event;
+			setActiveId(null);
+			if (!over || active.id === over.id) {
 				return;
 			}
-			const sourceBucket = findBucketForItem(columns, itemId);
-			if (!sourceBucket || sourceBucket === bucket) {
+
+			const itemId = String(active.id);
+
+			// Dropped on a column → bucket comes from droppable data
+			const overData = toRecord(over.data?.current);
+			const overBucket = overData ? getStringProperty(overData, 'bucket') : null;
+			if (overBucket) {
+				await moveItemToBucket(itemId, overBucket);
 				return;
 			}
 
-			const next: ColumnState = {};
-			const bucketOrder = Array.from(
-				new Set([...defaultBucketOrder, ...Object.keys(columns), bucket])
-			);
-			for (const key of bucketOrder) {
-				next[key] = (columns[key] ?? []).map((item) => ({ ...item }));
-			}
-
-			const sourceItems = next[sourceBucket] ?? [];
-			const sourceIndex = sourceItems.findIndex((item) => item.id === itemId);
-			if (sourceIndex === -1) {
-				return;
-			}
-			const [moved] = sourceItems.splice(sourceIndex, 1);
-			const updatedItem = { ...moved, bucket };
-			next[sourceBucket] = sourceItems.map((item, index) => ({ ...item, position: index }));
-
-			const targetItems = next[bucket] ?? [];
-			targetItems.push(updatedItem);
-			next[bucket] = targetItems.map((item, index) => ({ ...item, position: index }));
-
-			setColumns(next);
-
-			try {
-				setSavingOrder(true);
-				const updates: { id: string; position: number; bucket: string }[] = [];
-				for (const bucketKey of new Set([sourceBucket, bucket])) {
-					(next[bucketKey] ?? []).forEach((item, index) => {
-						updates.push({ id: item.id, bucket: bucketKey, position: index });
-					});
-				}
-				await fetch(`/api/lists/${listId}/items`, {
-					method: 'PATCH',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ items: updates }),
-				});
-				setDetail((prev) => (prev ? { ...prev, items: flattenColumnsForDetail(next) } : prev));
-			} catch (error) {
-				structuredConsole.error(error);
-				toast.error('Unable to update status, refreshing list.');
-				setColumns(bucketize(detail?.items ?? []));
-			} finally {
-				setSavingOrder(false);
+			// Dropped on another card → use that card's bucket
+			const overItem = findItemById(columns, String(over.id));
+			if (overItem) {
+				await moveItemToBucket(itemId, overItem.bucket);
 			}
 		},
-		[columns, detail?.items, listId]
+		[columns, moveItemToBucket]
+	);
+
+	// Status change (list-view dropdown) — same core operation
+	const handleStatusChange = useCallback(
+		async (itemId: string, bucket: string) => {
+			await moveItemToBucket(itemId, bucket);
+		},
+		[moveItemToBucket]
 	);
 
 	// Toggle pin handler

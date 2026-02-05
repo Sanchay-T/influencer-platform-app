@@ -9,7 +9,7 @@
  */
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -53,7 +53,9 @@ export function PaginationControls({
 
 	// Prefetch adjacent pages when current page changes
 	useEffect(() => {
-		if (!onPrefetchPages || isLoading) return;
+		if (!onPrefetchPages || isLoading) {
+			return;
+		}
 
 		// Prefetch 2 pages before and 3 pages after (users tend to go forward more)
 		const pagesToPrefetch: number[] = [];
@@ -102,7 +104,9 @@ export function PaginationControls({
 		return () => window.removeEventListener('keydown', handleKeyDown);
 	}, [currentPage, totalPages, onPageChange]);
 
-	if (totalResults === 0) return null;
+	if (totalResults === 0) {
+		return null;
+	}
 
 	return (
 		<div className="space-y-3">

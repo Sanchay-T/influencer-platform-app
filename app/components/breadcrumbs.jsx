@@ -21,7 +21,7 @@ export default function Breadcrumbs({
 
 		// Find the campaign item to navigate back to
 		const campaignItem = items.find((item) => item.type === 'campaign');
-		if (campaignItem && campaignItem.href) {
+		if (campaignItem?.href) {
 			router.push(campaignItem.href);
 		} else {
 			// Fallback to dashboard
@@ -33,7 +33,7 @@ export default function Breadcrumbs({
 		<div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
 			<nav className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-zinc-400">
 				{items.map((item, index) => (
-					<div key={index} className="flex items-center">
+					<div key={`${item.href ?? item.label}-${item.label}`} className="flex items-center">
 						{item.href ? (
 							<Link href={item.href} className="hover:text-zinc-200 transition-colors duration-200">
 								{item.label}

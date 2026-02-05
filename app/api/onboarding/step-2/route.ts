@@ -10,7 +10,6 @@ import { onboardingTracker, SentryLogger, sessionTracker } from '@/lib/sentry';
 
 const logger = createCategoryLogger(LogCategory.ONBOARDING);
 
-// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function PATCH(req: Request) {
 	try {
 		const { userId } = await getAuthOrTest();

@@ -3,9 +3,12 @@
 import { AlertTriangle, Calendar } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { StartSubscriptionModal } from '@/app/components/billing/start-subscription-modal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { PLANS, type PlanKey } from '@/lib/billing/plan-config';
+import { useStartSubscription } from '@/lib/hooks/use-start-subscription';
 
 type Status = {
 	isLoaded: boolean;
@@ -21,10 +24,14 @@ type Status = {
 		campaignsUsed: number;
 		campaignsLimit: number;
 	};
+	currentPlan?: string;
+	billingAmount?: number;
 };
 
 export default function TrialSidebarCompact() {
 	const [status, setStatus] = useState<Status>({ isLoaded: false, isTrialing: false });
+	const [showStartModal, setShowStartModal] = useState(false);
+	const { startSubscription, isLoading: isStarting } = useStartSubscription();
 
 	useEffect(() => {
 		let mounted = true;
@@ -36,18 +43,26 @@ export default function TrialSidebarCompact() {
 					if (cached) {
 						const parsed = JSON.parse(cached);
 						// Use cached data if less than 30 seconds old
-						if (parsed && parsed.ts && Date.now() - parsed.ts < 30_000) {
-							if (!mounted) return;
+						if (parsed?.ts && Date.now() - parsed.ts < 30_000) {
+							if (!mounted) {
+								return;
+							}
 							setStatus(parsed.data);
 							// Still fetch fresh data in background
 						}
 					}
-				} catch {}
+				} catch {
+					// Ignore localStorage access issues (e.g. privacy mode).
+				}
 
 				const res = await fetch('/api/billing/status', { cache: 'no-store' });
-				if (!res.ok) throw new Error('Failed to fetch status');
+				if (!res.ok) {
+					throw new Error('Failed to fetch status');
+				}
 				const data = await res.json();
-				if (!mounted) return;
+				if (!mounted) {
+					return;
+				}
 
 				const newStatus = {
 					isLoaded: true,
@@ -65,6 +80,8 @@ export default function TrialSidebarCompact() {
 								campaignsLimit: data.usageInfo.campaignsLimit || 0,
 							}
 						: undefined,
+					currentPlan: data.currentPlan || undefined,
+					billingAmount: data.billingAmount || 0,
 				};
 
 				setStatus(newStatus);
@@ -78,9 +95,13 @@ export default function TrialSidebarCompact() {
 							data: newStatus,
 						})
 					);
-				} catch {}
-			} catch (e) {
-				if (!mounted) return;
+				} catch {
+					// Ignore localStorage write failures.
+				}
+			} catch (_e) {
+				if (!mounted) {
+					return;
+				}
 				setStatus((s) => ({ ...s, isLoaded: true }));
 			}
 		};
@@ -144,33 +165,27 @@ export default function TrialSidebarCompact() {
 					<Progress value={progress} className="h-2 bg-zinc-800" />
 				</div>
 
-				<div className="grid grid-cols-2 gap-2 text-xs text-zinc-500">
-					<div className="flex items-center gap-1">
-						<Calendar className="h-3 w-3 text-zinc-400" />
-						<span>Started:</span>
-						<span className="text-zinc-300">
-							{status.trialStartDate
-								? new Date(status.trialStartDate).toLocaleDateString('en-US', {
-										month: 'short',
-										day: 'numeric',
-										year: 'numeric',
-									})
-								: '—'}
-						</span>
-					</div>
-					<div className="flex items-center gap-1 justify-end">
-						<Calendar className="h-3 w-3 text-zinc-400" />
-						<span>Expires:</span>
-						<span className="text-zinc-300">
-							{status.trialEndDate
-								? new Date(status.trialEndDate).toLocaleDateString('en-US', {
-										month: 'short',
-										day: 'numeric',
-										year: 'numeric',
-									})
-								: '—'}
-						</span>
-					</div>
+				<div className="flex items-center justify-center gap-1.5 text-xs text-zinc-500 mb-1">
+					<Calendar className="h-3 w-3 text-zinc-400 flex-shrink-0" />
+					<span className="text-zinc-300 whitespace-nowrap">
+						{status.trialStartDate
+							? new Date(status.trialStartDate).toLocaleDateString('en-US', {
+									month: 'short',
+									day: 'numeric',
+									year: 'numeric',
+								})
+							: '—'}
+					</span>
+					<span className="text-zinc-600">&rarr;</span>
+					<span className="text-zinc-300 whitespace-nowrap">
+						{status.trialEndDate
+							? new Date(status.trialEndDate).toLocaleDateString('en-US', {
+									month: 'short',
+									day: 'numeric',
+									year: 'numeric',
+								})
+							: '—'}
+					</span>
 				</div>
 
 				{status.usageInfo && status.usageInfo.campaignsLimit > 0 && (
@@ -179,15 +194,31 @@ export default function TrialSidebarCompact() {
 					</div>
 				)}
 
-				<Link href="/billing?upgrade=1" className="block">
-					<Button className="w-full text-sm">Upgrade Now</Button>
-				</Link>
+				<Button className="w-full text-sm mt-8 mb-4" onClick={() => setShowStartModal(true)}>
+					Start Subscription
+				</Button>
 				<Link href="/billing" className="block">
 					<Button variant="outline" className="w-full text-sm">
 						View Billing Details
 					</Button>
 				</Link>
 			</div>
+
+			{status.currentPlan && (
+				<StartSubscriptionModal
+					open={showStartModal}
+					onOpenChange={setShowStartModal}
+					planName={PLANS[status.currentPlan as PlanKey]?.name || status.currentPlan}
+					amount={status.billingAmount || 0}
+					onConfirm={async () => {
+						const result = await startSubscription();
+						if (result.success) {
+							setShowStartModal(false);
+						}
+					}}
+					isLoading={isStarting}
+				/>
+			)}
 		</div>
 	);
 }

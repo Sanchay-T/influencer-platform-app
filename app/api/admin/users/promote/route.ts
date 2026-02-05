@@ -1,8 +1,6 @@
-import { NextResponse } from 'next/server';
 import { isAdminUser } from '@/lib/auth/admin-utils';
-import { db } from '@/lib/db';
 import { createUser, getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
-import { LogCategory, logger } from '@/lib/logging';
+import { LogCategory } from '@/lib/logging';
 import {
 	createApiResponse,
 	createErrorResponse,

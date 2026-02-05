@@ -245,7 +245,7 @@ export class OnboardingLogger {
 	): Promise<void> {
 		const data = {
 			fieldName,
-			value: typeof value === 'string' ? value.substring(0, 100) + '...' : value,
+			value: typeof value === 'string' ? `${value.substring(0, 100)}...` : value,
 		};
 		await OnboardingLogger.log({
 			step: `STEP-${step}`,
@@ -265,7 +265,9 @@ export class OnboardingLogger {
 		if (typeof window !== 'undefined') {
 			try {
 				const res = await fetch(`/api/logs/onboarding?lines=${lines}`);
-				if (!res.ok) return [];
+				if (!res.ok) {
+					return [];
+				}
 				const data = await res.json();
 				return Array.isArray(data.lines) ? data.lines : [];
 			} catch {
@@ -283,7 +285,9 @@ export class OnboardingLogger {
 		if (typeof window !== 'undefined') {
 			try {
 				await fetch('/api/logs/onboarding', { method: 'DELETE' });
-			} catch {}
+			} catch {
+				// Ignore log cleanup failures.
+			}
 			return;
 		}
 		// No direct file write here to avoid bundling fs; rely on API if needed.

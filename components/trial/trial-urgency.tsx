@@ -75,7 +75,9 @@ export default function TrialUrgency({ trialData }: TrialUrgencyProps) {
 		},
 	};
 
-	if (!currentOffer) return null;
+	if (!currentOffer) {
+		return null;
+	}
 
 	const offer = offers[currentOffer];
 

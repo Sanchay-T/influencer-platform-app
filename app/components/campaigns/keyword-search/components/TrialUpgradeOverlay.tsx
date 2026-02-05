@@ -20,6 +20,9 @@ export interface TrialUpgradeOverlayProps {
 
 // Plan display names for the description
 const PLAN_NAMES: Record<string, string> = {
+	growth: 'Growth',
+	scale: 'Scale',
+	pro: 'Pro',
 	glow_up: 'Glow Up',
 	viral_surge: 'Viral Surge',
 	fame_flex: 'Fame Flex',
@@ -36,7 +39,7 @@ export function TrialUpgradeOverlay({
 
 	const planName = currentPlan ? PLAN_NAMES[currentPlan] || currentPlan : 'your';
 
-	const description = `Start your ${planName} subscription to unlock all creators with full details.`;
+	const description = `Start your ${planName} plan to unlock all ${blurredCount + 25} creators with full details.`;
 
 	return (
 		<div className="absolute bottom-0 left-0 right-0 z-40">

@@ -105,7 +105,6 @@ export default function KeywordSearch() {
 	};
 
 	// Manejar el paso 2: Revisión y envío de keywords
-	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Legacy flow; keep readable while improving error diagnostics.
 	const handleKeywordsSubmit = async (payload) => {
 		// Prevent double submission
 		if (isSubmitting) {
@@ -151,7 +150,9 @@ export default function KeywordSearch() {
 
 			const v2Platform = v2PlatformMap.get(normalizedPlatform);
 			if (!v2Platform) {
-				throw new Error(`Unsupported platform for keyword search: ${normalizedPlatform || 'unknown'}`);
+				throw new Error(
+					`Unsupported platform for keyword search: ${normalizedPlatform || 'unknown'}`
+				);
 			}
 
 			const response = await fetch('/api/v2/dispatch', {

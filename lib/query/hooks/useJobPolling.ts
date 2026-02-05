@@ -170,7 +170,6 @@ export function useJobPolling(
 	onCompleteRef.current = onComplete;
 
 	// Reset completion tracking when jobId changes
-	// biome-ignore lint/correctness/useExhaustiveDependencies: Intentionally reset on jobId change
 	useEffect(() => {
 		hasCalledCompleteRef.current = false;
 		prevStatusRef.current = undefined;
@@ -207,7 +206,6 @@ export function useJobPolling(
 	}, [jobId, enabled, platform]);
 
 	// Handle callbacks
-	// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Callback coordination requires multiple branches
 	useEffect(() => {
 		if (!mergedData) {
 			return;

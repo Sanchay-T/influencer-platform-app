@@ -41,7 +41,6 @@ export function trackCompleteRegistration(): void {
  * Track trial start
  */
 export function trackStartTrial(planId: string): void {
-	// biome-ignore lint/style/useNamingConvention: Meta Pixel API uses snake_case
 	trackMetaEvent('StartTrial', { content_name: planId });
 }
 
@@ -49,6 +48,5 @@ export function trackStartTrial(planId: string): void {
  * Track purchase with value
  */
 export function trackPurchase(value: number, currency: string, planId: string): void {
-	// biome-ignore lint/style/useNamingConvention: Meta Pixel API uses snake_case
 	trackMetaEvent('Purchase', { value, currency, content_name: planId });
 }

@@ -17,16 +17,12 @@ type ExtractedChannel = ReturnType<typeof extractChannelsFromVideos>[number];
 
 type EnhancedChannel = YouTubeSimilarChannel & {
 	username: string;
-	// biome-ignore lint/style/useNamingConvention: API response uses snake_case
 	full_name: string;
 	bio: string;
 	emails: string[];
 	socialLinks: string[];
-	// biome-ignore lint/style/useNamingConvention: API response uses snake_case
 	is_private: boolean;
-	// biome-ignore lint/style/useNamingConvention: API response uses snake_case
 	is_verified: boolean;
-	// biome-ignore lint/style/useNamingConvention: API response uses snake_case
 	profile_pic_url: string;
 	profileUrl: string;
 	platform: 'YouTube';
@@ -39,7 +35,6 @@ const MAX_API_CALLS_FOR_TESTING = 10;
 /**
  * Process YouTube similar creator search job
  */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: legacy flow staged for refactor
 export async function processYouTubeSimilarJob(
 	job: unknown,
 	jobId: string
@@ -397,18 +392,14 @@ export async function processYouTubeSimilarJob(
 				id: channel.id,
 				name: channel.name,
 				username: channel.handle || channel.name,
-				// biome-ignore lint/style/useNamingConvention: API response uses snake_case
 				full_name: channel.name,
 				handle: channel.handle,
 				thumbnail: channel.thumbnail,
 				bio: bio,
 				emails: uniqueEmails,
 				socialLinks: enhancedData?.links || [],
-				// biome-ignore lint/style/useNamingConvention: API response uses snake_case
 				is_private: false,
-				// biome-ignore lint/style/useNamingConvention: API response uses snake_case
 				is_verified: false,
-				// biome-ignore lint/style/useNamingConvention: API response uses snake_case
 				profile_pic_url: channel.thumbnail,
 				profileUrl: `https://www.youtube.com/${channel.handle || `@${channel.name.replace(/\s+/g, '')}`}`,
 				platform: 'YouTube',

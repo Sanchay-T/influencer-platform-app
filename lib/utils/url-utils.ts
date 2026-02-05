@@ -46,7 +46,6 @@ export function getUrl(type: 'client' | 'server' | 'webhook'): string {
 			return getClientUrl();
 		case 'webhook':
 			return getWebhookUrl();
-		case 'server':
 		default:
 			return getServerUrl();
 	}

@@ -45,7 +45,9 @@ export default function KeywordReview({ onSubmit, isLoading, platform }) {
 	);
 
 	const sanitizeInstagramHandle = (rawValue) => {
-		if (typeof rawValue !== 'string') return '';
+		if (typeof rawValue !== 'string') {
+			return '';
+		}
 		return rawValue.trim().replace(/^@+/, '').toLowerCase();
 	};
 
@@ -85,8 +87,10 @@ export default function KeywordReview({ onSubmit, isLoading, platform }) {
 		setIsSuggesting(false);
 	}, []);
 
-	const handleSuggestionEvent = (event) => {
-		if (!event || typeof event !== 'object') return;
+	const handleSuggestionEvent = useCallback((event) => {
+		if (!event || typeof event !== 'object') {
+			return;
+		}
 
 		if (event.type === 'token') {
 			const token = typeof event.payload === 'string' ? event.payload : '';
@@ -99,10 +103,16 @@ export default function KeywordReview({ onSubmit, isLoading, platform }) {
 		if (event.type === 'suggestion') {
 			const payload = event.payload ?? {};
 			const keyword = typeof payload.keyword === 'string' ? payload.keyword.trim() : '';
-			if (!keyword || keyword.length < MIN_SUGGEST_LENGTH) return;
+			if (!keyword || keyword.length < MIN_SUGGEST_LENGTH) {
+				return;
+			}
 			const currentKeywords = keywordsRef.current;
-			if (currentKeywords.some((item) => item.toLowerCase() === keyword.toLowerCase())) return;
-			if (suggestionRegistryRef.current.has(keyword.toLowerCase())) return;
+			if (currentKeywords.some((item) => item.toLowerCase() === keyword.toLowerCase())) {
+				return;
+			}
+			if (suggestionRegistryRef.current.has(keyword.toLowerCase())) {
+				return;
+			}
 			suggestionRegistryRef.current.add(keyword.toLowerCase());
 			setSuggestions((current) => {
 				if (current.some((item) => item.keyword.toLowerCase() === keyword.toLowerCase())) {
@@ -128,7 +138,7 @@ export default function KeywordReview({ onSubmit, isLoading, platform }) {
 		if (event.type === 'complete') {
 			setStreamingPreview('');
 		}
-	};
+	}, []);
 
 	const startSuggestionStream = useCallback(
 		(seed) => {
@@ -191,7 +201,9 @@ export default function KeywordReview({ onSubmit, isLoading, platform }) {
 
 					while (true) {
 						const { done, value } = await reader.read();
-						if (done) break;
+						if (done) {
+							break;
+						}
 						buffer += decoder.decode(value, { stream: true });
 
 						let separatorIndex = buffer.indexOf('\n\n');
@@ -234,7 +246,7 @@ export default function KeywordReview({ onSubmit, isLoading, platform }) {
 				}
 			})();
 		},
-		[abortSuggestionStream, availableSlots, isInstagramSimilarMode]
+		[abortSuggestionStream, availableSlots, isInstagramSimilarMode, handleSuggestionEvent]
 	);
 
 	useEffect(() => {
@@ -265,7 +277,6 @@ export default function KeywordReview({ onSubmit, isLoading, platform }) {
 	}, [
 		newKeyword,
 		availableSlots,
-		keywords,
 		isInstagramSimilarMode,
 		abortSuggestionStream,
 		startSuggestionStream,
@@ -294,7 +305,9 @@ export default function KeywordReview({ onSubmit, isLoading, platform }) {
 		const rawValue = newKeyword;
 		const trimmedKeyword = rawValue.trim();
 
-		if (!trimmedKeyword) return;
+		if (!trimmedKeyword) {
+			return;
+		}
 
 		if (keywords.length >= MAX_KEYWORDS) {
 			toast.error(
@@ -450,7 +463,9 @@ export default function KeywordReview({ onSubmit, isLoading, platform }) {
 
 				while (true) {
 					const { done, value } = await reader.read();
-					if (done) break;
+					if (done) {
+						break;
+					}
 					buffer += decoder.decode(value, { stream: true });
 
 					let separatorIndex = buffer.indexOf('\n\n');
@@ -518,6 +533,7 @@ export default function KeywordReview({ onSubmit, isLoading, platform }) {
 							<Badge key={keyword} variant="secondary" className="px-3 py-1">
 								{renderKeywordLabel(keyword)}
 								<button
+									type="button"
 									onClick={() => handleRemoveKeyword(keyword)}
 									className="ml-2 hover:text-destructive"
 									disabled={isSubmitting}

@@ -173,14 +173,21 @@ function DiagnosticsPanel({
 				<details className="mt-2">
 					<summary className="cursor-pointer text-indigo-300/80">Batch breakdown</summary>
 					<ul className="mt-1 space-y-1">
-						{diagnostics.batches.map((batch, index) => (
-							<li key={`${jobId}-batch-${index}`} className="flex justify-between font-mono">
-								<span>
-									#{batch.index ?? index + 1} · {batch.size ?? '—'} creators
-								</span>
-								<span>{formatDuration(batch.durationMs ?? null)}</span>
-							</li>
-						))}
+						{diagnostics.batches.map((batch, index) => {
+							const batchKey =
+								batch.index ??
+								batch.handle ??
+								batch.keyword ??
+								`${batch.size ?? 'size'}-${batch.durationMs ?? 'duration'}`;
+							return (
+								<li key={`${jobId}-batch-${batchKey}`} className="flex justify-between font-mono">
+									<span>
+										#{batch.index ?? index + 1} · {batch.size ?? '—'} creators
+									</span>
+									<span>{formatDuration(batch.durationMs ?? null)}</span>
+								</li>
+							);
+						})}
 					</ul>
 				</details>
 				<p className="text-end text-[10px] text-indigo-300/70">

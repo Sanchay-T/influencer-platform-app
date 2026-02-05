@@ -13,7 +13,9 @@ const getNestedNumber = (record: Record<string, unknown>, key: string): number |
 
 function extractLikes(creator: unknown): number | null {
 	const creatorRecord = toRecord(creator);
-	if (!creatorRecord) return null;
+	if (!creatorRecord) {
+		return null;
+	}
 	const videoRecord = getRecordProperty(creatorRecord, 'video');
 	const videoStats = videoRecord ? getRecordProperty(videoRecord, 'statistics') : null;
 	const creatorStats = getRecordProperty(creatorRecord, 'statistics');
@@ -27,14 +29,18 @@ function extractLikes(creator: unknown): number | null {
 	];
 
 	for (const val of paths) {
-		if (typeof val === 'number') return val;
+		if (typeof val === 'number') {
+			return val;
+		}
 	}
 	return null;
 }
 
 function extractViews(creator: unknown): number | null {
 	const creatorRecord = toRecord(creator);
-	if (!creatorRecord) return null;
+	if (!creatorRecord) {
+		return null;
+	}
 	const videoRecord = getRecordProperty(creatorRecord, 'video');
 	const videoStats = videoRecord ? getRecordProperty(videoRecord, 'statistics') : null;
 	const creatorStats = getRecordProperty(creatorRecord, 'statistics');
@@ -49,7 +55,9 @@ function extractViews(creator: unknown): number | null {
 		getNestedNumber(creatorRecord, 'view_count'),
 	];
 	for (const val of paths) {
-		if (typeof val === 'number') return val;
+		if (typeof val === 'number') {
+			return val;
+		}
 	}
 	return null;
 }
@@ -72,7 +80,9 @@ export function filterCreatorsByLikes<T extends Record<string, unknown>>(
 	return creators.filter((c) => {
 		const likes = extractLikes(c);
 		// If likes is null/unknown, include based on flag (default: keep them)
-		if (likes === null) return includeNullLikes;
+		if (likes === null) {
+			return includeNullLikes;
+		}
 		// Only filter out creators with KNOWN likes below threshold
 		return likes >= minLikes;
 	});
@@ -89,7 +99,9 @@ export function filterCreatorsByViews<T extends Record<string, unknown>>(
 ): T[] {
 	return creators.filter((c) => {
 		const views = extractViews(c);
-		if (views === null) return includeNullViews;
+		if (views === null) {
+			return includeNullViews;
+		}
 		return views >= minViews;
 	});
 }

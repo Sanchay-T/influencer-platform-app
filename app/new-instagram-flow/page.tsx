@@ -12,7 +12,9 @@ interface FeedResponse {
 
 const isFeedRunResult = (value: unknown): value is FeedRunResult => {
 	const record = toRecord(value);
-	if (!record) return false;
+	if (!record) {
+		return false;
+	}
 	return (
 		isString(record.keyword) &&
 		isString(record.generatedAt) &&
@@ -24,7 +26,9 @@ const isFeedRunResult = (value: unknown): value is FeedRunResult => {
 
 const parseFeedResponse = (value: unknown): FeedResponse | null => {
 	const record = toRecord(value);
-	if (!record || typeof record.ok !== 'boolean') return null;
+	if (!record || typeof record.ok !== 'boolean') {
+		return null;
+	}
 	const response: FeedResponse = { ok: record.ok };
 	if (isString(record.error)) {
 		response.error = record.error;
@@ -70,7 +74,9 @@ export default function NewInstagramFlowPage() {
 	}
 
 	const summary = useMemo(() => {
-		if (!result) return null;
+		if (!result) {
+			return null;
+		}
 		return `Created ${result.items.length} reels from ${result.creatorsConsidered} creators`;
 	}, [result]);
 
@@ -210,12 +216,16 @@ function Metric({ label, value }: { label: string; value?: number }) {
 }
 
 function formatNumber(value?: number) {
-	if (!value && value !== 0) return '—';
+	if (!value && value !== 0) {
+		return '—';
+	}
 	return Intl.NumberFormat(undefined, { notation: 'compact' }).format(value);
 }
 
 function formatDate(dateString: string) {
 	const date = new Date(dateString);
-	if (Number.isNaN(date.getTime())) return 'Unknown date';
+	if (Number.isNaN(date.getTime())) {
+		return 'Unknown date';
+	}
 	return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }

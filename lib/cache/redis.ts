@@ -12,7 +12,9 @@ import { structuredConsole } from '@/lib/logging/console-proxy';
 let redis: Redis | null = null;
 
 function getRedis(): Redis | null {
-	if (redis) return redis;
+	if (redis) {
+		return redis;
+	}
 
 	const url = process.env.UPSTASH_REDIS_REST_URL;
 	const token = process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -66,7 +68,9 @@ export const CacheTTL = {
 export async function cacheGet<T>(key: string): Promise<T | null> {
 	try {
 		const client = getRedis();
-		if (!client) return null;
+		if (!client) {
+			return null;
+		}
 
 		const value = await client.get<T>(key);
 		if (value) {
@@ -85,7 +89,9 @@ export async function cacheGet<T>(key: string): Promise<T | null> {
 export async function cacheSet<T>(key: string, value: T, ttlSeconds: number): Promise<boolean> {
 	try {
 		const client = getRedis();
-		if (!client) return false;
+		if (!client) {
+			return false;
+		}
 
 		await client.set(key, value, { ex: ttlSeconds });
 		structuredConsole.log(`[CACHE] SET: ${key} (TTL: ${ttlSeconds}s)`);
@@ -102,7 +108,9 @@ export async function cacheSet<T>(key: string, value: T, ttlSeconds: number): Pr
 export async function cacheDelete(key: string): Promise<boolean> {
 	try {
 		const client = getRedis();
-		if (!client) return false;
+		if (!client) {
+			return false;
+		}
 
 		await client.del(key);
 		structuredConsole.log(`[CACHE] DELETE: ${key}`);
@@ -119,11 +127,15 @@ export async function cacheDelete(key: string): Promise<boolean> {
 export async function cacheDeletePattern(pattern: string): Promise<number> {
 	try {
 		const client = getRedis();
-		if (!client) return 0;
+		if (!client) {
+			return 0;
+		}
 
 		// Upstash doesn't support SCAN, so we use KEYS (ok for small datasets)
 		const keys = await client.keys(pattern);
-		if (keys.length === 0) return 0;
+		if (keys.length === 0) {
+			return 0;
+		}
 
 		await client.del(...keys);
 		structuredConsole.log(`[CACHE] DELETE PATTERN: ${pattern} (${keys.length} keys)`);

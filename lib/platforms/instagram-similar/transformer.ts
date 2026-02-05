@@ -61,7 +61,7 @@ export function transformInstagramProfile(
  */
 export function transformRelatedProfile(
 	profile: ApifyRelatedProfile,
-	order: number = 0
+	_order: number = 0
 ): InstagramSimilarCreatorRecord {
 	const followerCount = resolveFollowerCount(profile);
 
@@ -149,7 +149,9 @@ export function transformEnhancedProfile(
  * Extract emails from bio text (same function as in api.ts)
  */
 function extractEmailsFromBio(bio: string): string[] {
-	if (!bio) return [];
+	if (!bio) {
+		return [];
+	}
 	const emailRegex = /[\w.-]+@[\w.-]+\.\w+/g;
 	return bio.match(emailRegex) || [];
 }
@@ -165,7 +167,7 @@ export function extractProfileInfo(profileData: ApifyInstagramProfileResponse) {
 		following: profileData.followsCount,
 		verified: profileData.verified,
 		isBusinessAccount: profileData.isBusinessAccount,
-		biography: profileData.biography?.substring(0, 100) + '...',
+		biography: `${profileData.biography?.substring(0, 100)}...`,
 		externalUrl: profileData.externalUrl,
 		relatedProfilesCount: profileData.relatedProfiles?.length || 0,
 	};

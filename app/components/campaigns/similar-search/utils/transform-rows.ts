@@ -119,7 +119,9 @@ function resolvePreviewImage(creator: CreatorInput | null): string | null {
 }
 
 const toNumberValue = (value: unknown): number | null => {
-	if (isNumber(value)) return value;
+	if (isNumber(value)) {
+		return value;
+	}
 	if (isString(value) && value.trim()) {
 		const parsed = Number(value);
 		return Number.isFinite(parsed) ? parsed : null;

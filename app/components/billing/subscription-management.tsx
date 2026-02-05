@@ -22,16 +22,16 @@ import { useBilling } from '@/lib/hooks/use-billing';
 import { ErrorBoundary } from '../error-boundary';
 import { ManageSubscriptionButton } from './customer-portal-button';
 
-const planMeta: Record<string, { label: string; price: string; Icon: typeof Shield }> = {
-	free: { label: 'Free Trial', price: '$0', Icon: Shield },
+const planMeta: Record<string, { label: string; price: string; icon: typeof Shield }> = {
+	free: { label: 'Free Trial', price: '$0', icon: Shield },
 	// New plans (Jan 2026)
-	growth: { label: 'Growth', price: '$199', Icon: Star },
-	scale: { label: 'Scale', price: '$599', Icon: Zap },
-	pro: { label: 'Pro', price: '$1,999', Icon: Crown },
+	growth: { label: 'Growth', price: '$199', icon: Star },
+	scale: { label: 'Scale', price: '$599', icon: Zap },
+	pro: { label: 'Pro', price: '$1,999', icon: Crown },
 	// Legacy plans (grandfathered)
-	glow_up: { label: 'Glow Up', price: '$99', Icon: Star },
-	viral_surge: { label: 'Viral Surge', price: '$249', Icon: Zap },
-	fame_flex: { label: 'Fame Flex', price: '$499', Icon: Crown },
+	glow_up: { label: 'Glow Up', price: '$99', icon: Star },
+	viral_surge: { label: 'Viral Surge', price: '$249', icon: Zap },
+	fame_flex: { label: 'Fame Flex', price: '$499', icon: Crown },
 };
 
 function SubscriptionCard() {
@@ -54,7 +54,9 @@ function SubscriptionCard() {
 	const canAccessPortal = canManageSubscription ?? false;
 
 	const statusBadge = useMemo(() => {
-		if (isTrialing) return <Badge variant="secondary">Trial Active</Badge>;
+		if (isTrialing) {
+			return <Badge variant="secondary">Trial Active</Badge>;
+		}
 		switch (subscriptionStatus) {
 			case 'active':
 				return (
@@ -103,7 +105,7 @@ function SubscriptionCard() {
 					<div className="flex items-center justify-between gap-4 flex-wrap">
 						<div className="flex items-center gap-3">
 							<div className="p-3 rounded-full bg-zinc-800">
-								<plan.Icon className="h-7 w-7" />
+								<plan.icon className="h-7 w-7" />
 							</div>
 							<div>
 								<CardTitle className="text-2xl text-zinc-100">{plan.label}</CardTitle>

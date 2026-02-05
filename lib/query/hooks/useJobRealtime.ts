@@ -129,7 +129,6 @@ export function useJobRealtime(jobId: string | null | undefined): UseJobRealtime
 					setData(parsed);
 				}
 			)
-			// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Realtime status handling is branchy.
 			.subscribe((status, err) => {
 				debugLog('REALTIME', 'Subscription status changed', { status, error: err?.message });
 

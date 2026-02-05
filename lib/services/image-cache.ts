@@ -12,8 +12,8 @@
  *   images/thumbnails/{platform}/{contentId}.jpg
  */
 
+import { createHash } from 'node:crypto';
 import { head, put } from '@vercel/blob';
-import { createHash } from 'crypto';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
 // ============================================================================
@@ -80,7 +80,9 @@ export class ImageCache {
 	 * Check if URL looks valid for caching
 	 */
 	private isValidUrl(url: string | null | undefined): url is string {
-		if (!url || typeof url !== 'string') return false;
+		if (!url || typeof url !== 'string') {
+			return false;
+		}
 		const trimmed = url.trim();
 		return trimmed.startsWith('http://') || trimmed.startsWith('https://');
 	}
@@ -147,7 +149,7 @@ export class ImageCache {
 						quality: 0.85,
 					});
 					buffer = Buffer.from(converted);
-				} catch (heicError) {
+				} catch (_heicError) {
 					structuredConsole.warn(`${LOG_PREFIX} HEIC conversion failed, using original`);
 				}
 			}

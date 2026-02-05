@@ -42,7 +42,9 @@ export function EmailScheduleDisplay({
 
 		// Process each email type
 		Object.entries(emailScheduleStatus).forEach(([emailType, data]) => {
-			if (!isRecord(data)) return;
+			if (!isRecord(data)) {
+				return;
+			}
 			const status = isScheduleStatus(data.status) ? data.status : 'scheduled';
 			schedules.push({
 				type: emailType,
@@ -121,7 +123,9 @@ export function EmailScheduleDisplay({
 	};
 
 	const formatTimestamp = (timestamp?: string): string => {
-		if (!timestamp) return 'Not set';
+		if (!timestamp) {
+			return 'Not set';
+		}
 		try {
 			const date = new Date(timestamp);
 			return date.toLocaleString();
@@ -148,9 +152,9 @@ export function EmailScheduleDisplay({
 
 			<CardContent>
 				<div className="space-y-4">
-					{emailSchedules.map((schedule, index) => (
+					{emailSchedules.map((schedule) => (
 						<div
-							key={index}
+							key={`${schedule.type}-${schedule.timestamp ?? schedule.scheduledFor ?? 'pending'}`}
 							className="flex items-start gap-3 p-3 bg-zinc-800/50 rounded-lg border border-zinc-700/50"
 						>
 							<div className="flex-shrink-0 mt-0.5">{getStatusIcon(schedule.status)}</div>

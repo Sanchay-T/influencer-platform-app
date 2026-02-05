@@ -16,11 +16,43 @@ interface Step2BrandProps {
 	error: string;
 }
 
-const examplePrompts = [
-	"We're a sustainable skincare brand targeting eco-conscious millennials. We look for beauty influencers who promote clean living, natural products, and environmental awareness.",
-	'Fitness apparel company for women. We want to work with fitness influencers, yoga instructors, and wellness coaches who inspire healthy lifestyles and body positivity.',
-	"Tech startup building productivity apps. We're seeking tech reviewers, productivity experts, and entrepreneurs who create content about business tools and efficiency.",
-];
+const CATEGORY_EXAMPLES = [
+	{
+		label: 'Beauty & Skincare',
+		prompt:
+			"We're a sustainable skincare brand targeting eco-conscious millennials. We look for beauty influencers who promote clean living, natural products, and environmental awareness.",
+	},
+	{
+		label: 'Fitness & Wellness',
+		prompt:
+			'Fitness apparel company for women. We want to work with fitness influencers, yoga instructors, and wellness coaches who inspire healthy lifestyles and body positivity.',
+	},
+	{
+		label: 'Tech & Software',
+		prompt:
+			"Tech startup building productivity apps. We're seeking tech reviewers, productivity experts, and entrepreneurs who create content about business tools and efficiency.",
+	},
+	{
+		label: 'Fashion & Apparel',
+		prompt:
+			'Sustainable fashion brand for young professionals. We seek fashion bloggers and style influencers who promote ethical and eco-friendly clothing choices.',
+	},
+	{
+		label: 'Food & Beverage',
+		prompt:
+			'Organic snack company targeting health-conscious consumers. We want food bloggers and nutrition influencers who promote healthy eating and natural ingredients.',
+	},
+	{
+		label: 'Home & Lifestyle',
+		prompt:
+			'Home decor brand for modern minimalists. We want interior design influencers and lifestyle creators who showcase clean, aesthetic living spaces.',
+	},
+	{
+		label: 'Travel & Hospitality',
+		prompt:
+			'Luxury travel agency targeting affluent travelers. We want travel bloggers and lifestyle influencers who showcase premium destinations and unique experiences.',
+	},
+] as const;
 
 export default function Step2Brand({
 	brandDescription,
@@ -84,20 +116,20 @@ export default function Step2Brand({
 					</div>
 				</div>
 
-				<div className="space-y-3">
+				<div className="space-y-2">
 					<Label className="text-sm font-medium text-foreground">
-						Need inspiration? Click any example:
+						Select your industry to auto-fill an example:
 					</Label>
 
-					<div className="space-y-2">
-						{examplePrompts.map((prompt, promptIndex) => (
+					<div className="flex flex-wrap gap-2">
+						{CATEGORY_EXAMPLES.map((cat, i) => (
 							<button
-								key={`example-${promptIndex}`}
+								key={cat.label}
 								type="button"
-								className="w-full text-left p-3 bg-zinc-800/30 border border-zinc-700/50 rounded-md cursor-pointer hover:bg-zinc-800/50 hover:border-zinc-600/50 transition-colors"
-								onClick={() => onExampleSelect(prompt, promptIndex)}
+								className="px-3 py-1.5 text-sm rounded-full border border-zinc-700/50 bg-zinc-800/30 text-zinc-300 hover:border-pink-500/50 hover:bg-pink-500/10 hover:text-pink-400 transition-colors"
+								onClick={() => onExampleSelect(cat.prompt, i)}
 							>
-								<p className="text-sm text-muted-foreground">{prompt}</p>
+								{cat.label}
 							</button>
 						))}
 					</div>

@@ -14,7 +14,7 @@ import TrialDay5Email from '@/components/email-templates/trial-day5-email';
 import WelcomeEmail from '@/components/email-templates/welcome-email';
 import { EMAIL_CONFIG, sendEmail, updateEmailScheduleStatus } from '@/lib/email/email-service';
 import { logger } from '@/lib/logging';
-import { backgroundJobLogger, jobLog } from '@/lib/logging/background-job-logger';
+import { jobLog } from '@/lib/logging/background-job-logger';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { LogCategory } from '@/lib/logging/types';
 import { toError } from '@/lib/utils/type-guards';
@@ -122,22 +122,22 @@ export async function POST(request: Request) {
 		switch (emailType) {
 			case 'welcome':
 				emailComponent = WelcomeEmail(templateProps);
-				subject = subjectPrefix + `Welcome to Gemz! 🎉`;
+				subject = `${subjectPrefix}Welcome to Gemz! 🎉`;
 				break;
 
 			case 'abandonment':
 				emailComponent = TrialAbandonmentEmail(templateProps);
-				subject = subjectPrefix + 'Complete your setup and start your free trial';
+				subject = `${subjectPrefix}Complete your setup and start your free trial`;
 				break;
 
 			case 'trial_day2':
 				emailComponent = TrialDay2Email(templateProps);
-				subject = subjectPrefix + "How's your trial going? Tips to get the most out of it 💡";
+				subject = `${subjectPrefix}How's your trial going? Tips to get the most out of it 💡`;
 				break;
 
 			case 'trial_day5':
 				emailComponent = TrialDay5Email(templateProps);
-				subject = subjectPrefix + "Your trial ends in 2 days - here's what you've accomplished! 🏆";
+				subject = `${subjectPrefix}Your trial ends in 2 days - here's what you've accomplished! 🏆`;
 				break;
 
 			case 'subscription_welcome':
@@ -156,7 +156,7 @@ export async function POST(request: Request) {
 
 			case 'trial_expiry':
 				emailComponent = TrialDay5Email(templateProps); // Reuse day5 template for now
-				subject = subjectPrefix + "Your trial expires tomorrow - Don't lose your progress! 🔔";
+				subject = `${subjectPrefix}Your trial expires tomorrow - Don't lose your progress! 🔔`;
 				break;
 
 			// Onboarding drip sequence (for users who sign up but don't start trial)
@@ -166,7 +166,7 @@ export async function POST(request: Request) {
 					dashboardUrl: templateProps.dashboardUrl,
 					unsubscribeUrl: templateProps.unsubscribeUrl,
 				});
-				subject = subjectPrefix + "Welcome to Gemz — here's what you're unlocking";
+				subject = `${subjectPrefix}Welcome to Gemz — here's what you're unlocking`;
 				break;
 
 			case 'onboarding_2_keyword':
@@ -175,7 +175,7 @@ export async function POST(request: Request) {
 					dashboardUrl: templateProps.dashboardUrl,
 					unsubscribeUrl: templateProps.unsubscribeUrl,
 				});
-				subject = subjectPrefix + 'How to find creators by what they actually talk about';
+				subject = `${subjectPrefix}How to find creators by what they actually talk about`;
 				break;
 
 			case 'onboarding_3_similar':
@@ -184,7 +184,7 @@ export async function POST(request: Request) {
 					dashboardUrl: templateProps.dashboardUrl,
 					unsubscribeUrl: templateProps.unsubscribeUrl,
 				});
-				subject = subjectPrefix + "Found one good creator? Here's how to find 50 more";
+				subject = `${subjectPrefix}Found one good creator? Here's how to find 50 more`;
 				break;
 
 			case 'onboarding_4_database':
@@ -193,7 +193,7 @@ export async function POST(request: Request) {
 					dashboardUrl: templateProps.dashboardUrl,
 					unsubscribeUrl: templateProps.unsubscribeUrl,
 				});
-				subject = subjectPrefix + 'Why influencer databases are lying to you';
+				subject = `${subjectPrefix}Why influencer databases are lying to you`;
 				break;
 
 			case 'onboarding_5_cost':
@@ -202,7 +202,7 @@ export async function POST(request: Request) {
 					dashboardUrl: templateProps.dashboardUrl,
 					unsubscribeUrl: templateProps.unsubscribeUrl,
 				});
-				subject = subjectPrefix + "You don't need a $500/mo influencer tool";
+				subject = `${subjectPrefix}You don't need a $500/mo influencer tool`;
 				break;
 
 			case 'onboarding_6_final':
@@ -211,7 +211,7 @@ export async function POST(request: Request) {
 					dashboardUrl: templateProps.dashboardUrl,
 					unsubscribeUrl: templateProps.unsubscribeUrl,
 				});
-				subject = subjectPrefix + "Last thing — then I'll stop emailing";
+				subject = `${subjectPrefix}Last thing — then I'll stop emailing`;
 				break;
 
 			default:

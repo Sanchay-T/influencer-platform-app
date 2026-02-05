@@ -297,7 +297,6 @@ interface ResultsViewProps {
 	onStartSearch: (type?: 'keyword' | 'similar') => void;
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Orchestrates multiple result states in one view.
 function ResultsView({
 	campaign,
 	selectedJob,

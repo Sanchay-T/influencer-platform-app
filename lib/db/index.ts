@@ -94,7 +94,9 @@ const queryClient =
 		prepare: !usesPgBouncer,
 	});
 
-if (!global.__queryClient) global.__queryClient = queryClient;
+if (!global.__queryClient) {
+	global.__queryClient = queryClient;
+}
 
 // Note: We only use Supabase for database hosting, auth is handled by Clerk
 
@@ -109,7 +111,9 @@ export const db: PostgresJsDatabase<typeof schema> =
 		},
 	});
 
-if (!global.__db) global.__db = db; // cache for later lambdas
+if (!global.__db) {
+	global.__db = db; // cache for later lambdas
+}
 
 if (createdNewClient && process.env.NODE_ENV !== 'production') {
 	const summary = summarizeConnection(connectionString);

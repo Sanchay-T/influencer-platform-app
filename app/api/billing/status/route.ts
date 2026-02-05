@@ -25,7 +25,7 @@ const logger = createCategoryLogger(LogCategory.BILLING);
 
 const CACHE_TTL_MS = 30_000; // 30 seconds
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
 	const startTime = Date.now();
 	const requestId = `bill_${startTime}_${Math.random().toString(36).slice(2, 8)}`;
 

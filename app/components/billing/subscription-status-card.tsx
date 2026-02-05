@@ -36,7 +36,7 @@ export default function SubscriptionStatusCard({
 	daysRemaining = 0,
 	progressPercentage = 0,
 	nextBillingDate,
-	trialEndDate,
+	trialEndDate: _trialEndDate,
 	className = '',
 }: SubscriptionStatusCardProps) {
 	const getPlanIcon = (plan: string) => {
@@ -57,7 +57,7 @@ export default function SubscriptionStatusCard({
 		}
 	};
 
-	const getPlanColor = (plan: string) => {
+	const getPlanColor = (_plan: string) => {
 		return 'text-zinc-200 bg-zinc-800 border border-zinc-700/50';
 	};
 

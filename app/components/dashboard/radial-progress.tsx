@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface RadialProgressProps {
 	value?: number; // 0-100
@@ -25,6 +25,7 @@ export default function RadialProgress({
 
 	return (
 		<svg width={size} height={size} viewBox="0 0 100 100">
+			<title>Progress</title>
 			<circle cx="50" cy="50" r={radius} className="fill-none stroke-zinc-800" strokeWidth={8} />
 			<circle
 				cx="50"

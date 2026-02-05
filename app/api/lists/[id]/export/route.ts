@@ -4,7 +4,6 @@ import { recordExport } from '@/lib/db/queries/list-queries';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { apiTracker, listTracker, SentryLogger, sessionTracker } from '@/lib/sentry';
 
-// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
 	const { id } = await params;
 

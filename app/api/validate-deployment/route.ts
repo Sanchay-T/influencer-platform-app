@@ -276,7 +276,7 @@ async function runDeploymentValidation(
  * Validate environment configuration
  */
 async function validateEnvironmentCategory(
-	targetEnv?: string,
+	_targetEnv?: string,
 	skipSlow = false
 ): Promise<ValidationCategoryResult> {
 	try {

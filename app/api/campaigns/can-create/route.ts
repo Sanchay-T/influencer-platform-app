@@ -9,7 +9,9 @@ const logger = createCategoryLogger(LogCategory.BILLING);
 export async function GET() {
 	try {
 		const { userId } = await getAuthOrTest();
-		if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+		if (!userId) {
+			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+		}
 
 		const validation = await validateCampaignCreation(userId);
 		if (!validation.allowed) {

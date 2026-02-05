@@ -1,7 +1,4 @@
 import { structuredConsole } from '@/lib/logging/console-proxy';
-import { getLoggingConfig, validateLoggingConfig } from './logging-config';
-import { validateMonitoringConfig } from './monitoring-config';
-import SystemConfig from './system-config';
 
 /**
  * Environment validation result

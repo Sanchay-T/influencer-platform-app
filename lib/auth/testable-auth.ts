@@ -31,9 +31,13 @@ function hmacSha256Base64Url(data: string, secret: string): string {
 
 export function buildTestAuthHeaders(payload: TestAuthPayload, secret?: string) {
 	const key = secret || process.env.TEST_AUTH_SECRET;
-	if (!key) throw new Error('TEST_AUTH_SECRET is required to build test auth headers');
+	if (!key) {
+		throw new Error('TEST_AUTH_SECRET is required to build test auth headers');
+	}
 	const body: TestAuthPayload = { ...payload };
-	if (!body.iat) body.iat = Math.floor(Date.now() / 1000);
+	if (!body.iat) {
+		body.iat = Math.floor(Date.now() / 1000);
+	}
 	const json = JSON.stringify(body);
 	const token = base64UrlEncode(Buffer.from(json, 'utf8'));
 	const sig = hmacSha256Base64Url(token, key);
@@ -51,21 +55,31 @@ export function verifyTestAuthHeaders(
 	h: HeaderReader,
 	opts?: { maxAgeSeconds?: number }
 ): TestAuthPayload | null {
-	if (isProd) return null;
-	if (process.env.ENABLE_TEST_AUTH !== 'true') return null;
+	if (isProd) {
+		return null;
+	}
+	if (process.env.ENABLE_TEST_AUTH !== 'true') {
+		return null;
+	}
 
 	const token = h.get('x-test-auth');
 	const sig = h.get('x-test-signature');
 	const key = process.env.TEST_AUTH_SECRET;
-	if (!(token && sig && key)) return null;
+	if (!(token && sig && key)) {
+		return null;
+	}
 
 	const expected = hmacSha256Base64Url(token, key);
-	if (expected !== sig) return null;
+	if (expected !== sig) {
+		return null;
+	}
 
 	try {
 		const buf = base64UrlDecode(token);
 		const parsed = toRecord(JSON.parse(buf.toString('utf8')));
-		if (!(parsed && isString(parsed.userId))) return null;
+		if (!(parsed && isString(parsed.userId))) {
+			return null;
+		}
 		const payload: TestAuthPayload = {
 			userId: parsed.userId,
 			email: isString(parsed.email) ? parsed.email : undefined,
@@ -74,7 +88,9 @@ export function verifyTestAuthHeaders(
 		};
 		// Basic age check
 		const maxAge = opts?.maxAgeSeconds ?? 3600; // 1 hour default
-		if (payload.iat && Math.floor(Date.now() / 1000) - payload.iat > maxAge) return null;
+		if (payload.iat && Math.floor(Date.now() / 1000) - payload.iat > maxAge) {
+			return null;
+		}
 		return payload;
 	} catch {
 		return null;

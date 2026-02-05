@@ -95,8 +95,11 @@ export default function CampaignForm() {
 			<CardContent>
 				<form onSubmit={handleSubmitBasicInfo} className="space-y-5">
 					<div className="space-y-2">
-						<label className="text-sm font-medium text-zinc-200">Campaign Name</label>
+						<label htmlFor="campaign-name" className="text-sm font-medium text-zinc-200">
+							Campaign Name
+						</label>
 						<Input
+							id="campaign-name"
 							required
 							value={formData.name}
 							onChange={(e) => {
@@ -108,8 +111,11 @@ export default function CampaignForm() {
 						/>
 					</div>
 					<div className="space-y-2">
-						<label className="text-sm font-medium text-zinc-200">Campaign Description</label>
+						<label htmlFor="campaign-description" className="text-sm font-medium text-zinc-200">
+							Campaign Description
+						</label>
 						<Textarea
+							id="campaign-description"
 							required
 							value={formData.description}
 							onChange={(e) => {

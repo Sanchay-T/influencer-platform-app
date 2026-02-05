@@ -14,7 +14,9 @@ import { getUserProfile } from '@/lib/db/queries/user-queries';
  * Check if an email is a fallback/placeholder email
  */
 function isFallbackEmail(email: string | null | undefined): boolean {
-	if (!email) return true;
+	if (!email) {
+		return true;
+	}
 	return email.includes('@example.com') || email.startsWith('user-user_');
 }
 

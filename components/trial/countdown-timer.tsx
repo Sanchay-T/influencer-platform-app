@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { AlertTriangle, Clock } from 'lucide-react';
 import { type TrialData, useTrialCountdown } from '@/lib/hooks/useTrialCountdown';
 
 interface CountdownTimerProps {
@@ -66,8 +66,12 @@ export function CountdownTimer({
 	};
 
 	const getStatusColor = () => {
-		if (countdown.isExpired) return 'text-red-600';
-		if (countdown.daysRemaining <= 1) return 'text-orange-600';
+		if (countdown.isExpired) {
+			return 'text-red-600';
+		}
+		if (countdown.daysRemaining <= 1) {
+			return 'text-orange-600';
+		}
 		return 'text-blue-600';
 	};
 

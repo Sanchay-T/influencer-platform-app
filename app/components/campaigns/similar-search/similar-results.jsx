@@ -1,8 +1,8 @@
 'use client';
 
 import { Download, Filter } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useEffect, useState } from 'react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -184,16 +184,19 @@ export default function SimilarResults({ data }) {
 							disabled={currentPage === 1}
 						/>
 					</PaginationItem>
-					{Array.from({ length: totalPages }).map((_, i) => (
-						<PaginationItem key={i}>
-							<PaginationLink
-								onClick={() => setCurrentPage(i + 1)}
-								isActive={currentPage === i + 1}
-							>
-								{i + 1}
-							</PaginationLink>
-						</PaginationItem>
-					))}
+					{Array.from({ length: totalPages }).map((_, index) => {
+						const page = index + 1;
+						return (
+							<PaginationItem key={page}>
+								<PaginationLink
+									onClick={() => setCurrentPage(page)}
+									isActive={currentPage === page}
+								>
+									{page}
+								</PaginationLink>
+							</PaginationItem>
+						);
+					})}
 					<PaginationItem>
 						<PaginationNext
 							onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}

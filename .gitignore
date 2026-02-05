@@ -68,3 +68,9 @@ e2e-*.png
 database-backups/
 schema-comparison-output.json
 .claude/.env
+
+# Per-worktree env overrides
+.env.worktree
+
+# Auto-generated Claude session context
+.claude/rules/context.md

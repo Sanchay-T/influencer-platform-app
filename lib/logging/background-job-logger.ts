@@ -413,7 +413,9 @@ export class BackgroundJobLogger {
 	 * Monitor memory usage and warn about potential issues
 	 */
 	public checkMemoryUsage(jobId: string, context?: Partial<JobContext>): void {
-		if (typeof process === 'undefined') return;
+		if (typeof process === 'undefined') {
+			return;
+		}
 
 		const memUsage = process.memoryUsage();
 

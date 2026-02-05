@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { trackSearchStarted } from '@/lib/analytics/logsnag';
 import { getUserDataForTracking } from '@/lib/analytics/track-server-utils';

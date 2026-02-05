@@ -19,7 +19,6 @@ import { EMAIL_REGEX, ENDPOINTS } from '../core/config';
 import type { FetchResult, NormalizedCreator, Platform, SearchConfig } from '../core/types';
 import type { SearchAdapter } from './interface';
 import { registerAdapter } from './interface';
-import type { TikTokProfileResponse, TikTokSearchItem, TikTokSearchResponse } from './tiktok-types';
 
 // ============================================================================
 // TikTok Adapter Implementation
@@ -134,7 +133,9 @@ class TikTokAdapter implements SearchAdapter {
 
 		const getFirstUrl = (value: unknown): string | null => {
 			const list = toArray(value);
-			if (!list) return null;
+			if (!list) {
+				return null;
+			}
 			const match = list.find(
 				(entry): entry is string => isString(entry) && entry.trim().length > 0
 			);

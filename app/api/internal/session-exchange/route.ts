@@ -18,7 +18,9 @@ export async function POST(req: NextRequest) {
 		}
 
 		const clerkKey = process.env.CLERK_SECRET_KEY;
-		if (!clerkKey) return NextResponse.json({ error: 'CLERK_SECRET_KEY not set' }, { status: 500 });
+		if (!clerkKey) {
+			return NextResponse.json({ error: 'CLERK_SECRET_KEY not set' }, { status: 500 });
+		}
 
 		const { userId, email, createIfMissing = true } = await req.json().catch(() => ({}));
 		const targetEmail: string | undefined = email || (userId ? undefined : 'agent+dev@example.com');
@@ -35,10 +37,11 @@ export async function POST(req: NextRequest) {
 		// Resolve or create user
 		let resolvedUserId: string | undefined = userId;
 		if (!resolvedUserId) {
-			if (!targetEmail)
+			if (!targetEmail) {
 				return NextResponse.json({ error: 'Provide userId or email' }, { status: 400 });
+			}
 			const listRes = await fetch(
-				`${clerkApiBase}/v1/users?email_address=` + encodeURIComponent(targetEmail),
+				`${clerkApiBase}/v1/users?email_address=${encodeURIComponent(targetEmail)}`,
 				{ headers: adminHeaders }
 			);
 			const list = await listRes.json();
@@ -52,8 +55,9 @@ export async function POST(req: NextRequest) {
 				const created = await createRes.json();
 				resolvedUserId = created?.id;
 			}
-			if (!resolvedUserId)
+			if (!resolvedUserId) {
 				return NextResponse.json({ error: 'User not found and not created' }, { status: 404 });
+			}
 		}
 
 		// Create a session for this user
@@ -112,7 +116,9 @@ export async function POST(req: NextRequest) {
 			});
 			if (devBrowserRes.ok) {
 				const payload = await devBrowserRes.json().catch(() => null);
-				if (isString(payload?.token)) devBrowserToken = payload.token;
+				if (isString(payload?.token)) {
+					devBrowserToken = payload.token;
+				}
 			} else {
 				const detail = await devBrowserRes.text().catch(() => '');
 				structuredConsole.warn(

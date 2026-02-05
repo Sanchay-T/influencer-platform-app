@@ -41,17 +41,23 @@ try {
 			logApiCall(platform, jobType, request, response);
 		};
 	}
-} catch (error) {
+} catch (_error) {
 	// Logging not available
 }
 
 const isInstagramCreatorRecord = (value: unknown): value is InstagramSimilarCreatorRecord => {
 	const record = toRecord(value);
-	if (!record) return false;
+	if (!record) {
+		return false;
+	}
 	const platform = getStringProperty(record, 'platform');
-	if (platform !== 'Instagram') return false;
+	if (platform !== 'Instagram') {
+		return false;
+	}
 	const creatorRecord = getRecordProperty(record, 'creator');
-	if (!creatorRecord) return false;
+	if (!creatorRecord) {
+		return false;
+	}
 	const name = getStringProperty(creatorRecord, 'name');
 	const uniqueId = getStringProperty(creatorRecord, 'uniqueId');
 	const id = getStringProperty(record, 'id');
@@ -64,7 +70,9 @@ const isInstagramCreatorRecord = (value: unknown): value is InstagramSimilarCrea
 	if (!(name && uniqueId && id && username && fullName && profilePicUrl && profileUrl)) {
 		return false;
 	}
-	if (isPrivate === null || isVerified === null) return false;
+	if (isPrivate === null || isVerified === null) {
+		return false;
+	}
 	return true;
 };
 
@@ -78,7 +86,7 @@ export async function processInstagramSimilarJob(
 	job: ScrapingJob,
 	jobId: string
 ): Promise<InstagramSimilarJobResult> {
-	const handlerStartTime = Date.now();
+	const _handlerStartTime = Date.now();
 
 	// Set Sentry context for this Instagram similar job
 	SentryLogger.setContext('instagram_similar_handler', {
@@ -232,7 +240,7 @@ export async function processInstagramSimilarJob(
 				where: eq(scrapingResults.jobId, jobId),
 			});
 
-			if (existingResults && existingResults.creators) {
+			if (existingResults?.creators) {
 				const existingCreators = Array.isArray(existingResults.creators)
 					? existingResults.creators.filter(isInstagramCreatorRecord)
 					: [];
@@ -243,7 +251,9 @@ export async function processInstagramSimilarJob(
 				// Create set of existing IDs to avoid duplicates
 				existingCreators.forEach((creator) => {
 					const id = creator.id || creator.username || creator.creator.uniqueId;
-					if (id) existingCreatorIds.add(id);
+					if (id) {
+						existingCreatorIds.add(id);
+					}
 				});
 
 				// Filter new creators to avoid duplicates
@@ -381,7 +391,7 @@ export async function processInstagramSimilarJob(
 					where: eq(scrapingResults.jobId, jobId),
 				});
 
-				if (verificationResults && verificationResults.creators) {
+				if (verificationResults?.creators) {
 					const savedCreators = Array.isArray(verificationResults.creators)
 						? verificationResults.creators
 						: [];
@@ -422,7 +432,7 @@ export async function processInstagramSimilarJob(
 		try {
 			for (let batchStart = 0; batchStart < maxEnhancedProfiles; batchStart += batchSize) {
 				const batchEnd = Math.min(batchStart + batchSize, maxEnhancedProfiles);
-				const batch = transformedCreators.slice(batchStart, batchEnd);
+				const _batch = transformedCreators.slice(batchStart, batchEnd);
 
 				structuredConsole.log(
 					`🔄 [INSTAGRAM-BATCH] Processing batch ${Math.floor(batchStart / batchSize) + 1}: creators ${batchStart + 1}-${batchEnd}`
@@ -583,7 +593,7 @@ export async function processInstagramSimilarJob(
 			where: eq(scrapingResults.jobId, jobId),
 		});
 
-		if (finalResults && finalResults.creators) {
+		if (finalResults?.creators) {
 			const finalCreators = Array.isArray(finalResults.creators)
 				? finalResults.creators.filter(isInstagramCreatorRecord)
 				: [];

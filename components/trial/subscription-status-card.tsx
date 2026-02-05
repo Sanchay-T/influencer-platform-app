@@ -1,15 +1,6 @@
 'use client';
 
-import {
-	Calendar,
-	CheckCircle,
-	CreditCard,
-	Crown,
-	ExternalLink,
-	Settings,
-	Star,
-	Zap,
-} from 'lucide-react';
+import { Calendar, CheckCircle, CreditCard, Crown, Settings, Star, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -143,8 +134,8 @@ export function SubscriptionStatusCard({
 				<div className="space-y-2">
 					<h4 className="font-medium text-gray-900 text-sm">Plan Features</h4>
 					<div className="space-y-1">
-						{planDetails.features.map((feature, index) => (
-							<div key={index} className="flex items-center gap-2 text-sm text-gray-600">
+						{planDetails.features.map((feature) => (
+							<div key={feature} className="flex items-center gap-2 text-sm text-gray-600">
 								<CheckCircle className="h-3 w-3 text-green-500 flex-shrink-0" />
 								<span>{feature}</span>
 							</div>

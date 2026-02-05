@@ -1,10 +1,10 @@
-import { head, list } from '@vercel/blob';
+import { createHash } from 'node:crypto';
+import { list } from '@vercel/blob';
 import convert from 'heic-convert';
-import { createHash } from 'crypto';
 import { NextResponse } from 'next/server';
 import sharp from 'sharp';
 import { logger } from '@/lib/logging';
-import { backgroundJobLogger, jobLog } from '@/lib/logging/background-job-logger';
+import { jobLog } from '@/lib/logging/background-job-logger';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { LogCategory } from '@/lib/logging/types';
 import { toError } from '@/lib/utils/type-guards';
@@ -33,7 +33,7 @@ function generatePlaceholderResponse(imageUrl: string, jobId?: string) {
 			initial = 'U'; // Unknown/User
 			color = '#3B82F6'; // Blue
 		}
-	} catch (e) {
+	} catch (_e) {
 		// Use defaults
 	}
 
@@ -54,7 +54,7 @@ function generatePlaceholderResponse(imageUrl: string, jobId?: string) {
 		{
 			jobId,
 			platform,
-			imageUrl: imageUrl.substring(0, 100) + '...',
+			imageUrl: `${imageUrl.substring(0, 100)}...`,
 			initial,
 			color,
 		},
@@ -141,7 +141,7 @@ export async function GET(request: Request) {
 			{
 				requestId,
 				jobId,
-				sourceUrl: imageUrl?.substring(0, 100) + '...',
+				sourceUrl: `${imageUrl?.substring(0, 100)}...`,
 				metadata: {
 					method: request.method,
 					urlLength: imageUrl?.length || 0,
@@ -211,13 +211,13 @@ export async function GET(request: Request) {
 			structuredConsole.log('🎯 [IMAGE-PROXY] Using TikTok-specific headers');
 		}
 
-		let response;
+		let response: Response;
 		let fetchStrategy = 'initial';
 
 		try {
 			response = await fetch(imageUrl, { headers: fetchHeaders });
 			const fetchTime = Date.now() - startTime;
-			structuredConsole.log('📊 [IMAGE-PROXY] Fetch completed in', fetchTime + 'ms');
+			structuredConsole.log('📊 [IMAGE-PROXY] Fetch completed in', `${fetchTime}ms`);
 			structuredConsole.log('📡 [IMAGE-PROXY] Fetch status:', response.status, response.statusText);
 		} catch (fetchError: unknown) {
 			const error = toError(fetchError);
@@ -261,8 +261,8 @@ export async function GET(request: Request) {
 			// Strategy 1: Try without referrer headers (some CDNs block specific referrers)
 			structuredConsole.log('🔄 [IMAGE-PROXY] Retry 1: Removing referrer headers...');
 			const noReferrerHeaders: Record<string, string> = { ...fetchHeaders };
-			delete noReferrerHeaders.Referer;
-			delete noReferrerHeaders.Origin;
+			noReferrerHeaders.Referer = undefined;
+			noReferrerHeaders.Origin = undefined;
 
 			response = await fetch(imageUrl, { headers: noReferrerHeaders });
 			structuredConsole.log(
@@ -316,7 +316,9 @@ export async function GET(request: Request) {
 						];
 
 						for (const domain of cdnDomains) {
-							if (simplifiedUrl.includes(domain)) continue; // Skip if already using this domain
+							if (simplifiedUrl.includes(domain)) {
+								continue; // Skip if already using this domain
+							}
 
 							const alternativeDomainUrl = simplifiedUrl.replace(
 								/p\d+-[^.]+\.tiktokcdn[^/]*/,
@@ -339,7 +341,7 @@ export async function GET(request: Request) {
 									fetchStrategy = 'alternative-domain';
 									break;
 								}
-							} catch (domainError) {
+							} catch (_domainError) {
 								structuredConsole.log('❌ [IMAGE-PROXY] Alternative domain failed:', domain);
 							}
 						}
@@ -451,7 +453,7 @@ export async function GET(request: Request) {
 				contentType = 'image/jpeg';
 
 				structuredConsole.log('✅ [IMAGE-PROXY] HEIC conversion successful with heic-convert');
-				structuredConsole.log('⏱️ [IMAGE-PROXY] Conversion time:', convertTime + 'ms');
+				structuredConsole.log('⏱️ [IMAGE-PROXY] Conversion time:', `${convertTime}ms`);
 				structuredConsole.log('📏 [IMAGE-PROXY] Converted buffer size:', buffer.length, 'bytes');
 				structuredConsole.log('🎯 [IMAGE-PROXY] Final content type:', contentType);
 			} catch (heicConvertError) {
@@ -469,7 +471,7 @@ export async function GET(request: Request) {
 					contentType = 'image/jpeg';
 
 					structuredConsole.log('✅ [IMAGE-PROXY] HEIC conversion successful with Sharp fallback');
-					structuredConsole.log('⏱️ [IMAGE-PROXY] Conversion time:', convertTime + 'ms');
+					structuredConsole.log('⏱️ [IMAGE-PROXY] Conversion time:', `${convertTime}ms`);
 				} catch (sharpError) {
 					const error = toError(sharpError);
 					structuredConsole.error('❌ [IMAGE-PROXY] Sharp fallback also failed:', error.message);
@@ -529,7 +531,7 @@ export async function GET(request: Request) {
 		structuredConsole.log('📤 [IMAGE-PROXY] Final response details:', {
 			contentType: contentType,
 			bufferSize: buffer.length,
-			totalTime: totalTime + 'ms',
+			totalTime: `${totalTime}ms`,
 			fetchStrategy: fetchStrategy,
 			requestId: requestId,
 		});
@@ -560,12 +562,12 @@ export async function GET(request: Request) {
 		});
 	} catch (error) {
 		const errorTime = Date.now() - startTime;
-		structuredConsole.error('❌ [IMAGE-PROXY] Critical error after', errorTime + 'ms:', error);
+		structuredConsole.error('❌ [IMAGE-PROXY] Critical error after', `${errorTime}ms:`, error);
 		structuredConsole.error('📍 [IMAGE-PROXY] Error details:', {
 			message: error instanceof Error ? error.message : String(error),
 			stack: error instanceof Error ? error.stack : 'No stack trace',
 			requestId: requestId,
-			errorTime: errorTime + 'ms',
+			errorTime: `${errorTime}ms`,
 		});
 		structuredConsole.groupEnd();
 		return new NextResponse('Error fetching image', { status: 500 });

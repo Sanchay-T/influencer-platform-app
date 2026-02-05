@@ -1,5 +1,3 @@
-import { structuredConsole } from '@/lib/logging/console-proxy';
-
 /**
  * Centralized Logging System - Public API
  *
@@ -363,9 +361,9 @@ export const devLogger = {
 						),
 				}
 			: {
-					mount: () => {},
-					update: () => {},
-					unmount: () => {},
+					mount: () => undefined,
+					update: () => undefined,
+					unmount: () => undefined,
 				},
 
 	/**
@@ -386,7 +384,7 @@ export const devLogger = {
 						),
 				}
 			: {
-					change: () => {},
+					change: () => undefined,
 				},
 };
 

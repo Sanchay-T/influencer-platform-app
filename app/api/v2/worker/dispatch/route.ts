@@ -31,9 +31,7 @@ export const maxDuration = 300;
 // ============================================================================
 
 const receiver = new Receiver({
-	// biome-ignore lint/style/noNonNullAssertion: QStash keys are required in deployed environments.
 	currentSigningKey: process.env.QSTASH_CURRENT_SIGNING_KEY!,
-	// biome-ignore lint/style/noNonNullAssertion: QStash keys are required in deployed environments.
 	nextSigningKey: process.env.QSTASH_NEXT_SIGNING_KEY!,
 });
 
@@ -60,7 +58,6 @@ function getCallbackUrl(req: Request): string {
 // Route Handler
 // ============================================================================
 
-// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function POST(req: Request) {
 	const startTime = Date.now();
 

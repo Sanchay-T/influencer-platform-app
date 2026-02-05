@@ -41,7 +41,6 @@ function setCache(userId: string, subscription: Stripe.Subscription) {
  * Modern subscription status endpoint
  * Always returns fresh data from Stripe - no hardcoded values
  */
-// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function GET(_req: NextRequest) {
 	try {
 		const startedAt = Date.now();
@@ -130,16 +129,11 @@ export async function GET(_req: NextRequest) {
 			subscription: {
 				id: subscription.id,
 				status: subscription.status,
-				// biome-ignore lint/style/useNamingConvention: Stripe uses snake_case.
 				current_period_end: currentPeriodEnd,
-				// biome-ignore lint/style/useNamingConvention: Stripe uses snake_case.
 				cancel_at_period_end: subscription.cancel_at_period_end,
-				// biome-ignore lint/style/useNamingConvention: Stripe uses snake_case.
 				canceled_at: subscription.canceled_at,
 				created: subscription.created,
-				// biome-ignore lint/style/useNamingConvention: Stripe uses snake_case.
 				trial_end: subscription.trial_end,
-				// biome-ignore lint/style/useNamingConvention: Stripe uses snake_case.
 				latest_invoice: subscription.latest_invoice,
 			},
 			status: subscription.status,

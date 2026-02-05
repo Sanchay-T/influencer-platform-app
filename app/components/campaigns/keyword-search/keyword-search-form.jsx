@@ -21,7 +21,19 @@ export default function KeywordSearchForm({ onSubmit }) {
 	const [isSnappingBack, setIsSnappingBack] = useState(false);
 	const snapbackTimeoutRef = useRef(null);
 	const { user, isLoaded } = useUser();
-	const { isTrialUser, searchesRemaining, isLoading: trialLoading } = useTrialStatus();
+	const { isTrialUser, searchesRemaining, isLoading: trialLoading, currentPlan } = useTrialStatus();
+
+	// Map plan ID → display name for upgrade messages
+	const planDisplayName = currentPlan
+		? {
+				growth: 'Growth',
+				scale: 'Scale',
+				pro: 'Pro',
+				glow_up: 'Glow Up',
+				viral_surge: 'Viral Surge',
+				fame_flex: 'Fame Flex',
+			}[currentPlan] || 'a paid plan'
+		: 'a paid plan';
 
 	// Cleanup timeout on unmount
 	useEffect(() => {
@@ -68,7 +80,10 @@ export default function KeywordSearchForm({ onSubmit }) {
 				snapbackTimeoutRef.current = setTimeout(() => {
 					setCreatorsCount(TRIAL_MAX_RESULTS);
 					setIsSnappingBack(false);
-					toast('Upgrade to unlock 500+ creators', { icon: '👑' });
+					toast(
+						`Start your ${planDisplayName} plan to unlock ${value.toLocaleString()}+ creators`,
+						{ icon: '👑' }
+					);
 				}, SNAPBACK_DELAY);
 				return;
 			}
@@ -136,10 +151,10 @@ export default function KeywordSearchForm({ onSubmit }) {
 	const sliderMin = 100;
 	const sliderMax = 1000;
 	const sliderStep = 100;
-	const sliderMarks = [100, 500, 1000];
+	const _sliderMarks = [100, 500, 1000];
 
 	// Check if a mark is locked for trial users
-	const isMarkLocked = (value) => isTrialUser && value > TRIAL_MAX_RESULTS;
+	const _isMarkLocked = (value) => isTrialUser && value > TRIAL_MAX_RESULTS;
 
 	return (
 		<div className="rounded-lg text-card-foreground shadow-sm bg-zinc-900/80 border border-zinc-700/50">
@@ -152,7 +167,7 @@ export default function KeywordSearchForm({ onSubmit }) {
 				<form onSubmit={handleSubmit} className="space-y-8">
 					{/* Platform Selection */}
 					<div className="space-y-4">
-						<label className="text-sm font-medium">Platform</label>
+						<p className="text-sm font-medium">Platform</p>
 						<div className="flex flex-wrap gap-4">
 							{platformOptions.map((platform) => {
 								const isActive = selectedPlatform === platform.value;
@@ -161,10 +176,8 @@ export default function KeywordSearchForm({ onSubmit }) {
 									<div key={platform.value} className="flex items-center">
 										<button
 											type="button"
-											role="checkbox"
-											aria-checked={isActive}
+											aria-pressed={isActive}
 											data-state={isActive ? 'checked' : 'unchecked'}
-											value="on"
 											onClick={() => setSelectedPlatform(platform.value)}
 											className="peer h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
 										>
@@ -177,14 +190,6 @@ export default function KeywordSearchForm({ onSubmit }) {
 												</span>
 											)}
 										</button>
-										<input
-											aria-hidden="true"
-											tabIndex={-1}
-											type="checkbox"
-											className="sr-only"
-											checked={isActive}
-											readOnly
-										/>
 										<span className="ml-2 flex items-center gap-2">
 											{platform.label}
 											{platform.badge && (
@@ -201,7 +206,7 @@ export default function KeywordSearchForm({ onSubmit }) {
 
 					{/* Creator Count Selection */}
 					<div className="space-y-4">
-						<label className="text-sm font-medium">How many creators do you need?</label>
+						<p className="text-sm font-medium">How many creators do you need?</p>
 
 						{/* Slider */}
 						<Slider
@@ -253,7 +258,7 @@ export default function KeywordSearchForm({ onSubmit }) {
 						{/* Snap-back feedback message */}
 						{isTrialUser && isSnappingBack && (
 							<p className="text-xs text-amber-400 animate-pulse text-center">
-								✨ Nice choice... but you need Pro!
+								✨ Start your {planDisplayName} plan to unlock more creators
 							</p>
 						)}
 					</div>

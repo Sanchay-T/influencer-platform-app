@@ -16,7 +16,7 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import TrialSidebarCompact from '@/app/components/trial/trial-sidebar-compact';
 import { Button } from '@/components/ui/button';
 import { useAdmin } from '@/lib/hooks/use-admin';

@@ -42,6 +42,10 @@ When you make a mistake and get corrected, immediately update this file with a r
 DO NOT: [the mistake you made]
 DO: [the correct approach]
 ```
+End every correction with: "Now update CLAUDE.md so you don't make that mistake again."
+
+### When Things Go Wrong
+When an approach isn't working — tests keep failing, types won't resolve, the design feels forced — **stop and re-plan**. Switch to plan mode (shift+tab) and rethink the approach. Don't keep pushing deeper into a failing path.
 
 ### Code Style
 - You must use TypeScript strict mode
@@ -51,6 +55,7 @@ DO: [the correct approach]
 - You use Drizzle ORM patterns already in the codebase
 - No `any` types - use proper typing or `unknown` with type guards
 - No `console.log` in production code - use the logging utilities in `lib/logging/`
+- Prefer `type` over `interface`; never use `enum` (use string literal unions instead)
 
 ### Project Structure
 - `app/` — Next.js App Router pages and API routes
@@ -111,6 +116,16 @@ DO: Use proper TypeScript types or `unknown` with type guards
 
 DO NOT: Ignore failing tests
 DO: Fix tests or code before proceeding
+
+## Browser Automation
+
+Use `agent-browser` for web automation. Run `agent-browser --help` for all commands.
+
+Core workflow:
+1. `agent-browser open <url>` - Navigate to page
+2. `agent-browser snapshot -i` - Get interactive elements with refs (@e1, @e2)
+3. `agent-browser click @e1` / `fill @e2 "text"` - Interact using refs
+4. Re-snapshot after page changes
 
 ---
 *This file is yours to update. When you learn something, write it down.*

@@ -34,7 +34,7 @@ export class ResendAudienceService {
 		const { email, firstName, lastName } = params;
 
 		// Validate email
-		if (!(email && email.includes('@'))) {
+		if (!email?.includes('@')) {
 			structuredConsole.warn('⚠️ [RESEND-AUDIENCE] Invalid email, skipping sync:', email);
 			return { success: false, error: 'Invalid email address' };
 		}
@@ -140,7 +140,7 @@ export class ResendAudienceService {
 		const { email, firstName, lastName } = params;
 
 		// Validate email
-		if (!(email && email.includes('@'))) {
+		if (!email?.includes('@')) {
 			structuredConsole.warn('⚠️ [RESEND-AUDIENCE] Invalid email for update, skipping:', email);
 			return { success: false, error: 'Invalid email address' };
 		}
@@ -237,7 +237,7 @@ export class ResendAudienceService {
 	 */
 	static async removeContact(email: string): Promise<AddContactResult> {
 		// Validate email
-		if (!(email && email.includes('@'))) {
+		if (!email?.includes('@')) {
 			structuredConsole.warn('⚠️ [RESEND-AUDIENCE] Invalid email for removal, skipping:', email);
 			return { success: false, error: 'Invalid email address' };
 		}

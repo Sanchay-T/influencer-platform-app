@@ -64,8 +64,6 @@ function getStatusMessage(
 // Route Handler
 // ============================================================================
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Status handler coordinates multiple query paths.
-// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function GET(req: Request) {
 	const startTime = Date.now();
 

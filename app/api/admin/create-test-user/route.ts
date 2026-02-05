@@ -2,7 +2,6 @@ import { structuredConsole } from '@/lib/logging/console-proxy';
 import '@/lib/config/load-env';
 import { NextResponse } from 'next/server';
 import { isAdminUser } from '@/lib/auth/admin-utils';
-import { db } from '@/lib/db';
 import { createUser } from '@/lib/db/queries/user-queries';
 
 /**
@@ -93,7 +92,7 @@ export async function POST(req: Request) {
 /**
  * Get all test users (for cleanup/management)
  */
-export async function GET(req: Request) {
+export async function GET(_req: Request) {
 	try {
 		if (process.env.NEXT_PHASE === 'phase-production-build') {
 			return NextResponse.json({ testUsers: [] });

@@ -1,5 +1,3 @@
-import { structuredConsole } from '@/lib/logging/console-proxy';
-
 /**
  * Core Logger Implementation
  *
@@ -11,7 +9,6 @@ import { structuredConsole } from '@/lib/logging/console-proxy';
 import { toError, toRecord } from '@/lib/utils/type-guards';
 import {
 	CONSOLE_CONFIG,
-	CONTEXT_ENRICHMENT,
 	generateRequestId,
 	getCategoryIcon,
 	getLoggerConfig,
@@ -44,7 +41,6 @@ class Logger {
 	private config: Partial<LoggerConfig>;
 	private minLevel: LogLevel;
 	private categoryOverrides: Partial<Record<LogCategory, LogLevel>>;
-	private requestIdMap: Map<string, string> = new Map();
 	private performanceTimers: Map<string, PerformanceTimer> = new Map();
 	private serverWriterPromise?: Promise<typeof import('./server-writer')>;
 	private nativeConsole: Console;
@@ -178,7 +174,7 @@ class Logger {
 					const memUsage = process.memoryUsage();
 					context.memoryUsage = memUsage.heapUsed;
 				}
-			} catch (error) {
+			} catch (_error) {
 				// Don't let context enrichment errors break logging
 			}
 		}
@@ -192,7 +188,9 @@ class Logger {
 	private sanitizeData(data: LogContext, sanitizer?: DataSanitizer): LogContext;
 	private sanitizeData(data: unknown, sanitizer?: DataSanitizer): unknown;
 	private sanitizeData(data: unknown, sanitizer?: DataSanitizer): unknown {
-		if (!data || typeof data !== 'object') return data;
+		if (!data || typeof data !== 'object') {
+			return data;
+		}
 
 		if (Array.isArray(data)) {
 			const sanitizedArray = data.map((item) => this.sanitizeData(item, sanitizer));
@@ -203,7 +201,9 @@ class Logger {
 		}
 
 		const record = toRecord(data);
-		if (!record) return data;
+		if (!record) {
+			return data;
+		}
 
 		const sanitized: Record<string, unknown> = { ...record };
 
@@ -219,7 +219,7 @@ class Logger {
 		Object.keys(sanitized).forEach((key) => {
 			if (fieldsToRemove.includes(key)) {
 				delete sanitized[key];
-			} else if (fieldsToMask.some((field) => isSensitiveField(key))) {
+			} else if (fieldsToMask.some((_field) => isSensitiveField(key))) {
 				sanitized[key] = '[REDACTED]';
 			} else if (typeof sanitized[key] === 'object' && sanitized[key] !== null) {
 				sanitized[key] = this.sanitizeData(sanitized[key], sanitizer);
@@ -243,7 +243,9 @@ class Logger {
 	}
 
 	private formatConsoleLog(entry: LogEntry): void {
-		if (!this.config.enableConsole) return;
+		if (!this.config.enableConsole) {
+			return;
+		}
 
 		const useStructuredOutput = this.config.prettyConsole === false;
 
@@ -466,7 +468,7 @@ class Logger {
 						}
 					: undefined;
 
-			void this.logEntry(level, message, context, category || LogCategory.SYSTEM, errorArg);
+			this.logEntry(level, message, context, category || LogCategory.SYSTEM, errorArg);
 		} catch (error) {
 			this.callNativeConsole('error', ['🚨 [LOGGER] Failed to capture console usage', error]);
 			this.callNativeConsole('log', args);

@@ -44,7 +44,6 @@ function mapDiscoveryToCreator(
 		fullName: profile.full_name ?? '',
 		profilePicUrl: profile.picture ?? '',
 		followers: profile.followers ?? 0,
-		// biome-ignore lint/style/useNamingConvention: external API uses snake_case
 		followers_count: profile.followers ?? 0,
 		engagementRate: profile.engagement_percent ?? 0,
 		creator: {
@@ -89,7 +88,6 @@ function similarDiscoveryDedupeKey(creator: NormalizedCreator): string | null {
 /**
  * Main provider function for similar creator discovery
  */
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: legacy flow staged for refactor
 export async function runSimilarDiscoveryProvider(
 	{ job, config }: ProviderContext,
 	service: SearchJobService

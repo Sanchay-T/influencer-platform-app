@@ -67,7 +67,9 @@ export function usePagePrefetch<T = unknown>({
 	// Evict oldest entries if cache is too large
 	const evictIfNeeded = useCallback(() => {
 		const cache = cacheRef.current;
-		if (cache.size <= maxCacheSize) return;
+		if (cache.size <= maxCacheSize) {
+			return;
+		}
 
 		// Sort by timestamp and remove oldest
 		const entries = Array.from(cache.entries()).sort(([, a], [, b]) => a.timestamp - b.timestamp);
@@ -130,10 +132,14 @@ export function usePagePrefetch<T = unknown>({
 					const cached = cacheRef.current.get(key);
 
 					// Skip if already cached and fresh
-					if (cached && !isStale(cached)) continue;
+					if (cached && !isStale(cached)) {
+						continue;
+					}
 
 					// Skip if already fetching
-					if (pendingRef.current.has(key)) continue;
+					if (pendingRef.current.has(key)) {
+						continue;
+					}
 
 					// Fetch in background (don't await)
 					getPage(page, pageSize).catch(() => {

@@ -1,6 +1,5 @@
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { SentryLogger } from '@/lib/logging/sentry-logger';
-import { billingTracker } from '@/lib/sentry/feature-tracking';
 import {
 	getUserEmailFromClerk,
 	scheduleEmail,
@@ -101,7 +100,7 @@ export async function scheduleTrialEmails(
 				structuredConsole.log('✅✅✅ [TRIAL-EMAILS] TRIAL DAY 2 EMAIL SCHEDULED SUCCESSFULLY');
 				structuredConsole.log('📧 [TRIAL-EMAILS] Day 2 details:', {
 					messageId: day2Result.messageId,
-					setupTime: Date.now() - day2StartTime + 'ms',
+					setupTime: `${Date.now() - day2StartTime}ms`,
 				});
 			} else {
 				results.push({ emailType: 'trial_day2', success: false, error: day2Result.error });
@@ -141,7 +140,7 @@ export async function scheduleTrialEmails(
 				structuredConsole.log('✅✅✅ [TRIAL-EMAILS] TRIAL DAY 5 EMAIL SCHEDULED SUCCESSFULLY');
 				structuredConsole.log('📧 [TRIAL-EMAILS] Day 5 details:', {
 					messageId: day5Result.messageId,
-					setupTime: Date.now() - day5StartTime + 'ms',
+					setupTime: `${Date.now() - day5StartTime}ms`,
 				});
 			} else {
 				results.push({ emailType: 'trial_day5', success: false, error: day5Result.error });

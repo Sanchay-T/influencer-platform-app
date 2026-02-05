@@ -18,7 +18,7 @@ export interface PinkSpinnerProps {
 export const PinkSpinner = ({ size = 'h-4 w-4', className = '', label }: PinkSpinnerProps) => (
 	<span
 		className={cn('relative inline-flex items-center justify-center', size, className)}
-		role="status"
+		role="img"
 		aria-label={label ?? 'Loading'}
 	>
 		<span

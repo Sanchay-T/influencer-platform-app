@@ -21,7 +21,9 @@ export default function DashboardHeader({ onToggleSidebar, isSidebarOpen }) {
 	const [loadingGate, setLoadingGate] = useState(true);
 
 	useEffect(() => {
-		if (!billingLoaded) return;
+		if (!billingLoaded) {
+			return;
+		}
 		const used = Number(usageInfo?.campaignsUsed ?? 0);
 		const limit = usageInfo?.campaignsLimit;
 		const unlimited = limit === -1 || limit === null || typeof limit === 'undefined';
@@ -39,15 +41,12 @@ export default function DashboardHeader({ onToggleSidebar, isSidebarOpen }) {
 	// Focus search when pressing '/'; ignore if typing in an input/textarea/select
 	useEffect(() => {
 		const handler = (e) => {
-			if (e.key !== '/') return;
+			if (e.key !== '/') {
+				return;
+			}
 			const el = e.target;
-			const tag = el && el.tagName ? el.tagName.toLowerCase() : '';
-			if (
-				tag === 'input' ||
-				tag === 'textarea' ||
-				tag === 'select' ||
-				(el && el.isContentEditable)
-			) {
+			const tag = el?.tagName ? el.tagName.toLowerCase() : '';
+			if (tag === 'input' || tag === 'textarea' || tag === 'select' || el?.isContentEditable) {
 				return;
 			}
 			e.preventDefault();

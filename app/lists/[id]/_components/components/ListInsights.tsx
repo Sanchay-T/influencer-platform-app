@@ -12,7 +12,9 @@ interface ListInsightsProps {
 export function ListInsights({ detail }: ListInsightsProps) {
 	const engagementRates = detail.items.map((item) => {
 		const value = item.creator.engagementRate;
-		if (typeof value === 'number' && Number.isFinite(value)) return value;
+		if (typeof value === 'number' && Number.isFinite(value)) {
+			return value;
+		}
 		if (typeof value === 'string' && value.trim().length > 0) {
 			const parsed = Number(value);
 			return Number.isFinite(parsed) ? parsed : 0;

@@ -21,7 +21,6 @@ import type {
 	PipelineContext,
 	PipelineMetrics,
 	PipelineResult,
-	Platform,
 	SearchConfig,
 } from './types';
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
 /**
@@ -18,14 +18,12 @@ export default function CampaignCounter({ variant = 'pill', className = '', show
 	const [usageData, setUsageData] = useState(null);
 	const [isLoading, setIsLoading] = useState(true);
 
-	useEffect(() => {
-		fetchUsageData();
-	}, []);
-
-	const fetchUsageData = async () => {
+	const fetchUsageData = useCallback(async () => {
 		try {
 			const res = await fetch('/api/billing/status');
-			if (!res.ok) return;
+			if (!res.ok) {
+				return;
+			}
 
 			const data = await res.json();
 			setUsageData({
@@ -37,7 +35,11 @@ export default function CampaignCounter({ variant = 'pill', className = '', show
 		} finally {
 			setIsLoading(false);
 		}
-	};
+	}, []);
+
+	useEffect(() => {
+		fetchUsageData();
+	}, [fetchUsageData]);
 
 	if (isLoading || !usageData) {
 		return <div className={`animate-pulse bg-gray-200 rounded-lg h-6 w-24 ${className}`}></div>;
@@ -85,7 +87,6 @@ export default function CampaignCounter({ variant = 'pill', className = '', show
 			return renderCompactVariant();
 		case 'inline':
 			return renderInlineVariant();
-		case 'pill':
 		default:
 			return renderPillVariant();
 	}

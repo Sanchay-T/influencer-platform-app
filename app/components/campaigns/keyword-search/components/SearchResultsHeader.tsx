@@ -19,11 +19,11 @@ import { PinkSpinner } from '../utils';
 import type { CreatorSnapshot } from '../utils/creator-snapshot';
 
 type ViewMode = 'table' | 'gallery';
-const VIEW_MODES: ReadonlyArray<ViewMode> = ['table', 'gallery'];
+const VIEW_MODES: readonly ViewMode[] = ['table', 'gallery'];
 
-const VIEW_MODE_META: Record<ViewMode, { label: string; Icon: typeof Table2 }> = {
-	table: { label: 'Table', Icon: Table2 },
-	gallery: { label: 'Gallery', Icon: LayoutGrid },
+const VIEW_MODE_META: Record<ViewMode, { label: string; icon: typeof Table2 }> = {
+	table: { label: 'Table', icon: Table2 },
+	gallery: { label: 'Gallery', icon: LayoutGrid },
 };
 
 export interface EnrichmentBulkState {
@@ -84,10 +84,10 @@ export function SearchResultsHeader({
 	setViewMode,
 	showEmailOnly,
 	setShowEmailOnly,
-	currentPage,
-	totalPages,
+	currentPage: _currentPage,
+	totalPages: _totalPages,
 	totalResults,
-	itemsPerPage,
+	itemsPerPage: _itemsPerPage,
 	emailCount,
 	selectionCount,
 	selectedSnapshots,
@@ -134,7 +134,7 @@ export function SearchResultsHeader({
 						<div className="inline-flex items-center gap-1 rounded-md border border-zinc-800 bg-zinc-900/60 p-1">
 							{VIEW_MODES.map((mode) => {
 								const meta = VIEW_MODE_META[mode];
-								const Icon = meta.Icon;
+								const Icon = meta.icon;
 								const isActive = viewMode === mode;
 								return (
 									<Button

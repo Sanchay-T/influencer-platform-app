@@ -25,7 +25,7 @@ interface OnboardingModalProps {
 
 export default function OnboardingModal({
 	isOpen,
-	onComplete,
+	onComplete: _onComplete,
 	initialStep = 1,
 	existingData,
 }: OnboardingModalProps) {

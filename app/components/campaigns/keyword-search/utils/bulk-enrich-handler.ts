@@ -27,7 +27,7 @@ export interface BulkEnrichResult {
  * Find a matching creator entry for an enrichment target.
  */
 export function findCreatorMatch(
-	creators: Array<Record<string, unknown>>,
+	creators: Record<string, unknown>[],
 	target: EnrichmentTarget
 ): Record<string, unknown> | null {
 	const normalizedHandle = normalizeHandleValue(target.handle);
@@ -35,7 +35,9 @@ export function findCreatorMatch(
 
 	const match = creators.find((entry) => {
 		const entryRecord = toRecord(entry);
-		if (!entryRecord) return false;
+		if (!entryRecord) {
+			return false;
+		}
 
 		// Handle nested creator object
 		const base = getRecordProperty(entryRecord, 'creator') ?? entryRecord;
@@ -57,7 +59,9 @@ export function findCreatorMatch(
 		}
 
 		// If no platform specified, match on handle alone
-		if (!normalizedPlatform) return true;
+		if (!normalizedPlatform) {
+			return true;
+		}
 
 		// Check platform match
 		const entryPlatform = normalizePlatformValue(
@@ -74,7 +78,7 @@ export function findCreatorMatch(
  */
 export function processBulkEnrichResults(
 	result: BulkEnrichResult | null,
-	creators: Array<Record<string, unknown>>,
+	creators: Record<string, unknown>[],
 	applyEnrichment: (
 		record: EnrichmentRecord,
 		target: EnrichmentTarget,
@@ -82,7 +86,9 @@ export function processBulkEnrichResults(
 		origin: string
 	) => void
 ): void {
-	if (!result?.records?.length) return;
+	if (!result?.records?.length) {
+		return;
+	}
 
 	for (const { target, record } of result.records) {
 		if (record) {

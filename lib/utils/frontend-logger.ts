@@ -21,9 +21,9 @@ export interface LoggedApiResponse<T = unknown> {
 	headers: Headers;
 	json: () => Promise<T>;
 	data: T;
-	_parsedData: T;
-	_duration: number;
-	_requestId: string;
+	parsedData: T;
+	duration: number;
+	requestId: string;
 	raw: Response;
 }
 
@@ -49,13 +49,17 @@ function buildContext(
 }
 
 function sanitizePayload(payload: unknown): unknown {
-	if (!payload || typeof payload !== 'object') return payload;
+	if (!payload || typeof payload !== 'object') {
+		return payload;
+	}
 	if (Array.isArray(payload)) {
 		return payload.map((item) => sanitizePayload(item));
 	}
 
 	const record = toRecord(payload);
-	if (!record) return payload;
+	if (!record) {
+		return payload;
+	}
 
 	const clone: Record<string, unknown> = { ...record };
 	for (const [key, value] of Object.entries(clone)) {
@@ -165,9 +169,9 @@ class FrontendLogger {
 				headers: response.headers,
 				json: async () => data,
 				data,
-				_parsedData: data,
-				_duration: duration,
-				_requestId: requestId,
+				parsedData: data,
+				duration,
+				requestId,
 				raw: response,
 			};
 		} catch (error) {

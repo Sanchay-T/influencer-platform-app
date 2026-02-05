@@ -7,8 +7,11 @@ import {
 	CircleCheckBig,
 	CreditCard,
 	Crown,
+	Download,
 	Factory,
+	LayoutList,
 	Mail,
+	Plus,
 	Settings,
 	Star,
 	User,
@@ -16,7 +19,6 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { PlanBadge } from '@/app/components/billing/protect';
 import EmailScheduleDisplay from '@/components/trial/email-schedule-display';
 import TrialStatusCard from '@/components/trial/trial-status-card';
 import TrialStatusCardUser from '@/components/trial/trial-status-card-user';
@@ -24,7 +26,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
+import { getPlanDisplayConfig } from '@/lib/billing/plan-display-config';
 import { useAdmin } from '@/lib/hooks/use-admin';
 import { useBilling } from '@/lib/hooks/use-billing';
 import { structuredConsole } from '@/lib/logging/console-proxy';
@@ -35,7 +37,7 @@ import { UserProfileModal } from '../components/profile/user-profile-modal';
 export default function ProfileSettingsPage() {
 	const { user, isLoaded } = useUser();
 	const { isAdmin } = useAdmin();
-	const { currentPlan, hasActiveSubscription, isPaidUser, isTrialing, needsUpgrade } = useBilling();
+	const { hasActiveSubscription, isTrialing } = useBilling();
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState('');
 	const [showUserProfile, setShowUserProfile] = useState(false);
@@ -296,6 +298,58 @@ export default function ProfileSettingsPage() {
 							</div>
 						</div>
 					</section>
+
+					{/* Quick Links */}
+					<section>
+						<h2 className="text-lg font-semibold text-zinc-100 mb-4">Quick Links</h2>
+						<div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+							<Link href="/campaigns/search/keyword">
+								<Card className="bg-zinc-900/80 border border-zinc-700/50 hover:border-zinc-600 transition-colors cursor-pointer">
+									<CardContent className="p-4 flex flex-col items-center gap-2 text-center">
+										<Plus className="h-5 w-5 text-zinc-400" />
+										<span className="text-sm text-zinc-300">New Campaign</span>
+									</CardContent>
+								</Card>
+							</Link>
+							<Link href="/lists">
+								<Card className="bg-zinc-900/80 border border-zinc-700/50 hover:border-zinc-600 transition-colors cursor-pointer">
+									<CardContent className="p-4 flex flex-col items-center gap-2 text-center">
+										<LayoutList className="h-5 w-5 text-zinc-400" />
+										<span className="text-sm text-zinc-300">My Lists</span>
+									</CardContent>
+								</Card>
+							</Link>
+							<Link href="/billing">
+								<Card className="bg-zinc-900/80 border border-zinc-700/50 hover:border-zinc-600 transition-colors cursor-pointer">
+									<CardContent className="p-4 flex flex-col items-center gap-2 text-center">
+										<CreditCard className="h-5 w-5 text-zinc-400" />
+										<span className="text-sm text-zinc-300">Billing & Plans</span>
+									</CardContent>
+								</Card>
+							</Link>
+							<Link href="/lists">
+								<Card className="bg-zinc-900/80 border border-zinc-700/50 hover:border-zinc-600 transition-colors cursor-pointer">
+									<CardContent className="p-4 flex flex-col items-center gap-2 text-center">
+										<Download className="h-5 w-5 text-zinc-400" />
+										<span className="text-sm text-zinc-300">Export Data</span>
+									</CardContent>
+								</Card>
+							</Link>
+						</div>
+					</section>
+
+					{/* Support row */}
+					<div className="flex items-center justify-center text-xs text-zinc-500 pt-2">
+						<span>
+							Need help? Reach out at{' '}
+							<a
+								href="mailto:support@usegems.io"
+								className="text-zinc-400 hover:text-zinc-300 underline underline-offset-2"
+							>
+								support@usegems.io
+							</a>
+						</span>
+					</div>
 				</div>
 			</div>
 
@@ -521,11 +575,18 @@ function SubscriptionPlanCard() {
 				{/* Plan Features */}
 				<div className="space-y-2">
 					<h4 className="font-medium text-zinc-300 text-sm">Plan Features</h4>
-					<div className="space-y-1">
-						<div className="flex items-center gap-2 text-sm text-zinc-400">
-							<CircleCheckBig className="h-3 w-3 text-pink-400 flex-shrink-0" />
-							<span>{config?.limits || 'Basic features'}</span>
-						</div>
+					<div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+						{getPlanDisplayConfig(currentPlan)?.features.map((feature) => (
+							<div key={feature} className="flex items-center gap-2 text-sm text-zinc-400">
+								<CircleCheckBig className="h-3 w-3 text-pink-400 flex-shrink-0" />
+								<span>{feature}</span>
+							</div>
+						)) ?? (
+							<div className="flex items-center gap-2 text-sm text-zinc-400">
+								<CircleCheckBig className="h-3 w-3 text-pink-400 flex-shrink-0" />
+								<span>{config?.limits || 'Basic features'}</span>
+							</div>
+						)}
 					</div>
 				</div>
 

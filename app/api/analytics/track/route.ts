@@ -24,7 +24,6 @@ interface TrackRequest {
 	};
 }
 
-// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function POST(request: Request) {
 	try {
 		// Verify the user is authenticated

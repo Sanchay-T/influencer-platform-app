@@ -31,13 +31,19 @@ export interface CreatorRow {
 }
 
 const toStringValue = (value: unknown, fallback: string): string => {
-	if (isString(value)) return value;
-	if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+	if (isString(value)) {
+		return value;
+	}
+	if (typeof value === 'number' && Number.isFinite(value)) {
+		return String(value);
+	}
 	return fallback;
 };
 
 const toNumberValue = (value: unknown): number | null => {
-	if (isNumber(value)) return value;
+	if (isNumber(value)) {
+		return value;
+	}
 	if (isString(value) && value.trim()) {
 		const parsed = Number(value);
 		return Number.isFinite(parsed) ? parsed : null;
@@ -51,7 +57,7 @@ const toNumberValue = (value: unknown): number | null => {
  * various data structures (TikTok, Instagram, YouTube formats).
  */
 export function transformCreatorsToRows(
-	creators: Array<Record<string, unknown>>,
+	creators: Record<string, unknown>[],
 	platformNormalized: string,
 	startIndex: number,
 	renderProfileLink: (creator: unknown) => string
@@ -102,7 +108,9 @@ export function transformCreatorsToRows(
 		// Handle duplicate keys
 		if (seenRowKeys.has(keyId)) {
 			let i = 1;
-			while (seenRowKeys.has(`${keyId}-${i}`)) i++;
+			while (seenRowKeys.has(`${keyId}-${i}`)) {
+				i++;
+			}
 			keyId = `${keyId}-${i}`;
 		}
 		seenRowKeys.add(keyId);

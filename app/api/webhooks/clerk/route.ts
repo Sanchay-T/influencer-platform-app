@@ -46,7 +46,6 @@ const getPrimaryEmail = (record: UnknownRecord): string | undefined => {
 	return undefined;
 };
 
-// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function POST(req: NextRequest) {
 	const requestId = BillingLogger.generateRequestId();
 

@@ -11,7 +11,6 @@ import { getStringProperty, toRecord } from '@/lib/utils/type-guards';
 
 const logger = createCategoryLogger(LogCategory.ONBOARDING);
 
-// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function POST(req: Request) {
 	try {
 		const { userId } = await getAuthOrTest();

@@ -1,7 +1,6 @@
 'use client';
 
 import { ExternalLink, Mail } from 'lucide-react';
-import React from 'react';
 import { AddToListButton } from '@/components/lists/add-to-list-button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';

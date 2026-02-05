@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 interface AnimatedSparklineProps {
 	data?: number[];
@@ -30,7 +30,9 @@ export default function AnimatedSparkline({
 	}, [data, width, height]);
 
 	const d = useMemo(() => {
-		if (!points.length) return '';
+		if (!points.length) {
+			return '';
+		}
 		return points
 			.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`)
 			.join(' ');
@@ -44,11 +46,13 @@ export default function AnimatedSparkline({
 
 	useEffect(() => {
 		const path = pathRef.current;
-		if (!path) return;
+		if (!path) {
+			return;
+		}
 		const len = path.getTotalLength();
 		path.style.strokeDasharray = `${len}`;
 		path.style.strokeDashoffset = animated ? '0' : `${len}`;
-	}, [animated, d]);
+	}, [animated]);
 
 	return (
 		<svg
@@ -57,6 +61,7 @@ export default function AnimatedSparkline({
 			viewBox={`0 0 ${width} ${height}`}
 			className="overflow-visible"
 		>
+			<title>Trend sparkline</title>
 			<path
 				ref={pathRef}
 				d={d}
@@ -66,7 +71,7 @@ export default function AnimatedSparkline({
 			/>
 			{points.map((p, i) => (
 				<circle
-					key={i}
+					key={`${p.x}-${p.y}`}
 					cx={p.x}
 					cy={p.y}
 					r={i === points.length - 1 ? 2.5 : 0}

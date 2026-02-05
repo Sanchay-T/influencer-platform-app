@@ -320,6 +320,7 @@ function BoardView({
 }: BoardViewProps) {
 	return (
 		<DndContext
+			id="list-board"
 			sensors={sensors}
 			onDragStart={(event) =>
 				setActiveId(typeof event.active.id === 'string' ? event.active.id : String(event.active.id))

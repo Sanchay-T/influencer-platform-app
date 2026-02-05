@@ -13,7 +13,7 @@ import { structuredConsole } from '@/lib/logging/console-proxy';
 import { SentryLogger } from '@/lib/sentry';
 
 export interface GetCreatorsResult {
-	creators: any[];
+	creators: unknown[];
 	source: 'v2' | 'legacy';
 }
 
@@ -66,22 +66,26 @@ export async function getCreatorsForJobs(jobIds: string[]): Promise<GetCreatorsR
 		where: inArray(scrapingResults.jobId, jobIds),
 	});
 
-	let allCreators: any[] = [];
+	let allCreators: unknown[] = [];
 	for (const result of legacyResults) {
-		const creatorsData = result.creators as any;
+		const creatorsData = result.creators as unknown;
 		if (Array.isArray(creatorsData)) {
 			allCreators = allCreators.concat(creatorsData);
 		} else if (creatorsData && typeof creatorsData === 'object') {
-			if ('results' in creatorsData && Array.isArray(creatorsData.results)) {
-				for (const r of creatorsData.results) {
-					if (r.creators && Array.isArray(r.creators)) {
-						allCreators = allCreators.concat(r.creators);
+			const creatorsRecord = creatorsData as Record<string, unknown>;
+			if ('results' in creatorsRecord && Array.isArray(creatorsRecord.results)) {
+				for (const r of creatorsRecord.results) {
+					const resultRecord = r && typeof r === 'object' ? (r as Record<string, unknown>) : null;
+					const creatorsList = resultRecord ? resultRecord.creators : undefined;
+					if (Array.isArray(creatorsList)) {
+						allCreators = allCreators.concat(creatorsList);
 					}
 				}
 			} else {
-				for (const key of Object.keys(creatorsData)) {
-					if (Array.isArray(creatorsData[key])) {
-						allCreators = allCreators.concat(creatorsData[key]);
+				for (const key of Object.keys(creatorsRecord)) {
+					const value = creatorsRecord[key];
+					if (Array.isArray(value)) {
+						allCreators = allCreators.concat(value);
 					}
 				}
 			}

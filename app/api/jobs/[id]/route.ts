@@ -1,13 +1,13 @@
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { scrapingJobs, scrapingResults } from '@/lib/db/schema';
+import { scrapingJobs } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
 // @performance Vercel timeout protection - job queries with results can be slow
 export const maxDuration = 15;
 
-export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
 	try {
 		const { id: jobId } = await params;
 
@@ -45,7 +45,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 	}
 }
 
-export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
 	try {
 		const { id: jobId } = await params;
 

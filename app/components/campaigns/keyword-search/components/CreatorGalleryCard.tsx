@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-import { resolveCreatorPreview } from '@/lib/utils/media-preview';
 import {
 	getNumberProperty,
 	getRecordProperty,
@@ -73,11 +72,17 @@ export const CreatorGalleryCard = memo(function CreatorGalleryCard({
 	const creatorRecord = getRecordProperty(rawRecord, 'creator') ?? {};
 
 	const readNumber = (record: Record<string, unknown> | null, key: string): number | null => {
-		if (!record) return null;
+		if (!record) {
+			return null;
+		}
 		const numeric = getNumberProperty(record, key);
-		if (numeric != null) return numeric;
+		if (numeric != null) {
+			return numeric;
+		}
 		const text = getStringProperty(record, key);
-		if (!text) return null;
+		if (!text) {
+			return null;
+		}
 		const parsed = Number(text);
 		return Number.isFinite(parsed) ? parsed : null;
 	};

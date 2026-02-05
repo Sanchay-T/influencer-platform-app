@@ -23,7 +23,6 @@
  * ```
  */
 
-import * as Sentry from '@sentry/nextjs';
 import { SentryLogger } from '@/lib/logging/sentry-logger';
 
 // ============================================================================

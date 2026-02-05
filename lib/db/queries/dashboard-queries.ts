@@ -60,18 +60,6 @@ function accessibleListFilter(userId: string) {
 	return or(eq(creatorLists.ownerId, userId), inArray(creatorLists.id, collaboratorSubquery));
 }
 
-function favoriteListCondition() {
-	const favoriteCondition = or(
-		sql<boolean>`((${creatorLists.settings}->>'dashboardFavorite')::boolean IS TRUE)`,
-		and(
-			eq(creatorLists.type, 'favorites'),
-			sql<boolean>`(${creatorLists.settings}->>'dashboardFavorite') IS NULL`
-		)
-	);
-
-	return favoriteCondition;
-}
-
 // Consumed by app/api/dashboard/overview/route.ts to hydrate dashboard favorites
 export async function getFavoriteInfluencersForDashboard(
 	clerkUserId: string,
@@ -105,7 +93,7 @@ export async function getFavoriteInfluencersForDashboard(
 		.where(
 			and(
 				eq(creatorLists.isArchived, false),
-				or(eq(creatorListItems.pinned, true), favoriteListCondition()),
+				eq(creatorListItems.pinned, true),
 				accessibleListFilter(internalUserId)
 			)
 		)
@@ -200,9 +188,13 @@ export async function getSearchTelemetryForDashboard(
 	for (const job of jobs) {
 		const start = job.startedAt ?? job.createdAt;
 		const end = job.completedAt;
-		if (!(start && end)) continue;
+		if (!(start && end)) {
+			continue;
+		}
 		const duration = end.getTime() - start.getTime();
-		if (duration < 0) continue;
+		if (duration < 0) {
+			continue;
+		}
 		totalDuration += duration;
 		completedJobs += 1;
 	}

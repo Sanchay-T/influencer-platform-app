@@ -79,8 +79,11 @@ export default function DemoSearch({ businessName }: { businessName: string }) {
 							<span className="text-gray-500">Search time: 2.3s</span>
 						</div>
 
-						{results.map((influencer, index) => (
-							<div key={index} className="border rounded-lg p-3 hover:bg-gray-50">
+						{results.map((influencer) => (
+							<div
+								key={`${influencer.platform}-${influencer.name}`}
+								className="border rounded-lg p-3 hover:bg-gray-50"
+							>
 								<div className="flex items-start justify-between">
 									<div className="flex items-center space-x-3">
 										<img
@@ -137,7 +140,7 @@ export default function DemoSearch({ businessName }: { businessName: string }) {
 				) : (
 					<div className="text-center py-8">
 						<Button onClick={runDemoSearch} disabled={isSearching} className="w-full">
-							{isSearching ? 'Searching...' : 'Find Influencers for ' + businessName}
+							{isSearching ? 'Searching...' : `Find Influencers for ${businessName}`}
 						</Button>
 					</div>
 				)}

@@ -165,7 +165,7 @@ const normalizeEngagementRate = (value?: number | null): string | null => {
 	return value.toString();
 };
 
-const mergeMetadata = (
+const _mergeMetadata = (
 	current: unknown,
 	incoming?: Record<string, unknown>
 ): Record<string, unknown> => {
@@ -196,8 +196,6 @@ async function refreshListStats(listId: string) {
 export async function getListsForUser(clerkUserId: string): Promise<CreatorListSummary[]> {
 	const user = await findInternalUser(clerkUserId);
 
-	// OPTIMIZED: Use cached stats instead of expensive JOINs
-	// This makes dropdown load 10x faster (no JOIN with items/profiles)
 	const collaboratorSubquery = db
 		.select({ listId: creatorListCollaborators.listId })
 		.from(creatorListCollaborators)
@@ -208,28 +206,28 @@ export async function getListsForUser(clerkUserId: string): Promise<CreatorListS
 			)
 		);
 
+	// Compute stats live with JOINs — the cached stats field was unreliable
+	// (deadlocked refreshListStats caused stale 0s). A user has few lists so this is fine.
 	const rows = await db
 		.select({
 			list: creatorLists,
+			creatorCount: sql<number>`COALESCE(COUNT(${creatorListItems.id}), 0)`,
+			followerSum: sql<number>`COALESCE(SUM(${creatorProfiles.followers}), 0)`,
 		})
 		.from(creatorLists)
+		.leftJoin(creatorListItems, eq(creatorListItems.listId, creatorLists.id))
+		.leftJoin(creatorProfiles, eq(creatorProfiles.id, creatorListItems.creatorId))
 		.where(or(eq(creatorLists.ownerId, user.id), inArray(creatorLists.id, collaboratorSubquery)))
+		.groupBy(creatorLists.id)
 		.orderBy(desc(creatorLists.updatedAt));
 
-	return rows.map((row) => {
-		// Read stats from cached JSON field instead of calculating
-		const stats = toRecord(row.list.stats);
-		const creatorCount = typeof stats?.creatorCount === 'number' ? stats.creatorCount : 0;
-		const followerSum = typeof stats?.followerSum === 'number' ? stats.followerSum : 0;
-
-		return {
-			...row.list,
-			creatorCount,
-			followerSum,
-			collaboratorCount: 0, // Skip collaborator count for dropdown (not critical)
-			viewerRole: row.list.ownerId === user.id ? 'owner' : 'viewer',
-		};
-	});
+	return rows.map((row) => ({
+		...row.list,
+		creatorCount: Number(row.creatorCount) || 0,
+		followerSum: Number(row.followerSum) || 0,
+		collaboratorCount: 0,
+		viewerRole: row.list.ownerId === user.id ? 'owner' : 'viewer',
+	}));
 }
 
 export async function getListDetail(
@@ -477,8 +475,6 @@ export async function duplicateList(clerkUserId: string, listId: string, name?: 
 			payload: { sourceListId: listId },
 		});
 
-		await refreshListStats(newList.id);
-
 		const [stats] = await tx
 			.select({
 				creatorCount: sql<number>`COALESCE(COUNT(${creatorListItems.id}), 0)`,
@@ -565,7 +561,9 @@ export async function addCreatorsToList(
 		const itemValues = creators
 			.map((creator, idx) => {
 				const profile = profileMap.get(`${creator.platform}:${creator.externalId}`);
-				if (!profile) return null;
+				if (!profile) {
+					return null;
+				}
 				return {
 					listId,
 					creatorId: profile.id,
@@ -657,7 +655,9 @@ export async function updateListItems(
 	listId: string,
 	updates: ListItemUpdate[]
 ) {
-	if (!updates.length) return;
+	if (!updates.length) {
+		return;
+	}
 	const user = await findInternalUser(clerkUserId);
 	const access = await fetchAccessibleList(listId, user.id);
 	if (!access) {
@@ -678,7 +678,6 @@ export async function updateListItems(
 				})
 				.where(and(eq(creatorListItems.id, update.id), eq(creatorListItems.listId, listId)));
 		}
-		await refreshListStats(listId);
 		await tx.insert(creatorListActivities).values({
 			listId,
 			actorId: user.id,
@@ -686,10 +685,13 @@ export async function updateListItems(
 			payload: { count: updates.length },
 		});
 	});
+	await refreshListStats(listId);
 }
 
 export async function removeListItems(clerkUserId: string, listId: string, itemIds: string[]) {
-	if (!itemIds.length) return;
+	if (!itemIds.length) {
+		return;
+	}
 	const user = await findInternalUser(clerkUserId);
 	const access = await fetchAccessibleList(listId, user.id);
 	if (!access) {
@@ -701,7 +703,6 @@ export async function removeListItems(clerkUserId: string, listId: string, itemI
 		await tx
 			.delete(creatorListItems)
 			.where(and(eq(creatorListItems.listId, listId), inArray(creatorListItems.id, itemIds)));
-		await refreshListStats(listId);
 		await tx.insert(creatorListActivities).values({
 			listId,
 			actorId: user.id,
@@ -709,6 +710,7 @@ export async function removeListItems(clerkUserId: string, listId: string, itemI
 			payload: { count: itemIds.length },
 		});
 	});
+	await refreshListStats(listId);
 }
 
 export async function manageCollaborators(

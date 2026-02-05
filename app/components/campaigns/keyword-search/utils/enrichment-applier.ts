@@ -80,7 +80,7 @@ export function patchCreatorEntry(
 	if (clientNewEmails.length) {
 		nextMetadata.clientNewEmails = clientNewEmails;
 	} else if (nextMetadata.clientNewEmails) {
-		delete nextMetadata.clientNewEmails;
+		nextMetadata.clientNewEmails = undefined;
 	}
 
 	const nextEntry: Creator = {

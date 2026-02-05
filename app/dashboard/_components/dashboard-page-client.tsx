@@ -79,7 +79,8 @@ export default function DashboardPageClient({
 								<div>
 									<h3 className="font-semibold text-zinc-100">Create your first campaign</h3>
 									<p className="text-sm text-zinc-400">
-										Start discovering influencers by creating a campaign and running your first search.
+										Start discovering influencers by creating a campaign and running your first
+										search.
 									</p>
 								</div>
 							</div>
@@ -185,11 +186,7 @@ export default function DashboardPageClient({
 						</CardHeader>
 						<CardContent>
 							{hasSearchActivity ? (
-								<AnimatedSparkline
-									data={[normalizedMetrics.searchCount]}
-									width={520}
-									height={96}
-								/>
+								<AnimatedSparkline data={[normalizedMetrics.searchCount]} width={520} height={96} />
 							) : (
 								<div className="flex items-center justify-center h-24 text-sm text-zinc-500">
 									No search activity yet. Run your first search to see activity here.

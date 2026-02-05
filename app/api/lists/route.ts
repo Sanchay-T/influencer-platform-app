@@ -20,7 +20,6 @@ function errorResponse(error: unknown, status = 500) {
 	);
 }
 
-// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function GET() {
 	return apiTracker.trackRoute('list', 'list', async () => {
 		const requestId = `lists_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -56,7 +55,6 @@ export async function GET() {
 	});
 }
 
-// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function POST(request: Request) {
 	return apiTracker.trackRoute('list', 'create', async () => {
 		const { userId } = await getAuthOrTest();

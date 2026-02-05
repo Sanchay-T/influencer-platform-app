@@ -214,10 +214,12 @@ export function FeatureGate({
 }) {
 	const { hasAccess, isLoaded } = useFeatureAccess(feature);
 
-	if (!isLoaded) return null;
+	if (!isLoaded) {
+		return null;
+	}
 
 	if (!hasAccess) {
-		return fallback ? <>{fallback}</> : null;
+		return fallback ? fallback : null;
 	}
 
 	return <>{children}</>;
@@ -229,7 +231,9 @@ export function FeatureGate({
 export function PlanBadge({ className }: { className?: string }) {
 	const { currentPlan, isLoaded } = useBilling();
 
-	if (!isLoaded) return null;
+	if (!isLoaded) {
+		return null;
+	}
 
 	const badgeStyles: Record<PlanKey, string> = {
 		free: 'bg-gray-100 text-gray-800',

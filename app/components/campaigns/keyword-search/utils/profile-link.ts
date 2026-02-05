@@ -15,16 +15,22 @@ const INSTAGRAM_BASE = 'https://www.instagram.com/';
 const getNestedRecord = (root: unknown, path: string[]): UnknownRecord | null => {
 	let current = toRecord(root);
 	for (const key of path) {
-		if (!current) return null;
+		if (!current) {
+			return null;
+		}
 		current = getRecordProperty(current, key);
 	}
 	return current;
 };
 
 const getNestedString = (root: unknown, path: string[]): string | null => {
-	if (path.length === 0) return null;
+	if (path.length === 0) {
+		return null;
+	}
 	const record = path.length === 1 ? toRecord(root) : getNestedRecord(root, path.slice(0, -1));
-	if (!record) return null;
+	if (!record) {
+		return null;
+	}
 	return getStringProperty(record, path[path.length - 1]);
 };
 

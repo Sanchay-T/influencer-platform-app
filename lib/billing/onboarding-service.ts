@@ -26,7 +26,6 @@ import {
 import { scheduleOnboardingEmails } from '@/lib/email/onboarding-email-triggers';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
 import { toError } from '@/lib/utils/type-guards';
-import type { BillingInterval, PlanKey } from './plan-config';
 
 const logger = createCategoryLogger(LogCategory.BILLING);
 
@@ -41,7 +40,7 @@ export type OnboardingStep =
 	| 'plan_selected'
 	| 'completed';
 
-export const OnboardingSteps: ReadonlyArray<OnboardingStep> = [
+export const OnboardingSteps: readonly OnboardingStep[] = [
 	'pending',
 	'info_captured',
 	'intent_captured',
@@ -91,7 +90,9 @@ export interface OnboardingStatus {
 // ═══════════════════════════════════════════════════════════════
 
 function getStepIndex(step: OnboardingStep | string | null | undefined): number {
-	if (!step) return 0; // 'pending' is index 0
+	if (!step) {
+		return 0; // 'pending' is index 0
+	}
 	if (!isOnboardingStep(step)) {
 		return 0;
 	}

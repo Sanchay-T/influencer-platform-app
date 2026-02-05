@@ -7,13 +7,10 @@ import { updateUserProfile } from '@/lib/db/queries/user-queries';
 import { campaigns, scrapingJobs, scrapingResults } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
-// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function GET(request: Request) {
 	return POST(request);
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: Admin reset flow includes multiple guarded steps.
-// biome-ignore lint/style/useNamingConvention: Next.js route handlers are expected to be exported as uppercase (GET/POST/etc).
 export async function POST(request: Request) {
 	try {
 		const { userId: adminUserId } = await getAuthOrTest();

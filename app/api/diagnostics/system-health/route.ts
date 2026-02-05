@@ -70,7 +70,7 @@ type SystemDiagnostics = {
 	};
 };
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
 	try {
 		const { userId } = await getAuthOrTest();
 		if (!userId) {
@@ -261,15 +261,21 @@ export async function GET(request: NextRequest) {
 
 		// 7. Overall system health assessment
 		const criticalIssues = [];
-		if (!diagnostics.checks.eventsTable?.exists) criticalIssues.push('Events table missing');
-		if (!diagnostics.checks.backgroundJobsTable?.exists)
+		if (!diagnostics.checks.eventsTable?.exists) {
+			criticalIssues.push('Events table missing');
+		}
+		if (!diagnostics.checks.backgroundJobsTable?.exists) {
 			criticalIssues.push('Background jobs table missing');
-		if (!diagnostics.checks.eventService?.importable)
+		}
+		if (!diagnostics.checks.eventService?.importable) {
 			criticalIssues.push('Event service not importable');
-		if (!diagnostics.checks.jobProcessor?.importable)
+		}
+		if (!diagnostics.checks.jobProcessor?.importable) {
 			criticalIssues.push('Job processor not importable');
-		if (diagnostics.checks.userProfile?.inconsistentState)
+		}
+		if (diagnostics.checks.userProfile?.inconsistentState) {
 			criticalIssues.push('User in inconsistent state');
+		}
 
 		diagnostics.overallHealth = {
 			status: criticalIssues.length === 0 ? 'healthy' : 'unhealthy',

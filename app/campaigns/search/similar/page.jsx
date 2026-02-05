@@ -16,7 +16,7 @@ export default function SimilarCreatorSearch() {
 		platform: 'tiktok',
 		targetUsername: '',
 	});
-	const [isLoading, setIsLoading] = useState(false); // Start with false - no need to wait
+	const [isLoading, _setIsLoading] = useState(false); // Start with false - no need to wait
 	const [campaignName, setCampaignName] = useState('');
 
 	useEffect(() => {

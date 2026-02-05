@@ -32,7 +32,6 @@ export function trackGA4Event(eventName: string, params?: Record<string, unknown
  */
 export function trackGA4TrialStart(planName: string, value: number): void {
 	trackGA4Event('begin_trial', {
-		// biome-ignore lint/style/useNamingConvention: GA4 uses snake_case
 		plan_name: planName,
 		value: value,
 		currency: 'USD',
@@ -44,11 +43,9 @@ export function trackGA4TrialStart(planName: string, value: number): void {
  */
 export function trackGA4Purchase(planName: string, value: number): void {
 	trackGA4Event('purchase', {
-		// biome-ignore lint/style/useNamingConvention: GA4 uses snake_case
 		plan_name: planName,
 		value: value,
 		currency: 'USD',
-		// biome-ignore lint/style/useNamingConvention: GA4 uses snake_case
 		transaction_id: `txn_${Date.now()}`,
 	});
 }
@@ -92,18 +89,14 @@ export async function trackGA4ServerEvent(
 	const url = `https://www.google-analytics.com/mp/collect?measurement_id=${GA4_MEASUREMENT_ID}&api_secret=${GA4_API_SECRET}`;
 
 	const payload = {
-		// biome-ignore lint/style/useNamingConvention: GA4 Measurement Protocol uses snake_case
 		client_id: userId,
-		// biome-ignore lint/style/useNamingConvention: GA4 Measurement Protocol uses snake_case
 		user_id: userId,
 		events: [
 			{
 				name: eventName,
 				params: {
 					...params,
-					// biome-ignore lint/style/useNamingConvention: GA4 Measurement Protocol uses snake_case
 					engagement_time_msec: 100,
-					// biome-ignore lint/style/useNamingConvention: GA4 Measurement Protocol uses snake_case
 					session_id: Date.now().toString(),
 				},
 			},

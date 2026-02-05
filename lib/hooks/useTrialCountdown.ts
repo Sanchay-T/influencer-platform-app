@@ -80,7 +80,11 @@ export function useTrialCountdown(initialTrialData?: TrialData | null) {
 				// Calculate progress as precise time-based percentage
 				// Prefer using actual start/end dates if provided; fallback to 7-day window
 				let progressPercentage = 0;
-				if (startDate && !isNaN(startDate.getTime()) && endDate.getTime() > startDate.getTime()) {
+				if (
+					startDate &&
+					!Number.isNaN(startDate.getTime()) &&
+					endDate.getTime() > startDate.getTime()
+				) {
 					const totalMs = endDate.getTime() - startDate.getTime();
 					const elapsedMs = now.getTime() - startDate.getTime();
 					progressPercentage = (elapsedMs / totalMs) * 100;
@@ -179,7 +183,7 @@ export function useTrialCountdown(initialTrialData?: TrialData | null) {
 
 	// Update countdown based on current trial data
 	const updateCountdown = useCallback(() => {
-		if (trialData && trialData.endDate && !trialData.isExpired) {
+		if (trialData?.endDate && !trialData.isExpired) {
 			const newCountdown = calculateCountdown(trialData.endDate, trialData.startDate);
 			setCountdownData(newCountdown);
 
@@ -193,7 +197,7 @@ export function useTrialCountdown(initialTrialData?: TrialData | null) {
 
 	// Initialize countdown on mount or when trial data changes
 	useEffect(() => {
-		if (trialData && trialData.endDate) {
+		if (trialData?.endDate) {
 			updateCountdown();
 		} else if (!initialTrialData) {
 			// No initial data provided, fetch from API

@@ -181,7 +181,7 @@ function AdminEmailTestingPageContent() {
 		}, 150); // Reduced from 300ms to 150ms for faster response
 
 		return () => clearTimeout(timeoutId);
-	}, [searchQuery]);
+	}, [searchQuery, searchUsers]);
 
 	// Send test email
 	const sendTestEmail = async (userId?: string, userEmail?: string) => {

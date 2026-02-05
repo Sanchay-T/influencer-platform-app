@@ -6,7 +6,7 @@ import { structuredConsole } from '@/lib/logging/console-proxy';
 export const maxDuration = 30;
 
 // POST - Initialize default configurations
-export async function POST(request: Request) {
+export async function POST(_request: Request) {
 	structuredConsole.log('\n\n====== ADMIN CONFIG INIT API POST CALLED ======');
 	structuredConsole.log(
 		'🔄 [ADMIN-CONFIG-INIT] POST request received at:',
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
 }
 
 // GET - Check initialization status
-export async function GET(request: Request) {
+export async function GET(_request: Request) {
 	structuredConsole.log('\n\n====== ADMIN CONFIG INIT API GET CALLED ======');
 	structuredConsole.log(
 		'🔍 [ADMIN-CONFIG-INIT] GET request received at:',
