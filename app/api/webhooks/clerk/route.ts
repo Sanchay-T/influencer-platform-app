@@ -330,7 +330,7 @@ async function handleUserCreated(userData: unknown, requestId: string) {
 	const email = getPrimaryEmail(userRecord);
 	const firstName = getStringProperty(userRecord, 'first_name') ?? '';
 	const lastName = getStringProperty(userRecord, 'last_name') ?? '';
-	const fullName = `${firstName} ${lastName}`.trim() || 'New User';
+	const fullName = `${firstName} ${lastName}`.trim() || undefined;
 
 	// Initialize user session logger for debugging
 	const userLogger = email ? UserSessionLogger.forUser(email, userId) : null;
@@ -489,7 +489,7 @@ async function handleUserCreated(userData: unknown, requestId: string) {
 		);
 
 		// Track signup events in LogSnag and GA4
-		await trackUserSignup({ email: email || 'unknown', name: fullName });
+		await trackUserSignup({ email: email || 'unknown', name: fullName || '' });
 		await trackGA4ServerSignup(userId);
 
 		// Sync to Resend audience (fire-and-forget, don't block user creation)
