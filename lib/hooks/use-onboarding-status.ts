@@ -83,7 +83,7 @@ export function useOnboardingStatus(): OnboardingState {
 
 	const hasPlan = !!intendedPlan;
 	const hasStripeSub = !!stripeSubscriptionId;
-	const isPaidOrTrial = subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
+	const isPaidOrTrial = subscriptionStatus === 'active';
 
 	return {
 		step,

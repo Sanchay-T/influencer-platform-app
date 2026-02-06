@@ -47,8 +47,7 @@ async function validateAccessInternal(userId: string): Promise<AccessResultWithU
 	}
 
 	// Check subscription status
-	const hasActiveSubscription =
-		user.subscriptionStatus === 'active' || user.subscriptionStatus === 'trialing';
+	const hasActiveSubscription = user.subscriptionStatus === 'active';
 
 	// Derive trial status dynamically instead of trusting DB field
 	// @why DB trial_status can be stale if webhook failed or user abandoned checkout
