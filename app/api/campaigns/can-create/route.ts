@@ -40,6 +40,6 @@ export async function GET() {
 		);
 
 		structuredConsole.error('[CAN-CREATE-CAMPAIGN] error', err);
-		return NextResponse.json({ allowed: true }); // fail-open to avoid blocking
+		return NextResponse.json({ allowed: false, message: 'Validation error — please try again' });
 	}
 }

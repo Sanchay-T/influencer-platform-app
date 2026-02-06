@@ -93,6 +93,22 @@ export default function SubscriptionStatusCard({
 	};
 
 	const getStatusInfo = (): StatusInfo => {
+		if (isTrialing && daysRemaining <= 0) {
+			return {
+				icon: AlertTriangle,
+				color: 'text-red-400',
+				bgColor: 'bg-red-900/30 border-red-800',
+				badge: {
+					text: 'Expired',
+					variant: 'destructive',
+					className: 'bg-red-600/20 text-red-400 border border-red-600/30',
+				},
+				title: 'Trial Expired',
+				message: 'Your trial has ended. Start your subscription to continue.',
+				showProgress: false,
+			};
+		}
+
 		if (isTrialing) {
 			const isExpiringSoon = daysRemaining <= 2;
 			return {

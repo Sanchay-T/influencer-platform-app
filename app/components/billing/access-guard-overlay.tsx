@@ -18,11 +18,7 @@ export default function AccessGuardOverlay({
 	showOnboarding?: boolean;
 }) {
 	const { isLoaded, isTrialing, trialStatus, hasActiveSubscription } = useBilling();
-	const {
-		isLoading: onboardingLoading,
-		isCompleted: onboardingCompleted,
-		isPaidOrTrial,
-	} = useOnboardingStatus();
+	const { isLoading: onboardingLoading, isCompleted: onboardingCompleted } = useOnboardingStatus();
 	const pathname = usePathname();
 	const [blocked, setBlocked] = useState<boolean>(initialBlocked);
 	const [blockStart, setBlockStart] = useState<number | null>(null);
@@ -43,7 +39,7 @@ export default function AccessGuardOverlay({
 		}
 
 		const isTrialExpired = isTrialing && trialStatus === 'expired';
-		const hasAccess = hasActiveSubscription || isPaidOrTrial || (isTrialing && !isTrialExpired);
+		const hasAccess = hasActiveSubscription || (isTrialing && !isTrialExpired);
 		const onboardingIncomplete = !onboardingCompleted;
 		const nextBlocked = !(hasAccess || isAllowedRoute || onboardingIncomplete);
 		setBlocked(nextBlocked);
@@ -80,7 +76,6 @@ export default function AccessGuardOverlay({
 		blockStart,
 		pathname,
 		mountTs,
-		isPaidOrTrial,
 	]);
 
 	// 🚨 Don't show overlay while onboarding is in progress or still loading.
