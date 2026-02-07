@@ -19,7 +19,6 @@ import { Loader2, RefreshCw, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import type { JSX } from 'react';
 import { Suspense, useCallback, useEffect } from 'react';
-import ExportButton from '@/app/components/campaigns/export-button';
 import KeywordSearchResults from '@/app/components/campaigns/keyword-search/search-results';
 import SimilarSearchResults from '@/app/components/campaigns/similar-search/search-results';
 import { Badge } from '@/components/ui/badge';
@@ -33,7 +32,6 @@ import { useCampaignJobs } from './hooks/useCampaignJobs';
 import type { ClientCampaignPageProps } from './types/campaign-page';
 import {
 	formatDate,
-	getCreatorsCount,
 	getStatusVariant,
 	isSimilarSearchJob,
 	resolveScrapingEndpoint,
@@ -254,13 +252,6 @@ function CampaignHeader({
 						>
 							<Search className="mr-2 h-4 w-4" /> Similar search
 						</Button>
-						<ExportButton
-							campaignId={campaign.id}
-							jobId={selectedJob?.id}
-							variant="outline"
-							className="border-zinc-700/60 text-zinc-100"
-							disabled={!selectedJob || getCreatorsCount(selectedJob) === 0}
-						/>
 					</div>
 				</div>
 			</CardHeader>

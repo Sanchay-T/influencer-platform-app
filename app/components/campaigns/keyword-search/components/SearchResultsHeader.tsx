@@ -251,7 +251,7 @@ export function SearchResultsHeader({
 					)}
 
 					{/* Export button */}
-					{(campaignId || jobId) && (
+					{jobId && (
 						<FeatureGate
 							feature="csv_export"
 							fallback={
@@ -260,7 +260,7 @@ export function SearchResultsHeader({
 								</Button>
 							}
 						>
-							<ExportButton campaignId={campaignId} jobId={jobId} />
+							<ExportButton jobId={jobId} />
 						</FeatureGate>
 					)}
 				</div>
