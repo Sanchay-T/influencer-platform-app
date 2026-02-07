@@ -19,7 +19,7 @@ import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { exportJobs, scrapingJobs } from '@/lib/db/schema';
-import { dedupeCreators, formatEmailsForCsv } from '@/lib/export/csv-utils';
+import { dedupeByCreator, dedupeCreators, formatEmailsForCsv } from '@/lib/export/csv-utils';
 import { getCreatorsForJobs } from '@/lib/export/get-creators';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { SentryLogger } from '@/lib/sentry';
@@ -144,9 +144,13 @@ export async function POST(req: Request) {
 				throw new Error('No creators found to export');
 			}
 
-			// Dedupe creators
-			const creators = dedupeCreators(rawCreators);
-			structuredConsole.log(`CSV Worker: Deduped to ${creators.length} creators`);
+			// Dedupe creators — first by identity fields, then collapse multiple
+			// videos per creator into a single row (keeping the best-performing video)
+			const identityDeduped = dedupeCreators(rawCreators);
+			const creators = dedupeByCreator(identityDeduped);
+			structuredConsole.log(
+				`CSV Worker: ${rawCreators.length} raw → ${identityDeduped.length} identity-deduped → ${creators.length} creator-deduped`
+			);
 
 			SentryLogger.addBreadcrumb({
 				category: 'export',
