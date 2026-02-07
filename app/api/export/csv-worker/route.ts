@@ -158,9 +158,12 @@ export async function POST(req: Request) {
 			const csvContent = generateCsvContent(creators, keywords);
 
 			// Upload to Vercel Blob
+			// Filenames include a random token to make URLs unguessable.
+			// TODO: upgrade to @vercel/blob v2+ for private blob access with signed URLs
+			const token = crypto.randomUUID();
 			const filename = campaignId
-				? `exports/campaign-${campaignId}-${Date.now()}.csv`
-				: `exports/job-${jobId}-${Date.now()}.csv`;
+				? `exports/campaign-${campaignId}-${Date.now()}-${token}.csv`
+				: `exports/job-${jobId}-${Date.now()}-${token}.csv`;
 
 			SentryLogger.addBreadcrumb({
 				category: 'export',

@@ -77,7 +77,7 @@ export interface BillingStatus {
 	// Subscription info
 	subscriptionStatus: SubscriptionStatus;
 	billingAmount: number;
-	billingCycle: 'monthly';
+	billingCycle: 'monthly' | 'yearly';
 	nextBillingDate?: string;
 
 	// Stripe IDs

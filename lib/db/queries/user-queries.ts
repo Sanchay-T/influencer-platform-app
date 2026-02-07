@@ -5,7 +5,7 @@
  * =====================================================
  */
 
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNotNull } from 'drizzle-orm';
 import { clerkBackendClient } from '@/lib/auth/backend-auth';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
 import { sessionTracker } from '@/lib/sentry/feature-tracking';
@@ -87,6 +87,8 @@ export async function getUserProfile(userId: string): Promise<UserProfileComplet
 			trialStartDate: userSubscriptions.trialStartDate,
 			trialEndDate: userSubscriptions.trialEndDate,
 			subscriptionCancelDate: userSubscriptions.subscriptionCancelDate,
+			billingInterval: userSubscriptions.billingInterval,
+			currentPeriodEnd: userSubscriptions.currentPeriodEnd,
 			billingSyncStatus: userSubscriptions.billingSyncStatus,
 
 			// Billing data (minimal - Stripe Portal handles card/address)
@@ -270,6 +272,8 @@ export async function createUser(userData: {
 				trialStartDate: newSubscription.trialStartDate,
 				trialEndDate: newSubscription.trialEndDate,
 				subscriptionCancelDate: newSubscription.subscriptionCancelDate,
+				billingInterval: newSubscription.billingInterval,
+				currentPeriodEnd: newSubscription.currentPeriodEnd,
 				billingSyncStatus: newSubscription.billingSyncStatus,
 
 				// Billing data (initially empty)
@@ -410,6 +414,8 @@ export async function updateUserProfile(
 		trialStartDate?: Date;
 		trialEndDate?: Date;
 		subscriptionCancelDate?: Date;
+		billingInterval?: string;
+		currentPeriodEnd?: Date;
 		billingSyncStatus?: string;
 
 		// Billing updates (minimal - Stripe Portal handles card/address)
@@ -463,6 +469,8 @@ export async function updateUserProfile(
 			trialStartDate: updates.trialStartDate,
 			trialEndDate: updates.trialEndDate,
 			subscriptionCancelDate: updates.subscriptionCancelDate,
+			billingInterval: updates.billingInterval,
+			currentPeriodEnd: updates.currentPeriodEnd,
 			billingSyncStatus: updates.billingSyncStatus,
 		};
 
@@ -589,7 +597,7 @@ export async function getUserBilling(
 			and(
 				eq(users.userId, userId),
 				// Only return records with Stripe customer ID
-				eq(userBilling.stripeCustomerId, userBilling.stripeCustomerId)
+				isNotNull(userBilling.stripeCustomerId)
 			)
 		);
 
@@ -647,6 +655,8 @@ export async function getUserByStripeCustomerId(
 			trialStartDate: userSubscriptions.trialStartDate,
 			trialEndDate: userSubscriptions.trialEndDate,
 			subscriptionCancelDate: userSubscriptions.subscriptionCancelDate,
+			billingInterval: userSubscriptions.billingInterval,
+			currentPeriodEnd: userSubscriptions.currentPeriodEnd,
 			billingSyncStatus: userSubscriptions.billingSyncStatus,
 
 			// Billing data (minimal - Stripe Portal handles card/address)
