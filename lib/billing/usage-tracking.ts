@@ -163,7 +163,9 @@ export async function incrementCampaignCount(
 				.where(eq(userUsage.userId, internalUserId))
 				.returning({ newCount: userUsage.usageCampaignsCurrent });
 
-			if (updated.length > 0) return { success: true as const, newCount: updated[0].newCount || 1 };
+			if (updated.length > 0) {
+				return { success: true as const, newCount: updated[0].newCount || 1 };
+			}
 
 			const inserted = await tx
 				.insert(userUsage)
@@ -246,7 +248,9 @@ export async function incrementCreatorCount(
 				.where(eq(userUsage.userId, internalUserId))
 				.returning({ newCount: userUsage.usageCreatorsCurrentMonth });
 
-			if (updated.length > 0) return updated[0].newCount || count;
+			if (updated.length > 0) {
+				return updated[0].newCount || count;
+			}
 
 			const inserted = await tx
 				.insert(userUsage)
@@ -319,7 +323,9 @@ export async function incrementEnrichmentCount(
 				.where(eq(userUsage.userId, internalUserId))
 				.returning({ newCount: userUsage.enrichmentsCurrentMonth });
 
-			if (updated.length > 0) return updated[0].newCount || count;
+			if (updated.length > 0) {
+				return updated[0].newCount || count;
+			}
 
 			const inserted = await tx
 				.insert(userUsage)

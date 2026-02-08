@@ -16,7 +16,6 @@ interface ExportButtonProps {
 	variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
 }
 
-const POLL_INTERVAL = 2000; // 2 seconds
 const MAX_POLL_TIME = 5 * 60 * 1000; // 5 minutes max
 
 function ExportButtonContent({

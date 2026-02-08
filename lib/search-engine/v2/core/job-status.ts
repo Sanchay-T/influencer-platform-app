@@ -99,7 +99,9 @@ export async function markJobCompleted(jobId: string): Promise<void> {
 	// Track search_completed in LogSnag (fire and forget)
 	// @why Uses getUserDataForTracking to get fresh data from Clerk if DB has fallback email
 	if (job) {
-		const normalizedPlatform = (job.platform || 'tiktok').toLowerCase().includes('instagram')
+		const normalizedPlatform: 'tiktok' | 'instagram' | 'youtube' = (job.platform || 'tiktok')
+			.toLowerCase()
+			.includes('instagram')
 			? 'instagram'
 			: (job.platform || 'tiktok').toLowerCase().includes('youtube')
 				? 'youtube'
@@ -109,7 +111,7 @@ export async function markJobCompleted(jobId: string): Promise<void> {
 			.then((userData) => {
 				return trackServer('search_completed', {
 					userId: job.userId,
-					platform: normalizedPlatform as 'tiktok' | 'instagram' | 'youtube',
+					platform: normalizedPlatform,
 					type: 'keyword',
 					creatorCount: job.creatorsFound ?? 0,
 					email: userData.email,

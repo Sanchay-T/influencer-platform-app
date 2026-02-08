@@ -23,6 +23,7 @@ import { dedupeByCreator, dedupeCreators, formatEmailsForCsv } from '@/lib/expor
 import { getCreatorsForJobs } from '@/lib/export/get-creators';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { SentryLogger } from '@/lib/sentry';
+import { getNumberProperty, toRecord } from '@/lib/utils/type-guards';
 
 export const maxDuration = 300; // 5 minutes
 export const dynamic = 'force-dynamic';
@@ -112,7 +113,9 @@ export async function POST(req: Request) {
 				jobIds = jobs.map((j) => j.id);
 				jobs.forEach((job) => {
 					if (Array.isArray(job.keywords)) {
-						keywords = keywords.concat(job.keywords as string[]);
+						keywords = keywords.concat(
+							job.keywords.filter((k): k is string => typeof k === 'string')
+						);
 					}
 				});
 				keywords = [...new Set(keywords)];
@@ -123,7 +126,7 @@ export async function POST(req: Request) {
 					columns: { keywords: true },
 				});
 				if (job && Array.isArray(job.keywords)) {
-					keywords = job.keywords as string[];
+					keywords = job.keywords.filter((k): k is string => typeof k === 'string');
 				}
 			}
 
@@ -291,16 +294,36 @@ function generateCsvContent(creators: CreatorItem[], keywords: string[]): string
 		for (const item of creators) {
 			const creator = item.creator || {};
 			const video = item.video || {};
-			const stats = (video.statistics || {}) as Record<string, number>;
+			const statsRecord = toRecord(video.statistics) ?? {};
+			const views = getNumberProperty(statsRecord, 'views') ?? 0;
+			const likes = getNumberProperty(statsRecord, 'likes') ?? 0;
+			const comments = getNumberProperty(statsRecord, 'comments') ?? 0;
+			const shares = getNumberProperty(statsRecord, 'shares') ?? 0;
 			const hashtags = Array.isArray(item.hashtags) ? item.hashtags.join(';') : '';
 			const platform = item.platform || 'Unknown';
 			const emailCell = formatEmailsForCsv([item, creator]);
 
 			let dateStr = '';
 			if (platform === 'YouTube' && item.publishedTime) {
-				dateStr = new Date(item.publishedTime as string).toISOString().split('T')[0];
+				const publishedTime = item.publishedTime;
+				if (typeof publishedTime === 'string' || typeof publishedTime === 'number') {
+					const parsed = new Date(publishedTime);
+					if (!Number.isNaN(parsed.getTime())) {
+						dateStr = parsed.toISOString().split('T')[0];
+					}
+				}
 			} else if (item.createTime) {
-				dateStr = new Date((item.createTime as number) * 1000).toISOString().split('T')[0];
+				const createTime = item.createTime;
+				const createTimeNumber =
+					typeof createTime === 'number'
+						? createTime
+						: typeof createTime === 'string'
+							? Number(createTime)
+							: Number.NaN;
+
+				if (Number.isFinite(createTimeNumber)) {
+					dateStr = new Date(createTimeNumber * 1000).toISOString().split('T')[0];
+				}
 			}
 
 			const row = [
@@ -309,10 +332,10 @@ function generateCsvContent(creators: CreatorItem[], keywords: string[]): string
 				`"${creator.followers || 0}"`,
 				`"${video.url || ''}"`,
 				`"${escapeCSV(String(video.description || ''))}"`,
-				`"${stats.views || 0}"`,
-				`"${stats.likes || 0}"`,
-				`"${stats.comments || 0}"`,
-				`"${stats.shares || 0}"`,
+				`"${views}"`,
+				`"${likes}"`,
+				`"${comments}"`,
+				`"${shares}"`,
 				`"${item.lengthSeconds || 0}"`,
 				`"${hashtags}"`,
 				`"${dateStr}"`,

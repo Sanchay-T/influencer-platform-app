@@ -5,7 +5,7 @@
  * that removes them. Call cleanup in afterEach / afterAll.
  */
 
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import { eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import {
@@ -17,6 +17,7 @@ import {
 	users,
 	userUsage,
 } from '@/lib/db/schema';
+import { getNumberProperty, toRecord } from '@/lib/utils/type-guards';
 
 function testId() {
 	return `test_${crypto.randomUUID().slice(0, 8)}`;
@@ -173,5 +174,9 @@ export async function setUserUsage(
 
 export async function dbPing(): Promise<boolean> {
 	const [result] = await db.execute(sql`SELECT 1 AS ok`);
-	return (result as Record<string, unknown>)?.ok === 1;
+	const record = toRecord(result);
+	if (!record) {
+		return false;
+	}
+	return getNumberProperty(record, 'ok') === 1;
 }

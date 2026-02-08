@@ -57,7 +57,9 @@ describe('POST /api/campaigns', () => {
 			await db
 				.delete(campaigns)
 				.where(eq(campaigns.id, id))
-				.catch(() => {});
+				.catch(() => {
+					// Ignore cleanup errors (best-effort delete)
+				});
 		}
 		createdCampaignIds.length = 0;
 		await testUser.cleanup();

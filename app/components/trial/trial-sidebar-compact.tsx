@@ -28,6 +28,8 @@ type Status = {
 	billingAmount?: number;
 };
 
+const isPlanKey = (value: string): value is PlanKey => Object.hasOwn(PLANS, value);
+
 export default function TrialSidebarCompact() {
 	const [status, setStatus] = useState<Status>({ isLoaded: false, isTrialing: false });
 	const [showStartModal, setShowStartModal] = useState(false);
@@ -208,7 +210,9 @@ export default function TrialSidebarCompact() {
 				<StartSubscriptionModal
 					open={showStartModal}
 					onOpenChange={setShowStartModal}
-					planName={PLANS[status.currentPlan as PlanKey]?.name || status.currentPlan}
+					planName={
+						isPlanKey(status.currentPlan) ? PLANS[status.currentPlan].name : status.currentPlan
+					}
 					amount={status.billingAmount || 0}
 					onConfirm={async () => {
 						const result = await startSubscription();

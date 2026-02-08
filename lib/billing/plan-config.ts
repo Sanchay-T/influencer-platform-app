@@ -312,14 +312,14 @@ export function isValidPlan(plan: string): plan is PlanKey {
  * Check if a plan is a legacy (grandfathered) plan.
  */
 export function isLegacyPlan(plan: string): boolean {
-	return LEGACY_PLAN_KEYS.includes(plan as PlanKey);
+	return isValidPlan(plan) && LEGACY_PLAN_KEYS.includes(plan);
 }
 
 /**
  * Check if a plan is a new plan (Jan 2026+).
  */
 export function isNewPlan(plan: string): boolean {
-	return NEW_PLAN_KEYS.includes(plan as PlanKey);
+	return isValidPlan(plan) && NEW_PLAN_KEYS.includes(plan);
 }
 
 // ═══════════════════════════════════════════════════════════════

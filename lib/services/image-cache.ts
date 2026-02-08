@@ -148,7 +148,11 @@ export class ImageCache {
 						format: 'JPEG',
 						quality: 0.85,
 					});
-					buffer = Buffer.from(converted as Uint8Array);
+					if (converted instanceof Uint8Array) {
+						buffer = Buffer.from(converted);
+					} else if (converted instanceof ArrayBuffer) {
+						buffer = Buffer.from(converted);
+					}
 				} catch (_heicError) {
 					structuredConsole.warn(`${LOG_PREFIX} HEIC conversion failed, using original`);
 				}

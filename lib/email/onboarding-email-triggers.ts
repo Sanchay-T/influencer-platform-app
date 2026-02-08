@@ -64,7 +64,7 @@ export async function scheduleOnboardingEmails(
 				success: false,
 				scheduled: [],
 				skipped: [],
-				failed: ONBOARDING_EMAIL_TYPES as string[],
+				failed: ONBOARDING_EMAIL_TYPES,
 				error: 'Could not retrieve user email',
 			};
 		}
@@ -128,9 +128,7 @@ export async function scheduleOnboardingEmails(
 			success: false,
 			scheduled,
 			skipped,
-			failed: ONBOARDING_EMAIL_TYPES.filter(
-				(t) => !(scheduled.includes(t) || skipped.includes(t))
-			) as string[],
+			failed: ONBOARDING_EMAIL_TYPES.filter((t) => !(scheduled.includes(t) || skipped.includes(t))),
 			error: error instanceof Error ? error.message : 'Unknown error',
 		};
 	}
@@ -188,5 +186,5 @@ export function getOnboardingEmailSubject(emailType: EmailType): string {
  * Check if an email type is part of the onboarding sequence.
  */
 export function isOnboardingEmail(emailType: string): emailType is EmailType {
-	return ONBOARDING_EMAIL_TYPES.includes(emailType as EmailType);
+	return ONBOARDING_EMAIL_TYPES.some((t) => t === emailType);
 }

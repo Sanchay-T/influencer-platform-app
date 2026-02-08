@@ -116,7 +116,11 @@ describe('POST /api/export/csv-worker', () => {
 		);
 
 		// Verify filename contains UUID token for unguessability
-		const [filename] = mockPut.mock.calls[0] as unknown as [string, unknown, unknown];
+		const firstCall = mockPut.mock.calls[0];
+		const filename = firstCall?.[0];
+		if (typeof filename !== 'string') {
+			throw new Error('Expected put() to be called with a filename string');
+		}
 		const parts = filename.split('-');
 		// Should have UUID-format token at the end (before .csv)
 		expect(parts.length).toBeGreaterThan(3);

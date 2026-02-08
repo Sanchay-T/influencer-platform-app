@@ -17,7 +17,7 @@ import { logger } from '@/lib/logging';
 import { jobLog } from '@/lib/logging/background-job-logger';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { LogCategory } from '@/lib/logging/types';
-import { toError } from '@/lib/utils/type-guards';
+import { getRecordProperty, getStringProperty, toError, toRecord } from '@/lib/utils/type-guards';
 
 // Initialize QStash receiver
 const receiver = new Receiver({
@@ -89,8 +89,13 @@ export async function POST(request: Request) {
 			const userProfile = await getUserProfile(userId);
 
 			if (userProfile?.emailScheduleStatus) {
-				const emailStatus = userProfile.emailScheduleStatus as Record<string, { status?: string }>;
-				const thisEmailStatus = emailStatus[emailType]?.status;
+				const emailStatusRecord = toRecord(userProfile.emailScheduleStatus);
+				const thisEmailRecord = emailStatusRecord
+					? getRecordProperty(emailStatusRecord, String(emailType))
+					: null;
+				const thisEmailStatus = thisEmailRecord
+					? getStringProperty(thisEmailRecord, 'status')
+					: null;
 
 				if (thisEmailStatus === 'cancelled' || thisEmailStatus === 'cancelled_subscription') {
 					logger.info(

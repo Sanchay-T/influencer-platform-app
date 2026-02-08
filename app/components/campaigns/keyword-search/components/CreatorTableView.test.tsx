@@ -55,7 +55,9 @@ function makeRows(count: number): RowData[] {
 	}));
 }
 
-const noopFn = () => {};
+const noopFn = () => {
+	// Intentionally empty (used for callback props)
+};
 const noopAsync = async () => null;
 
 const defaultProps = {

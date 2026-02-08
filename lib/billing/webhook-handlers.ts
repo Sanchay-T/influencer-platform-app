@@ -40,6 +40,26 @@ import type { WebhookResult } from './subscription-types';
 
 const logger = createCategoryLogger(LogCategory.BILLING);
 
+type StripeSubscriptionLike = {
+	id: string;
+	status: Stripe.Subscription.Status;
+	customer: Stripe.Subscription['customer'];
+	metadata?: Record<string, string>;
+	items: {
+		data: Array<{
+			price?: {
+				id?: string | null;
+				recurring?: { interval?: Stripe.Price.Recurring.Interval | null } | null;
+			} | null;
+			current_period_end?: number | null;
+		}>;
+	};
+	trial_end?: number | null;
+	trial_start?: number | null;
+	cancel_at_period_end?: boolean | null;
+	cancel_at?: number | null;
+};
+
 const resolveCustomerId = (customer: Stripe.Subscription['customer']): string | null => {
 	if (typeof customer === 'string') {
 		return customer;
@@ -86,7 +106,7 @@ export const mapStripeSubscriptionStatus = (
  * This is IDEMPOTENT - calling multiple times produces same result.
  */
 export async function handleSubscriptionChange(
-	subscription: Stripe.Subscription,
+	subscription: StripeSubscriptionLike,
 	eventType: string
 ): Promise<WebhookResult> {
 	const handlerId = `wh_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
@@ -161,7 +181,7 @@ export async function handleSubscriptionChange(
 
 		// 2. Extract plan from Stripe subscription (must happen before idempotency check
 		// so we can detect plan upgrades/downgrades where subscription ID and status stay the same)
-		const priceId = subscription.items.data[0]?.price?.id;
+		const priceId = subscription.items.data[0]?.price?.id ?? undefined;
 		const planKey = getPlanKeyByPriceId(priceId);
 
 		// CRITICAL: All users must be on a paid plan
@@ -445,7 +465,7 @@ export async function handleSubscriptionChange(
  * Access is controlled by subscriptionStatus, not currentPlan.
  */
 export async function handleSubscriptionDeleted(
-	subscription: Stripe.Subscription
+	subscription: StripeSubscriptionLike
 ): Promise<WebhookResult> {
 	// Add breadcrumb for subscription deletion
 	SentryLogger.addBreadcrumb({

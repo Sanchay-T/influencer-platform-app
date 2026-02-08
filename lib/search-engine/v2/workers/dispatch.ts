@@ -378,7 +378,9 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 			// Step 3.5: Track search_started in LogSnag (fire and forget)
 			// ============================================================================
 
-			const normalizedPlatform = platform.toLowerCase().includes('instagram')
+			const normalizedPlatform: 'tiktok' | 'instagram' | 'youtube' = platform
+				.toLowerCase()
+				.includes('instagram')
 				? 'instagram'
 				: platform.toLowerCase().includes('youtube')
 					? 'youtube'
@@ -390,7 +392,7 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 				.then((userData) => {
 					return trackServer('search_started', {
 						userId,
-						platform: normalizedPlatform as 'tiktok' | 'instagram' | 'youtube',
+						platform: normalizedPlatform,
 						type: 'keyword',
 						targetCount: targetResults,
 						email: userData.email,

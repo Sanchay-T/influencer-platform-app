@@ -64,17 +64,27 @@ export default function ListsPageClient({ initialLists }: ListsPageClientProps) 
 
 		// 1. Create optimistic list with temp ID (partial - will be replaced with real data)
 		const tempId = `temp-${Date.now()}`;
-		const optimisticList = {
+		const now = new Date();
+		const optimisticList: ListSummary = {
 			id: tempId,
+			ownerId: '00000000-0000-0000-0000-000000000000',
 			name: form.name,
 			description: form.description,
 			type: form.type,
+			privacy: 'private',
+			tags: [],
+			settings: {},
+			stats: {},
+			isArchived: false,
+			slug: null,
+			createdAt: now,
+			updatedAt: now,
+			lastSharedAt: null,
 			creatorCount: 0,
 			followerSum: 0,
 			collaboratorCount: 0,
-			tags: [],
-			viewerRole: 'owner' as const,
-		} as ListSummary;
+			viewerRole: 'owner',
+		};
 
 		// 2. Optimistic update
 		setLists((prev) => [optimisticList, ...prev]);

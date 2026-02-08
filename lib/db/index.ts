@@ -147,8 +147,8 @@ export async function withDbRetry<T>(fn: () => Promise<T>, maxRetries = 3): Prom
 		try {
 			return await fn();
 		} catch (error: unknown) {
-			const errorCode =
-				error instanceof Error && 'code' in error ? (error as { code: string }).code : '';
+			const codeValue = error instanceof Error ? Reflect.get(error, 'code') : undefined;
+			const errorCode = typeof codeValue === 'string' ? codeValue : '';
 			const errorMessage = error instanceof Error ? error.message : String(error);
 
 			const isRetryable =

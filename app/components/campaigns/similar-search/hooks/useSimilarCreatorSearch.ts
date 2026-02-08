@@ -325,11 +325,16 @@ export function useSimilarCreatorSearch(
 	const handleIntermediateResults = useCallback(
 		(data: unknown[] | { creators?: unknown[] }) => {
 			// Handle both array format (from SearchProgress) and object format
-			const incoming = Array.isArray(data)
-				? data
-				: Array.isArray((data as { creators?: unknown[] })?.creators)
-					? (data as { creators: unknown[] }).creators
-					: [];
+			let incoming: unknown[] = [];
+			if (Array.isArray(data)) {
+				incoming = data;
+			} else {
+				const record = toRecord(data);
+				const creators = record?.creators;
+				if (Array.isArray(creators)) {
+					incoming = creators;
+				}
+			}
 			if (!incoming.length) {
 				return;
 			}

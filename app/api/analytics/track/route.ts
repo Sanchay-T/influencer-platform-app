@@ -32,7 +32,7 @@ export async function POST(request: Request) {
 			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
 
-		const body = (await request.json()) as TrackRequest;
+		const body: TrackRequest = await request.json();
 		const { event, properties } = body;
 
 		// Validate the request

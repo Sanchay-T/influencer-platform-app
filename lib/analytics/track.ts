@@ -11,23 +11,7 @@
  */
 
 import { structuredConsole } from '@/lib/logging/console-proxy';
-import type {
-	AnalyticsEvent,
-	CampaignCreatedProps,
-	CreatorSavedProps,
-	CsvExportedProps,
-	EventPropertiesMap,
-	ListCreatedProps,
-	OnboardingStepProps,
-	SearchCompletedProps,
-	SearchStartedProps,
-	SubscriptionCanceledProps,
-	SubscriptionCreatedProps,
-	TrialStartedProps,
-	UpgradeClickedProps,
-	UserSignedInProps,
-	UserSignedUpProps,
-} from './events';
+import type { AnalyticsEvent, EventPropertiesMap } from './events';
 import { trackGA4Event, trackGA4ServerEvent, trackGA4SignUp } from './google-analytics';
 import {
 	trackCampaignCreated,
@@ -52,6 +36,10 @@ import {
 	trackStartTrial,
 } from './meta-pixel';
 
+type TrackArgs = {
+	[E in AnalyticsEvent]: [event: E, properties: EventPropertiesMap[E]];
+}[AnalyticsEvent];
+
 // ============================================================================
 // Client-side tracking (browser only)
 // ============================================================================
@@ -62,18 +50,15 @@ import {
  * Use this for events triggered by user interactions in React components.
  * Sends to GA4 and Meta Pixel.
  */
-export function trackClient<E extends AnalyticsEvent>(
-	event: E,
-	properties: EventPropertiesMap[E]
-): void {
+export function trackClient(...args: TrackArgs): void {
 	if (typeof window === 'undefined') {
 		structuredConsole.warn('[Analytics] trackClient called on server; use trackServer instead');
 		return;
 	}
 
-	switch (event) {
+	switch (args[0]) {
 		case 'user_signed_in': {
-			const props = properties as UserSignedInProps;
+			const props = args[1];
 			trackGA4Event('login', {
 				method: 'clerk',
 				user_id: props.userId,
@@ -82,7 +67,7 @@ export function trackClient<E extends AnalyticsEvent>(
 		}
 
 		case 'onboarding_step_completed': {
-			const props = properties as OnboardingStepProps;
+			const props = args[1];
 			trackGA4Event(`onboarding_step_${props.step}`, {
 				step_name: props.stepName,
 			});
@@ -96,7 +81,7 @@ export function trackClient<E extends AnalyticsEvent>(
 		}
 
 		case 'upgrade_clicked': {
-			const props = properties as UpgradeClickedProps;
+			const props = args[1];
 			trackGA4Event('begin_checkout', {
 				source: props.source,
 				current_plan: props.currentPlan,
@@ -110,7 +95,7 @@ export function trackClient<E extends AnalyticsEvent>(
 		}
 
 		default:
-			structuredConsole.warn(`[Analytics] Unknown client event: ${event}`);
+			structuredConsole.warn(`[Analytics] Unknown client event: ${args[0]}`);
 	}
 }
 
@@ -124,13 +109,10 @@ export function trackClient<E extends AnalyticsEvent>(
  * Use this for events triggered in API routes or Stripe/Clerk webhooks.
  * Sends to GA4 (Measurement Protocol), and LogSnag.
  */
-export async function trackServer<E extends AnalyticsEvent>(
-	event: E,
-	properties: EventPropertiesMap[E]
-): Promise<void> {
-	switch (event) {
+export async function trackServer(...args: TrackArgs): Promise<void> {
+	switch (args[0]) {
 		case 'user_signed_up': {
-			const props = properties as UserSignedUpProps;
+			const props = args[1];
 			await Promise.all([
 				trackGA4ServerEvent('sign_up', { method: 'clerk' }, props.userId),
 				trackUserSignup({ email: props.email, name: props.name }),
@@ -139,7 +121,7 @@ export async function trackServer<E extends AnalyticsEvent>(
 		}
 
 		case 'user_signed_in': {
-			const props = properties as UserSignedInProps;
+			const props = args[1];
 			await Promise.all([
 				trackGA4ServerEvent('login', { method: 'clerk' }, props.userId),
 				trackUserSignedIn({
@@ -152,7 +134,7 @@ export async function trackServer<E extends AnalyticsEvent>(
 		}
 
 		case 'onboarding_step_completed': {
-			const props = properties as OnboardingStepProps;
+			const props = args[1];
 			await Promise.all([
 				trackGA4ServerEvent(
 					`onboarding_step_${props.step}`,
@@ -173,7 +155,7 @@ export async function trackServer<E extends AnalyticsEvent>(
 		}
 
 		case 'trial_started': {
-			const props = properties as TrialStartedProps;
+			const props = args[1];
 			await Promise.all([
 				trackGA4ServerEvent(
 					'begin_trial',
@@ -195,7 +177,7 @@ export async function trackServer<E extends AnalyticsEvent>(
 		}
 
 		case 'trial_converted': {
-			const props = properties as SubscriptionCreatedProps;
+			const props = args[1];
 			await Promise.all([
 				trackGA4ServerEvent(
 					'purchase',
@@ -219,7 +201,7 @@ export async function trackServer<E extends AnalyticsEvent>(
 		}
 
 		case 'subscription_created': {
-			const props = properties as SubscriptionCreatedProps;
+			const props = args[1];
 			await Promise.all([
 				trackGA4ServerEvent(
 					'purchase',
@@ -243,7 +225,7 @@ export async function trackServer<E extends AnalyticsEvent>(
 		}
 
 		case 'subscription_canceled': {
-			const props = properties as SubscriptionCanceledProps;
+			const props = args[1];
 			await Promise.all([
 				trackGA4ServerEvent(
 					'subscription_canceled',
@@ -263,7 +245,7 @@ export async function trackServer<E extends AnalyticsEvent>(
 		}
 
 		case 'campaign_created': {
-			const props = properties as CampaignCreatedProps;
+			const props = args[1];
 			await Promise.all([
 				trackGA4ServerEvent(
 					'campaign_created',
@@ -283,7 +265,7 @@ export async function trackServer<E extends AnalyticsEvent>(
 		}
 
 		case 'search_started': {
-			const props = properties as SearchStartedProps;
+			const props = args[1];
 			await Promise.all([
 				trackGA4ServerEvent(
 					'search_started',
@@ -307,7 +289,7 @@ export async function trackServer<E extends AnalyticsEvent>(
 		}
 
 		case 'search_completed': {
-			const props = properties as SearchCompletedProps;
+			const props = args[1];
 			await Promise.all([
 				trackGA4ServerEvent(
 					'search',
@@ -331,7 +313,7 @@ export async function trackServer<E extends AnalyticsEvent>(
 		}
 
 		case 'list_created': {
-			const props = properties as ListCreatedProps;
+			const props = args[1];
 			await Promise.all([
 				trackGA4ServerEvent(
 					'list_created',
@@ -353,7 +335,7 @@ export async function trackServer<E extends AnalyticsEvent>(
 		}
 
 		case 'creator_saved': {
-			const props = properties as CreatorSavedProps;
+			const props = args[1];
 			await Promise.all([
 				trackGA4ServerEvent(
 					'add_to_list',
@@ -375,7 +357,7 @@ export async function trackServer<E extends AnalyticsEvent>(
 		}
 
 		case 'csv_exported': {
-			const props = properties as CsvExportedProps;
+			const props = args[1];
 			await Promise.all([
 				trackGA4ServerEvent(
 					'export',
@@ -398,7 +380,7 @@ export async function trackServer<E extends AnalyticsEvent>(
 		}
 
 		default:
-			structuredConsole.warn(`[Analytics] Unknown server event: ${event}`);
+			structuredConsole.warn(`[Analytics] Unknown server event: ${args[0]}`);
 	}
 }
 

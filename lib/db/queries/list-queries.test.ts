@@ -7,6 +7,7 @@ import {
 	createTestList,
 	createTestUser,
 } from '@/lib/test-utils/db-helpers';
+import { toRecord } from '@/lib/utils/type-guards';
 import { addCreatorsToList, removeListItems } from './list-queries';
 
 // ---------------------------------------------------------------------------
@@ -42,7 +43,9 @@ describe('removeListItems — stats stay consistent', () => {
 			createTestCreatorProfile('instagram', { followers: 2000 }),
 			createTestCreatorProfile('instagram', { followers: 3000 }),
 		]);
-		for (const p of profiles) cleanups.push(p.cleanup);
+		for (const p of profiles) {
+			cleanups.push(p.cleanup);
+		}
 
 		await addCreatorsToList(testUser.clerkId, testList.listId, [
 			{ platform: 'instagram', externalId: profiles[0].externalId, handle: profiles[0].handle },
@@ -73,9 +76,10 @@ describe('removeListItems — stats stay consistent', () => {
 			.from(creatorLists)
 			.where(eq(creatorLists.id, testList.listId));
 
-		const stats = list.stats as Record<string, unknown>;
+		const stats = toRecord(list.stats);
+		const creatorCountValue = stats ? Reflect.get(stats, 'creatorCount') : undefined;
 		expect(Number(actual.count)).toBe(2);
-		expect(Number(stats.creatorCount)).toBe(2);
+		expect(Number(creatorCountValue)).toBe(2);
 	});
 });
 

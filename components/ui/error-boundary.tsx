@@ -72,6 +72,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
 		// Extract component name from stack for tagging
 		const componentName = this.extractComponentName(errorInfo.componentStack);
+		const digestValue = Reflect.get(errorInfo, 'digest');
+		const digest = typeof digestValue === 'string' ? digestValue : undefined;
 
 		// Send to Sentry with enhanced context
 		const eventId = Sentry.captureException(error, {
@@ -83,7 +85,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 			},
 			extra: {
 				componentStack: errorInfo.componentStack,
-				digest: (errorInfo as React.ErrorInfo & { digest?: string }).digest ?? undefined,
+				digest,
 			},
 			contexts: {
 				react: {

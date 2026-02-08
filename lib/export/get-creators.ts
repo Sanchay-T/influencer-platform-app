@@ -11,6 +11,7 @@ import { db } from '@/lib/db';
 import { jobCreators, scrapingResults } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { SentryLogger } from '@/lib/sentry';
+import { toRecord } from '@/lib/utils/type-guards';
 
 export interface GetCreatorsResult {
 	creators: unknown[];
@@ -68,14 +69,19 @@ export async function getCreatorsForJobs(jobIds: string[]): Promise<GetCreatorsR
 
 	let allCreators: unknown[] = [];
 	for (const result of legacyResults) {
-		const creatorsData = result.creators as unknown;
+		const creatorsData = result.creators;
 		if (Array.isArray(creatorsData)) {
 			allCreators = allCreators.concat(creatorsData);
 		} else if (creatorsData && typeof creatorsData === 'object') {
-			const creatorsRecord = creatorsData as Record<string, unknown>;
-			if ('results' in creatorsRecord && Array.isArray(creatorsRecord.results)) {
-				for (const r of creatorsRecord.results) {
-					const resultRecord = r && typeof r === 'object' ? (r as Record<string, unknown>) : null;
+			const creatorsRecord = toRecord(creatorsData);
+			if (!creatorsRecord) {
+				continue;
+			}
+
+			const results = creatorsRecord.results;
+			if (Array.isArray(results)) {
+				for (const r of results) {
+					const resultRecord = toRecord(r);
 					const creatorsList = resultRecord ? resultRecord.creators : undefined;
 					if (Array.isArray(creatorsList)) {
 						allCreators = allCreators.concat(creatorsList);

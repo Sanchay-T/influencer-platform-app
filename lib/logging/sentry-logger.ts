@@ -22,6 +22,7 @@
 
 import * as Sentry from '@sentry/nextjs';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { getStringProperty, toRecord } from '@/lib/utils/type-guards';
 import type { LogEntry } from './types';
 
 // Type for Sentry severity levels
@@ -307,7 +308,7 @@ export class SentryLogger {
 		SentryLogger.initialize();
 
 		const level = mapLogLevelToSeverity(entry.level?.toString());
-		const context = entry.context as Record<string, unknown> | undefined;
+		const context = toRecord(entry.context) ?? undefined;
 
 		// If Sentry isn't enabled, just log to console
 		if (!isSentryEnabled()) {
@@ -326,7 +327,9 @@ export class SentryLogger {
 			const error = context?.error instanceof Error ? context.error : new Error(entry.message);
 
 			// Extract requestId from context if available
-			const requestId = context?.requestId as string | undefined;
+			const requestId = context
+				? (getStringProperty(context, 'requestId') ?? undefined)
+				: undefined;
 
 			Sentry.captureException(error, {
 				level,
@@ -371,21 +374,7 @@ export class SentryLogger {
 	public static withScope<T>(callback: (scope: Sentry.Scope) => T): T {
 		SentryLogger.initialize();
 
-		if (isSentryEnabled()) {
-			return Sentry.withScope(callback);
-		}
-
-		// Provide a mock scope if Sentry isn't enabled
-		const noopScope = {
-			setTag: () => noopScope,
-			setExtra: () => noopScope,
-			setContext: () => noopScope,
-			setUser: () => noopScope,
-			setLevel: () => noopScope,
-			addBreadcrumb: () => noopScope,
-		} as unknown as Sentry.Scope;
-
-		return callback(noopScope);
+		return Sentry.withScope(callback);
 	}
 }
 

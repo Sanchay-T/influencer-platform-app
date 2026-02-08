@@ -1,4 +1,3 @@
-import type Stripe from 'stripe';
 import { describe, expect, it, vi } from 'vitest';
 
 // Mock dependencies
@@ -69,27 +68,23 @@ vi.mock('./plan-config', () => ({
 
 import { handleSubscriptionChange, mapStripeSubscriptionStatus } from './webhook-handlers';
 
-function makeSubscription(overrides: Partial<Stripe.Subscription> = {}): Stripe.Subscription {
+type SubscriptionLike = Parameters<typeof handleSubscriptionChange>[0];
+
+function makeSubscription(overrides: Partial<SubscriptionLike> = {}): SubscriptionLike {
 	return {
 		id: 'sub_123',
-		object: 'subscription',
 		customer: 'cus_123',
 		status: 'active',
 		items: {
-			object: 'list',
 			data: [
 				{
-					id: 'si_1',
-					object: 'subscription_item',
 					price: {
 						id: 'price_growth_monthly',
 						recurring: { interval: 'month' },
-					} as unknown as Stripe.Price,
+					},
 					current_period_end: Math.floor(Date.now() / 1000) + 30 * 86400,
-				} as unknown as Stripe.SubscriptionItem,
+				},
 			],
-			has_more: false,
-			url: '',
 		},
 		metadata: {},
 		cancel_at_period_end: false,
@@ -97,7 +92,7 @@ function makeSubscription(overrides: Partial<Stripe.Subscription> = {}): Stripe.
 		trial_start: null,
 		trial_end: null,
 		...overrides,
-	} as Stripe.Subscription;
+	};
 }
 
 describe('handleSubscriptionChange', () => {
@@ -116,20 +111,15 @@ describe('handleSubscriptionChange', () => {
 		// Stripe webhook says same sub ID, still active, but now scale plan price
 		const subscription = makeSubscription({
 			items: {
-				object: 'list',
 				data: [
 					{
-						id: 'si_1',
-						object: 'subscription_item',
 						price: {
 							id: 'price_scale_monthly',
 							recurring: { interval: 'month' },
-						} as unknown as Stripe.Price,
+						},
 						current_period_end: Math.floor(Date.now() / 1000) + 30 * 86400,
-					} as unknown as Stripe.SubscriptionItem,
+					},
 				],
-				has_more: false,
-				url: '',
 			},
 		});
 

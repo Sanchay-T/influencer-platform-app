@@ -314,9 +314,11 @@ export async function GET(request: Request) {
 
 			// Strategy 1: Try without referrer headers (some CDNs block specific referrers)
 			structuredConsole.log('🔄 [IMAGE-PROXY] Retry 1: Removing referrer headers...');
-			const noReferrerHeaders: Record<string, string> = { ...fetchHeaders };
-			delete noReferrerHeaders.Referer;
-			delete noReferrerHeaders.Origin;
+			const {
+				Referer: _ignoredReferer,
+				Origin: _ignoredOrigin,
+				...noReferrerHeaders
+			} = fetchHeaders;
 
 			response = await fetch(imageUrl, { headers: noReferrerHeaders });
 			structuredConsole.log(

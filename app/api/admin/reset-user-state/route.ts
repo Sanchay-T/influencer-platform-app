@@ -6,6 +6,7 @@ import { db } from '@/lib/db';
 import { updateUserProfile } from '@/lib/db/queries/user-queries';
 import { campaigns, scrapingJobs, scrapingResults } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { getStringProperty, toRecord } from '@/lib/utils/type-guards';
 
 export async function GET(request: Request) {
 	return POST(request);
@@ -30,11 +31,10 @@ export async function POST(request: Request) {
 		let targetUserId = url.searchParams.get('userId');
 		if (!targetUserId && request.method !== 'GET') {
 			const body = await request.json().catch(() => null);
-			if (body && typeof body === 'object' && 'userId' in body) {
-				const userIdValue = (body as { userId?: unknown }).userId;
-				if (typeof userIdValue === 'string') {
-					targetUserId = userIdValue;
-				}
+			const bodyRecord = toRecord(body);
+			const userIdValue = bodyRecord ? getStringProperty(bodyRecord, 'userId') : null;
+			if (userIdValue) {
+				targetUserId = userIdValue;
 			}
 		}
 

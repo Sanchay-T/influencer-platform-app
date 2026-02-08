@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, inArray, or, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gte, inArray, or } from 'drizzle-orm';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { getRecordProperty, getStringProperty, isString, toRecord } from '@/lib/utils/type-guards';
 import { db } from '../index';

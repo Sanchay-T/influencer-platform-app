@@ -16,6 +16,6 @@ export function useTrialStatus() {
 			: 0,
 		isLoading: !billing.isLoaded,
 		currentPlan: billing.currentPlan,
-		refetch: billing.refreshBillingData ?? (() => {}),
+		refetch: billing.refreshBillingData ?? (() => undefined),
 	};
 }

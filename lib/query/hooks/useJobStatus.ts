@@ -18,6 +18,7 @@ import {
 	isDoneStatus,
 	isSuccessStatus as isSuccessStatusHelper,
 } from '@/lib/types/statuses';
+import { getNumberProperty, getStringProperty, toRecord } from '@/lib/utils/type-guards';
 
 // Debug logging helper - enable via: localStorage.setItem('debug_job_status', 'true')
 const debugLog = (tag: string, msg: string, data?: Record<string, unknown>) => {
@@ -38,6 +39,23 @@ export type JobStatus =
 	| 'partial'
 	| 'error'
 	| 'timeout';
+
+const isJobStatus = (value: unknown): value is JobStatus => {
+	if (typeof value !== 'string') {
+		return false;
+	}
+	return (
+		value === 'pending' ||
+		value === 'dispatching' ||
+		value === 'searching' ||
+		value === 'enriching' ||
+		value === 'processing' ||
+		value === 'completed' ||
+		value === 'partial' ||
+		value === 'error' ||
+		value === 'timeout'
+	);
+};
 
 export interface JobStatusData {
 	status: JobStatus;
@@ -140,18 +158,48 @@ function getStatusEndpoint(jobId: string, platform?: string): string {
  * @why Similar search API returns different shape than v2/status
  */
 function normalizeSimilarResponse(data: Record<string, unknown>): JobStatusData {
-	const status = (data.status as JobStatus) ?? 'pending';
-	const processedResults = (data.processedResults as number) ?? 0;
-	const targetResults = (data.targetResults as number) ?? 100;
-	const progress = (data.progress as number) ?? 0;
-	const totalCreators = (data.totalCreators as number) ?? processedResults;
+	const statusValue = data.status;
+	const status: JobStatus = isJobStatus(statusValue) ? statusValue : 'pending';
+
+	const processedResults = typeof data.processedResults === 'number' ? data.processedResults : 0;
+	const targetResults = typeof data.targetResults === 'number' ? data.targetResults : 100;
+	const percentComplete = typeof data.progress === 'number' ? data.progress : 0;
+	const totalCreators =
+		typeof data.totalCreators === 'number' ? data.totalCreators : processedResults;
 
 	// Similar search returns results as [{ creators: [...] }] from paginateCreators
 	// Normalize to match v2/status format: [{ id: jobId, creators: [...] }]
-	const rawResults = data.results as Array<{ creators?: unknown[] }> | undefined;
-	const results: JobStatusData['results'] = rawResults?.map((r) => ({
-		creators: Array.isArray(r.creators) ? r.creators : [],
-	}));
+	const resultsValue = data.results;
+	const results: JobStatusData['results'] = Array.isArray(resultsValue)
+		? resultsValue.map((r) => {
+				const record = toRecord(r);
+				const creatorsValue = record?.creators;
+				return {
+					creators: Array.isArray(creatorsValue) ? creatorsValue : [],
+				};
+			})
+		: undefined;
+
+	const paginationRecord = toRecord(data.pagination);
+	const pagination: JobStatusData['pagination'] = paginationRecord
+		? (() => {
+				const offset = getNumberProperty(paginationRecord, 'offset');
+				const limit = getNumberProperty(paginationRecord, 'limit');
+				const total = getNumberProperty(paginationRecord, 'total');
+				const nextOffsetValue = Reflect.get(paginationRecord, 'nextOffset');
+				const nextOffset =
+					typeof nextOffsetValue === 'number'
+						? nextOffsetValue
+						: nextOffsetValue === null
+							? null
+							: null;
+
+				if (offset === null || limit === null || total === null) {
+					return undefined;
+				}
+				return { offset, limit, total, nextOffset };
+			})()
+		: undefined;
 
 	return {
 		status,
@@ -160,15 +208,15 @@ function normalizeSimilarResponse(data: Record<string, unknown>): JobStatusData 
 			keywordsCompleted: 0,
 			creatorsFound: totalCreators,
 			creatorsEnriched: totalCreators,
-			percentComplete: progress,
+			percentComplete,
 		},
 		processedResults,
 		totalCreators,
 		targetResults,
-		platform: (data.platform as string) ?? '',
+		platform: getStringProperty(data, 'platform') ?? '',
 		keywords: [],
-		error: data.error as string | undefined,
-		pagination: data.pagination as JobStatusData['pagination'],
+		error: getStringProperty(data, 'error') ?? undefined,
+		pagination,
 		results,
 	};
 }
