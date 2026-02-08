@@ -57,15 +57,36 @@ When an approach isn't working — tests keep failing, types won't resolve, the 
 - No `console.log` in production code - use the logging utilities in `lib/logging/`
 - Prefer `type` over `interface`; never use `enum` (use string literal unions instead)
 
+### Database Migrations (Drizzle)
+The migration workflow:
+```bash
+1. Edit lib/db/schema.ts              # make your schema change
+2. npx drizzle-kit generate           # generates SQL + snapshot in supabase/migrations/
+3. Review the generated SQL            # check for destructive operations (DROP, etc.)
+4. npx drizzle-kit migrate            # applies to local DB
+5. git add supabase/migrations/       # commit the migration files (always push these!)
+```
+
+**Migration files MUST be committed and pushed to git.** They are no longer gitignored. Every schema change must include the generated migration SQL + snapshot so that deploys and other environments stay in sync.
+
+- Migrations run automatically on Vercel deploy (`build` script runs `drizzle-kit migrate` before `next build`)
+- Migration files live in `supabase/migrations/` and **must be committed to git**
+- Always review generated SQL — if you renamed a column, Drizzle generates DROP + CREATE (data loss). Hand-edit to `ALTER TABLE ... RENAME COLUMN` instead.
+- Never manually edit `_journal.json` or snapshot files — only `drizzle-kit generate` should touch those
+- Config: `drizzle.config.ts`, schema: `lib/db/schema.ts`, output: `supabase/migrations/`
+
 ### Project Structure
 - `app/` — Next.js App Router pages and API routes
 - `app/api/` — API route handlers
 - `components/` — React components (shared in `components/ui/`)
 - `lib/` — Core business logic
 - `lib/db/` — Drizzle schema and queries
+- `lib/hooks/` — Client-side React hooks (billing, trial status, admin, onboarding)
 - `lib/services/` — Business services (billing, search, etc.)
 - `lib/auth/` — Clerk integration helpers
 - `scripts/` — Utility and maintenance scripts
+- `supabase/migrations/` — Drizzle migration files (committed to git)
+- `supabase/migrations-archive/` — Pre-baseline legacy migrations (reference only)
 
 ### Before Making Changes
 1. Read the relevant existing code first
@@ -116,6 +137,18 @@ DO: Use proper TypeScript types or `unknown` with type guards
 
 DO NOT: Ignore failing tests
 DO: Fix tests or code before proceeding
+
+DO NOT: Rename or remove columns in schema.ts without reviewing the generated SQL
+DO: After `drizzle-kit generate`, check for DROP statements — hand-edit to RENAME if needed
+
+DO NOT: Manually edit migration files in `supabase/migrations/meta/`
+DO: Only use `drizzle-kit generate` to create/update migrations and snapshots
+
+DO NOT: Duplicate billing logic in new hooks — `useBilling()` is the single source of truth
+DO: For trial-specific UI, use `useTrialStatus()` (thin wrapper over `useBilling` in `lib/hooks/use-trial-status.ts`)
+
+DO NOT: Run `pnpm build` without a `DATABASE_URL` — the build script runs `drizzle-kit migrate` first
+DO: Ensure `.env.local` (or the target env file) has `DATABASE_URL` set before building
 
 ## Browser Automation
 

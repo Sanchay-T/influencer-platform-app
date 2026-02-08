@@ -1,0 +1,36 @@
+name: Claude Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Claude Code Review
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          review_comment_prefix: "claude"
+          direct_prompt: |
+            Review this PR as a senior engineer. Focus on:
+            1. Correctness and edge cases
+            2. Security vulnerabilities (auth, injection, XSS)
+            3. Performance (N+1 queries, unnecessary re-renders)
+            4. TypeScript types (no `any`, proper error handling)
+            5. Next.js patterns (server vs client components)
+
+            Be concise. Only comment on real issues, not style preferences.
+            Use biome.json rules as the style guide — don't flag what biome handles.

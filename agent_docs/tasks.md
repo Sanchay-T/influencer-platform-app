@@ -7,6 +7,92 @@
 
 ## Current Task
 
+**ID:** TASK-015
+**Title:** Fix 10 Remaining Issues (CSV security + regression tests)
+**Status:** COMPLETE
+**Branch:** `fix/remaining-10-issues`
+**Started:** Feb 7, 2026
+**Last Updated:** Feb 7, 2026
+
+### Summary
+Deep scan found 10 issues post business-logic-fixes. 9 of 10 were already fixed in commit `24a6d1952`. Issue #5 (CSV public blob access) was already mitigated via defense-in-depth — Vercel Blob does not support private access (`access: 'public'` is the only option). Existing mitigations: auth-protected download proxy, UUID tokens in filenames, raw blob URLs never exposed to clients.
+
+**What was done:**
+- **#5 verification:** Confirmed `@vercel/blob` (v1.1.1 through v2.2.0) does not support `access: 'private'`. Defense-in-depth already in place: status endpoint → `/api/export/download/[id]` proxy → auth+ownership check → 302 redirect to blob. QStash response omits blob URL.
+- **Test: webhook plan detection** — verifies plan upgrade is detected when sub ID and status stay the same (3 tests)
+- **Test: image proxy SSRF** — verifies private IP blocking and domain allowlist (9 tests)
+- **Test: CSV blob upload** — verifies blob put is called with correct options (1 test)
+
+**Files changed:**
+- `app/api/export/csv-worker/route.ts` — Updated comment (removed stale TODO, documented security approach)
+- `app/api/export/status/[id]/route.ts` — Returns proxy download URL instead of raw blob URL
+- `app/api/export/download/[id]/route.ts` — New auth-protected download endpoint
+- `lib/billing/webhook-handlers.test.ts` — New test file
+- `app/api/proxy/image/route.test.ts` — New test file
+- `app/api/export/csv-worker/route.test.ts` — New test file
+- `agent_docs/remaining-issues-2026-02-07.md` — Documented all 10 issues status
+
+**Documentation:** `agent_docs/remaining-issues-2026-02-07.md`
+**Tests:** 31 passing across 11 test files
+**Verification:** `pnpm test` green, `pnpm typecheck` no new errors (pre-existing errors in unrelated files)
+
+---
+
+## Previous Task
+
+**ID:** TASK-014
+**Title:** Business Logic Fixes (10 bugs)
+**Status:** ✅ COMPLETE (ready to commit)
+**Branch:** `main` (or create `fix/business-logic-fixes`)
+**Started:** Feb 7, 2026
+**Last Updated:** Feb 7, 2026
+
+### Summary
+Deep-scan audit found 10 real bugs affecting billing accuracy, data integrity, and UX. All fixed with 18 regression tests against the real dev DB. Test infrastructure (vitest) recreated from scratch.
+
+**What was done:**
+- **Fix A:** Campaign creation atomicity — wrapped insert + counter in single transaction
+- **Fix B:** Enrichment counter never incremented — wired incrementEnrichmentCount after persist
+- **Fix C:** can-create log metadata said "fail-open" but code was fail-closed
+- **Fix D:** refreshListStats race condition — moved inside transactions
+- **Fix E:** addCreatorsToList had no input validation — added Zod schema
+- **Fix F:** Activity logging used wrong logger — swapped to category logger
+- **Fix G:** Campaign detail loaded full creator arrays — trimmed response
+- **Fix H:** Email filter didn't reset pagination — added useEffect
+- **Fix I:** Trial blur used page-local index — added startIndex prop
+- **Fix J:** CSV export polled with no backoff — added exponential backoff
+
+**Documentation:** `agent_docs/business-logic-fixes-2026-02-07.md`
+**Tests:** 18 passing across 8 test files
+**Verification:** `pnpm test` green, `pnpm typecheck` no new errors
+
+### Next Action
+```
+COMMIT THE FIXES:
+git checkout -b fix/business-logic-fixes
+git add vitest.config.ts package.json
+git add lib/test-utils/setup.ts lib/test-utils/db-helpers.ts lib/test-utils/index.ts lib/test-utils/smoke.test.ts
+git add lib/billing/usage-tracking.ts lib/billing/index.ts
+git add lib/services/creator-enrichment.ts
+git add lib/db/queries/list-queries.ts
+git add lib/logging/constants.ts lib/logging/types.ts
+git add app/api/campaigns/route.ts app/api/campaigns/can-create/route.ts app/api/campaigns/\[id\]/route.ts
+git add app/components/campaigns/keyword-search/search-results.jsx
+git add app/components/campaigns/keyword-search/components/CreatorTableView.tsx
+git add app/components/campaigns/export-button.tsx
+git add app/api/campaigns/route.test.ts app/api/campaigns/can-create/route.test.ts app/api/campaigns/\[id\]/route.test.ts
+git add lib/services/creator-enrichment.test.ts lib/db/queries/list-queries.test.ts
+git add app/components/campaigns/keyword-search/components/CreatorTableView.test.tsx
+git add app/components/campaigns/export-button.test.tsx
+git add agent_docs/business-logic-fixes-2026-02-07.md agent_docs/tasks.md
+git commit -m "fix: 10 business logic bugs + 18 regression tests"
+git push origin HEAD
+```
+
+---
+
+## Previous Task
+
 **ID:** TASK-013
 **Title:** Tech Junk Cleanup
 **Status:** ✅ COMPLETE (ready to commit)
@@ -25,14 +111,6 @@ Comprehensive codebase cleanup removing ~9,000 lines of debug code, unused files
 - Created `scripts/scan-tech-junk.sh` scanner tool
 
 **Documentation:** `agent_docs/tech-junk-cleanup-2026-01-18.md`
-
-### Next Action
-```
-COMMIT THE CLEANUP:
-git add -A
-git commit -m "chore: remove tech junk (~9K lines)"
-git push origin HEAD
-```
 
 ---
 
@@ -388,6 +466,8 @@ START HERE: Run git diff on all 7 modified files to understand what changed.
 
 | ID | Title | Completed |
 |----|-------|-----------|
+| TASK-014 | Business Logic Fixes (10 bugs + 18 tests) | Feb 7, 2026 |
+| TASK-013 | Tech Junk Cleanup (~9K lines removed) | Jan 18, 2026 |
 | — | list-detail-client.tsx Refactor (1124→357 lines) | Dec 12, 2025 |
 | — | client-page.tsx Refactor (1588→417 lines) | Dec 12, 2025 |
 | — | Bug: Instagram similar search wrong API | Dec 12, 2025 |
@@ -402,4 +482,4 @@ START HERE: Run git diff on all 7 modified files to understand what changed.
 
 ---
 
-*Last updated: Jan 15, 2026 — 03:10 PM*
+*Last updated: Feb 7, 2026*
