@@ -38,6 +38,7 @@ vi.mock('@/lib/db/schema', () => ({
 
 vi.mock('@/lib/export/csv-utils', () => ({
 	dedupeCreators: vi.fn((creators: unknown[]) => creators),
+	dedupeByCreator: vi.fn((creators: unknown[]) => creators),
 	formatEmailsForCsv: vi.fn(() => ''),
 }));
 
