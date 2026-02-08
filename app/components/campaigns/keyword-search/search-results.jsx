@@ -166,7 +166,7 @@ const SearchResults = ({ searchData }) => {
 	// Reset to page 1 when email filter changes
 	useEffect(() => {
 		setPage(1);
-	}, [showEmailOnly]);
+	}, [setPage, showEmailOnly]);
 
 	// Sync creators from hook to local state
 	useEffect(() => {

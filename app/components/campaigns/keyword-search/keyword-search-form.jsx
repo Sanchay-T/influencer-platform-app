@@ -90,7 +90,7 @@ export default function KeywordSearchForm({ onSubmit }) {
 
 			setCreatorsCount(value);
 		},
-		[isTrialUser]
+		[isTrialUser, planDisplayName]
 	);
 
 	if (!(isLoaded && user)) {

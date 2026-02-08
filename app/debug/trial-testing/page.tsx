@@ -11,7 +11,7 @@ import {
 	Timer,
 } from 'lucide-react';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,7 +33,7 @@ export default function TrialTestingPage() {
 	const [simulateDay, setSimulateDay] = useState('3');
 	const [lastAction, setLastAction] = useState('');
 
-	const fetchTrialStatus = async () => {
+	const fetchTrialStatus = useCallback(async () => {
 		try {
 			const response = await fetch('/api/debug/trial-testing');
 			const data = await response.json();
@@ -41,7 +41,7 @@ export default function TrialTestingPage() {
 		} catch (error) {
 			structuredConsole.error('Error fetching trial status:', error);
 		}
-	};
+	}, []);
 
 	useEffect(() => {
 		fetchTrialStatus();

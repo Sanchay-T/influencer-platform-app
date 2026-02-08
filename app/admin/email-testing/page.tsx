@@ -16,7 +16,7 @@ import {
 	User,
 	Users,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ErrorBoundary } from '@/app/components/error-boundary';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -133,7 +133,7 @@ function AdminEmailTestingPageContent() {
 	];
 
 	// Search users
-	const searchUsers = async (query: string) => {
+	const searchUsers = useCallback(async (query: string) => {
 		if (!query || query.length < 2) {
 			setSearchResults([]);
 			return;
@@ -172,7 +172,7 @@ function AdminEmailTestingPageContent() {
 		} finally {
 			setIsSearching(false);
 		}
-	};
+	}, []);
 
 	// Handle search input changes with optimized debouncing
 	useEffect(() => {
