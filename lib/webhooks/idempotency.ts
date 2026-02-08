@@ -55,21 +55,15 @@ export async function checkWebhookIdempotency(
 	payload?: unknown
 ): Promise<IdempotencyCheckResult> {
 	try {
-		// Check if event already exists
+		// First, handle retries of failed events
 		const existing = await db.query.webhookEvents.findFirst({
 			where: eq(webhookEvents.eventId, eventId),
 		});
 
 		if (existing) {
-			// Already completed - skip
 			if (existing.status === 'completed') {
 				logger.info('Webhook already processed (idempotent skip)', {
-					metadata: {
-						eventId,
-						source,
-						eventType,
-						originalProcessedAt: existing.processedAt,
-					},
+					metadata: { eventId, source, eventType, originalProcessedAt: existing.processedAt },
 				});
 				return {
 					shouldProcess: false,
@@ -83,15 +77,9 @@ export async function checkWebhookIdempotency(
 				};
 			}
 
-			// Currently processing - skip (let first one finish)
 			if (existing.status === 'processing') {
 				logger.info('Webhook already processing (concurrent delivery)', {
-					metadata: {
-						eventId,
-						source,
-						eventType,
-						createdAt: existing.createdAt,
-					},
+					metadata: { eventId, source, eventType, createdAt: existing.createdAt },
 				});
 				return {
 					shouldProcess: false,
@@ -105,7 +93,7 @@ export async function checkWebhookIdempotency(
 				};
 			}
 
-			// Previously failed - allow retry
+			// Failed event - allow retry
 			if (existing.status === 'failed') {
 				logger.info('Retrying previously failed webhook', {
 					metadata: {
@@ -116,17 +104,10 @@ export async function checkWebhookIdempotency(
 						retryCount: existing.retryCount + 1,
 					},
 				});
-
-				// Update to processing
 				await db
 					.update(webhookEvents)
-					.set({
-						status: 'processing',
-						retryCount: existing.retryCount + 1,
-						errorMessage: null,
-					})
+					.set({ status: 'processing', retryCount: existing.retryCount + 1, errorMessage: null })
 					.where(eq(webhookEvents.eventId, eventId));
-
 				return {
 					shouldProcess: true,
 					reason: 'retrying_failed',
@@ -140,8 +121,8 @@ export async function checkWebhookIdempotency(
 			}
 		}
 
-		// New event - insert as processing
-		await db
+		// New event - atomically insert, handling race with concurrent inserts
+		const inserted = await db
 			.insert(webhookEvents)
 			.values({
 				eventId,
@@ -150,27 +131,47 @@ export async function checkWebhookIdempotency(
 				status: 'processing',
 				eventTimestamp,
 				payload,
-				metadata: {
-					receivedAt: new Date().toISOString(),
-				},
+				metadata: { receivedAt: new Date().toISOString() },
 			})
-			.onConflictDoNothing(); // Handle race condition with concurrent inserts
+			.onConflictDoUpdate({
+				target: webhookEvents.eventId,
+				set: { retryCount: sql`${webhookEvents.retryCount} + 1` },
+			})
+			.returning({
+				id: webhookEvents.id,
+				retryCount: webhookEvents.retryCount,
+				status: webhookEvents.status,
+			});
+
+		const row = inserted[0];
+		if (!row) {
+			logger.warn('Insert returned no rows', { metadata: { eventId } });
+			return { shouldProcess: true, reason: 'new' };
+		}
+
+		// If retryCount > 0, another process already inserted — they're the owner
+		if (row.retryCount > 0 && row.status === 'processing') {
+			logger.info('Lost insert race, another process is handling this event', {
+				metadata: { eventId, source, eventType, retryCount: row.retryCount },
+			});
+			return {
+				shouldProcess: false,
+				reason: 'already_processing',
+				existingEvent: {
+					id: row.id,
+					status: row.status ?? 'processing',
+					processedAt: null,
+					retryCount: row.retryCount,
+				},
+			};
+		}
 
 		logger.info('New webhook event, processing', {
-			metadata: {
-				eventId,
-				source,
-				eventType,
-			},
+			metadata: { eventId, source, eventType },
 		});
 
-		return {
-			shouldProcess: true,
-			reason: 'new',
-		};
+		return { shouldProcess: true, reason: 'new' };
 	} catch (error) {
-		// If we fail to check idempotency, log but allow processing
-		// Better to potentially duplicate than to drop events
 		logger.error(
 			'Failed to check webhook idempotency, allowing processing',
 			error instanceof Error ? error : new Error(String(error)),
@@ -183,11 +184,7 @@ export async function checkWebhookIdempotency(
 				},
 			}
 		);
-
-		return {
-			shouldProcess: true,
-			reason: 'new',
-		};
+		return { shouldProcess: true, reason: 'new' };
 	}
 }
 

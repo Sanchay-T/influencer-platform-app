@@ -57,7 +57,6 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 								columns: {
 									id: true,
 									jobId: true,
-									creators: true,
 									createdAt: true,
 								},
 							},

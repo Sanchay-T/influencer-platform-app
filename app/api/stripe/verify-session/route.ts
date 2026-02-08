@@ -108,6 +108,23 @@ export async function GET(request: NextRequest) {
 
 		// Check if webhook already processed this subscription
 		const user = await getUserProfile(userId);
+
+		// Verify the subscription belongs to this user
+		const subCustomer =
+			typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
+
+		if (!user?.stripeCustomerId || subCustomer !== user.stripeCustomerId) {
+			logger.warn('Session verification - customer mismatch', {
+				userId,
+				metadata: {
+					sessionId,
+					subscriptionCustomer: subCustomer,
+					userCustomer: user?.stripeCustomerId ?? 'none',
+				},
+			});
+			return NextResponse.json({ error: 'Session does not belong to this user' }, { status: 403 });
+		}
+
 		const expectedStatus = mapStripeSubscriptionStatus(subscription.status);
 		const alreadyProcessed =
 			user?.stripeSubscriptionId === subscription.id && user?.subscriptionStatus === expectedStatus;

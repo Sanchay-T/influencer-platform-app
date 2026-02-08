@@ -123,8 +123,8 @@ export default function ListsPageClient({ initialLists }: ListsPageClientProps) 
 		[deletingId]
 	);
 
-	const handleCancelDelete = useCallback((event: MouseEvent) => {
-		event.stopPropagation();
+	const handleCancelDelete = useCallback((event?: MouseEvent) => {
+		event?.stopPropagation();
 		setConfirmDeleteId(null);
 	}, []);
 

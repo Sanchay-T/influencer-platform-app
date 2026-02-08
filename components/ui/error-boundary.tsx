@@ -83,7 +83,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 			},
 			extra: {
 				componentStack: errorInfo.componentStack,
-				digest: errorInfo.digest ?? undefined,
+				digest: (errorInfo as React.ErrorInfo & { digest?: string }).digest ?? undefined,
 			},
 			contexts: {
 				react: {

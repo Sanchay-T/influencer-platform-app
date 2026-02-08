@@ -247,7 +247,7 @@ export const createJobUpdateFromPayload = (
 		creatorBuffer: dedupedCreators,
 		totalCreators,
 		pagination,
-		pageLimit: pagination?.limit ?? undefined ?? job.pageLimit ?? DEFAULT_PAGE_LIMIT,
+		pageLimit: pagination?.limit ?? job.pageLimit ?? DEFAULT_PAGE_LIMIT,
 		resultsError: null,
 		handleQueue: queueState ?? job.handleQueue ?? null,
 	};

@@ -158,6 +158,60 @@ export async function GET(request: Request) {
 			return new NextResponse('Missing image URL', { status: 400 });
 		}
 
+		// Domain allowlist — prevents SSRF by restricting fetch targets to known CDNs
+		const ALLOWED_DOMAINS = [
+			'cdninstagram.com',
+			'fbcdn.net',
+			'instagram.com',
+			'tiktokcdn.com',
+			'tiktokcdn-us.com',
+			'ytimg.com',
+			'ggpht.com',
+			'googleusercontent.com',
+			'blob.vercel-storage.com',
+		];
+
+		try {
+			const parsedUrl = new URL(imageUrl);
+			const hostname = parsedUrl.hostname.toLowerCase();
+
+			// Block private/internal IPs
+			if (
+				hostname === 'localhost' ||
+				hostname === '0.0.0.0' ||
+				hostname === '::1' ||
+				hostname.startsWith('127.') ||
+				hostname.startsWith('10.') ||
+				hostname.startsWith('192.168.') ||
+				hostname.startsWith('169.254.') ||
+				/^172\.(1[6-9]|2\d|3[01])\./.test(hostname)
+			) {
+				logger.warn(
+					'Image proxy blocked private IP',
+					{ requestId, jobId, hostname },
+					LogCategory.API
+				);
+				return new NextResponse('URL not allowed', { status: 403 });
+			}
+
+			const isAllowed = ALLOWED_DOMAINS.some((d) => hostname === d || hostname.endsWith(`.${d}`));
+			if (!isAllowed) {
+				logger.warn(
+					'Image proxy blocked disallowed domain',
+					{ requestId, jobId, hostname },
+					LogCategory.API
+				);
+				return new NextResponse('Domain not allowed', { status: 403 });
+			}
+		} catch {
+			logger.warn(
+				'Image proxy received malformed URL',
+				{ requestId, jobId, imageUrl: imageUrl.substring(0, 200) },
+				LogCategory.API
+			);
+			return new NextResponse('Invalid URL', { status: 400 });
+		}
+
 		// Check if this is a blob URL (which shouldn't be proxied)
 		if (imageUrl.includes('blob.vercel-storage.com')) {
 			logger.warn(
@@ -261,8 +315,8 @@ export async function GET(request: Request) {
 			// Strategy 1: Try without referrer headers (some CDNs block specific referrers)
 			structuredConsole.log('🔄 [IMAGE-PROXY] Retry 1: Removing referrer headers...');
 			const noReferrerHeaders: Record<string, string> = { ...fetchHeaders };
-			noReferrerHeaders.Referer = undefined;
-			noReferrerHeaders.Origin = undefined;
+			delete noReferrerHeaders.Referer;
+			delete noReferrerHeaders.Origin;
 
 			response = await fetch(imageUrl, { headers: noReferrerHeaders });
 			structuredConsole.log(

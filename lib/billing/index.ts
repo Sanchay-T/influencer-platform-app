@@ -170,6 +170,7 @@ export {
 	type IncrementResult,
 	incrementCampaignCount,
 	incrementCreatorCount,
+	incrementEnrichmentCount,
 	resetAllMonthlyUsage,
 	resetMonthlyUsage,
 	shouldResetUsage,

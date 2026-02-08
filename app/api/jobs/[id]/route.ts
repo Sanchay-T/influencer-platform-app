@@ -1,14 +1,21 @@
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
+import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { db } from '@/lib/db';
 import { scrapingJobs } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { SentryLogger } from '@/lib/sentry';
 
 // @performance Vercel timeout protection - job queries with results can be slow
 export const maxDuration = 15;
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
 	try {
+		const { userId } = await getAuthOrTest();
+		if (!userId) {
+			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+		}
+
 		const { id: jobId } = await params;
 
 		// Obtener el job con sus resultados
@@ -21,6 +28,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
 		if (!job) {
 			return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+		}
+
+		if (job.userId !== userId) {
+			SentryLogger.captureMessage('Unauthorized job access attempt', 'warning', {
+				tags: { feature: 'jobs', reason: 'wrong_user' },
+				extra: { jobId, requestUserId: userId },
+			});
+			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
 
 		// Calcular progreso
@@ -47,6 +62,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
 	try {
+		const { userId } = await getAuthOrTest();
+		if (!userId) {
+			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+		}
+
 		const { id: jobId } = await params;
 
 		// Verificar si el job existe
@@ -56,6 +76,14 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
 
 		if (!job) {
 			return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+		}
+
+		if (job.userId !== userId) {
+			SentryLogger.captureMessage('Unauthorized job delete attempt', 'warning', {
+				tags: { feature: 'jobs', reason: 'wrong_user' },
+				extra: { jobId, requestUserId: userId },
+			});
+			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
 
 		// No permitir cancelar jobs que ya terminaron

@@ -159,28 +159,8 @@ export async function handleSubscriptionChange(
 			subscriptionStatus: user.subscriptionStatus || undefined,
 		});
 
-		// Check if already processed (idempotent - prevents duplicate events)
-		const expectedStatus = mapStripeSubscriptionStatus(subscription.status);
-		if (
-			user.stripeSubscriptionId === subscription.id &&
-			user.subscriptionStatus === expectedStatus
-		) {
-			logger.info(`[${handlerId}] Subscription state already matches, skipping processing`, {
-				metadata: {
-					subscriptionId: subscription.id,
-					status: subscription.status,
-					source: eventType,
-				},
-			});
-
-			return {
-				success: true,
-				action: 'already_current',
-				details: { eventType, subscriptionId: subscription.id },
-			};
-		}
-
-		// 2. Extract plan from Stripe subscription
+		// 2. Extract plan from Stripe subscription (must happen before idempotency check
+		// so we can detect plan upgrades/downgrades where subscription ID and status stay the same)
 		const priceId = subscription.items.data[0]?.price?.id;
 		const planKey = getPlanKeyByPriceId(priceId);
 
@@ -197,6 +177,31 @@ export async function handleSubscriptionChange(
 					subscriptionId: subscription.id,
 					error: 'Price ID does not map to any known plan',
 				},
+			};
+		}
+
+		// Check if already processed (idempotent - prevents duplicate events)
+		// Includes planKey check to detect plan upgrades/downgrades via Stripe Portal
+		// where subscription ID stays the same and status remains 'active' → 'active'
+		const expectedStatus = mapStripeSubscriptionStatus(subscription.status);
+		if (
+			user.stripeSubscriptionId === subscription.id &&
+			user.subscriptionStatus === expectedStatus &&
+			user.currentPlan === planKey
+		) {
+			logger.info(`[${handlerId}] Subscription state already matches, skipping processing`, {
+				metadata: {
+					subscriptionId: subscription.id,
+					status: subscription.status,
+					currentPlan: planKey,
+					source: eventType,
+				},
+			});
+
+			return {
+				success: true,
+				action: 'already_current',
+				details: { eventType, subscriptionId: subscription.id },
 			};
 		}
 
@@ -225,9 +230,14 @@ export async function handleSubscriptionChange(
 			trialStartDate: trialStart ? new Date(trialStart) : undefined,
 			trialEndDate: trialEnd ? new Date(trialEnd) : undefined,
 
-			// Plan limits
-			planCampaignsLimit: planConfig.limits.campaigns,
-			planCreatorsLimit: planConfig.limits.creatorsPerMonth,
+			// Note: planCampaignsLimit/planCreatorsLimit removed — deprecated DB columns.
+			// Limits are read from plan-config.ts at runtime by access-validation.ts.
+
+			// Billing interval and period end from Stripe (for billing UI)
+			billingInterval: subscription.items.data[0]?.price?.recurring?.interval ?? 'month',
+			currentPeriodEnd: subscription.items.data[0]?.current_period_end
+				? new Date(subscription.items.data[0].current_period_end * 1000)
+				: undefined,
 
 			// Mark onboarding complete
 			onboardingStep: 'completed',

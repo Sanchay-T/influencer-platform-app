@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { and, eq } from 'drizzle-orm';
+import { incrementEnrichmentCount } from '@/lib/billing';
 import { db } from '@/lib/db';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { creatorProfiles } from '@/lib/db/schema';
@@ -696,8 +697,8 @@ export class CreatorEnrichmentService {
 
 		await CreatorEnrichmentService.persistEnrichment(creator.id, record, creator.metadata);
 
-		// TODO: Enrichment usage tracking not implemented - column deprecated in user_usage table
-		// If enrichment limits are needed in the future, add incrementEnrichmentCount() back to lib/billing
+		// Increment enrichment usage counter after successful persist
+		await incrementEnrichmentCount(options.userId);
 
 		logger.info('Creator enrichment persisted', {
 			userId: options.userId,

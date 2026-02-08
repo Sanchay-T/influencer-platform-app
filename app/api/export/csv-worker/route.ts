@@ -162,9 +162,14 @@ export async function POST(req: Request) {
 			const csvContent = generateCsvContent(creators, keywords);
 
 			// Upload to Vercel Blob
+			// Vercel Blob only supports access: 'public'. To protect exports:
+			// 1. Filenames include a random UUID token to make URLs unguessable
+			// 2. Raw blob URLs are never exposed to clients — downloads go through
+			//    /api/export/download/[id] which requires auth + ownership verification
+			const token = crypto.randomUUID();
 			const filename = campaignId
-				? `exports/campaign-${campaignId}-${Date.now()}.csv`
-				: `exports/job-${jobId}-${Date.now()}.csv`;
+				? `exports/campaign-${campaignId}-${Date.now()}-${token}.csv`
+				: `exports/job-${jobId}-${Date.now()}-${token}.csv`;
 
 			SentryLogger.addBreadcrumb({
 				category: 'export',
@@ -202,10 +207,11 @@ export async function POST(req: Request) {
 
 			// Skip email - frontend polls for status and auto-downloads
 
+			// Response to QStash — omit raw blob URL to prevent leaks via
+			// dead letter queues, observability tools, or debug calls
 			return NextResponse.json({
 				success: true,
 				exportId,
-				downloadUrl: blob.url,
 				totalCreators: creators.length,
 			});
 		} catch (error) {
@@ -285,24 +291,24 @@ function generateCsvContent(creators: CreatorItem[], keywords: string[]): string
 		for (const item of creators) {
 			const creator = item.creator || {};
 			const video = item.video || {};
-			const stats = video.statistics || {};
+			const stats = (video.statistics || {}) as Record<string, number>;
 			const hashtags = Array.isArray(item.hashtags) ? item.hashtags.join(';') : '';
 			const platform = item.platform || 'Unknown';
 			const emailCell = formatEmailsForCsv([item, creator]);
 
 			let dateStr = '';
 			if (platform === 'YouTube' && item.publishedTime) {
-				dateStr = new Date(item.publishedTime).toISOString().split('T')[0];
+				dateStr = new Date(item.publishedTime as string).toISOString().split('T')[0];
 			} else if (item.createTime) {
-				dateStr = new Date(item.createTime * 1000).toISOString().split('T')[0];
+				dateStr = new Date((item.createTime as number) * 1000).toISOString().split('T')[0];
 			}
 
 			const row = [
 				`"${platform}"`,
-				`"${escapeCSV(creator.name || '')}"`,
+				`"${escapeCSV(String(creator.name || ''))}"`,
 				`"${creator.followers || 0}"`,
 				`"${video.url || ''}"`,
-				`"${escapeCSV(video.description || '')}"`,
+				`"${escapeCSV(String(video.description || ''))}"`,
 				`"${stats.views || 0}"`,
 				`"${stats.likes || 0}"`,
 				`"${stats.comments || 0}"`,
@@ -344,7 +350,7 @@ function generateCsvContent(creators: CreatorItem[], keywords: string[]): string
 
 			const row = [
 				`"${creator.username || ''}"`,
-				`"${escapeCSV(creator.full_name || creator.displayName || '')}"`,
+				`"${escapeCSV(String(creator.full_name || creator.displayName || ''))}"`,
 				`"${creator.followerCount || creator.followers || 0}"`,
 				`"${emailCell}"`,
 				`"${creator.is_verified || creator.verified ? 'Yes' : 'No'}"`,

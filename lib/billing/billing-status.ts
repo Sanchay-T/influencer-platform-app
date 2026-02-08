@@ -96,10 +96,12 @@ export async function getBillingStatus(userId: string): Promise<BillingStatus> {
 
 		subscriptionStatus,
 		billingAmount,
-		billingCycle: 'monthly',
-		nextBillingDate: hasActiveSubscription
-			? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-			: undefined,
+		billingCycle: user.billingInterval === 'year' ? 'yearly' : 'monthly',
+		nextBillingDate: user.currentPeriodEnd
+			? user.currentPeriodEnd.toISOString().split('T')[0]
+			: hasActiveSubscription
+				? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+				: undefined,
 
 		stripeCustomerId: user.stripeCustomerId || null,
 		stripeSubscriptionId: user.stripeSubscriptionId || null,
