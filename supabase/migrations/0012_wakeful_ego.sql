@@ -1,1 +1,0 @@
-ALTER TABLE "user_profiles" ADD COLUMN "intended_plan" varchar(50);
