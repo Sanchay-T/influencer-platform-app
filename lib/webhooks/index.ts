@@ -8,7 +8,6 @@ export {
 	checkWebhookIdempotency,
 	cleanupOldWebhookEvents,
 	type IdempotencyCheckResult,
-	isEventStale,
 	markWebhookCompleted,
 	markWebhookFailed,
 } from './idempotency';

@@ -1,6 +1,11 @@
 import { and, desc, eq, inArray, or, sql } from 'drizzle-orm';
+import { z } from 'zod';
+import { createCategoryLogger, LogCategory } from '@/lib/logging';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { isRecord, isString, toRecord } from '@/lib/utils/type-guards';
+
+const logger = createCategoryLogger(LogCategory.LIST);
+
 import { db } from '../index';
 import {
 	type CreatorList,
@@ -174,8 +179,11 @@ const _mergeMetadata = (
 	return { ...currentRecord, ...incomingRecord };
 };
 
-async function refreshListStats(listId: string) {
-	const [stats] = await db
+async function refreshListStats(
+	listId: string,
+	txOrDb: typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0] = db
+) {
+	const [stats] = await txOrDb
 		.select({
 			creatorCount: sql<number>`COUNT(${creatorListItems.id})`,
 			followerSum: sql<number>`COALESCE(SUM(${creatorProfiles.followers}), 0)`,
@@ -184,7 +192,7 @@ async function refreshListStats(listId: string) {
 		.leftJoin(creatorProfiles, eq(creatorProfiles.id, creatorListItems.creatorId))
 		.where(eq(creatorListItems.listId, listId));
 
-	await db
+	await txOrDb
 		.update(creatorLists)
 		.set({
 			stats: buildStats(stats?.creatorCount ?? 0, stats?.followerSum ?? 0),
@@ -494,6 +502,26 @@ export async function duplicateList(clerkUserId: string, listId: string, name?: 
 	});
 }
 
+const VALID_PLATFORMS = ['tiktok', 'instagram', 'youtube'] as const;
+
+const creatorInputSchema = z.object({
+	platform: z.enum(VALID_PLATFORMS),
+	externalId: z.string().trim().min(1, 'externalId is required'),
+	handle: z.string().trim().min(1, 'handle is required'),
+	displayName: z.string().nullish(),
+	avatarUrl: z.string().nullish(),
+	url: z.string().nullish(),
+	followers: z.number().nullish(),
+	engagementRate: z.number().nullish(),
+	category: z.string().nullish(),
+	metadata: z.record(z.unknown()).optional().default({}),
+	metricsSnapshot: z.record(z.unknown()).optional().default({}),
+	bucket: z.string().optional().default('backlog'),
+	notes: z.string().nullish(),
+	customFields: z.record(z.unknown()).optional().default({}),
+	pinned: z.boolean().optional().default(false),
+});
+
 export async function addCreatorsToList(
 	clerkUserId: string,
 	listId: string,
@@ -502,6 +530,9 @@ export async function addCreatorsToList(
 	if (!creators.length) {
 		return { added: 0, skipped: [], attempted: 0 };
 	}
+
+	const parsed = z.array(creatorInputSchema).parse(creators);
+
 	const user = await findInternalUser(clerkUserId);
 	const access = await fetchAccessibleList(listId, user.id);
 	if (!access) {
@@ -512,7 +543,7 @@ export async function addCreatorsToList(
 	// SIMPLE: Just insert profiles (if new) and link to list - no updates, no extra operations
 	const summary = await db.transaction(async (tx) => {
 		// Step 1: Insert profiles as-is (DO NOTHING if exists - don't update anything)
-		const profileValues = creators.map((c) => ({
+		const profileValues = parsed.map((c) => ({
 			platform: c.platform,
 			externalId: c.externalId,
 			handle: c.handle,
@@ -532,7 +563,7 @@ export async function addCreatorsToList(
 			.onConflictDoNothing({ target: [creatorProfiles.platform, creatorProfiles.externalId] });
 
 		// Step 2: Get profile IDs for linking (single query)
-		const conditions = creators.map((c) =>
+		const conditions = parsed.map((c) =>
 			and(eq(creatorProfiles.platform, c.platform), eq(creatorProfiles.externalId, c.externalId))
 		);
 		const existingProfiles = await tx
@@ -558,7 +589,7 @@ export async function addCreatorsToList(
 		const startPosition = Number(maxPosition ?? 0) + 1;
 
 		// Step 4: Insert list items
-		const itemValues = creators
+		const itemValues = parsed
 			.map((creator, idx) => {
 				const profile = profileMap.get(`${creator.platform}:${creator.externalId}`);
 				if (!profile) {
@@ -587,7 +618,7 @@ export async function addCreatorsToList(
 		// Track skipped (already in list)
 		const insertedCreatorIds = new Set(insertedItems.map((i) => i.creatorId));
 		const skipped: Array<{ externalId: string; handle: string; platform: string }> = [];
-		for (const creator of creators) {
+		for (const creator of parsed) {
 			const profile = profileMap.get(`${creator.platform}:${creator.externalId}`);
 			if (profile && !insertedCreatorIds.has(profile.id)) {
 				skipped.push({
@@ -601,7 +632,7 @@ export async function addCreatorsToList(
 		// Step 5: Increment stats
 		const addedCount = insertedItems.length;
 		if (addedCount > 0) {
-			const addedFollowers = creators.reduce((sum, c) => {
+			const addedFollowers = parsed.reduce((sum, c) => {
 				const profile = profileMap.get(`${c.platform}:${c.externalId}`);
 				if (profile && insertedCreatorIds.has(profile.id)) {
 					return sum + (profile.followers ?? 0);
@@ -636,17 +667,23 @@ export async function addCreatorsToList(
 			actorId: user.id,
 			action: 'creators_added',
 			payload: {
-				attempted: creators.length,
+				attempted: parsed.length,
 				added: summary.inserted,
 				skipped: summary.skipped.length,
 			},
 		})
-		.catch((err) => structuredConsole.error('[LIST] Activity log failed', err));
+		.catch((err) =>
+			logger.error(
+				'Activity log insert failed',
+				err instanceof Error ? err : new Error(String(err)),
+				{ listId }
+			)
+		);
 
 	return {
 		added: summary.inserted,
 		skipped: summary.skipped,
-		attempted: creators.length,
+		attempted: parsed.length,
 	};
 }
 
@@ -684,8 +721,8 @@ export async function updateListItems(
 			action: 'list_items_updated',
 			payload: { count: updates.length },
 		});
+		await refreshListStats(listId, tx);
 	});
-	await refreshListStats(listId);
 }
 
 export async function removeListItems(clerkUserId: string, listId: string, itemIds: string[]) {
@@ -709,8 +746,8 @@ export async function removeListItems(clerkUserId: string, listId: string, itemI
 			action: 'list_items_removed',
 			payload: { count: itemIds.length },
 		});
+		await refreshListStats(listId, tx);
 	});
-	await refreshListStats(listId);
 }
 
 export async function manageCollaborators(

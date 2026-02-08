@@ -25,11 +25,22 @@ const logger = createCategoryLogger(LogCategory.BILLING);
 // HELPER FUNCTIONS
 // ═══════════════════════════════════════════════════════════════
 
+/** Drizzle transaction type extracted from the db instance. */
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 /**
  * Get the internal UUID for a user from their Clerk userId.
  * userUsage.userId references users.id (UUID), not the Clerk ID.
  */
-async function getInternalUserId(clerkUserId: string): Promise<string | null> {
+async function getInternalUserId(clerkUserId: string, txOrDb?: Tx): Promise<string | null> {
+	if (txOrDb) {
+		const rows = await txOrDb
+			.select({ id: users.id })
+			.from(users)
+			.where(eq(users.userId, clerkUserId))
+			.limit(1);
+		return rows[0]?.id ?? null;
+	}
 	const user = await db.query.users.findFirst({
 		where: eq(users.userId, clerkUserId),
 		columns: { id: true },
@@ -127,28 +138,34 @@ export async function getUsageSummary(userId: string): Promise<UsageSummary | nu
  * Increment the campaign count for a user.
  * Call this AFTER successfully creating a campaign.
  * @param clerkUserId - The Clerk user ID (not internal UUID)
+ * @param txOrDb - Optional transaction to run inside (for atomicity with campaign insert)
  */
-export async function incrementCampaignCount(clerkUserId: string): Promise<IncrementResult> {
+export async function incrementCampaignCount(
+	clerkUserId: string,
+	txOrDb?: Tx
+): Promise<IncrementResult> {
 	try {
-		// Resolve Clerk ID to internal UUID
-		const internalUserId = await getInternalUserId(clerkUserId);
-		if (!internalUserId) {
-			logger.warn('User not found for campaign increment', { userId: clerkUserId });
-			return { success: false, newCount: 0, error: 'User not found' };
-		}
+		const runIncrement = async (tx: Tx) => {
+			const internalUserId = await getInternalUserId(clerkUserId, tx);
+			if (!internalUserId) {
+				return { success: false as const, newCount: 0, error: 'User not found' };
+			}
 
-		const result = await db
-			.update(userUsage)
-			.set({
-				usageCampaignsCurrent: sql`COALESCE(${userUsage.usageCampaignsCurrent}, 0) + 1`,
-				updatedAt: new Date(),
-			})
-			.where(eq(userUsage.userId, internalUserId))
-			.returning({ newCount: userUsage.usageCampaignsCurrent });
+			// Lock the user row to prevent concurrent insert races
+			await tx.execute(sql`SELECT 1 FROM users WHERE id = ${internalUserId} FOR UPDATE`);
 
-		if (result.length === 0) {
-			// User usage record doesn't exist, create it
-			const inserted = await db
+			const updated = await tx
+				.update(userUsage)
+				.set({
+					usageCampaignsCurrent: sql`COALESCE(${userUsage.usageCampaignsCurrent}, 0) + 1`,
+					updatedAt: new Date(),
+				})
+				.where(eq(userUsage.userId, internalUserId))
+				.returning({ newCount: userUsage.usageCampaignsCurrent });
+
+			if (updated.length > 0) return { success: true as const, newCount: updated[0].newCount || 1 };
+
+			const inserted = await tx
 				.insert(userUsage)
 				.values({
 					userId: internalUserId,
@@ -158,18 +175,24 @@ export async function incrementCampaignCount(clerkUserId: string): Promise<Incre
 				})
 				.returning({ newCount: userUsage.usageCampaignsCurrent });
 
-			logger.info('Created new usage record for user', {
-				userId: clerkUserId,
-				metadata: { campaigns: 1 },
-			});
-			return { success: true, newCount: inserted[0]?.newCount || 1 };
+			return { success: true as const, newCount: inserted[0]?.newCount || 1 };
+		};
+
+		// If a transaction was passed in, use it directly; otherwise create our own
+		const result = txOrDb
+			? await runIncrement(txOrDb)
+			: await db.transaction(async (tx) => runIncrement(tx));
+
+		if (!result.success) {
+			logger.warn('User not found for campaign increment', { userId: clerkUserId });
+			return result;
 		}
 
 		logger.info('Incremented campaign count', {
 			userId: clerkUserId,
-			metadata: { newCount: result[0].newCount },
+			metadata: { newCount: result.newCount },
 		});
-		return { success: true, newCount: result[0].newCount || 1 };
+		return result;
 	} catch (error) {
 		logger.error(
 			'Failed to increment campaign count',
@@ -210,18 +233,22 @@ export async function incrementCreatorCount(
 			return { success: false, newCount: 0, error: 'User not found' };
 		}
 
-		const result = await db
-			.update(userUsage)
-			.set({
-				usageCreatorsCurrentMonth: sql`COALESCE(${userUsage.usageCreatorsCurrentMonth}, 0) + ${count}`,
-				updatedAt: new Date(),
-			})
-			.where(eq(userUsage.userId, internalUserId))
-			.returning({ newCount: userUsage.usageCreatorsCurrentMonth });
+		const newCount = await db.transaction(async (tx) => {
+			// Lock the user row to prevent concurrent insert races
+			await tx.execute(sql`SELECT 1 FROM users WHERE id = ${internalUserId} FOR UPDATE`);
 
-		if (result.length === 0) {
-			// User usage record doesn't exist, create it
-			const inserted = await db
+			const updated = await tx
+				.update(userUsage)
+				.set({
+					usageCreatorsCurrentMonth: sql`COALESCE(${userUsage.usageCreatorsCurrentMonth}, 0) + ${count}`,
+					updatedAt: new Date(),
+				})
+				.where(eq(userUsage.userId, internalUserId))
+				.returning({ newCount: userUsage.usageCreatorsCurrentMonth });
+
+			if (updated.length > 0) return updated[0].newCount || count;
+
+			const inserted = await tx
 				.insert(userUsage)
 				.values({
 					userId: internalUserId,
@@ -231,18 +258,14 @@ export async function incrementCreatorCount(
 				})
 				.returning({ newCount: userUsage.usageCreatorsCurrentMonth });
 
-			logger.info('Created new usage record for user', {
-				userId: clerkUserId,
-				metadata: { creators: count },
-			});
-			return { success: true, newCount: inserted[0]?.newCount || count };
-		}
+			return inserted[0]?.newCount || count;
+		});
 
 		logger.info('Incremented creator count', {
 			userId: clerkUserId,
-			metadata: { added: count, newCount: result[0].newCount },
+			metadata: { added: count, newCount },
 		});
-		return { success: true, newCount: result[0].newCount || count };
+		return { success: true, newCount };
 	} catch (error) {
 		logger.error(
 			'Failed to increment creator count',
@@ -283,18 +306,22 @@ export async function incrementEnrichmentCount(
 			return { success: false, newCount: 0, error: 'User not found' };
 		}
 
-		const result = await db
-			.update(userUsage)
-			.set({
-				enrichmentsCurrentMonth: sql`COALESCE(${userUsage.enrichmentsCurrentMonth}, 0) + ${count}`,
-				updatedAt: new Date(),
-			})
-			.where(eq(userUsage.userId, internalUserId))
-			.returning({ newCount: userUsage.enrichmentsCurrentMonth });
+		const newCount = await db.transaction(async (tx) => {
+			// Lock the user row to prevent concurrent insert races
+			await tx.execute(sql`SELECT 1 FROM users WHERE id = ${internalUserId} FOR UPDATE`);
 
-		if (result.length === 0) {
-			// User usage record doesn't exist, create it
-			const inserted = await db
+			const updated = await tx
+				.update(userUsage)
+				.set({
+					enrichmentsCurrentMonth: sql`COALESCE(${userUsage.enrichmentsCurrentMonth}, 0) + ${count}`,
+					updatedAt: new Date(),
+				})
+				.where(eq(userUsage.userId, internalUserId))
+				.returning({ newCount: userUsage.enrichmentsCurrentMonth });
+
+			if (updated.length > 0) return updated[0].newCount || count;
+
+			const inserted = await tx
 				.insert(userUsage)
 				.values({
 					userId: internalUserId,
@@ -305,18 +332,14 @@ export async function incrementEnrichmentCount(
 				})
 				.returning({ newCount: userUsage.enrichmentsCurrentMonth });
 
-			logger.info('Created new usage record for user', {
-				userId: clerkUserId,
-				metadata: { enrichments: count },
-			});
-			return { success: true, newCount: inserted[0]?.newCount || count };
-		}
+			return inserted[0]?.newCount || count;
+		});
 
 		logger.info('Incremented enrichment count', {
 			userId: clerkUserId,
-			metadata: { added: count, newCount: result[0].newCount },
+			metadata: { added: count, newCount },
 		});
-		return { success: true, newCount: result[0].newCount || count };
+		return { success: true, newCount };
 	} catch (error) {
 		logger.error(
 			'Failed to increment enrichment count',

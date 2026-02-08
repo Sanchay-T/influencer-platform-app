@@ -8,7 +8,7 @@
  * 4. Returns jobId immediately
  */
 
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { trackServer } from '@/lib/analytics/track';
 import { getUserDataForTracking } from '@/lib/analytics/track-server-utils';
 import { validateCreatorSearch, validateTrialSearchLimit } from '@/lib/billing';
@@ -302,26 +302,60 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 			}
 
 			// ============================================================================
-			// Step 2.5: Validate Trial Search Limit
+			// Step 2.5 + 3: Validate Trial Limit + Create Job (Atomic)
 			// ============================================================================
 
-			const trialValidation = await validateTrialSearchLimit(userId);
-			if (!trialValidation.allowed) {
-				logger.warn(
-					`${LOG_PREFIX} Search blocked by trial limit`,
-					{
-						userId,
-						reason: trialValidation.reason,
-						trialSearchesUsed: trialValidation.trialSearchesUsed,
-					},
-					LogCategory.BILLING
+			let jobId: string;
+			try {
+				const txResult = await SentryLogger.startSpanAsync(
+					{ name: 'dispatch.trial_validate_and_create_job', op: 'db' },
+					async () =>
+						db.transaction(async (tx) => {
+							// Lock user's scraping jobs to prevent concurrent limit bypass.
+							// Uses FOR UPDATE to serialize concurrent dispatch calls for the same user.
+							await tx.execute(
+								sql`SELECT 1 FROM ${scrapingJobs} WHERE ${scrapingJobs.userId} = ${userId} LIMIT 1 FOR UPDATE`
+							);
+
+							// Validate trial search limit within transaction
+							const trialVal = await validateTrialSearchLimit(userId);
+							if (!trialVal.allowed) {
+								throw new Error(`TRIAL_LIMIT:${trialVal.reason || 'Trial search limit exceeded'}`);
+							}
+
+							// Create job within the same transaction
+							const jId = await createV2Job({
+								userId,
+								campaignId,
+								platform,
+								keywords,
+								targetResults,
+							});
+
+							return { jobId: jId, trialValidation: trialVal };
+						})
 				);
 
-				return {
-					success: false,
-					error: trialValidation.reason || 'Trial search limit exceeded',
-					statusCode: 403,
-				};
+				jobId = txResult.jobId;
+			} catch (txError) {
+				const errorMessage = txError instanceof Error ? txError.message : String(txError);
+				if (errorMessage.startsWith('TRIAL_LIMIT:')) {
+					const reason = errorMessage.slice('TRIAL_LIMIT:'.length);
+					logger.warn(
+						`${LOG_PREFIX} Search blocked by trial limit (atomic)`,
+						{
+							userId,
+							reason,
+						},
+						LogCategory.BILLING
+					);
+					return {
+						success: false,
+						error: reason,
+						statusCode: 403,
+					};
+				}
+				throw txError; // Re-throw non-trial errors
 			}
 
 			// Add breadcrumb for state transition
@@ -331,22 +365,6 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 				level: 'info',
 				data: { userId },
 			});
-
-			// ============================================================================
-			// Step 3: Create Job in Database (with Sentry span)
-			// ============================================================================
-
-			const jobId = await SentryLogger.startSpanAsync(
-				{ name: 'dispatch.create_job', op: 'db' },
-				async () =>
-					createV2Job({
-						userId,
-						campaignId,
-						platform,
-						keywords,
-						targetResults,
-					})
-			);
 
 			// Add breadcrumb for state transition
 			SentryLogger.addBreadcrumb({

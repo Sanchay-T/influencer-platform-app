@@ -30,6 +30,7 @@ function ExportButtonContent({
 	const [isExporting, setIsExporting] = useState(false);
 	const pollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 	const startTimeRef = useRef<number>(0);
+	const pollAttemptRef = useRef(0);
 
 	const downloadFile = (url: string) => {
 		const link = document.createElement('a');
@@ -68,8 +69,10 @@ function ExportButtonContent({
 					exportId,
 				});
 			} else {
-				// Still processing, poll again
-				pollTimeoutRef.current = setTimeout(() => pollExportStatus(exportId), POLL_INTERVAL);
+				// Still processing, poll again with exponential backoff
+				pollAttemptRef.current += 1;
+				const delay = Math.min(2000 * 1.5 ** (pollAttemptRef.current - 1), 30000);
+				pollTimeoutRef.current = setTimeout(() => pollExportStatus(exportId), delay);
 			}
 		} catch (_error) {
 			toast.error('Error checking export status', { id: 'export-progress' });
@@ -85,6 +88,7 @@ function ExportButtonContent({
 		try {
 			setIsExporting(true);
 			startTimeRef.current = Date.now();
+			pollAttemptRef.current = 0;
 
 			toast.loading('Preparing your export...', { id: 'export-progress', duration: Infinity });
 
