@@ -35,9 +35,22 @@ export default async function DashboardPage() {
 	}
 
 	// Ensure user exists FIRST (fixes race condition with Clerk webhook)
+	// @why createUser can hang forever if the DB transaction never resolves (PgBouncer / connection pool).
+	// A try/catch alone doesn't help — the await never settles. Use Promise.race with a hard timeout.
+	const ENSURE_PROFILE_TIMEOUT_MS = 10_000;
 	let userProfile: Awaited<ReturnType<typeof ensureUserProfile>> | null = null;
 	try {
-		userProfile = await ensureUserProfile(userId);
+		userProfile = await Promise.race([
+			ensureUserProfile(userId),
+			new Promise<null>((resolve) =>
+				setTimeout(() => {
+					structuredConsole.error(
+						`[DASHBOARD] ensureUserProfile timed out after ${ENSURE_PROFILE_TIMEOUT_MS}ms for ${userId}`
+					);
+					resolve(null);
+				}, ENSURE_PROFILE_TIMEOUT_MS)
+			),
+		]);
 	} catch (err) {
 		structuredConsole.error('[DASHBOARD] ensureUserProfile failed', err);
 	}
@@ -59,10 +72,21 @@ export default async function DashboardPage() {
 		redirect('/onboarding/success');
 	}
 
-	// Fetch dashboard data — wrapped in try/catch so the page always renders
+	// Fetch dashboard data — wrapped in try/catch + timeout so the page always renders
+	const OVERVIEW_TIMEOUT_MS = 15_000;
 	let overview: DashboardOverviewData;
 	try {
-		overview = await getDashboardOverview(userId);
+		overview = await Promise.race([
+			getDashboardOverview(userId),
+			new Promise<DashboardOverviewData>((resolve) =>
+				setTimeout(() => {
+					structuredConsole.error(
+						`[DASHBOARD] getDashboardOverview timed out after ${OVERVIEW_TIMEOUT_MS}ms for ${userId}`
+					);
+					resolve(EMPTY_OVERVIEW);
+				}, OVERVIEW_TIMEOUT_MS)
+			),
+		]);
 	} catch (err) {
 		structuredConsole.error('[DASHBOARD] getDashboardOverview failed, rendering empty state', err);
 		overview = EMPTY_OVERVIEW;

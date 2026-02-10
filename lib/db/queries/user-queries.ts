@@ -195,6 +195,7 @@ export async function createUser(userData: {
 	});
 
 	return db.transaction(async (tx) => {
+		const txStart = Date.now();
 		debug('Starting database transaction for user creation', { userId: userData.userId });
 
 		try {
@@ -211,6 +212,10 @@ export async function createUser(userData: {
 					onboardingStep: userData.onboardingStep || 'pending',
 				})
 				.returning();
+			info('createUser: users INSERT done', {
+				userId: userData.userId,
+				txMs: Date.now() - txStart,
+			});
 
 			// 2. Insert subscription data
 			// Note: currentPlan is NULL until Stripe webhook confirms payment
@@ -225,6 +230,10 @@ export async function createUser(userData: {
 					trialEndDate: userData.trialEndDate,
 				})
 				.returning();
+			info('createUser: user_subscriptions INSERT done', {
+				userId: userData.userId,
+				txMs: Date.now() - txStart,
+			});
 
 			// 3. Insert usage tracking
 			const [newUsage] = await tx
@@ -237,6 +246,10 @@ export async function createUser(userData: {
 					enrichmentsCurrentMonth: 0,
 				})
 				.returning();
+			info('createUser: user_usage INSERT done', {
+				userId: userData.userId,
+				txMs: Date.now() - txStart,
+			});
 
 			// 4. Insert system data
 			const [newSystemData] = await tx
@@ -246,6 +259,10 @@ export async function createUser(userData: {
 					emailScheduleStatus: {},
 				})
 				.returning();
+			info('createUser: user_system_data INSERT done', {
+				userId: userData.userId,
+				txMs: Date.now() - txStart,
+			});
 
 			// Return combined profile
 			const profile: UserProfileComplete = {
