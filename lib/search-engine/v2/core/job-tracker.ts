@@ -431,9 +431,31 @@ export async function createV2Job(params: {
 	platform: string;
 	keywords: string[];
 	targetResults: number;
-}): Promise<string> {
-	const jobId = await db.transaction(async (tx) => {
-		const [job] = await tx
+}): Promise<string>;
+export async function createV2Job(
+	params: {
+		userId: string;
+		campaignId: string;
+		platform: string;
+		keywords: string[];
+		targetResults: number;
+	},
+	tx: Parameters<Parameters<typeof db.transaction>[0]>[0]
+): Promise<string>;
+export async function createV2Job(
+	params: {
+		userId: string;
+		campaignId: string;
+		platform: string;
+		keywords: string[];
+		targetResults: number;
+	},
+	tx?: Parameters<Parameters<typeof db.transaction>[0]>[0]
+): Promise<string> {
+	// Allow callers that already hold a transaction to reuse it.
+	// This avoids nested transactions (which can deadlock with a single-connection pool).
+	const insertJob = async (txOrDb: Parameters<Parameters<typeof db.transaction>[0]>[0]) => {
+		const [job] = await txOrDb
 			.insert(scrapingJobs)
 			.values({
 				userId: params.userId,
@@ -453,9 +475,17 @@ export async function createV2Job(params: {
 			})
 			.returning({ id: scrapingJobs.id });
 
-		await tx.insert(scrapingResults).values({ jobId: job.id, creators: [] });
+		await txOrDb.insert(scrapingResults).values({ jobId: job.id, creators: [] });
 		return job.id;
-	});
+	};
+
+	if (tx) {
+		// Caller owns the transaction lifecycle; don't emit "created" logs here
+		// because the outer transaction may still roll back.
+		return insertJob(tx);
+	}
+
+	const jobId = await db.transaction(async (tx) => insertJob(tx));
 
 	logger.info(
 		'V2 job created',

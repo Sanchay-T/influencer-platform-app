@@ -8,12 +8,13 @@
  * 4. Returns jobId immediately
  */
 
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, gte, sql } from 'drizzle-orm';
 import { trackServer } from '@/lib/analytics/track';
 import { getUserDataForTracking } from '@/lib/analytics/track-server-utils';
-import { validateCreatorSearch, validateTrialSearchLimit } from '@/lib/billing';
+import { TRIAL_SEARCH_LIMIT, validateCreatorSearch } from '@/lib/billing';
+import { deriveTrialStatus } from '@/lib/billing/trial-status';
 import { db } from '@/lib/db';
-import { campaigns, scrapingJobs } from '@/lib/db/schema';
+import { campaigns, scrapingJobs, userSubscriptions, users } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
 import { SentryLogger } from '@/lib/logging/sentry-logger';
 import { getDeadLetterQueueUrl, qstash } from '@/lib/queue/qstash';
@@ -311,28 +312,69 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 					{ name: 'dispatch.trial_validate_and_create_job', op: 'db' },
 					async () =>
 						db.transaction(async (tx) => {
-							// Lock user's scraping jobs to prevent concurrent limit bypass.
-							// Uses FOR UPDATE to serialize concurrent dispatch calls for the same user.
+							// Serialize concurrent dispatch calls for the same user.
+							// Lock a stable row (users) so even a user's *first* search is protected.
 							await tx.execute(
-								sql`SELECT 1 FROM ${scrapingJobs} WHERE ${scrapingJobs.userId} = ${userId} LIMIT 1 FOR UPDATE`
+								sql`SELECT 1 FROM ${users} WHERE ${users.userId} = ${userId} LIMIT 1 FOR UPDATE`
 							);
 
-							// Validate trial search limit within transaction
-							const trialVal = await validateTrialSearchLimit(userId);
-							if (!trialVal.allowed) {
-								throw new Error(`TRIAL_LIMIT:${trialVal.reason || 'Trial search limit exceeded'}`);
+							// Validate trial search limit within transaction.
+							// IMPORTANT: Must only use `tx` inside this transaction to avoid deadlocking
+							// when the DB pool is configured with a single connection (common with PgBouncer).
+							const [trialProfile] = await tx
+								.select({
+									createdAt: users.createdAt,
+									subscriptionStatus: userSubscriptions.subscriptionStatus,
+									trialStartDate: userSubscriptions.trialStartDate,
+									trialEndDate: userSubscriptions.trialEndDate,
+								})
+								.from(users)
+								.leftJoin(userSubscriptions, eq(users.id, userSubscriptions.userId))
+								.where(eq(users.userId, userId))
+								.limit(1);
+
+							if (!trialProfile) {
+								throw new Error('USER_NOT_FOUND');
+							}
+
+							const effectiveTrialStatus = deriveTrialStatus(
+								trialProfile.subscriptionStatus,
+								trialProfile.trialEndDate ?? null
+							);
+
+							if (effectiveTrialStatus === 'active') {
+								const trialStartDate = trialProfile.trialStartDate ?? trialProfile.createdAt;
+								const [jobCountRow] = await tx
+									.select({ count: sql<number>`count(*)` })
+									.from(scrapingJobs)
+									.where(
+										and(
+											eq(scrapingJobs.userId, userId),
+											gte(scrapingJobs.createdAt, trialStartDate)
+										)
+									);
+
+								const trialJobCount = Number(jobCountRow?.count ?? 0);
+								if (trialJobCount >= TRIAL_SEARCH_LIMIT) {
+									throw new Error(
+										`TRIAL_LIMIT:You've used all ${TRIAL_SEARCH_LIMIT} trial searches. Upgrade to continue searching.`
+									);
+								}
 							}
 
 							// Create job within the same transaction
-							const jId = await createV2Job({
-								userId,
-								campaignId,
-								platform,
-								keywords,
-								targetResults,
-							});
+							const jId = await createV2Job(
+								{
+									userId,
+									campaignId,
+									platform,
+									keywords,
+									targetResults,
+								},
+								tx
+							);
 
-							return { jobId: jId, trialValidation: trialVal };
+							return { jobId: jId };
 						})
 				);
 
