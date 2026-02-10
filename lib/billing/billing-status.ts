@@ -32,7 +32,36 @@ export async function getBillingStatus(userId: string): Promise<BillingStatus> {
 	const user = await getUserProfile(userId);
 
 	if (!user) {
-		throw new Error(`User not found: ${userId}`);
+		// Return safe defaults instead of throwing — the page already called
+		// ensureUserProfile so this should be rare, but if it happens we don't
+		// want to crash the entire dashboard Promise.all.
+		return {
+			currentPlan: null,
+			isTrialing: false,
+			hasActiveSubscription: false,
+			trialStatus: 'pending',
+			daysRemaining: 0,
+			hoursRemaining: 0,
+			minutesRemaining: 0,
+			trialProgressPercentage: 0,
+			trialTimeRemaining: '',
+			trialTimeRemainingShort: '',
+			trialUrgencyLevel: 'expired',
+			subscriptionStatus: 'none' as SubscriptionStatus,
+			billingAmount: 0,
+			billingCycle: 'monthly' as const,
+			stripeCustomerId: null,
+			stripeSubscriptionId: null,
+			canManageSubscription: false,
+			usageInfo: {
+				campaignsUsed: 0,
+				creatorsUsed: 0,
+				campaignsLimit: 0,
+				creatorsLimit: 0,
+				progressPercentage: 0,
+			},
+			lastSyncTime: new Date().toISOString(),
+		};
 	}
 
 	// Calculate trial time

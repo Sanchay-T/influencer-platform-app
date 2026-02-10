@@ -337,9 +337,18 @@ export async function ensureUserProfile(userId: string): Promise<UserProfileComp
 
 	info('ensureUserProfile creating normalized profile', { userId });
 
-	// Get user data from Clerk - this is required, no fallback
+	// Get user data from Clerk with a timeout to prevent hanging the dashboard
+	const CLERK_TIMEOUT_MS = 8000;
 	const clerk = await clerkBackendClient();
-	const clerkUser = await clerk.users.getUser(userId);
+	const clerkUser = await Promise.race([
+		clerk.users.getUser(userId),
+		new Promise<never>((_, reject) =>
+			setTimeout(
+				() => reject(new Error(`Clerk API timed out after ${CLERK_TIMEOUT_MS}ms for ${userId}`)),
+				CLERK_TIMEOUT_MS
+			)
+		),
+	]);
 	const email = clerkUser.emailAddresses?.[0]?.emailAddress;
 	const fullName = `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || undefined;
 

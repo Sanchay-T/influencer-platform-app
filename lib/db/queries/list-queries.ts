@@ -194,7 +194,12 @@ async function refreshListStats(listId: string) {
 }
 
 export async function getListsForUser(clerkUserId: string): Promise<CreatorListSummary[]> {
-	const user = await findInternalUser(clerkUserId);
+	const user = await db.query.users.findFirst({
+		where: eq(users.userId, clerkUserId),
+	});
+	if (!user) {
+		return [];
+	}
 
 	const collaboratorSubquery = db
 		.select({ listId: creatorListCollaborators.listId })

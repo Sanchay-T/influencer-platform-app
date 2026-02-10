@@ -7,7 +7,7 @@ import {
 	getSearchTelemetryForDashboard,
 } from '@/lib/db/queries/dashboard-queries';
 import { getListsForUser } from '@/lib/db/queries/list-queries';
-import { ensureUserProfile } from '@/lib/db/queries/user-queries';
+import { structuredConsole } from '@/lib/logging/console-proxy';
 
 // Breadcrumb: getDashboardOverview -> consumed by RSC dashboard page & REST API -> relies on db/queries + plan validator.
 
@@ -60,30 +60,36 @@ export async function getDashboardOverview(clerkUserId: string): Promise<Dashboa
 	noStore();
 	const _overviewStart = Date.now();
 
-	// Ensure normalized profile exists before downstream queries (first dashboard load happens pre-billing).
-	const _ensureStart = Date.now();
-	await ensureUserProfile(clerkUserId);
+	// NOTE: ensureUserProfile is already called by the dashboard page RSC before
+	// getDashboardOverview, so we skip it here to avoid redundant DB + Clerk API calls.
 
 	// Run queries with individual timing
 	const _queryStart = Date.now();
 
-	const [favorites, lists, searchTelemetry, planStatus, campaignCount] = await Promise.all([
-		getFavoriteInfluencersForDashboard(clerkUserId, 10).then((r) => {
-			return r;
-		}),
-		getListsForUser(clerkUserId).then((r) => {
-			return r;
-		}),
-		getSearchTelemetryForDashboard(clerkUserId).then((r) => {
-			return r;
-		}),
-		getBillingStatus(clerkUserId).then((r) => {
-			return r;
-		}),
-		getCampaignCountForDashboard(clerkUserId).then((r) => {
-			return r;
-		}),
+	const results = await Promise.allSettled([
+		getFavoriteInfluencersForDashboard(clerkUserId, 10),
+		getListsForUser(clerkUserId),
+		getSearchTelemetryForDashboard(clerkUserId),
+		getBillingStatus(clerkUserId),
+		getCampaignCountForDashboard(clerkUserId),
 	]);
+
+	// Extract values with safe fallbacks — never let a single query crash the page
+	const favorites = results[0].status === 'fulfilled' ? results[0].value : [];
+	const lists = results[1].status === 'fulfilled' ? results[1].value : [];
+	const searchTelemetry =
+		results[2].status === 'fulfilled'
+			? results[2].value
+			: { totalJobs: 0, completedJobs: 0, averageDurationMs: 0 };
+	const planStatus = results[3].status === 'fulfilled' ? results[3].value : null;
+	const campaignCount = results[4].status === 'fulfilled' ? results[4].value : 0;
+
+	// Log any failures for debugging without crashing
+	for (const [i, r] of results.entries()) {
+		if (r.status === 'rejected') {
+			structuredConsole.error(`[DASHBOARD] Query ${i} failed for ${clerkUserId}:`, r.reason);
+		}
+	}
 
 	const normalizedLists = normalizeRecentLists(lists);
 	const searchLimit = planStatus?.usageInfo?.creatorsLimit ?? null;

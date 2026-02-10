@@ -1,16 +1,29 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
+import type { DashboardOverviewData } from '@/lib/dashboard/overview';
 import { getDashboardOverview } from '@/lib/dashboard/overview';
 import { ensureUserProfile } from '@/lib/db/queries/user-queries';
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import DashboardPageClient from './_components/dashboard-page-client';
 
 export const dynamic = 'force-dynamic';
 
 export const revalidate = 0;
 
-export default async function DashboardPage() {
-	const _startTime = Date.now();
+const EMPTY_OVERVIEW: DashboardOverviewData = {
+	favorites: [],
+	recentLists: [],
+	metrics: {
+		averageSearchMs: null,
+		searchesLast30Days: 0,
+		completedSearchesLast30Days: 0,
+		searchLimit: null,
+		totalFavorites: 0,
+		campaignCount: 0,
+	},
+};
 
+export default async function DashboardPage() {
 	const { userId } = await auth();
 
 	if (!userId) {
@@ -18,7 +31,6 @@ export default async function DashboardPage() {
 	}
 
 	// Ensure user exists FIRST (fixes race condition with Clerk webhook)
-	const _profileStart = Date.now();
 	const userProfile = await ensureUserProfile(userId);
 
 	const onboardingStep = userProfile.onboardingStep;
@@ -34,9 +46,16 @@ export default async function DashboardPage() {
 		redirect('/onboarding/success');
 	}
 
-	// Now safe to fetch dashboard data
-	const _overviewStart = Date.now();
-	const { favorites, recentLists, metrics } = await getDashboardOverview(userId);
+	// Fetch dashboard data — wrapped in try/catch so the page always renders
+	let overview: DashboardOverviewData;
+	try {
+		overview = await getDashboardOverview(userId);
+	} catch (err) {
+		structuredConsole.error('[DASHBOARD] getDashboardOverview failed, rendering empty state', err);
+		overview = EMPTY_OVERVIEW;
+	}
+
+	const { favorites, recentLists, metrics } = overview;
 
 	const showOnboarding = onboardingStep !== 'completed';
 
