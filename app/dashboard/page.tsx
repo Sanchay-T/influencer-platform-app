@@ -31,10 +31,15 @@ export default async function DashboardPage() {
 	}
 
 	// Ensure user exists FIRST (fixes race condition with Clerk webhook)
-	const userProfile = await ensureUserProfile(userId);
+	let userProfile: Awaited<ReturnType<typeof ensureUserProfile>> | null = null;
+	try {
+		userProfile = await ensureUserProfile(userId);
+	} catch (err) {
+		structuredConsole.error('[DASHBOARD] ensureUserProfile failed', err);
+	}
 
-	const onboardingStep = userProfile.onboardingStep;
-	const subscriptionStatus = userProfile.subscriptionStatus;
+	const onboardingStep = userProfile?.onboardingStep ?? 'pending';
+	const subscriptionStatus = userProfile?.subscriptionStatus ?? 'none';
 
 	// Only redirect to success page if webhook is pending (subscription exists but onboarding not complete)
 	// @why If plan_selected + subscription_status='none', user abandoned checkout and should retry
@@ -70,9 +75,9 @@ export default async function DashboardPage() {
 					? 2
 					: 1;
 	const onboardingData = {
-		fullName: userProfile.fullName ?? '',
-		businessName: userProfile.businessName ?? '',
-		brandDescription: userProfile.brandDescription ?? '',
+		fullName: userProfile?.fullName ?? '',
+		businessName: userProfile?.businessName ?? '',
+		brandDescription: userProfile?.brandDescription ?? '',
 	};
 
 	return (
