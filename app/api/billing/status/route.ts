@@ -19,6 +19,7 @@ import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { getBillingStatus } from '@/lib/billing';
 import { createUser } from '@/lib/db/queries/user-queries';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
+import { structuredConsole } from '@/lib/logging/console-proxy';
 import { toError } from '@/lib/utils/type-guards';
 
 const logger = createCategoryLogger(LogCategory.BILLING);
@@ -29,12 +30,15 @@ export async function GET(_request: NextRequest) {
 	const startTime = Date.now();
 	const requestId = `bill_${startTime}_${Math.random().toString(36).slice(2, 8)}`;
 
+	structuredConsole.log(`[BILLING-API] start ${requestId}`);
+
 	try {
 		// ─────────────────────────────────────────────────────────────
 		// AUTH
 		// ─────────────────────────────────────────────────────────────
 
 		const { userId } = await getAuthOrTest();
+		structuredConsole.log(`[BILLING-API] auth done +${Date.now() - startTime}ms userId=${userId}`);
 
 		if (!userId) {
 			logger.warn('Billing status request unauthorized', {
@@ -55,7 +59,11 @@ export async function GET(_request: NextRequest) {
 		let billingStatus: Awaited<ReturnType<typeof getBillingStatus>> | undefined;
 
 		try {
+			const BsStart = Date.now();
 			billingStatus = await getBillingStatus(userId);
+			structuredConsole.log(
+				`[BILLING-API] getBillingStatus done +${Date.now() - startTime}ms (query=${Date.now() - BsStart}ms) plan=${billingStatus.currentPlan} trialing=${billingStatus.isTrialing} sub=${billingStatus.subscriptionStatus}`
+			);
 		} catch (error) {
 			// User might not exist yet - auto-create
 			const errorMessage = error instanceof Error ? error.message : String(error);

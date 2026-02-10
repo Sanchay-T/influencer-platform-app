@@ -24,7 +24,11 @@ const EMPTY_OVERVIEW: DashboardOverviewData = {
 };
 
 export default async function DashboardPage() {
+	const t0 = Date.now();
+	structuredConsole.log('[DASHBOARD] RSC start');
+
 	const { userId } = await auth();
+	structuredConsole.log(`[DASHBOARD] auth() done +${Date.now() - t0}ms userId=${userId}`);
 
 	if (!userId) {
 		redirect('/sign-in');
@@ -37,6 +41,9 @@ export default async function DashboardPage() {
 	} catch (err) {
 		structuredConsole.error('[DASHBOARD] ensureUserProfile failed', err);
 	}
+	structuredConsole.log(
+		`[DASHBOARD] ensureUserProfile done +${Date.now() - t0}ms found=${!!userProfile} onboarding=${userProfile?.onboardingStep} sub=${userProfile?.subscriptionStatus}`
+	);
 
 	const onboardingStep = userProfile?.onboardingStep ?? 'pending';
 	const subscriptionStatus = userProfile?.subscriptionStatus ?? 'none';
@@ -48,6 +55,7 @@ export default async function DashboardPage() {
 		(subscriptionStatus === 'trialing' || subscriptionStatus === 'active');
 
 	if (hasPendingWebhook) {
+		structuredConsole.log('[DASHBOARD] redirecting to /onboarding/success (pending webhook)');
 		redirect('/onboarding/success');
 	}
 
@@ -59,6 +67,7 @@ export default async function DashboardPage() {
 		structuredConsole.error('[DASHBOARD] getDashboardOverview failed, rendering empty state', err);
 		overview = EMPTY_OVERVIEW;
 	}
+	structuredConsole.log(`[DASHBOARD] getDashboardOverview done +${Date.now() - t0}ms`);
 
 	const { favorites, recentLists, metrics } = overview;
 
@@ -79,6 +88,10 @@ export default async function DashboardPage() {
 		businessName: userProfile?.businessName ?? '',
 		brandDescription: userProfile?.brandDescription ?? '',
 	};
+
+	structuredConsole.log(
+		`[DASHBOARD] RSC returning JSX +${Date.now() - t0}ms showOnboarding=${showOnboarding} step=${onboardingInitialStep} favorites=${favorites.length} lists=${recentLists.length}`
+	);
 
 	return (
 		<DashboardPageClient
