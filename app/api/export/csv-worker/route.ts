@@ -13,7 +13,6 @@
  * 5. Update export job status (frontend polls this)
  */
 
-import { Receiver } from '@upstash/qstash';
 import { put } from '@vercel/blob';
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
@@ -22,25 +21,11 @@ import { exportJobs, scrapingJobs } from '@/lib/db/schema';
 import { dedupeByCreator, dedupeCreators, formatEmailsForCsv } from '@/lib/export/csv-utils';
 import { getCreatorsForJobs } from '@/lib/export/get-creators';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { verifyQstashRequestSignature } from '@/lib/queue/qstash-signature';
 import { SentryLogger } from '@/lib/sentry';
 
 export const maxDuration = 300; // 5 minutes
 export const dynamic = 'force-dynamic';
-
-const receiver = new Receiver({
-	currentSigningKey: process.env.QSTASH_CURRENT_SIGNING_KEY!,
-	nextSigningKey: process.env.QSTASH_NEXT_SIGNING_KEY!,
-});
-
-function shouldVerifySignature() {
-	if (process.env.NODE_ENV === 'development') {
-		return process.env.VERIFY_QSTASH_SIGNATURE === 'true';
-	}
-	if (process.env.SKIP_QSTASH_SIGNATURE === 'true') {
-		return false;
-	}
-	return true;
-}
 
 interface ExportWorkerMessage {
 	exportId: string;
@@ -51,24 +36,18 @@ interface ExportWorkerMessage {
 
 export async function POST(req: Request) {
 	const rawBody = await req.text();
-	const signature = req.headers.get('Upstash-Signature');
 
-	// Verify signature in production
-	if (shouldVerifySignature()) {
-		if (!signature) {
-			return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
-		}
-		const currentHost = req.headers.get('host') || process.env.VERCEL_URL || '';
-		const protocol = currentHost.includes('localhost') ? 'http' : 'https';
-		const baseUrl = currentHost ? `${protocol}://${currentHost}` : process.env.NEXT_PUBLIC_SITE_URL;
-		const verificationUrl = `${baseUrl}/api/export/csv-worker`;
-
-		try {
-			await receiver.verify({ signature, body: rawBody, url: verificationUrl });
-		} catch {
-			structuredConsole.error('CSV Worker: Signature verification failed');
-			return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-		}
+	const verification = await verifyQstashRequestSignature({
+		req,
+		rawBody,
+		pathname: '/api/export/csv-worker',
+	});
+	if (!verification.ok) {
+		structuredConsole.error('CSV Worker: QStash signature rejected', {
+			error: verification.error,
+			callbackUrl: verification.callbackUrl,
+		});
+		return NextResponse.json({ error: verification.error }, { status: verification.status });
 	}
 
 	let message: ExportWorkerMessage;

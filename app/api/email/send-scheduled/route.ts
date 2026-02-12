@@ -1,4 +1,3 @@
-import { Receiver } from '@upstash/qstash';
 import { NextResponse } from 'next/server';
 // Email templates
 import OnboardingWelcomeEmail from '@/components/email-templates/onboarding-1-welcome';
@@ -17,17 +16,34 @@ import { logger } from '@/lib/logging';
 import { jobLog } from '@/lib/logging/background-job-logger';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { LogCategory } from '@/lib/logging/types';
-import { toError } from '@/lib/utils/type-guards';
-
-// Initialize QStash receiver
-const receiver = new Receiver({
-	currentSigningKey: process.env.QSTASH_CURRENT_SIGNING_KEY!,
-	nextSigningKey: process.env.QSTASH_NEXT_SIGNING_KEY!,
-});
+import { verifyQstashRequestSignature } from '@/lib/queue/qstash-signature';
 
 export async function POST(request: Request) {
 	try {
-		// Start email job tracking
+		const rawBody = await request.text();
+
+		const verification = await verifyQstashRequestSignature({
+			req: request,
+			rawBody,
+			pathname: '/api/email/send-scheduled',
+		});
+		if (!verification.ok) {
+			logger.warn(
+				'Scheduled email QStash signature rejected',
+				{ error: verification.error, callbackUrl: verification.callbackUrl },
+				LogCategory.EMAIL
+			);
+			return NextResponse.json({ error: verification.error }, { status: verification.status });
+		}
+
+		let messageData: unknown;
+		try {
+			messageData = JSON.parse(rawBody);
+		} catch {
+			return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+		}
+
+		// Start email job tracking (only after request is trusted)
 		const jobId = jobLog.start({
 			jobType: 'scheduled-email',
 			metadata: { operation: 'send-scheduled-email' },
@@ -35,39 +51,8 @@ export async function POST(request: Request) {
 
 		logger.info('Processing scheduled email request', { jobId }, LogCategory.EMAIL);
 
-		// Get request body
-		const body = await request.text();
-		const messageData = JSON.parse(body);
 		const { userId, emailType, userEmail, templateProps, scheduledAt, source, adminUserId } =
-			messageData;
-
-		// Skip signature verification for admin-triggered emails (development convenience)
-		if (source !== 'admin-testing') {
-			try {
-				const isValid = await receiver.verify({
-					signature: request.headers.get('Upstash-Signature')!,
-					body,
-					url: `${EMAIL_CONFIG.siteUrl}/api/email/send-scheduled`,
-				});
-
-				if (!isValid) {
-					logger.error(
-						'Invalid QStash signature for scheduled email',
-						undefined,
-						{ jobId },
-						LogCategory.EMAIL
-					);
-					jobLog.fail(jobId, new Error('Invalid QStash signature'), undefined, false);
-					return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-				}
-			} catch (signatureError) {
-				logger.warn(
-					'QStash signature verification failed for admin test',
-					{ jobId, error: toError(signatureError) },
-					LogCategory.EMAIL
-				);
-			}
-		}
+			messageData as Record<string, unknown>;
 
 		logger.info(
 			'Processing scheduled email',

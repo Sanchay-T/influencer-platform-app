@@ -36,8 +36,17 @@ Verification expectation (after each patch):
   - `app/api/admin/config/init/route.ts`
   - Patch: Removed explicit OPTIONS handlers (no wildcard CORS).
 
-- [ ] #5 `SKIP_QSTASH_SIGNATURE` not gated by `NODE_ENV` (works in prod)
-  - File: 6+ QStash route files
+- [x] #5 `SKIP_QSTASH_SIGNATURE` not gated by `NODE_ENV` (works in prod)
+  - Patch: Centralized signature verification logic in `lib/queue/qstash-signature.ts` (fail-closed outside dev/test).
+  - Files updated:
+  - `app/api/v2/worker/search/route.ts`
+  - `app/api/v2/worker/dispatch/route.ts`
+  - `app/api/v2/worker/enrich/route.ts`
+  - `app/api/export/csv-worker/route.ts`
+  - `app/api/qstash/process-search/route.ts`
+  - `app/api/email/send-scheduled/route.ts` (also removed attacker-controlled `source === 'admin-testing'` signature bypass)
+  - Tests: `lib/queue/qstash-signature.test.ts`
+  - Verification: with `VERIFY_QSTASH_SIGNATURE=true` in dev, missing signature returns `401` (tested on `/api/v2/worker/search` + `/api/email/send-scheduled`).
 
 - [ ] #6 DLQ handler swallows signature verification failure — processes anyway
   - File: `app/api/qstash/dead-letter/route.ts:66`

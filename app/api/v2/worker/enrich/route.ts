@@ -18,41 +18,13 @@
  * }
  */
 
-import { Receiver } from '@upstash/qstash';
 import { NextResponse } from 'next/server';
 import { LogCategory, logger } from '@/lib/logging';
+import { verifyQstashRequestSignature } from '@/lib/queue/qstash-signature';
 import { processEnrich, validateEnrichWorkerMessage } from '@/lib/search-engine/v2/workers';
 
 // Vercel Pro: 5 minute timeout for enrichment workers
 export const maxDuration = 300;
-
-// ============================================================================
-// QStash Signature Verification
-// ============================================================================
-
-const receiver = new Receiver({
-	currentSigningKey: process.env.QSTASH_CURRENT_SIGNING_KEY!,
-	nextSigningKey: process.env.QSTASH_NEXT_SIGNING_KEY!,
-});
-
-function shouldVerifySignature(): boolean {
-	if (process.env.NODE_ENV === 'development') {
-		return process.env.VERIFY_QSTASH_SIGNATURE === 'true';
-	}
-	if (process.env.SKIP_QSTASH_SIGNATURE === 'true') {
-		return false;
-	}
-	return true;
-}
-
-function getCallbackUrl(req: Request): string {
-	const currentHost = req.headers.get('host') || process.env.VERCEL_URL || '';
-	const defaultBase = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-	const protocol =
-		currentHost.includes('localhost') || currentHost.startsWith('127.') ? 'http' : 'https';
-	const baseUrl = currentHost ? `${protocol}://${currentHost}` : defaultBase;
-	return `${baseUrl}/api/v2/worker/enrich`;
-}
 
 // ============================================================================
 // Route Handler
@@ -66,30 +38,28 @@ export async function POST(req: Request) {
 	// ========================================================================
 
 	const rawBody = await req.text();
-	const signature = req.headers.get('Upstash-Signature');
 
-	if (shouldVerifySignature()) {
-		if (!signature) {
-			logger.warn('[v2-enrich-worker-route] Missing QStash signature', {}, LogCategory.JOB);
-			return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
-		}
-
-		const callbackUrl = getCallbackUrl(req);
-		try {
-			const valid = await receiver.verify({ signature, body: rawBody, url: callbackUrl });
-			if (!valid) {
-				logger.warn('[v2-enrich-worker-route] Invalid QStash signature', {}, LogCategory.JOB);
-				return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-			}
-		} catch (error) {
+	const verification = await verifyQstashRequestSignature({
+		req,
+		rawBody,
+		pathname: '/api/v2/worker/enrich',
+	});
+	if (!verification.ok) {
+		if (verification.error === 'Signature verification failed') {
 			logger.error(
 				'[v2-enrich-worker-route] Signature verification error',
-				error instanceof Error ? error : new Error(String(error)),
-				{},
+				new Error(verification.error),
+				{ callbackUrl: verification.callbackUrl },
 				LogCategory.JOB
 			);
-			return NextResponse.json({ error: 'Signature verification failed' }, { status: 401 });
+		} else {
+			logger.warn(
+				'[v2-enrich-worker-route] QStash signature rejected',
+				{ error: verification.error, callbackUrl: verification.callbackUrl },
+				LogCategory.JOB
+			);
 		}
+		return NextResponse.json({ error: verification.error }, { status: verification.status });
 	}
 
 	// ========================================================================
