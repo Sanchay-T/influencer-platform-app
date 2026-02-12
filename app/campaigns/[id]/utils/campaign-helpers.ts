@@ -239,19 +239,19 @@ export const createJobUpdateFromPayload = (
 			}
 		: job.pagination;
 
-	return {
-		status: typeof data?.status === 'string' ? data.status : job.status,
-		progress: extractProgress() ?? job.progress,
-		results: aggregatedResults,
-		resultsLoaded: true,
-		creatorBuffer: dedupedCreators,
-		totalCreators,
-		pagination,
-		pageLimit: pagination?.limit ?? undefined ?? job.pageLimit ?? DEFAULT_PAGE_LIMIT,
-		resultsError: null,
-		handleQueue: queueState ?? job.handleQueue ?? null,
+		return {
+			status: typeof data?.status === 'string' ? data.status : job.status,
+			progress: extractProgress() ?? job.progress,
+			results: aggregatedResults,
+			resultsLoaded: true,
+			creatorBuffer: dedupedCreators,
+			totalCreators,
+			pagination,
+			pageLimit: pagination?.limit ?? job.pageLimit ?? DEFAULT_PAGE_LIMIT,
+			resultsError: null,
+			handleQueue: queueState ?? job.handleQueue ?? null,
+		};
 	};
-};
 
 // ScrapingJob to UiScrapingJob conversion
 export const toUiJob = (job: import('../types/campaign-page').ScrapingJob): UiScrapingJob => {
