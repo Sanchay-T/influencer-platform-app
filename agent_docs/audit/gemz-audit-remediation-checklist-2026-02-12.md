@@ -48,8 +48,10 @@ Verification expectation (after each patch):
   - Tests: `lib/queue/qstash-signature.test.ts`
   - Verification: with `VERIFY_QSTASH_SIGNATURE=true` in dev, missing signature returns `401` (tested on `/api/v2/worker/search` + `/api/email/send-scheduled`).
 
-- [ ] #6 DLQ handler swallows signature verification failure — processes anyway
-  - File: `app/api/qstash/dead-letter/route.ts:66`
+- [x] #6 DLQ handler swallows signature verification failure — processes anyway
+  - File: `app/api/qstash/dead-letter/route.ts`
+  - Patch: Fail closed on invalid/missing signature (no "catch and proceed anyway").
+  - Verification: with `VERIFY_QSTASH_SIGNATURE=true` in dev, missing signature returns `401`.
 
 - [ ] #7 E2E routes accessible if `ENABLE_AUTH_BYPASS=true` in prod
   - File: `app/api/admin/e2e/*`
