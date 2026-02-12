@@ -30,8 +30,11 @@ Verification expectation (after each patch):
   - File: `vercel.json`
   - Patch: Removed global wildcard CORS headers.
 
-- [ ] #4 Admin CORS `*` on OPTIONS handler
-  - File: `app/api/admin/config/route.ts:239`
+- [x] #4 Admin CORS `*` on OPTIONS handler
+  - Files:
+  - `app/api/admin/config/route.ts`
+  - `app/api/admin/config/init/route.ts`
+  - Patch: Removed explicit OPTIONS handlers (no wildcard CORS).
 
 - [ ] #5 `SKIP_QSTASH_SIGNATURE` not gated by `NODE_ENV` (works in prod)
   - File: 6+ QStash route files
