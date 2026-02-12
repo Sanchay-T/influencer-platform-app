@@ -40,21 +40,26 @@ function isBot(userAgent: string | null): boolean {
   return BOT_USER_AGENTS.some(bot => ua.includes(bot.toLowerCase()));
 }
 
-const PUBLIC_ROUTE_PATTERNS = [
+const PUBLIC_ROUTE_PATTERNS: RegExp[] = [
   /^\/$/,
   /^\/sign-in(\/.*)?$/,
   /^\/sign-up(\/.*)?$/,
   /^\/sso-callback(\/.*)?$/,
   /^\/api\/stripe\/webhook$/,
+  /^\/api\/health$/,
   /^\/api\/webhooks\/.*$/,
+  /^\/api\/cron\/.*$/,
   /^\/api\/qstash\/.*$/,
   /^\/api\/v2\/worker\/.*$/,
   /^\/api\/proxy\/.*$/,
   /^\/api\/export\/.*$/,
   /^\/api\/email\/send-scheduled$/,
-  // E2E test admin routes (dev only - routes check NODE_ENV internally)
-  /^\/api\/admin\/e2e\/.*$/,
 ];
+
+if (process.env.NODE_ENV !== 'production') {
+  // E2E test admin routes (dev/test only).
+  PUBLIC_ROUTE_PATTERNS.push(/^\/api\/admin\/e2e\/.*$/);
+}
 
 function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTE_PATTERNS.some((pattern) => pattern.test(pathname));

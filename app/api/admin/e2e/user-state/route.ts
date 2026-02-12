@@ -7,21 +7,15 @@
 
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
+import { getE2eApiDisabledResponse, isE2eApiEnabled } from '@/lib/auth/e2e-guards';
 import { deriveTrialStatus } from '@/lib/billing/trial-status';
 import { db } from '@/lib/db';
 import { userBilling, userSubscriptions, users, userUsage } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
-// Only allow in development mode
-const isTestMode =
-	process.env.NODE_ENV === 'development' || process.env.ENABLE_AUTH_BYPASS === 'true';
-
 export async function GET(request: Request) {
-	if (!isTestMode) {
-		return NextResponse.json(
-			{ error: 'E2E endpoints only available in development' },
-			{ status: 403 }
-		);
+	if (!isE2eApiEnabled()) {
+		return getE2eApiDisabledResponse();
 	}
 
 	const { searchParams } = new URL(request.url);
@@ -81,11 +75,8 @@ export async function GET(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-	if (!isTestMode) {
-		return NextResponse.json(
-			{ error: 'E2E endpoints only available in development' },
-			{ status: 403 }
-		);
+	if (!isE2eApiEnabled()) {
+		return getE2eApiDisabledResponse();
 	}
 
 	const body = await request.json();

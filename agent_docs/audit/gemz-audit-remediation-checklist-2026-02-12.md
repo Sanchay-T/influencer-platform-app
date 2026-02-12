@@ -53,8 +53,13 @@ Verification expectation (after each patch):
   - Patch: Fail closed on invalid/missing signature (no "catch and proceed anyway").
   - Verification: with `VERIFY_QSTASH_SIGNATURE=true` in dev, missing signature returns `401`.
 
-- [ ] #7 E2E routes accessible if `ENABLE_AUTH_BYPASS=true` in prod
-  - File: `app/api/admin/e2e/*`
+- [x] #7 E2E routes accessible if `ENABLE_AUTH_BYPASS=true` in prod
+  - Files:
+  - `app/api/admin/e2e/*`
+  - `middleware.ts`
+  - Patch:
+  - Added centralized guard `lib/auth/e2e-guards.ts` (hard-disable in production, returns `404`).
+  - `middleware.ts` only treats `/api/admin/e2e/*` as public when `NODE_ENV !== 'production'`.
 
 - [ ] #8 CSV exports stored as access: `public` on Vercel Blob
   - File: `app/api/export/csv-worker/route.ts:175`
