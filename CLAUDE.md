@@ -6,6 +6,7 @@ You are working on **Gemz** (usegems.io) — an AI-powered influencer discovery 
 - **Stack:** Next.js 15 (App Router), TypeScript, Supabase + Drizzle ORM, Clerk auth, Stripe billing, QStash, Resend
 - **Features:** Keyword search, Similar creator search, Campaign management, List organization, CSV export, Trial/subscription billing
 - **Deployment:** Vercel → usegems.io
+- **Dev Server:** `npm run dev:ngrok` (canonical local dev command)
 
 ## Your Behavior
 

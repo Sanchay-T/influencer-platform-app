@@ -665,7 +665,7 @@ Notice how the thinking depth increases!
 
 ### Best Uses
 
-- Development servers (`npm run dev`)
+- Development servers (`npm run dev:ngrok`)
 - Watch mode commands (`npm run watch`)
 - Long builds (`npm run build`)
 - Database processes
@@ -676,7 +676,7 @@ Notice how the thinking depth increases!
 ### Exercise 9.1: Background a Dev Server
 
 ```
-1. Ask Claude: "Start the dev server with npm run dev"
+1. Ask Claude: "Start the dev server with npm run dev:ngrok"
 2. While it's running, press Ctrl+B
 3. The command goes to background
 4. You can keep working while it runs!
