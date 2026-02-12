@@ -12,8 +12,7 @@
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { trackServer } from '@/lib/analytics/track';
-import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
-import { FeatureGateService } from '@/lib/billing';
+import { requireBillingAccess } from '@/lib/billing';
 import { db } from '@/lib/db';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { campaigns, exportJobs, scrapingJobs } from '@/lib/db/schema';
@@ -40,11 +39,14 @@ export async function GET(req: Request) {
 				return NextResponse.json({ error: 'Job ID or campaign ID is required' }, { status: 400 });
 			}
 
-			// Verify authentication
-			const { userId } = await getAuthOrTest();
-			if (!userId) {
-				return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+			const access = await requireBillingAccess({
+				featureKey: 'csv_export',
+				requireActiveAccess: true,
+			});
+			if ('response' in access) {
+				return access.response;
 			}
+			const { userId } = access;
 
 			// Set Sentry context for export
 			SentryLogger.setContext('export', {
@@ -53,30 +55,6 @@ export async function GET(req: Request) {
 				userId,
 				source: campaignId ? 'campaign' : 'job',
 			});
-
-			// Feature gate: ensure CSV export is allowed for this plan
-			SentryLogger.addBreadcrumb({
-				category: 'export',
-				message: 'Checking feature gate for CSV export',
-			});
-			const gate = await FeatureGateService.assertExportFormat(userId, 'CSV');
-			if (!gate.allowed) {
-				SentryLogger.addBreadcrumb({
-					category: 'export',
-					message: 'CSV export blocked by feature gate',
-					level: 'warning',
-					data: { currentPlan: gate.currentPlan, reason: gate.reason },
-				});
-				return NextResponse.json(
-					{
-						error: 'CSV export not available on your plan',
-						upgrade: true,
-						currentPlan: gate.currentPlan,
-						reason: gate.reason,
-					},
-					{ status: 403 }
-				);
-			}
 
 			// Validate ownership
 			if (campaignId) {

@@ -93,9 +93,6 @@ export const buildAggregatedResults = (
 export const resolveScrapingEndpoint = (
 	job?: Pick<UiScrapingJob, 'platform' | 'targetUsername' | 'keywords' | 'id'>
 ) => {
-	const normalized = (job?.platform || '').toLowerCase();
-	const hasTargetUsername =
-		typeof job?.targetUsername === 'string' && job.targetUsername.trim().length > 0;
 	const debugPolling =
 		typeof window !== 'undefined' && window.localStorage.getItem('gemz_debug_polling') === 'true';
 
@@ -104,27 +101,14 @@ export const resolveScrapingEndpoint = (
 			structuredConsole.log('[RUN-ENDPOINT] resolve', {
 				jobId: job?.id ?? null,
 				platform: job?.platform ?? null,
-				hasTargetUsername,
 				endpoint,
 			});
 		}
 		return endpoint;
 	};
 
-	// Handle similar_discovery platforms first (new unified similar search system)
-	if (normalized.startsWith('similar_discovery_')) {
-		return logEndpoint('/api/scraping/similar-discovery');
-	}
-
-	if (hasTargetUsername) {
-		if (['youtube', 'youtube-similar', 'youtube_similar'].includes(normalized)) {
-			return logEndpoint('/api/scraping/youtube-similar');
-		}
-		if (['instagram', 'instagram-similar', 'instagram_similar'].includes(normalized)) {
-			return logEndpoint('/api/scraping/instagram');
-		}
-	}
-
+	// Canonical status/results endpoint for all job types.
+	// Similar jobs are normalized server-side via /api/v2/status fallback to scraping_results.
 	return logEndpoint('/api/v2/status');
 };
 
@@ -247,7 +231,7 @@ export const createJobUpdateFromPayload = (
 		creatorBuffer: dedupedCreators,
 		totalCreators,
 		pagination,
-		pageLimit: pagination?.limit ?? undefined ?? job.pageLimit ?? DEFAULT_PAGE_LIMIT,
+		pageLimit: pagination?.limit ?? job.pageLimit ?? DEFAULT_PAGE_LIMIT,
 		resultsError: null,
 		handleQueue: queueState ?? job.handleQueue ?? null,
 	};

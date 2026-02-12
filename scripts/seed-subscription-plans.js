@@ -125,7 +125,7 @@ async function seedPlans() {
     console.log('💡 Next steps:');
     console.log('   • Test plan validation: npm run db:local:test');
     console.log('   • View in database studio: npm run db:studio:local');
-    console.log('   • Start development server: npm run dev:local');
+    console.log('   • Start development server: npm run dev:ngrok');
 
   } catch (error) {
     console.error('❌ Error seeding plans:', error);

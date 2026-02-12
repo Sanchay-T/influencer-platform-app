@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
+import { requireBillingAccess } from '@/lib/billing';
 import { recordExport } from '@/lib/db/queries/list-queries';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { apiTracker, listTracker, SentryLogger, sessionTracker } from '@/lib/sentry';
@@ -8,10 +8,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 	const { id } = await params;
 
 	return apiTracker.trackRoute('list', 'export', async () => {
-		const { userId } = await getAuthOrTest();
-		if (!userId) {
-			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+		const access = await requireBillingAccess({
+			featureKey: 'csv_export',
+			requireActiveAccess: true,
+		});
+		if ('response' in access) {
+			return access.response;
 		}
+		const { userId } = access;
 
 		// Set user and list context for Sentry
 		SentryLogger.setContext('list_export', { userId, listId: id });

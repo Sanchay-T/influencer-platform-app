@@ -11,7 +11,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { resetAllMonthlyUsage } from '@/lib/billing';
+import { resetAllMonthlyUsageWithAudit } from '@/lib/billing';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
 
 const logger = createCategoryLogger(LogCategory.SYSTEM);
@@ -42,20 +42,28 @@ export async function GET(request: Request) {
 			}
 		}
 
-		logger.info('Starting monthly usage reset');
-		const startTime = Date.now();
+			logger.info('Starting monthly usage reset');
+			const startTime = Date.now();
 
-		const usersReset = await resetAllMonthlyUsage();
+			const resetResult = await resetAllMonthlyUsageWithAudit('cron');
 
-		const duration = Date.now() - startTime;
-		logger.info('Monthly usage reset completed', { usersReset, durationMs: duration });
+			const duration = Date.now() - startTime;
+			logger.info('Monthly usage reset completed', {
+				usersReset: resetResult.usersReset,
+				skipped: resetResult.skipped,
+				auditId: resetResult.auditId,
+				durationMs: duration,
+			});
 
-		return NextResponse.json({
-			success: true,
-			usersReset,
-			durationMs: duration,
-			timestamp: new Date().toISOString(),
-		});
+			return NextResponse.json({
+				success: true,
+				usersReset: resetResult.usersReset,
+				skipped: resetResult.skipped,
+				auditId: resetResult.auditId,
+				monthStart: resetResult.monthStart.toISOString(),
+				durationMs: duration,
+				timestamp: new Date().toISOString(),
+			});
 	} catch (error) {
 		const normalizedError = error instanceof Error ? error : new Error(String(error));
 		logger.error('Monthly usage reset failed', normalizedError);

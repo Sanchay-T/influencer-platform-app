@@ -60,6 +60,7 @@ export default function PlansAdminPage() {
 	const [plans, setPlans] = useState<PlanItem[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [savingKey, setSavingKey] = useState<string | null>(null);
+	const [readOnly, setReadOnly] = useState(false);
 
 	useEffect(() => {
 		(async () => {
@@ -69,9 +70,10 @@ export default function PlansAdminPage() {
 				if (!res.ok) {
 					throw new Error('Unauthorized or failed to fetch');
 				}
-				const data = await res.json();
-				const record = toRecord(data);
-				const rawPlans = record ? (getArrayProperty(record, 'plans') ?? []) : [];
+					const data = await res.json();
+					const record = toRecord(data);
+					const rawPlans = record ? (getArrayProperty(record, 'plans') ?? []) : [];
+					setReadOnly(record ? (getBooleanProperty(record, 'readOnly') ?? false) : false);
 				const parsedPlans = rawPlans
 					.map((plan) => parsePlanItem(plan))
 					.filter((plan): plan is PlanItem => plan !== null);
@@ -85,6 +87,11 @@ export default function PlansAdminPage() {
 	}, []);
 
 	const onSave = async (plan: PlanItem) => {
+		if (readOnly) {
+			toast.error('Plan edits are disabled. Billing plans are read-only from static config.');
+			return;
+		}
+
 		try {
 			setSavingKey(plan.planKey);
 			const res = await fetch('/api/admin/plans', {
@@ -124,6 +131,12 @@ export default function PlansAdminPage() {
 	return (
 		<div className="p-6 space-y-4 max-w-5xl">
 			<h1 className="text-2xl font-bold">Subscription Plans</h1>
+			{readOnly ? (
+				<div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+					Plan settings are read-only. Runtime plan limits/features now come from static plan
+					config.
+				</div>
+			) : null}
 			<div className="grid gap-4 md:grid-cols-2">
 				{plans.map((plan, idx) => {
 					const planId = `plan-${plan.planKey}`;
@@ -237,7 +250,10 @@ export default function PlansAdminPage() {
 									/>
 								</div>
 								<div className="flex gap-2">
-									<Button disabled={savingKey === plan.planKey} onClick={() => onSave(plan)}>
+									<Button
+										disabled={readOnly || savingKey === plan.planKey}
+										onClick={() => onSave(plan)}
+									>
 										{savingKey === plan.planKey ? 'Saving…' : 'Save'}
 									</Button>
 								</div>

@@ -76,8 +76,12 @@ Verification expectation (after each patch):
   - `app/admin/layout.tsx` (new)
   - Patch: Added server-side admin guard in `app/admin/layout.tsx` (`isAdminUser()` + `notFound()`).
 
-- [ ] #10 `NEXT_PUBLIC_ADMIN_EMAILS` ships admin identities to every browser
-  - File: `lib/hooks/use-admin.ts`
+- [x] #10 `NEXT_PUBLIC_ADMIN_EMAILS` ships admin identities to every browser
+  - Files:
+  - `lib/hooks/use-admin.ts`
+  - `app/api/admin/me/route.ts` (new)
+  - `lib/auth/admin-utils.ts`
+  - Patch: client now derives `isAdmin` from server (`/api/admin/me`); allowlist env var is server-only `ADMIN_EMAILS` (fallback supported for migration).
 
 ### Data Integrity / Business Logic
 

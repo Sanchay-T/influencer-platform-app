@@ -424,7 +424,7 @@ async function validateSecurityCategory(targetEnv?: string): Promise<ValidationC
 	}
 
 	// Check admin configuration
-	const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS;
+	const adminEmails = process.env.ADMIN_EMAILS ?? process.env.NEXT_PUBLIC_ADMIN_EMAILS;
 	if (!adminEmails && environment !== 'test') {
 		issues.push('Admin emails not configured');
 	}

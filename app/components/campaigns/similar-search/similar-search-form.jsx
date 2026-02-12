@@ -63,20 +63,20 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
 		setSearchState({ status: 'searching', message: 'Starting search...' });
 
 		try {
-			// Determine API endpoint based on platform
-			const apiEndpoint =
-				selectedPlatform === 'youtube'
-					? '/api/scraping/youtube-similar'
-					: '/api/scraping/similar-discovery';
+			const apiEndpoint = '/api/v2/dispatch';
 			structuredConsole.log(`🔄 [SIMILAR-SEARCH-FORM] Making API request to ${apiEndpoint}`);
 
 			const response = await fetch(apiEndpoint, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					username,
+					searchType: 'similar',
+					seedUsername: username,
 					campaignId,
 					platform: selectedPlatform,
+					targetResults: 100,
+					similarEngine:
+						selectedPlatform === 'youtube' ? 'youtube_similar' : 'similar_discovery',
 				}),
 			});
 

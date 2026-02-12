@@ -47,7 +47,7 @@ if [ $? -eq 0 ]; then
     echo "🎉 Local database setup complete!"
     echo ""
     echo "📋 Next steps:"
-    echo "   • Start development server: npm run dev:local"
+    echo "   • Start development server: npm run dev:ngrok"
     echo "   • Access database studio: npm run db:studio:local"
     echo "   • View container logs: docker-compose logs -f"
     echo ""

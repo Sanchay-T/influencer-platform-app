@@ -4,7 +4,7 @@
  *
  * Verifies that QStash job handlers have proper idempotency:
  * 1. process-search checks job status before processing
- * 2. process-results checks job status before scheduling continuations
+ * 2. process-results is decommissioned (returns 410)
  *
  * Usage: npx tsx testing/scalability/verify-qstash.ts
  */
@@ -44,8 +44,8 @@ const QSTASH_FILES = [
   },
   {
     path: 'app/api/qstash/process-results/route.ts',
-    name: 'Process Results Handler',
-    requiredChecks: ['processing'], // Must check job is still processing before scheduling
+    name: 'Process Results Handler (Decommissioned)',
+    requiredChecks: ['decommissioned', '410'],
   },
 ];
 
@@ -96,27 +96,11 @@ function checkQStashFile(filePath: string, config: typeof QSTASH_FILES[0]): QSta
     (content.includes('skipped') || content.includes('already'));
 
   // Analyze for specific issues
-  if (config.name === 'Process Results Handler') {
-    // This handler MUST check if job is still 'processing' before scheduling continuation
-    if (!checksProcessingStatus) {
-      issues.push(
-        "Missing: Check job.status === 'processing' before scheduling continuation"
-      );
-      issues.push('Risk: Duplicate QStash messages will be scheduled (exponential explosion)');
-    }
-
-    // Check if it blindly schedules without checking status
-    const schedulesWithoutCheck =
-      content.includes('qstash.publishJSON') &&
-      !content.match(/if\s*\([^)]*status[^)]*\)[^{]*{[^}]*qstash\.publishJSON/s);
-
-    // More lenient check - look for any conditional before publishJSON
-    const hasConditionalBeforePublish =
-      content.includes('if (') &&
-      content.includes('qstash.publishJSON');
-
-    if (!hasConditionalBeforePublish) {
-      issues.push('Warning: qstash.publishJSON called without conditional check');
+  if (config.name === 'Process Results Handler (Decommissioned)') {
+    const decommissioned =
+      content.includes('Endpoint decommissioned') || content.includes('status: 410');
+    if (!decommissioned) {
+      issues.push('Missing: process-results route should be explicitly decommissioned (410)');
     }
   }
 

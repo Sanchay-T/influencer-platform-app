@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
+import { requireBillingAccess } from '@/lib/billing';
 import { deleteList, getListDetail, updateList } from '@/lib/db/queries/list-queries';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { apiTracker, listTracker, SentryLogger, sessionTracker } from '@/lib/sentry';
@@ -62,12 +63,13 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
 	return apiTracker.trackRoute('list', 'update', async () => {
 		const authStart = performance.now();
-		const { userId } = await getAuthOrTest();
+		const access = await requireBillingAccess({ requireActiveAccess: true });
 		const authMs = performance.now() - authStart;
 
-		if (!userId) {
-			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+		if ('response' in access) {
+			return access.response;
 		}
+		const { userId } = access;
 
 		// Set user and list context for Sentry
 		SentryLogger.setContext('list_update', { userId, listId: id });
@@ -104,10 +106,11 @@ export async function DELETE(_: Request, context: { params: Promise<{ id: string
 	const { id } = await context.params;
 
 	return apiTracker.trackRoute('list', 'delete', async () => {
-		const { userId } = await getAuthOrTest();
-		if (!userId) {
-			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+		const access = await requireBillingAccess({ requireActiveAccess: true });
+		if ('response' in access) {
+			return access.response;
 		}
+		const { userId } = access;
 
 		// Set user and list context for Sentry
 		SentryLogger.setContext('list_delete', { userId, listId: id });

@@ -21,6 +21,8 @@ import type {
 const VALID_PLATFORMS: readonly Platform[] = ['tiktok', 'instagram', 'youtube'];
 type TargetResults = 100 | 500 | 1000;
 const VALID_TARGETS: readonly TargetResults[] = [100, 500, 1000];
+const VALID_SIMILAR_ENGINES = ['similar_discovery', 'instagram_similar', 'youtube_similar'] as const;
+type SimilarEngine = (typeof VALID_SIMILAR_ENGINES)[number];
 const MAX_KEYWORDS = 50;
 const MIN_KEYWORD_LENGTH = 2;
 const MAX_KEYWORD_LENGTH = 100;
@@ -30,6 +32,9 @@ const isValidPlatform = (value: unknown): value is Platform =>
 
 const isValidTarget = (value: unknown): value is TargetResults =>
 	typeof value === 'number' && VALID_TARGETS.some((target) => target === value);
+
+const isValidSimilarEngine = (value: unknown): value is SimilarEngine =>
+	isString(value) && VALID_SIMILAR_ENGINES.some((engine) => engine === value);
 
 // ============================================================================
 // Dispatch Request Validation
@@ -48,11 +53,55 @@ export function validateDispatchRequest(body: unknown): {
 		return { valid: false, error: 'Request body must be an object' };
 	}
 
+	const rawSearchType = isString(obj.searchType) ? obj.searchType : 'keyword';
+	const searchType = rawSearchType === 'similar' ? 'similar' : 'keyword';
+
 	// Platform validation
 	if (!isValidPlatform(obj.platform)) {
 		return {
 			valid: false,
 			error: `Invalid platform. Must be one of: ${VALID_PLATFORMS.join(', ')}`,
+		};
+	}
+
+	// Similar dispatch validation path
+	if (searchType === 'similar') {
+		if (!isString(obj.seedUsername)) {
+			return { valid: false, error: 'seedUsername is required for similar search' };
+		}
+
+		const seedUsername = obj.seedUsername.trim().replace(/^@/, '');
+		if (seedUsername.length < 2) {
+			return { valid: false, error: 'seedUsername must be at least 2 characters' };
+		}
+		if (seedUsername.length > 100) {
+			return { valid: false, error: 'seedUsername must be at most 100 characters' };
+		}
+
+		// Campaign ID validation
+		if (!isString(obj.campaignId)) {
+			return { valid: false, error: 'campaignId is required and must be a string' };
+		}
+		const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+		if (!uuidRegex.test(obj.campaignId)) {
+			return { valid: false, error: 'campaignId must be a valid UUID' };
+		}
+
+			const targetResults = isValidTarget(obj.targetResults) ? obj.targetResults : 100;
+			const similarEngine = isValidSimilarEngine(obj.similarEngine)
+				? obj.similarEngine
+				: undefined;
+
+		return {
+			valid: true,
+			data: {
+				searchType: 'similar',
+				platform: obj.platform,
+				seedUsername,
+				targetResults,
+				campaignId: obj.campaignId,
+				...(similarEngine ? { similarEngine } : {}),
+			},
 		};
 	}
 
@@ -108,6 +157,7 @@ export function validateDispatchRequest(body: unknown): {
 	return {
 		valid: true,
 		data: {
+			searchType: 'keyword',
 			platform: obj.platform,
 			keywords: sanitizedKeywords,
 			targetResults: obj.targetResults,

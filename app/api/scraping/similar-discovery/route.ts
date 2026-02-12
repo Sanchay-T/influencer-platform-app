@@ -12,12 +12,14 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { trackSearchStarted } from '@/lib/analytics/logsnag';
 import { getUserDataForTracking } from '@/lib/analytics/track-server-utils';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
-import { validateCreatorSearch } from '@/lib/billing';
+import { validateCreatorSearch, validateTrialSearchLimit } from '@/lib/billing';
 import { db } from '@/lib/db';
 import { scrapingJobs } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { qstash } from '@/lib/queue/qstash';
+import { dispatch } from '@/lib/search-engine/v2/workers';
 import { normalizePageParams, paginateCreators } from '@/lib/search-engine/utils/pagination';
+import { buildUnifiedStatusResponse } from '@/lib/search-engine/utils/unified-status-response';
 import { isRecord, isString, toError, toRecord } from '@/lib/utils/type-guards';
 import { getWebhookUrl } from '@/lib/utils/url-utils';
 
@@ -84,75 +86,34 @@ export async function POST(req: NextRequest) {
 			? 100
 			: Math.max(100, Math.min(1000, Math.round(requestedTarget / 100) * 100));
 
-		// Plan enforcement
-		const planCheck = await validateCreatorSearch(userId, targetResults);
-		if (!planCheck.allowed) {
+		const dispatchResult = await dispatch({
+			userId,
+			request: {
+				searchType: 'similar',
+				platform,
+				seedUsername: sanitizedUsername,
+				targetResults: targetResults as 100 | 500 | 1000,
+				campaignId,
+				similarEngine: 'similar_discovery',
+			},
+		});
+
+		if (!dispatchResult.success) {
 			return NextResponse.json(
 				{
-					error: 'Plan limit exceeded',
-					message: planCheck.reason,
-					upgrade: true,
+					error: dispatchResult.error || 'Failed to queue search',
+					upgrade: dispatchResult.statusCode === 403,
 				},
-				{ status: 403 }
+				{ status: dispatchResult.statusCode }
 			);
 		}
 
-		// Create job with platform-specific identifier
-		const jobPlatform = `similar_discovery_${platform}`;
-
-		const [job] = await db
-			.insert(scrapingJobs)
-			.values({
-				userId,
-				targetUsername: sanitizedUsername,
-				targetResults: targetResults,
-				status: 'pending',
-				processedRuns: 0,
-				processedResults: 0,
-				platform: jobPlatform,
-				region: 'US', // Default to US for quality filter
-				campaignId,
-				searchParams: {
-					runner: 'similar_discovery',
-					targetUsername: sanitizedUsername,
-					targetPlatform: platform,
-				},
-				createdAt: new Date(),
-				updatedAt: new Date(),
-				cursor: 0,
-				progress: '0',
-				timeoutAt: new Date(Date.now() + TIMEOUT_MINUTES * 60 * 1000),
-			})
-			.returning();
-
-		// Track search started in LogSnag
-		// @why Uses getUserDataForTracking to get fresh data from Clerk if DB has fallback email
-		const userData = await getUserDataForTracking(userId);
-		await trackSearchStarted({
-			userId,
-			platform: platform === 'instagram' ? 'Instagram' : 'TikTok',
-			type: 'similar',
-			targetCount: targetResults,
-			email: userData.email || 'unknown',
-			name: userData.name,
-		});
-
-		// Enqueue for processing
-		if (process.env.QSTASH_TOKEN) {
-			const callbackUrl = `${getWebhookUrl()}/api/qstash/process-search`;
-
-			await qstash.publishJSON({
-				url: callbackUrl,
-				body: { jobId: job.id },
-				retries: 3,
-			});
-		}
-
 		return NextResponse.json({
-			jobId: job.id,
+			jobId: dispatchResult.data?.jobId,
 			status: 'queued',
 			targetResults: targetResults,
-			platform: jobPlatform,
+			platform: `similar_discovery_${platform}`,
+			engine: 'v2_dispatch_wrapper',
 		});
 	} catch (error: unknown) {
 		const requestError = toError(error);
@@ -209,9 +170,24 @@ export async function GET(req: NextRequest) {
 				})
 				.where(eq(scrapingJobs.id, job.id));
 
-			return NextResponse.json({
-				status: 'timeout',
+			const timeoutPayload = buildUnifiedStatusResponse({
+				jobId: job.id,
+				rawStatus: 'timeout',
+				processedResults: job.processedResults ?? 0,
+				targetResults: job.targetResults ?? 0,
+				progressPercent: Number(job.progress ?? '0'),
+				totalCreators: 0,
+				creatorsEnriched: 0,
+				platform: job.platform ?? 'similar_discovery_instagram',
 				error: 'Job exceeded maximum allowed time',
+				results: [],
+				pagination: { offset: 0, limit: 200, total: 0, nextOffset: null },
+			});
+			return NextResponse.json({
+				...timeoutPayload,
+				targetUsername: job.targetUsername,
+				targetPlatform: job.platform?.replace('similar_discovery_', '') ?? 'instagram',
+				engine: 'similar_discovery',
 			});
 		}
 
@@ -229,23 +205,32 @@ export async function GET(req: NextRequest) {
 
 		// Extract target platform from job platform
 		const targetPlatform = job.platform?.replace('similar_discovery_', '') ?? 'instagram';
+		const benchmark = isRecord(toRecord(job.searchParams)?.searchEngineBenchmark)
+			? toRecord(job.searchParams)?.searchEngineBenchmark
+			: null;
+		const unifiedPayload = buildUnifiedStatusResponse({
+			jobId: job.id,
+			rawStatus: job.status,
+			processedResults: job.processedResults ?? 0,
+			targetResults: job.targetResults ?? 0,
+			progressPercent: Number(job.progress ?? '0'),
+			totalCreators,
+			creatorsEnriched: totalCreators,
+			platform: job.platform ?? 'similar_discovery_instagram',
+			results: (paginatedResults ?? []).map((result) => ({
+				id: result.id,
+				creators: Array.isArray(result.creators) ? result.creators : [],
+			})),
+			pagination,
+			error: job.error,
+			benchmark,
+		});
 
 		return NextResponse.json({
-			status: job.status,
-			processedResults: job.processedResults,
-			targetResults: job.targetResults,
+			...unifiedPayload,
 			targetUsername: job.targetUsername,
-			error: job.error,
-			results: paginatedResults ?? [],
-			progress: Number(job.progress ?? '0'),
-			platform: job.platform ?? 'similar_discovery_instagram',
 			targetPlatform,
 			engine: 'similar_discovery',
-			benchmark: isRecord(toRecord(job.searchParams)?.searchEngineBenchmark)
-				? toRecord(job.searchParams)?.searchEngineBenchmark
-				: null,
-			totalCreators,
-			pagination,
 		});
 	} catch (error: unknown) {
 		structuredConsole.error('[SIMILAR-DISCOVERY] GET failed', error);

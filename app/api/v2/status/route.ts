@@ -14,7 +14,7 @@ import { NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { CacheKeys, CacheTTL, cacheGet, cacheSet } from '@/lib/cache/redis';
 import { db } from '@/lib/db';
-import { jobCreators, scrapingJobs } from '@/lib/db/schema';
+import { jobCreators, scrapingJobs, scrapingResults } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
 import { loadJobTracker } from '@/lib/search-engine/v2/core/job-tracker';
 import type { StatusResponse } from '@/lib/search-engine/v2/workers/types';
@@ -60,6 +60,31 @@ function getStatusMessage(
 	}
 }
 
+function isSimilarJobStatusSource(job: {
+	platform: string | null;
+	targetUsername: string | null;
+	keywords: unknown;
+}): boolean {
+	const normalizedPlatform = (job.platform ?? '').toLowerCase();
+	if (normalizedPlatform.includes('similar') || normalizedPlatform.startsWith('similar_discovery')) {
+		return true;
+	}
+
+	const hasTargetUsername =
+		typeof job.targetUsername === 'string' && job.targetUsername.trim().length > 0;
+	const keywords = toStringArray(job.keywords) ?? [];
+	return hasTargetUsername && keywords.length === 0;
+}
+
+function getJobStatusSource(job: { searchParams: unknown }): 'job_creators' | 'scraping_results_legacy' {
+	const params = toRecord(job.searchParams);
+	const source = params?.statusSource;
+	if (source === 'job_creators') {
+		return 'job_creators';
+	}
+	return 'scraping_results_legacy';
+}
+
 // ============================================================================
 // Route Handler
 // ============================================================================
@@ -87,7 +112,7 @@ export async function GET(req: Request) {
 
 	const jobId = searchParams.get('jobId');
 	const offset = Math.max(0, Number.parseInt(searchParams.get('offset') || '0', 10));
-	const limit = Math.min(500, Math.max(1, Number.parseInt(searchParams.get('limit') || '200', 10)));
+	const limit = Math.min(500, Math.max(0, Number.parseInt(searchParams.get('limit') || '200', 10)));
 
 	if (!jobId) {
 		return NextResponse.json({ error: 'jobId is required' }, { status: 400 });
@@ -96,13 +121,11 @@ export async function GET(req: Request) {
 	// ========================================================================
 	// Step 2.5: Check Cache First (for completed jobs)
 	// ========================================================================
-
-	const cacheKey = `${CacheKeys.jobResults(jobId)}:${offset}:${limit}`;
+	// @security Scope cache by userId to prevent cross-user leakage on guessed job IDs.
+	const cacheKey = `${CacheKeys.jobResults(jobId)}:${userId}:${offset}:${limit}`;
 	const cached = await cacheGet<StatusResponse>(cacheKey);
 
 	if (cached) {
-		// Verify ownership from cached data or do a quick DB check
-		// For now, we trust the cache since jobId is unique per user
 		logger.info(
 			`[v2-status] CACHE HIT for ${jobId} (${Date.now() - startTime}ms)`,
 			{},
@@ -150,7 +173,7 @@ export async function GET(req: Request) {
 					Object.assign(job, updatedJob);
 				}
 			} else {
-				// Fallback: Check for stale jobs (2 min timeout, 80%+ enriched)
+				// Fallback: Check for stale jobs (2 min timeout, 95%+ enriched)
 				const staleResult = await tracker.checkStaleAndComplete();
 				if (staleResult.completed) {
 					logger.info(
@@ -176,47 +199,71 @@ export async function GET(req: Request) {
 	}
 
 	// ========================================================================
-	// Step 4: Load Results from job_creators table (DB-level pagination)
+	// Step 4: Load Results (canonical v2 response with source fallback)
+	// - Keyword jobs use job_creators (v2 canonical source)
+	// - Similar jobs use scraping_results (legacy source during convergence)
 	// ========================================================================
 
 	const resultsStart = Date.now();
+	const useSimilarFallback =
+		isSimilarJobStatusSource(job) && getJobStatusSource(job) === 'scraping_results_legacy';
+	let totalCreators = 0;
+	let actualEnrichedCount = 0;
+	let paginatedCreators: unknown[] = [];
 
-	// Get total count (fast, uses index)
-	const countResult = await db
-		.select({ count: sql<number>`count(*)::int` })
-		.from(jobCreators)
-		.where(eq(jobCreators.jobId, jobId));
+	if (useSimilarFallback) {
+		const latestResult = await db.query.scrapingResults.findFirst({
+			where: eq(scrapingResults.jobId, jobId),
+			columns: {
+				creators: true,
+			},
+			orderBy: (table, { desc }) => [desc(table.createdAt)],
+		});
 
-	const totalCreators = countResult[0]?.count ?? 0;
+		const creators = Array.isArray(latestResult?.creators) ? latestResult.creators : [];
+		totalCreators = creators.length;
+		actualEnrichedCount = creators.length;
+		paginatedCreators = limit > 0 ? creators.slice(offset, offset + limit) : [];
+	} else {
+		// Get total count (fast, uses index)
+		const countResult = await db
+			.select({ count: sql<number>`count(*)::int` })
+			.from(jobCreators)
+			.where(eq(jobCreators.jobId, jobId));
 
-	// Get actual enriched count from DB (not counter column)
-	// @why Counter columns have race conditions from parallel workers - DB state is source of truth
-	const enrichedResult = await db
-		.select({ count: sql<number>`count(*)::int` })
-		.from(jobCreators)
-		.where(sql`${jobCreators.jobId} = ${jobId} AND ${jobCreators.enriched} = true`);
+		totalCreators = countResult[0]?.count ?? 0;
 
-	const actualEnrichedCount = enrichedResult[0]?.count ?? 0;
+		// Get actual enriched count from DB (not counter column)
+		// @why Counter columns have race conditions from parallel workers - DB state is source of truth
+		const enrichedResult = await db
+			.select({ count: sql<number>`count(*)::int` })
+			.from(jobCreators)
+			.where(sql`${jobCreators.jobId} = ${jobId} AND ${jobCreators.enriched} = true`);
 
-	// Get paginated creators (DB-level OFFSET/LIMIT)
-	// @context USE2-17: Include keyword to track which keyword found each creator
-	const paginatedRows = await db
-		.select({
-			creatorData: jobCreators.creatorData,
-			keyword: jobCreators.keyword,
-		})
-		.from(jobCreators)
-		.where(eq(jobCreators.jobId, jobId))
-		.orderBy(jobCreators.createdAt)
-		.limit(limit)
-		.offset(offset);
+		actualEnrichedCount = enrichedResult[0]?.count ?? 0;
 
-	// Extract creator data from rows, injecting keyword into each creator object
-	// @context USE2-17: Frontend expects keyword field on creator for filtering/display
-	const paginatedCreators = paginatedRows.map((row) => ({
-		...(row.creatorData as object),
-		keyword: row.keyword || null,
-	}));
+		// Get paginated creators (DB-level OFFSET/LIMIT)
+		// @context USE2-17: Include keyword to track which keyword found each creator
+		if (limit > 0) {
+			const paginatedRows = await db
+				.select({
+					creatorData: jobCreators.creatorData,
+					keyword: jobCreators.keyword,
+				})
+				.from(jobCreators)
+				.where(eq(jobCreators.jobId, jobId))
+				.orderBy(jobCreators.createdAt)
+				.limit(limit)
+				.offset(offset);
+
+			// Extract creator data from rows, injecting keyword into each creator object
+			// @context USE2-17: Frontend expects keyword field on creator for filtering/display
+			paginatedCreators = paginatedRows.map((row) => ({
+				...(toRecord(row.creatorData) ?? {}),
+				keyword: row.keyword || null,
+			}));
+		}
+	}
 
 	// DEBUG: Log first creator's enrichment data to diagnose bio/email display issues
 	if (enableStatusDebug && paginatedCreators.length > 0) {
@@ -245,7 +292,7 @@ export async function GET(req: Request) {
 		LogCategory.JOB
 	);
 
-	const nextOffset = offset + limit < totalCreators ? offset + limit : null;
+	const nextOffset = limit > 0 && offset + limit < totalCreators ? offset + limit : null;
 
 	// ========================================================================
 	// Step 5: Map Job Status to V2 Status
@@ -258,7 +305,7 @@ export async function GET(req: Request) {
 			status = 'dispatching';
 			break;
 		case 'processing':
-			if (job.enrichmentStatus === 'in_progress') {
+			if (job.enrichmentStatus === 'in_progress' || Number(job.progress ?? 0) >= 60) {
 				status = 'enriching';
 			} else {
 				status = 'searching';
@@ -285,12 +332,16 @@ export async function GET(req: Request) {
 	const creatorsEnriched = actualEnrichedCount;
 
 	// Progress = 50% search + 50% enrichment
+	// Similar-search jobs don't dispatch keyword counters, so fall back to stored job.progress.
 	let percentComplete = 0;
 	if (keywordsDispatched > 0) {
 		percentComplete += (keywordsCompleted / keywordsDispatched) * 50;
 	}
 	if (totalCreators > 0) {
 		percentComplete += (creatorsEnriched / totalCreators) * 50;
+	}
+	if (useSimilarFallback && Number.isFinite(Number(job.progress))) {
+		percentComplete = Math.max(percentComplete, Math.max(0, Math.min(100, Number(job.progress))));
 	}
 	if (status === 'completed') {
 		percentComplete = 100;

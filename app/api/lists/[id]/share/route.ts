@@ -1,14 +1,15 @@
 import { NextResponse } from 'next/server';
-import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
+import { requireBillingAccess } from '@/lib/billing';
 import { manageCollaborators } from '@/lib/db/queries/list-queries';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
 	const { id } = await params;
-	const { userId } = await getAuthOrTest();
-	if (!userId) {
-		return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+	const access = await requireBillingAccess({ requireActiveAccess: true });
+	if ('response' in access) {
+		return access.response;
 	}
+	const { userId } = access;
 	try {
 		const body = await request.json();
 		await manageCollaborators(userId, id, body.collaborators ?? []);

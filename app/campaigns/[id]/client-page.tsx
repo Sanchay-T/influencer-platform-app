@@ -34,7 +34,6 @@ import {
 	formatDate,
 	getStatusVariant,
 	isSimilarSearchJob,
-	resolveScrapingEndpoint,
 } from './utils/campaign-helpers';
 
 export default function ClientCampaignPage({ campaign }: ClientCampaignPageProps) {
@@ -309,11 +308,9 @@ function ResultsView({
 	}
 
 	const hasCreatorsLoaded = processedCreators.length > 0;
-	const isV2KeywordJob = resolveScrapingEndpoint(selectedJob) === '/api/v2/status';
 	// @why Only show loading spinner on initial load, not during background refreshes
 	// This prevents flickering during active job polling
 	const isInitialLoading = !(
-		isV2KeywordJob ||
 		selectedJob.resultsLoaded ||
 		hasCreatorsLoaded ||
 		['completed', 'partial', 'error', 'timeout'].includes(selectedJob.status ?? '')

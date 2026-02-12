@@ -1,9 +1,7 @@
-import { eq } from 'drizzle-orm';
 import { type NextRequest, NextResponse } from 'next/server';
 import { isAdminUser } from '@/lib/auth/admin-utils';
-import { db } from '@/lib/db';
+import { getPlanConfig, isValidPlan } from '@/lib/billing/plan-config';
 import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
-import { subscriptionPlans } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
 export async function POST(req: NextRequest) {
@@ -20,19 +18,16 @@ export async function POST(req: NextRequest) {
 			return NextResponse.json({ error: 'userId and planKey are required' }, { status: 400 });
 		}
 
-		// Validate plan exists
-		const plan = await db.query.subscriptionPlans.findFirst({
-			where: eq(subscriptionPlans.planKey, planKey),
-		});
-		if (!plan) {
+		if (!isValidPlan(planKey)) {
 			return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
 		}
+		const plan = getPlanConfig(planKey);
 
 		// Update user's plan and snapshot limits
 		await updateUserProfile(userId, {
-			currentPlan: plan.planKey,
-			planCampaignsLimit: plan.campaignsLimit,
-			planCreatorsLimit: plan.creatorsLimit,
+			currentPlan: plan.key,
+			planCampaignsLimit: plan.limits.campaigns,
+			planCreatorsLimit: plan.limits.creatorsPerMonth,
 			planFeatures: plan.features,
 		});
 

@@ -9,7 +9,6 @@ import { and, eq } from 'drizzle-orm';
 import { clerkBackendClient } from '@/lib/auth/backend-auth';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
 import { sessionTracker } from '@/lib/sentry/feature-tracking';
-import { getNumberProperty, getStringProperty, toRecord } from '@/lib/utils/type-guards';
 import { db } from '../index';
 import {
 	type UserBilling,
@@ -181,7 +180,7 @@ export async function createUser(userData: {
 	onboardingStep?: string;
 	trialStartDate?: Date;
 	trialEndDate?: Date;
-	currentPlan?: string;
+	currentPlan?: string | null;
 	intendedPlan?: string;
 }): Promise<UserProfileComplete> {
 	info('createUser invoked', {
@@ -194,245 +193,120 @@ export async function createUser(userData: {
 		hasTrialEnd: !!userData.trialEndDate,
 	});
 
-	return db.transaction(async (tx) => {
-		const txStart = Date.now();
-		debug('Starting database transaction for user creation', { userId: userData.userId });
+	// Step 1: Insert core user (idempotent — ON CONFLICT DO NOTHING)
+	await db
+		.insert(users)
+		.values({
+			userId: userData.userId,
+			email: userData.email,
+			fullName: userData.fullName,
+			businessName: userData.businessName,
+			brandDescription: userData.brandDescription,
+			industry: userData.industry,
+			onboardingStep: userData.onboardingStep || 'pending',
+		})
+		.onConflictDoNothing({ target: users.userId });
+	debug('createUser: users INSERT done', { userId: userData.userId });
 
-		try {
-			// 1. Insert core user data
-			const [newUser] = await tx
-				.insert(users)
-				.values({
-					userId: userData.userId,
-					email: userData.email,
-					fullName: userData.fullName,
-					businessName: userData.businessName,
-					brandDescription: userData.brandDescription,
-					industry: userData.industry,
-					onboardingStep: userData.onboardingStep || 'pending',
-				})
-				.returning();
-			info('createUser: users INSERT done', {
-				userId: userData.userId,
-				txMs: Date.now() - txStart,
-			});
+	// Step 2: Get internal UUID (always exists after step 1)
+	const [userRecord] = await db
+		.select({ id: users.id })
+		.from(users)
+		.where(eq(users.userId, userData.userId));
 
-			// 2. Insert subscription data
-			// Note: currentPlan is NULL until Stripe webhook confirms payment
-			const [newSubscription] = await tx
-				.insert(userSubscriptions)
-				.values({
-					userId: newUser.id,
-					currentPlan: userData.currentPlan || null, // NULL = hasn't completed onboarding
-					intendedPlan: userData.intendedPlan,
-					// trialStatus removed - now derived from subscriptionStatus + trialEndDate
-					trialStartDate: userData.trialStartDate,
-					trialEndDate: userData.trialEndDate,
-				})
-				.returning();
-			info('createUser: user_subscriptions INSERT done', {
-				userId: userData.userId,
-				txMs: Date.now() - txStart,
-			});
+	if (!userRecord) {
+		throw new Error(`createUser: user row missing after INSERT for ${userData.userId}`);
+	}
+	const internalId = userRecord.id;
 
-			// 3. Insert usage tracking
-			const [newUsage] = await tx
-				.insert(userUsage)
-				.values({
-					userId: newUser.id,
-					planFeatures: {},
-					usageCampaignsCurrent: 0,
-					usageCreatorsCurrentMonth: 0,
-					enrichmentsCurrentMonth: 0,
-				})
-				.returning();
-			info('createUser: user_usage INSERT done', {
-				userId: userData.userId,
-				txMs: Date.now() - txStart,
-			});
+	// Step 3: Insert child records in parallel (each idempotent via unique userId constraint)
+	// Self-healing: fills in any missing child records from partial previous runs
+	await Promise.all([
+		db
+			.insert(userSubscriptions)
+			.values({
+				userId: internalId,
+				currentPlan: userData.currentPlan || null, // NULL = hasn't completed onboarding
+				intendedPlan: userData.intendedPlan,
+				trialStartDate: userData.trialStartDate,
+				trialEndDate: userData.trialEndDate,
+			})
+			.onConflictDoNothing({ target: userSubscriptions.userId }),
+		db
+			.insert(userUsage)
+			.values({
+				userId: internalId,
+				planFeatures: {},
+				usageCampaignsCurrent: 0,
+				usageCreatorsCurrentMonth: 0,
+				enrichmentsCurrentMonth: 0,
+			})
+			.onConflictDoNothing({ target: userUsage.userId }),
+		db
+			.insert(userSystemData)
+			.values({
+				userId: internalId,
+				emailScheduleStatus: {},
+			})
+			.onConflictDoNothing({ target: userSystemData.userId }),
+	]);
+	debug('createUser: child records INSERT done', { userId: userData.userId });
 
-			// 4. Insert system data
-			const [newSystemData] = await tx
-				.insert(userSystemData)
-				.values({
-					userId: newUser.id,
-					emailScheduleStatus: {},
-				})
-				.returning();
-			info('createUser: user_system_data INSERT done', {
-				userId: userData.userId,
-				txMs: Date.now() - txStart,
-			});
+	// Step 4: Return complete profile via standard query
+	const profile = await getUserProfile(userData.userId);
+	if (!profile) {
+		throw new Error(`createUser: profile missing after INSERTs for ${userData.userId}`);
+	}
 
-			// Return combined profile
-			const profile: UserProfileComplete = {
-				// Core user data
-				id: newUser.id,
-				userId: newUser.userId,
-				email: newUser.email,
-				fullName: newUser.fullName,
-				businessName: newUser.businessName,
-				brandDescription: newUser.brandDescription,
-				industry: newUser.industry,
-				onboardingStep: newUser.onboardingStep,
-				isAdmin: newUser.isAdmin,
-				createdAt: newUser.createdAt,
-				updatedAt: newUser.updatedAt,
-
-				// Subscription data
-				currentPlan: newSubscription.currentPlan,
-				intendedPlan: newSubscription.intendedPlan,
-				subscriptionStatus: newSubscription.subscriptionStatus,
-				// trialStatus removed - derive via deriveTrialStatus()
-				trialStartDate: newSubscription.trialStartDate,
-				trialEndDate: newSubscription.trialEndDate,
-				subscriptionCancelDate: newSubscription.subscriptionCancelDate,
-				billingSyncStatus: newSubscription.billingSyncStatus,
-
-				// Billing data (initially empty)
-				stripeCustomerId: null,
-				stripeSubscriptionId: null,
-
-				// Usage data
-				planCampaignsLimit: newUsage.planCampaignsLimit,
-				planCreatorsLimit: newUsage.planCreatorsLimit,
-				planFeatures: newUsage.planFeatures,
-				usageCampaignsCurrent: newUsage.usageCampaignsCurrent,
-				usageCreatorsCurrentMonth: newUsage.usageCreatorsCurrentMonth,
-				enrichmentsCurrentMonth: newUsage.enrichmentsCurrentMonth,
-				usageResetDate: newUsage.usageResetDate,
-
-				// System data
-				signupTimestamp: newSystemData.signupTimestamp,
-				emailScheduleStatus: newSystemData.emailScheduleStatus,
-				lastWebhookEvent: newSystemData.lastWebhookEvent,
-				lastWebhookTimestamp: newSystemData.lastWebhookTimestamp,
-			};
-			info('User created successfully across normalized tables', {
-				userId: newUser.userId,
-				internalId: newUser.id,
-				email: userData.email,
-				currentPlan: newSubscription.currentPlan,
-				// trialStatus removed - derive via deriveTrialStatus()
-				onboardingStep: newUser.onboardingStep,
-			});
-			return profile;
-		} catch (transactionError: unknown) {
-			const errorRecord = toRecord(transactionError);
-			const message = errorRecord ? getStringProperty(errorRecord, 'message') : null;
-			const code = errorRecord ? getStringProperty(errorRecord, 'code') : null;
-			const numericCode = errorRecord ? getNumberProperty(errorRecord, 'code') : null;
-			const lowerMessage = message ? message.toLowerCase() : '';
-			const duplicate =
-				lowerMessage.includes('duplicate') ||
-				lowerMessage.includes('unique') ||
-				code === '23505' ||
-				numericCode === 23505;
-
-			if (duplicate) {
-				warn('User creation hit unique constraint — checking for existing profile', {
-					userId: userData.userId,
-					errorMessage: message,
-					errorCode: code ?? String(numericCode),
-				});
-				const existing = await getUserProfile(userData.userId);
-				if (existing) {
-					return existing;
-				}
-				// Concurrent txn rolled back — no user exists yet. Retry once.
-				warn('Duplicate error but no existing profile found — retrying INSERT', {
-					userId: userData.userId,
-				});
-			}
-
-			logError('User creation transaction failed', transactionError, { userId: userData.userId });
-			throw transactionError;
-		}
+	info('User created successfully across normalized tables', {
+		userId: profile.userId,
+		internalId: profile.id,
+		email: profile.email,
+		currentPlan: profile.currentPlan,
+		onboardingStep: profile.onboardingStep,
 	});
+
+	return profile;
 }
 
 export async function ensureUserProfile(userId: string): Promise<UserProfileComplete> {
-	// Retry up to 3 times — concurrent requests can cause a rolled-back txn
-	// where the duplicate error fires but no committed row exists yet.
-	const MAX_ATTEMPTS = 3;
-
-	for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-		const existingProfile = await getUserProfile(userId);
-		if (existingProfile) {
-			debug('ensureUserProfile resolved existing record', { userId, attempt });
-			return existingProfile;
-		}
-
-		info('ensureUserProfile creating normalized profile', { userId, attempt });
-
-		// Get user data from Clerk with a timeout to prevent hanging the dashboard
-		const CLERK_TIMEOUT_MS = 8000;
-		const clerk = await clerkBackendClient();
-		const clerkUser = await Promise.race([
-			clerk.users.getUser(userId),
-			new Promise<never>((_, reject) =>
-				setTimeout(
-					() => reject(new Error(`Clerk API timed out after ${CLERK_TIMEOUT_MS}ms for ${userId}`)),
-					CLERK_TIMEOUT_MS
-				)
-			),
-		]);
-		const email = clerkUser.emailAddresses?.[0]?.emailAddress;
-		const fullName = `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || undefined;
-
-		if (!email) {
-			throw new Error(`Clerk user ${userId} has no email address`);
-		}
-
-		try {
-			const createdProfile = await createUser({
-				userId,
-				email,
-				fullName,
-				onboardingStep: 'pending',
-			});
-
-			info('ensureUserProfile created new record', { userId });
-			return createdProfile;
-		} catch (createError: unknown) {
-			const errorRecord = toRecord(createError);
-			const message = errorRecord ? getStringProperty(errorRecord, 'message') : null;
-			const code = errorRecord ? getStringProperty(errorRecord, 'code') : null;
-			const numericCode = errorRecord ? getNumberProperty(errorRecord, 'code') : null;
-			const lowerMessage = message ? message.toLowerCase() : '';
-			const isDuplicate =
-				lowerMessage.includes('duplicate') ||
-				lowerMessage.includes('unique') ||
-				code === '23505' ||
-				numericCode === 23505;
-
-			if (isDuplicate) {
-				// Concurrent txn may have committed — try fetching again
-				warn('ensureUserProfile duplicate error, refetching', { userId, attempt });
-				const profile = await getUserProfile(userId);
-				if (profile) {
-					return profile;
-				}
-				// The concurrent txn rolled back too — retry the whole loop
-				if (attempt < MAX_ATTEMPTS) {
-					warn('ensureUserProfile no profile after duplicate — retrying', { userId, attempt });
-					await new Promise((r) => setTimeout(r, 100 * attempt));
-					continue;
-				}
-			}
-
-			logError('ensureUserProfile failed to create user', createError, {
-				userId,
-				attempt,
-				errorMessage: message,
-				errorCode: code ?? String(numericCode),
-			});
-			throw createError;
-		}
+	const existingProfile = await getUserProfile(userId);
+	if (existingProfile) {
+		debug('ensureUserProfile resolved existing record', { userId });
+		return existingProfile;
 	}
 
-	// Should never reach here, but TypeScript needs it
-	throw new Error(`ensureUserProfile exhausted ${MAX_ATTEMPTS} attempts for ${userId}`);
+	info('ensureUserProfile creating normalized profile', { userId });
+
+	// Get user data from Clerk with a timeout to prevent hanging the dashboard
+	const CLERK_TIMEOUT_MS = 8000;
+	const clerk = await clerkBackendClient();
+	const clerkUser = await Promise.race([
+		clerk.users.getUser(userId),
+		new Promise<never>((_, reject) =>
+			setTimeout(
+				() => reject(new Error(`Clerk API timed out after ${CLERK_TIMEOUT_MS}ms for ${userId}`)),
+				CLERK_TIMEOUT_MS
+			)
+		),
+	]);
+	const email = clerkUser.emailAddresses?.[0]?.emailAddress;
+	const fullName = `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || undefined;
+
+	if (!email) {
+		throw new Error(`Clerk user ${userId} has no email address`);
+	}
+
+	// createUser is idempotent — safe to call without retry logic
+	const createdProfile = await createUser({
+		userId,
+		email,
+		fullName,
+		onboardingStep: 'pending',
+	});
+
+	info('ensureUserProfile created new record', { userId });
+	return createdProfile;
 }
 
 /**
@@ -452,7 +326,7 @@ export async function updateUserProfile(
 		isAdmin?: boolean;
 
 		// Subscription updates
-		currentPlan?: string;
+		currentPlan?: string | null;
 		intendedPlan?: string;
 		subscriptionStatus?: string;
 		// trialStatus removed - now derived
@@ -480,140 +354,135 @@ export async function updateUserProfile(
 		lastWebhookTimestamp?: Date | null;
 	}
 ): Promise<void> {
-	return db.transaction(async (tx) => {
-		// Get user internal ID
-		const userRecord = await tx
-			.select({ id: users.id })
-			.from(users)
-			.where(eq(users.userId, userId));
+	// Get user internal ID
+	const userRecord = await db.select({ id: users.id }).from(users).where(eq(users.userId, userId));
 
-		if (!userRecord[0]) {
-			throw new Error(`User not found: ${userId}`);
-		}
+	if (!userRecord[0]) {
+		throw new Error(`User not found: ${userId}`);
+	}
 
-		const internalUserId = userRecord[0].id;
+	const internalUserId = userRecord[0].id;
 
-		// Split updates by table
-		const userUpdates = {
-			email: updates.email,
-			fullName: updates.fullName,
-			businessName: updates.businessName,
-			brandDescription: updates.brandDescription,
-			industry: updates.industry,
-			onboardingStep: updates.onboardingStep,
-			isAdmin: updates.isAdmin,
-		};
+	// Split updates by table
+	const userUpdates = {
+		email: updates.email,
+		fullName: updates.fullName,
+		businessName: updates.businessName,
+		brandDescription: updates.brandDescription,
+		industry: updates.industry,
+		onboardingStep: updates.onboardingStep,
+		isAdmin: updates.isAdmin,
+	};
 
-		const subscriptionUpdates = {
-			currentPlan: updates.currentPlan,
-			intendedPlan: updates.intendedPlan,
-			subscriptionStatus: updates.subscriptionStatus,
-			// trialStatus removed - now derived
-			trialStartDate: updates.trialStartDate,
-			trialEndDate: updates.trialEndDate,
-			subscriptionCancelDate: updates.subscriptionCancelDate,
-			billingSyncStatus: updates.billingSyncStatus,
-		};
+	const subscriptionUpdates = {
+		currentPlan: updates.currentPlan,
+		intendedPlan: updates.intendedPlan,
+		subscriptionStatus: updates.subscriptionStatus,
+		// trialStatus removed - now derived
+		trialStartDate: updates.trialStartDate,
+		trialEndDate: updates.trialEndDate,
+		subscriptionCancelDate: updates.subscriptionCancelDate,
+		billingSyncStatus: updates.billingSyncStatus,
+	};
 
-		const billingUpdates = {
-			stripeCustomerId: updates.stripeCustomerId,
-			stripeSubscriptionId: updates.stripeSubscriptionId,
-		};
+	const billingUpdates = {
+		stripeCustomerId: updates.stripeCustomerId,
+		stripeSubscriptionId: updates.stripeSubscriptionId,
+	};
 
-		const usageUpdates = {
-			planCampaignsLimit: updates.planCampaignsLimit,
-			planCreatorsLimit: updates.planCreatorsLimit,
-			planFeatures: updates.planFeatures,
-			usageCampaignsCurrent: updates.usageCampaignsCurrent,
-			usageCreatorsCurrentMonth: updates.usageCreatorsCurrentMonth,
-			enrichmentsCurrentMonth: updates.enrichmentsCurrentMonth,
-			usageResetDate: updates.usageResetDate,
-		};
+	const usageUpdates = {
+		planCampaignsLimit: updates.planCampaignsLimit,
+		planCreatorsLimit: updates.planCreatorsLimit,
+		planFeatures: updates.planFeatures,
+		usageCampaignsCurrent: updates.usageCampaignsCurrent,
+		usageCreatorsCurrentMonth: updates.usageCreatorsCurrentMonth,
+		enrichmentsCurrentMonth: updates.enrichmentsCurrentMonth,
+		usageResetDate: updates.usageResetDate,
+	};
 
-		const systemUpdates = {
-			emailScheduleStatus: updates.emailScheduleStatus,
-			lastWebhookEvent: updates.lastWebhookEvent,
-			lastWebhookTimestamp: updates.lastWebhookTimestamp,
-		};
+	const systemUpdates = {
+		emailScheduleStatus: updates.emailScheduleStatus,
+		lastWebhookEvent: updates.lastWebhookEvent,
+		lastWebhookTimestamp: updates.lastWebhookTimestamp,
+	};
 
-		// Apply updates to appropriate tables
-		const promises = [];
+	// Apply updates to appropriate tables
+	const promises = [];
 
-		// Update users table
-		if (Object.values(userUpdates).some((val) => val !== undefined)) {
-			const filteredUpdates = Object.fromEntries(
-				Object.entries(userUpdates).filter(([_, v]) => v !== undefined)
-			);
-			promises.push(
-				tx
-					.update(users)
-					.set({ ...filteredUpdates, updatedAt: new Date() })
-					.where(eq(users.userId, userId))
-			);
-		}
+	// Update users table
+	if (Object.values(userUpdates).some((val) => val !== undefined)) {
+		const filteredUpdates = Object.fromEntries(
+			Object.entries(userUpdates).filter(([_, v]) => v !== undefined)
+		);
+		promises.push(
+			db
+				.update(users)
+				.set({ ...filteredUpdates, updatedAt: new Date() })
+				.where(eq(users.userId, userId))
+		);
+	}
 
-		// Update or insert subscription record
-		if (Object.values(subscriptionUpdates).some((val) => val !== undefined)) {
-			const filteredUpdates = Object.fromEntries(
-				Object.entries(subscriptionUpdates).filter(([_, v]) => v !== undefined)
-			);
-			promises.push(
-				tx
-					.update(userSubscriptions)
-					.set({ ...filteredUpdates, updatedAt: new Date() })
-					.where(eq(userSubscriptions.userId, internalUserId))
-			);
-		}
+	// Update or insert subscription record
+	if (Object.values(subscriptionUpdates).some((val) => val !== undefined)) {
+		const filteredUpdates = Object.fromEntries(
+			Object.entries(subscriptionUpdates).filter(([_, v]) => v !== undefined)
+		);
+		promises.push(
+			db
+				.update(userSubscriptions)
+				.set({ ...filteredUpdates, updatedAt: new Date() })
+				.where(eq(userSubscriptions.userId, internalUserId))
+		);
+	}
 
-		// Update or insert billing record using UPSERT (atomic operation)
-		// This prevents race conditions when concurrent webhooks try to insert/update
-		if (Object.values(billingUpdates).some((val) => val !== undefined)) {
-			const filteredUpdates = Object.fromEntries(
-				Object.entries(billingUpdates).filter(([_, v]) => v !== undefined)
-			);
+	// Update or insert billing record using UPSERT (atomic operation)
+	// This prevents race conditions when concurrent webhooks try to insert/update
+	if (Object.values(billingUpdates).some((val) => val !== undefined)) {
+		const filteredUpdates = Object.fromEntries(
+			Object.entries(billingUpdates).filter(([_, v]) => v !== undefined)
+		);
 
-			// Use upsert to atomically insert or update
-			// This prevents the race condition where two webhooks both see no record
-			// and both try to insert, causing a unique constraint violation
-			promises.push(
-				tx
-					.insert(userBilling)
-					.values({ userId: internalUserId, ...filteredUpdates })
-					.onConflictDoUpdate({
-						target: userBilling.userId,
-						set: { ...filteredUpdates, updatedAt: new Date() },
-					})
-			);
-		}
+		// Use upsert to atomically insert or update
+		// This prevents the race condition where two webhooks both see no record
+		// and both try to insert, causing a unique constraint violation
+		promises.push(
+			db
+				.insert(userBilling)
+				.values({ userId: internalUserId, ...filteredUpdates })
+				.onConflictDoUpdate({
+					target: userBilling.userId,
+					set: { ...filteredUpdates, updatedAt: new Date() },
+				})
+		);
+	}
 
-		// Update usage record
-		if (Object.values(usageUpdates).some((val) => val !== undefined)) {
-			const filteredUpdates = Object.fromEntries(
-				Object.entries(usageUpdates).filter(([_, v]) => v !== undefined)
-			);
-			promises.push(
-				tx
-					.update(userUsage)
-					.set({ ...filteredUpdates, updatedAt: new Date() })
-					.where(eq(userUsage.userId, internalUserId))
-			);
-		}
+	// Update usage record
+	if (Object.values(usageUpdates).some((val) => val !== undefined)) {
+		const filteredUpdates = Object.fromEntries(
+			Object.entries(usageUpdates).filter(([_, v]) => v !== undefined)
+		);
+		promises.push(
+			db
+				.update(userUsage)
+				.set({ ...filteredUpdates, updatedAt: new Date() })
+				.where(eq(userUsage.userId, internalUserId))
+		);
+	}
 
-		// Update system data
-		if (Object.values(systemUpdates).some((val) => val !== undefined)) {
-			const filteredUpdates = Object.fromEntries(
-				Object.entries(systemUpdates).filter(([_, v]) => v !== undefined)
-			);
-			promises.push(
-				tx
-					.update(userSystemData)
-					.set({ ...filteredUpdates, updatedAt: new Date() })
-					.where(eq(userSystemData.userId, internalUserId))
-			);
-		}
+	// Update system data
+	if (Object.values(systemUpdates).some((val) => val !== undefined)) {
+		const filteredUpdates = Object.fromEntries(
+			Object.entries(systemUpdates).filter(([_, v]) => v !== undefined)
+		);
+		promises.push(
+			db
+				.update(userSystemData)
+				.set({ ...filteredUpdates, updatedAt: new Date() })
+				.where(eq(userSystemData.userId, internalUserId))
+		);
+	}
 
-		await Promise.all(promises);
-	});
+	await Promise.all(promises);
 }
 
 /**

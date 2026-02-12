@@ -31,7 +31,7 @@ export default defineConfig({
 
   // Shared settings for all projects
   use: {
-    // Base URL - use environment variable or default to localhost:3001 (dev:wt2)
+    // Base URL - use environment variable or default to localhost:3001 (dev:ngrok)
     baseURL: process.env.E2E_BASE_URL || 'http://localhost:3001',
 
     // Collect trace when retrying failed test
@@ -72,7 +72,7 @@ export default defineConfig({
   // Run local dev server before tests if not already running
   // Set E2E_SKIP_SERVER=true if server is already running
   webServer: process.env.E2E_SKIP_SERVER ? undefined : {
-    command: 'npm run dev',
+    command: 'npm run dev:ngrok',
     url: process.env.E2E_BASE_URL || 'http://localhost:3001',
     reuseExistingServer: true, // Always reuse if available
     timeout: 120000,

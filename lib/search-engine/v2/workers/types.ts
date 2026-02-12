@@ -23,7 +23,10 @@ export {
  * Request to start a new search job
  * Sent by frontend to POST /api/v2/dispatch
  */
-export interface DispatchRequest {
+export interface DispatchKeywordRequest {
+	/** Search type discriminator */
+	searchType?: 'keyword';
+
 	/** Platform to search (tiktok, instagram, youtube) */
 	platform: Platform;
 
@@ -40,6 +43,28 @@ export interface DispatchRequest {
 	enableExpansion?: boolean;
 }
 
+export interface DispatchSimilarRequest {
+	/** Search type discriminator */
+	searchType: 'similar';
+
+	/** Platform to search (tiktok, instagram, youtube) */
+	platform: Platform;
+
+	/** Username to seed the similar search */
+	seedUsername: string;
+
+	/** Campaign to associate results with */
+	campaignId: string;
+
+	/** Optional target results (defaults to 100 for similar search) */
+	targetResults?: 100 | 500 | 1000;
+
+	/** Optional engine hint for compatibility wrappers */
+	similarEngine?: 'similar_discovery' | 'instagram_similar' | 'youtube_similar';
+}
+
+export type DispatchRequest = DispatchKeywordRequest | DispatchSimilarRequest;
+
 /**
  * Response from dispatch route
  */
@@ -47,11 +72,14 @@ export interface DispatchResponse {
 	/** Unique job identifier */
 	jobId: string;
 
-	/** Keywords that will be searched (after expansion) */
+	/** Keywords that will be searched (after expansion). Empty for similar dispatch. */
 	keywords: string[];
 
 	/** Number of search workers dispatched */
 	workersDispatched: number;
+
+	/** Search type */
+	searchType?: 'keyword' | 'similar';
 
 	/** Message for debugging */
 	message: string;

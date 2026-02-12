@@ -59,13 +59,27 @@ export function useTrialStatus(): UseTrialStatusResult {
 
 		try {
 			setError(null);
-			const response = await fetch('/api/trial/search-count');
+			const entitlementsRes = await fetch('/api/billing/entitlements');
+			let data: TrialSearchStatus;
 
-			if (!response.ok) {
-				throw new Error('Failed to fetch trial status');
+			if (entitlementsRes.ok) {
+				const entitlements = await entitlementsRes.json();
+				const trialSearch = entitlements?.trialSearch ?? {};
+				data = {
+					isTrialUser: Boolean(trialSearch.isTrialUser),
+					searchesUsed: Number(trialSearch.searchesUsed ?? 0),
+					searchesRemaining: Number(trialSearch.searchesRemaining ?? 3),
+					searchesLimit: Number(trialSearch.searchesLimit ?? 3),
+					currentPlan:
+						typeof entitlements?.currentPlan === 'string' ? entitlements.currentPlan : null,
+				};
+			} else {
+				const response = await fetch('/api/trial/search-count');
+				if (!response.ok) {
+					throw new Error('Failed to fetch trial status');
+				}
+				data = await response.json();
 			}
-
-			const data: TrialSearchStatus = await response.json();
 			setStatus(data);
 
 			// Cache the result

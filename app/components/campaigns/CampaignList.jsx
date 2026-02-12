@@ -9,8 +9,9 @@ import {
 	RefreshCw,
 } from 'lucide-react';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'react-hot-toast';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -45,28 +46,52 @@ function CampaignCardSkeleton() {
 }
 
 export default function CampaignList() {
+	const router = useRouter();
+	const searchParams = useSearchParams();
+	const didInitFromUrl = useRef(false);
+
 	const [campaigns, setCampaigns] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const [retryCount, setRetryCount] = useState(0);
 	const [totalRetries, setTotalRetries] = useState(0); // Contador global de reintentos
+	const [page, setPage] = useState(1);
+	const [isInitialized, setIsInitialized] = useState(false);
 	const [pagination, setPagination] = useState({
 		currentPage: 1,
 		total: 0,
 		pages: 0,
 		limit: 9,
 	});
-	const [filterStatus, setFilterStatus] = useState('all'); // all | draft | active | completed
+	const [filterStatus, setFilterStatus] = useState('all'); // all | draft | active | completed | archived
 	const [query, setQuery] = useState('');
+	const [debouncedQuery, setDebouncedQuery] = useState('');
 	const [sortBy, setSortBy] = useState('newest'); // newest | updated | alpha
 
 	const fetchCampaigns = useCallback(
-		async (page = 1, retry = false) => {
+		async (page = 1, retry = false, overrides = null) => {
 			try {
 				setLoading(true);
 				setError(null);
 
-				const response = await fetch(`/api/campaigns?page=${page}&limit=${pagination.limit}`);
+				const effective = overrides || {
+					status: filterStatus,
+					q: debouncedQuery,
+					sortBy,
+				};
+
+				const params = new URLSearchParams();
+				params.set('page', String(page));
+				params.set('limit', String(pagination.limit));
+				params.set('sortBy', effective.sortBy || 'newest');
+				if (effective.status && effective.status !== 'all') {
+					params.set('status', effective.status);
+				}
+				if (effective.q) {
+					params.set('q', effective.q);
+				}
+
+				const response = await fetch(`/api/campaigns?${params.toString()}`);
 				const data = await response.json();
 
 				if (!response.ok) {
@@ -106,15 +131,78 @@ export default function CampaignList() {
 				setLoading(false);
 			}
 		},
-		[pagination.limit, retryCount, totalRetries]
+		[pagination.limit, retryCount, totalRetries, filterStatus, debouncedQuery, sortBy]
 	);
 
 	useEffect(() => {
-		fetchCampaigns();
-	}, [fetchCampaigns]);
+		if (didInitFromUrl.current) {
+			return;
+		}
+
+		const status = (searchParams.get('status') || 'all').toLowerCase();
+		const q = searchParams.get('q') || '';
+		const sort = (searchParams.get('sortBy') || 'newest').toLowerCase();
+		const pageParam = Number.parseInt(searchParams.get('page') || '1', 10);
+
+		if (['all', 'draft', 'active', 'completed', 'archived'].includes(status)) {
+			setFilterStatus(status);
+		}
+		if (['newest', 'updated', 'alpha'].includes(sort)) {
+			setSortBy(sort);
+		}
+		if (q) {
+			setQuery(q);
+			setDebouncedQuery(q.trim());
+		}
+		if (Number.isFinite(pageParam) && pageParam > 0) {
+			setPage(pageParam);
+		}
+
+		didInitFromUrl.current = true;
+		setIsInitialized(true);
+	}, [searchParams]);
+
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setDebouncedQuery(query.trim());
+		}, 250);
+		return () => clearTimeout(timer);
+	}, [query]);
+
+	useEffect(() => {
+		if (!isInitialized) {
+			return;
+		}
+
+		const params = new URLSearchParams(searchParams.toString());
+		params.set('page', String(page));
+		params.set('sortBy', sortBy);
+		if (filterStatus === 'all') {
+			params.delete('status');
+		} else {
+			params.set('status', filterStatus);
+		}
+		if (debouncedQuery) {
+			params.set('q', debouncedQuery);
+		} else {
+			params.delete('q');
+		}
+
+		const nextQuery = params.toString();
+		if (nextQuery !== searchParams.toString()) {
+			const nextUrl = nextQuery ? `/campaigns?${nextQuery}` : '/campaigns';
+			router.replace(nextUrl);
+		}
+
+		fetchCampaigns(page, false, {
+			status: filterStatus,
+			q: debouncedQuery,
+			sortBy,
+		});
+	}, [isInitialized, page, filterStatus, debouncedQuery, sortBy, fetchCampaigns, router, searchParams]);
 
 	const handlePageChange = (page) => {
-		fetchCampaigns(page);
+		setPage(page);
 	};
 
 	// Función para generar el array de páginas a mostrar
@@ -188,27 +276,7 @@ export default function CampaignList() {
 		);
 	}
 
-	const normalized = (s) => (s || '').toString().toLowerCase();
-	const filtered = campaigns
-		.filter((c) => (filterStatus === 'all' ? true : c.status === filterStatus))
-		.filter((c) => {
-			if (!query) {
-				return true;
-			}
-			const q = normalized(query);
-			return normalized(c.name).includes(q) || normalized(c.description).includes(q);
-		});
-
-	const sorted = [...filtered].sort((a, b) => {
-		if (sortBy === 'alpha') {
-			return a.name.localeCompare(b.name);
-		}
-		if (sortBy === 'updated') {
-			return new Date(b.updatedAt) - new Date(a.updatedAt);
-		}
-		// default newest by createdAt
-		return new Date(b.createdAt) - new Date(a.createdAt);
-	});
+	const totalCount = pagination.total || 0;
 
 	const renderContent = () => {
 		if (loading) {
@@ -231,24 +299,24 @@ export default function CampaignList() {
 			);
 		}
 
-		return (
-			<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-				{sorted.map((campaign) => (
-					<CampaignCard key={campaign.id} campaign={campaign} />
-				))}
-			</div>
-		);
-	};
+			return (
+				<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+					{campaigns.map((campaign) => (
+						<CampaignCard key={campaign.id} campaign={campaign} />
+					))}
+				</div>
+			);
+		};
 
 	return (
 		<div className="space-y-6">
 			{/* Controls: filters, search, sort */}
 			<div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-				<div className="flex flex-wrap items-center gap-2">
-					{['all', 'draft', 'active', 'completed'].map((s) => {
-						const isSelected = filterStatus === s;
-						return (
-							<Button
+					<div className="flex flex-wrap items-center gap-2">
+						{['all', 'draft', 'active', 'completed', 'archived'].map((s) => {
+							const isSelected = filterStatus === s;
+							return (
+								<Button
 								key={s}
 								variant="outline"
 								size="sm"
@@ -256,24 +324,36 @@ export default function CampaignList() {
 									isSelected
 										? 'relative h-8 px-3 rounded-md bg-secondary/70 text-zinc-100 shadow-sm border-l-2 border-l-primary'
 										: 'h-8 px-3 rounded-md border-input text-zinc-300 hover:bg-secondary/60'
-								}
-								onClick={() => setFilterStatus(s)}
-							>
-								{s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
-							</Button>
-						);
+									}
+									onClick={() => {
+										setFilterStatus(s);
+										setPage(1);
+									}}
+								>
+									{s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
+								</Button>
+							);
 					})}
 				</div>
 				<div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 lg:w-auto">
-					<div className="relative w-full sm:w-64">
-						<Input
-							placeholder="Filter campaigns..."
-							value={query}
-							onChange={(e) => setQuery(e.target.value)}
-							className="w-full bg-zinc-800/60 border-zinc-700/50"
-						/>
-					</div>
-					<Select value={sortBy} onValueChange={setSortBy}>
+						<div className="relative w-full sm:w-64">
+							<Input
+								placeholder="Filter campaigns..."
+								value={query}
+								onChange={(e) => {
+									setQuery(e.target.value);
+									setPage(1);
+								}}
+								className="w-full bg-zinc-800/60 border-zinc-700/50"
+							/>
+						</div>
+						<Select
+							value={sortBy}
+							onValueChange={(value) => {
+								setSortBy(value);
+								setPage(1);
+							}}
+						>
 						<SelectTrigger className="w-full sm:w-40 md:w-48 bg-zinc-800/60 border-zinc-700/50 text-zinc-200">
 							<SelectValue placeholder="Sort by" />
 						</SelectTrigger>
@@ -286,13 +366,13 @@ export default function CampaignList() {
 				</div>
 			</div>
 
-			<div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between text-xs text-zinc-400">
-				<div>
-					Showing {sorted.length} of {campaigns.length} on this page
-				</div>
-				{pagination?.pages > 0 && (
+				<div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between text-xs text-zinc-400">
 					<div>
-						Page {pagination.currentPage} of {pagination.pages}
+						Showing {campaigns.length} of {totalCount} result{totalCount === 1 ? '' : 's'}
+					</div>
+					{pagination?.pages > 0 && (
+						<div>
+							Page {pagination.currentPage} of {pagination.pages}
 					</div>
 				)}
 			</div>
