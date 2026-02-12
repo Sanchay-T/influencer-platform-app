@@ -19,6 +19,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { exportJobs, scrapingJobs } from '@/lib/db/schema';
 import { dedupeByCreator, dedupeCreators, formatEmailsForCsv } from '@/lib/export/csv-utils';
+import { encryptCsvBytes } from '@/lib/export/csv-encryption';
 import { getCreatorsForJobs } from '@/lib/export/get-creators';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { verifyQstashRequestSignature } from '@/lib/queue/qstash-signature';
@@ -139,21 +140,22 @@ export async function POST(req: Request) {
 
 			// Generate CSV content
 			const csvContent = generateCsvContent(creators, keywords);
+			const encryptedBytes = encryptCsvBytes(Buffer.from(csvContent, 'utf8'));
 
 			// Upload to Vercel Blob
 			const filename = campaignId
-				? `exports/campaign-${campaignId}-${Date.now()}.csv`
-				: `exports/job-${jobId}-${Date.now()}.csv`;
+				? `exports/campaign-${campaignId}-${Date.now()}.csv.enc`
+				: `exports/job-${jobId}-${Date.now()}.csv.enc`;
 
 			SentryLogger.addBreadcrumb({
 				category: 'export',
 				message: 'Uploading to blob storage',
-				data: { size: csvContent.length, filename },
+				data: { plaintextBytes: csvContent.length, encryptedBytes: encryptedBytes.length, filename },
 			});
 
-			const blob = await put(filename, csvContent, {
+			const blob = await put(filename, encryptedBytes, {
 				access: 'public',
-				contentType: 'text/csv',
+				contentType: 'application/octet-stream',
 			});
 
 			structuredConsole.log('CSV Worker: Uploaded to Blob', { url: blob.url });

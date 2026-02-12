@@ -61,8 +61,14 @@ Verification expectation (after each patch):
   - Added centralized guard `lib/auth/e2e-guards.ts` (hard-disable in production, returns `404`).
   - `middleware.ts` only treats `/api/admin/e2e/*` as public when `NODE_ENV !== 'production'`.
 
-- [ ] #8 CSV exports stored as access: `public` on Vercel Blob
-  - File: `app/api/export/csv-worker/route.ts:175`
+- [x] #8 CSV exports stored as access: `public` on Vercel Blob
+  - Files:
+  - `app/api/export/csv-worker/route.ts`
+  - `app/api/export/status/[id]/route.ts`
+  - `app/api/export/download/[id]/route.ts` (new)
+  - `lib/export/csv-encryption.ts` (new)
+  - Patch: Encrypt exports before upload + decrypt behind authenticated download endpoint (client never sees Blob URL).
+  - Verification: `tmp/verify-csv-export-status.png` (status now returns `/api/export/download/<id>`).
 
 - [ ] #9 Admin pages have NO access control — any auth’d user can navigate to `/admin/*`
   - File: `app/admin/**`
