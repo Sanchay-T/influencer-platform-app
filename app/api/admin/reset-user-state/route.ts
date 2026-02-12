@@ -102,8 +102,8 @@ export async function POST(request: Request) {
 				trialStartDate: now,
 				trialEndDate: trialEndDate,
 
-				// Plan reset to non-subscribed state
-				currentPlan: null,
+				// Plan reset to free tier
+				currentPlan: 'free',
 				subscriptionStatus: 'none',
 
 				// Reset all plan limits
@@ -129,7 +129,7 @@ export async function POST(request: Request) {
 
 			results.push(`✅ Reset user profile to fresh onboarding state`);
 			results.push(`✅ Started fresh 7-day trial (expires: ${trialEndDate.toISOString()})`);
-			results.push(`✅ Reset to non-subscribed state with 0 campaign/creator limits`);
+			results.push(`✅ Reset to free plan with 0 campaign/creator limits`);
 			results.push(`✅ Cleared all Stripe billing data`);
 			results.push(`✅ Reset usage counters to 0`);
 		} catch (error) {

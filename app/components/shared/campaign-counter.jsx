@@ -1,6 +1,7 @@
 'use client';
 
-import { useBilling } from '@/lib/hooks/use-billing';
+import { useCallback, useEffect, useState } from 'react';
+import { structuredConsole } from '@/lib/logging/console-proxy';
 
 /**
  * Universal Campaign Counter Component
@@ -14,16 +15,33 @@ import { useBilling } from '@/lib/hooks/use-billing';
  * @param {boolean} props.showLabel - Whether to show "campaigns" label (default: true)
  */
 export default function CampaignCounter({ variant = 'pill', className = '', showLabel = true }) {
-	const { isLoaded, usageInfo } = useBilling();
+	const [usageData, setUsageData] = useState(null);
+	const [isLoading, setIsLoading] = useState(true);
 
-	const usageData = usageInfo
-		? {
-				used: usageInfo.campaignsUsed || 0,
-				limit: usageInfo.campaignsLimit || 0,
+	const fetchUsageData = useCallback(async () => {
+		try {
+			const res = await fetch('/api/billing/status');
+			if (!res.ok) {
+				return;
 			}
-		: null;
 
-	if (!isLoaded || !usageData) {
+			const data = await res.json();
+			setUsageData({
+				used: data?.usageInfo?.campaignsUsed || 0,
+				limit: data?.usageInfo?.campaignsLimit || 0,
+			});
+		} catch (error) {
+			structuredConsole.error('Failed to fetch campaign usage:', error);
+		} finally {
+			setIsLoading(false);
+		}
+	}, []);
+
+	useEffect(() => {
+		fetchUsageData();
+	}, [fetchUsageData]);
+
+	if (isLoading || !usageData) {
 		return <div className={`animate-pulse bg-gray-200 rounded-lg h-6 w-24 ${className}`}></div>;
 	}
 

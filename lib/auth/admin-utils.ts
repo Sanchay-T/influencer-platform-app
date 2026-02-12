@@ -4,17 +4,6 @@ import { verifyTestAuthHeaders } from '@/lib/auth/testable-auth';
 import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
-function getAdminEmailsFromEnv(): string[] {
-	// Prefer server-only ADMIN_EMAILS; fall back to NEXT_PUBLIC_ADMIN_EMAILS for backward compatibility.
-	const adminEmailsString = process.env.ADMIN_EMAILS ?? process.env.NEXT_PUBLIC_ADMIN_EMAILS;
-	return adminEmailsString
-		? adminEmailsString
-				.split(',')
-				.map((email) => email.trim())
-				.filter(Boolean)
-		: [];
-}
-
 /**
  * Unified admin authentication function
  * Checks both environment variable and database admin status
@@ -28,7 +17,10 @@ export async function isAdminUser(): Promise<boolean> {
 				const h = await headers();
 				const payload = verifyTestAuthHeaders(h);
 				if (payload) {
-					const adminEmails = getAdminEmailsFromEnv();
+					const adminEmailsString = process.env.NEXT_PUBLIC_ADMIN_EMAILS;
+					const adminEmails = adminEmailsString
+						? adminEmailsString.split(',').map((email) => email.trim())
+						: [];
 					const isHeaderAdmin =
 						!!payload.admin || (!!payload.email && adminEmails.includes(payload.email));
 					structuredConsole.log('🔍 [ADMIN-CHECK] Header-based admin (pre-check):', isHeaderAdmin);
@@ -69,7 +61,10 @@ export async function isAdminUser(): Promise<boolean> {
 		}
 
 		// Method 1: Check environment variable (primary method)
-		const adminEmails = getAdminEmailsFromEnv();
+		const adminEmailsString = process.env.NEXT_PUBLIC_ADMIN_EMAILS;
+		const adminEmails = adminEmailsString
+			? adminEmailsString.split(',').map((email) => email.trim())
+			: [];
 		structuredConsole.log('🔍 [ADMIN-CHECK] Admin emails from env:', adminEmails);
 		const isEnvAdmin = userEmail && Array.isArray(adminEmails) && adminEmails.includes(userEmail);
 
@@ -220,8 +215,8 @@ export async function getAllAdminUsers() {
 		};
 
 		// Get environment admins
-		const adminEmails = getAdminEmailsFromEnv();
-		result.environmentAdmins = adminEmails;
+		const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(',') || [];
+		result.environmentAdmins = adminEmails.filter((email) => email.trim());
 
 		// Get database admins (if field exists)
 		try {

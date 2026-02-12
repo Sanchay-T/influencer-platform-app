@@ -1,13 +1,12 @@
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
-import { validateCreatorSearch, validateTrialSearchLimit } from '@/lib/billing';
+import { validateCreatorSearch } from '@/lib/billing';
 import { db } from '@/lib/db';
 import { campaigns, scrapingJobs } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { extractUsername } from '@/lib/platforms/instagram-similar/api';
 import { qstash } from '@/lib/queue/qstash';
-import { dispatch } from '@/lib/search-engine/v2/workers';
 import { normalizePageParams, paginateCreators } from '@/lib/search-engine/utils/pagination';
 import { isRecord, isString, toError, toRecord } from '@/lib/utils/type-guards';
 import { getWebhookUrl } from '@/lib/utils/url-utils';
@@ -61,35 +60,64 @@ export async function POST(req: Request) {
 				.where(eq(campaigns.id, campaignId));
 		}
 
-		const sanitizedUsername = extractUsername(username);
-		const targetResults = DEFAULT_TARGET_RESULTS;
-		const dispatchResult = await dispatch({
-			userId,
-			request: {
-				searchType: 'similar',
-				platform: 'instagram',
-				seedUsername: sanitizedUsername,
-				campaignId,
-				targetResults,
-				similarEngine: 'instagram_similar',
-			},
-		});
-
-		if (!dispatchResult.success) {
+		const planValidation = await validateCreatorSearch(userId, DEFAULT_TARGET_RESULTS);
+		if (!planValidation.allowed) {
 			return NextResponse.json(
 				{
-					error: dispatchResult.error || 'Failed to queue search',
-					upgrade: dispatchResult.statusCode === 403,
+					error: 'Plan limit exceeded',
+					message: planValidation.reason,
+					upgrade: true,
 				},
-				{ status: dispatchResult.statusCode }
+				{ status: 403 }
 			);
+		}
+
+		const sanitizedUsername = extractUsername(username);
+		const targetResults = DEFAULT_TARGET_RESULTS;
+
+		const [job] = await db
+			.insert(scrapingJobs)
+			.values({
+				userId,
+				campaignId,
+				targetUsername: sanitizedUsername,
+				platform: 'Instagram',
+				status: 'pending',
+				processedRuns: 0,
+				processedResults: 0,
+				targetResults,
+				cursor: 0,
+				progress: '0',
+				timeoutAt: new Date(Date.now() + TIMEOUT_MINUTES * 60 * 1000),
+				createdAt: new Date(),
+				updatedAt: new Date(),
+				searchParams: {
+					runner: 'search-engine',
+					platform: 'instagram_similar',
+					targetUsername: sanitizedUsername,
+				},
+			})
+			.returning();
+
+		let qstashMessageId: string | null = null;
+		try {
+			const result = await qstash.publishJSON({
+				url: `${getWebhookUrl()}/api/qstash/process-search`,
+				body: { jobId: job.id },
+				retries: 3,
+				notifyOnFailure: true,
+			});
+			const resultRecord = toRecord(result);
+			qstashMessageId = isString(resultRecord?.messageId) ? resultRecord.messageId : null;
+		} catch (error) {
+			structuredConsole.warn('Instagram similar QStash enqueue warning', error);
 		}
 
 		return NextResponse.json({
 			message: 'Instagram similar search job started successfully',
-			jobId: dispatchResult.data?.jobId,
-			qstashMessageId: null,
-			engine: 'v2_dispatch_wrapper',
+			jobId: job.id,
+			qstashMessageId,
+			engine: 'search-engine',
 		});
 	} catch (error: unknown) {
 		const requestError = toError(error);

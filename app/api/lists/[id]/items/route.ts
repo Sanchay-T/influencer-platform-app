@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { trackServer } from '@/lib/analytics/track';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
-import { requireBillingAccess } from '@/lib/billing';
 import { addCreatorsToList, removeListItems, updateListItems } from '@/lib/db/queries/list-queries';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { structuredConsole } from '@/lib/logging/console-proxy';
@@ -38,11 +37,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 	const { id } = await params;
 
 	return apiTracker.trackRoute('list_items', 'add_creator', async () => {
-		const access = await requireBillingAccess({ requireActiveAccess: true });
-		if ('response' in access) {
-			return access.response;
+		const { userId } = await getAuthOrTest();
+		if (!userId) {
+			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
-		const { userId } = access;
 
 		// Set user and list context for Sentry
 		SentryLogger.setContext('list_items_add', { userId, listId: id });
@@ -88,11 +86,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 	const { id } = await params;
 
 	return apiTracker.trackRoute('list_items', 'update', async () => {
-		const access = await requireBillingAccess({ requireActiveAccess: true });
-		if ('response' in access) {
-			return access.response;
+		const { userId } = await getAuthOrTest();
+		if (!userId) {
+			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
-		const { userId } = access;
 
 		// Set user and list context for Sentry
 		SentryLogger.setContext('list_items_update', { userId, listId: id });
@@ -112,11 +109,10 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 	const { id } = await params;
 
 	return apiTracker.trackRoute('list_items', 'remove_creator', async () => {
-		const access = await requireBillingAccess({ requireActiveAccess: true });
-		if ('response' in access) {
-			return access.response;
+		const { userId } = await getAuthOrTest();
+		if (!userId) {
+			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 		}
-		const { userId } = access;
 
 		// Set user and list context for Sentry
 		SentryLogger.setContext('list_items_remove', { userId, listId: id });

@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
-import { getBillingEntitlements } from '@/lib/billing';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { getNumberProperty, toRecord, type UnknownRecord } from '@/lib/utils/type-guards';
@@ -58,21 +57,9 @@ export async function GET(_req: NextRequest) {
 			return res;
 		}
 
-		const entitlements = await getBillingEntitlements(userId);
-
 		if (!stripe) {
 			const res = NextResponse.json(
-				{
-					error: 'STRIPE_SECRET_KEY is not configured',
-					billing: {
-						currentPlan: entitlements.currentPlan,
-						subscriptionStatus: entitlements.subscriptionStatus,
-						trialStatus: entitlements.trialStatus,
-						isTrialing: entitlements.isTrialing,
-						hasActiveSubscription: entitlements.hasActiveSubscription,
-						access: entitlements.access,
-					},
-				},
+				{ error: 'STRIPE_SECRET_KEY is not configured' },
 				{ status: 500 }
 			);
 			res.headers.set('x-request-id', reqId);
@@ -95,14 +82,6 @@ export async function GET(_req: NextRequest) {
 				access: {
 					hasAccess: false,
 					reason: 'no_subscription',
-				},
-				billing: {
-					currentPlan: entitlements.currentPlan,
-					subscriptionStatus: entitlements.subscriptionStatus,
-					trialStatus: entitlements.trialStatus,
-					isTrialing: entitlements.isTrialing,
-					hasActiveSubscription: entitlements.hasActiveSubscription,
-					access: entitlements.access,
 				},
 			});
 		}
@@ -173,16 +152,7 @@ export async function GET(_req: NextRequest) {
 				lastPaymentStatus: latestInvoice?.status ?? null,
 				paymentMethodLast4: paymentMethod?.card?.last4 ?? null,
 			},
-			billing: {
-				currentPlan: entitlements.currentPlan,
-				subscriptionStatus: entitlements.subscriptionStatus,
-				trialStatus: entitlements.trialStatus,
-				isTrialing: entitlements.isTrialing,
-				hasActiveSubscription: entitlements.hasActiveSubscription,
-				access: entitlements.access,
-			},
 		};
-
 		const duration = Date.now() - startedAt;
 		const res = NextResponse.json(payload);
 		res.headers.set('x-request-id', reqId);

@@ -3,14 +3,12 @@ import { NextResponse } from 'next/server';
 import { trackSearchStarted } from '@/lib/analytics/logsnag';
 import { getUserDataForTracking } from '@/lib/analytics/track-server-utils';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
-import { validateCreatorSearch, validateTrialSearchLimit } from '@/lib/billing';
+import { validateCreatorSearch } from '@/lib/billing';
 import { db } from '@/lib/db';
 import { campaigns, scrapingJobs } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { qstash } from '@/lib/queue/qstash';
-import { dispatch } from '@/lib/search-engine/v2/workers';
 import { normalizePageParams, paginateCreators } from '@/lib/search-engine/utils/pagination';
-import { buildUnifiedStatusResponse } from '@/lib/search-engine/utils/unified-status-response';
 import { isRecord, isString, toRecord } from '@/lib/utils/type-guards';
 import { getWebhookUrl } from '@/lib/utils/url-utils';
 
@@ -64,34 +62,75 @@ export async function POST(req: Request) {
 				.where(eq(campaigns.id, campaignId));
 		}
 
-		const targetResults = 100;
-		const dispatchResult = await dispatch({
-			userId,
-			request: {
-				searchType: 'similar',
-				platform: 'youtube',
-				seedUsername: target,
-				campaignId,
-				targetResults,
-				similarEngine: 'youtube_similar',
-			},
-		});
-
-		if (!dispatchResult.success) {
+		const planValidation = await validateCreatorSearch(userId, 100);
+		if (!planValidation.allowed) {
 			return NextResponse.json(
 				{
-					error: dispatchResult.error || 'Failed to queue search',
-					upgrade: dispatchResult.statusCode === 403,
+					error: 'Plan limit exceeded',
+					message: planValidation.reason,
+					upgrade: true,
 				},
-				{ status: dispatchResult.statusCode }
+				{ status: 403 }
 			);
+		}
+
+		const targetResults = 100;
+
+		const [job] = await db
+			.insert(scrapingJobs)
+			.values({
+				userId,
+				campaignId,
+				targetUsername: target,
+				platform: 'YouTube',
+				status: 'pending',
+				processedRuns: 0,
+				processedResults: 0,
+				targetResults,
+				cursor: 0,
+				progress: '0',
+				timeoutAt: new Date(Date.now() + TIMEOUT_MINUTES * 60 * 1000),
+				createdAt: new Date(),
+				updatedAt: new Date(),
+				searchParams: {
+					runner: 'search-engine',
+					platform: 'youtube_similar',
+					targetUsername: target,
+				},
+			})
+			.returning();
+
+		// Track search started in LogSnag
+		// @why Uses getUserDataForTracking to get fresh data from Clerk if DB has fallback email
+		const userData = await getUserDataForTracking(userId);
+		await trackSearchStarted({
+			userId,
+			platform: 'YouTube',
+			type: 'similar',
+			targetCount: targetResults,
+			email: userData.email || 'unknown',
+			name: userData.name,
+		});
+
+		let qstashMessageId: string | null = null;
+		try {
+			const result = await qstash.publishJSON({
+				url: `${getWebhookUrl()}/api/qstash/process-search`,
+				body: { jobId: job.id },
+				retries: 3,
+				notifyOnFailure: true,
+			});
+			const resultRecord = toRecord(result);
+			qstashMessageId = isString(resultRecord?.messageId) ? resultRecord.messageId : null;
+		} catch (error) {
+			structuredConsole.warn('YouTube similar QStash enqueue warning', error);
 		}
 
 		return NextResponse.json({
 			message: 'YouTube similar search job started successfully',
-			jobId: dispatchResult.data?.jobId,
-			qstashMessageId: null,
-			engine: 'v2_dispatch_wrapper',
+			jobId: job.id,
+			qstashMessageId,
+			engine: 'search-engine',
 		});
 	} catch (error: unknown) {
 		structuredConsole.error('YouTube similar POST failed', error);
@@ -145,25 +184,7 @@ export async function GET(req: Request) {
 					})
 					.where(eq(scrapingJobs.id, job.id));
 
-				const timeoutPayload = buildUnifiedStatusResponse({
-					jobId: job.id,
-					rawStatus: 'timeout',
-					processedResults: job.processedResults ?? 0,
-					targetResults: job.targetResults ?? 0,
-					progressPercent: Number(job.progress ?? '0'),
-					totalCreators: 0,
-					creatorsEnriched: 0,
-					platform: job.platform ?? 'YouTube',
-					error: 'Job exceeded maximum allowed time',
-					results: [],
-					pagination: { offset: 0, limit: 200, total: 0, nextOffset: null },
-				});
-				return NextResponse.json({
-					...timeoutPayload,
-					engine: isString(toRecord(job.searchParams)?.runner)
-						? toRecord(job.searchParams)?.runner
-						: 'search-engine',
-				});
+				return NextResponse.json({ status: 'timeout', error: 'Job exceeded maximum allowed time' });
 			}
 		}
 
@@ -177,33 +198,25 @@ export async function GET(req: Request) {
 			totalCreators,
 			pagination,
 		} = paginateCreators(job.results, limit, offset);
-		const benchmark = isRecord(toRecord(job.searchParams)?.searchEngineBenchmark)
-			? toRecord(job.searchParams)?.searchEngineBenchmark
-			: null;
-		const unifiedPayload = buildUnifiedStatusResponse({
-			jobId: job.id,
-			rawStatus: job.status,
-			processedResults: job.processedResults ?? 0,
-			targetResults: job.targetResults ?? 0,
-			progressPercent: Number(job.progress ?? '0'),
-			totalCreators,
-			creatorsEnriched: totalCreators,
-			platform: job.platform ?? 'YouTube',
-			results: (paginatedResults ?? []).map((result) => ({
-				id: result.id,
-				creators: Array.isArray(result.creators) ? result.creators : [],
-			})),
-			pagination,
-			error: job.error,
-			benchmark,
-		});
 
-		return NextResponse.json({
-			...unifiedPayload,
+		const payload = {
+			status: job.status,
+			processedResults: job.processedResults,
+			targetResults: job.targetResults,
+			error: job.error,
+			results: paginatedResults,
+			progress: parseFloat(job.progress || '0'),
 			engine: isString(toRecord(job.searchParams)?.runner)
 				? toRecord(job.searchParams)?.runner
 				: 'search-engine',
-		});
+			benchmark: isRecord(toRecord(job.searchParams)?.searchEngineBenchmark)
+				? toRecord(job.searchParams)?.searchEngineBenchmark
+				: null,
+			totalCreators,
+			pagination,
+		};
+
+		return NextResponse.json(payload);
 	} catch (error: unknown) {
 		structuredConsole.error('YouTube similar GET failed', error);
 		return NextResponse.json(

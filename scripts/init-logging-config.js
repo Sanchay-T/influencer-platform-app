@@ -168,7 +168,7 @@ async function main() {
   
   console.log('\n🚀 Ready to test the logging system!');
   console.log('Next steps:');
-  console.log('1. npm run dev:ngrok           # Start development server + ngrok');
+  console.log('1. npm start                  # Start development server');
   console.log('2. npm run test:logging       # Run logging system tests');
   console.log('3. Check browser console      # Should see clean, structured logs');
 }

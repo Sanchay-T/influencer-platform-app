@@ -344,6 +344,20 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 		return sortedJobs.find((job) => isActiveJob(job)) ?? null;
 	}, [sortedJobs]);
 
+	const isSelectedV2Job = useMemo(() => {
+		if (!selectedJob) {
+			return false;
+		}
+		return resolveScrapingEndpoint(selectedJob) === '/api/v2/status';
+	}, [selectedJob]);
+
+	const isActiveV2Job = useMemo(() => {
+		if (!activeJob) {
+			return false;
+		}
+		return resolveScrapingEndpoint(activeJob) === '/api/v2/status';
+	}, [activeJob]);
+
 	const isCampaignActive = useMemo(() => {
 		return sortedJobs.some((job) => isActiveJob(job));
 	}, [sortedJobs]);
@@ -463,13 +477,14 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 		if (!selectedJob) {
 			return;
 		}
-		// With canonical /api/v2/status endpoint, both keyword and similar jobs fetch through this path.
-		const shouldFetch = !selectedJob.resultsLoaded || isActiveJob(selectedJob);
+		// Active jobs should always fetch fresh data (cache may have 1 creator from initial load)
+		const shouldFetch =
+			!isSelectedV2Job && (!selectedJob.resultsLoaded || isActiveJob(selectedJob));
 		if (!shouldFetch) {
 			return;
 		}
 		fetchJobSnapshot(selectedJob);
-	}, [fetchJobSnapshot, selectedJob]);
+	}, [fetchJobSnapshot, selectedJob, isSelectedV2Job]);
 
 	// Log tab changes
 	useEffect(() => {
@@ -545,9 +560,13 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 	}, [activeJobId, polledData, updateJobState]);
 
 	// Periodically refresh creators for active jobs
-	// @why Status polling uses limit=0 (counts/progress), so we still fetch paged creators separately.
+	// @why Status polling uses limit=0 (only counts), so we need separate creator fetch
 	useEffect(() => {
 		if (!(activeJob && activeJobId)) {
+			return;
+		}
+
+		if (isActiveV2Job) {
 			return;
 		}
 
@@ -560,7 +579,7 @@ export function useCampaignJobs(campaign: Campaign | null): UseCampaignJobsResul
 		}, 5000);
 
 		return () => clearInterval(intervalId);
-	}, [activeJob, activeJobId, jobs, fetchJobSnapshot]);
+	}, [activeJob, activeJobId, jobs, fetchJobSnapshot, isActiveV2Job]);
 
 	// Handle job selection
 	const handleSelectJob = useCallback(

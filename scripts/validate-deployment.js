@@ -241,7 +241,7 @@ async function validateSecurityConfig() {
   }
   
   // Check admin configuration
-  const adminEmails = process.env.ADMIN_EMAILS || process.env.NEXT_PUBLIC_ADMIN_EMAILS;
+  const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS;
   if (!adminEmails && config.environment !== 'test') {
     Logger.warn('Admin emails not configured');
   }

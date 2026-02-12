@@ -15,7 +15,7 @@
  */
 
 const http = require('http');
-const { execSync, spawn } = require('child_process');
+const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const dotenv = require('dotenv');
@@ -35,6 +35,7 @@ function loadEnv(file) {
   }
 }
 
+// Keep port resolution consistent with scripts/dev-with-port.js
 loadEnv('.env.local');
 loadEnv('.env.worktree');
 
@@ -58,63 +59,6 @@ function log(message, color = colors.reset) {
 
 function logStep(step, message) {
   log(`\n${colors.bright}[${step}]${colors.reset} ${message}`);
-}
-
-function getPidsOnPort(port) {
-  try {
-    const output = execSync(`lsof -ti tcp:${port}`, {
-      stdio: ['ignore', 'pipe', 'ignore'],
-    }).toString().trim();
-
-    if (!output) {
-      return [];
-    }
-
-    return output
-      .split('\n')
-      .map((value) => Number(value.trim()))
-      .filter((pid) => Number.isFinite(pid));
-  } catch {
-    return [];
-  }
-}
-
-function cleanupPort(port) {
-  const initialPids = getPidsOnPort(port);
-  if (!initialPids.length) {
-    return;
-  }
-
-  logStep('PORT', `Cleaning up ${initialPids.length} process(es) on port ${port}...`);
-
-  for (const pid of initialPids) {
-    try {
-      process.kill(pid, 'SIGTERM');
-      log(`  Sent SIGTERM to PID ${pid}`, colors.cyan);
-    } catch {
-      // Ignore PID races.
-    }
-  }
-
-  // Give processes a moment to exit gracefully.
-  const waitUntil = Date.now() + 1200;
-  while (Date.now() < waitUntil) {
-    const remaining = getPidsOnPort(port);
-    if (!remaining.length) {
-      log(`${colors.green}✓ Port ${port} is now free${colors.reset}`);
-      return;
-    }
-  }
-
-  const forcePids = getPidsOnPort(port);
-  for (const pid of forcePids) {
-    try {
-      process.kill(pid, 'SIGKILL');
-      log(`  Force-killed PID ${pid}`, colors.yellow);
-    } catch {
-      // Ignore PID races.
-    }
-  }
 }
 
 async function checkNgrokStatus() {
@@ -170,27 +114,11 @@ async function startNgrok() {
 function startDevServer() {
   logStep('DEV SERVER', `Starting Next.js development server on port ${TARGET_PORT}...`);
 
-  const useTurbo = process.env.NO_TURBO !== 'true'; // Enable Turbopack by default for faster compilation
-
-  // Resolve local Next.js binary reliably (avoid relying on npm script indirection)
-  let nextBin;
-  try {
-    nextBin = require.resolve('next/dist/bin/next');
-  } catch (e) {
-    log('Could not resolve Next.js binary. Did you run npm install?', colors.red);
-    process.exit(1);
-  }
-
-  const args = [nextBin, 'dev', '-p', String(TARGET_PORT)];
-  if (useTurbo) {
-    args.push('--turbopack');
-    log('Using Turbopack for faster compilation', colors.cyan);
-  }
-
-  const devProcess = spawn(process.execPath, args, {
+  const devProcess = spawn('npm', ['run', 'dev'], {
     stdio: 'inherit',
+    shell: true,
     // Ensure Next.js binds to the same port ngrok is forwarding to
-    env: { ...process.env, LOCAL_PORT: String(TARGET_PORT), PORT: String(TARGET_PORT) },
+    env: { ...process.env, LOCAL_PORT: String(TARGET_PORT), PORT: String(TARGET_PORT) }
   });
 
   // Handle graceful shutdown
@@ -219,8 +147,6 @@ async function main() {
   log(`${colors.bright}${colors.blue}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${colors.reset}\n`);
 
   try {
-    cleanupPort(TARGET_PORT);
-
     // Step 1: Check if ngrok is already running
     logStep('CHECK', 'Checking ngrok status...');
     const status = await checkNgrokStatus();
@@ -240,7 +166,7 @@ async function main() {
     log(`\n${colors.red}✗ Error: ${error.message}${colors.reset}`, colors.red);
     log('\nTroubleshooting tips:', colors.yellow);
     log('  1. Make sure ngrok is installed and in your PATH');
-    log(`  2. Check if port ${TARGET_PORT} is available`);
+    log('  2. Check if port 3002 is available');
     log('  3. Verify ngrok auth token is configured');
     log('  4. Run: ngrok config add-authtoken <your-token>');
     process.exit(1);

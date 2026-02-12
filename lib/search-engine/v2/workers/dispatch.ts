@@ -17,17 +17,14 @@ import { campaigns, scrapingJobs } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
 import { SentryLogger } from '@/lib/logging/sentry-logger';
 import { getDeadLetterQueueUrl, qstash } from '@/lib/queue/qstash';
-import { getWebhookUrl } from '@/lib/utils/url-utils';
 import { PLATFORM_TIMEOUTS } from '../core/config';
 import { createV2Job, loadJobTracker } from '../core/job-tracker';
 import { expandKeywordsForTarget } from '../core/keyword-expander';
 import type { Platform } from '../core/types';
 import type {
 	DispatchRequest,
-	DispatchSimilarRequest,
 	DispatchResponse,
 	DispatchWorkerMessage,
-	DispatchKeywordRequest,
 	SearchWorkerMessage,
 } from './types';
 
@@ -39,75 +36,6 @@ export { dispatchEnrichmentBatches } from './enrich-dispatch';
 // ============================================================================
 
 const LOG_PREFIX = '[v2-dispatch]';
-
-function isSimilarDispatchRequest(request: DispatchRequest): request is DispatchSimilarRequest {
-	return request.searchType === 'similar';
-}
-
-function resolveSimilarJobConfig(request: DispatchSimilarRequest): {
-	jobPlatform: string;
-	runner: 'similar_discovery' | 'search-engine';
-	searchParams: Record<string, unknown>;
-	targetResults: number;
-} {
-	const normalizedPlatform = request.platform.toLowerCase();
-	const engine = request.similarEngine;
-	const targetResults = request.targetResults ?? 100;
-
-	if (engine === 'youtube_similar' || normalizedPlatform === 'youtube') {
-		return {
-			jobPlatform: 'youtube_similar',
-			runner: 'search-engine',
-			searchParams: {
-				runner: 'search-engine',
-				platform: 'youtube_similar',
-				targetUsername: request.seedUsername,
-				statusSource: 'job_creators',
-			},
-			targetResults,
-		};
-	}
-
-	if (engine === 'instagram_similar') {
-		return {
-			jobPlatform: 'instagram_similar',
-			runner: 'search-engine',
-			searchParams: {
-				runner: 'search-engine',
-				platform: 'instagram_similar',
-				targetUsername: request.seedUsername,
-				statusSource: 'job_creators',
-			},
-			targetResults,
-		};
-	}
-
-	if (normalizedPlatform === 'tiktok') {
-		return {
-			jobPlatform: 'similar_discovery_tiktok',
-			runner: 'similar_discovery',
-			searchParams: {
-				runner: 'similar_discovery',
-				targetUsername: request.seedUsername,
-				targetPlatform: 'tiktok',
-				statusSource: 'job_creators',
-			},
-			targetResults,
-		};
-	}
-
-	return {
-		jobPlatform: 'similar_discovery_instagram',
-		runner: 'similar_discovery',
-		searchParams: {
-			runner: 'similar_discovery',
-			targetUsername: request.seedUsername,
-			targetPlatform: 'instagram',
-			statusSource: 'job_creators',
-		},
-		targetResults,
-	};
-}
 
 /**
  * Get the base URL for worker endpoints
@@ -239,130 +167,12 @@ export interface DispatchWorkerResult {
 	failedDispatches?: number;
 }
 
-async function dispatchSimilar(options: {
-	userId: string;
-	request: DispatchSimilarRequest;
-}): Promise<DispatchResult> {
-	const { userId, request } = options;
-	const { campaignId } = request;
-	const targetUsername = request.seedUsername.trim().replace(/^@/, '');
-
-	const campaign = await db.query.campaigns.findFirst({
-		where: eq(campaigns.id, campaignId),
-	});
-	if (!campaign) {
-		return {
-			success: false,
-			error: 'Campaign not found',
-			statusCode: 404,
-		};
-	}
-	if (campaign.userId !== userId) {
-		return {
-			success: false,
-			error: 'Campaign does not belong to this user',
-			statusCode: 403,
-		};
-	}
-
-	const { targetResults, jobPlatform, searchParams } = resolveSimilarJobConfig(request);
-
-	const planValidation = await validateCreatorSearch(userId, targetResults);
-	if (!planValidation.allowed) {
-		return {
-			success: false,
-			error: planValidation.reason || 'Search limit exceeded',
-			statusCode: 403,
-		};
-	}
-
-	const trialValidation = await validateTrialSearchLimit(userId);
-	if (!trialValidation.allowed) {
-		return {
-			success: false,
-			error: trialValidation.reason || 'Trial search limit exceeded',
-			statusCode: 403,
-		};
-	}
-
-	const [job] = await db
-		.insert(scrapingJobs)
-		.values({
-			userId,
-			campaignId,
-			targetUsername,
-			platform: jobPlatform,
-			status: 'pending',
-			processedRuns: 0,
-			processedResults: 0,
-			targetResults,
-			cursor: 0,
-			progress: '0',
-			timeoutAt: new Date(Date.now() + (jobPlatform.includes('youtube') ? 60 : 30) * 60 * 1000),
-			createdAt: new Date(),
-			updatedAt: new Date(),
-			searchParams,
-		})
-		.returning({ id: scrapingJobs.id });
-
-	try {
-		await qstash.publishJSON({
-			url: `${getWebhookUrl()}/api/qstash/process-search`,
-			body: { jobId: job.id },
-			retries: 3,
-			notifyOnFailure: true,
-		});
-	} catch (qstashError) {
-		logger.warn(
-			`${LOG_PREFIX} Similar dispatch queued without QStash confirmation`,
-			{ error: String(qstashError), jobId: job.id },
-			LogCategory.JOB
-		);
-	}
-
-	// Best-effort analytics event for parity with keyword flow.
-	getUserDataForTracking(userId)
-		.then((userData) =>
-			trackServer('search_started', {
-				userId,
-				platform: request.platform as 'tiktok' | 'instagram' | 'youtube',
-				type: 'similar',
-				targetCount: targetResults,
-				email: userData.email,
-				name: userData.name,
-			})
-		)
-		.catch(() => undefined);
-
-	return {
-		success: true,
-		data: {
-			jobId: job.id,
-			keywords: [],
-			workersDispatched: 0,
-			searchType: 'similar',
-			message: 'Similar search job queued',
-		},
-		statusCode: 200,
-	};
-}
-
 /**
  * Main dispatch function - validates, creates job, fans out to workers
  */
 export async function dispatch(options: DispatchOptions): Promise<DispatchResult> {
 	const { userId, request } = options;
-	if (isSimilarDispatchRequest(request)) {
-		return dispatchSimilar({ userId, request });
-	}
-	const keywordRequest: DispatchKeywordRequest = request;
-	const {
-		platform,
-		keywords,
-		targetResults,
-		campaignId,
-		enableExpansion = true,
-	} = keywordRequest;
+	const { platform, keywords, targetResults, campaignId, enableExpansion = true } = request;
 
 	// Set Sentry context for this dispatch
 	SentryLogger.setContext('search_dispatch', {
@@ -655,7 +465,6 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 					jobId,
 					keywords,
 					workersDispatched: 0,
-					searchType: 'keyword',
 					message: 'Queued dispatch worker',
 				},
 				statusCode: 200,

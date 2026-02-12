@@ -2,13 +2,25 @@
 
 import { useAuth } from '@clerk/nextjs';
 import { useCallback, useEffect, useState } from 'react';
-import { PLAN_ORDER } from '@/lib/billing/plan-config';
-import type { PlanKey } from '@/lib/types/statuses';
-import { type LoggedApiResponse, loggedApiCall } from '@/lib/utils/frontend-logger';
+import { structuredConsole } from '@/lib/logging/console-proxy';
+import { isValidPlanKey } from '@/lib/types/statuses';
+import { type LoggedApiResponse, loggedApiCall, logTiming } from '@/lib/utils/frontend-logger';
 import { isBoolean, isNumber, isString, toRecord } from '@/lib/utils/type-guards';
+import { buildPlanFns, type PlanKey } from './billing-plan';
+
+const BILLING_DEBUG = false;
+const debugLog = (...args: unknown[]) => {
+	if (BILLING_DEBUG) {
+		structuredConsole.log(...args);
+	}
+};
+const _debugWarn = (...args: unknown[]) => {
+	if (BILLING_DEBUG) {
+		structuredConsole.warn(...args);
+	}
+};
 
 const BILLING_CACHE_KEY = 'gemz_entitlements_v1';
-const CACHE_TTL_MS = 30_000;
 
 type BillingApiRecord = Record<string, unknown>;
 
@@ -18,13 +30,13 @@ type BillingCache = {
 	inflight: Promise<BillingApiRecord> | null;
 };
 
+const normalizeBillingPayload = (input: unknown): BillingApiRecord => {
+	return toRecord(input) ?? {};
+};
+
 declare global {
 	var __BILLING_CACHE__: BillingCache | undefined;
 }
-
-const PLAN_HIERARCHY_WITH_FREE: PlanKey[] = ['free', ...PLAN_ORDER];
-
-const normalizeBillingPayload = (input: unknown): BillingApiRecord => toRecord(input) ?? {};
 
 const getBillingCache = (): BillingCache => {
 	if (!globalThis.__BILLING_CACHE__) {
@@ -76,84 +88,53 @@ export interface BillingStatus {
 const isBillingTrialStatus = (value: string): value is NonNullable<BillingStatus['trialStatus']> =>
 	value === 'active' || value === 'expired' || value === 'converted' || value === 'cancelled';
 
-const isPlan = (value: string): value is PlanKey =>
-	PLAN_HIERARCHY_WITH_FREE.some((plan) => plan === value);
-
-function getPlanFunctions(currentPlan: PlanKey, featureMap: Record<string, boolean>) {
-	const currentIndex = PLAN_HIERARCHY_WITH_FREE.indexOf(currentPlan);
-
-	const hasPlan = (required: string): boolean => {
-		if (!isPlan(required)) {
-			return required === 'free';
-		}
-		const requiredIndex = PLAN_HIERARCHY_WITH_FREE.indexOf(required);
-		return currentIndex >= requiredIndex;
-	};
-
-	const canAccessFeature = (feature: string): boolean => {
-		if (Object.prototype.hasOwnProperty.call(featureMap, feature)) {
-			return Boolean(featureMap[feature]);
-		}
-		// Fail-safe: unknown features are denied until explicitly added by backend entitlements.
-		return false;
-	};
-
-	return {
-		hasPlan,
-		canAccessFeature,
-		hasFeature: canAccessFeature,
-	};
-}
-
-const defaultBillingStatus: BillingStatus = {
-	isLoaded: false,
-	currentPlan: 'free',
-	hasFeature: () => false,
-	hasPlan: (plan) => plan === 'free',
-	canAccessFeature: () => false,
-	isTrialing: false,
-	needsUpgrade: false,
-	usageInfo: {
-		campaignsUsed: 0,
-		campaignsLimit: 0,
-		creatorsUsed: 0,
-		creatorsLimit: 0,
-		progressPercentage: 0,
-	},
-	planFeatures: {
-		campaigns: 0,
-		creators: 0,
-		features: ['trial_access'],
-		price: 0,
-	},
-};
-
+/**
+ * Custom hook for Stripe-only billing and plan verification
+ */
 export function useBilling(): BillingStatus {
 	const { isLoaded, userId } = useAuth();
+	// Simple in-memory cache to avoid duplicate fetches and speed up gating
+	// Shared across all hook instances in the same tab
+	// Keep data fresh but avoid thrash: 30s TTL + dedupe in-flight
+	const CACHE_TTL_MS = 30000;
 	const cacheRef = getBillingCache();
-	const [billingStatus, setBillingStatus] = useState<BillingStatus>(defaultBillingStatus);
+	const [billingStatus, setBillingStatus] = useState<BillingStatus>({
+		isLoaded: false,
+		currentPlan: 'free',
+		hasFeature: () => false,
+		hasPlan: () => false,
+		canAccessFeature: () => false,
+		isTrialing: false,
+		needsUpgrade: false,
+	});
 
 	const setFromData = useCallback((data: BillingApiRecord) => {
-		const currentPlanValue = isString(data.currentPlan) ? data.currentPlan : 'free';
-		const currentPlan: PlanKey = isPlan(currentPlanValue) ? currentPlanValue : 'free';
+		const currentPlanValue = isString(data.currentPlan) ? data.currentPlan : '';
+		const currentPlan: PlanKey = isValidPlanKey(currentPlanValue) ? currentPlanValue : 'free';
 		const isTrialing = isBoolean(data.isTrialing) ? data.isTrialing : false;
 		const hasActiveSubscription = isBoolean(data.hasActiveSubscription)
 			? data.hasActiveSubscription
 			: false;
 		const isPaidUser = hasActiveSubscription && currentPlan !== 'free';
+		const { hasPlan, canAccessFeature, hasFeature, planFeatures } = buildPlanFns(currentPlan);
 
-		const accessRecord = toRecord(data.access);
-		const rawFeatureAccessMap = toRecord(accessRecord?.canAccessFeature) ?? {};
-		const featureAccessMap = Object.fromEntries(
-			Object.entries(rawFeatureAccessMap).map(([feature, value]) => [feature, Boolean(value)])
-		) as Record<string, boolean>;
-		const { hasPlan, canAccessFeature, hasFeature } = getPlanFunctions(currentPlan, {
-			...featureAccessMap,
-		});
+		const usageInfo = toRecord(data.usageInfo);
+		const actualCampaignsLimit =
+			(isNumber(usageInfo?.campaignsLimit) ? usageInfo?.campaignsLimit : undefined) ??
+			planFeatures.campaigns;
+		const actualCreatorsLimit =
+			(isNumber(usageInfo?.creatorsLimit) ? usageInfo?.creatorsLimit : undefined) ??
+			planFeatures.creators;
 
-		const planFeaturesRecord = toRecord(data.planFeatures);
-		const usageInfoRecord = toRecord(data.usageInfo);
+		const stripeCustomerId =
+			data.stripeCustomerId === null
+				? null
+				: isString(data.stripeCustomerId)
+					? data.stripeCustomerId
+					: undefined;
 		const trialStatusValue = isString(data.trialStatus) ? data.trialStatus : undefined;
+		const trialStatus =
+			trialStatusValue && isBillingTrialStatus(trialStatusValue) ? trialStatusValue : undefined;
 
 		setBillingStatus({
 			isLoaded: true,
@@ -164,13 +145,8 @@ export function useBilling(): BillingStatus {
 			isTrialing,
 			hasActiveSubscription,
 			isPaidUser,
-			needsUpgrade: isBoolean(data.needsUpgrade)
-				? data.needsUpgrade
-				: !(isPaidUser || isTrialing),
-			trialStatus:
-				trialStatusValue && isBillingTrialStatus(trialStatusValue)
-					? trialStatusValue
-					: undefined,
+			needsUpgrade: !isPaidUser,
+			trialStatus,
 			daysRemaining: isNumber(data.daysRemaining) ? data.daysRemaining : undefined,
 			hoursRemaining: isNumber(data.hoursRemaining) ? data.hoursRemaining : undefined,
 			minutesRemaining: isNumber(data.minutesRemaining) ? data.minutesRemaining : undefined,
@@ -179,59 +155,71 @@ export function useBilling(): BillingStatus {
 				: undefined,
 			trialStartDate: isString(data.trialStartDate) ? data.trialStartDate : undefined,
 			trialEndDate: isString(data.trialEndDate) ? data.trialEndDate : undefined,
-			planFeatures: {
-				campaigns: isNumber(planFeaturesRecord?.campaigns) ? planFeaturesRecord.campaigns : 0,
-				creators: isNumber(planFeaturesRecord?.creators) ? planFeaturesRecord.creators : 0,
-				features: Array.isArray(planFeaturesRecord?.features)
-					? planFeaturesRecord.features.filter((value): value is string => typeof value === 'string')
-					: ['trial_access'],
-				price: isNumber(planFeaturesRecord?.price) ? planFeaturesRecord.price : 0,
-			},
+			planFeatures,
 			usageInfo: {
-				campaignsUsed: isNumber(usageInfoRecord?.campaignsUsed) ? usageInfoRecord.campaignsUsed : 0,
-				campaignsLimit: isNumber(usageInfoRecord?.campaignsLimit)
-					? usageInfoRecord.campaignsLimit
-					: 0,
-				creatorsUsed: isNumber(usageInfoRecord?.creatorsUsed) ? usageInfoRecord.creatorsUsed : 0,
-				creatorsLimit: isNumber(usageInfoRecord?.creatorsLimit)
-					? usageInfoRecord.creatorsLimit
-					: 0,
-				progressPercentage: isNumber(usageInfoRecord?.progressPercentage)
-					? usageInfoRecord.progressPercentage
+				campaignsUsed: isNumber(usageInfo?.campaignsUsed) ? usageInfo.campaignsUsed : 0,
+				campaignsLimit: actualCampaignsLimit,
+				creatorsUsed: isNumber(usageInfo?.creatorsUsed) ? usageInfo.creatorsUsed : 0,
+				creatorsLimit: actualCreatorsLimit,
+				progressPercentage: isNumber(usageInfo?.progressPercentage)
+					? usageInfo.progressPercentage
 					: 0,
 			},
 			canManageSubscription: isBoolean(data.canManageSubscription)
 				? data.canManageSubscription
 				: undefined,
-			stripeCustomerId:
-				data.stripeCustomerId === null
-					? null
-					: isString(data.stripeCustomerId)
-						? data.stripeCustomerId
-						: undefined,
+			stripeCustomerId,
 			subscriptionStatus: isString(data.subscriptionStatus) ? data.subscriptionStatus : undefined,
 		});
 	}, []);
 
 	const setOnError = useCallback(() => {
+		// Default to free plan on error
 		setBillingStatus({
-			...defaultBillingStatus,
 			isLoaded: true,
+			currentPlan: 'free',
+			hasFeature: () => false,
+			hasPlan: (plan) => plan === 'free',
+			canAccessFeature: () => false,
+			isTrialing: false,
 			needsUpgrade: true,
+			hasActiveSubscription: false,
+			isPaidUser: false,
+			trialProgressPercentage: 0,
+			hoursRemaining: 0,
+			minutesRemaining: 0,
+			trialStartDate: undefined,
+			trialEndDate: undefined,
+			planFeatures: {
+				campaigns: 0,
+				creators: 0,
+				features: ['trial_access'],
+				price: 0,
+			},
+			usageInfo: {
+				campaignsUsed: 0,
+				campaignsLimit: 0,
+				creatorsUsed: 0,
+				creatorsLimit: 0,
+				progressPercentage: 0,
+			},
 		});
 	}, []);
 
+	// Fetch billing status from our API (with simple cache + inflight guard)
 	const fetchBillingStatus = useCallback(
 		async (skipCache = false) => {
 			if (!userId) {
 				return;
 			}
-
 			try {
+				// 1) Try persisted snapshot first for instant UX (no spinner on refresh)
 				try {
 					const persisted = localStorage.getItem(BILLING_CACHE_KEY);
 					if (persisted) {
-						const parsedRecord = toRecord(JSON.parse(persisted));
+						const parsed = JSON.parse(persisted);
+						// TTL 60s to keep UI snappy during navigation/refreshes
+						const parsedRecord = toRecord(parsed);
 						const cachedTs = parsedRecord && isNumber(parsedRecord.ts) ? parsedRecord.ts : null;
 						const cachedData = parsedRecord ? toRecord(parsedRecord.data) : null;
 						if (cachedTs && cachedData && Date.now() - cachedTs < 60_000) {
@@ -239,51 +227,66 @@ export function useBilling(): BillingStatus {
 						}
 					}
 				} catch {
-					// Ignore local cache read failures.
+					// Ignore localStorage read failures (e.g. privacy mode).
 				}
 
-				if (!skipCache && cacheRef.data && Date.now() - cacheRef.ts < CACHE_TTL_MS) {
+				const now = Date.now();
+				if (!skipCache && cacheRef.data && now - cacheRef.ts < CACHE_TTL_MS) {
 					setFromData(cacheRef.data);
 					return;
 				}
-
 				if (cacheRef.inflight) {
 					const data = await cacheRef.inflight;
 					setFromData(data);
 					return;
 				}
+				const opStart = Date.now();
+				debugLog('💳 [STRIPE-BILLING] Fetching billing status for user:', userId);
 
 				cacheRef.inflight = loggedApiCall(
-					'/api/billing/entitlements',
+					'/api/billing/status',
 					{},
-					{ action: 'fetch_billing_entitlements', userId }
+					{ action: 'fetch_billing_status', userId }
 				)
 					.then(async (res: LoggedApiResponse<unknown>) => {
 						if (!res.ok) {
-							throw new Error(`Failed to fetch billing entitlements (status ${res.status})`);
+							throw new Error(`Failed to fetch billing status (status ${res.status})`);
 						}
+						const reqId = res.headers.get('x-request-id') || 'none';
+						const serverDuration = res.headers.get('x-duration-ms') || 'n/a';
 						const rawData = res.data ?? (await res.json());
 						const data = normalizeBillingPayload(rawData);
+						debugLog('💳 [STRIPE-BILLING] Correlation IDs:', {
+							requestId: reqId,
+							serverDurationMs: serverDuration,
+						});
+						logTiming('fetch_billing_status_total', opStart, {
+							userId,
+							requestId: reqId || undefined,
+						});
 						cacheRef.data = data;
 						cacheRef.ts = Date.now();
 						cacheRef.inflight = null;
+						// persist snapshot for fast subsequent loads
 						try {
 							localStorage.setItem(BILLING_CACHE_KEY, JSON.stringify({ ts: Date.now(), data }));
 						} catch {
-							// Ignore local cache write failures.
+							// Ignore localStorage write failures.
 						}
 						return data;
 					})
-					.catch((error: unknown) => {
+					.catch((e: unknown) => {
 						cacheRef.inflight = null;
-						throw error;
+						throw e;
 					});
 
 				const data = await cacheRef.inflight;
+				debugLog('💳 [STRIPE-BILLING] Received billing data:', data);
+
 				setFromData(data);
 			} catch (error) {
+				structuredConsole.error('❌ [STRIPE-BILLING] Error fetching billing status:', error);
 				setOnError();
-				throw error;
 			}
 		},
 		[cacheRef, setFromData, setOnError, userId]
@@ -293,21 +296,26 @@ export function useBilling(): BillingStatus {
 		if (!(isLoaded && userId)) {
 			return;
 		}
-		fetchBillingStatus().catch(() => undefined);
+		fetchBillingStatus();
 	}, [fetchBillingStatus, isLoaded, userId]);
 
+	// Add function to force refresh billing data (useful after upgrades)
 	const refreshBillingData = useCallback(() => {
+		debugLog('🔄 [BILLING-REFRESH] Force refreshing billing data');
+
+		// Clear caches
 		try {
 			localStorage.removeItem(BILLING_CACHE_KEY);
 			const cache = getBillingCache();
 			cache.data = null;
 			cache.ts = 0;
 			cache.inflight = null;
-		} catch {
-			// Ignore cache clearing errors.
+		} catch (_e) {
+			// Ignore cache clearing failures.
 		}
 
-		fetchBillingStatus(true).catch(() => undefined);
+		// Trigger a fresh fetch
+		fetchBillingStatus(true);
 	}, [fetchBillingStatus]);
 
 	return {
@@ -316,11 +324,13 @@ export function useBilling(): BillingStatus {
 	};
 }
 
+// Utility for pages that can't use the hook but need to bust caches (e.g., Stripe return pages)
 export function clearBillingCache() {
 	try {
-		localStorage.removeItem(BILLING_CACHE_KEY);
-		localStorage.removeItem('gemz_trial_status_v1');
-		localStorage.removeItem('gemz_trial_status_cache');
+		// Clear all billing-related caches
+		localStorage.removeItem(BILLING_CACHE_KEY); // gemz_entitlements_v1
+		localStorage.removeItem('gemz_trial_status_v1'); // trial-sidebar-compact.tsx
+		localStorage.removeItem('gemz_trial_status_cache'); // use-trial-status.ts (blur overlay)
 	} catch {
 		// Ignore localStorage access issues.
 	}
@@ -334,6 +344,9 @@ export function clearBillingCache() {
 	}
 }
 
+/**
+ * Hook for checking specific plan access
+ */
 export function usePlanAccess(requiredPlan?: string) {
 	const { hasPlan, isLoaded } = useBilling();
 
@@ -352,6 +365,9 @@ export function usePlanAccess(requiredPlan?: string) {
 	};
 }
 
+/**
+ * Hook for checking specific feature access
+ */
 export function useFeatureAccess(requiredFeature?: string) {
 	const { canAccessFeature, isLoaded, currentPlan } = useBilling();
 

@@ -171,38 +171,7 @@ export {
 	incrementCampaignCount,
 	incrementCreatorCount,
 	resetAllMonthlyUsage,
-	resetAllMonthlyUsageWithAudit,
 	resetMonthlyUsage,
 	shouldResetUsage,
-	type MonthlyUsageResetResult,
 	type UsageSummary,
 } from './usage-tracking';
-
-// ═══════════════════════════════════════════════════════════════
-// ENTITLEMENTS
-// ═══════════════════════════════════════════════════════════════
-
-export {
-	getBillingEntitlements,
-	type BillingEntitlements,
-	type ClientPlanKey,
-} from './entitlements';
-
-// ═══════════════════════════════════════════════════════════════
-// RECONCILIATION
-// ═══════════════════════════════════════════════════════════════
-
-export {
-	reconcileStaleBillingState,
-	type BillingReconciliationResult,
-} from './reconciliation';
-
-// ═══════════════════════════════════════════════════════════════
-// SERVER GUARDS
-// ═══════════════════════════════════════════════════════════════
-
-export {
-	requireBillingAccess,
-	type GuardOptions,
-	type GuardResult,
-} from './server-guards';

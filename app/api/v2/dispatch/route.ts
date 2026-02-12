@@ -68,13 +68,8 @@ export async function POST(req: Request) {
 			{
 				userId,
 				platform: validation.data.platform,
-				searchType: validation.data.searchType ?? 'keyword',
-				keywordCount:
-					validation.data.searchType === 'similar' ? 0 : validation.data.keywords.length,
-				targetResults:
-					validation.data.searchType === 'similar'
-						? validation.data.targetResults ?? 100
-						: validation.data.targetResults,
+				keywordCount: validation.data.keywords.length,
+				targetResults: validation.data.targetResults,
 				campaignId: validation.data.campaignId,
 				vercelId,
 			},

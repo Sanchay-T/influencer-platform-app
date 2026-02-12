@@ -203,14 +203,14 @@ export default function SimilarSearchResults({ searchData }) {
 						jobId={searchData.jobId}
 						platform={searchData.platform}
 						searchData={searchData}
-							onMeta={setEnhancedMeta}
-							onProgress={setProgressInfo}
-							onComplete={(payload) => {
-								if (payload?.status === 'completed' || payload?.status === 'partial') {
-									handleResultsComplete(payload);
-								}
-							}}
-						/>
+						onMeta={setEnhancedMeta}
+						onProgress={setProgressInfo}
+						onComplete={(payload) => {
+							if (payload?.status === 'completed') {
+								handleResultsComplete(payload);
+							}
+						}}
+					/>
 				</div>
 			)}
 

@@ -360,9 +360,34 @@ export default function ProfileSettingsPage() {
 
 // SubscriptionPlanCard component using real billing status API with dark theme
 function SubscriptionPlanCard() {
-	const billingStatus = useBilling();
+	type BillingStatusSummary = {
+		currentPlan?: string;
+		hasActiveSubscription?: boolean;
+		isTrialing?: boolean;
+		daysRemaining?: number;
+	};
+	const [billingStatus, setBillingStatus] = useState<BillingStatusSummary | null>(null);
+	const [loading, setLoading] = useState(true);
 
-	if (!billingStatus.isLoaded) {
+	useEffect(() => {
+		async function fetchBillingStatus() {
+			try {
+				const response = await fetch('/api/billing/status', { cache: 'no-store' });
+				if (response.ok) {
+					const data = await response.json();
+					setBillingStatus(data);
+				}
+			} catch (error) {
+				structuredConsole.error('Error fetching billing status:', error);
+			} finally {
+				setLoading(false);
+			}
+		}
+
+		fetchBillingStatus();
+	}, []);
+
+	if (loading) {
 		return (
 			<Card className="h-fit bg-zinc-900/80 border border-zinc-700/50">
 				<CardContent className="p-6">
@@ -455,13 +480,13 @@ function SubscriptionPlanCard() {
 		},
 	};
 
-	const planCandidate = billingStatus.currentPlan ?? '';
+	const planCandidate = billingStatus?.currentPlan ?? '';
 	const currentPlan: PlanKey = isValidPlanKey(planCandidate) ? planCandidate : 'free';
 	const config = planConfig[currentPlan];
 	const Icon = config?.icon || Star;
 
-	const isActive = billingStatus.hasActiveSubscription;
-	const status = isActive ? 'Active' : billingStatus.isTrialing ? 'Trial' : 'Inactive';
+	const isActive = billingStatus?.hasActiveSubscription;
+	const status = isActive ? 'Active' : billingStatus?.isTrialing ? 'Trial' : 'Inactive';
 
 	// Calculate next billing date (mock for now)
 	const nextBilling = new Date();
@@ -491,7 +516,7 @@ function SubscriptionPlanCard() {
 				<CardDescription className="mt-1 text-zinc-400">
 					{isActive
 						? 'Your subscription is active and all features are available.'
-						: billingStatus.isTrialing
+						: billingStatus?.isTrialing
 							? 'Your trial is active with full feature access.'
 							: 'Upgrade to access premium features.'}
 				</CardDescription>
@@ -520,7 +545,7 @@ function SubscriptionPlanCard() {
 								className={
 									isActive
 										? 'text-pink-400 font-medium'
-										: billingStatus.isTrialing
+										: billingStatus?.isTrialing
 											? 'text-blue-400 font-medium'
 											: 'text-zinc-400'
 								}
@@ -584,7 +609,7 @@ function SubscriptionPlanCard() {
 					className={
 						isActive
 							? 'bg-zinc-800/60 border border-zinc-700/50 rounded-lg p-4'
-							: billingStatus.isTrialing
+							: billingStatus?.isTrialing
 								? 'bg-zinc-800/60 border border-zinc-700/50 rounded-lg p-4'
 								: 'bg-zinc-800/60 border border-zinc-700/50 rounded-lg p-4'
 					}
@@ -594,7 +619,7 @@ function SubscriptionPlanCard() {
 							className={`h-5 w-5 flex-shrink-0 mt-0.5 ${
 								isActive
 									? 'text-pink-400'
-									: billingStatus.isTrialing
+									: billingStatus?.isTrialing
 										? 'text-blue-400'
 										: 'text-zinc-400'
 							}`}
@@ -603,14 +628,14 @@ function SubscriptionPlanCard() {
 							<h4 className="font-medium text-sm text-zinc-100">
 								{isActive
 									? 'Subscription Active'
-									: billingStatus.isTrialing
+									: billingStatus?.isTrialing
 										? 'Trial Active'
 										: 'No Active Subscription'}
 							</h4>
 							<p className="text-sm mt-1 text-zinc-300">
 								{isActive
 									? `You have full access to all ${config?.name.toLowerCase()} features. Thank you for being a valued customer!`
-									: billingStatus.isTrialing
+									: billingStatus?.isTrialing
 										? `You have full trial access. ${billingStatus.daysRemaining || 0} days remaining.`
 										: 'Upgrade to access premium features and unlimited usage.'}
 							</p>

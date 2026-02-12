@@ -7,8 +7,6 @@ import { scrapingJobs, scrapingResults } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
 import { dedupeCreators as sharedDedupeCreators } from '@/lib/utils/dedupe-creators';
 import { getStringProperty, toArray, toRecord } from '@/lib/utils/type-guards';
-import { saveCreatorsToJob } from './v2/workers/save-creators';
-import type { NormalizedCreator as V2NormalizedCreator } from './v2/core/types';
 import type { NormalizedCreator, ScrapingJobRecord, SearchMetricsSnapshot } from './types';
 
 // Note: filterCreatorsByLikes removed from backend - filtering now done in frontend
@@ -87,25 +85,6 @@ const dedupeWithHint = (
 	sharedDedupeCreators(creators, {
 		platformHint,
 	});
-
-const fallbackCreatorKey = (creator: NormalizedCreator): string => {
-	const creatorRecord = toRecord(creator) ?? {};
-	const creatorNested = toRecord(creatorRecord.creator) ?? {};
-	return (
-		getStringProperty(creatorRecord, 'username') ??
-		getStringProperty(creatorRecord, 'handle') ??
-		getStringProperty(creatorNested, 'username') ??
-		getStringProperty(creatorNested, 'uniqueId') ??
-		getStringProperty(creatorRecord, 'id') ??
-		getStringProperty(creatorRecord, 'externalId') ??
-		`creator_${Math.random().toString(36).slice(2, 10)}`
-	)
-		.toLowerCase()
-		.trim();
-};
-
-const toV2Creators = (creators: NormalizedCreator[]): V2NormalizedCreator[] =>
-	creators as unknown as V2NormalizedCreator[];
 
 export class SearchJobService {
 	private job: ScrapingJobRecord;
@@ -292,34 +271,11 @@ export class SearchJobService {
 			return { total: result.total, newCount: 0 };
 		}
 
-		let canonicalNewCount = 0;
-		try {
-			const canonicalResult = await saveCreatorsToJob(
-				this.job.id,
-				toV2Creators(creators),
-				(creator) =>
-					getKey(creator as unknown as NormalizedCreator) ??
-					fallbackCreatorKey(creator as unknown as NormalizedCreator),
-				this.job.targetResults ?? 1000
-			);
-			canonicalNewCount = canonicalResult.newCount;
-		} catch (error) {
-			logger.warn(
-				'Failed to sync similar creators into canonical job_creators',
-				{
-					jobId: this.job.id,
-					error: String(error),
-				},
-				LogCategory.JOB
-			);
-		}
-
 		await this.refresh();
-		const usageIncrement = canonicalNewCount > 0 ? canonicalNewCount : result.newCount;
-		if (usageIncrement > 0) {
-			await this.incrementCreatorUsage(usageIncrement, 'merge_creators');
+		if (result.newCount > 0) {
+			await this.incrementCreatorUsage(result.newCount, 'merge_creators');
 		}
-		return { total: result.total, newCount: usageIncrement };
+		return { total: result.total, newCount: result.newCount };
 	}
 
 	async complete(finalStatus: 'completed' | 'error', data: { error?: string; reason?: string }) {
@@ -578,31 +534,10 @@ export class SearchJobService {
 			});
 		}
 
-		let canonicalNewCount = 0;
-		try {
-			const canonicalResult = await saveCreatorsToJob(
-				this.job.id,
-				toV2Creators(creators),
-				(creator) => fallbackCreatorKey(creator as unknown as NormalizedCreator),
-				this.job.targetResults ?? 1000
-			);
-			canonicalNewCount = canonicalResult.newCount;
-		} catch (error) {
-			logger.warn(
-				'Failed to sync replaceCreators payload into canonical job_creators',
-				{
-					jobId: this.job.id,
-					error: String(error),
-				},
-				LogCategory.JOB
-			);
-		}
-
 		await this.refresh();
-		const legacyNewCount = Math.max(deduped.length - previousCount, 0);
-		const usageIncrement = canonicalNewCount > 0 ? canonicalNewCount : legacyNewCount;
-		if (usageIncrement > 0) {
-			await this.incrementCreatorUsage(usageIncrement, 'replace_creators');
+		const newCount = Math.max(deduped.length - previousCount, 0);
+		if (newCount > 0) {
+			await this.incrementCreatorUsage(newCount, 'replace_creators');
 		}
 		return deduped.length;
 	}

@@ -1,11 +1,9 @@
-import { eq } from 'drizzle-orm';
+import { count, desc, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
-import { parseCampaignListParams } from '@/lib/campaigns/campaign-list';
 import { trackServer } from '@/lib/analytics/track';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { incrementCampaignCount, validateCampaignCreation } from '@/lib/billing';
 import { db } from '@/lib/db';
-import { listCampaignsForUser } from '@/lib/db/queries/campaign-list';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { campaigns } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
@@ -64,18 +62,8 @@ export async function POST(req: Request) {
 				})
 				.returning();
 
-			// Increment usage counter and compensate on failure so counters do not drift.
-			const usageUpdate = await incrementCampaignCount(userId);
-			if (!usageUpdate.success) {
-				await db.delete(campaigns).where(eq(campaigns.id, campaign.id));
-				return NextResponse.json(
-					{
-						error: 'Failed to update usage counters. Campaign creation was rolled back.',
-						details: usageUpdate.error || 'Unknown usage tracking failure',
-					},
-					{ status: 503 }
-				);
-			}
+			// Increment usage counter
+			await incrementCampaignCount(userId);
 
 			// Track campaign creation (GA4 + LogSnag + Sentry)
 			const user = await getUserProfile(userId);
@@ -132,25 +120,50 @@ export async function GET(request: Request) {
 			sessionTracker.setUser({ userId });
 
 			const url = new URL(request.url);
-			const parsed = parseCampaignListParams(url);
-			if (!parsed.ok) {
-				return NextResponse.json({ error: 'Bad Request', details: parsed.error }, { status: 400 });
-			}
+			const page = parseInt(url.searchParams.get('page') || '1', 10);
+			const limit = parseInt(url.searchParams.get('limit') || '10', 10);
+			const offset = (page - 1) * limit;
 
 			const dbStart = Date.now();
 
-			const result = await listCampaignsForUser(userId, parsed.value);
+			// Simplified query - removed JOIN to scrapingJobs for faster loading
+			const [totalResult, userCampaigns] = await Promise.all([
+				db.select({ count: count() }).from(campaigns).where(eq(campaigns.userId, userId)),
+
+				db
+					.select({
+						id: campaigns.id,
+						name: campaigns.name,
+						description: campaigns.description,
+						searchType: campaigns.searchType,
+						status: campaigns.status,
+						createdAt: campaigns.createdAt,
+						updatedAt: campaigns.updatedAt,
+					})
+					.from(campaigns)
+					.where(eq(campaigns.userId, userId))
+					.orderBy(desc(campaigns.createdAt))
+					.limit(limit)
+					.offset(offset),
+			]);
 
 			structuredConsole.log(`[CAMPAIGNS-API] DB queries completed in ${Date.now() - dbStart}ms`);
 			structuredConsole.log(`[CAMPAIGNS-API] Total request time: ${Date.now() - startTime}ms`);
+
+			const totalCount = totalResult[0].count;
 
 			const headers = new Headers();
 			headers.set('Cache-Control', 's-maxage=1, stale-while-revalidate=59');
 
 			return NextResponse.json(
 				{
-					campaigns: result.campaigns,
-					pagination: result.pagination,
+					campaigns: userCampaigns,
+					pagination: {
+						total: totalCount,
+						pages: Math.ceil(totalCount / limit),
+						currentPage: page,
+						limit,
+					},
 				},
 				{ headers }
 			);

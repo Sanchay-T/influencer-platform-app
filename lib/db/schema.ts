@@ -148,8 +148,6 @@ export const jobCreators = pgTable(
 		uniqueCreator: unique('job_creators_unique').on(table.jobId, table.platform, table.username),
 		// Index for fast job lookups and pagination
 		jobIdIdx: index('idx_job_creators_job_id').on(table.jobId),
-		// Cover ordered pagination by created_at for large result sets
-		jobCreatedAtIdx: index('idx_job_creators_job_created_at').on(table.jobId, table.createdAt),
 		// Index for fast completion queries (COUNT WHERE enriched = true)
 		enrichedIdx: index('idx_job_creators_enriched').on(table.jobId, table.enriched),
 		// Index for fast keyword filtering (USE2-17)
@@ -245,117 +243,73 @@ export const users = pgTable(
 );
 
 // 2. USER_SUBSCRIPTIONS - Trial and subscription management
-export const userSubscriptions = pgTable(
-	'user_subscriptions',
-	{
-		id: uuid('id').primaryKey().defaultRandom(),
-		userId: uuid('user_id')
-			.notNull()
-			.references(() => users.id, { onDelete: 'cascade' }),
-		// NULL = user hasn't completed onboarding/payment yet
-		// Set by Stripe webhook after successful payment
-		currentPlan: varchar('current_plan', { length: 50 }),
-		intendedPlan: varchar('intended_plan', { length: 50 }), // Plan selected before checkout
-		subscriptionStatus: varchar('subscription_status', { length: 20 }).default('none').notNull(),
-		// trialStatus REMOVED - now derived from subscriptionStatus + trialEndDate via deriveTrialStatus()
-		trialStartDate: timestamp('trial_start_date'),
-		trialEndDate: timestamp('trial_end_date'),
-		subscriptionCancelDate: timestamp('subscription_cancel_date'),
-		// Removed: trialConversionDate, subscriptionRenewalDate (never used)
-		billingSyncStatus: varchar('billing_sync_status', { length: 20 }).default('pending').notNull(),
-		createdAt: timestamp('created_at').defaultNow().notNull(),
-		updatedAt: timestamp('updated_at').defaultNow().notNull(),
-	},
-	(table) => ({
-		uniqueUserId: unique('uq_user_subscriptions_user_id').on(table.userId),
-	})
-);
+export const userSubscriptions = pgTable('user_subscriptions', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	userId: uuid('user_id')
+		.notNull()
+		.references(() => users.id, { onDelete: 'cascade' }),
+	// NULL = user hasn't completed onboarding/payment yet
+	// Set by Stripe webhook after successful payment
+	currentPlan: varchar('current_plan', { length: 50 }),
+	intendedPlan: varchar('intended_plan', { length: 50 }), // Plan selected before checkout
+	subscriptionStatus: varchar('subscription_status', { length: 20 }).default('none').notNull(),
+	// trialStatus REMOVED - now derived from subscriptionStatus + trialEndDate via deriveTrialStatus()
+	trialStartDate: timestamp('trial_start_date'),
+	trialEndDate: timestamp('trial_end_date'),
+	subscriptionCancelDate: timestamp('subscription_cancel_date'),
+	// Removed: trialConversionDate, subscriptionRenewalDate (never used)
+	billingSyncStatus: varchar('billing_sync_status', { length: 20 }).default('pending').notNull(),
+	createdAt: timestamp('created_at').defaultNow().notNull(),
+	updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
 
 // 3. USER_BILLING - Stripe payment data (minimal - Stripe is source of truth)
-export const userBilling = pgTable(
-	'user_billing',
-	{
-		id: uuid('id').primaryKey().defaultRandom(),
-		userId: uuid('user_id')
-			.notNull()
-			.references(() => users.id, { onDelete: 'cascade' }),
-		stripeCustomerId: text('stripe_customer_id').unique(),
-		stripeSubscriptionId: text('stripe_subscription_id'),
-		// Removed: paymentMethodId, card*, billingAddress* (Stripe Portal handles this)
-		createdAt: timestamp('created_at').defaultNow().notNull(),
-		updatedAt: timestamp('updated_at').defaultNow().notNull(),
-	},
-	(table) => ({
-		uniqueUserId: unique('uq_user_billing_user_id').on(table.userId),
-	})
-);
+export const userBilling = pgTable('user_billing', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	userId: uuid('user_id')
+		.notNull()
+		.references(() => users.id, { onDelete: 'cascade' }),
+	stripeCustomerId: text('stripe_customer_id').unique(),
+	stripeSubscriptionId: text('stripe_subscription_id'),
+	// Removed: paymentMethodId, card*, billingAddress* (Stripe Portal handles this)
+	createdAt: timestamp('created_at').defaultNow().notNull(),
+	updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
 
 // 4. USER_USAGE - Usage tracking and plan limits
-export const userUsage = pgTable(
-	'user_usage',
-	{
-		id: uuid('id').primaryKey().defaultRandom(),
-		userId: uuid('user_id')
-			.notNull()
-			.references(() => users.id, { onDelete: 'cascade' }),
-		// DEPRECATED: These columns are set but never read. Limits come from PLANS config in plan-config.ts
-		// TODO: Remove in future migration
-		planCampaignsLimit: integer('plan_campaigns_limit'),
-		planCreatorsLimit: integer('plan_creators_limit'),
-		planFeatures: jsonb('plan_features').default('{}').notNull(),
-		// Active usage tracking
-		usageCampaignsCurrent: integer('usage_campaigns_current').default(0).notNull(),
-		usageCreatorsCurrentMonth: integer('usage_creators_current_month').default(0).notNull(),
-		// DEPRECATED: Never incremented - enrichment feature not implemented
-		enrichmentsCurrentMonth: integer('enrichments_current_month').default(0).notNull(),
-		usageResetDate: timestamp('usage_reset_date').defaultNow().notNull(),
-		createdAt: timestamp('created_at').defaultNow().notNull(),
-		updatedAt: timestamp('updated_at').defaultNow().notNull(),
-	},
-	(table) => ({
-		uniqueUserId: unique('uq_user_usage_user_id').on(table.userId),
-	})
-);
+export const userUsage = pgTable('user_usage', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	userId: uuid('user_id')
+		.notNull()
+		.references(() => users.id, { onDelete: 'cascade' }),
+	// DEPRECATED: These columns are set but never read. Limits come from PLANS config in plan-config.ts
+	// TODO: Remove in future migration
+	planCampaignsLimit: integer('plan_campaigns_limit'),
+	planCreatorsLimit: integer('plan_creators_limit'),
+	planFeatures: jsonb('plan_features').default('{}').notNull(),
+	// Active usage tracking
+	usageCampaignsCurrent: integer('usage_campaigns_current').default(0).notNull(),
+	usageCreatorsCurrentMonth: integer('usage_creators_current_month').default(0).notNull(),
+	// DEPRECATED: Never incremented - enrichment feature not implemented
+	enrichmentsCurrentMonth: integer('enrichments_current_month').default(0).notNull(),
+	usageResetDate: timestamp('usage_reset_date').defaultNow().notNull(),
+	createdAt: timestamp('created_at').defaultNow().notNull(),
+	updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
 
-// 5. USAGE_RESET_AUDITS - Monthly reset run tracking (idempotency + replay visibility)
-export const usageResetAudits = pgTable(
-	'usage_reset_audits',
-	{
-		id: uuid('id').primaryKey().defaultRandom(),
-		resetMonth: timestamp('reset_month').notNull(),
-		triggerSource: varchar('trigger_source', { length: 50 }).notNull().default('cron'),
-		status: varchar('status', { length: 20 }).notNull().default('running'),
-		usersReset: integer('users_reset').notNull().default(0),
-		startedAt: timestamp('started_at').notNull().defaultNow(),
-		completedAt: timestamp('completed_at'),
-		error: text('error'),
-		metadata: jsonb('metadata').default('{}').notNull(),
-	},
-	(table) => ({
-		uniqueResetMonth: unique('uq_usage_reset_audits_reset_month').on(table.resetMonth),
-		statusIdx: index('idx_usage_reset_audits_status').on(table.status),
-	})
-);
-
-// 6. USER_SYSTEM_DATA - System metadata and webhook tracking
-export const userSystemData = pgTable(
-	'user_system_data',
-	{
-		id: uuid('id').primaryKey().defaultRandom(),
-		userId: uuid('user_id')
-			.notNull()
-			.references(() => users.id, { onDelete: 'cascade' }),
-		signupTimestamp: timestamp('signup_timestamp').defaultNow().notNull(),
-		emailScheduleStatus: jsonb('email_schedule_status').default('{}').notNull(),
-		lastWebhookEvent: varchar('last_webhook_event', { length: 100 }),
-		lastWebhookTimestamp: timestamp('last_webhook_timestamp'),
-		createdAt: timestamp('created_at').defaultNow().notNull(),
-		updatedAt: timestamp('updated_at').defaultNow().notNull(),
-	},
-	(table) => ({
-		uniqueUserId: unique('uq_user_system_data_user_id').on(table.userId),
-	})
-);
+// 5. USER_SYSTEM_DATA - System metadata and webhook tracking
+export const userSystemData = pgTable('user_system_data', {
+	id: uuid('id').primaryKey().defaultRandom(),
+	userId: uuid('user_id')
+		.notNull()
+		.references(() => users.id, { onDelete: 'cascade' }),
+	signupTimestamp: timestamp('signup_timestamp').defaultNow().notNull(),
+	emailScheduleStatus: jsonb('email_schedule_status').default('{}').notNull(),
+	lastWebhookEvent: varchar('last_webhook_event', { length: 100 }),
+	lastWebhookTimestamp: timestamp('last_webhook_timestamp'),
+	createdAt: timestamp('created_at').defaultNow().notNull(),
+	updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
 
 // System Configurations table
 export const systemConfigurations = pgTable(
@@ -928,8 +882,6 @@ export type UserBilling = typeof userBilling.$inferSelect;
 export type NewUserBilling = typeof userBilling.$inferInsert;
 export type UserUsage = typeof userUsage.$inferSelect;
 export type NewUserUsage = typeof userUsage.$inferInsert;
-export type UsageResetAudit = typeof usageResetAudits.$inferSelect;
-export type NewUsageResetAudit = typeof usageResetAudits.$inferInsert;
 export type UserSystemData = typeof userSystemData.$inferSelect;
 export type NewUserSystemData = typeof userSystemData.$inferInsert;
 

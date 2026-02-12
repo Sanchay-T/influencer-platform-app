@@ -1,58 +1,21 @@
 import { useUser } from '@clerk/nextjs';
-import { useEffect, useState } from 'react';
 
 export function useAdmin() {
 	const { user, isLoaded } = useUser();
 
-	const [isAdmin, setIsAdmin] = useState(false);
-	const [isAdminLoaded, setIsAdminLoaded] = useState(false);
+	// Get admin emails from environment variable
+	const adminEmails =
+		process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(',').map((email) => email.trim()) || [];
 
-	useEffect(() => {
-		let cancelled = false;
-
-		async function fetchAdminStatus() {
-			if (!isLoaded) return;
-			if (!user) {
-				setIsAdmin(false);
-				setIsAdminLoaded(true);
-				return;
-			}
-
-			try {
-				setIsAdminLoaded(false);
-				const response = await fetch('/api/admin/me');
-				if (!response.ok) {
-					throw new Error(`Failed to fetch admin status (${response.status})`);
-				}
-
-				const data = (await response.json()) as { isAdmin?: boolean };
-				if (!cancelled) {
-					setIsAdmin(Boolean(data.isAdmin));
-				}
-			} catch {
-				if (!cancelled) {
-					setIsAdmin(false);
-				}
-			} finally {
-				if (!cancelled) {
-					setIsAdminLoaded(true);
-				}
-			}
-		}
-
-		fetchAdminStatus();
-
-		return () => {
-			cancelled = true;
-		};
-	}, [isLoaded, user?.id]);
-
+	// Check if current user is an admin
 	const userEmail = user?.primaryEmailAddress?.emailAddress || '';
+	const isAdmin = adminEmails.includes(userEmail);
 
 	return {
 		isAdmin,
-		isLoaded: isLoaded && isAdminLoaded,
+		isLoaded,
 		user,
 		userEmail,
+		adminEmails,
 	};
 }

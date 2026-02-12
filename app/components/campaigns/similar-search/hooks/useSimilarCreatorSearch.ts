@@ -144,7 +144,7 @@ export function useSimilarCreatorSearch(
 	useEffect(() => {
 		setSelectedCreators({});
 		setCurrentPage(1);
-	}, [searchData?.jobId]);
+	}, []);
 
 	// Sync creators with initial seed
 	useEffect(() => {
@@ -158,7 +158,7 @@ export function useSimilarCreatorSearch(
 	// Reset page when view mode or email filter changes
 	useEffect(() => {
 		setCurrentPage(1);
-	}, [viewMode, emailOnly]);
+	}, []);
 
 	// Items per page based on view mode
 	const itemsPerPage = viewMode === 'gallery' ? 9 : 10;
@@ -301,7 +301,7 @@ export function useSimilarCreatorSearch(
 			creators?: unknown[];
 			results?: Array<{ creators?: unknown[] }>;
 		}) => {
-			if (!(data?.status === 'completed' || data?.status === 'partial')) {
+			if (data?.status !== 'completed') {
 				return;
 			}
 			// Extract creators from either direct creators array or nested results

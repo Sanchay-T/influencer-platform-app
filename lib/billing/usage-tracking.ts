@@ -11,10 +11,10 @@
  * Usage is stored in the `user_usage` table (via user_queries).
  */
 
-import { and, eq, lt, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
-import { usageResetAudits, users, userUsage } from '@/lib/db/schema';
+import { users, userUsage } from '@/lib/db/schema';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
 import type { PlanKey } from './plan-config';
 import { getPlanConfig, isValidPlan } from './plan-config';
@@ -35,38 +35,6 @@ async function getInternalUserId(clerkUserId: string): Promise<string | null> {
 		columns: { id: true },
 	});
 	return user?.id ?? null;
-}
-
-async function withRetry<T>(
-	fn: () => Promise<T>,
-	label: string,
-	maxAttempts: number = 3
-): Promise<T> {
-	let lastError: Error | null = null;
-
-	for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-		try {
-			return await fn();
-		} catch (error) {
-			lastError = error instanceof Error ? error : new Error(String(error));
-			if (attempt < maxAttempts) {
-				const backoffMs = 100 * 2 ** (attempt - 1);
-				logger.warn(`${label} failed, retrying`, {
-					metadata: { attempt, backoffMs, error: lastError.message },
-				});
-				await new Promise((resolve) => setTimeout(resolve, backoffMs));
-			}
-		}
-	}
-
-	throw (lastError ?? new Error(`${label} failed after retries`));
-}
-
-function getMonthStartUtc(reference = new Date()): Date {
-	const monthStart = new Date(reference);
-	monthStart.setUTCDate(1);
-	monthStart.setUTCHours(0, 0, 0, 0);
-	return monthStart;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -93,13 +61,6 @@ export interface IncrementResult {
 	success: boolean;
 	newCount: number;
 	error?: string;
-}
-
-export interface MonthlyUsageResetResult {
-	monthStart: Date;
-	usersReset: number;
-	skipped: boolean;
-	auditId?: string;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -176,34 +137,26 @@ export async function incrementCampaignCount(clerkUserId: string): Promise<Incre
 			return { success: false, newCount: 0, error: 'User not found' };
 		}
 
-		const result = await withRetry(
-			() =>
-				db
-					.update(userUsage)
-					.set({
-						usageCampaignsCurrent: sql`COALESCE(${userUsage.usageCampaignsCurrent}, 0) + 1`,
-						updatedAt: new Date(),
-					})
-					.where(eq(userUsage.userId, internalUserId))
-					.returning({ newCount: userUsage.usageCampaignsCurrent }),
-			'incrementCampaignCount:update'
-		);
+		const result = await db
+			.update(userUsage)
+			.set({
+				usageCampaignsCurrent: sql`COALESCE(${userUsage.usageCampaignsCurrent}, 0) + 1`,
+				updatedAt: new Date(),
+			})
+			.where(eq(userUsage.userId, internalUserId))
+			.returning({ newCount: userUsage.usageCampaignsCurrent });
 
 		if (result.length === 0) {
 			// User usage record doesn't exist, create it
-			const inserted = await withRetry(
-				() =>
-					db
-						.insert(userUsage)
-						.values({
-							userId: internalUserId,
-							usageCampaignsCurrent: 1,
-							usageCreatorsCurrentMonth: 0,
-							usageResetDate: new Date(),
-						})
-						.returning({ newCount: userUsage.usageCampaignsCurrent }),
-				'incrementCampaignCount:insert'
-			);
+			const inserted = await db
+				.insert(userUsage)
+				.values({
+					userId: internalUserId,
+					usageCampaignsCurrent: 1,
+					usageCreatorsCurrentMonth: 0,
+					usageResetDate: new Date(),
+				})
+				.returning({ newCount: userUsage.usageCampaignsCurrent });
 
 			logger.info('Created new usage record for user', {
 				userId: clerkUserId,
@@ -257,34 +210,26 @@ export async function incrementCreatorCount(
 			return { success: false, newCount: 0, error: 'User not found' };
 		}
 
-		const result = await withRetry(
-			() =>
-				db
-					.update(userUsage)
-					.set({
-						usageCreatorsCurrentMonth: sql`COALESCE(${userUsage.usageCreatorsCurrentMonth}, 0) + ${count}`,
-						updatedAt: new Date(),
-					})
-					.where(eq(userUsage.userId, internalUserId))
-					.returning({ newCount: userUsage.usageCreatorsCurrentMonth }),
-			'incrementCreatorCount:update'
-		);
+		const result = await db
+			.update(userUsage)
+			.set({
+				usageCreatorsCurrentMonth: sql`COALESCE(${userUsage.usageCreatorsCurrentMonth}, 0) + ${count}`,
+				updatedAt: new Date(),
+			})
+			.where(eq(userUsage.userId, internalUserId))
+			.returning({ newCount: userUsage.usageCreatorsCurrentMonth });
 
 		if (result.length === 0) {
 			// User usage record doesn't exist, create it
-			const inserted = await withRetry(
-				() =>
-					db
-						.insert(userUsage)
-						.values({
-							userId: internalUserId,
-							usageCampaignsCurrent: 0,
-							usageCreatorsCurrentMonth: count,
-							usageResetDate: new Date(),
-						})
-						.returning({ newCount: userUsage.usageCreatorsCurrentMonth }),
-				'incrementCreatorCount:insert'
-			);
+			const inserted = await db
+				.insert(userUsage)
+				.values({
+					userId: internalUserId,
+					usageCampaignsCurrent: 0,
+					usageCreatorsCurrentMonth: count,
+					usageResetDate: new Date(),
+				})
+				.returning({ newCount: userUsage.usageCreatorsCurrentMonth });
 
 			logger.info('Created new usage record for user', {
 				userId: clerkUserId,
@@ -396,17 +341,15 @@ export async function incrementEnrichmentCount(
  */
 export async function resetMonthlyUsage(userId: string): Promise<boolean> {
 	try {
-		const monthStart = getMonthStartUtc();
-
 		await db
 			.update(userUsage)
 			.set({
 				usageCreatorsCurrentMonth: 0,
 				enrichmentsCurrentMonth: 0,
-				usageResetDate: monthStart,
+				usageResetDate: new Date(),
 				updatedAt: new Date(),
 			})
-			.where(and(eq(userUsage.userId, userId), lt(userUsage.usageResetDate, monthStart)));
+			.where(eq(userUsage.userId, userId));
 
 		logger.info('Reset monthly usage for user', { userId });
 		return true;
@@ -428,17 +371,14 @@ export async function resetMonthlyUsage(userId: string): Promise<boolean> {
  */
 export async function resetAllMonthlyUsage(): Promise<number> {
 	try {
-		const monthStart = getMonthStartUtc();
-
 		const result = await db
 			.update(userUsage)
 			.set({
 				usageCreatorsCurrentMonth: 0,
 				enrichmentsCurrentMonth: 0,
-				usageResetDate: monthStart,
+				usageResetDate: new Date(),
 				updatedAt: new Date(),
 			})
-			.where(lt(userUsage.usageResetDate, monthStart))
 			.returning({ userId: userUsage.userId });
 
 		const count = result.length;
@@ -450,107 +390,6 @@ export async function resetAllMonthlyUsage(): Promise<number> {
 			error instanceof Error ? error : new Error(String(error))
 		);
 		return 0;
-	}
-}
-
-/**
- * Reset usage for the current month with explicit audit tracking.
- *
- * - Idempotent by reset month.
- * - If a completed audit already exists for this month, it returns skipped=true.
- * - Failed runs are marked and can be retried safely.
- */
-export async function resetAllMonthlyUsageWithAudit(
-	triggerSource: string = 'cron'
-): Promise<MonthlyUsageResetResult> {
-	const monthStart = getMonthStartUtc();
-
-	const existingAudit = await db.query.usageResetAudits.findFirst({
-		where: eq(usageResetAudits.resetMonth, monthStart),
-		columns: {
-			id: true,
-			status: true,
-			usersReset: true,
-		},
-	});
-
-	if (existingAudit?.status === 'completed') {
-		return {
-			monthStart,
-			usersReset: existingAudit.usersReset ?? 0,
-			skipped: true,
-			auditId: existingAudit.id,
-		};
-	}
-
-	const startedAt = new Date();
-	const [audit] = await db
-		.insert(usageResetAudits)
-		.values({
-			resetMonth: monthStart,
-			triggerSource,
-			status: 'running',
-			usersReset: 0,
-			startedAt,
-			metadata: {
-				triggerSource,
-				startedAt: startedAt.toISOString(),
-			},
-		})
-		.onConflictDoUpdate({
-			target: usageResetAudits.resetMonth,
-			set: {
-				triggerSource,
-				status: 'running',
-				usersReset: 0,
-				startedAt,
-				completedAt: null,
-				error: null,
-				metadata: {
-					triggerSource,
-					retriedAt: startedAt.toISOString(),
-				},
-			},
-		})
-		.returning({ id: usageResetAudits.id });
-
-	try {
-		const usersReset = await resetAllMonthlyUsage();
-		await db
-			.update(usageResetAudits)
-			.set({
-				status: 'completed',
-				usersReset,
-				completedAt: new Date(),
-				error: null,
-				metadata: {
-					triggerSource,
-					usersReset,
-				},
-			})
-			.where(eq(usageResetAudits.id, audit.id));
-
-		return {
-			monthStart,
-			usersReset,
-			skipped: false,
-			auditId: audit.id,
-		};
-	} catch (error) {
-		const normalized = error instanceof Error ? error : new Error(String(error));
-		await db
-			.update(usageResetAudits)
-			.set({
-				status: 'failed',
-				completedAt: new Date(),
-				error: normalized.message,
-				metadata: {
-					triggerSource,
-					failedAt: new Date().toISOString(),
-				},
-			})
-			.where(eq(usageResetAudits.id, audit.id));
-		throw normalized;
 	}
 }
 

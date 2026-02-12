@@ -1,6 +1,4 @@
 import { createHash } from 'node:crypto';
-import { lookup } from 'node:dns/promises';
-import { isIP } from 'node:net';
 import { list } from '@vercel/blob';
 import convert from 'heic-convert';
 import { NextResponse } from 'next/server';
@@ -13,211 +11,6 @@ import { toError } from '@/lib/utils/type-guards';
 
 // @performance Vercel timeout protection - image fetching with retries can take time
 export const maxDuration = 30;
-
-const MAX_IMAGE_URL_LENGTH = 2048;
-const MAX_REDIRECTS = 5;
-
-type UrlValidationResult = { ok: true; url: URL } | { ok: false; reason: string };
-
-function isBlockedHostname(hostname: string): boolean {
-	const normalized = hostname.trim().toLowerCase();
-	if (!normalized) {
-		return true;
-	}
-
-	if (normalized === 'localhost' || normalized.endsWith('.localhost')) {
-		return true;
-	}
-
-	// Local network hostnames often resolve privately even if not obviously an IP.
-	if (normalized.endsWith('.local') || normalized.endsWith('.internal')) {
-		return true;
-	}
-
-	return false;
-}
-
-function ipv4ToNumber(address: string): number | null {
-	const parts = address.split('.');
-	if (parts.length !== 4) {
-		return null;
-	}
-	const nums = parts.map((p) => Number.parseInt(p, 10));
-	if (nums.some((n) => Number.isNaN(n) || n < 0 || n > 255)) {
-		return null;
-	}
-	return ((nums[0] << 24) | (nums[1] << 16) | (nums[2] << 8) | nums[3]) >>> 0;
-}
-
-function isIpv4InCidr(address: string, base: string, maskBits: number): boolean {
-	const ipNum = ipv4ToNumber(address);
-	const baseNum = ipv4ToNumber(base);
-	if (ipNum == null || baseNum == null) {
-		return false;
-	}
-	const mask = maskBits === 0 ? 0 : (0xffffffff << (32 - maskBits)) >>> 0;
-	return (ipNum & mask) === (baseNum & mask);
-}
-
-function isPrivateOrReservedIp(address: string): boolean {
-	const ipVersion = isIP(address);
-	if (ipVersion === 4) {
-		const blockedCidrs: Array<[string, number]> = [
-			['0.0.0.0', 8],
-			['10.0.0.0', 8],
-			['100.64.0.0', 10],
-			['127.0.0.0', 8],
-			['169.254.0.0', 16],
-			['172.16.0.0', 12],
-			['192.0.0.0', 24],
-			['192.0.2.0', 24],
-			['192.168.0.0', 16],
-			['198.18.0.0', 15],
-			['198.51.100.0', 24],
-			['203.0.113.0', 24],
-			['224.0.0.0', 4],
-			['240.0.0.0', 4],
-			['255.255.255.255', 32],
-		];
-		return blockedCidrs.some(([base, maskBits]) => isIpv4InCidr(address, base, maskBits));
-	}
-
-	if (ipVersion === 6) {
-		const normalized = address.trim().toLowerCase();
-		if (normalized === '::' || normalized === '::1') {
-			return true;
-		}
-		if (normalized.startsWith('fe80:')) {
-			return true; // link-local
-		}
-		if (normalized.startsWith('fc') || normalized.startsWith('fd')) {
-			return true; // unique local (fc00::/7)
-		}
-		if (normalized.startsWith('2001:db8:')) {
-			return true; // documentation
-		}
-		if (normalized.startsWith('::ffff:')) {
-			const maybeIpv4 = normalized.slice('::ffff:'.length);
-			return isPrivateOrReservedIp(maybeIpv4);
-		}
-	}
-
-	return false;
-}
-
-function validateImageProxyUrl(rawUrl: string): Promise<UrlValidationResult> {
-	return (async () => {
-		if (rawUrl.length > MAX_IMAGE_URL_LENGTH) {
-			return { ok: false, reason: 'URL too long' };
-		}
-
-		let parsed: URL;
-		try {
-			parsed = new URL(rawUrl);
-		} catch {
-			return { ok: false, reason: 'Invalid URL' };
-		}
-
-		if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-			return { ok: false, reason: `Unsupported protocol: ${parsed.protocol}` };
-		}
-
-		if (parsed.username || parsed.password) {
-			return { ok: false, reason: 'Credentials in URL are not allowed' };
-		}
-
-		const port = parsed.port ? Number.parseInt(parsed.port, 10) : null;
-		if (port != null && !Number.isNaN(port) && port !== 80 && port !== 443) {
-			return { ok: false, reason: 'Non-standard ports are not allowed' };
-		}
-
-		const hostname = parsed.hostname.trim().toLowerCase();
-		if (isBlockedHostname(hostname)) {
-			return { ok: false, reason: `Blocked hostname: ${hostname}` };
-		}
-
-		// If hostname is already an IP, we can validate without DNS.
-		const directIpVersion = isIP(hostname);
-		if (directIpVersion !== 0) {
-			if (isPrivateOrReservedIp(hostname)) {
-				return { ok: false, reason: `Blocked IP address: ${hostname}` };
-			}
-			return { ok: true, url: parsed };
-		}
-
-		let resolved: Array<{ address: string }> = [];
-		try {
-			resolved = await lookup(hostname, { all: true, verbatim: true });
-		} catch {
-			return { ok: false, reason: `DNS lookup failed for hostname: ${hostname}` };
-		}
-
-		if (resolved.length === 0) {
-			return { ok: false, reason: `No DNS records for hostname: ${hostname}` };
-		}
-
-		for (const entry of resolved) {
-			if (isPrivateOrReservedIp(entry.address)) {
-				return { ok: false, reason: `Hostname resolves to a private IP: ${hostname}` };
-			}
-		}
-
-		return { ok: true, url: parsed };
-	})();
-}
-
-async function safeFetchWithRedirects(
-	rawUrl: string,
-	init: RequestInit
-): Promise<{ response: Response; finalUrl: string }> {
-	let current = rawUrl;
-
-	for (let i = 0; i <= MAX_REDIRECTS; i++) {
-		const validation = await validateImageProxyUrl(current);
-		if (!validation.ok) {
-			throw new Error(validation.reason);
-		}
-
-		const response = await fetch(validation.url.toString(), {
-			...init,
-			redirect: 'manual',
-		});
-
-		if ([301, 302, 303, 307, 308].includes(response.status)) {
-			const location = response.headers.get('location');
-			if (!location) {
-				return { response, finalUrl: validation.url.toString() };
-			}
-			const nextUrl = new URL(location, validation.url);
-			current = nextUrl.toString();
-			continue;
-		}
-
-		return { response, finalUrl: validation.url.toString() };
-	}
-
-	throw new Error('Too many redirects');
-}
-
-function isLikelyImageResponse(contentType: string | null, urlPathname: string): boolean {
-	if (typeof contentType === 'string' && contentType.toLowerCase().startsWith('image/')) {
-		return true;
-	}
-
-	// Some CDNs respond with generic types even for images.
-	const pathname = urlPathname.toLowerCase();
-	return (
-		pathname.endsWith('.jpg') ||
-		pathname.endsWith('.jpeg') ||
-		pathname.endsWith('.png') ||
-		pathname.endsWith('.webp') ||
-		pathname.endsWith('.gif') ||
-		pathname.endsWith('.svg') ||
-		pathname.endsWith('.heic') ||
-		pathname.endsWith('.heif') ||
-		pathname.endsWith('.avif')
-	);
-}
 
 // Generate placeholder for failed images
 function generatePlaceholderResponse(imageUrl: string, jobId?: string) {
@@ -365,32 +158,6 @@ export async function GET(request: Request) {
 			return new NextResponse('Missing image URL', { status: 400 });
 		}
 
-		const urlValidation = await validateImageProxyUrl(imageUrl);
-		if (!urlValidation.ok) {
-			logger.warn(
-				'Blocked image proxy URL (potential SSRF attempt)',
-				{
-					requestId,
-					jobId,
-					sourceUrl: `${imageUrl.substring(0, 100)}...`,
-					metadata: {
-						reason: urlValidation.reason,
-					},
-				},
-				LogCategory.SECURITY
-			);
-
-			jobLog.complete(jobId, { duration: Date.now() - startTime }, { metadata: { blocked: true } });
-			return new NextResponse(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1" />'), {
-				headers: {
-					'Content-Type': 'image/svg+xml',
-					'Cache-Control': 'no-store',
-					'X-Image-Proxy-Source': 'blocked-url',
-					'X-Image-Proxy-Blocked-Reason': urlValidation.reason,
-				},
-			});
-		}
-
 		// Check if this is a blob URL (which shouldn't be proxied)
 		if (imageUrl.includes('blob.vercel-storage.com')) {
 			logger.warn(
@@ -446,12 +213,9 @@ export async function GET(request: Request) {
 
 		let response: Response;
 		let fetchStrategy = 'initial';
-		let finalUrl = urlValidation.url.toString();
 
 		try {
-			const result = await safeFetchWithRedirects(imageUrl, { headers: fetchHeaders });
-			response = result.response;
-			finalUrl = result.finalUrl;
+			response = await fetch(imageUrl, { headers: fetchHeaders });
 			const fetchTime = Date.now() - startTime;
 			structuredConsole.log('📊 [IMAGE-PROXY] Fetch completed in', `${fetchTime}ms`);
 			structuredConsole.log('📡 [IMAGE-PROXY] Fetch status:', response.status, response.statusText);
@@ -497,14 +261,10 @@ export async function GET(request: Request) {
 			// Strategy 1: Try without referrer headers (some CDNs block specific referrers)
 			structuredConsole.log('🔄 [IMAGE-PROXY] Retry 1: Removing referrer headers...');
 			const noReferrerHeaders: Record<string, string> = { ...fetchHeaders };
-			delete noReferrerHeaders.Referer;
-			delete noReferrerHeaders.Origin;
+			noReferrerHeaders.Referer = undefined;
+			noReferrerHeaders.Origin = undefined;
 
-			{
-				const result = await safeFetchWithRedirects(imageUrl, { headers: noReferrerHeaders });
-				response = result.response;
-				finalUrl = result.finalUrl;
-			}
+			response = await fetch(imageUrl, { headers: noReferrerHeaders });
 			structuredConsole.log(
 				'📡 [IMAGE-PROXY] Retry 1 status:',
 				response.status,
@@ -519,11 +279,7 @@ export async function GET(request: Request) {
 				const simplifiedUrl = imageUrl.split('?')[0]; // Remove all query parameters
 				structuredConsole.log('🔗 [IMAGE-PROXY] Simplified URL:', simplifiedUrl);
 
-				{
-					const result = await safeFetchWithRedirects(simplifiedUrl, { headers: noReferrerHeaders });
-					response = result.response;
-					finalUrl = result.finalUrl;
-				}
+				response = await fetch(simplifiedUrl, { headers: noReferrerHeaders });
 				structuredConsole.log(
 					'📡 [IMAGE-PROXY] Retry 2 status:',
 					response.status,
@@ -540,11 +296,7 @@ export async function GET(request: Request) {
 						Accept: '*/*',
 					};
 
-					{
-						const result = await safeFetchWithRedirects(simplifiedUrl, { headers: minimalHeaders });
-						response = result.response;
-						finalUrl = result.finalUrl;
-					}
+					response = await fetch(simplifiedUrl, { headers: minimalHeaders });
 					structuredConsole.log(
 						'📡 [IMAGE-PROXY] Retry 3 status:',
 						response.status,
@@ -578,13 +330,7 @@ export async function GET(request: Request) {
 							);
 
 							try {
-								{
-									const result = await safeFetchWithRedirects(alternativeDomainUrl, {
-										headers: minimalHeaders,
-									});
-									response = result.response;
-									finalUrl = result.finalUrl;
-								}
+								response = await fetch(alternativeDomainUrl, { headers: minimalHeaders });
 								structuredConsole.log(
 									'📡 [IMAGE-PROXY] Alternative domain status:',
 									response.status,
@@ -675,34 +421,10 @@ export async function GET(request: Request) {
 			});
 		}
 
-		const responseContentType = response.headers.get('content-type');
-		if (!isLikelyImageResponse(responseContentType, new URL(finalUrl).pathname)) {
-			logger.warn(
-				'Blocked non-image response from image proxy',
-				{
-					requestId,
-					jobId,
-					sourceUrl: `${imageUrl.substring(0, 100)}...`,
-					finalUrl: `${finalUrl.substring(0, 100)}...`,
-					metadata: {
-						contentType: responseContentType,
-					},
-				},
-				LogCategory.SECURITY
-			);
-
-			jobLog.complete(
-				jobId,
-				{ duration: Date.now() - startTime },
-				{ metadata: { blocked: true, reason: 'non-image-content-type' } }
-			);
-			return generatePlaceholderResponse(imageUrl, jobId);
-		}
-
 		const arrayBuffer = await response.arrayBuffer();
 		let buffer = Buffer.from(new Uint8Array(arrayBuffer));
 
-		let contentType = responseContentType || 'image/jpeg';
+		let contentType = response.headers.get('content-type') || 'image/jpeg';
 		structuredConsole.log('🎨 [IMAGE-PROXY] Original content type:', contentType);
 		structuredConsole.log('📏 [IMAGE-PROXY] Original buffer size:', buffer.length, 'bytes');
 

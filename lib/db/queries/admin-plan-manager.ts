@@ -1,7 +1,7 @@
 import { eq, ilike } from 'drizzle-orm';
-import { getPlanConfig, isValidPlan } from '@/lib/billing/plan-config';
 import { db } from '@/lib/db';
 import {
+	subscriptionPlans,
 	userBilling,
 	userSubscriptions,
 	userSystemData,
@@ -16,7 +16,7 @@ export type AdminUserSummary = {
 	email: string | null;
 	fullName: string | null;
 	onboardingStep: string;
-	currentPlan: string | null;
+	currentPlan: string;
 	subscriptionStatus: string;
 	// trialStatus derived from subscriptionStatus + trialEndDate
 	planCampaignsLimit: number | null;
@@ -52,7 +52,7 @@ export async function searchUsersByEmail(query: string, limit = 10): Promise<Adm
 
 	return results.map((row) => ({
 		...row,
-		currentPlan: row.currentPlan ?? null,
+		currentPlan: row.currentPlan ?? 'free',
 		subscriptionStatus: row.subscriptionStatus ?? 'none',
 		// trialStatus derived - not stored
 	}));
@@ -85,12 +85,14 @@ export async function grantPlanToUserByEmail(
 
 	const user = userRecord[0];
 
-	if (!isValidPlan(planKey)) {
+	const planRow = await db.query.subscriptionPlans.findFirst({
+		where: eq(subscriptionPlans.planKey, planKey),
+	});
+	if (!planRow) {
 		throw new Error(`Plan not found: ${planKey}`);
 	}
-	const plan = getPlanConfig(planKey);
 
-	const planFeatures = plan.features ?? {};
+	const planFeatures = planRow.features ?? {};
 
 	await db.transaction(async (tx) => {
 		const now = new Date();
@@ -130,8 +132,8 @@ export async function grantPlanToUserByEmail(
 		}
 
 		const usageUpdates = {
-			planCampaignsLimit: plan.limits.campaigns ?? -1,
-			planCreatorsLimit: plan.limits.creatorsPerMonth ?? -1,
+			planCampaignsLimit: planRow.campaignsLimit ?? -1,
+			planCreatorsLimit: planRow.creatorsLimit ?? -1,
 			planFeatures,
 			updatedAt: now,
 		};

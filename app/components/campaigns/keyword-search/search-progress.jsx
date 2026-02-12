@@ -35,7 +35,6 @@ const SearchProgress = ({
 				status: data.status,
 				processedResults: data.progress?.creatorsFound ?? 0,
 				percentComplete: data.progress?.percentComplete ?? 0,
-				progress: data.progress?.percentComplete ?? 0,
 				keywordsDispatched: data.progress?.keywordsDispatched ?? 0,
 				keywordsCompleted: data.progress?.keywordsCompleted ?? 0,
 				creatorsFound: data.progress?.creatorsFound ?? 0,

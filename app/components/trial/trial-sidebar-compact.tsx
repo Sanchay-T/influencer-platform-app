@@ -2,13 +2,12 @@
 
 import { AlertTriangle, Calendar } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StartSubscriptionModal } from '@/app/components/billing/start-subscription-modal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { PLANS, type PlanKey } from '@/lib/billing/plan-config';
-import { useBilling } from '@/lib/hooks/use-billing';
 import { useStartSubscription } from '@/lib/hooks/use-start-subscription';
 
 type Status = {
@@ -30,29 +29,89 @@ type Status = {
 };
 
 export default function TrialSidebarCompact() {
-	const billing = useBilling();
+	const [status, setStatus] = useState<Status>({ isLoaded: false, isTrialing: false });
 	const [showStartModal, setShowStartModal] = useState(false);
 	const { startSubscription, isLoading: isStarting } = useStartSubscription();
 
-	const status: Status = {
-		isLoaded: billing.isLoaded,
-		isTrialing: billing.isTrialing,
-		trialStatus: billing.trialStatus,
-		trialStartDate: billing.trialStartDate,
-		trialEndDate: billing.trialEndDate,
-		trialProgressPercentage: billing.trialProgressPercentage,
-		daysRemaining: billing.daysRemaining,
-		hasActiveSubscription: billing.hasActiveSubscription,
-		isPaidUser: billing.isPaidUser,
-		usageInfo: billing.usageInfo
-			? {
-					campaignsUsed: billing.usageInfo.campaignsUsed || 0,
-					campaignsLimit: billing.usageInfo.campaignsLimit || 0,
+	useEffect(() => {
+		let mounted = true;
+		const load = async () => {
+			try {
+				// 🚀 ANTI-FLICKER: Try localStorage cache first for instant UI
+				try {
+					const cached = localStorage.getItem('gemz_trial_status_v1');
+					if (cached) {
+						const parsed = JSON.parse(cached);
+						// Use cached data if less than 30 seconds old
+						if (parsed?.ts && Date.now() - parsed.ts < 30_000) {
+							if (!mounted) {
+								return;
+							}
+							setStatus(parsed.data);
+							// Still fetch fresh data in background
+						}
+					}
+				} catch {
+					// Ignore localStorage access issues (e.g. privacy mode).
 				}
-			: undefined,
-		currentPlan: billing.currentPlan,
-		billingAmount: billing.planFeatures?.price ?? 0,
-	};
+
+				const res = await fetch('/api/billing/status', { cache: 'no-store' });
+				if (!res.ok) {
+					throw new Error('Failed to fetch status');
+				}
+				const data = await res.json();
+				if (!mounted) {
+					return;
+				}
+
+				const newStatus = {
+					isLoaded: true,
+					isTrialing: !!data.isTrialing,
+					trialStatus: data.trialStatus,
+					trialStartDate: data.trialStartDate,
+					trialEndDate: data.trialEndDate,
+					trialProgressPercentage: data.trialProgressPercentage,
+					daysRemaining: data.daysRemaining,
+					hasActiveSubscription: data.hasActiveSubscription,
+					isPaidUser: data.hasActiveSubscription && data.currentPlan !== 'free',
+					usageInfo: data.usageInfo
+						? {
+								campaignsUsed: data.usageInfo.campaignsUsed || 0,
+								campaignsLimit: data.usageInfo.campaignsLimit || 0,
+							}
+						: undefined,
+					currentPlan: data.currentPlan || undefined,
+					billingAmount: data.billingAmount || 0,
+				};
+
+				setStatus(newStatus);
+
+				// 💾 CACHE: Store fresh data for next page load
+				try {
+					localStorage.setItem(
+						'gemz_trial_status_v1',
+						JSON.stringify({
+							ts: Date.now(),
+							data: newStatus,
+						})
+					);
+				} catch {
+					// Ignore localStorage write failures.
+				}
+			} catch (_e) {
+				if (!mounted) {
+					return;
+				}
+				setStatus((s) => ({ ...s, isLoaded: true }));
+			}
+		};
+		load();
+		const id = setInterval(load, 30000); // light polling for near realtime
+		return () => {
+			mounted = false;
+			clearInterval(id);
+		};
+	}, []);
 
 	const isExpired = status.trialStatus === 'expired' || !(status.isTrialing || status.isPaidUser);
 	const progress = Math.max(
