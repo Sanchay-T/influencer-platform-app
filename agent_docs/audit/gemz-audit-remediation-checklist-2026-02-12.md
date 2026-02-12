@@ -70,8 +70,11 @@ Verification expectation (after each patch):
   - Patch: Encrypt exports before upload + decrypt behind authenticated download endpoint (client never sees Blob URL).
   - Verification: `tmp/verify-csv-export-status.png` (status now returns `/api/export/download/<id>`).
 
-- [ ] #9 Admin pages have NO access control — any auth’d user can navigate to `/admin/*`
-  - File: `app/admin/**`
+- [x] #9 Admin pages have NO access control — any auth’d user can navigate to `/admin/*`
+  - Files:
+  - `app/admin/**`
+  - `app/admin/layout.tsx` (new)
+  - Patch: Added server-side admin guard in `app/admin/layout.tsx` (`isAdminUser()` + `notFound()`).
 
 - [ ] #10 `NEXT_PUBLIC_ADMIN_EMAILS` ships admin identities to every browser
   - File: `lib/hooks/use-admin.ts`
