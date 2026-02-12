@@ -26,8 +26,9 @@ Verification expectation (after each patch):
   - Patch: Disabled endpoint in production (`404` for GET + POST).
   - Verification: `tmp/verify-validate-deployment-dev.png` (dev redirects to auth via middleware, expected).
 
-- [ ] #3 CORS wildcard `*` on ALL API routes via `vercel.json` headers
-  - File: `vercel.json:28`
+- [x] #3 CORS wildcard `*` on ALL API routes via `vercel.json` headers
+  - File: `vercel.json`
+  - Patch: Removed global wildcard CORS headers.
 
 - [ ] #4 Admin CORS `*` on OPTIONS handler
   - File: `app/api/admin/config/route.ts:239`

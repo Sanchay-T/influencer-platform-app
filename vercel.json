@@ -1,6 +1,6 @@
 {
   "buildCommand": "npm run build",
-  "devCommand": "npm run dev",
+  "devCommand": "npm run dev:ngrok",
   "installCommand": "npm install",
   "framework": "nextjs",
   "regions": ["iad1"],
@@ -20,25 +20,6 @@
     {
       "path": "/api/cron/reset-monthly-usage",
       "schedule": "0 0 1 * *"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
-        },
-        {
-          "key": "Access-Control-Allow-Methods",
-          "value": "GET, POST, PUT, DELETE, OPTIONS"
-        },
-        {
-          "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Authorization"
-        }
-      ]
     }
   ]
 }
