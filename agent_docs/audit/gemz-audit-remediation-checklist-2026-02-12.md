@@ -101,11 +101,13 @@ Verification expectation (after each patch):
 - [ ] #14 Campaign creation + usage increment not atomic
   - File: `app/api/campaigns/route.ts:56-78`
 
-- [ ] #15 Reconciliation cron not in `vercel.json` — never runs
+- [x] #15 Reconciliation cron not in `vercel.json` — never runs
   - File: `vercel.json`
+  - Patch: Added `/api/cron/reconcile-billing` route and scheduled it hourly at `15 * * * *`.
 
-- [ ] #16 Missing cron route — `/api/cron/trial-reminders` doesn’t exist, daily 404
+- [x] #16 Missing cron route — `/api/cron/trial-reminders` doesn’t exist, daily 404
   - File: `vercel.json`
+  - Patch: Removed the broken cron entry for `/api/cron/trial-reminders`.
 
 - [ ] #17 `ignoreBuildErrors: true` + `ignoreDuringBuilds: true`
   - File: `next.config.mjs`

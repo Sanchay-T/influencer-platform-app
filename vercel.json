@@ -14,12 +14,12 @@
   },
   "crons": [
     {
-      "path": "/api/cron/trial-reminders",
-      "schedule": "0 9 * * *"
-    },
-    {
       "path": "/api/cron/reset-monthly-usage",
       "schedule": "0 0 1 * *"
+    },
+    {
+      "path": "/api/cron/reconcile-billing",
+      "schedule": "15 * * * *"
     }
   ]
 }
