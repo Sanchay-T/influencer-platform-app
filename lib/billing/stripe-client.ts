@@ -23,7 +23,7 @@ const logger = createCategoryLogger(LogCategory.BILLING);
 // STRIPE INSTANCE
 // ═══════════════════════════════════════════════════════════════
 
-const STRIPE_API_VERSION: Stripe.LatestApiVersion = '2025-08-27.basil';
+const STRIPE_API_VERSION: Stripe.LatestApiVersion = '2025-06-30.basil';
 
 // Singleton Stripe instance
 let stripeInstance: Stripe | null = null;
