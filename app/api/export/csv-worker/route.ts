@@ -225,25 +225,59 @@ export async function POST(req: Request) {
 /**
  * Generate CSV content from creators array
  */
-type CreatorItem = {
-	creator?: Record<string, unknown>;
-	video?: Record<string, unknown>;
-	hashtags?: unknown;
-	platform?: string;
-	[key: string]: unknown;
-};
+	type CreatorItem = {
+		creator?: Record<string, unknown>;
+		video?: Record<string, unknown>;
+		hashtags?: unknown;
+		platform?: string;
+		[key: string]: unknown;
+	};
 
-function generateCsvContent(creators: CreatorItem[], keywords: string[]): string {
-	if (creators.length === 0) {
-		return '';
+	function isRecord(value: unknown): value is Record<string, unknown> {
+		return typeof value === 'object' && value !== null && !Array.isArray(value);
 	}
+
+	function readString(value: unknown): string | undefined {
+		return typeof value === 'string' ? value : undefined;
+	}
+
+	function readNumber(value: unknown): number | undefined {
+		if (typeof value === 'number' && Number.isFinite(value)) {
+			return value;
+		}
+		if (typeof value === 'string') {
+			const trimmed = value.trim();
+			if (!trimmed) {
+				return undefined;
+			}
+			const parsed = Number(trimmed);
+			return Number.isFinite(parsed) ? parsed : undefined;
+		}
+		return undefined;
+	}
+
+	function toIsoDate(value: unknown): string | undefined {
+		if (value instanceof Date) {
+			return Number.isNaN(value.getTime()) ? undefined : value.toISOString().split('T')[0];
+		}
+		if (typeof value === 'string' || typeof value === 'number') {
+			const parsed = new Date(value);
+			return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString().split('T')[0];
+		}
+		return undefined;
+	}
+
+	function generateCsvContent(creators: CreatorItem[], keywords: string[]): string {
+		if (creators.length === 0) {
+			return '';
+		}
 
 	const firstCreator = creators[0];
 	const keywordsStr = keywords.join(';');
 
 	// Detect format and generate appropriate CSV
-	if (firstCreator.creator && firstCreator.video) {
-		// Video-based format (TikTok, YouTube keyword search)
+		if (firstCreator.creator && firstCreator.video) {
+			// Video-based format (TikTok, YouTube keyword search)
 		const headers = [
 			'Platform',
 			'Creator/Channel Name',
@@ -263,48 +297,70 @@ function generateCsvContent(creators: CreatorItem[], keywords: string[]): string
 
 		let csv = `${headers.join(',')}\n`;
 
-		for (const item of creators) {
-			const creator = item.creator || {};
-			const video = item.video || {};
-			const stats = video.statistics || {};
-			const hashtags = Array.isArray(item.hashtags) ? item.hashtags.join(';') : '';
-			const platform = item.platform || 'Unknown';
-			const emailCell = formatEmailsForCsv([item, creator]);
+			for (const item of creators) {
+				const creator = isRecord(item.creator) ? item.creator : {};
+				const video = isRecord(item.video) ? item.video : {};
+				const stats = isRecord(video.statistics) ? video.statistics : {};
+				const hashtagList = Array.isArray(item.hashtags)
+					? item.hashtags.filter((tag): tag is string => typeof tag === 'string')
+					: [];
+				const hashtags = hashtagList.length > 0 ? hashtagList.join(';') : '';
+				const platform = readString(item.platform) ?? 'Unknown';
+				const emailCell = formatEmailsForCsv([item, creator]);
 
-			let dateStr = '';
-			if (platform === 'YouTube' && item.publishedTime) {
-				dateStr = new Date(item.publishedTime).toISOString().split('T')[0];
-			} else if (item.createTime) {
-				dateStr = new Date(item.createTime * 1000).toISOString().split('T')[0];
-			}
+				let dateStr = '';
+				if (platform === 'YouTube') {
+					dateStr = toIsoDate(item.publishedTime) ?? '';
+				} else {
+					const createTime = readNumber(item.createTime);
+					if (createTime !== undefined) {
+						dateStr = toIsoDate(createTime * 1000) ?? '';
+					}
+				}
 
-			const row = [
-				`"${platform}"`,
-				`"${escapeCSV(creator.name || '')}"`,
-				`"${creator.followers || 0}"`,
-				`"${video.url || ''}"`,
-				`"${escapeCSV(video.description || '')}"`,
-				`"${stats.views || 0}"`,
-				`"${stats.likes || 0}"`,
-				`"${stats.comments || 0}"`,
-				`"${stats.shares || 0}"`,
-				`"${item.lengthSeconds || 0}"`,
-				`"${hashtags}"`,
-				`"${dateStr}"`,
-				`"${keywordsStr}"`,
-				`"${emailCell}"`,
-			];
+				const creatorName = readString(creator.name) ?? '';
+				const followers = readNumber(creator.followers) ?? 0;
+				const videoUrl = readString(video.url) ?? '';
+				const description = readString(video.description) ?? '';
+				const views = readNumber(stats.views) ?? 0;
+				const likes = readNumber(stats.likes) ?? 0;
+				const comments = readNumber(stats.comments) ?? 0;
+				const shares = readNumber(stats.shares) ?? 0;
+				const lengthSeconds = readNumber(item.lengthSeconds) ?? 0;
+
+				const row = [
+					`"${platform}"`,
+					`"${escapeCSV(creatorName)}"`,
+					`"${followers}"`,
+					`"${videoUrl}"`,
+					`"${escapeCSV(description)}"`,
+					`"${views}"`,
+					`"${likes}"`,
+					`"${comments}"`,
+					`"${shares}"`,
+					`"${lengthSeconds}"`,
+					`"${hashtags}"`,
+					`"${dateStr}"`,
+					`"${keywordsStr}"`,
+					`"${emailCell}"`,
+				];
 			csv += `${row.join(',')}\n`;
 		}
 
 		return csv;
 	}
 
-	if (firstCreator.username && (firstCreator.is_verified !== undefined || firstCreator.full_name)) {
-		// Similar search format (Instagram, TikTok similar)
-		const headers = [
-			'Username',
-			'Full Name',
+		const isSimilarSearchFormat =
+			typeof firstCreator.username === 'string' &&
+			(firstCreator.is_verified !== undefined ||
+				typeof firstCreator.full_name === 'string' ||
+				typeof firstCreator.displayName === 'string');
+
+		if (isSimilarSearchFormat) {
+			// Similar search format (Instagram, TikTok similar)
+			const headers = [
+				'Username',
+				'Full Name',
 			'Followers',
 			'Email',
 			'Verified',
@@ -313,28 +369,37 @@ function generateCsvContent(creators: CreatorItem[], keywords: string[]): string
 			'Profile URL',
 		];
 
-		let csv = `${headers.join(',')}\n`;
+			let csv = `${headers.join(',')}\n`;
 
-		for (const creator of creators) {
-			const emailCell = formatEmailsForCsv(creator);
-			const platform = creator.platform || 'Instagram';
-			const profileUrl =
-				platform === 'TikTok'
-					? `https://www.tiktok.com/@${creator.username}`
-					: `https://instagram.com/${creator.username}`;
+			for (const creator of creators) {
+				const emailCell = formatEmailsForCsv(creator);
+				const platform = readString(creator.platform) ?? 'Instagram';
+				const username = typeof creator.username === 'string' ? creator.username : '';
+				const profileUrl =
+					platform === 'TikTok'
+						? `https://www.tiktok.com/@${username}`
+						: `https://instagram.com/${username}`;
 
-			const row = [
-				`"${creator.username || ''}"`,
-				`"${escapeCSV(creator.full_name || creator.displayName || '')}"`,
-				`"${creator.followerCount || creator.followers || 0}"`,
-				`"${emailCell}"`,
-				`"${creator.is_verified || creator.verified ? 'Yes' : 'No'}"`,
-				`"${creator.is_private || creator.isPrivate ? 'Yes' : 'No'}"`,
-				`"${platform}"`,
-				`"${profileUrl}"`,
-			];
-			csv += `${row.join(',')}\n`;
-		}
+				const fullName =
+					readString(creator.full_name) ?? readString(creator.displayName) ?? '';
+				const followerCount = readNumber(creator.followerCount) ?? readNumber(creator.followers) ?? 0;
+				const isVerified =
+					creator.is_verified === true || creator.verified === true ? 'Yes' : 'No';
+				const isPrivate =
+					creator.is_private === true || creator.isPrivate === true ? 'Yes' : 'No';
+
+				const row = [
+					`"${username}"`,
+					`"${escapeCSV(fullName)}"`,
+					`"${followerCount}"`,
+					`"${emailCell}"`,
+					`"${isVerified}"`,
+					`"${isPrivate}"`,
+					`"${platform}"`,
+					`"${profileUrl}"`,
+				];
+				csv += `${row.join(',')}\n`;
+			}
 
 		return csv;
 	}

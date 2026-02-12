@@ -18,6 +18,22 @@ import { structuredConsole } from '@/lib/logging/console-proxy';
 import { LogCategory } from '@/lib/logging/types';
 import { verifyQstashRequestSignature } from '@/lib/queue/qstash-signature';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function readString(value: unknown): string | undefined {
+	return typeof value === 'string' ? value : undefined;
+}
+
+function readStringArray(value: unknown): string[] | undefined {
+	if (!Array.isArray(value)) {
+		return undefined;
+	}
+	const onlyStrings = value.filter((item): item is string => typeof item === 'string');
+	return onlyStrings.length === value.length ? onlyStrings : undefined;
+}
+
 export async function POST(request: Request) {
 	try {
 		const rawBody = await request.text();
@@ -44,29 +60,59 @@ export async function POST(request: Request) {
 		}
 
 		// Start email job tracking (only after request is trusted)
-		const jobId = jobLog.start({
-			jobType: 'scheduled-email',
-			metadata: { operation: 'send-scheduled-email' },
-		});
+			const jobId = jobLog.start({
+				jobType: 'scheduled-email',
+				metadata: { operation: 'send-scheduled-email' },
+			});
 
-		logger.info('Processing scheduled email request', { jobId }, LogCategory.EMAIL);
+			logger.info('Processing scheduled email request', { jobId }, LogCategory.EMAIL);
 
-		const { userId, emailType, userEmail, templateProps, scheduledAt, source, adminUserId } =
-			messageData as Record<string, unknown>;
+			if (!isRecord(messageData)) {
+				return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+			}
 
-		logger.info(
-			'Processing scheduled email',
-			{
-				jobId,
-				userId,
-				emailType,
-				userEmail: userEmail.replace(/(.{2}).*@/, '$1***@'), // Partially redact
-				scheduledAt,
-				source: source || 'system',
-				adminTriggered: !!adminUserId,
-			},
-			LogCategory.EMAIL
-		);
+			const userId = readString(messageData.userId);
+			const emailType = readString(messageData.emailType);
+			const userEmail = readString(messageData.userEmail);
+			const scheduledAt = readString(messageData.scheduledAt);
+			const source = readString(messageData.source) ?? 'system';
+			const adminUserId = readString(messageData.adminUserId);
+			const templatePropsRaw = messageData.templateProps;
+
+			if (!userId || !emailType || !userEmail) {
+				return NextResponse.json(
+					{
+						error: 'Invalid payload: userId, emailType, and userEmail are required',
+					},
+					{ status: 400 }
+				);
+			}
+
+			if (!isRecord(templatePropsRaw)) {
+				return NextResponse.json({ error: 'Invalid payload: templateProps is required' }, { status: 400 });
+			}
+			const templateProps = templatePropsRaw;
+			const dashboardUrl = readString(templateProps.dashboardUrl);
+			if (!dashboardUrl) {
+				return NextResponse.json(
+					{ error: 'Invalid payload: templateProps.dashboardUrl is required' },
+					{ status: 400 }
+				);
+			}
+
+			logger.info(
+				'Processing scheduled email',
+				{
+					jobId,
+					userId,
+					emailType,
+					userEmail: userEmail.replace(/(.{2}).*@/, '$1***@'), // Partially redact
+					scheduledAt,
+					source,
+					adminTriggered: !!adminUserId,
+				},
+				LogCategory.EMAIL
+			);
 
 		// Check if email was cancelled before sending (skip for admin tests)
 		if (source !== 'admin-testing') {
@@ -97,107 +143,145 @@ export async function POST(request: Request) {
 			}
 		}
 
-		// Get the appropriate email template and subject
-		let emailComponent: React.ReactElement;
-		let subject: string;
+			// Get the appropriate email template and subject
+			let emailComponent: React.ReactElement;
+			let subject: string;
 
 		// Add admin testing prefix if triggered by admin
 		const subjectPrefix = source === 'admin-testing' ? '[ADMIN TEST] ' : '';
 
-		switch (emailType) {
-			case 'welcome':
-				emailComponent = WelcomeEmail(templateProps);
-				subject = `${subjectPrefix}Welcome to Gemz! 🎉`;
-				break;
+			switch (emailType) {
+				case 'welcome':
+					emailComponent = WelcomeEmail({
+						username: readString(templateProps.username),
+						fullName: readString(templateProps.fullName),
+						businessName: readString(templateProps.businessName),
+						dashboardUrl,
+						unsubscribeUrl: readString(templateProps.unsubscribeUrl),
+					});
+					subject = `${subjectPrefix}Welcome to Gemz! 🎉`;
+					break;
 
-			case 'abandonment':
-				emailComponent = TrialAbandonmentEmail(templateProps);
-				subject = `${subjectPrefix}Complete your setup and start your free trial`;
-				break;
+				case 'abandonment':
+					emailComponent = TrialAbandonmentEmail({
+						username: readString(templateProps.username),
+						fullName: readString(templateProps.fullName),
+						businessName: readString(templateProps.businessName),
+						dashboardUrl,
+						unsubscribeUrl: readString(templateProps.unsubscribeUrl),
+					});
+					subject = `${subjectPrefix}Complete your setup and start your free trial`;
+					break;
 
-			case 'trial_day2':
-				emailComponent = TrialDay2Email(templateProps);
-				subject = `${subjectPrefix}How's your trial going? Tips to get the most out of it 💡`;
-				break;
+				case 'trial_day2':
+					emailComponent = TrialDay2Email({
+						username: readString(templateProps.username),
+						fullName: readString(templateProps.fullName),
+						businessName: readString(templateProps.businessName),
+						dashboardUrl,
+						unsubscribeUrl: readString(templateProps.unsubscribeUrl),
+					});
+					subject = `${subjectPrefix}How's your trial going? Tips to get the most out of it 💡`;
+					break;
 
-			case 'trial_day5':
-				emailComponent = TrialDay5Email(templateProps);
-				subject = `${subjectPrefix}Your trial ends in 2 days - here's what you've accomplished! 🏆`;
-				break;
+				case 'trial_day5':
+					emailComponent = TrialDay5Email({
+						username: readString(templateProps.username),
+						fullName: readString(templateProps.fullName),
+						businessName: readString(templateProps.businessName),
+						dashboardUrl,
+						unsubscribeUrl: readString(templateProps.unsubscribeUrl),
+					});
+					subject = `${subjectPrefix}Your trial ends in 2 days - here's what you've accomplished! 🏆`;
+					break;
 
-			case 'subscription_welcome':
-				emailComponent = SubscriptionWelcomeEmail({
-					fullName: templateProps.fullName,
-					businessName: templateProps.businessName,
-					planName: templateProps.planName || templateProps.plan || 'Gemz',
-					planFeatures: templateProps.planFeatures,
-					dashboardUrl: templateProps.dashboardUrl,
-					billingUrl: templateProps.billingUrl,
-				});
-				subject =
-					subjectPrefix +
-					`You're now live on the ${templateProps.planName || templateProps.plan || 'Gemz'} plan! 🎉`;
-				break;
+				case 'subscription_welcome':
+					{
+						const planName =
+							readString(templateProps.planName) ??
+							readString(templateProps.plan) ??
+							'Gemz';
+						const planFeatures = readStringArray(templateProps.planFeatures);
 
-			case 'trial_expiry':
-				emailComponent = TrialDay5Email(templateProps); // Reuse day5 template for now
-				subject = `${subjectPrefix}Your trial expires tomorrow - Don't lose your progress! 🔔`;
-				break;
+					emailComponent = SubscriptionWelcomeEmail({
+						fullName: readString(templateProps.fullName),
+						businessName: readString(templateProps.businessName),
+						planName,
+						planFeatures,
+						dashboardUrl,
+						billingUrl: readString(templateProps.billingUrl),
+					});
+					subject =
+						subjectPrefix +
+						`You're now live on the ${planName} plan! 🎉`;
+					break;
+				}
 
-			// Onboarding drip sequence (for users who sign up but don't start trial)
-			case 'onboarding_1_welcome':
-				emailComponent = OnboardingWelcomeEmail({
-					fullName: templateProps.fullName,
-					dashboardUrl: templateProps.dashboardUrl,
-					unsubscribeUrl: templateProps.unsubscribeUrl,
-				});
-				subject = `${subjectPrefix}Welcome to Gemz — here's what you're unlocking`;
-				break;
+				case 'trial_expiry':
+					emailComponent = TrialDay5Email({
+						username: readString(templateProps.username),
+						fullName: readString(templateProps.fullName),
+						businessName: readString(templateProps.businessName),
+						dashboardUrl,
+						unsubscribeUrl: readString(templateProps.unsubscribeUrl),
+					}); // Reuse day5 template for now
+					subject = `${subjectPrefix}Your trial expires tomorrow - Don't lose your progress! 🔔`;
+					break;
 
-			case 'onboarding_2_keyword':
-				emailComponent = OnboardingKeywordEmail({
-					fullName: templateProps.fullName,
-					dashboardUrl: templateProps.dashboardUrl,
-					unsubscribeUrl: templateProps.unsubscribeUrl,
-				});
-				subject = `${subjectPrefix}How to find creators by what they actually talk about`;
-				break;
+				// Onboarding drip sequence (for users who sign up but don't start trial)
+				case 'onboarding_1_welcome':
+					emailComponent = OnboardingWelcomeEmail({
+						fullName: readString(templateProps.fullName),
+						dashboardUrl,
+						unsubscribeUrl: readString(templateProps.unsubscribeUrl),
+					});
+					subject = `${subjectPrefix}Welcome to Gemz — here's what you're unlocking`;
+					break;
 
-			case 'onboarding_3_similar':
-				emailComponent = OnboardingSimilarCreatorEmail({
-					fullName: templateProps.fullName,
-					dashboardUrl: templateProps.dashboardUrl,
-					unsubscribeUrl: templateProps.unsubscribeUrl,
-				});
-				subject = `${subjectPrefix}Found one good creator? Here's how to find 50 more`;
-				break;
+				case 'onboarding_2_keyword':
+					emailComponent = OnboardingKeywordEmail({
+						fullName: readString(templateProps.fullName),
+						dashboardUrl,
+						unsubscribeUrl: readString(templateProps.unsubscribeUrl),
+					});
+					subject = `${subjectPrefix}How to find creators by what they actually talk about`;
+					break;
 
-			case 'onboarding_4_database':
-				emailComponent = OnboardingNotDatabaseEmail({
-					fullName: templateProps.fullName,
-					dashboardUrl: templateProps.dashboardUrl,
-					unsubscribeUrl: templateProps.unsubscribeUrl,
-				});
-				subject = `${subjectPrefix}Why influencer databases are lying to you`;
-				break;
+				case 'onboarding_3_similar':
+					emailComponent = OnboardingSimilarCreatorEmail({
+						fullName: readString(templateProps.fullName),
+						dashboardUrl,
+						unsubscribeUrl: readString(templateProps.unsubscribeUrl),
+					});
+					subject = `${subjectPrefix}Found one good creator? Here's how to find 50 more`;
+					break;
 
-			case 'onboarding_5_cost':
-				emailComponent = OnboardingCostComparisonEmail({
-					fullName: templateProps.fullName,
-					dashboardUrl: templateProps.dashboardUrl,
-					unsubscribeUrl: templateProps.unsubscribeUrl,
-				});
-				subject = `${subjectPrefix}You don't need a $500/mo influencer tool`;
-				break;
+				case 'onboarding_4_database':
+					emailComponent = OnboardingNotDatabaseEmail({
+						fullName: readString(templateProps.fullName),
+						dashboardUrl,
+						unsubscribeUrl: readString(templateProps.unsubscribeUrl),
+					});
+					subject = `${subjectPrefix}Why influencer databases are lying to you`;
+					break;
 
-			case 'onboarding_6_final':
-				emailComponent = OnboardingFinalPushEmail({
-					fullName: templateProps.fullName,
-					dashboardUrl: templateProps.dashboardUrl,
-					unsubscribeUrl: templateProps.unsubscribeUrl,
-				});
-				subject = `${subjectPrefix}Last thing — then I'll stop emailing`;
-				break;
+				case 'onboarding_5_cost':
+					emailComponent = OnboardingCostComparisonEmail({
+						fullName: readString(templateProps.fullName),
+						dashboardUrl,
+						unsubscribeUrl: readString(templateProps.unsubscribeUrl),
+					});
+					subject = `${subjectPrefix}You don't need a $500/mo influencer tool`;
+					break;
+
+				case 'onboarding_6_final':
+					emailComponent = OnboardingFinalPushEmail({
+						fullName: readString(templateProps.fullName),
+						dashboardUrl,
+						unsubscribeUrl: readString(templateProps.unsubscribeUrl),
+					});
+					subject = `${subjectPrefix}Last thing — then I'll stop emailing`;
+					break;
 
 			default:
 				structuredConsole.error('❌ [SCHEDULED-EMAIL] Unknown email type:', emailType);

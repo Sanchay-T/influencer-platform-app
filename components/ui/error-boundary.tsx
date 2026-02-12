@@ -80,14 +80,13 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 				...(platform ? { platform } : {}),
 				errorBoundary: 'true',
 				componentName,
-			},
-			extra: {
-				componentStack: errorInfo.componentStack,
-				digest: errorInfo.digest ?? undefined,
-			},
-			contexts: {
-				react: {
+				},
+				extra: {
 					componentStack: errorInfo.componentStack,
+				},
+				contexts: {
+					react: {
+						componentStack: errorInfo.componentStack,
 				},
 			},
 		});

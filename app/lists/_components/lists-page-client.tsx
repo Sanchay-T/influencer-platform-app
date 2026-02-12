@@ -298,7 +298,7 @@ export default function ListsPageClient({ initialLists }: ListsPageClientProps) 
 															type="button"
 															onClick={(event) => {
 																event.stopPropagation();
-																handleCancelDelete();
+																handleCancelDelete(event);
 															}}
 															className="rounded-full p-1.5 text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"
 															aria-label="Cancel delete"

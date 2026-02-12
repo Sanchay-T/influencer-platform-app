@@ -141,18 +141,20 @@ export class ImageCache {
 
 			// Convert HEIC to JPEG if needed
 			if (url.includes('.heic') || url.includes('.heif')) {
-				try {
-					const convert = (await import('heic-convert')).default;
-					const converted = await convert({
-						buffer,
-						format: 'JPEG',
-						quality: 0.85,
-					});
-					buffer = Buffer.from(converted);
-				} catch (_heicError) {
-					structuredConsole.warn(`${LOG_PREFIX} HEIC conversion failed, using original`);
+					try {
+						const convert = (await import('heic-convert')).default;
+						const converted = await convert({
+							buffer,
+							format: 'JPEG',
+							quality: 0.85,
+						});
+						const convertedBytes =
+							converted instanceof ArrayBuffer ? new Uint8Array(converted) : converted;
+						buffer = Buffer.from(convertedBytes);
+					} catch (_heicError) {
+						structuredConsole.warn(`${LOG_PREFIX} HEIC conversion failed, using original`);
+					}
 				}
-			}
 
 			// Upload to Vercel Blob
 			const blob = await put(cacheKey, buffer, {
