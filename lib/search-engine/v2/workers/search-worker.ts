@@ -12,7 +12,6 @@
  * 8. Triggers adaptive re-expansion if target not reached
  */
 
-import { incrementCreatorCount } from '@/lib/billing';
 import { LogCategory, logger } from '@/lib/logging';
 import { SentryLogger } from '@/lib/logging/sentry-logger';
 import { searchTracker } from '@/lib/sentry/feature-tracking';
@@ -277,6 +276,7 @@ export async function processSearch(options: ProcessSearchOptions): Promise<Sear
 				// @context USE2-17: Pass keyword so we track which keyword found each creator
 				const { newCount, creatorIds } = await saveCreatorsToJob(
 					jobId,
+					userId,
 					normalizedCreators,
 					adapter.getDedupeKey.bind(adapter),
 					targetResults,
@@ -292,20 +292,8 @@ export async function processSearch(options: ProcessSearchOptions): Promise<Sear
 				const { allDone } = await tracker.incrementKeywordsCompleted();
 				await tracker.updateProgressPercentage();
 
-				// Increment billing usage for new creators
-				if (newCount > 0) {
-					try {
-						await incrementCreatorCount(userId, newCount);
-					} catch (error) {
-						logger.error(
-							`${LOG_PREFIX} Failed to increment billing`,
-							error instanceof Error ? error : new Error(String(error)),
-							{ jobId, userId, newCount },
-							LogCategory.BILLING
-						);
-						// Don't fail the worker for billing errors
-					}
-				}
+				// Note: billing usage increments happen inside saveCreatorsToJob()
+				// so we charge by actual unique creators inserted (concurrency-safe).
 
 				// ========================================================================
 				// Step 6: Dispatch Enrichment Batches
