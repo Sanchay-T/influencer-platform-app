@@ -31,6 +31,9 @@ export async function POST(req: NextRequest) {
 		// Update user's plan and snapshot limits
 		await updateUserProfile(userId, {
 			currentPlan: plan.planKey,
+			subscriptionStatus: 'active',
+			// Access validation requires onboardingStep === 'completed'
+			onboardingStep: 'completed',
 			planCampaignsLimit: plan.campaignsLimit,
 			planCreatorsLimit: plan.creatorsLimit,
 			planFeatures: plan.features,

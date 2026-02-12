@@ -93,8 +93,10 @@ Verification expectation (after each patch):
   - Patch: Replace self-equality check with `isNotNull(userBilling.stripeCustomerId)`.
   - Test: `testing/__tests__/billing/get-user-billing.test.ts`
 
-- [ ] #13 Admin set-plan doesn’t set `subscriptionStatus`
+- [x] #13 Admin set-plan doesn’t set `subscriptionStatus`
   - File: `app/api/admin/users/set-plan/route.ts`
+  - Patch: Set `subscriptionStatus: 'active'` and `onboardingStep: 'completed'` when admin assigns a plan.
+  - Test: `testing/__tests__/billing/admin-set-plan-route.test.ts`
 
 - [ ] #14 Campaign creation + usage increment not atomic
   - File: `app/api/campaigns/route.ts:56-78`
