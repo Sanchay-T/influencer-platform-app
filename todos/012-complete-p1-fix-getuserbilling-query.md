@@ -1,5 +1,5 @@
 ---
-status: ready
+status: complete
 priority: p1
 issue_id: "012"
 tags: [billing, bug]
@@ -29,8 +29,8 @@ Implement Option 1 and add regression coverage.
 
 ## Acceptance Criteria
 
-- [ ] Correct billing record returned for user.
-- [ ] Add a test covering the prior bug.
+- [x] Correct billing record returned for user (query no longer matches all rows).
+- [x] Add a test covering the prior bug.
 
 ## Work Log
 
@@ -40,3 +40,16 @@ Implement Option 1 and add regression coverage.
 
 **Actions:**
 - Captured audit issue into this todo.
+
+### 2026-02-12 - Fix Predicate + Add Regression Test
+
+**By:** Codex
+
+**Actions:**
+- Fixed `getUserBilling` predicate in `lib/db/queries/user-queries.ts`:
+  - Replaced `eq(userBilling.stripeCustomerId, userBilling.stripeCustomerId)` with `isNotNull(userBilling.stripeCustomerId)`.
+- Added `buildGetUserBillingQuery()` for SQL-level regression testing.
+- Added test: `testing/__tests__/billing/get-user-billing.test.ts`.
+
+**Verification:**
+- `npx vitest run testing/__tests__/billing/get-user-billing.test.ts`

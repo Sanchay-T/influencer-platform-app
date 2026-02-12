@@ -88,8 +88,10 @@ Verification expectation (after each patch):
 - [ ] #11 Usage tracking race condition (TOCTOU) — validate then increment are separate ops
   - File: `lib/billing/usage-tracking.ts`
 
-- [ ] #12 `getUserBilling` self-referential WHERE (`eq(col, col)` always true)
-  - File: `lib/db/queries/user-queries.ts:510`
+- [x] #12 `getUserBilling` self-referential WHERE (`eq(col, col)` always true)
+  - File: `lib/db/queries/user-queries.ts`
+  - Patch: Replace self-equality check with `isNotNull(userBilling.stripeCustomerId)`.
+  - Test: `testing/__tests__/billing/get-user-billing.test.ts`
 
 - [ ] #13 Admin set-plan doesn’t set `subscriptionStatus`
   - File: `app/api/admin/users/set-plan/route.ts`
