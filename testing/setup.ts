@@ -10,6 +10,7 @@ import { afterAll, afterEach, beforeAll, vi } from 'vitest';
 process.env.NODE_ENV = 'test';
 process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = 'pk_test_mock';
 process.env.CLERK_SECRET_KEY = 'sk_test_mock';
+process.env.NEXT_PUBLIC_SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3001';
 process.env.DATABASE_URL =
 	process.env.DATABASE_URL ?? 'postgres://postgres:postgres@localhost:5432/gemz_test';
 process.env.RESEND_API_KEY = process.env.RESEND_API_KEY ?? 're_test_mock';
