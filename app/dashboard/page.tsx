@@ -23,6 +23,28 @@ const EMPTY_OVERVIEW: DashboardOverviewData = {
 	},
 };
 
+function withTimeout<T>(
+	promise: Promise<T>,
+	timeoutMs: number,
+	onTimeout: () => void,
+	fallback: T
+): Promise<T> {
+	let timeoutId: ReturnType<typeof setTimeout> | undefined;
+	const timeoutPromise = new Promise<T>((resolve) => {
+		timeoutId = setTimeout(() => {
+			onTimeout();
+			resolve(fallback);
+		}, timeoutMs);
+	});
+
+	// Important: clear the timer so we don't log a timeout after the promise already settled.
+	return Promise.race([promise, timeoutPromise]).finally(() => {
+		if (timeoutId) {
+			clearTimeout(timeoutId);
+		}
+	});
+}
+
 export default async function DashboardPage() {
 	const t0 = Date.now();
 	structuredConsole.log('[DASHBOARD] RSC start');
@@ -40,17 +62,15 @@ export default async function DashboardPage() {
 	const ENSURE_PROFILE_TIMEOUT_MS = 10_000;
 	let userProfile: Awaited<ReturnType<typeof ensureUserProfile>> | null = null;
 	try {
-		userProfile = await Promise.race([
+		userProfile = await withTimeout(
 			ensureUserProfile(userId),
-			new Promise<null>((resolve) =>
-				setTimeout(() => {
-					structuredConsole.error(
-						`[DASHBOARD] ensureUserProfile timed out after ${ENSURE_PROFILE_TIMEOUT_MS}ms for ${userId}`
-					);
-					resolve(null);
-				}, ENSURE_PROFILE_TIMEOUT_MS)
-			),
-		]);
+			ENSURE_PROFILE_TIMEOUT_MS,
+			() =>
+				structuredConsole.error(
+					`[DASHBOARD] ensureUserProfile timed out after ${ENSURE_PROFILE_TIMEOUT_MS}ms for ${userId}`
+				),
+			null
+		);
 	} catch (err) {
 		structuredConsole.error('[DASHBOARD] ensureUserProfile failed', err);
 	}
@@ -76,17 +96,15 @@ export default async function DashboardPage() {
 	const OVERVIEW_TIMEOUT_MS = 15_000;
 	let overview: DashboardOverviewData;
 	try {
-		overview = await Promise.race([
+		overview = await withTimeout(
 			getDashboardOverview(userId),
-			new Promise<DashboardOverviewData>((resolve) =>
-				setTimeout(() => {
-					structuredConsole.error(
-						`[DASHBOARD] getDashboardOverview timed out after ${OVERVIEW_TIMEOUT_MS}ms for ${userId}`
-					);
-					resolve(EMPTY_OVERVIEW);
-				}, OVERVIEW_TIMEOUT_MS)
-			),
-		]);
+			OVERVIEW_TIMEOUT_MS,
+			() =>
+				structuredConsole.error(
+					`[DASHBOARD] getDashboardOverview timed out after ${OVERVIEW_TIMEOUT_MS}ms for ${userId}`
+				),
+			EMPTY_OVERVIEW
+		);
 	} catch (err) {
 		structuredConsole.error('[DASHBOARD] getDashboardOverview failed, rendering empty state', err);
 		overview = EMPTY_OVERVIEW;
