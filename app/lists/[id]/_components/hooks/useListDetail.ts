@@ -18,6 +18,7 @@ import {
 	findBucketForItem,
 	findItemById,
 	flattenColumnsForDetail,
+	summarizeEnrichment,
 } from '../utils/list-helpers';
 
 interface UseListDetailResult {
@@ -145,6 +146,23 @@ export function useListDetail(listId: string, initialDetail: ListDetail): UseLis
 		}
 		fetchDetail();
 	}, [fetchDetail, initialDetail, listId]);
+
+	useEffect(() => {
+		if (!detail) {
+			return;
+		}
+
+		const summary = summarizeEnrichment(detail.items);
+		if (summary.active <= 0) {
+			return;
+		}
+
+		const interval = setInterval(() => {
+			fetchDetail();
+		}, 4000);
+
+		return () => clearInterval(interval);
+	}, [detail, fetchDetail]);
 
 	// Derived state
 	const allBuckets = useMemo(() => {

@@ -4,7 +4,36 @@ import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { addCreatorsToList, removeListItems, updateListItems } from '@/lib/db/queries/list-queries';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { toRecord } from '@/lib/utils/type-guards';
+import { getQstashBaseUrl, qstash } from '@/lib/queue/qstash';
 import { apiTracker, listTracker, SentryLogger, sessionTracker } from '@/lib/sentry';
+
+type AddedCreatorForAutoEnrichment = {
+	listItemId: string;
+	creatorId: string;
+	handle: string;
+	platform: string;
+	externalId: string;
+};
+
+async function dispatchAutoEnrichment(
+	userId: string,
+	listId: string,
+	addedCreators: AddedCreatorForAutoEnrichment[]
+) {
+	if (!addedCreators.length) {
+		return;
+	}
+
+	const url = `${getQstashBaseUrl()}/api/qstash/auto-enrich-list-items`;
+	await qstash.publishJSON({
+		url,
+		body: { userId, listId, addedCreators },
+		retries: 3,
+		delay: '1s',
+		notifyOnFailure: true,
+	});
+}
 
 function errorToResponse(
 	error: unknown,
@@ -49,6 +78,34 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 		try {
 			const body = await request.json();
 			const result = await addCreatorsToList(userId, id, body.creators ?? []);
+			const addedCreators = Array.isArray(result.addedCreators)
+				? result.addedCreators.filter((item): item is AddedCreatorForAutoEnrichment => {
+					if (!(item && typeof item === 'object')) {
+						return false;
+					}
+					const record = toRecord(item);
+					if (!record) {
+						return false;
+					}
+					return (
+						typeof record.listItemId === 'string' &&
+						typeof record.creatorId === 'string' &&
+						typeof record.handle === 'string' &&
+						typeof record.platform === 'string' &&
+						typeof record.externalId === 'string'
+					);
+				})
+				: [];
+
+			if (addedCreators.length > 0) {
+				dispatchAutoEnrichment(userId, id, addedCreators).catch((dispatchError) => {
+					structuredConsole.error('[LIST_ITEMS_API] Failed to dispatch auto-enrichment', {
+						dispatchError,
+						listId: id,
+						addedCreators: addedCreators.length,
+					});
+				});
+			}
 
 			// Fire-and-forget: Analytics tracking (don't block response)
 			if (result.added > 0) {
@@ -75,7 +132,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 					);
 			}
 
-			return NextResponse.json(result, { status: 201 });
+			return NextResponse.json(
+				{
+					...result,
+					autoEnrichmentQueued: addedCreators.length,
+				},
+				{ status: 201 }
+			);
 		} catch (error) {
 			return errorToResponse(error, { userId, listId: id, action: 'add_creator' });
 		}
