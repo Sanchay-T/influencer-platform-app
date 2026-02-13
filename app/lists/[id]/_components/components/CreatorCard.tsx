@@ -4,7 +4,7 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import clsx from 'clsx';
-import { Link2, Star } from 'lucide-react';
+import { Clock3, Link2, Loader2, Star, TriangleAlert } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import {
 	formatFollowers,
 	resolveAvatarSource,
 	resolveProfileUrl,
+	getItemEnrichmentStatus,
 } from '../utils/list-helpers';
 
 interface SortableCardProps {
@@ -49,6 +50,7 @@ export function CreatorCardContent({ item, onTogglePin }: CreatorCardContentProp
 	const followers = formatFollowers(item.creator.followers ?? 0);
 	const avatarSource = ensureImageUrl(resolveAvatarSource(item.creator));
 	const profileUrl = resolveProfileUrl(item.creator);
+	const enrichmentStatus = getItemEnrichmentStatus(item);
 
 	return (
 		<div className="rounded-xl border border-zinc-800/60 bg-zinc-900/80 p-4 shadow-sm">
@@ -87,6 +89,7 @@ export function CreatorCardContent({ item, onTogglePin }: CreatorCardContentProp
 					</div>
 				</div>
 				<div className="flex flex-wrap items-center gap-2">
+					<EnrichmentChip status={enrichmentStatus} />
 					{profileUrl ? (
 						<Button
 							variant="ghost"
@@ -130,4 +133,40 @@ export function CreatorCardContent({ item, onTogglePin }: CreatorCardContentProp
 			</div>
 		</div>
 	);
+}
+
+
+function EnrichmentChip({
+	status,
+}: {
+	status: ReturnType<typeof getItemEnrichmentStatus>;
+}) {
+	if (status === 'enriched') {
+		return <Badge className="bg-emerald-500/15 text-emerald-200 border border-emerald-500/40">✓ Enriched</Badge>;
+	}
+	if (status === 'in_progress') {
+		return (
+			<Badge className="bg-pink-500/15 text-pink-200 border border-pink-500/40">
+				<Loader2 className="mr-1 h-3 w-3 animate-spin" /> Enriching
+			</Badge>
+		);
+	}
+	if (status === 'queued') {
+		return (
+			<Badge className="bg-zinc-700/40 text-zinc-200 border border-zinc-600">
+				<Clock3 className="mr-1 h-3 w-3" /> Queued
+			</Badge>
+		);
+	}
+	if (status === 'failed') {
+		return (
+			<Badge className="bg-amber-500/15 text-amber-200 border border-amber-500/40">
+				<TriangleAlert className="mr-1 h-3 w-3" /> Failed
+			</Badge>
+		);
+	}
+	if (status === 'skipped_limit') {
+		return <Badge className="bg-violet-500/15 text-violet-200 border border-violet-500/40">Limit</Badge>;
+	}
+	return <Badge className="bg-zinc-800/60 text-zinc-400 border border-zinc-700">Pending</Badge>;
 }
