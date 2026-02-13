@@ -71,6 +71,14 @@ export type CreatorInput = {
 	pinned?: boolean;
 };
 
+export type AutoEnrichmentStatus =
+	| 'pending'
+	| 'queued'
+	| 'in_progress'
+	| 'enriched'
+	| 'failed'
+	| 'skipped_limit';
+
 export type ListItemUpdate = {
 	id: string;
 	position?: number;
@@ -505,7 +513,7 @@ export async function addCreatorsToList(
 	creators: CreatorInput[]
 ) {
 	if (!creators.length) {
-		return { added: 0, skipped: [], attempted: 0 };
+		return { added: 0, skipped: [], attempted: 0, addedCreators: [] };
 	}
 	const user = await findInternalUser(clerkUserId);
 	const access = await fetchAccessibleList(listId, user.id);
@@ -516,6 +524,19 @@ export async function addCreatorsToList(
 
 	// SIMPLE: Just insert profiles (if new) and link to list - no updates, no extra operations
 	const summary = await db.transaction(async (tx) => {
+		const buildAutoEnrichmentMeta = (customFields: unknown) => {
+			const currentCustomFields = toRecord(customFields) ?? {};
+			return {
+				...currentCustomFields,
+				autoEnrichment: {
+					status: 'queued',
+					source: 'list_add_auto',
+					queuedAt: new Date().toISOString(),
+					attempts: 0,
+				},
+			};
+		};
+
 		// Step 1: Insert profiles as-is (DO NOTHING if exists - don't update anything)
 		const profileValues = creators.map((c) => ({
 			platform: c.platform,
@@ -545,14 +566,24 @@ export async function addCreatorsToList(
 				id: creatorProfiles.id,
 				platform: creatorProfiles.platform,
 				externalId: creatorProfiles.externalId,
+				handle: creatorProfiles.handle,
 				followers: creatorProfiles.followers,
 			})
 			.from(creatorProfiles)
 			.where(or(...conditions));
 
-		const profileMap = new Map<string, { id: string; followers: number | null }>();
+		const profileMap = new Map<
+			string,
+			{ id: string; followers: number | null; handle: string; platform: string; externalId: string }
+		>();
 		for (const p of existingProfiles) {
-			profileMap.set(`${p.platform}:${p.externalId}`, { id: p.id, followers: p.followers });
+			profileMap.set(`${p.platform}:${p.externalId}`, {
+				id: p.id,
+				followers: p.followers,
+				handle: p.handle,
+				platform: p.platform,
+				externalId: p.externalId,
+			});
 		}
 
 		// Step 3: Get max position
@@ -577,7 +608,7 @@ export async function addCreatorsToList(
 					addedBy: user.id,
 					notes: creator.notes ?? null,
 					metricsSnapshot: creator.metricsSnapshot ?? {},
-					customFields: creator.customFields ?? {},
+					customFields: buildAutoEnrichmentMeta(creator.customFields),
 					pinned: creator.pinned ?? false,
 				};
 			})
@@ -587,10 +618,11 @@ export async function addCreatorsToList(
 			.insert(creatorListItems)
 			.values(itemValues)
 			.onConflictDoNothing({ target: [creatorListItems.listId, creatorListItems.creatorId] })
-			.returning({ creatorId: creatorListItems.creatorId });
+			.returning({ creatorId: creatorListItems.creatorId, listItemId: creatorListItems.id });
 
 		// Track skipped (already in list)
 		const insertedCreatorIds = new Set(insertedItems.map((i) => i.creatorId));
+		const insertedItemMap = new Map(insertedItems.map((item) => [item.creatorId, item.listItemId]));
 		const skipped: Array<{ externalId: string; handle: string; platform: string }> = [];
 		for (const creator of creators) {
 			const profile = profileMap.get(`${creator.platform}:${creator.externalId}`);
@@ -602,6 +634,26 @@ export async function addCreatorsToList(
 				});
 			}
 		}
+
+		const addedCreators = creators
+			.map((creator) => {
+				const profile = profileMap.get(`${creator.platform}:${creator.externalId}`);
+				if (!profile || !insertedCreatorIds.has(profile.id)) {
+					return null;
+				}
+				const listItemId = insertedItemMap.get(profile.id);
+				if (!listItemId) {
+					return null;
+				}
+				return {
+					listItemId,
+					creatorId: profile.id,
+					handle: profile.handle,
+					platform: profile.platform,
+					externalId: profile.externalId,
+				};
+			})
+			.filter((value): value is NonNullable<typeof value> => value !== null);
 
 		// Step 5: Increment stats
 		const addedCount = insertedItems.length;
@@ -631,7 +683,7 @@ export async function addCreatorsToList(
 				.where(eq(creatorLists.id, listId));
 		}
 
-		return { inserted: addedCount, skipped };
+		return { inserted: addedCount, skipped, addedCreators };
 	});
 
 	// Fire-and-forget: Activity logging (don't block response)
@@ -652,6 +704,7 @@ export async function addCreatorsToList(
 		added: summary.inserted,
 		skipped: summary.skipped,
 		attempted: creators.length,
+		addedCreators: summary.addedCreators,
 	};
 }
 

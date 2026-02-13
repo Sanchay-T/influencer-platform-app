@@ -2,7 +2,7 @@
  * Table/List view for creators
  */
 import clsx from 'clsx';
-import { Link2, Star } from 'lucide-react';
+import { Clock3, Link2, Loader2, Star, TriangleAlert } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -28,6 +28,7 @@ import {
 	formatFollowers,
 	resolveAvatarSource,
 	resolveProfileUrl,
+	getItemEnrichmentStatus,
 } from '../utils/list-helpers';
 
 interface ListViewProps {
@@ -50,6 +51,7 @@ export function ListView({ items, bucketOptions, onStatusChange, onTogglePin }: 
 								<TableHead className="text-zinc-400">Followers</TableHead>
 								<TableHead className="text-zinc-400">Category</TableHead>
 								<TableHead className="text-zinc-400">Status</TableHead>
+								<TableHead className="text-zinc-400">Enrichment</TableHead>
 								<TableHead className="text-zinc-400">Pin</TableHead>
 								<TableHead className="text-right text-zinc-400">Actions</TableHead>
 							</TableRow>
@@ -57,7 +59,7 @@ export function ListView({ items, bucketOptions, onStatusChange, onTogglePin }: 
 						<TableBody>
 							{items.length === 0 ? (
 								<TableRow>
-									<TableCell colSpan={7} className="py-10 text-center text-sm text-zinc-500">
+									<TableCell colSpan={8} className="py-10 text-center text-sm text-zinc-500">
 										No creators saved yet. Add creators from search results or campaigns to populate
 										this list.
 									</TableCell>
@@ -139,6 +141,9 @@ function ListViewRow({ item, bucketOptions, onStatusChange, onTogglePin }: ListV
 					</SelectContent>
 				</Select>
 			</TableCell>
+			<TableCell>
+				<EnrichmentBadge item={item} />
+			</TableCell>
 			<TableCell className="text-center">
 				<Button
 					variant="ghost"
@@ -176,4 +181,37 @@ function ListViewRow({ item, bucketOptions, onStatusChange, onTogglePin }: ListV
 			</TableCell>
 		</TableRow>
 	);
+}
+
+
+function EnrichmentBadge({ item }: { item: ListItem }) {
+	const status = getItemEnrichmentStatus(item);
+	if (status === 'enriched') {
+		return <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-xs text-emerald-200">✓ Enriched</span>;
+	}
+	if (status === 'in_progress') {
+		return (
+			<span className="inline-flex items-center gap-1 rounded-full border border-pink-500/40 bg-pink-500/10 px-2 py-1 text-xs text-pink-200">
+				<Loader2 className="h-3 w-3 animate-spin" /> Enriching
+			</span>
+		);
+	}
+	if (status === 'queued') {
+		return (
+			<span className="inline-flex items-center gap-1 rounded-full border border-zinc-600 bg-zinc-800/60 px-2 py-1 text-xs text-zinc-300">
+				<Clock3 className="h-3 w-3" /> Queued
+			</span>
+		);
+	}
+	if (status === 'failed') {
+		return (
+			<span className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-xs text-amber-200">
+				<TriangleAlert className="h-3 w-3" /> Failed
+			</span>
+		);
+	}
+	if (status === 'skipped_limit') {
+		return <span className="rounded-full border border-violet-500/40 bg-violet-500/10 px-2 py-1 text-xs text-violet-200">Limit reached</span>;
+	}
+	return <span className="text-xs text-zinc-500">Not started</span>;
 }

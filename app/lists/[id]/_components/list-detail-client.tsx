@@ -12,7 +12,7 @@
 import { DndContext, DragOverlay } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import clsx from 'clsx';
-import { LayoutGrid, Link2, List as ListIcon, Loader2, Trash2 } from 'lucide-react';
+import { LayoutGrid, Link2, List as ListIcon, Loader2, Sparkles, Trash2 } from 'lucide-react';
 import DashboardLayout from '@/app/components/layout/dashboard-layout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,7 @@ import {
 } from './components';
 import { useListDetail } from './hooks/useListDetail';
 import { bucketLabels } from './types/list-detail';
-import { formatFollowers } from './utils/list-helpers';
+import { formatFollowers, summarizeEnrichment } from './utils/list-helpers';
 
 interface ListDetailClientProps {
 	listId: string;
@@ -72,6 +72,8 @@ export default function ListDetailClient({ listId, initialDetail }: ListDetailCl
 		handleExport,
 	} = useListDetail(listId, initialDetail);
 
+	const enrichmentSummary = detail ? summarizeEnrichment(detail.items) : null;
+
 	// Loading state
 	if (loading || !detail) {
 		return (
@@ -99,6 +101,16 @@ export default function ListDetailClient({ listId, initialDetail }: ListDetailCl
 						onExport={handleExport}
 						onShowDeleteConfirm={() => setShowDeleteConfirm(true)}
 					/>
+
+					{enrichmentSummary && enrichmentSummary.active > 0 && (
+						<AutoEnrichmentProgressStrip
+							processed={enrichmentSummary.processed}
+							total={enrichmentSummary.total}
+							failed={enrichmentSummary.failed}
+							inProgress={enrichmentSummary.in_progress}
+							queued={enrichmentSummary.queued}
+						/>
+					)}
 
 					{/* Creator views */}
 					<div className="space-y-4">
@@ -294,6 +306,43 @@ function ViewToggle({ viewMode, setViewMode }: ViewToggleProps) {
 				>
 					<ListIcon className="h-3.5 w-3.5" /> List view
 				</button>
+			</div>
+		</div>
+	);
+}
+
+
+
+function AutoEnrichmentProgressStrip({
+	processed,
+	total,
+	failed,
+	inProgress,
+	queued,
+}: {
+	processed: number;
+	total: number;
+	failed: number;
+	inProgress: number;
+	queued: number;
+}) {
+	const percent = total > 0 ? Math.round((processed / total) * 100) : 0;
+
+	return (
+		<div className="rounded-xl border border-pink-500/30 bg-pink-500/5 p-3">
+			<div className="flex flex-wrap items-center justify-between gap-2">
+				<p className="flex items-center gap-2 text-sm text-pink-100">
+					<Sparkles className="h-4 w-4" />
+					Auto-enrichment in progress: {processed}/{total}
+				</p>
+				<p className="text-xs text-pink-200/80">{inProgress} enriching · {queued} queued</p>
+			</div>
+			<div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-zinc-800">
+				<div className="h-full bg-pink-400 transition-all" style={{ width: `${percent}%` }} />
+			</div>
+			<div className="mt-2 flex items-center justify-between text-xs text-zinc-300">
+				<span>{percent}% complete</span>
+				{failed > 0 ? <span className="text-amber-200">{failed} failed</span> : null}
 			</div>
 		</div>
 	);
