@@ -2,7 +2,7 @@
  * Table/List view for creators
  */
 import clsx from 'clsx';
-import { Clock3, Link2, Loader2, Star, TriangleAlert } from 'lucide-react';
+import { Link2, Star } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,12 +23,12 @@ import {
 } from '@/components/ui/table';
 import type { ListItem } from '../types/list-detail';
 import { bucketLabels } from '../types/list-detail';
+import { EnrichmentStatusBadge } from './EnrichmentStatusBadge';
 import {
 	ensureImageUrl,
 	formatFollowers,
 	resolveAvatarSource,
 	resolveProfileUrl,
-	getItemEnrichmentStatus,
 } from '../utils/list-helpers';
 
 interface ListViewProps {
@@ -142,7 +142,7 @@ function ListViewRow({ item, bucketOptions, onStatusChange, onTogglePin }: ListV
 				</Select>
 			</TableCell>
 			<TableCell>
-				<EnrichmentBadge item={item} />
+				<EnrichmentStatusBadge item={item} />
 			</TableCell>
 			<TableCell className="text-center">
 				<Button
@@ -181,37 +181,4 @@ function ListViewRow({ item, bucketOptions, onStatusChange, onTogglePin }: ListV
 			</TableCell>
 		</TableRow>
 	);
-}
-
-
-function EnrichmentBadge({ item }: { item: ListItem }) {
-	const status = getItemEnrichmentStatus(item);
-	if (status === 'enriched') {
-		return <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-xs text-emerald-200">✓ Enriched</span>;
-	}
-	if (status === 'in_progress') {
-		return (
-			<span className="inline-flex items-center gap-1 rounded-full border border-pink-500/40 bg-pink-500/10 px-2 py-1 text-xs text-pink-200">
-				<Loader2 className="h-3 w-3 animate-spin" /> Enriching
-			</span>
-		);
-	}
-	if (status === 'queued') {
-		return (
-			<span className="inline-flex items-center gap-1 rounded-full border border-zinc-600 bg-zinc-800/60 px-2 py-1 text-xs text-zinc-300">
-				<Clock3 className="h-3 w-3" /> Queued
-			</span>
-		);
-	}
-	if (status === 'failed') {
-		return (
-			<span className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-xs text-amber-200">
-				<TriangleAlert className="h-3 w-3" /> Failed
-			</span>
-		);
-	}
-	if (status === 'skipped_limit') {
-		return <span className="rounded-full border border-violet-500/40 bg-violet-500/10 px-2 py-1 text-xs text-violet-200">Limit reached</span>;
-	}
-	return <span className="text-xs text-zinc-500">Not started</span>;
 }
