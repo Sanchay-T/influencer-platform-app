@@ -8,7 +8,7 @@
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { apiTracker, SentryLogger, searchTracker } from '@/lib/sentry';
 import { type DiscoveryAccount, discoverySearchSimilar } from '@/lib/services/influencers-club';
-import { getRecordProperty, getStringProperty, toRecord } from '@/lib/utils/type-guards';
+import { getRecordProperty, getStringProperty, toError, toRecord } from '@/lib/utils/type-guards';
 import type { SearchJobService } from '../job-service';
 import type {
 	NormalizedCreator,
@@ -353,15 +353,15 @@ export async function runSimilarDiscoveryProvider(
 			if (config.continuationDelayMs > 0 && pagesFetched < maxPagesToFetch) {
 				await sleep(config.continuationDelayMs);
 			}
-		} catch (error) {
-			// Log error but continue if we have some results
-			structuredConsole.warn('[similar-discovery] API error on page', currentPage, error);
-			searchTracker.trackFailure(error as Error, {
-				platform: targetPlatform,
-				searchType: 'similar',
-				stage: 'fetch',
-				userId: job.userId ?? 'unknown',
-				jobId: job.id,
+			} catch (error) {
+				// Log error but continue if we have some results
+				structuredConsole.warn('[similar-discovery] API error on page', currentPage, error);
+				searchTracker.trackFailure(toError(error), {
+					platform: targetPlatform,
+					searchType: 'similar',
+					stage: 'fetch',
+					userId: job.userId ?? 'unknown',
+					jobId: job.id,
 			});
 			if (allCreatorsThisRun.length === 0) {
 				throw error;

@@ -158,20 +158,23 @@ export async function GET(req: Request) {
 				data: { exportId: newExportJob.id },
 			});
 
-			// Track export event (fire and forget - don't block response)
-			getUserProfile(userId)
-				.then((user) => {
-					return trackServer('csv_exported', {
-						userId,
-						email: user?.email || '',
-						name: user?.fullName || '',
-						creatorCount: 0, // Count determined by worker
-						source: campaignId ? 'campaign' : 'list',
+				// Track export event (fire and forget - don't block response)
+				getUserProfile(userId)
+					.then((user) => {
+						return trackServer({
+							event: 'csv_exported',
+							properties: {
+								userId,
+								email: user?.email || '',
+								name: user?.fullName || '',
+								creatorCount: 0, // Count determined by worker
+								source: campaignId ? 'campaign' : 'list',
+							},
+						});
+					})
+					.catch(() => {
+						// Ignore tracking errors - fire and forget
 					});
-				})
-				.catch(() => {
-					// Ignore tracking errors - fire and forget
-				});
 
 			return NextResponse.json({
 				exportId: newExportJob.id,

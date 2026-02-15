@@ -1,5 +1,6 @@
 import { useUser } from '@clerk/nextjs';
 import { useEffect, useState } from 'react';
+import { getBooleanProperty, toRecord } from '@/lib/utils/type-guards';
 
 export function useAdmin() {
 	const { user, isLoaded } = useUser();
@@ -20,21 +21,23 @@ export function useAdmin() {
 				return;
 			}
 
-			try {
-				setIsAdminLoaded(false);
-				const response = await fetch('/api/admin/me');
-				if (!response.ok) {
-					throw new Error(`Failed to fetch admin status (${response.status})`);
-				}
+				try {
+					setIsAdminLoaded(false);
+					const response = await fetch('/api/admin/me');
+					if (!response.ok) {
+						throw new Error(`Failed to fetch admin status (${response.status})`);
+					}
 
-				const data = (await response.json()) as { isAdmin?: boolean };
-				if (!cancelled) {
-					setIsAdmin(Boolean(data.isAdmin));
-				}
-			} catch {
-				if (!cancelled) {
-					setIsAdmin(false);
-				}
+					const data = await response.json().catch(() => null);
+					const record = toRecord(data);
+					const isAdminValue = record ? getBooleanProperty(record, 'isAdmin') : null;
+					if (!cancelled) {
+						setIsAdmin(Boolean(isAdminValue));
+					}
+				} catch {
+					if (!cancelled) {
+						setIsAdmin(false);
+					}
 			} finally {
 				if (!cancelled) {
 					setIsAdminLoaded(true);
@@ -44,10 +47,10 @@ export function useAdmin() {
 
 		fetchAdminStatus();
 
-		return () => {
-			cancelled = true;
-		};
-	}, [isLoaded, user?.id]);
+			return () => {
+				cancelled = true;
+			};
+		}, [isLoaded, user]);
 
 	const userEmail = user?.primaryEmailAddress?.emailAddress || '';
 

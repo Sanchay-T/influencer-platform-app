@@ -59,22 +59,32 @@ export default function ListsPageClient({ initialLists }: ListsPageClientProps) 
 			setCreateError('Name is required');
 			return;
 		}
-		setCreateError(null);
-		setCreating(true);
+			setCreateError(null);
+			setCreating(true);
 
-		// 1. Create optimistic list with temp ID (partial - will be replaced with real data)
-		const tempId = `temp-${Date.now()}`;
-		const optimisticList = {
-			id: tempId,
-			name: form.name,
-			description: form.description,
-			type: form.type,
-			creatorCount: 0,
-			followerSum: 0,
-			collaboratorCount: 0,
-			tags: [],
-			viewerRole: 'owner' as const,
-		} as ListSummary;
+			// 1. Create optimistic list with temp ID (partial - will be replaced with real data)
+			const tempId = `temp-${Date.now()}`;
+			const now = new Date();
+			const optimisticList: ListSummary = {
+				id: tempId,
+				ownerId: '',
+				name: form.name,
+				description: form.description || null,
+				type: form.type,
+				privacy: 'private',
+				creatorCount: 0,
+				followerSum: 0,
+				collaboratorCount: 0,
+				tags: [],
+				settings: {},
+				stats: {},
+				isArchived: false,
+				slug: null,
+				createdAt: now,
+				updatedAt: now,
+				lastSharedAt: null,
+				viewerRole: 'owner',
+			};
 
 		// 2. Optimistic update
 		setLists((prev) => [optimisticList, ...prev]);

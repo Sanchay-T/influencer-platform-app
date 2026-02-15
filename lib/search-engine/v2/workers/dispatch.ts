@@ -360,28 +360,33 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 			// Step 3.5: Track search_started in LogSnag (fire and forget)
 			// ============================================================================
 
-			const normalizedPlatform = platform.toLowerCase().includes('instagram')
-				? 'instagram'
-				: platform.toLowerCase().includes('youtube')
-					? 'youtube'
-					: 'tiktok';
+				const normalizedPlatform: 'tiktok' | 'instagram' | 'youtube' = platform
+					.toLowerCase()
+					.includes('instagram')
+					? 'instagram'
+					: platform.toLowerCase().includes('youtube')
+						? 'youtube'
+						: 'tiktok';
 
 			// Get user data for tracking (don't block on this)
 			// @why Uses getUserDataForTracking to get fresh data from Clerk if DB has fallback email
-			getUserDataForTracking(userId)
-				.then((userData) => {
-					return trackServer('search_started', {
-						userId,
-						platform: normalizedPlatform as 'tiktok' | 'instagram' | 'youtube',
-						type: 'keyword',
-						targetCount: targetResults,
-						email: userData.email,
-						name: userData.name,
-					});
-				})
-				.catch((err) => {
-					logger.warn(
-						`${LOG_PREFIX} Failed to track search_started`,
+				getUserDataForTracking(userId)
+					.then((userData) => {
+						return trackServer({
+							event: 'search_started',
+							properties: {
+								userId,
+								platform: normalizedPlatform,
+								type: 'keyword',
+								targetCount: targetResults,
+								email: userData.email,
+								name: userData.name,
+							},
+						});
+					})
+					.catch((err) => {
+						logger.warn(
+							`${LOG_PREFIX} Failed to track search_started`,
 						{ error: String(err) },
 						LogCategory.JOB
 					);

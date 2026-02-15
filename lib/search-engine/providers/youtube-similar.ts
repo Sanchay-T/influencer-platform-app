@@ -8,7 +8,7 @@ import {
 	transformToSimilarChannels,
 } from '@/lib/platforms/youtube-similar/transformer';
 import { apiTracker, SentryLogger, searchTracker } from '@/lib/sentry';
-import { getNumberProperty, getStringProperty, toArray, toRecord } from '@/lib/utils/type-guards';
+import { getNumberProperty, getStringProperty, toArray, toError, toRecord } from '@/lib/utils/type-guards';
 import type { SearchJobService } from '../job-service';
 import type {
 	NormalizedCreator,
@@ -245,13 +245,13 @@ export async function runYouTubeSimilarProvider(
 							'youtube_profile_enhancement',
 							async () => getYouTubeChannelProfile(channel.handle)
 						);
-					} catch (error) {
-						searchTracker.trackFailure(error as Error, {
-							platform: 'youtube',
-							searchType: 'similar',
-							stage: 'parse',
-							userId: job.userId ?? 'unknown',
-							jobId: job.id,
+						} catch (error) {
+							searchTracker.trackFailure(toError(error), {
+								platform: 'youtube',
+								searchType: 'similar',
+								stage: 'parse',
+								userId: job.userId ?? 'unknown',
+								jobId: job.id,
 						});
 						profile = null;
 					}

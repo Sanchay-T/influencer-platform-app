@@ -117,15 +117,16 @@ export async function POST(request: Request) {
 		// Check if email was cancelled before sending (skip for admin tests)
 		if (source !== 'admin-testing') {
 			const { getUserProfile } = await import('@/lib/db/queries/user-queries');
-			const userProfile = await getUserProfile(userId);
+				const userProfile = await getUserProfile(userId);
 
-			if (userProfile?.emailScheduleStatus) {
-				const emailStatus = userProfile.emailScheduleStatus as Record<string, { status?: string }>;
-				const thisEmailStatus = emailStatus[emailType]?.status;
+				if (userProfile?.emailScheduleStatus) {
+					const emailStatusRaw = userProfile.emailScheduleStatus;
+					const perEmailStatus = isRecord(emailStatusRaw) ? emailStatusRaw[emailType] : null;
+					const thisEmailStatus = isRecord(perEmailStatus) ? readString(perEmailStatus.status) : undefined;
 
-				if (thisEmailStatus === 'cancelled' || thisEmailStatus === 'cancelled_subscription') {
-					logger.info(
-						'Skipping cancelled email',
+					if (thisEmailStatus === 'cancelled' || thisEmailStatus === 'cancelled_subscription') {
+						logger.info(
+							'Skipping cancelled email',
 						{
 							jobId,
 							userId,

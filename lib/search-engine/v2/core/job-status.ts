@@ -97,25 +97,32 @@ export async function markJobCompleted(jobId: string): Promise<void> {
 	logger.info('Job marked as completed (cache invalidated)', { jobId }, LogCategory.JOB);
 
 	// Track search_completed in LogSnag (fire and forget)
-	// @why Uses getUserDataForTracking to get fresh data from Clerk if DB has fallback email
-	if (job) {
-		const normalizedPlatform = (job.platform || 'tiktok').toLowerCase().includes('instagram')
-			? 'instagram'
-			: (job.platform || 'tiktok').toLowerCase().includes('youtube')
-				? 'youtube'
-				: 'tiktok';
+		// @why Uses getUserDataForTracking to get fresh data from Clerk if DB has fallback email
+		if (job) {
+			const normalizedPlatform: 'tiktok' | 'instagram' | 'youtube' = (
+				job.platform || 'tiktok'
+			)
+				.toLowerCase()
+				.includes('instagram')
+				? 'instagram'
+				: (job.platform || 'tiktok').toLowerCase().includes('youtube')
+					? 'youtube'
+					: 'tiktok';
 
-		getUserDataForTracking(job.userId)
-			.then((userData) => {
-				return trackServer('search_completed', {
-					userId: job.userId,
-					platform: normalizedPlatform as 'tiktok' | 'instagram' | 'youtube',
-					type: 'keyword',
-					creatorCount: job.creatorsFound ?? 0,
-					email: userData.email,
-					name: userData.name,
-				});
-			})
+			getUserDataForTracking(job.userId)
+				.then((userData) => {
+					return trackServer({
+						event: 'search_completed',
+						properties: {
+							userId: job.userId,
+							platform: normalizedPlatform,
+							type: 'keyword',
+							creatorCount: job.creatorsFound ?? 0,
+							email: userData.email,
+							name: userData.name,
+						},
+					});
+				})
 			.catch((err) => {
 				logger.warn('Failed to track search_completed', { error: String(err) }, LogCategory.JOB);
 			});

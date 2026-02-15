@@ -105,20 +105,23 @@ export async function runSearchJob(jobId: string): Promise<SearchExecutionResult
 	// Track search started (GA4 + LogSnag)
 	const searchType = job.keywords ? 'keyword' : 'similar';
 	const platformLower = (job.platform || 'tiktok').toLowerCase();
-	const normalizedPlatform = platformLower.includes('instagram')
-		? 'instagram'
-		: platformLower.includes('youtube')
-			? 'youtube'
-			: 'tiktok';
-	const userForTracking = await getUserDataForTracking(job.userId);
-	await trackServer('search_started', {
-		userId: job.userId,
-		platform: normalizedPlatform,
-		type: searchType,
-		targetCount: job.targetResults || 0,
-		email: userForTracking.email || 'unknown',
-		name: userForTracking.name || '',
-	});
+		const normalizedPlatform = platformLower.includes('instagram')
+			? 'instagram'
+			: platformLower.includes('youtube')
+				? 'youtube'
+				: 'tiktok';
+		const userForTracking = await getUserDataForTracking(job.userId);
+		await trackServer({
+			event: 'search_started',
+			properties: {
+				userId: job.userId,
+				platform: normalizedPlatform,
+				type: searchType,
+				targetCount: job.targetResults || 0,
+				email: userForTracking.email || 'unknown',
+				name: userForTracking.name || '',
+			},
+		});
 
 	let providerResult: ProviderRunResult;
 	if (isYouTubeSimilar(job.platform, job.targetUsername)) {
@@ -140,22 +143,25 @@ export async function runSearchJob(jobId: string): Promise<SearchExecutionResult
 	if (providerResult.status === 'completed') {
 		const searchType = job.keywords ? 'keyword' : 'similar';
 		const platformLower = (job.platform || 'tiktok').toLowerCase();
-		const normalizedPlatform = platformLower.includes('instagram')
-			? 'instagram'
-			: platformLower.includes('youtube')
-				? 'youtube'
-				: 'tiktok';
-		// @why Uses getUserDataForTracking to get fresh data from Clerk if DB has fallback email
-		const userData = await getUserDataForTracking(job.userId);
-		await trackServer('search_completed', {
-			userId: job.userId,
-			platform: normalizedPlatform,
-			type: searchType,
-			creatorCount: providerResult.processedResults || 0,
-			email: userData.email || 'unknown',
-			name: userData.name || '',
-		});
-	}
+			const normalizedPlatform = platformLower.includes('instagram')
+				? 'instagram'
+				: platformLower.includes('youtube')
+					? 'youtube'
+					: 'tiktok';
+			// @why Uses getUserDataForTracking to get fresh data from Clerk if DB has fallback email
+			const userData = await getUserDataForTracking(job.userId);
+			await trackServer({
+				event: 'search_completed',
+				properties: {
+					userId: job.userId,
+					platform: normalizedPlatform,
+					type: searchType,
+					creatorCount: providerResult.processedResults || 0,
+					email: userData.email || 'unknown',
+					name: userData.name || '',
+				},
+			});
+		}
 
 	return {
 		service,

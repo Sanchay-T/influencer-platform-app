@@ -102,20 +102,23 @@ export async function PATCH(req: Request) {
 				);
 			});
 
-		// Track onboarding step 1 in LogSnag (fire and forget)
-		getUserProfile(userId)
-			.then((profile) => {
-				return trackServer('onboarding_step_completed', {
-					step: 1,
-					stepName: 'profile',
-					email: profile?.email || '',
-					name: fullName.trim(),
-					userId,
+			// Track onboarding step 1 in LogSnag (fire and forget)
+			getUserProfile(userId)
+				.then((profile) => {
+					return trackServer({
+						event: 'onboarding_step_completed',
+						properties: {
+							step: 1,
+							stepName: 'profile',
+							email: profile?.email || '',
+							name: fullName.trim(),
+							userId,
+						},
+					});
+				})
+				.catch(() => {
+					// Ignore tracking errors - fire and forget
 				});
-			})
-			.catch(() => {
-				// Ignore tracking errors - fire and forget
-			});
 
 		perf.end();
 		return NextResponse.json({

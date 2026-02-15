@@ -24,6 +24,7 @@ import { getCreatorsForJobs } from '@/lib/export/get-creators';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { verifyQstashRequestSignature } from '@/lib/queue/qstash-signature';
 import { SentryLogger } from '@/lib/sentry';
+import { toStringArray } from '@/lib/utils/type-guards';
 
 export const maxDuration = 300; // 5 minutes
 export const dynamic = 'force-dynamic';
@@ -89,23 +90,24 @@ export async function POST(req: Request) {
 					where: eq(scrapingJobs.campaignId, campaignId),
 					columns: { id: true, keywords: true },
 				});
-				jobIds = jobs.map((j) => j.id);
-				jobs.forEach((job) => {
-					if (Array.isArray(job.keywords)) {
-						keywords = keywords.concat(job.keywords as string[]);
+					jobIds = jobs.map((j) => j.id);
+					jobs.forEach((job) => {
+						const jobKeywords = toStringArray(job.keywords);
+						if (jobKeywords) {
+							keywords = keywords.concat(jobKeywords);
+						}
+					});
+					keywords = [...new Set(keywords)];
+				} else if (jobId) {
+					jobIds = [jobId];
+					const job = await db.query.scrapingJobs.findFirst({
+						where: eq(scrapingJobs.id, jobId),
+						columns: { keywords: true },
+					});
+					if (job) {
+						keywords = toStringArray(job.keywords) ?? [];
 					}
-				});
-				keywords = [...new Set(keywords)];
-			} else if (jobId) {
-				jobIds = [jobId];
-				const job = await db.query.scrapingJobs.findFirst({
-					where: eq(scrapingJobs.id, jobId),
-					columns: { keywords: true },
-				});
-				if (job && Array.isArray(job.keywords)) {
-					keywords = job.keywords as string[];
 				}
-			}
 
 			if (jobIds.length === 0) {
 				throw new Error('No jobs found for export');

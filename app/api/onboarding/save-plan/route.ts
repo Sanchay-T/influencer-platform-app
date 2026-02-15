@@ -94,20 +94,23 @@ export async function POST(req: Request) {
 			source: 'onboarding_plan_selection',
 		});
 
-		// Track onboarding step 3 in LogSnag (fire and forget)
-		getUserProfile(userId)
-			.then((profile) => {
-				return trackServer('onboarding_step_completed', {
-					step: 3,
-					stepName: 'plan',
-					email: profile?.email || '',
-					name: profile?.fullName || '',
-					userId,
+			// Track onboarding step 3 in LogSnag (fire and forget)
+			getUserProfile(userId)
+				.then((profile) => {
+					return trackServer({
+						event: 'onboarding_step_completed',
+						properties: {
+							step: 3,
+							stepName: 'plan',
+							email: profile?.email || '',
+							name: profile?.fullName || '',
+							userId,
+						},
+					});
+				})
+				.catch(() => {
+					// Ignore tracking errors - fire and forget
 				});
-			})
-			.catch(() => {
-				// Ignore tracking errors - fire and forget
-			});
 
 		return NextResponse.json({
 			success: true,

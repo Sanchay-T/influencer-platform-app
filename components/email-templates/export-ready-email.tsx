@@ -72,13 +72,15 @@ export const ExportReadyEmail = ({
 			</Container>
 		</Body>
 	</Html>
-);
+	);
 
-ExportReadyEmail.PreviewProps = {
+const previewProps: ExportReadyEmailProps = {
 	downloadUrl: `${baseUrl}/exports/sample.csv`,
 	creatorCount: 1250,
 	expiresAt: 'January 20, 2026',
-} as ExportReadyEmailProps;
+};
+
+ExportReadyEmail.PreviewProps = previewProps;
 
 export default ExportReadyEmail;
 

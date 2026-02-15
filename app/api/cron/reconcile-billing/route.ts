@@ -39,6 +39,20 @@ type NormalizedSubscriptionStatus =
 	| 'canceled'
 	| 'unpaid';
 
+function coerceNormalizedSubscriptionStatus(value: unknown): NormalizedSubscriptionStatus {
+	switch (value) {
+		case 'none':
+		case 'trialing':
+		case 'active':
+		case 'past_due':
+		case 'canceled':
+		case 'unpaid':
+			return value;
+		default:
+			return 'none';
+	}
+}
+
 function normalizeStripeStatus(status: Stripe.Subscription.Status): NormalizedSubscriptionStatus {
 	switch (status) {
 		case 'trialing':
@@ -199,7 +213,7 @@ export async function GET(request: Request) {
 			const trialEndMs = best?.trial_end ? best.trial_end * 1000 : null;
 			const cancelAtMs = best?.cancel_at ? best.cancel_at * 1000 : null;
 
-			const dbStatus = (row.dbSubscriptionStatus ?? 'none') as NormalizedSubscriptionStatus;
+			const dbStatus = coerceNormalizedSubscriptionStatus(row.dbSubscriptionStatus ?? 'none');
 			const dbStripeSubId = row.stripeSubscriptionId ?? null;
 
 			const dbTrialStartIso = row.dbTrialStartDate?.toISOString() ?? null;
