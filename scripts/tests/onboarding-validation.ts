@@ -17,8 +17,11 @@
  * RUN WITH URL: BASE_URL=https://staging.example.com npx tsx scripts/tests/onboarding-validation.ts
  */
 
-import 'dotenv/config';
+import { loadEnvConfig } from '@next/env';
 import { getNumberProperty, getStringProperty, toRecord } from '@/lib/utils/type-guards';
+
+// Load env the same way Next.js does (.env.local, .env.development, etc.)
+loadEnvConfig(process.cwd());
 
 // ============================================================================
 // CONFIGURATION

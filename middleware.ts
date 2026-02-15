@@ -47,6 +47,7 @@ const PUBLIC_ROUTE_PATTERNS: RegExp[] = [
   /^\/sso-callback(\/.*)?$/,
   /^\/api\/stripe\/webhook$/,
   /^\/api\/health$/,
+  /^\/api\/status$/,
   /^\/api\/webhooks\/.*$/,
   /^\/api\/cron\/.*$/,
   /^\/api\/qstash\/.*$/,
@@ -110,6 +111,17 @@ export default async function middleware(request: NextRequest, event: NextFetchE
   if (pathname === '/' && isBot(userAgent)) {
     if (shouldLogMiddleware) {
       console.log('[MIDDLEWARE] Bot detected on homepage, bypassing Clerk:', userAgent);
+    }
+    return NextResponse.next();
+  }
+
+  // Critical: Skip Clerk entirely for public routes and trusted dev bypass headers.
+  //
+  // Clerk's dev-browser handshake can return `dev-browser-missing` for non-browser clients
+  // (curl, validation scripts). We still want those calls to hit our public endpoints.
+  if (isPublicRoute(pathname) || hasBypassAuthHeader(request)) {
+    if (shouldLogMiddleware) {
+      console.log('[MIDDLEWARE] Bypassing Clerk for route:', pathname);
     }
     return NextResponse.next();
   }

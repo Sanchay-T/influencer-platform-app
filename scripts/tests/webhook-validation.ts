@@ -12,8 +12,11 @@
  * RUN: npx tsx scripts/tests/webhook-validation.ts
  */
 
-import 'dotenv/config';
+import { loadEnvConfig } from '@next/env';
 import crypto from 'crypto';
+
+// Load env the same way Next.js does (.env.local, .env.development, etc.)
+loadEnvConfig(process.cwd());
 
 // ============================================================================
 // CONFIGURATION
