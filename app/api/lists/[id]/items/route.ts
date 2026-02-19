@@ -4,9 +4,9 @@ import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { addCreatorsToList, removeListItems, updateListItems } from '@/lib/db/queries/list-queries';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { structuredConsole } from '@/lib/logging/console-proxy';
-import { toRecord } from '@/lib/utils/type-guards';
 import { getQstashBaseUrl, qstash } from '@/lib/queue/qstash';
 import { apiTracker, listTracker, SentryLogger, sessionTracker } from '@/lib/sentry';
+import { toRecord } from '@/lib/utils/type-guards';
 
 type AddedCreatorForAutoEnrichment = {
 	listItemId: string;
@@ -77,24 +77,27 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
 		try {
 			const body = await request.json();
-			const result = await addCreatorsToList(userId, id, body.creators ?? []);
+			if (!Array.isArray(body?.creators)) {
+				return NextResponse.json({ error: 'creators must be an array' }, { status: 400 });
+			}
+			const result = await addCreatorsToList(userId, id, body.creators);
 			const addedCreators = Array.isArray(result.addedCreators)
 				? result.addedCreators.filter((item): item is AddedCreatorForAutoEnrichment => {
-					if (!(item && typeof item === 'object')) {
-						return false;
-					}
-					const record = toRecord(item);
-					if (!record) {
-						return false;
-					}
-					return (
-						typeof record.listItemId === 'string' &&
-						typeof record.creatorId === 'string' &&
-						typeof record.handle === 'string' &&
-						typeof record.platform === 'string' &&
-						typeof record.externalId === 'string'
-					);
-				})
+						if (!(item && typeof item === 'object')) {
+							return false;
+						}
+						const record = toRecord(item);
+						if (!record) {
+							return false;
+						}
+						return (
+							typeof record.listItemId === 'string' &&
+							typeof record.creatorId === 'string' &&
+							typeof record.handle === 'string' &&
+							typeof record.platform === 'string' &&
+							typeof record.externalId === 'string'
+						);
+					})
 				: [];
 
 			if (addedCreators.length > 0) {
@@ -160,7 +163,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
 		try {
 			const body = await request.json();
-			await updateListItems(userId, id, body.items ?? []);
+			if (!Array.isArray(body?.items)) {
+				return NextResponse.json({ error: 'items must be an array' }, { status: 400 });
+			}
+			await updateListItems(userId, id, body.items);
 			return NextResponse.json({ ok: true });
 		} catch (error) {
 			return errorToResponse(error, { userId, listId: id, action: 'update' });
@@ -183,7 +189,10 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 
 		try {
 			const body = await request.json();
-			const itemIds = body.itemIds ?? [];
+			if (!Array.isArray(body?.itemIds)) {
+				return NextResponse.json({ error: 'itemIds must be an array' }, { status: 400 });
+			}
+			const itemIds = body.itemIds;
 			await removeListItems(userId, id, itemIds);
 
 			// Track remove creators operation in Sentry

@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * Creator card components for board and drag overlay
  */
@@ -12,9 +14,9 @@ import type { CreatorListItem } from '../types/list-detail';
 import {
 	ensureImageUrl,
 	formatFollowers,
+	getItemEnrichmentStatus,
 	resolveAvatarSource,
 	resolveProfileUrl,
-	getItemEnrichmentStatus,
 } from '../utils/list-helpers';
 
 interface SortableCardProps {
@@ -135,14 +137,13 @@ export function CreatorCardContent({ item, onTogglePin }: CreatorCardContentProp
 	);
 }
 
-
-function EnrichmentChip({
-	status,
-}: {
-	status: ReturnType<typeof getItemEnrichmentStatus>;
-}) {
+function EnrichmentChip({ status }: { status: ReturnType<typeof getItemEnrichmentStatus> }) {
 	if (status === 'enriched') {
-		return <Badge className="bg-emerald-500/15 text-emerald-200 border border-emerald-500/40">✓ Enriched</Badge>;
+		return (
+			<Badge className="bg-emerald-500/15 text-emerald-200 border border-emerald-500/40">
+				✓ Enriched
+			</Badge>
+		);
 	}
 	if (status === 'in_progress') {
 		return (
@@ -166,7 +167,9 @@ function EnrichmentChip({
 		);
 	}
 	if (status === 'skipped_limit') {
-		return <Badge className="bg-violet-500/15 text-violet-200 border border-violet-500/40">Limit</Badge>;
+		return (
+			<Badge className="bg-violet-500/15 text-violet-200 border border-violet-500/40">Limit</Badge>
+		);
 	}
 	return <Badge className="bg-zinc-800/60 text-zinc-400 border border-zinc-700">Pending</Badge>;
 }

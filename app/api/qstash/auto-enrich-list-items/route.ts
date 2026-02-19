@@ -4,7 +4,10 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { creatorListItems } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
-import { PlanLimitExceededError, creatorEnrichmentService } from '@/lib/services/creator-enrichment';
+import {
+	creatorEnrichmentService,
+	PlanLimitExceededError,
+} from '@/lib/services/creator-enrichment';
 import { getStringProperty, toArray, toRecord } from '@/lib/utils/type-guards';
 
 const receiver = new Receiver({
@@ -26,7 +29,7 @@ function shouldVerifySignature() {
 	if (process.env.NODE_ENV === 'development') {
 		return process.env.VERIFY_QSTASH_SIGNATURE === 'true';
 	}
-	if (process.env.SKIP_QSTASH_SIGNATURE === 'true') {
+	if (process.env.NODE_ENV !== 'production' && process.env.SKIP_QSTASH_SIGNATURE === 'true') {
 		return false;
 	}
 	return true;
@@ -35,7 +38,11 @@ function shouldVerifySignature() {
 const isSupportedPlatform = (value: string): value is AddedCreatorPayload['platform'] =>
 	value === 'instagram' || value === 'tiktok' || value === 'youtube';
 
-function parsePayload(raw: string): { userId: string; listId: string; addedCreators: AddedCreatorPayload[] } {
+function parsePayload(raw: string): {
+	userId: string;
+	listId: string;
+	addedCreators: AddedCreatorPayload[];
+} {
 	const parsed = JSON.parse(raw);
 	const record = toRecord(parsed);
 	const userId = getStringProperty(record ?? {}, 'userId');
@@ -47,26 +54,26 @@ function parsePayload(raw: string): { userId: string; listId: string; addedCreat
 	}
 
 	const addedCreators = rawCreators.reduce<AddedCreatorPayload[]>((acc, entry) => {
-			const creator = toRecord(entry);
-			const listItemId = getStringProperty(creator ?? {}, 'listItemId');
-			const creatorId = getStringProperty(creator ?? {}, 'creatorId');
-			const handle = getStringProperty(creator ?? {}, 'handle');
-			const platformRaw = getStringProperty(creator ?? {}, 'platform')?.toLowerCase();
-			const externalId = getStringProperty(creator ?? {}, 'externalId');
+		const creator = toRecord(entry);
+		const listItemId = getStringProperty(creator ?? {}, 'listItemId');
+		const creatorId = getStringProperty(creator ?? {}, 'creatorId');
+		const handle = getStringProperty(creator ?? {}, 'handle');
+		const platformRaw = getStringProperty(creator ?? {}, 'platform')?.toLowerCase();
+		const externalId = getStringProperty(creator ?? {}, 'externalId');
 
-			if (!(listItemId && creatorId && handle && platformRaw && isSupportedPlatform(platformRaw))) {
-				return acc;
-			}
-
-			acc.push({
-				listItemId,
-				creatorId,
-				handle,
-				platform: platformRaw,
-				externalId: externalId ?? undefined,
-			});
+		if (!(listItemId && creatorId && handle && platformRaw && isSupportedPlatform(platformRaw))) {
 			return acc;
-		}, []);
+		}
+
+		acc.push({
+			listItemId,
+			creatorId,
+			handle,
+			platform: platformRaw,
+			externalId: externalId ?? undefined,
+		});
+		return acc;
+	}, []);
 
 	return { userId, listId, addedCreators };
 }

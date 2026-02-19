@@ -5,6 +5,10 @@ import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { getNumberProperty, toRecord, type UnknownRecord } from '@/lib/utils/type-guards';
 
+// Warm-instance optimization: caches Stripe responses per-process to reduce
+// API calls during bursts of requests from the same user.  The Map lives only
+// in the memory of the current serverless invocation and is NOT shared across
+// cold starts or different Vercel instances.
 const CACHE_TTL_MS = 30_000; // 30 seconds cache
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;

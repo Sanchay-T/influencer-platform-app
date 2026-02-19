@@ -13,6 +13,7 @@ import { isRecord, isString, toRecord } from '@/lib/utils/type-guards';
 
 // @performance Vercel timeout protection - external enrichment API calls can be slow
 export const maxDuration = 30;
+export const dynamic = 'force-dynamic';
 
 // Breadcrumb: POST /api/creators/enrich -> validates Clerk/test auth -> delegates to creatorEnrichmentService -> returns usage counters + stored payload.
 

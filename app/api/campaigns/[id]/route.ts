@@ -90,7 +90,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 					tags: { feature: 'campaign', reason: 'wrong_user' },
 					extra: { campaignId: id, requestUserId: userId },
 				});
-				return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+				return NextResponse.json({ error: 'Campaign not found' }, { status: 404 });
 			}
 			structuredConsole.log('[CAMPAIGN-DETAIL-API] User authorized to access campaign');
 

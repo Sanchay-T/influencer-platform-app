@@ -17,7 +17,7 @@ export async function isAdminUser(): Promise<boolean> {
 				const h = await headers();
 				const payload = verifyTestAuthHeaders(h);
 				if (payload) {
-					const adminEmailsString = process.env.NEXT_PUBLIC_ADMIN_EMAILS;
+					const adminEmailsString = process.env.ADMIN_EMAILS;
 					const adminEmails = adminEmailsString
 						? adminEmailsString.split(',').map((email) => email.trim())
 						: [];
@@ -61,7 +61,7 @@ export async function isAdminUser(): Promise<boolean> {
 		}
 
 		// Method 1: Check environment variable (primary method)
-		const adminEmailsString = process.env.NEXT_PUBLIC_ADMIN_EMAILS;
+		const adminEmailsString = process.env.ADMIN_EMAILS;
 		const adminEmails = adminEmailsString
 			? adminEmailsString.split(',').map((email) => email.trim())
 			: [];
@@ -215,7 +215,7 @@ export async function getAllAdminUsers() {
 		};
 
 		// Get environment admins
-		const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(',') || [];
+		const adminEmails = process.env.ADMIN_EMAILS?.split(',') || [];
 		result.environmentAdmins = adminEmails.filter((email) => email.trim());
 
 		// Get database admins (if field exists)

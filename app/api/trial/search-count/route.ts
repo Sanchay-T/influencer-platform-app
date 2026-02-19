@@ -9,6 +9,8 @@ import { NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { getTrialSearchStatus } from '@/lib/billing';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
 	const { userId } = await getAuthOrTest();
 

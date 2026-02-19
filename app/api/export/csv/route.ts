@@ -184,13 +184,7 @@ export async function GET(req: Request) {
 				tags: { feature: 'export', operation: 'csv_init' },
 				extra: { route: '/api/export/csv' },
 			});
-			return NextResponse.json(
-				{
-					error: 'Failed to start export',
-					details: error instanceof Error ? error.message : 'Unknown error',
-				},
-				{ status: 500 }
-			);
+			return NextResponse.json({ error: 'Failed to start export' }, { status: 500 });
 		}
 	});
 }

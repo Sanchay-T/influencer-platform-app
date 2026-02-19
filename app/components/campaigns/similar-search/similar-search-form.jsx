@@ -105,6 +105,7 @@ export function SimilarSearchForm({ campaignId, onSuccess }) {
 			toast.success(
 				`${selectedPlatform === 'youtube' ? 'YouTube' : 'Instagram'} similar search started!`
 			);
+			setSearchState({ status: 'idle', message: '', progress: 0 });
 		} catch (error) {
 			structuredConsole.error('💥 [SIMILAR-SEARCH-FORM] Error during submission:', error);
 			setSearchState({ status: 'idle', message: '' });

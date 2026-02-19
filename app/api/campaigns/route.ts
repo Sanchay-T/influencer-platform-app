@@ -93,10 +93,7 @@ export async function POST(req: Request) {
 				extra: { errorMessage },
 			});
 
-			return NextResponse.json(
-				{ error: 'Internal Server Error', message: errorMessage },
-				{ status: 500 }
-			);
+			return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
 		}
 	});
 }
@@ -120,8 +117,10 @@ export async function GET(request: Request) {
 			sessionTracker.setUser({ userId });
 
 			const url = new URL(request.url);
-			const page = parseInt(url.searchParams.get('page') || '1', 10);
-			const limit = parseInt(url.searchParams.get('limit') || '10', 10);
+			const rawPage = parseInt(url.searchParams.get('page') || '1', 10);
+			const rawLimit = parseInt(url.searchParams.get('limit') || '10', 10);
+			const page = Number.isNaN(rawPage) ? 1 : Math.max(1, rawPage);
+			const limit = Number.isNaN(rawLimit) ? 10 : Math.min(100, Math.max(1, rawLimit));
 			const offset = (page - 1) * limit;
 
 			const dbStart = Date.now();
@@ -177,10 +176,7 @@ export async function GET(request: Request) {
 				extra: { errorMessage },
 			});
 
-			return NextResponse.json(
-				{ error: 'Error loading campaigns', details: errorMessage },
-				{ status: 500 }
-			);
+			return NextResponse.json({ error: 'Error loading campaigns' }, { status: 500 });
 		}
 	});
 }
