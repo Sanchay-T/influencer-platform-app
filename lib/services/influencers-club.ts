@@ -443,6 +443,80 @@ export async function fetchPostTranscript(
 	return { audioUrl: result && isString(result.audio_url) ? result.audio_url : undefined };
 }
 
+export async function discoverySearchByNiche(params: {
+	aiSearch: string;
+	platform: 'instagram' | 'tiktok';
+	followerMin?: number;
+	followerMax?: number;
+	page?: number;
+	limit?: number;
+}): Promise<{ accounts: DiscoveryAccount[]; total: number; creditsUsed: number }> {
+	const filters: Record<string, unknown> = {
+		ai_search: params.aiSearch,
+		exclude_private_profile: true,
+		has_videos: true,
+		last_post: 90,
+		engagement_percent: { min: 1 },
+	};
+
+	if (params.followerMin || params.followerMax) {
+		const followers: Record<string, number> = {};
+		if (params.followerMin) {
+			followers.min = params.followerMin;
+		}
+		if (params.followerMax) {
+			followers.max = params.followerMax;
+		}
+		filters.followers = followers;
+	}
+
+	const body = {
+		platform: params.platform,
+		paging: {
+			limit: params.limit ?? 50,
+			page: params.page ?? 0,
+		},
+		sort: {
+			sort_by: 'relevancy',
+			sort_order: 'desc',
+		},
+		filters,
+	};
+
+	const res = await fetch(`${API_BASE}/discovery/`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${API_KEY}`,
+		},
+		body: JSON.stringify(body),
+	});
+
+	if (!res.ok) {
+		let details = '';
+		try {
+			details = await res.text();
+		} catch (readError) {
+			structuredConsole.warn(
+				'[influencers-club] failed to read discovery niche error body',
+				readError
+			);
+		}
+		const hint = extractErrorHint(details);
+		throw new Error(`Discovery niche request failed (${res.status})${hint ? ` – ${hint}` : ''}`);
+	}
+
+	const data = toRecord(await res.json());
+	const accounts = Array.isArray(data?.accounts) ? data.accounts : [];
+	return {
+		accounts: accounts
+			.map(toDiscoveryAccount)
+			.filter((account): account is DiscoveryAccount => account !== null),
+		total: isNumber(data?.total) ? data.total : 0,
+		creditsUsed: isNumber(data?.credits_used) ? data.credits_used : 1,
+	};
+}
+
 function extractErrorHint(raw: string | null | undefined): string | null {
 	if (!raw) {
 		return null;

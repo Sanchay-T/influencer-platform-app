@@ -35,6 +35,13 @@ export async function getYouTubeChannelProfile(handle: string): Promise<YouTubeC
 	const data = await response.json();
 	structuredConsole.log('✅ [YOUTUBE-API] Channel profile fetched successfully:', data.name);
 
+	const tags = Array.isArray(data.tags)
+		? data.tags.filter((t: unknown) => typeof t === 'string')
+		: [];
+	const keywords = Array.isArray(data.keywords)
+		? data.keywords.filter((k: unknown) => typeof k === 'string')
+		: [];
+
 	return {
 		id: data.id || handle,
 		name: data.name || 'Unknown Channel',
@@ -44,6 +51,8 @@ export async function getYouTubeChannelProfile(handle: string): Promise<YouTubeC
 		thumbnail: data.thumbnail || '',
 		links: data.links || [],
 		email: data.email || '',
+		...(tags.length > 0 ? { tags } : {}),
+		...(keywords.length > 0 ? { keywords } : {}),
 	};
 }
 
