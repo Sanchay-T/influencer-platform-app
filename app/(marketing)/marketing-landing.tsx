@@ -21,8 +21,10 @@ import {
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { SeoResourcesPreview } from '@/components/landing/seo-resources-preview';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { getFeaturedSeoArticleIndex } from '@/lib/seo-content-index';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 
 const INFLUENCER_SPARK_BARS = [
@@ -46,6 +48,8 @@ const ENGAGEMENT_SPARK_BARS = [
 	{ id: 'engagement-7', height: 60 },
 	{ id: 'engagement-8', height: 55 },
 ];
+
+const FEATURED_SEO_ARTICLES = getFeaturedSeoArticleIndex(4);
 
 export default function MarketingLanding() {
 	const [activeStep, setActiveStep] = useState(1);
@@ -74,49 +78,75 @@ export default function MarketingLanding() {
 			{/* Content */}
 			<div className="relative z-10">
 				{/* Header */}
-				<header className="flex items-center justify-between p-6 lg:px-12">
-					<div className="flex items-center">
-						<img src="/images/untitled-20design.png" alt="Gemz" className="h-12 w-auto" />
+				<header className="space-y-4 p-6 lg:px-12">
+					<div className="grid grid-cols-[auto_1fr] items-center gap-4 md:grid-cols-[1fr_auto_1fr]">
+						<div className="flex items-center">
+							<img src="/images/untitled-20design.png" alt="Gemz" className="h-12 w-auto" />
+						</div>
+
+						<nav className="hidden items-center justify-self-center space-x-6 md:flex">
+							<button
+								type="button"
+								className="text-white/90 hover:text-white transition-colors"
+								onClick={() => {
+									document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
+								}}
+							>
+								Pricing
+							</button>
+							<a href="#resources" className="text-white/90 hover:text-white transition-colors">
+								Resources
+							</a>
+							<a href="/blog" className="text-white/90 hover:text-white transition-colors">
+								Blogs
+							</a>
+						</nav>
+
+						<div className="flex items-center justify-end space-x-3">
+							{isLoaded && isSignedIn ? (
+								<a href="/dashboard">
+									<Button className="bg-white text-black hover:bg-white/90 font-medium">
+										Go to Dashboard
+										<ArrowRight className="ml-2 h-4 w-4" />
+									</Button>
+								</a>
+							) : (
+								<>
+									<SignInButton mode="modal">
+										<Button
+											variant="ghost"
+											className="text-white hover:bg-white/10 border border-white/10"
+										>
+											Sign In
+										</Button>
+									</SignInButton>
+									<SignUpButton mode="modal">
+										<Button className="bg-white text-black hover:bg-white/90 font-medium">
+											Sign Up
+										</Button>
+									</SignUpButton>
+								</>
+							)}
+						</div>
 					</div>
 
-					<nav className="hidden md:flex items-center">
+					<nav className="flex items-center justify-center gap-6 rounded-full border border-white/10 bg-white/[0.03] py-2 md:hidden">
 						<button
 							type="button"
-							className="text-white/90 hover:text-white transition-colors"
+							className="text-sm text-white/85 hover:text-white transition-colors"
 							onClick={() => {
 								document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' });
 							}}
 						>
 							Pricing
 						</button>
+						<a href="#resources" className="text-sm text-white/85 hover:text-white transition-colors">
+							Resources
+						</a>
+						<a href="/blog" className="text-sm text-white/85 hover:text-white transition-colors">
+							Blogs
+						</a>
 					</nav>
-
-					<div className="flex items-center space-x-3">
-						{isLoaded && isSignedIn ? (
-							<a href="/dashboard">
-								<Button className="bg-white text-black hover:bg-white/90 font-medium">
-									Go to Dashboard
-									<ArrowRight className="ml-2 h-4 w-4" />
-								</Button>
-							</a>
-						) : (
-							<>
-								<SignInButton mode="modal">
-									<Button
-										variant="ghost"
-										className="text-white hover:bg-white/10 border border-white/10"
-									>
-										Sign In
-									</Button>
-								</SignInButton>
-								<SignUpButton mode="modal">
-									<Button className="bg-white text-black hover:bg-white/90 font-medium">
-										Sign Up
-									</Button>
-								</SignUpButton>
-							</>
-						)}
-					</div>
 				</header>
 
 				{/* Main Content */}
@@ -1267,6 +1297,8 @@ export default function MarketingLanding() {
 				</div>
 			</section>
 
+			<SeoResourcesPreview articles={FEATURED_SEO_ARTICLES} />
+
 			{/* CTA Section */}
 			<section className="relative z-10 bg-black py-24 px-6 lg:px-12">
 				<div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white/15 via-zinc-900/30 to-black" />
@@ -1349,6 +1381,12 @@ export default function MarketingLanding() {
 							>
 								Pricing
 							</button>
+							<a href="#resources" className="text-zinc-400 hover:text-white transition-colors text-sm">
+								Resources
+							</a>
+							<a href="/blog" className="text-zinc-400 hover:text-white transition-colors text-sm">
+								Blogs
+							</a>
 							<a
 								href="#privacy"
 								className="text-zinc-400 hover:text-white transition-colors text-sm"
