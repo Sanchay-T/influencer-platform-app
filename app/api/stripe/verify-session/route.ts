@@ -67,7 +67,9 @@ export async function GET(request: NextRequest) {
 		]);
 
 		// Check payment status
-		if (session.payment_status !== 'paid') {
+		// @why Trial checkouts have payment_status 'no_payment_required' (card validated, no charge yet).
+		// This matches CheckoutService.verifyCheckoutSession() logic in checkout-service.ts.
+		if (session.payment_status !== 'paid' && session.payment_status !== 'no_payment_required') {
 			logger.info('Session not paid', {
 				userId,
 				metadata: { sessionId, paymentStatus: session.payment_status },
@@ -105,6 +107,23 @@ export async function GET(request: NextRequest) {
 		const subscription = await StripeClient.retrieveSubscription(subscriptionId, [
 			'items.data.price',
 		]);
+
+		// For trial checkouts (no_payment_required), verify the subscription is actually valid.
+		// Prevents activation if the session exists but subscription is incomplete/canceled.
+		if (session.payment_status === 'no_payment_required') {
+			if (subscription.status !== 'trialing' && subscription.status !== 'active') {
+				logger.warn('Trial session has invalid subscription status', {
+					userId,
+					metadata: { sessionId, subscriptionId, subscriptionStatus: subscription.status },
+				});
+
+				return NextResponse.json({
+					verified: false,
+					status: subscription.status,
+					message: 'Subscription is not active or trialing',
+				});
+			}
+		}
 
 		// Check if webhook already processed this subscription
 		const user = await getUserProfile(userId);
