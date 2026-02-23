@@ -97,13 +97,16 @@ export function AuthLogger() {
 				if (isNewSignup) {
 					// Fire Meta Pixel Lead + GA4 sign_up event for new signups
 					trackLeadClient();
-				} else {
-					// Fire GA4 login event for returning users (once per session)
-					trackClient('user_signed_in', {
-						userId: user.id,
-						email: user.primaryEmailAddress?.emailAddress || '',
-						name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
-					});
+					} else {
+						// Fire GA4 login event for returning users (once per session)
+						trackClient({
+							event: 'user_signed_in',
+							properties: {
+								userId: user.id,
+								email: user.primaryEmailAddress?.emailAddress || '',
+								name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+							},
+						});
 
 					// Also send to LogSnag via API (GA4 is client-only, LogSnag needs server)
 					fetch('/api/analytics/track', {

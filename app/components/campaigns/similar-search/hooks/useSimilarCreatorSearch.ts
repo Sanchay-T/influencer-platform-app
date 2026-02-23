@@ -320,19 +320,21 @@ export function useSimilarCreatorSearch(
 		[platformHint]
 	);
 
-	// Intermediate results handler
-	// @why SearchProgress calls onIntermediateResults with creators array directly
-	const handleIntermediateResults = useCallback(
-		(data: unknown[] | { creators?: unknown[] }) => {
-			// Handle both array format (from SearchProgress) and object format
-			const incoming = Array.isArray(data)
-				? data
-				: Array.isArray((data as { creators?: unknown[] })?.creators)
-					? (data as { creators: unknown[] }).creators
-					: [];
-			if (!incoming.length) {
-				return;
-			}
+		// Intermediate results handler
+		// @why SearchProgress calls onIntermediateResults with creators array directly
+		const handleIntermediateResults = useCallback(
+			(data: unknown[] | { creators?: unknown[] }) => {
+				// Handle both array format (from SearchProgress) and object format
+				const record = toRecord(data);
+				const creators = record ? record.creators : null;
+				const incoming = Array.isArray(data)
+					? data
+					: Array.isArray(creators)
+						? creators
+						: [];
+				if (!incoming.length) {
+					return;
+				}
 			setCreators((prev) => {
 				const merged = dedupeCreators([...prev, ...incoming], { platformHint });
 				if (merged.length > prev.length) {

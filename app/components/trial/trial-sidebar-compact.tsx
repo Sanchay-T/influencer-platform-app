@@ -7,7 +7,7 @@ import { StartSubscriptionModal } from '@/app/components/billing/start-subscript
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { PLANS, type PlanKey } from '@/lib/billing/plan-config';
+import { isValidPlan, PLANS } from '@/lib/billing/plan-config';
 import { useStartSubscription } from '@/lib/hooks/use-start-subscription';
 
 type Status = {
@@ -204,17 +204,21 @@ export default function TrialSidebarCompact() {
 				</Link>
 			</div>
 
-			{status.currentPlan && (
-				<StartSubscriptionModal
-					open={showStartModal}
-					onOpenChange={setShowStartModal}
-					planName={PLANS[status.currentPlan as PlanKey]?.name || status.currentPlan}
-					amount={status.billingAmount || 0}
-					onConfirm={async () => {
-						const result = await startSubscription();
-						if (result.success) {
-							setShowStartModal(false);
+				{status.currentPlan && (
+					<StartSubscriptionModal
+						open={showStartModal}
+						onOpenChange={setShowStartModal}
+						planName={
+							isValidPlan(status.currentPlan)
+								? PLANS[status.currentPlan].name
+								: status.currentPlan
 						}
+						amount={status.billingAmount || 0}
+						onConfirm={async () => {
+							const result = await startSubscription();
+							if (result.success) {
+								setShowStartModal(false);
+							}
 					}}
 					isLoading={isStarting}
 				/>

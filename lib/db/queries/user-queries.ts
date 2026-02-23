@@ -5,7 +5,7 @@
  * =====================================================
  */
 
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNotNull } from 'drizzle-orm';
 import { clerkBackendClient } from '@/lib/auth/backend-auth';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
 import { sessionTracker } from '@/lib/sentry/feature-tracking';
@@ -623,7 +623,20 @@ export async function updateUserProfile(
 export async function getUserBilling(
 	userId: string
 ): Promise<(UserBilling & { stripeCustomerId: string }) | null> {
-	const result = await db
+	const result = await buildGetUserBillingQuery(userId);
+
+	const record = result[0];
+	if (!record || typeof record.stripeCustomerId !== 'string') {
+		return null;
+	}
+	return {
+		...record,
+		stripeCustomerId: record.stripeCustomerId,
+	};
+}
+
+export function buildGetUserBillingQuery(userId: string) {
+	return db
 		.select({
 			id: userBilling.id,
 			userId: userBilling.userId,
@@ -638,18 +651,9 @@ export async function getUserBilling(
 			and(
 				eq(users.userId, userId),
 				// Only return records with Stripe customer ID
-				eq(userBilling.stripeCustomerId, userBilling.stripeCustomerId)
+				isNotNull(userBilling.stripeCustomerId)
 			)
 		);
-
-	const record = result[0];
-	if (!record || typeof record.stripeCustomerId !== 'string') {
-		return null;
-	}
-	return {
-		...record,
-		stripeCustomerId: record.stripeCustomerId,
-	};
 }
 
 /**

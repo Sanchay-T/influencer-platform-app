@@ -6,8 +6,21 @@ You are working on **Gemz** (usegems.io) — an AI-powered influencer discovery 
 - **Stack:** Next.js 15 (App Router), TypeScript, Supabase + Drizzle ORM, Clerk auth, Stripe billing, QStash, Resend
 - **Features:** Keyword search, Similar creator search, Campaign management, List organization, CSV export, Trial/subscription billing
 - **Deployment:** Vercel → usegems.io
+- **Dev Server:** `npm run dev:ngrok` (canonical local dev command)
 
 ## Your Behavior
+
+### Canonical Policy Alignment
+`AGENTS.md` and this file are intended to be aligned. If they diverge, update this file to match `AGENTS.md` and keep behavior consistent.
+
+- Ship production-grade implementations that can scale beyond 1000 users; avoid MVP shortcuts.
+- Optimize for long-term maintainability and reliability.
+- Keep a single canonical implementation in the primary codepath; avoid duplicate logic paths.
+- Delete legacy, dead, or duplicate paths as part of delivery only when the user explicitly approves deletion in the current task.
+- Use direct, first-class integrations; avoid adapter/glue layers.
+- Keep one source of truth for business rules and policy.
+- Define strict API invariants: validate required inputs up front and fail fast.
+- Use latest stable libraries and official docs; when web searching, prefer 2026 sources/docs unless an older version is explicitly needed.
 
 ### Mandatory Self-Checks
 You MUST follow these rules on every task:
@@ -36,6 +49,14 @@ You MUST follow these rules on every task:
    - No credentials in code
    - Check `git diff` for accidental inclusions
 
+6. **Respect parallel edits safely**
+   - If files change unexpectedly, continue only when edits are clearly unrelated to touched files
+   - Stop and ask the user when there is overlap, merge-conflict risk, ambiguity, or breakage
+
+7. **Respect strict deletion controls**
+   - Do not delete, move, or overwrite existing files/code unless the user explicitly approves that deletion in the current task
+   - If deletion is approved, prefer `trash` over `rm`
+
 ### Self-Correction
 When you make a mistake and get corrected, immediately update this file with a rule to prevent it:
 ```
@@ -56,6 +77,13 @@ When an approach isn't working — tests keep failing, types won't resolve, the 
 - No `any` types - use proper typing or `unknown` with type guards
 - No `console.log` in production code - use the logging utilities in `lib/logging/`
 - Prefer `type` over `interface`; never use `enum` (use string literal unions instead)
+- Target <=500 LOC per file change; hard cap 750 LOC (imports and types excluded)
+- Keep UI/markup nesting <=3 levels; extract components/helpers when complexity grows
+
+### Security Guards
+- Validate and sanitize untrusted input to prevent injection, path traversal, SSRF, and unsafe uploads
+- Enforce AuthN/AuthZ and tenant boundaries with least-privilege defaults
+- Be cautious with new dependencies and flag supply-chain/CVE risk before adoption
 
 ### Project Structure
 - `app/` — Next.js App Router pages and API routes
@@ -72,12 +100,21 @@ When an approach isn't working — tests keep failing, types won't resolve, the 
 2. Check for similar patterns in the codebase
 3. Run `pnpm typecheck` before committing
 4. Run `pnpm lint` before committing (or `npx biome check --write <files>`)
+5. Keep diffs scoped and intentional
 
 ### Testing
 - Run `pnpm test` to execute tests
 - Add tests for new API routes
 - Add tests for complex business logic
 - Use the test auth system for API testing without Clerk
+
+### Pull Requests
+- Keep PR descriptions short and structured:
+  - Why: 1-2 bullets
+  - How: 1-3 bullets
+  - Tests: commands run and results
+- Use `gh pr ...` for PR creation and management
+- Avoid noise in PRs; include key context, risks, and screenshots when UX changes
 
 ### Git Workflow
 ```bash
@@ -90,10 +127,19 @@ git diff                               # Review changes
 pnpm typecheck && pnpm lint           # Verify quality
 git add <specific-files>              # Stage intentionally
 git commit -m "fix: description"      # Commit with prefix
-git push origin HEAD                  # Push to remote
+# Ask user before pushing
+# git push origin HEAD
 ```
 
 Commit prefixes: `fix:`, `feat:`, `refactor:`, `chore:`, `docs:`, `test:`
+Ask before any `git push`.
+
+GitHub operations should use `gh` CLI (`gh issue ...`, `gh pr ...`, `gh release ...`).
+
+### Codex Prompts and Skills
+- Skills live in repo `.codex/skills` and global `~/.codex/skills`
+- If `$<myskill>` is not found locally, load `~/.codex/skills/<myskill>/SKILL.md` plus required `references/`/`scripts/`
+- Prompts live in `~/.codex/prompts/*.md`
 
 ## Project Notes
 - Main docs in `agent_docs/` - read `tasks.md` first for current work
@@ -129,3 +175,9 @@ Core workflow:
 
 ---
 *This file is yours to update. When you learn something, write it down.*
+
+## Shell Usage
+
+- Prefer built-in tools (`read_file`, `list_dir`, `grep_files`) over ad-hoc shell plumbing when available.
+- For shell search, prefer `fd` for files, `rg` for text, `ast-grep` for syntax-aware search, and `jq`/`yq` for structured extraction.
+- Keep shell usage deterministic and non-interactive; limit output and pick one consistent result when multiple matches exist.

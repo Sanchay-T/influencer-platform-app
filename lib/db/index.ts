@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import { drizzle, type PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { systemLogger } from '@/lib/logging';
+import { isRecord } from '@/lib/utils/type-guards';
 import * as schema from './schema';
 
 /**
@@ -143,13 +144,12 @@ if (createdNewClient && process.env.NODE_ENV !== 'production') {
 export async function withDbRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
 	const retryableErrors = ['ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT', 'connection_refused'];
 
-	for (let attempt = 0; attempt < maxRetries; attempt++) {
-		try {
-			return await fn();
-		} catch (error: unknown) {
-			const errorCode =
-				error instanceof Error && 'code' in error ? (error as { code: string }).code : '';
-			const errorMessage = error instanceof Error ? error.message : String(error);
+		for (let attempt = 0; attempt < maxRetries; attempt++) {
+			try {
+				return await fn();
+			} catch (error: unknown) {
+				const errorCode = isRecord(error) && typeof error.code === 'string' ? error.code : '';
+				const errorMessage = error instanceof Error ? error.message : String(error);
 
 			const isRetryable =
 				retryableErrors.some((code) => errorCode === code) ||

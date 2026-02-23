@@ -18,6 +18,7 @@ import {
 	isDoneStatus,
 	isSuccessStatus as isSuccessStatusHelper,
 } from '@/lib/types/statuses';
+import { getNumberProperty, getStringProperty, isRecord, toRecord } from '@/lib/utils/type-guards';
 
 // Debug logging helper - enable via: localStorage.setItem('debug_job_status', 'true')
 const debugLog = (tag: string, msg: string, data?: Record<string, unknown>) => {
@@ -139,19 +140,47 @@ function getStatusEndpoint(jobId: string, platform?: string): string {
  * Normalize similar search API response to match JobStatusData interface
  * @why Similar search API returns different shape than v2/status
  */
-function normalizeSimilarResponse(data: Record<string, unknown>): JobStatusData {
-	const status = (data.status as JobStatus) ?? 'pending';
-	const processedResults = (data.processedResults as number) ?? 0;
-	const targetResults = (data.targetResults as number) ?? 100;
-	const progress = (data.progress as number) ?? 0;
-	const totalCreators = (data.totalCreators as number) ?? processedResults;
+function coerceJobStatus(value: unknown): JobStatus {
+	switch (value) {
+		case 'pending':
+		case 'dispatching':
+		case 'searching':
+		case 'enriching':
+		case 'processing':
+		case 'completed':
+		case 'partial':
+		case 'error':
+		case 'timeout':
+			return value;
+		default:
+			return 'pending';
+	}
+}
+
+function normalizeSimilarResponse(raw: unknown): JobStatusData {
+	const data = toRecord(raw);
+	const record = data ?? {};
+
+	const status = coerceJobStatus(record.status);
+	const processedResults = getNumberProperty(record, 'processedResults') ?? 0;
+	const targetResults = getNumberProperty(record, 'targetResults') ?? 100;
+	const progress = getNumberProperty(record, 'progress') ?? 0;
+	const totalCreators = getNumberProperty(record, 'totalCreators') ?? processedResults;
 
 	// Similar search returns results as [{ creators: [...] }] from paginateCreators
 	// Normalize to match v2/status format: [{ id: jobId, creators: [...] }]
-	const rawResults = data.results as Array<{ creators?: unknown[] }> | undefined;
-	const results: JobStatusData['results'] = rawResults?.map((r) => ({
-		creators: Array.isArray(r.creators) ? r.creators : [],
-	}));
+	const resultsRaw = Array.isArray(record.results) ? record.results : null;
+	const results = resultsRaw
+		? resultsRaw.map((result) => {
+				const resultRecord = toRecord(result);
+				const creators = Array.isArray(resultRecord?.creators) ? resultRecord.creators : [];
+				const id = getStringProperty(resultRecord ?? {}, 'id') ?? undefined;
+				return { id, creators };
+			})
+		: undefined;
+
+	const paginationRecord = isRecord(record.pagination) ? record.pagination : null;
+	const nextOffsetRaw = paginationRecord ? paginationRecord.nextOffset : undefined;
 
 	return {
 		status,
@@ -165,10 +194,19 @@ function normalizeSimilarResponse(data: Record<string, unknown>): JobStatusData 
 		processedResults,
 		totalCreators,
 		targetResults,
-		platform: (data.platform as string) ?? '',
+		platform: getStringProperty(record, 'platform') ?? '',
 		keywords: [],
-		error: data.error as string | undefined,
-		pagination: data.pagination as JobStatusData['pagination'],
+		error: getStringProperty(record, 'error') ?? undefined,
+		pagination: paginationRecord
+			? {
+					offset: getNumberProperty(paginationRecord, 'offset') ?? 0,
+					limit: getNumberProperty(paginationRecord, 'limit') ?? 0,
+					total: getNumberProperty(paginationRecord, 'total') ?? 0,
+					nextOffset:
+						getNumberProperty(paginationRecord, 'nextOffset') ??
+						(nextOffsetRaw === null ? null : null),
+				}
+			: undefined,
 		results,
 	};
 }

@@ -4,10 +4,12 @@ import { getRecordProperty, getStringProperty, isString, toRecord } from '@/lib/
 import { db } from '../index';
 import {
 	campaigns,
+	creatorListActivities,
 	creatorListCollaborators,
 	creatorListItems,
 	creatorLists,
 	creatorProfiles,
+	jobCreators,
 	scrapingJobs,
 	users,
 } from '../schema';
@@ -215,4 +217,122 @@ export async function getCampaignCountForDashboard(clerkUserId: string): Promise
 		.where(eq(campaigns.userId, clerkUserId));
 
 	return result[0]?.count ?? 0;
+}
+
+// Dashboard overview → pipeline bucket counts (backlog/shortlist/contacted/booked)
+export async function getPipelineSummaryForDashboard(clerkUserId: string) {
+	const internalUserId = await resolveInternalUserId(clerkUserId);
+	if (!internalUserId) {
+		return { total: 0, backlog: 0, shortlist: 0, contacted: 0, booked: 0 };
+	}
+
+	const rows = await db
+		.select({
+			bucket: creatorListItems.bucket,
+			count: count(),
+		})
+		.from(creatorListItems)
+		.innerJoin(creatorLists, eq(creatorListItems.listId, creatorLists.id))
+		.where(and(eq(creatorLists.isArchived, false), accessibleListFilter(internalUserId)))
+		.groupBy(creatorListItems.bucket);
+
+	const buckets: Record<string, number> = {};
+	for (const row of rows) {
+		buckets[row.bucket] = row.count;
+	}
+
+	const backlog = buckets.backlog ?? 0;
+	const shortlist = buckets.shortlist ?? 0;
+	const contacted = buckets.contacted ?? 0;
+	const booked = buckets.booked ?? 0;
+
+	return { total: backlog + shortlist + contacted + booked, backlog, shortlist, contacted, booked };
+}
+
+// Dashboard overview → campaign count + search count + creators discovered
+export async function getCampaignStatsForDashboard(clerkUserId: string) {
+	const [campaignResult, jobResult] = await Promise.all([
+		db.select({ count: count() }).from(campaigns).where(eq(campaigns.userId, clerkUserId)),
+		db
+			.select({
+				totalSearches: count(),
+				totalCreatorsDiscovered: sql<number>`coalesce(sum(${scrapingJobs.creatorsFound}), 0)`,
+			})
+			.from(scrapingJobs)
+			.where(eq(scrapingJobs.userId, clerkUserId)),
+	]);
+
+	return {
+		totalCampaigns: campaignResult[0]?.count ?? 0,
+		totalSearches: jobResult[0]?.totalSearches ?? 0,
+		totalCreatorsDiscovered: Number(jobResult[0]?.totalCreatorsDiscovered ?? 0),
+	};
+}
+
+// Dashboard overview → platform distribution across searches
+export async function getPlatformBreakdownForDashboard(clerkUserId: string) {
+	const rows = await db
+		.select({
+			platform: sql<string>`lower(${scrapingJobs.platform})`,
+			count: count(),
+		})
+		.from(scrapingJobs)
+		.where(eq(scrapingJobs.userId, clerkUserId))
+		.groupBy(sql`lower(${scrapingJobs.platform})`)
+		.orderBy(desc(count()));
+
+	return rows.map((r) => ({ platform: r.platform, count: r.count }));
+}
+
+// Dashboard overview → top searched keywords
+export async function getTopKeywordsForDashboard(clerkUserId: string, limit = 8) {
+	const rows = await db
+		.select({
+			keyword: jobCreators.keyword,
+			count: count(),
+		})
+		.from(jobCreators)
+		.innerJoin(scrapingJobs, eq(jobCreators.jobId, scrapingJobs.id))
+		.where(and(eq(scrapingJobs.userId, clerkUserId), sql`${jobCreators.keyword} is not null`))
+		.groupBy(jobCreators.keyword)
+		.orderBy(desc(count()))
+		.limit(limit);
+
+	return rows
+		.filter((r): r is typeof r & { keyword: string } => r.keyword !== null)
+		.map((r) => ({ keyword: r.keyword, count: r.count }));
+}
+
+// Dashboard overview → recent list activity log
+export async function getRecentActivityForDashboard(clerkUserId: string, limit = 10) {
+	const internalUserId = await resolveInternalUserId(clerkUserId);
+	if (!internalUserId) {
+		return [];
+	}
+
+	const rows = await db
+		.select({
+			id: creatorListActivities.id,
+			action: creatorListActivities.action,
+			payload: creatorListActivities.payload,
+			listId: creatorListActivities.listId,
+			listName: creatorLists.name,
+			listSlug: creatorLists.slug,
+			createdAt: creatorListActivities.createdAt,
+		})
+		.from(creatorListActivities)
+		.innerJoin(creatorLists, eq(creatorListActivities.listId, creatorLists.id))
+		.where(and(eq(creatorLists.isArchived, false), accessibleListFilter(internalUserId)))
+		.orderBy(desc(creatorListActivities.createdAt))
+		.limit(limit);
+
+	return rows.map((r) => ({
+		id: r.id,
+		action: r.action,
+		payload: toRecord(r.payload) ?? {},
+		listId: r.listId,
+		listName: r.listName,
+		listSlug: r.listSlug ?? null,
+		createdAt: r.createdAt,
+	}));
 }

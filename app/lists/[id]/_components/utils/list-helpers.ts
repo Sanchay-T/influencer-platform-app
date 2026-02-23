@@ -11,6 +11,11 @@ import {
 	toRecord,
 	type UnknownRecord,
 } from '@/lib/utils/type-guards';
+import {
+	resolveListItemEnrichmentStatus,
+	summarizeListEnrichment,
+	type ListItemEnrichmentStatus,
+} from '@/lib/lists/enrichment-status';
 import type { ColumnState, ListItem } from '../types/list-detail';
 import { defaultBucketOrder } from '../types/list-detail';
 
@@ -259,55 +264,18 @@ export function escapeCsv(value: unknown): string {
 	return stringValue;
 }
 
-
-export type EnrichmentUiStatus =
-	| 'not_started'
-	| 'queued'
-	| 'in_progress'
-	| 'enriched'
-	| 'failed'
-	| 'skipped_limit';
-
 export function getItemEnrichmentStatus(item: ListItem): EnrichmentUiStatus {
-	const customFields = toRecord(item.customFields) ?? {};
-	const auto = toRecord(customFields.autoEnrichment);
-	const status = getStringProperty(auto ?? {}, 'status');
-
-	if (status === 'queued' || status === 'in_progress' || status === 'enriched') {
-		return status;
-	}
-	if (status === 'failed' || status === 'skipped_limit') {
-		return status;
-	}
-
-	const creatorMeta = toRecord(item.creator.metadata) ?? {};
-	const enrichment = toRecord(creatorMeta.enrichment);
-	if (enrichment) {
-		return 'enriched';
-	}
-
-	return 'not_started';
+	return resolveListItemEnrichmentStatus(item);
 }
 
 export function summarizeEnrichment(items: ListItem[]) {
-	const summary = {
-		total: items.length,
-		not_started: 0,
-		queued: 0,
-		in_progress: 0,
-		enriched: 0,
-		failed: 0,
-		skipped_limit: 0,
-	};
-
-	for (const item of items) {
-		const status = getItemEnrichmentStatus(item);
-		summary[status] += 1;
-	}
-
+	const { total, counts, active, processed } = summarizeListEnrichment(items);
 	return {
-		...summary,
-		active: summary.queued + summary.in_progress,
-		processed: summary.enriched + summary.failed + summary.skipped_limit,
+		total,
+		...counts,
+		active,
+		processed,
 	};
 }
+
+export type EnrichmentUiStatus = ListItemEnrichmentStatus;

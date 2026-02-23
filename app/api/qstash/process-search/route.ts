@@ -1,53 +1,34 @@
 // api/qstash/process-search — lightweight QStash entrypoint for the modular search runner
 
-import { Receiver } from '@upstash/qstash';
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { scrapingJobs } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
 import { SentryLogger } from '@/lib/logging/sentry-logger';
+import { verifyQstashRequestSignature } from '@/lib/queue/qstash-signature';
 import { qstash } from '@/lib/queue/qstash';
 import { runSearchJob } from '@/lib/search-engine/runner';
 import { toError } from '@/lib/utils/type-guards';
 import { getWebhookUrl } from '@/lib/utils/url-utils';
 
-const receiver = new Receiver({
-	currentSigningKey: process.env.QSTASH_CURRENT_SIGNING_KEY!,
-	nextSigningKey: process.env.QSTASH_NEXT_SIGNING_KEY!,
-});
-
-function shouldVerifySignature() {
-	if (process.env.NODE_ENV === 'development') {
-		return process.env.VERIFY_QSTASH_SIGNATURE === 'true';
-	}
-	if (process.env.SKIP_QSTASH_SIGNATURE === 'true') {
-		return false;
-	}
-	return true;
-}
-
 export async function POST(req: Request) {
 	const rawBody = await req.text();
-	const signature = req.headers.get('Upstash-Signature');
 
-	const currentHost = req.headers.get('host') || process.env.VERCEL_URL || '';
-	const defaultBase = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-	const protocol =
-		currentHost.includes('localhost') || currentHost.startsWith('127.') ? 'http' : 'https';
-	const baseUrl = currentHost ? `${protocol}://${currentHost}` : defaultBase;
-	const callbackUrl = `${baseUrl}/api/qstash/process-search`;
+	const verification = await verifyQstashRequestSignature({
+		req,
+		rawBody,
+		pathname: '/api/qstash/process-search',
+	});
+	const callbackUrl = verification.callbackUrl;
 
-	if (shouldVerifySignature()) {
-		if (!signature) {
-			return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
-		}
-		const verificationUrl =
-			callbackUrl || `${process.env.NEXT_PUBLIC_SITE_URL}/api/qstash/process-search`;
-		const valid = await receiver.verify({ signature, body: rawBody, url: verificationUrl });
-		if (!valid) {
-			return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-		}
+	if (!verification.ok) {
+		logger.warn(
+			'QStash signature rejected for process-search',
+			{ error: verification.error, callbackUrl },
+			LogCategory.QSTASH
+		);
+		return NextResponse.json({ error: verification.error }, { status: verification.status });
 	}
 
 	let jobId: string;

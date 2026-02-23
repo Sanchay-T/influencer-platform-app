@@ -3,8 +3,13 @@ import { getBillingStatus } from '@/lib/billing';
 import type { DashboardFavoriteInfluencer } from '@/lib/db/queries/dashboard-queries';
 import {
 	getCampaignCountForDashboard,
+	getCampaignStatsForDashboard,
 	getFavoriteInfluencersForDashboard,
+	getPipelineSummaryForDashboard,
+	getPlatformBreakdownForDashboard,
+	getRecentActivityForDashboard,
 	getSearchTelemetryForDashboard,
+	getTopKeywordsForDashboard,
 } from '@/lib/db/queries/dashboard-queries';
 import { getListsForUser } from '@/lib/db/queries/list-queries';
 import { structuredConsole } from '@/lib/logging/console-proxy';
@@ -31,10 +36,88 @@ export interface DashboardOverviewMetrics {
 	campaignCount: number;
 }
 
+export type PipelineSummary = {
+	total: number;
+	backlog: number;
+	shortlist: number;
+	contacted: number;
+	booked: number;
+};
+
+export type DeltaStats = {
+	creatorsAddedToday: number;
+	creatorsAddedYesterday: number;
+	pipelineChangeToday: {
+		backlog: number;
+		shortlist: number;
+		contacted: number;
+		booked: number;
+	};
+};
+
+export type PlatformBreakdown = {
+	platform: string;
+	count: number;
+};
+
+export type TopKeyword = {
+	keyword: string;
+	count: number;
+};
+
+export type TopCategory = {
+	category: string;
+	count: number;
+};
+
+export type CampaignStats = {
+	totalCampaigns: number;
+	totalSearches: number;
+	totalCreatorsDiscovered: number;
+};
+
+export type RecentActivity = {
+	id: string;
+	action: string;
+	payload: Record<string, unknown>;
+	listId: string;
+	listName: string;
+	listSlug: string | null;
+	createdAt: Date;
+};
+
+export type IncompleteSearch = {
+	campaignId: string;
+	campaignName: string;
+	keywords: string[];
+	status: string;
+	creatorsFound: number;
+	targetResults: number;
+};
+
+export type TopPerformer = {
+	handle: string;
+	platform: string;
+	engagementRate: number | null;
+};
+
+const EMPTY_DELTAS: DeltaStats = {
+	creatorsAddedToday: 0,
+	creatorsAddedYesterday: 0,
+	pipelineChangeToday: { backlog: 0, shortlist: 0, contacted: 0, booked: 0 },
+};
+
 export interface DashboardOverviewData {
 	favorites: DashboardFavorite[];
 	recentLists: DashboardRecentList[];
 	metrics: DashboardOverviewMetrics;
+	pipeline: PipelineSummary;
+	deltas: DeltaStats;
+	platformBreakdown: PlatformBreakdown[];
+	topKeywords: TopKeyword[];
+	topCategories: TopCategory[];
+	campaignStats: CampaignStats;
+	recentActivity: RecentActivity[];
 }
 
 function normalizeRecentLists(
@@ -72,6 +155,11 @@ export async function getDashboardOverview(clerkUserId: string): Promise<Dashboa
 		getSearchTelemetryForDashboard(clerkUserId),
 		getBillingStatus(clerkUserId),
 		getCampaignCountForDashboard(clerkUserId),
+		getPipelineSummaryForDashboard(clerkUserId),
+		getCampaignStatsForDashboard(clerkUserId),
+		getPlatformBreakdownForDashboard(clerkUserId),
+		getTopKeywordsForDashboard(clerkUserId),
+		getRecentActivityForDashboard(clerkUserId),
 	]);
 
 	// Extract values with safe fallbacks — never let a single query crash the page
@@ -83,6 +171,17 @@ export async function getDashboardOverview(clerkUserId: string): Promise<Dashboa
 			: { totalJobs: 0, completedJobs: 0, averageDurationMs: 0 };
 	const planStatus = results[3].status === 'fulfilled' ? results[3].value : null;
 	const campaignCount = results[4].status === 'fulfilled' ? results[4].value : 0;
+	const pipeline =
+		results[5].status === 'fulfilled'
+			? results[5].value
+			: { total: 0, backlog: 0, shortlist: 0, contacted: 0, booked: 0 };
+	const campaignStats =
+		results[6].status === 'fulfilled'
+			? results[6].value
+			: { totalCampaigns: 0, totalSearches: 0, totalCreatorsDiscovered: 0 };
+	const platformBreakdown = results[7].status === 'fulfilled' ? results[7].value : [];
+	const topKeywords = results[8].status === 'fulfilled' ? results[8].value : [];
+	const recentActivity = results[9].status === 'fulfilled' ? results[9].value : [];
 
 	// Log any failures for debugging without crashing
 	for (const [i, r] of results.entries()) {
@@ -106,5 +205,12 @@ export async function getDashboardOverview(clerkUserId: string): Promise<Dashboa
 			totalFavorites: favorites.length,
 			campaignCount,
 		},
+		pipeline,
+		deltas: EMPTY_DELTAS,
+		platformBreakdown,
+		topKeywords,
+		topCategories: [],
+		campaignStats,
+		recentActivity,
 	};
 }

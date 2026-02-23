@@ -1,7 +1,7 @@
 'use client';
 
 import { AlertTriangle, Clock, Database, RefreshCw, Save, Settings, Zap } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ErrorBoundary } from '@/app/components/error-boundary';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -81,7 +81,7 @@ function SystemConfigPageContent() {
 	});
 
 	// Load configurations
-	const loadConfigurations = async () => {
+	const loadConfigurations = useCallback(async () => {
 		try {
 			setLoading(true);
 			setError(null);
@@ -107,7 +107,7 @@ function SystemConfigPageContent() {
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, []);
 
 	// Initialize default configurations
 	const initializeDefaults = async () => {

@@ -43,10 +43,15 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 				data: { exportId, status: exportJob.status },
 			});
 
+			const downloadUrl =
+				exportJob.status === 'completed' && exportJob.downloadUrl
+					? `/api/export/download/${exportJob.id}`
+					: null;
+
 			return NextResponse.json({
 				id: exportJob.id,
 				status: exportJob.status,
-				downloadUrl: exportJob.downloadUrl,
+				downloadUrl,
 				expiresAt: exportJob.expiresAt,
 				totalCreators: exportJob.totalCreators,
 				error: exportJob.error,

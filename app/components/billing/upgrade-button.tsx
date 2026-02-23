@@ -145,18 +145,21 @@ function UpgradeButtonContent({
 		return null;
 	}
 
-	const handleUpgrade = async () => {
-		setIsLoading(true);
-		setError('');
+		const handleUpgrade = async () => {
+			setIsLoading(true);
+			setError('');
 
-		// Track upgrade intent (GA4 + Meta)
-		trackClient('upgrade_clicked', {
-			userId: '',
-			email: '',
-			currentPlan: currentPlan || undefined,
-			targetPlan: targetPlan,
-			source: 'billing_page',
-		});
+			// Track upgrade intent (GA4 + Meta)
+			trackClient({
+				event: 'upgrade_clicked',
+				properties: {
+					userId: '',
+					email: '',
+					currentPlan: currentPlan || undefined,
+					targetPlan: targetPlan,
+					source: 'billing_page',
+				},
+			});
 
 		try {
 			paymentLogger.info('Starting upgrade process', {

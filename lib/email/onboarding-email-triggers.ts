@@ -24,6 +24,8 @@ const ONBOARDING_EMAIL_TYPES: EmailType[] = [
 	'onboarding_6_final',
 ];
 
+const ONBOARDING_EMAIL_TYPE_SET = new Set<string>(ONBOARDING_EMAIL_TYPES);
+
 const ONBOARDING_SUBJECTS: Record<string, string> = {
 	onboarding_1_welcome: "Welcome to Gemz — here's what you're unlocking",
 	onboarding_2_keyword: 'How to find creators by what they actually talk about',
@@ -58,16 +60,16 @@ export async function scheduleOnboardingEmails(
 	try {
 		// Get user email from Clerk
 		const userEmail = await getUserEmailFromClerk(userId);
-		if (!userEmail) {
-			structuredConsole.error('❌ [ONBOARDING-EMAILS] Could not retrieve email for user:', userId);
-			return {
-				success: false,
-				scheduled: [],
-				skipped: [],
-				failed: ONBOARDING_EMAIL_TYPES as string[],
-				error: 'Could not retrieve user email',
-			};
-		}
+			if (!userEmail) {
+				structuredConsole.error('❌ [ONBOARDING-EMAILS] Could not retrieve email for user:', userId);
+				return {
+					success: false,
+					scheduled: [],
+					skipped: [],
+					failed: ONBOARDING_EMAIL_TYPES,
+					error: 'Could not retrieve user email',
+				};
+			}
 
 		// Build template props with UTM tracking
 		// Note: dashboardUrl goes to /dashboard which shows the onboarding modal
@@ -124,17 +126,15 @@ export async function scheduleOnboardingEmails(
 			level: 'error',
 		});
 
-		return {
-			success: false,
-			scheduled,
-			skipped,
-			failed: ONBOARDING_EMAIL_TYPES.filter(
-				(t) => !(scheduled.includes(t) || skipped.includes(t))
-			) as string[],
-			error: error instanceof Error ? error.message : 'Unknown error',
-		};
+			return {
+				success: false,
+				scheduled,
+				skipped,
+				failed: ONBOARDING_EMAIL_TYPES.filter((t) => !(scheduled.includes(t) || skipped.includes(t))),
+				error: error instanceof Error ? error.message : 'Unknown error',
+			};
+		}
 	}
-}
 
 /**
  * Cancel all pending onboarding emails for a user.
@@ -188,5 +188,5 @@ export function getOnboardingEmailSubject(emailType: EmailType): string {
  * Check if an email type is part of the onboarding sequence.
  */
 export function isOnboardingEmail(emailType: string): emailType is EmailType {
-	return ONBOARDING_EMAIL_TYPES.includes(emailType as EmailType);
+	return ONBOARDING_EMAIL_TYPE_SET.has(emailType);
 }

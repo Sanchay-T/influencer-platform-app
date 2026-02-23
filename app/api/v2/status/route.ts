@@ -211,12 +211,15 @@ export async function GET(req: Request) {
 		.limit(limit)
 		.offset(offset);
 
-	// Extract creator data from rows, injecting keyword into each creator object
-	// @context USE2-17: Frontend expects keyword field on creator for filtering/display
-	const paginatedCreators = paginatedRows.map((row) => ({
-		...(row.creatorData as object),
-		keyword: row.keyword || null,
-	}));
+		// Extract creator data from rows, injecting keyword into each creator object
+		// @context USE2-17: Frontend expects keyword field on creator for filtering/display
+		const paginatedCreators = paginatedRows.map((row) => {
+			const creatorData = isRecord(row.creatorData) ? row.creatorData : {};
+			return {
+				...creatorData,
+				keyword: row.keyword || null,
+			};
+		});
 
 	// DEBUG: Log first creator's enrichment data to diagnose bio/email display issues
 	if (enableStatusDebug && paginatedCreators.length > 0) {

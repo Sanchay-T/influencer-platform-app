@@ -1,6 +1,7 @@
 'use client';
 
 import { Loader2, Plus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 import {
 	type ComponentProps,
@@ -87,6 +88,7 @@ export function AddToListButton({
 	disabled,
 	onAdded,
 }: AddToListButtonProps) {
+	const router = useRouter();
 	const creatorsToAdd = useMemo(() => {
 		if (Array.isArray(creators) && creators.length) {
 			return creators;
@@ -285,16 +287,48 @@ export function AddToListButton({
 			);
 
 			const successLabel = selectedListSummary?.name;
-			if (addedCount > 0) {
-				if (successLabel) {
-					toast.success(
-						addedCount > 1
-							? `Added ${addedCount} creators to “${successLabel}”`
-							: `Added to “${successLabel}”`
-					);
-				} else {
-					toast.success(addedCount > 1 ? 'Creators saved to list' : 'Creator saved to list');
+			const viewList = () => {
+				try {
+					router.push(`/lists/${selectedList}`);
+				} catch {
+					window.location.href = `/lists/${selectedList}`;
 				}
+			};
+
+			if (addedCount > 0) {
+				const title = successLabel
+					? addedCount > 1
+						? `Saved ${addedCount} to “${successLabel}”`
+						: `Saved to “${successLabel}”`
+					: addedCount > 1
+						? `Saved ${addedCount} creators`
+						: 'Saved creator';
+
+				toast.custom(
+					(t) => (
+						<div className="pointer-events-auto w-full max-w-md rounded-xl border border-zinc-700/60 bg-zinc-950/95 px-4 py-3 text-sm text-zinc-200 shadow-xl">
+							<div className="flex items-start justify-between gap-3">
+								<div className="min-w-0">
+									<p className="font-medium text-zinc-100">{title}</p>
+									<p className="mt-0.5 text-xs text-zinc-400">
+										Auto-enrichment started. You can keep browsing.
+									</p>
+								</div>
+								<Button
+									size="sm"
+									className="h-8 shrink-0 bg-pink-600 text-white hover:bg-pink-500"
+									onClick={() => {
+										toast.dismiss(t.id);
+										viewList();
+									}}
+								>
+									View list
+								</Button>
+							</div>
+						</div>
+					),
+					{ duration: 6500 }
+				);
 			}
 
 			if (skippedCount > 0) {
@@ -305,19 +339,37 @@ export function AddToListButton({
 					.join(', ');
 
 				toast.custom(
-					() => (
-						<div className="rounded-lg border border-zinc-700/60 bg-zinc-950/90 px-4 py-3 text-sm text-zinc-200 shadow-xl">
-							<p className="font-medium text-zinc-100">
-								{skippedCount === attemptedCount
-									? 'All selected creators are already saved in this list.'
-									: `${skippedCount} creator${skippedCount === 1 ? '' : 's'} already saved`}
-							</p>
-							{displayHandles && (
-								<p className="mt-1 text-xs text-zinc-400">
-									{displayHandles}
-									{skippedCount > 3 ? ` +${skippedCount - 3} more` : ''}
-								</p>
-							)}
+					(t) => (
+						<div className="pointer-events-auto w-full max-w-md rounded-xl border border-zinc-700/60 bg-zinc-950/95 px-4 py-3 text-sm text-zinc-200 shadow-xl">
+							<div className="flex items-start justify-between gap-3">
+								<div className="min-w-0">
+									<p className="font-medium text-zinc-100">
+										{skippedCount === attemptedCount
+											? 'Already saved in this list'
+											: `Skipped ${skippedCount} already saved`}
+									</p>
+									<p className="mt-0.5 text-xs text-zinc-400">
+										{successLabel ? `In “${successLabel}”.` : 'Already present in the list.'}
+									</p>
+									{displayHandles && (
+										<p className="mt-1 text-xs text-zinc-500">
+											{displayHandles}
+											{skippedCount > 3 ? ` +${skippedCount - 3} more` : ''}
+										</p>
+									)}
+								</div>
+								<Button
+									size="sm"
+									variant="outline"
+									className="h-8 shrink-0 border-zinc-700/60 bg-zinc-900/40 text-zinc-100 hover:bg-zinc-900/60"
+									onClick={() => {
+										toast.dismiss(t.id);
+										viewList();
+									}}
+								>
+									View list
+								</Button>
+							</div>
 						</div>
 					),
 					{ duration: 5000 }

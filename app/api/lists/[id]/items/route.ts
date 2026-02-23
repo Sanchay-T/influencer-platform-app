@@ -116,20 +116,23 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 					creatorCount: result.added,
 				});
 
-				// GA4 + LogSnag tracking - fire and forget (async HTTP calls)
-				getUserProfile(userId)
-					.then((user) =>
-						trackServer('creator_saved', {
-							userId,
-							listName: id,
-							count: result.added,
-							email: user?.email || 'unknown',
-							userName: user?.fullName || '',
-						})
-					)
-					.catch((err) =>
-						structuredConsole.error('[LIST_ITEMS_API] Analytics tracking failed', err)
-					);
+					// GA4 + LogSnag tracking - fire and forget (async HTTP calls)
+					getUserProfile(userId)
+						.then((user) =>
+							trackServer({
+								event: 'creator_saved',
+								properties: {
+									userId,
+									listName: id,
+									count: result.added,
+									email: user?.email || 'unknown',
+									userName: user?.fullName || '',
+								},
+							})
+						)
+						.catch((err) =>
+							structuredConsole.error('[LIST_ITEMS_API] Analytics tracking failed', err)
+						);
 			}
 
 			return NextResponse.json(
