@@ -24,7 +24,7 @@ interface ExportReadyEmailProps {
 	expiresAt: string;
 }
 
-const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://usegems.io';
+const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://usegemz.io';
 
 export const ExportReadyEmail = ({
 	downloadUrl,

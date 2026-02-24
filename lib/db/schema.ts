@@ -232,6 +232,12 @@ export const users = pgTable(
 		industry: text('industry'),
 		onboardingStep: varchar('onboarding_step', { length: 50 }).default('pending').notNull(),
 		isAdmin: boolean('is_admin').default(false).notNull(),
+		// USE2-79: Resend auto-tagging for broadcast segmentation
+		// Tags stored locally because Resend SDK doesn't support native contact tags
+		resendTags: text('resend_tags')
+			.array()
+			.notNull()
+			.default(sql`ARRAY[]::text[]`),
 		createdAt: timestamp('created_at').defaultNow().notNull(),
 		updatedAt: timestamp('updated_at').defaultNow().notNull(),
 	},
@@ -897,6 +903,7 @@ export type UserProfileComplete = {
 	industry?: string | null;
 	onboardingStep: string;
 	isAdmin: boolean;
+	resendTags: string[];
 
 	// Subscription data
 	// NOTE: currentPlan is NULL until user completes onboarding/payment

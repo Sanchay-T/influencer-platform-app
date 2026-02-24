@@ -76,6 +76,7 @@ export async function getUserProfile(userId: string): Promise<UserProfileComplet
 			industry: users.industry,
 			onboardingStep: users.onboardingStep,
 			isAdmin: users.isAdmin,
+			resendTags: users.resendTags,
 			createdAt: users.createdAt,
 			updatedAt: users.updatedAt,
 
@@ -141,6 +142,7 @@ export async function getUserProfile(userId: string): Promise<UserProfileComplet
 	const profile: UserProfileComplete = {
 		...userRecord,
 		// Ensure required fields have defaults
+		resendTags: userRecord.resendTags || [],
 		currentPlan: userRecord.currentPlan, // NULL = not onboarded yet
 		subscriptionStatus: userRecord.subscriptionStatus || 'none',
 		// trialStatus removed - derive via deriveTrialStatus()
@@ -276,6 +278,7 @@ export async function createUser(userData: {
 				industry: newUser.industry,
 				onboardingStep: newUser.onboardingStep,
 				isAdmin: newUser.isAdmin,
+				resendTags: newUser.resendTags ?? [],
 				createdAt: newUser.createdAt,
 				updatedAt: newUser.updatedAt,
 
@@ -689,6 +692,7 @@ export async function getUserByStripeCustomerId(
 			industry: users.industry,
 			onboardingStep: users.onboardingStep,
 			isAdmin: users.isAdmin,
+			resendTags: users.resendTags,
 			createdAt: users.createdAt,
 			updatedAt: users.updatedAt,
 
@@ -738,6 +742,7 @@ export async function getUserByStripeCustomerId(
 	const profile: UserProfileComplete = {
 		...userRecord,
 		// Ensure required fields have defaults
+		resendTags: userRecord.resendTags || [],
 		currentPlan: userRecord.currentPlan, // NULL = not onboarded yet
 		subscriptionStatus: userRecord.subscriptionStatus || 'none',
 		// trialStatus removed - derive via deriveTrialStatus()

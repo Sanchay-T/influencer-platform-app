@@ -6,18 +6,10 @@ import { getListDetail } from '@/lib/db/queries/list-queries';
 import { creatorListItems } from '@/lib/db/schema';
 import { resolveListItemEnrichmentStatus } from '@/lib/lists/enrichment-status';
 import { structuredConsole } from '@/lib/logging/console-proxy';
-import { getQstashBaseUrl, qstash } from '@/lib/queue/qstash';
+import { dispatchListEnrichmentBatches, type ListEnrichCreatorPayload } from '@/lib/lists/enrich-list-dispatch';
 import { getStringProperty, toRecord } from '@/lib/utils/type-guards';
 
 type RetryMode = 'failed_only';
-
-type AddedCreatorForAutoEnrichment = {
-	listItemId: string;
-	creatorId: string;
-	handle: string;
-	platform: 'instagram' | 'tiktok' | 'youtube';
-	externalId: string;
-};
 
 function parseRetryMode(value: unknown): RetryMode | null {
 	const record = toRecord(value);
@@ -26,25 +18,6 @@ function parseRetryMode(value: unknown): RetryMode | null {
 		return mode;
 	}
 	return null;
-}
-
-async function dispatchAutoEnrichment(
-	userId: string,
-	listId: string,
-	addedCreators: AddedCreatorForAutoEnrichment[]
-) {
-	if (!addedCreators.length) {
-		return;
-	}
-
-	const url = `${getQstashBaseUrl()}/api/qstash/auto-enrich-list-items`;
-	await qstash.publishJSON({
-		url,
-		body: { userId, listId, addedCreators },
-		retries: 3,
-		delay: '1s',
-		notifyOnFailure: true,
-	});
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -76,7 +49,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 		}
 
 		const nowIso = new Date().toISOString();
-		const retryTargets: AddedCreatorForAutoEnrichment[] = [];
+		const retryTargets: ListEnrichCreatorPayload[] = [];
 
 		for (const item of failedItems) {
 			const itemRecord = toRecord(item) ?? {};
@@ -124,7 +97,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 				.where(and(eq(creatorListItems.id, itemId), eq(creatorListItems.listId, listId)));
 		}
 
-		await dispatchAutoEnrichment(userId, listId, retryTargets);
+		// USE2-77: Fan out retries into parallel batches
+		await dispatchListEnrichmentBatches({ userId, listId, addedCreators: retryTargets });
 
 		return NextResponse.json({ ok: true, queued: retryTargets.length });
 	} catch (error) {

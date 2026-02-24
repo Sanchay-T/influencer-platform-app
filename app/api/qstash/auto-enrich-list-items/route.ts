@@ -129,45 +129,80 @@ export async function POST(request: Request) {
 			return NextResponse.json({ ok: true, processed: 0 });
 		}
 
+		// USE2-77: Process creators in parallel within each batch (configurable concurrency)
+		const MAX_PARALLEL = parseInt(process.env.LIST_ENRICH_MAX_PARALLEL || '3', 10);
 		let processed = 0;
-		for (const creator of addedCreators) {
-			try {
-				await updateListItemStatus(listId, creator.listItemId, 'in_progress', {
-					startedAt: new Date().toISOString(),
-					lastError: null,
-					attempts: 1,
-				});
+		let planLimitHit = false;
 
-				await creatorEnrichmentService.enrichCreator({
-					userId,
-					creatorId: creator.creatorId,
-					handle: creator.handle,
-					platform: creator.platform,
-					externalId: creator.externalId,
-					forceRefresh: false,
-				});
-
-				await updateListItemStatus(listId, creator.listItemId, 'enriched', {
-					completedAt: new Date().toISOString(),
-				});
-				processed += 1;
-			} catch (error) {
-				if (error instanceof PlanLimitExceededError) {
-					await updateListItemStatus(listId, creator.listItemId, 'skipped_limit', {
+		// Process in chunks of MAX_PARALLEL concurrent enrichments
+		for (let i = 0; i < addedCreators.length; i += MAX_PARALLEL) {
+			if (planLimitHit) {
+				// Mark remaining creators as skipped
+				for (const remaining of addedCreators.slice(i)) {
+					await updateListItemStatus(listId, remaining.listItemId, 'skipped_limit', {
 						completedAt: new Date().toISOString(),
 						lastError: 'Plan limit reached',
 					});
-					continue;
 				}
-				await updateListItemStatus(listId, creator.listItemId, 'failed', {
-					completedAt: new Date().toISOString(),
-					lastError: error instanceof Error ? error.message : 'Enrichment failed',
-				});
-				structuredConsole.error('[AUTO_ENRICH_QSTASH] creator enrich failed', {
-					listId,
-					listItemId: creator.listItemId,
-					error,
-				});
+				break;
+			}
+
+			const chunk = addedCreators.slice(i, i + MAX_PARALLEL);
+
+			// Mark all in chunk as in_progress
+			await Promise.allSettled(
+				chunk.map((creator) =>
+					updateListItemStatus(listId, creator.listItemId, 'in_progress', {
+						startedAt: new Date().toISOString(),
+						lastError: null,
+						attempts: 1,
+					})
+				)
+			);
+
+			// Enrich all creators in chunk concurrently
+			const results = await Promise.allSettled(
+				chunk.map(async (creator) => {
+					await creatorEnrichmentService.enrichCreator({
+						userId,
+						creatorId: creator.creatorId,
+						handle: creator.handle,
+						platform: creator.platform,
+						externalId: creator.externalId,
+						forceRefresh: false,
+					});
+					return creator;
+				})
+			);
+
+			// Process results
+			for (const [index, result] of results.entries()) {
+				const creator = chunk[index];
+				if (result.status === 'fulfilled') {
+					await updateListItemStatus(listId, creator.listItemId, 'enriched', {
+						completedAt: new Date().toISOString(),
+					});
+					processed += 1;
+				} else {
+					const error = result.reason;
+					if (error instanceof PlanLimitExceededError) {
+						planLimitHit = true;
+						await updateListItemStatus(listId, creator.listItemId, 'skipped_limit', {
+							completedAt: new Date().toISOString(),
+							lastError: 'Plan limit reached',
+						});
+					} else {
+						await updateListItemStatus(listId, creator.listItemId, 'failed', {
+							completedAt: new Date().toISOString(),
+							lastError: error instanceof Error ? error.message : 'Enrichment failed',
+						});
+						structuredConsole.error('[AUTO_ENRICH_QSTASH] creator enrich failed', {
+							listId,
+							listItemId: creator.listItemId,
+							error,
+						});
+					}
+				}
 			}
 		}
 

@@ -5,35 +5,8 @@ import { addCreatorsToList, removeListItems, updateListItems } from '@/lib/db/qu
 import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { toRecord } from '@/lib/utils/type-guards';
-import { getQstashBaseUrl, qstash } from '@/lib/queue/qstash';
+import { dispatchListEnrichmentBatches, type ListEnrichCreatorPayload } from '@/lib/lists/enrich-list-dispatch';
 import { apiTracker, listTracker, SentryLogger, sessionTracker } from '@/lib/sentry';
-
-type AddedCreatorForAutoEnrichment = {
-	listItemId: string;
-	creatorId: string;
-	handle: string;
-	platform: string;
-	externalId: string;
-};
-
-async function dispatchAutoEnrichment(
-	userId: string,
-	listId: string,
-	addedCreators: AddedCreatorForAutoEnrichment[]
-) {
-	if (!addedCreators.length) {
-		return;
-	}
-
-	const url = `${getQstashBaseUrl()}/api/qstash/auto-enrich-list-items`;
-	await qstash.publishJSON({
-		url,
-		body: { userId, listId, addedCreators },
-		retries: 3,
-		delay: '1s',
-		notifyOnFailure: true,
-	});
-}
 
 function errorToResponse(
 	error: unknown,
@@ -79,7 +52,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 			const body = await request.json();
 			const result = await addCreatorsToList(userId, id, body.creators ?? []);
 			const addedCreators = Array.isArray(result.addedCreators)
-				? result.addedCreators.filter((item): item is AddedCreatorForAutoEnrichment => {
+				? result.addedCreators.filter((item): item is ListEnrichCreatorPayload => {
 					if (!(item && typeof item === 'object')) {
 						return false;
 					}
@@ -98,8 +71,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 				: [];
 
 			if (addedCreators.length > 0) {
-				dispatchAutoEnrichment(userId, id, addedCreators).catch((dispatchError) => {
-					structuredConsole.error('[LIST_ITEMS_API] Failed to dispatch auto-enrichment', {
+				// USE2-77: Fan out into parallel batches for faster enrichment
+				dispatchListEnrichmentBatches({ userId, listId: id, addedCreators }).catch((dispatchError) => {
+					structuredConsole.error('[LIST_ITEMS_API] Failed to dispatch auto-enrichment batches', {
 						dispatchError,
 						listId: id,
 						addedCreators: addedCreators.length,

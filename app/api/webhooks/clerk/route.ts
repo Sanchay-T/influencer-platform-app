@@ -7,6 +7,7 @@ import { createUser, getUserProfile, updateUserProfile } from '@/lib/db/queries/
 import { ResendAudienceService } from '@/lib/email/resend-audience-service';
 import BillingLogger from '@/lib/loggers/billing-logger';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { SentryLogger } from '@/lib/logging/sentry-logger';
 import { UserSessionLogger } from '@/lib/logging/user-session-logger';
 import {
 	getArrayProperty,
@@ -500,8 +501,18 @@ async function handleUserCreated(userData: unknown, requestId: string) {
 				lastName: lastName || undefined,
 			}).catch((err) => {
 				structuredConsole.error('❌ [CLERK-WEBHOOK] Resend audience sync failed:', err);
+				SentryLogger.captureException(err instanceof Error ? err : new Error(String(err)), {
+					tags: { feature: 'resend_audience', operation: 'webhook_add_contact' },
+					extra: { email, userId },
+					level: 'warning',
+				});
 			});
 		}
+
+		// USE2-79: Tag new signup in DB for broadcast segmentation (fire-and-forget)
+		ResendAudienceService.setContactTags(userId, ['signup']).catch((err) => {
+			structuredConsole.error('❌ [CLERK-WEBHOOK] Resend tag sync failed:', err);
+		});
 
 		userLogger?.log('USER_CREATED', 'User profile created successfully', {
 			userId,
@@ -585,6 +596,11 @@ async function handleUserUpdated(userData: unknown, requestId: string) {
 				lastName: lastName || undefined,
 			}).catch((err) => {
 				structuredConsole.error('❌ [CLERK-WEBHOOK] Resend contact update failed:', err);
+				SentryLogger.captureException(err instanceof Error ? err : new Error(String(err)), {
+					tags: { feature: 'resend_audience', operation: 'webhook_update_contact' },
+					extra: { email, userId },
+					level: 'warning',
+				});
 			});
 		}
 

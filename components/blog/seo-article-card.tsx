@@ -43,7 +43,7 @@ export function SeoArticleCard({
 				<div className="absolute inset-0 bg-gradient-to-t from-black via-black/35 to-transparent" />
 				<div className="absolute inset-x-0 bottom-0 flex items-center justify-between px-4 pb-4">
 					<span className="rounded-full border border-white/25 bg-black/40 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-white/80">
-						{article.category === 'pillar' ? 'Pillar Guide' : 'SEO Guide'}
+						{{ 'finding-creators': 'Finding Creators', 'tools-platforms': 'Tools & Platforms', 'career-trends': 'Career & Trends' }[article.category]}
 					</span>
 					<span className="rounded-full border border-white/20 bg-black/35 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.13em] text-white/70">
 						{article.readingTimeMinutes} min
