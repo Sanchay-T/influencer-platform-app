@@ -9,7 +9,7 @@ const articleSummarySchema = z.object({
 	slug: z.string().min(1),
 	title: z.string().min(1),
 	deck: z.string().min(1),
-	category: z.union([z.literal('pillar'), z.literal('seo')]),
+	category: z.union([z.literal('finding-creators'), z.literal('tools-platforms'), z.literal('career-trends')]),
 	order: z.number().int().positive().nullable(),
 	heroImage: z.string().min(1),
 	heroAlt: z.string().min(1),
@@ -34,6 +34,12 @@ const articleBlockSchema = z.union([
 		image: z.string().min(1),
 		alt: z.string().min(1),
 	}),
+	z.object({
+		type: z.literal('table'),
+		headers: z.array(z.string().min(1)).min(1),
+		rows: z.array(z.array(z.string())).min(1),
+		caption: z.string().optional(),
+	}),
 ]);
 
 const articleSchema = articleSummarySchema.extend({
@@ -43,8 +49,9 @@ const articleSchema = articleSummarySchema.extend({
 });
 
 const categoryRank = {
-	pillar: 0,
-	seo: 1,
+	'finding-creators': 0,
+	'tools-platforms': 1,
+	'career-trends': 2,
 } as const;
 
 function articleComparator(left: SeoArticleSummary, right: SeoArticleSummary): number {
@@ -106,5 +113,18 @@ export function getRelatedSeoArticles(slug: string, limit = 3): SeoArticleSummar
 		}
 	}
 
-	return Array.from(unique.values());
+	const results = Array.from(unique.values());
+
+	// USE2-75: Ensure at least 1 finding-creators guide in related articles
+	const hasFindingCreators = results.some((a) => a.category === 'finding-creators');
+	if (!hasFindingCreators && results.length >= limit) {
+		const findingCreatorsArticle = sortedArticleIndex.find(
+			(a) => a.slug !== slug && a.category === 'finding-creators' && !unique.has(a.slug),
+		);
+		if (findingCreatorsArticle) {
+			results[results.length - 1] = findingCreatorsArticle;
+		}
+	}
+
+	return results;
 }

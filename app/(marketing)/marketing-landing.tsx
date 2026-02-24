@@ -81,7 +81,7 @@ export default function MarketingLanding() {
 				<header className="space-y-4 p-6 lg:px-12">
 					<div className="grid grid-cols-[auto_1fr] items-center gap-4 md:grid-cols-[1fr_auto_1fr]">
 						<div className="flex items-center">
-							<img src="/images/untitled-20design.png" alt="Gemz" className="h-12 w-auto" />
+							<img src="/logo.png" alt="Gemz" className="h-12 w-auto" />
 						</div>
 
 						<nav className="hidden items-center justify-self-center space-x-6 md:flex">
@@ -1367,7 +1367,7 @@ export default function MarketingLanding() {
 				<div className="max-w-7xl mx-auto px-6 lg:px-12">
 					<div className="flex items-center justify-between py-8">
 						<div className="flex items-center">
-							<img src="/images/untitled-20design.png" alt="Gemz" className="h-10 w-auto" />
+							<img src="/logo.png" alt="Gemz" className="h-10 w-auto" />
 						</div>
 					</div>
 					<div className="py-8 border-t border-white/10">

@@ -24,7 +24,7 @@ export const colors = {
 };
 
 // Logo image URL (matches landing page header)
-export const logoImageUrl = 'https://usegemz.io/images/untitled-20design.png';
+export const logoImageUrl = 'https://usegemz.io/logo.png';
 
 export const main: CSSProperties = {
 	backgroundColor: colors.background,

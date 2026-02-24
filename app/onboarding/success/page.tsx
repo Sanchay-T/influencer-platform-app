@@ -23,6 +23,7 @@ function OnboardingSuccessContent() {
 	const [loading, setLoading] = useState(true);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [webhookConfirmed, setWebhookConfirmed] = useState(false);
+	const [verificationFailed, setVerificationFailed] = useState(false);
 	const pollCountRef = useRef(0);
 	const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 	const eventsFiredRef = useRef(false);
@@ -101,15 +102,24 @@ function OnboardingSuccessContent() {
 				}
 			}
 
-			// Stop polling after max attempts
+			// After 30 seconds (15 attempts), try verification one more time
+			if (pollCountRef.current === 15) {
+				const verified = await verifySession();
+				if (verified) {
+					return;
+				}
+			}
+
+			// Stop polling after max attempts — show error instead of auto-confirming
+			// @why Auto-confirming fires false conversion events and lets users through
+			// without a valid subscription if the webhook truly failed
 			if (pollCountRef.current >= MAX_POLL_ATTEMPTS) {
 				if (pollIntervalRef.current) {
 					clearInterval(pollIntervalRef.current);
 					pollIntervalRef.current = null;
 				}
-				// After timeout, allow continue anyway (webhook may have failed but Stripe has the subscription)
-				setWebhookConfirmed(true);
-				structuredConsole.warn('Webhook polling timeout - allowing continue');
+				setVerificationFailed(true);
+				structuredConsole.warn('Webhook polling timeout - verification failed');
 			}
 		}, POLL_INTERVAL_MS);
 	}, [pollForWebhook, verifySession]);
@@ -208,13 +218,21 @@ function OnboardingSuccessContent() {
 		}
 	};
 
+	const handleRetry = () => {
+		setVerificationFailed(false);
+		pollCountRef.current = 0;
+		startPolling();
+	};
+
 	return (
 		<SuccessCard
 			loading={loading}
 			sessionData={sessionData}
 			isSubmitting={isSubmitting}
 			webhookConfirmed={webhookConfirmed}
+			verificationFailed={verificationFailed}
 			onContinue={handleContinue}
+			onRetry={handleRetry}
 		/>
 	);
 }

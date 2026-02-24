@@ -213,9 +213,9 @@ export function AddToListButton({
 		};
 	}, [open, resetPanel]);
 
-	const handleCreateList = async () => {
+	const createListAndSelect = async (): Promise<string | null> => {
 		if (!newListName.trim()) {
-			return;
+			return null;
 		}
 		setCreating(true);
 		try {
@@ -232,17 +232,33 @@ export function AddToListButton({
 			setSelectedList(data.list.id);
 			setNewListName('');
 			toast.success(`Created “${data.list.name}”`);
+			return data.list.id as string;
 		} catch (error) {
 			structuredConsole.error(error);
 			const message = error instanceof Error ? error.message : 'Unable to create list';
 			toast.error(message);
+			return null;
 		} finally {
 			setCreating(false);
 		}
 	};
 
+	const handleCreateList = async () => {
+		await createListAndSelect();
+	};
+
 	const handleAdd = async () => {
-		if (!selectedList) {
+		// Auto-create list if the create form is showing with a name but no list selected
+		let targetList = selectedList;
+		if (!targetList && showCreate && newListName.trim()) {
+			const created = await createListAndSelect();
+			if (!created) {
+				return; // creation failed, error toast already shown
+			}
+			targetList = created;
+		}
+
+		if (!targetList) {
 			toast.error('Select a list first');
 			return;
 		}
@@ -261,7 +277,7 @@ export function AddToListButton({
 				metadata: entry.metadata ?? {},
 			}));
 
-			const res = await fetch(`/api/lists/${selectedList}/items`, {
+			const res = await fetch(`/api/lists/${targetList}/items`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ creators: payload }),
@@ -280,18 +296,20 @@ export function AddToListButton({
 
 			setLists((prev) =>
 				prev.map((list) =>
-					list.id === selectedList
+					list.id === targetList
 						? { ...list, creatorCount: list.creatorCount + addedCount }
 						: list
 				)
 			);
 
-			const successLabel = selectedListSummary?.name;
+			const successLabel =
+				selectedListSummary?.name ??
+				lists.find((l) => l.id === targetList)?.name;
 			const viewList = () => {
 				try {
-					router.push(`/lists/${selectedList}`);
+					router.push(`/lists/${targetList}`);
 				} catch {
-					window.location.href = `/lists/${selectedList}`;
+					window.location.href = `/lists/${targetList}`;
 				}
 			};
 
@@ -377,12 +395,12 @@ export function AddToListButton({
 			}
 
 			structuredConsole.debug('[AddToList] added creators', {
-				listId: selectedList,
+				listId: targetList,
 				added: addedCount,
 				attempted: attemptedCount,
 			});
 
-			onAdded?.(selectedList);
+			onAdded?.(targetList);
 			setOpen(false);
 			resetPanel();
 		} catch (error) {
@@ -551,7 +569,7 @@ export function AddToListButton({
 							>
 								Cancel
 							</Button>
-							<Button size="sm" onClick={handleAdd} disabled={adding || !selectedList}>
+							<Button size="sm" onClick={handleAdd} disabled={adding || creating || (!selectedList && !(showCreate && newListName.trim()))}>
 								{adding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
 								Save
 							</Button>

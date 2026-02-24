@@ -3,8 +3,9 @@ import type { SeoArticleCategory } from '@/types/seo-content';
 import type { SeoArticleSummary } from '@/types/seo-content';
 
 const categoryRank = {
-	pillar: 0,
-	seo: 1,
+	'finding-creators': 0,
+	'tools-platforms': 1,
+	'career-trends': 2,
 } as const;
 
 function articleComparator(left: SeoArticleSummary, right: SeoArticleSummary): number {
@@ -23,7 +24,7 @@ function articleComparator(left: SeoArticleSummary, right: SeoArticleSummary): n
 }
 
 function isSeoArticleCategory(value: string): value is SeoArticleCategory {
-	return value === 'pillar' || value === 'seo';
+	return value === 'finding-creators' || value === 'tools-platforms' || value === 'career-trends';
 }
 
 const articleIndex: SeoArticleSummary[] = rawArticleIndex.map((article) => {

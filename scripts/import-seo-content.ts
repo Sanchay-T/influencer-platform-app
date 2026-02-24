@@ -9,13 +9,34 @@ interface Args {
 	publicImagesDir: string;
 }
 
-type Category = 'pillar' | 'seo';
+type Category = 'finding-creators' | 'tools-platforms' | 'career-trends';
+
+/**
+ * USE2-76: Manual category overrides keyed by slug.
+ * When adding new articles, add them here or they'll default to 'finding-creators'.
+ */
+const CATEGORY_OVERRIDES: Record<string, Category> = {
+	// Finding Creators
+	'influencer-discovery': 'finding-creators',
+	'ugc-creators': 'finding-creators',
+	'find-instagram-influencers-for-free': 'finding-creators',
+	'find-tiktok-influencers-by-niche': 'finding-creators',
+	// Tools & Platforms
+	'heepsy-alternative': 'tools-platforms',
+	'modash-alternative': 'tools-platforms',
+	'upfluence-alternative': 'tools-platforms',
+	'influencer-database-inaccurate': 'tools-platforms',
+	// Career & Trends
+	'influencer-marketing-jobs': 'career-trends',
+	'influencer-marketing-news': 'career-trends',
+};
 
 type Block =
 	| { type: 'heading'; text: string }
 	| { type: 'paragraph'; text: string }
 	| { type: 'list'; items: string[] }
-	| { type: 'image'; image: string; alt: string };
+	| { type: 'image'; image: string; alt: string }
+	| { type: 'table'; headers: string[]; rows: string[][]; caption?: string };
 
 interface GeneratedArticle {
 	slug: string;
@@ -293,7 +314,8 @@ function countWords(blocks: Block[]): number {
 }
 
 function articleSortComparator(a: GeneratedArticleSummary, b: GeneratedArticleSummary): number {
-	const categoryRank = (category: Category) => (category === 'pillar' ? 0 : 1);
+	const categoryRankMap: Record<Category, number> = { 'finding-creators': 0, 'tools-platforms': 1, 'career-trends': 2 };
+	const categoryRank = (category: Category) => categoryRankMap[category];
 	const categoryDiff = categoryRank(a.category) - categoryRank(b.category);
 	if (categoryDiff !== 0) {
 		return categoryDiff;
@@ -378,12 +400,11 @@ function main(): void {
 
 	for (const docxPath of allDocxFiles) {
 		const relativeDocPath = path.relative(extractedArticlesDir, docxPath).replaceAll(path.sep, '/');
-		const category: Category = relativeDocPath.startsWith('gemz-articles/') ? 'pillar' : 'seo';
-
 		const baseName = path.basename(docxPath, '.docx');
 		const numberPrefix = baseName.match(/^(\d+)-(.+)$/);
 		const order = numberPrefix ? Number.parseInt(numberPrefix[1], 10) : null;
 		const slug = slugify(numberPrefix ? numberPrefix[2] : baseName);
+		const category: Category = CATEGORY_OVERRIDES[slug] ?? 'finding-creators';
 
 		const paragraphs = extractDocxParagraphs(docxPath);
 		if (paragraphs.length < 2) {

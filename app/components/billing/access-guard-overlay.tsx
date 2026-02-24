@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useBilling } from '@/lib/hooks/use-billing';
 import { useOnboardingStatus } from '@/lib/hooks/use-onboarding-status';
@@ -17,17 +17,38 @@ export default function AccessGuardOverlay({
 	onboardingStatusLoaded?: boolean;
 	showOnboarding?: boolean;
 }) {
-	const { isLoaded, isTrialing, trialStatus, hasActiveSubscription } = useBilling();
+	const { isLoaded, isTrialing, trialStatus, hasActiveSubscription, refreshBillingData } =
+		useBilling();
 	const { isLoading: onboardingLoading, isCompleted: onboardingCompleted } = useOnboardingStatus();
 	const pathname = usePathname();
 	const [blocked, setBlocked] = useState<boolean>(initialBlocked);
 	const [blockStart, setBlockStart] = useState<number | null>(null);
+	const [freshFetchDone, setFreshFetchDone] = useState(false);
 	const mountTs = useMemo(() => new Date().toISOString(), []);
+	const refreshTriggeredRef = useRef(false);
 
 	const isAllowedRoute = useMemo(
 		() => ['/billing', '/onboarding', '/account'].some((p) => pathname?.startsWith(p)),
 		[pathname]
 	);
+
+	// When data says "blocked", force a fresh fetch before trusting it.
+	// @why The billing cache (30s in-memory, 60s localStorage) can serve stale data
+	// that incorrectly says the user has no subscription, causing a false paywall.
+	const triggerFreshFetch = useCallback(() => {
+		if (refreshTriggeredRef.current) {
+			return;
+		}
+		refreshTriggeredRef.current = true;
+		logStepHeader('access_guard_recheck', 'Forcing fresh billing fetch before blocking', {
+			metadata: { pathname },
+		});
+		// Await the actual API response — no magic timeout numbers.
+		refreshBillingData?.().then(
+			() => setFreshFetchDone(true),
+			() => setFreshFetchDone(true) // On error, proceed with whatever data we have
+		);
+	}, [refreshBillingData, pathname]);
 
 	useEffect(() => {
 		// Do NOT block while loading to avoid spinner on refresh
@@ -42,6 +63,13 @@ export default function AccessGuardOverlay({
 		const hasAccess = hasActiveSubscription || (isTrialing && !isTrialExpired);
 		const onboardingIncomplete = !onboardingCompleted;
 		const nextBlocked = !(hasAccess || isAllowedRoute || onboardingIncomplete);
+
+		// If data says blocked but we haven't done a fresh fetch yet, do one first
+		if (nextBlocked && !freshFetchDone) {
+			triggerFreshFetch();
+			return; // Don't set blocked yet — wait for fresh data
+		}
+
 		setBlocked(nextBlocked);
 		if (nextBlocked && blockStart === null) {
 			setBlockStart(Date.now());
@@ -76,6 +104,8 @@ export default function AccessGuardOverlay({
 		blockStart,
 		pathname,
 		mountTs,
+		freshFetchDone,
+		triggerFreshFetch,
 	]);
 
 	// 🚨 Don't show overlay while onboarding is in progress or still loading.

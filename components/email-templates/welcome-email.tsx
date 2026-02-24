@@ -23,7 +23,7 @@ interface WelcomeEmailProps {
 
 const baseUrl = process.env.VERCEL_URL
 	? `https://${process.env.VERCEL_URL}`
-	: 'https://influencerplatform.vercel.app';
+	: 'https://usegemz.io';
 
 export const WelcomeEmail = ({
 	username,
@@ -38,7 +38,7 @@ export const WelcomeEmail = ({
 			<Preview>Welcome to Gemz! 🎉 Your account is ready to go.</Preview>
 			<Container style={container}>
 				<Img
-					src={`${baseUrl}/static/logo.png`}
+					src={`${baseUrl}/logo.png`}
 					width="48"
 					height="48"
 					alt="Gemz Logo"
@@ -105,7 +105,7 @@ const welcomeEmailPreviewProps: WelcomeEmailProps = {
 	username: 'johndoe',
 	fullName: 'John Doe',
 	businessName: 'Acme Corp',
-	dashboardUrl: 'https://usegems.io/dashboard',
+	dashboardUrl: 'https://usegemz.io/dashboard',
 };
 
 WelcomeEmail.PreviewProps = welcomeEmailPreviewProps;

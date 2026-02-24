@@ -1,4 +1,4 @@
-export type SeoArticleCategory = 'pillar' | 'seo';
+export type SeoArticleCategory = 'finding-creators' | 'tools-platforms' | 'career-trends';
 
 export interface SeoArticleBlockHeading {
 	type: 'heading';
@@ -21,11 +21,19 @@ export interface SeoArticleBlockImage {
 	alt: string;
 }
 
+export interface SeoArticleBlockTable {
+	type: 'table';
+	headers: string[];
+	rows: string[][];
+	caption?: string;
+}
+
 export type SeoArticleBlock =
 	| SeoArticleBlockHeading
 	| SeoArticleBlockParagraph
 	| SeoArticleBlockList
-	| SeoArticleBlockImage;
+	| SeoArticleBlockImage
+	| SeoArticleBlockTable;
 
 export interface SeoArticleSummary {
 	slug: string;

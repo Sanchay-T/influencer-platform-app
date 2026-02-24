@@ -24,7 +24,7 @@ export async function POST(req: Request) {
 	try {
 		// Obtener la URL base del ambiente actual
 		const currentHost =
-			req.headers.get('host') || process.env.VERCEL_URL || 'influencerplatform.vercel.app';
+			req.headers.get('host') || process.env.VERCEL_URL || 'usegemz.io';
 		const protocol = currentHost.includes('localhost') ? 'http' : 'https';
 		const baseUrl = `${protocol}://${currentHost}`;
 

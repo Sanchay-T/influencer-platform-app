@@ -25,8 +25,9 @@ export default function BlogPage() {
 	const allArticles = getSeoArticleIndex();
 	const [primaryFeature, ...secondaryFeatures] = allArticles;
 	const supportingFeatures = secondaryFeatures.slice(0, 2);
-	const pillarArticles = allArticles.filter((article) => article.category === 'pillar');
-	const seoArticles = allArticles.filter((article) => article.category === 'seo');
+	const findingCreatorsArticles = allArticles.filter((article) => article.category === 'finding-creators');
+	const toolsPlatformsArticles = allArticles.filter((article) => article.category === 'tools-platforms');
+	const careerTrendsArticles = allArticles.filter((article) => article.category === 'career-trends');
 	const latestArticles = allArticles.slice(0, 6);
 
 	return (
@@ -88,33 +89,53 @@ export default function BlogPage() {
 					</section>
 				)}
 
-				<section className="mb-16 space-y-6" aria-labelledby="pillar-guides-heading">
+				{findingCreatorsArticles.length > 0 && (
+				<section className="mb-16 space-y-6" aria-labelledby="finding-creators-heading">
 					<div className="flex items-center justify-between gap-4">
-						<h2 id="pillar-guides-heading" className="text-2xl font-semibold tracking-tight lg:text-3xl">
-							Pillar Guides
+						<h2 id="finding-creators-heading" className="text-2xl font-semibold tracking-tight lg:text-3xl">
+							Finding Creators
 						</h2>
-						<p className="text-sm text-white/65">Foundational frameworks and strategic playbooks.</p>
+						<p className="text-sm text-white/65">Discovery tactics and playbooks for sourcing the right influencers.</p>
 					</div>
 					<div className="grid gap-6 md:grid-cols-2">
-						{pillarArticles.map((article, index) => (
+						{findingCreatorsArticles.map((article, index) => (
 							<SeoArticleCard key={article.slug} article={article} priority={index < 2} />
 						))}
 					</div>
 				</section>
+			)}
 
-				<section className="mb-16 space-y-6" aria-labelledby="seo-guides-heading">
+			{toolsPlatformsArticles.length > 0 && (
+				<section className="mb-16 space-y-6" aria-labelledby="tools-platforms-heading">
 					<div className="flex items-center justify-between gap-4">
-						<h2 id="seo-guides-heading" className="text-2xl font-semibold tracking-tight lg:text-3xl">
-							SEO Guides
+						<h2 id="tools-platforms-heading" className="text-2xl font-semibold tracking-tight lg:text-3xl">
+							Tools & Platforms
 						</h2>
-						<p className="text-sm text-white/65">Specific tactics, alternatives, and platform comparisons.</p>
+						<p className="text-sm text-white/65">Platform comparisons, alternatives, and data accuracy breakdowns.</p>
 					</div>
 					<div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-						{seoArticles.map((article) => (
+						{toolsPlatformsArticles.map((article) => (
 							<SeoArticleCard key={article.slug} article={article} compact />
 						))}
 					</div>
 				</section>
+			)}
+
+			{careerTrendsArticles.length > 0 && (
+				<section className="mb-16 space-y-6" aria-labelledby="career-trends-heading">
+					<div className="flex items-center justify-between gap-4">
+						<h2 id="career-trends-heading" className="text-2xl font-semibold tracking-tight lg:text-3xl">
+							Career & Trends
+						</h2>
+						<p className="text-sm text-white/65">Industry news, career guides, and creator economy insights.</p>
+					</div>
+					<div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+						{careerTrendsArticles.map((article) => (
+							<SeoArticleCard key={article.slug} article={article} compact />
+						))}
+					</div>
+				</section>
+			)}
 
 				<section className="mb-16 space-y-6" aria-labelledby="latest-guides-heading">
 					<h2 id="latest-guides-heading" className="text-2xl font-semibold tracking-tight lg:text-3xl">
@@ -140,10 +161,10 @@ export default function BlogPage() {
 							</p>
 						</div>
 						<Link
-							href="/"
-							className="inline-flex items-center gap-2 rounded-xl border border-white/20 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+							href="/signup"
+							className="inline-flex items-center gap-2 rounded-xl bg-pink-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-pink-500/25 transition-all hover:bg-pink-400 hover:shadow-pink-500/35"
 						>
-							Explore Gemz
+							Try Gemz Free
 							<ArrowRight className="h-4 w-4" />
 						</Link>
 					</div>

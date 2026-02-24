@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { SeoArticleCard } from '@/components/blog/seo-article-card';
+import { ArticleCta } from '@/components/blog/article-cta';
 import { getRelatedSeoArticles, getSeoArticleBySlug, getSeoArticleIndex } from '@/lib/seo-content';
 import type { SeoArticleBlock } from '@/types/seo-content';
 
@@ -121,6 +122,44 @@ function renderBlock(block: SeoArticleBlock, key: string, headingId: string | nu
 		);
 	}
 
+	if (block.type === 'table') {
+		return (
+			<div key={key} className="overflow-x-auto">
+				<table className="w-full border-collapse rounded-xl border border-white/12 text-sm lg:text-base">
+					<thead>
+						<tr className="border-b border-white/12 bg-white/[0.06]">
+							{block.headers.map((header, i) => (
+								<th
+									key={`${key}-h-${i}`}
+									className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-white/80"
+								>
+									{header}
+								</th>
+							))}
+						</tr>
+					</thead>
+					<tbody>
+						{block.rows.map((row, rowIndex) => (
+							<tr key={`${key}-r-${rowIndex}`} className="border-b border-white/8 last:border-b-0">
+								{row.map((cell, cellIndex) => (
+									<td
+										key={`${key}-r-${rowIndex}-c-${cellIndex}`}
+										className="px-4 py-3 text-white/78"
+									>
+										{cell}
+									</td>
+								))}
+							</tr>
+						))}
+					</tbody>
+				</table>
+				{block.caption && (
+					<p className="mt-2 text-center text-xs text-white/50">{block.caption}</p>
+				)}
+			</div>
+		);
+	}
+
 	return (
 		<figure
 			key={key}
@@ -169,7 +208,7 @@ export default async function BlogArticlePage({ params }: ArticlePageProps) {
 					<div className="grid gap-8 lg:grid-cols-12 lg:items-start">
 						<div className="space-y-5 lg:col-span-8">
 							<div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.18em] text-white/65">
-								<span>{article.category === 'pillar' ? 'Pillar guide' : 'SEO guide'}</span>
+								<span>{{ 'finding-creators': 'Finding Creators', 'tools-platforms': 'Tools & Platforms', 'career-trends': 'Career & Trends' }[article.category]}</span>
 								<span>{article.readingTimeMinutes} min read</span>
 							</div>
 							<h1 className="text-balance text-4xl font-normal leading-tight lg:text-6xl">
@@ -192,15 +231,41 @@ export default async function BlogArticlePage({ params }: ArticlePageProps) {
 					</div>
 				</header>
 
+				<div className="mb-8">
+					<ArticleCta variant="banner" />
+				</div>
+
 				<div className={showJumpLinks ? 'grid gap-10 lg:grid-cols-12 lg:items-start' : ''}>
 					<article className={`space-y-6 rounded-2xl border border-white/10 bg-white/[0.02] p-6 lg:p-8 ${showJumpLinks ? 'lg:col-span-8' : ''}`}>
-						{article.blocks.map((block, index) =>
-							renderBlock(
-								block,
-								`${article.slug}-${index}`,
-								headingByBlockIndex.get(index) ?? null,
-							),
-						)}
+						{(() => {
+							const elements: React.ReactNode[] = [];
+							let headingCount = 0;
+							let midCtaInserted = false;
+
+							for (const [index, block] of article.blocks.entries()) {
+								if (block.type === 'heading') {
+									headingCount++;
+								}
+
+								// Insert mid-article CTA after the 2nd heading
+								if (headingCount === 2 && block.type === 'heading' && !midCtaInserted) {
+									elements.push(
+										<ArticleCta key="mid-article-cta" />,
+									);
+									midCtaInserted = true;
+								}
+
+								elements.push(
+									renderBlock(
+										block,
+										`${article.slug}-${index}`,
+										headingByBlockIndex.get(index) ?? null,
+									),
+								);
+							}
+
+							return elements;
+						})()}
 					</article>
 
 					{showJumpLinks && (
@@ -223,19 +288,36 @@ export default async function BlogArticlePage({ params }: ArticlePageProps) {
 					)}
 				</div>
 
-				<div className="mt-12 rounded-2xl border border-white/15 bg-gradient-to-r from-white/[0.08] via-white/[0.04] to-transparent p-6 lg:p-8">
-					<h2 className="text-2xl font-semibold tracking-tight text-white">Need better creator discovery?</h2>
-					<p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/72 lg:text-base">
-						Gemz combines real-time creator search with AI ranking so you can move from keyword to
-						qualified outreach without spreadsheet-heavy workflows.
-					</p>
-					<Link
-						href="/"
-						className="mt-5 inline-flex items-center gap-2 rounded-xl border border-white/20 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10"
-					>
-						See Gemz landing page
-						<ArrowRight className="h-4 w-4" />
-					</Link>
+				<div className="mt-12 grid gap-6 lg:grid-cols-12">
+					<div className="rounded-2xl border border-white/12 bg-white/[0.04] p-6 lg:col-span-5 lg:p-8">
+						<p className="text-xs font-semibold uppercase tracking-[0.18em] text-pink-300/80">Pricing</p>
+						<p className="mt-3 text-3xl font-semibold text-white">Starting at $99<span className="text-lg font-normal text-white/60">/mo</span></p>
+						<p className="mt-2 text-sm leading-relaxed text-white/65">
+							Real-time creator search, AI ranking, and audience analytics. No annual contracts.
+						</p>
+						<Link
+							href="/signup"
+							className="mt-5 inline-flex items-center gap-2 rounded-xl bg-pink-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-pink-500/25 transition-all hover:bg-pink-400 hover:shadow-pink-500/35"
+						>
+							Start free trial
+							<ArrowRight className="h-4 w-4" />
+						</Link>
+					</div>
+
+					<div className="rounded-2xl border border-white/15 bg-gradient-to-r from-white/[0.08] via-white/[0.04] to-transparent p-6 lg:col-span-7 lg:p-8">
+						<h2 className="text-2xl font-semibold tracking-tight text-white">Need better creator discovery?</h2>
+						<p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/72 lg:text-base">
+							Gemz combines real-time creator search with AI ranking so you can move from keyword to
+							qualified outreach without spreadsheet-heavy workflows.
+						</p>
+						<Link
+							href="/signup"
+							className="mt-5 inline-flex items-center gap-2 rounded-xl bg-pink-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-pink-500/25 transition-all hover:bg-pink-400 hover:shadow-pink-500/35"
+						>
+							Try Gemz Free
+							<ArrowRight className="h-4 w-4" />
+						</Link>
+					</div>
 				</div>
 			</div>
 

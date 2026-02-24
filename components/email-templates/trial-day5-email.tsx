@@ -23,7 +23,7 @@ interface TrialDay5EmailProps {
 
 const baseUrl = process.env.VERCEL_URL
 	? `https://${process.env.VERCEL_URL}`
-	: 'https://influencerplatform.vercel.app';
+	: 'https://usegemz.io';
 
 export const TrialDay5Email = ({
 	username,
@@ -40,7 +40,7 @@ export const TrialDay5Email = ({
 			</Preview>
 			<Container style={container}>
 				<Img
-					src={`${baseUrl}/static/logo.png`}
+					src={`${baseUrl}/logo.png`}
 					width="48"
 					height="48"
 					alt="Gemz Logo"
@@ -160,7 +160,7 @@ const trialDay5PreviewProps: TrialDay5EmailProps = {
 	username: 'johndoe',
 	fullName: 'John Doe',
 	businessName: 'Acme Corp',
-	dashboardUrl: 'https://influencerplatform.vercel.app/campaigns',
+	dashboardUrl: 'https://usegemz.io/campaigns',
 };
 
 TrialDay5Email.PreviewProps = trialDay5PreviewProps;
