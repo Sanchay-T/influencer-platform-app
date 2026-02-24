@@ -130,7 +130,7 @@ export async function POST(request: Request) {
 		}
 
 		// USE2-77: Process creators in parallel within each batch (configurable concurrency)
-		const MAX_PARALLEL = parseInt(process.env.LIST_ENRICH_MAX_PARALLEL || '3', 10);
+		const MAX_PARALLEL = Math.max(1, parseInt(process.env.LIST_ENRICH_MAX_PARALLEL || '3', 10) || 3);
 		let processed = 0;
 		let planLimitHit = false;
 
