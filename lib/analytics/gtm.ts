@@ -1,11 +1,13 @@
 /**
  * Google Tag Manager DataLayer Integration
  *
- * @context Provides type-safe dataLayer.push() for all client-side analytics.
- * GTM container handles routing events to GA4, Meta Pixel, and Google Ads.
+ * @context Pushes conversion events to GTM dataLayer.
+ * GTM container routes these to GA4, Meta Pixel, and Google Ads.
  *
- * @why Replaces direct gtag/fbq/conversion calls with a single dataLayer interface.
- * All event routing logic lives in the GTM container UI, not in application code.
+ * Only 3 conversion events + user identification:
+ * - sign_up: new user created
+ * - begin_trial: trial subscription started
+ * - purchase: paid subscription (direct or trial conversion on client)
  */
 
 // ============================================================================
@@ -13,28 +15,14 @@
 // ============================================================================
 
 type DataLayerEvent =
-	| { event: 'login'; method: string; user_id: string }
 	| { event: 'sign_up'; method: string }
-	| { event: 'lead' }
-	| { event: 'onboarding_step'; step: number; step_name: string }
-	| { event: 'complete_registration'; method: string }
-	| { event: 'begin_checkout'; source: string; current_plan?: string; target_plan?: string }
-	| { event: 'initiate_checkout'; content_name?: string; content_category: string }
 	| { event: 'begin_trial'; plan_name: string; value: number; currency: string }
-	| { event: 'start_trial'; content_name: string }
 	| {
 			event: 'purchase';
 			plan_name: string;
 			value: number;
 			currency: string;
 			transaction_id: string;
-	  }
-	| { event: 'purchase_meta'; value: number; currency: string; content_name: string }
-	| {
-			event: 'google_ads_conversion';
-			send_to: string;
-			value: number;
-			currency: string;
 	  }
 	| { event: 'set_user_id'; user_id: string };
 

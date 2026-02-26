@@ -45,56 +45,14 @@ export type AnalyticsPayload = {
 /**
  * Track an event from the browser (client-side)
  *
- * Use this for events triggered by user interactions in React components.
- * Pushes to GTM dataLayer; GTM routes to GA4, Meta Pixel, and Google Ads.
+ * Product analytics events (login, onboarding steps, checkout clicks) are
+ * tracked server-side via LogSnag + GA4 Measurement Protocol.
+ * GTM dataLayer only gets the 3 conversion events: sign_up, begin_trial, purchase.
+ * Use trackLeadClient() and trackPurchaseClient() for those.
  */
-export function trackClient(payload: AnalyticsPayload): void {
-	if (typeof window === 'undefined') {
-		structuredConsole.warn('[Analytics] trackClient called on server; use trackServer instead');
-		return;
-	}
-
-	switch (payload.event) {
-		case 'user_signed_in': {
-			const props = payload.properties;
-			pushToDataLayer({ event: 'login', method: 'clerk', user_id: props.userId });
-			break;
-		}
-
-		case 'onboarding_step_completed': {
-			const props = payload.properties;
-			pushToDataLayer({
-				event: 'onboarding_step',
-				step: props.step,
-				step_name: props.stepName,
-			});
-			break;
-		}
-
-		case 'onboarding_completed': {
-			pushToDataLayer({ event: 'complete_registration', method: 'onboarding' });
-			break;
-		}
-
-		case 'upgrade_clicked': {
-			const props = payload.properties;
-			pushToDataLayer({
-				event: 'begin_checkout',
-				source: props.source,
-				current_plan: props.currentPlan,
-				target_plan: props.targetPlan,
-			});
-			pushToDataLayer({
-				event: 'initiate_checkout',
-				content_name: props.targetPlan,
-				content_category: 'subscription',
-			});
-			break;
-		}
-
-		default:
-			structuredConsole.warn(`[Analytics] Unknown client event: ${payload.event}`);
-	}
+export function trackClient(_payload: AnalyticsPayload): void {
+	// No-op: product analytics events don't need GTM.
+	// Conversion events use trackLeadClient() and trackPurchaseClient() instead.
 }
 
 // ============================================================================
@@ -387,46 +345,35 @@ export async function trackServer(payload: AnalyticsPayload): Promise<void> {
 // ============================================================================
 
 /**
- * Client-side tracking for Lead/SignUp event (new user created, before payment)
- * Call this when a new user is created on the client
- * @why Fires both Meta Pixel "Lead" and GA4 "sign_up" via GTM dataLayer
+ * Client-side tracking for Signup event (new user created)
+ * @why Fires sign_up via GTM → GA4 + Meta Lead
  */
 export function trackLeadClient(): void {
 	if (typeof window !== 'undefined') {
-		pushToDataLayer({ event: 'lead' });
 		pushToDataLayer({ event: 'sign_up', method: 'clerk' });
 	}
 }
 
 /**
- * Client-side tracking for purchase events
+ * Client-side tracking for trial/purchase events
  * Call this on the success page after Stripe checkout
- * @why Fires trial or purchase events via GTM dataLayer
+ * @why Fires begin_trial or purchase via GTM → GA4 + Meta + Google Ads
  */
 export function trackPurchaseClient(value: number, planId: string, isTrial: boolean): void {
-	if (typeof window === 'undefined') {
-		return;
-	}
+	if (typeof window === 'undefined') return;
 
 	if (isTrial) {
-		pushToDataLayer({ event: 'start_trial', content_name: planId });
 		pushToDataLayer({
 			event: 'begin_trial',
 			plan_name: planId,
-			value: value,
+			value,
 			currency: 'USD',
 		});
 	} else {
 		pushToDataLayer({
-			event: 'purchase_meta',
-			value,
-			currency: 'USD',
-			content_name: planId,
-		});
-		pushToDataLayer({
 			event: 'purchase',
 			plan_name: planId,
-			value: value,
+			value,
 			currency: 'USD',
 			transaction_id: `txn_${Date.now()}`,
 		});
