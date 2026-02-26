@@ -22,7 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { pushToDataLayer } from '@/lib/analytics/gtm';
+import { trackPurchaseClient } from '@/lib/analytics/track';
 import { getPlanDisplayConfig, getVisiblePlanConfigs } from '@/lib/billing/plan-display-config';
 import { clearBillingCache, useBilling } from '@/lib/hooks/use-billing';
 import { useStartSubscription } from '@/lib/hooks/use-start-subscription';
@@ -323,13 +323,8 @@ function BillingContent() {
 				structuredConsole.log('[BILLING] Cache clear failed:', e);
 			}
 
-			// Google Ads: Fire lead conversion for successful upgrade (via GTM)
-			pushToDataLayer({
-				event: 'google_ads_conversion',
-				send_to: 'AW-17893774225/QpdlCMSw8OkbEJGntdRC',
-				value: 1.0,
-				currency: 'USD',
-			});
+			// Fire purchase conversion via GTM → GA4 + Meta + Google Ads
+			trackPurchaseClient(1.0, planParam || 'upgrade', false);
 		}
 	}, [upgradeParam, planParam, successParam, upgradedParam]);
 

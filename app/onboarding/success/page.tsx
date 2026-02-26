@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { pushToDataLayer } from '@/lib/analytics/gtm';
+import { trackPurchaseClient } from '@/lib/analytics/track';
 import { clearBillingCache } from '@/lib/hooks/use-billing';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { type SessionData, SuccessCard } from './success-card';
@@ -171,38 +171,17 @@ function OnboardingSuccessContent() {
 		if (webhookConfirmed && sessionData && !eventsFiredRef.current) {
 			eventsFiredRef.current = true;
 
-			// CompleteRegistration (GTM routes to both GA4 + Meta)
-			pushToDataLayer({ event: 'complete_registration', method: 'onboarding' });
-
-			// Google Ads: Fire lead conversion (GTM routes to Google Ads conversion tag)
-			pushToDataLayer({
-				event: 'google_ads_conversion',
-				send_to: 'AW-17893774225/QpdlCMSw8OkbEJGntdRC',
-				value: 1.0,
-				currency: 'USD',
-			});
-
-			// Parse price for event values
+			// Parse price for conversion event value
 			const priceStr =
 				sessionData.billing === 'yearly'
 					? sessionData.plan.yearlyPrice
 					: sessionData.plan.monthlyPrice;
 			const value = parseFloat(priceStr.replace(/[^0-9.]/g, ''));
 
-			// Fire StartTrial if this is a trial subscription (GTM routes to Meta)
-			// @why GA4 events are tracked server-side via Stripe webhook (more reliable, not blocked by ad blockers)
-			if (sessionData.subscription?.status === 'trialing') {
-				pushToDataLayer({ event: 'start_trial', content_name: sessionData.planId });
-			}
-
-			// Fire Purchase with value (GTM routes to Meta)
+			// Fire begin_trial or purchase via GTM → GA4 + Meta + Google Ads
 			if (!Number.isNaN(value)) {
-				pushToDataLayer({
-					event: 'purchase_meta',
-					value,
-					currency: 'USD',
-					content_name: sessionData.planId,
-				});
+				const isTrial = sessionData.subscription?.status === 'trialing';
+				trackPurchaseClient(value, sessionData.planId, isTrial);
 			}
 
 			structuredConsole.info('Conversion events fired (via GTM dataLayer)', {
