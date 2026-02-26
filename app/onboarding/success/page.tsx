@@ -2,12 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { trackLeadConversion } from '@/lib/analytics/google-ads';
-import {
-	trackCompleteRegistration,
-	trackPurchase,
-	trackStartTrial,
-} from '@/lib/analytics/meta-pixel';
+import { pushToDataLayer } from '@/lib/analytics/gtm';
 import { clearBillingCache } from '@/lib/hooks/use-billing';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { type SessionData, SuccessCard } from './success-card';
@@ -176,11 +171,16 @@ function OnboardingSuccessContent() {
 		if (webhookConfirmed && sessionData && !eventsFiredRef.current) {
 			eventsFiredRef.current = true;
 
-			// Always fire CompleteRegistration for successful onboarding
-			trackCompleteRegistration();
+			// CompleteRegistration (GTM routes to both GA4 + Meta)
+			pushToDataLayer({ event: 'complete_registration', method: 'onboarding' });
 
-			// Google Ads: Fire lead conversion
-			trackLeadConversion();
+			// Google Ads: Fire lead conversion (GTM routes to Google Ads conversion tag)
+			pushToDataLayer({
+				event: 'google_ads_conversion',
+				send_to: 'AW-17893774225/QpdlCMSw8OkbEJGntdRC',
+				value: 1.0,
+				currency: 'USD',
+			});
 
 			// Parse price for event values
 			const priceStr =
@@ -189,18 +189,23 @@ function OnboardingSuccessContent() {
 					: sessionData.plan.monthlyPrice;
 			const value = parseFloat(priceStr.replace(/[^0-9.]/g, ''));
 
-			// Fire StartTrial if this is a trial subscription (Meta Pixel only)
+			// Fire StartTrial if this is a trial subscription (GTM routes to Meta)
 			// @why GA4 events are tracked server-side via Stripe webhook (more reliable, not blocked by ad blockers)
 			if (sessionData.subscription?.status === 'trialing') {
-				trackStartTrial(sessionData.planId);
+				pushToDataLayer({ event: 'start_trial', content_name: sessionData.planId });
 			}
 
-			// Fire Purchase with value (Meta Pixel only)
+			// Fire Purchase with value (GTM routes to Meta)
 			if (!Number.isNaN(value)) {
-				trackPurchase(value, 'USD', sessionData.planId);
+				pushToDataLayer({
+					event: 'purchase_meta',
+					value,
+					currency: 'USD',
+					content_name: sessionData.planId,
+				});
 			}
 
-			structuredConsole.info('Conversion events fired (Meta Pixel)', {
+			structuredConsole.info('Conversion events fired (via GTM dataLayer)', {
 				planId: sessionData.planId,
 				billing: sessionData.billing,
 				value,
