@@ -1,61 +1,11 @@
 /**
- * Google Analytics 4 Event Tracking
+ * Google Analytics 4 Server-side Tracking
  *
- * @context Tracks conversion events for GA4.
- * Client-side: Uses window.gtag (initialized in app/layout.tsx)
- * Server-side: Uses GA4 Measurement Protocol for webhook events
+ * @context Server-side GA4 tracking via Measurement Protocol for webhook events.
+ * Client-side tracking is handled by GTM dataLayer (see lib/analytics/gtm.ts).
  */
 
 import { structuredConsole } from '@/lib/logging/console-proxy';
-
-declare global {
-	interface Window {
-		gtag?: (...args: unknown[]) => void;
-	}
-}
-
-// ============================================================================
-// Client-side tracking (for browser)
-// ============================================================================
-
-/**
- * Fire a GA4 event from the browser
- */
-export function trackGA4Event(eventName: string, params?: Record<string, unknown>): void {
-	if (typeof window !== 'undefined' && window.gtag) {
-		window.gtag('event', eventName, params);
-	}
-}
-
-/**
- * Track trial start
- */
-export function trackGA4TrialStart(planName: string, value: number): void {
-	trackGA4Event('begin_trial', {
-		plan_name: planName,
-		value: value,
-		currency: 'USD',
-	});
-}
-
-/**
- * Track purchase completion
- */
-export function trackGA4Purchase(planName: string, value: number): void {
-	trackGA4Event('purchase', {
-		plan_name: planName,
-		value: value,
-		currency: 'USD',
-		transaction_id: `txn_${Date.now()}`,
-	});
-}
-
-/**
- * Track new user signup (client-side)
- */
-export function trackGA4SignUp(): void {
-	trackGA4Event('sign_up', { method: 'clerk' });
-}
 
 // ============================================================================
 // Server-side tracking (for webhooks via Measurement Protocol)

@@ -2,7 +2,8 @@
  * Unified Analytics Tracking
  *
  * @context Single entry point for all analytics tracking.
- * Sends events to GA4, Meta Pixel, and LogSnag simultaneously.
+ * Client-side: pushes to GTM dataLayer (GTM routes to GA4, Meta, Google Ads).
+ * Server-side: sends to GA4 Measurement Protocol + LogSnag.
  *
  * @why Consolidates tracking to ensure consistent event firing across all platforms.
  * Every event includes email, name, and userId for consistent user identification.
@@ -12,7 +13,8 @@
 
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import type { AnalyticsEvent, EventPropertiesMap } from './events';
-import { trackGA4Event, trackGA4ServerEvent, trackGA4SignUp } from './google-analytics';
+import { trackGA4ServerEvent } from './google-analytics';
+import { pushToDataLayer } from './gtm';
 import {
 	trackCampaignCreated,
 	trackCreatorSaved,
@@ -28,13 +30,6 @@ import {
 	trackUserSignedIn,
 	trackUserSignup,
 } from './logsnag';
-import {
-	trackCompleteRegistration,
-	trackLead,
-	trackMetaEvent,
-	trackPurchase,
-	trackStartTrial,
-} from './meta-pixel';
 
 export type AnalyticsPayload = {
 	[E in AnalyticsEvent]: {
@@ -51,7 +46,7 @@ export type AnalyticsPayload = {
  * Track an event from the browser (client-side)
  *
  * Use this for events triggered by user interactions in React components.
- * Sends to GA4 and Meta Pixel.
+ * Pushes to GTM dataLayer; GTM routes to GA4, Meta Pixel, and Google Ads.
  */
 export function trackClient(payload: AnalyticsPayload): void {
 	if (typeof window === 'undefined') {
@@ -62,35 +57,35 @@ export function trackClient(payload: AnalyticsPayload): void {
 	switch (payload.event) {
 		case 'user_signed_in': {
 			const props = payload.properties;
-			trackGA4Event('login', {
-				method: 'clerk',
-				user_id: props.userId,
-			});
+			pushToDataLayer({ event: 'login', method: 'clerk', user_id: props.userId });
 			break;
 		}
 
 		case 'onboarding_step_completed': {
 			const props = payload.properties;
-			trackGA4Event(`onboarding_step_${props.step}`, {
+			pushToDataLayer({
+				event: 'onboarding_step',
+				step: props.step,
 				step_name: props.stepName,
 			});
 			break;
 		}
 
 		case 'onboarding_completed': {
-			trackGA4Event('complete_registration', { method: 'onboarding' });
-			trackCompleteRegistration();
+			pushToDataLayer({ event: 'complete_registration', method: 'onboarding' });
 			break;
 		}
 
 		case 'upgrade_clicked': {
 			const props = payload.properties;
-			trackGA4Event('begin_checkout', {
+			pushToDataLayer({
+				event: 'begin_checkout',
 				source: props.source,
 				current_plan: props.currentPlan,
 				target_plan: props.targetPlan,
 			});
-			trackMetaEvent('InitiateCheckout', {
+			pushToDataLayer({
+				event: 'initiate_checkout',
 				content_name: props.targetPlan,
 				content_category: 'subscription',
 			});
@@ -394,18 +389,19 @@ export async function trackServer(payload: AnalyticsPayload): Promise<void> {
 /**
  * Client-side tracking for Lead/SignUp event (new user created, before payment)
  * Call this when a new user is created on the client
- * @why Fires both Meta Pixel "Lead" and GA4 "sign_up" for consistent funnel tracking
+ * @why Fires both Meta Pixel "Lead" and GA4 "sign_up" via GTM dataLayer
  */
 export function trackLeadClient(): void {
 	if (typeof window !== 'undefined') {
-		trackLead(); // Meta Pixel "Lead"
-		trackGA4SignUp(); // GA4 "sign_up"
+		pushToDataLayer({ event: 'lead' });
+		pushToDataLayer({ event: 'sign_up', method: 'clerk' });
 	}
 }
 
 /**
  * Client-side tracking for purchase events
  * Call this on the success page after Stripe checkout
+ * @why Fires trial or purchase events via GTM dataLayer
  */
 export function trackPurchaseClient(value: number, planId: string, isTrial: boolean): void {
 	if (typeof window === 'undefined') {
@@ -413,15 +409,22 @@ export function trackPurchaseClient(value: number, planId: string, isTrial: bool
 	}
 
 	if (isTrial) {
-		trackStartTrial(planId);
-		trackGA4Event('begin_trial', {
+		pushToDataLayer({ event: 'start_trial', content_name: planId });
+		pushToDataLayer({
+			event: 'begin_trial',
 			plan_name: planId,
 			value: value,
 			currency: 'USD',
 		});
 	} else {
-		trackPurchase(value, 'USD', planId);
-		trackGA4Event('purchase', {
+		pushToDataLayer({
+			event: 'purchase_meta',
+			value,
+			currency: 'USD',
+			content_name: planId,
+		});
+		pushToDataLayer({
+			event: 'purchase',
 			plan_name: planId,
 			value: value,
 			currency: 'USD',
