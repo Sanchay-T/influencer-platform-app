@@ -7,6 +7,7 @@ import type { Metadata } from 'next';
 // Font configuration for app-wide Inter usage.
 import { Inter } from 'next/font/google';
 import type { ComponentProps, ReactNode } from 'react';
+import { GTMTrialConversion } from './components/analytics/gtm-trial-conversion';
 import { GTMUserIdentifier } from './components/analytics/gtm-user-id';
 import { AuthLogger } from './components/auth/auth-logger';
 import { IntercomProvider } from './components/intercom/intercom-provider';
@@ -186,6 +187,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
 					<ClientConsoleBridge />
 					<AuthLogger />
 					<GTMUserIdentifier />
+					<GTMTrialConversion />
 					<IntercomProvider />
 					<NavigationLogger />
 					<QueryProvider>{children}</QueryProvider>
