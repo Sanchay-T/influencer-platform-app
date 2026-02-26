@@ -4,10 +4,11 @@
  * @context Pushes conversion events to GTM dataLayer.
  * GTM container routes these to GA4, Meta Pixel, and Google Ads.
  *
- * Only 3 conversion events + user identification:
+ * 4 conversion events + user identification:
  * - sign_up: new user created
  * - begin_trial: trial subscription started
- * - purchase: paid subscription (direct or trial conversion on client)
+ * - trial_converted: trial converted to paid (fired on next visit after webhook)
+ * - purchase: paid subscription (direct purchase or upgrade)
  */
 
 // ============================================================================
@@ -17,6 +18,7 @@
 type DataLayerEvent =
 	| { event: 'sign_up'; method: string }
 	| { event: 'begin_trial'; plan_name: string; value: number; currency: string }
+	| { event: 'trial_converted'; plan_name: string; value: number; currency: string }
 	| {
 			event: 'purchase';
 			plan_name: string;
