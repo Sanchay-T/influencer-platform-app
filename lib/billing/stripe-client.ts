@@ -343,6 +343,31 @@ export class StripeClient {
 	}
 
 	// ─────────────────────────────────────────────────────────────
+	// CUSTOMER BALANCE
+	// ─────────────────────────────────────────────────────────────
+
+	/**
+	 * Add a credit (negative amount) or debit (positive amount) to a customer's balance.
+	 * Negative amounts are credits that reduce the next invoice total.
+	 *
+	 * @context Used by social sharing to give users a free month via credit.
+	 */
+	static async createCustomerBalanceTransaction(
+		customerId: string,
+		amountCents: number,
+		description: string,
+		metadata?: Record<string, string>
+	): Promise<Stripe.CustomerBalanceTransaction> {
+		const stripe = getStripe();
+		return stripe.customers.createBalanceTransaction(customerId, {
+			amount: amountCents,
+			currency: 'usd',
+			description,
+			metadata,
+		});
+	}
+
+	// ─────────────────────────────────────────────────────────────
 	// INVOICES
 	// ─────────────────────────────────────────────────────────────
 
