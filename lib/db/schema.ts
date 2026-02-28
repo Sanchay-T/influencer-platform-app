@@ -715,6 +715,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
 	campaigns: many(campaigns), // Assuming campaigns will reference users eventually
 	lists: many(creatorLists),
 	collaborations: many(creatorListCollaborators),
+	socialSharingSubmissions: many(socialSharingSubmissions),
 }));
 
 // User subscriptions relations
@@ -833,6 +834,44 @@ export const listExportsRelations = relations(listExports, ({ one }) => ({
 	}),
 }));
 
+// =====================================================
+// SOCIAL SHARING SUBMISSIONS
+// =====================================================
+
+export type SocialSharingEvidenceType = 'image' | 'link';
+export type SocialSharingStatus = 'pending' | 'approved' | 'rejected';
+
+export const socialSharingSubmissions = pgTable(
+	'social_sharing_submissions',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		userId: uuid('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		evidenceType: varchar('evidence_type', { length: 10 }).notNull(), // 'image' | 'link'
+		evidenceUrl: text('evidence_url').notNull(),
+		status: varchar('status', { length: 10 }).notNull().default('pending'), // 'pending' | 'approved' | 'rejected'
+		adminNotes: text('admin_notes'),
+		approvedBy: uuid('approved_by').references(() => users.id),
+		approvedAt: timestamp('approved_at'),
+		createdAt: timestamp('created_at').notNull().defaultNow(),
+		updatedAt: timestamp('updated_at').notNull().defaultNow(),
+	},
+	(table) => ({
+		userIdIdx: index('idx_social_sharing_user_id').on(table.userId),
+		statusIdx: index('idx_social_sharing_status').on(table.status),
+		userStatusIdx: index('idx_social_sharing_user_status').on(table.userId, table.status),
+		createdAtIdx: index('idx_social_sharing_created_at').on(table.createdAt),
+	})
+);
+
+export const socialSharingSubmissionsRelations = relations(socialSharingSubmissions, ({ one }) => ({
+	user: one(users, {
+		fields: [socialSharingSubmissions.userId],
+		references: [users.id],
+	}),
+}));
+
 // Export types for TypeScript
 export type Campaign = typeof campaigns.$inferSelect;
 export type NewCampaign = typeof campaigns.$inferInsert;
@@ -876,6 +915,8 @@ export type CreatorListActivity = typeof creatorListActivities.$inferSelect;
 export type NewCreatorListActivity = typeof creatorListActivities.$inferInsert;
 export type ListExport = typeof listExports.$inferSelect;
 export type NewListExport = typeof listExports.$inferInsert;
+export type SocialSharingSubmission = typeof socialSharingSubmissions.$inferSelect;
+export type NewSocialSharingSubmission = typeof socialSharingSubmissions.$inferInsert;
 
 // =====================================================
 // NORMALIZED USER TABLE TYPES

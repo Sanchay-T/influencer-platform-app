@@ -9,6 +9,7 @@ import { RecentListsSection } from '@/app/components/dashboard/recent-lists';
 import DashboardLayout from '@/app/components/layout/dashboard-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { SocialSharingBanner } from '@/components/social-sharing/social-sharing-banner';
 import type {
 	DashboardFavorite,
 	DashboardOverviewMetrics,
@@ -93,6 +94,9 @@ export default function DashboardPageClient({
 						</CardContent>
 					</Card>
 				)}
+
+				{/* Social sharing CTA */}
+				<SocialSharingBanner />
 
 				{/* Key metrics overview */}
 				<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">

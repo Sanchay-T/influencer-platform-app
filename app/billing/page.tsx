@@ -27,6 +27,7 @@ import { getPlanDisplayConfig, getVisiblePlanConfigs } from '@/lib/billing/plan-
 import { clearBillingCache, useBilling } from '@/lib/hooks/use-billing';
 import { useStartSubscription } from '@/lib/hooks/use-start-subscription';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { SocialSharingBanner } from '@/components/social-sharing/social-sharing-banner';
 import DashboardLayout from '../components/layout/dashboard-layout';
 
 // Plan prices for the modal (includes both new and legacy plans)
@@ -340,6 +341,9 @@ function BillingContent() {
 
 			{/* Hero Banner */}
 			<HeroBanner successPlan={successPlan} onOpenStartModal={handleOpenStartModal} />
+
+			{/* Social Sharing CTA */}
+			<SocialSharingBanner />
 
 			{/* Tabbed Content */}
 			<Tabs defaultValue="plans" id="billing-tabs">
