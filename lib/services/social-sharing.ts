@@ -5,9 +5,12 @@
  * Users post about Gemz on social media, submit proof, and receive a free month after admin approval.
  */
 
-import { and, desc, eq, ilike, sql } from 'drizzle-orm';
 import { put } from '@vercel/blob';
+import { and, desc, eq, ilike, sql } from 'drizzle-orm';
 import { createElement } from 'react';
+import { SocialSharingApprovalEmail } from '@/components/email-templates/social-sharing-approval-email';
+import { SocialSharingRejectionEmail } from '@/components/email-templates/social-sharing-rejection-email';
+import { StripeClient } from '@/lib/billing/stripe-client';
 import { db } from '@/lib/db';
 import {
 	type SocialSharingEvidenceType,
@@ -16,11 +19,8 @@ import {
 	userBilling,
 	users,
 } from '@/lib/db/schema';
-import { StripeClient } from '@/lib/billing/stripe-client';
-import { createCategoryLogger, LogCategory } from '@/lib/logging';
 import { sendEmail } from '@/lib/email/email-service';
-import { SocialSharingApprovalEmail } from '@/components/email-templates/social-sharing-approval-email';
-import { SocialSharingRejectionEmail } from '@/components/email-templates/social-sharing-rejection-email';
+import { createCategoryLogger, LogCategory } from '@/lib/logging';
 
 const logger = createCategoryLogger(LogCategory.ADMIN);
 
@@ -155,9 +155,13 @@ export async function submitLink({ userInternalId, url }: SubmitLinkParams) {
 
 	// Notify admins asynchronously (don't block the response)
 	notifyAdminsOfNewSubmission(submission.id, userInternalId).catch((err) => {
-		logger.error('Failed to notify admins of new submission', err instanceof Error ? err : new Error(String(err)), {
-			metadata: { submissionId: submission.id },
-		});
+		logger.error(
+			'Failed to notify admins of new submission',
+			err instanceof Error ? err : new Error(String(err)),
+			{
+				metadata: { submissionId: submission.id },
+			}
+		);
 	});
 
 	return submission;
@@ -205,9 +209,13 @@ export async function submitImage({ userInternalId, file }: SubmitImageParams) {
 
 	// Notify admins asynchronously
 	notifyAdminsOfNewSubmission(submission.id, userInternalId).catch((err) => {
-		logger.error('Failed to notify admins of new submission', err instanceof Error ? err : new Error(String(err)), {
-			metadata: { submissionId: submission.id },
-		});
+		logger.error(
+			'Failed to notify admins of new submission',
+			err instanceof Error ? err : new Error(String(err)),
+			{
+				metadata: { submissionId: submission.id },
+			}
+		);
 	});
 
 	return submission;
@@ -220,7 +228,9 @@ export async function submitImage({ userInternalId, file }: SubmitImageParams) {
 /**
  * List submissions with user info, pagination, filtering.
  */
-export async function listSubmissions(params: ListSubmissionsParams): Promise<SubmissionListResult> {
+export async function listSubmissions(
+	params: ListSubmissionsParams
+): Promise<SubmissionListResult> {
 	const { status, emailSearch, page = 1, pageSize = 20 } = params;
 	const offset = (page - 1) * pageSize;
 
@@ -334,9 +344,13 @@ export async function approveSubmission({ submissionId, adminInternalId }: Admin
 				dashboardUrl: `${SITE_URL}/dashboard`,
 			})
 		).catch((err) => {
-			logger.error('Failed to send approval email', err instanceof Error ? err : new Error(String(err)), {
-				metadata: { submissionId, userId: submission.userId },
-			});
+			logger.error(
+				'Failed to send approval email',
+				err instanceof Error ? err : new Error(String(err)),
+				{
+					metadata: { submissionId, userId: submission.userId },
+				}
+			);
 		});
 	}
 
@@ -355,7 +369,11 @@ export async function approveSubmission({ submissionId, adminInternalId }: Admin
 /**
  * Reject a submission: update status, save reason, send email.
  */
-export async function rejectSubmission({ submissionId, adminInternalId, reason }: AdminRejectParams) {
+export async function rejectSubmission({
+	submissionId,
+	adminInternalId,
+	reason,
+}: AdminRejectParams) {
 	// 1. Load submission + verify it's pending
 	const [submission] = await db
 		.select()
@@ -399,9 +417,13 @@ export async function rejectSubmission({ submissionId, adminInternalId, reason }
 				resubmitUrl: `${SITE_URL}/dashboard`,
 			})
 		).catch((err) => {
-			logger.error('Failed to send rejection email', err instanceof Error ? err : new Error(String(err)), {
-				metadata: { submissionId, userId: submission.userId },
-			});
+			logger.error(
+				'Failed to send rejection email',
+				err instanceof Error ? err : new Error(String(err)),
+				{
+					metadata: { submissionId, userId: submission.userId },
+				}
+			);
 		});
 	}
 
@@ -468,7 +490,14 @@ async function extendSubscription(
 	if (subscription.status === 'active') {
 		// For active subscriptions, extend by adding 30 days to the current period end
 		// We use `billing_cycle_anchor` approach: pause collection + extend period
-		const currentPeriodEnd = subscription.current_period_end;
+		const currentPeriodEnd = subscription.items.data[0]?.current_period_end;
+		if (!currentPeriodEnd) {
+			return {
+				extended: false,
+				method: 'none',
+				details: 'No billing period end found on subscription item.',
+			};
+		}
 		const newPeriodEnd = currentPeriodEnd + 30 * 24 * 60 * 60; // +30 days
 
 		// Set trial_end to push the next billing date forward by 30 days
@@ -531,31 +560,50 @@ async function notifyAdminsOfNewSubmission(submissionId: string, userInternalId:
 				}),
 			});
 		} catch (err) {
-			logger.error('Slack notification failed', err instanceof Error ? err : new Error(String(err)), {
-				metadata: { submissionId },
-			});
+			logger.error(
+				'Slack notification failed',
+				err instanceof Error ? err : new Error(String(err)),
+				{
+					metadata: { submissionId },
+				}
+			);
 		}
 	}
 
 	// Send email notification to admin emails
 	const adminEmailsString = process.env.ADMIN_EMAILS ?? process.env.NEXT_PUBLIC_ADMIN_EMAILS;
 	if (adminEmailsString) {
-		const adminEmails = adminEmailsString.split(',').map((addr: string) => addr.trim()).filter(Boolean);
+		const adminEmails = adminEmailsString
+			.split(',')
+			.map((addr: string) => addr.trim())
+			.filter(Boolean);
 		for (const adminEmail of adminEmails) {
 			await sendEmail(
 				adminEmail,
 				`New Social Sharing Submission from ${userName}`,
-				createElement('div', null,
+				createElement(
+					'div',
+					null,
 					createElement('h2', null, 'New Social Sharing Submission'),
-					createElement('p', null, `${userName} has submitted proof of a social media post about Gemz.`),
-					createElement('p', null,
+					createElement(
+						'p',
+						null,
+						`${userName} has submitted proof of a social media post about Gemz.`
+					),
+					createElement(
+						'p',
+						null,
 						createElement('a', { href: `${SITE_URL}/admin/social-sharing` }, 'Review Submission')
 					)
 				)
 			).catch((err) => {
-				logger.error('Admin email notification failed', err instanceof Error ? err : new Error(String(err)), {
-					metadata: { submissionId, adminEmail },
-				});
+				logger.error(
+					'Admin email notification failed',
+					err instanceof Error ? err : new Error(String(err)),
+					{
+						metadata: { submissionId, adminEmail },
+					}
+				);
 			});
 		}
 	}

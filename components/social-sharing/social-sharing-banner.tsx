@@ -1,6 +1,6 @@
 'use client';
 
-import { Gift, ExternalLink, Upload, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { CheckCircle, Clock, ExternalLink, Gift, Loader2, Upload, XCircle } from 'lucide-react';
 import { type ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
@@ -37,10 +37,12 @@ export function SocialSharingBanner() {
 		try {
 			const res = await fetch('/api/social-sharing/status');
 			if (!res.ok) return;
-			const data = (await res.json()) as { data?: StatusResponse };
-			if (data.data) {
-				setSubmissionState(data.data.status as SubmissionStatus);
-				setSubmission(data.data.submission);
+			const data = (await res.json()) as StatusResponse & { data?: StatusResponse };
+			// API spreads response flat (status, submission at top level)
+			const resolved = data.data ?? data;
+			if (resolved.status && resolved.status !== 'none') {
+				setSubmissionState(resolved.status as SubmissionStatus);
+				setSubmission(resolved.submission);
 			}
 		} catch {
 			// Silently fail — banner is non-critical
@@ -73,7 +75,7 @@ export function SocialSharingBanner() {
 				return;
 			}
 
-			toast.success('Submitted! We\'ll review your post shortly.');
+			toast.success("Submitted! We'll review your post shortly.");
 			setShowForm(false);
 			setLinkUrl('');
 			await fetchStatus();
@@ -114,7 +116,7 @@ export function SocialSharingBanner() {
 				return;
 			}
 
-			toast.success('Screenshot uploaded! We\'ll review it shortly.');
+			toast.success("Screenshot uploaded! We'll review it shortly.");
 			setShowForm(false);
 			await fetchStatus();
 		} catch {
@@ -142,9 +144,7 @@ export function SocialSharingBanner() {
 							<CheckCircle className="h-5 w-5 text-emerald-400" />
 						</div>
 						<div>
-							<p className="text-sm font-medium text-emerald-300">
-								Free month applied!
-							</p>
+							<p className="text-sm font-medium text-emerald-300">Free month applied!</p>
 							<p className="text-xs text-emerald-400/70">
 								Thanks for sharing Gemz. Your subscription has been extended by 30 days.
 							</p>
@@ -165,9 +165,7 @@ export function SocialSharingBanner() {
 							<Clock className="h-5 w-5 text-amber-400" />
 						</div>
 						<div>
-							<p className="text-sm font-medium text-amber-300">
-								Submission under review
-							</p>
+							<p className="text-sm font-medium text-amber-300">Submission under review</p>
 							<p className="text-xs text-amber-400/70">
 								We&apos;re reviewing your social post. You&apos;ll hear back soon!
 								{submission?.createdAt && (
@@ -192,13 +190,9 @@ export function SocialSharingBanner() {
 								<XCircle className="h-5 w-5 text-red-400" />
 							</div>
 							<div>
-								<p className="text-sm font-medium text-zinc-300">
-									Submission not approved
-								</p>
+								<p className="text-sm font-medium text-zinc-300">Submission not approved</p>
 								{submission?.adminNotes && (
-									<p className="text-xs text-zinc-500 mt-0.5">
-										Reason: {submission.adminNotes}
-									</p>
+									<p className="text-xs text-zinc-500 mt-0.5">Reason: {submission.adminNotes}</p>
 								)}
 							</div>
 						</div>
@@ -223,31 +217,7 @@ export function SocialSharingBanner() {
 	return (
 		<Card className="bg-gradient-to-r from-violet-950/40 to-purple-950/30 border border-violet-700/30">
 			<CardContent className="p-4">
-				{!showForm ? (
-					<div className="flex items-center justify-between gap-4">
-						<div className="flex items-center gap-3">
-							<div className="p-2 rounded-full bg-violet-900/50">
-								<Gift className="h-5 w-5 text-violet-400" />
-							</div>
-							<div>
-								<p className="text-sm font-medium text-violet-200">
-									Get 1 Free Month
-								</p>
-								<p className="text-xs text-violet-300/70">
-									Share Gemz on social media and submit proof to get a free month
-								</p>
-							</div>
-						</div>
-						<Button
-							size="sm"
-							className="bg-violet-600 hover:bg-violet-500 text-white shrink-0"
-							onClick={() => setShowForm(true)}
-						>
-							<Gift className="h-4 w-4 mr-1.5" />
-							Claim
-						</Button>
-					</div>
-				) : (
+				{showForm ? (
 					<div className="space-y-3">
 						<div className="flex items-center justify-between">
 							<p className="text-sm font-medium text-violet-200">
@@ -267,9 +237,11 @@ export function SocialSharingBanner() {
 							<Button
 								size="sm"
 								variant={formMode === 'link' ? 'default' : 'outline'}
-								className={formMode === 'link'
-									? 'bg-violet-600 hover:bg-violet-500 text-white'
-									: 'border-zinc-700 text-zinc-400'}
+								className={
+									formMode === 'link'
+										? 'bg-violet-600 hover:bg-violet-500 text-white'
+										: 'border-zinc-700 text-zinc-400'
+								}
 								onClick={() => setFormMode('link')}
 							>
 								<ExternalLink className="h-3.5 w-3.5 mr-1.5" />
@@ -278,9 +250,11 @@ export function SocialSharingBanner() {
 							<Button
 								size="sm"
 								variant={formMode === 'image' ? 'default' : 'outline'}
-								className={formMode === 'image'
-									? 'bg-violet-600 hover:bg-violet-500 text-white'
-									: 'border-zinc-700 text-zinc-400'}
+								className={
+									formMode === 'image'
+										? 'bg-violet-600 hover:bg-violet-500 text-white'
+										: 'border-zinc-700 text-zinc-400'
+								}
 								onClick={() => setFormMode('image')}
 							>
 								<Upload className="h-3.5 w-3.5 mr-1.5" />
@@ -346,6 +320,28 @@ export function SocialSharingBanner() {
 						<p className="text-xs text-zinc-600">
 							Post about Gemz on any social platform, then share the link or screenshot here.
 						</p>
+					</div>
+				) : (
+					<div className="flex items-center justify-between gap-4">
+						<div className="flex items-center gap-3">
+							<div className="p-2 rounded-full bg-violet-900/50">
+								<Gift className="h-5 w-5 text-violet-400" />
+							</div>
+							<div>
+								<p className="text-sm font-medium text-violet-200">Get 1 Free Month</p>
+								<p className="text-xs text-violet-300/70">
+									Share Gemz on social media and submit proof to get a free month
+								</p>
+							</div>
+						</div>
+						<Button
+							size="sm"
+							className="bg-violet-600 hover:bg-violet-500 text-white shrink-0"
+							onClick={() => setShowForm(true)}
+						>
+							<Gift className="h-4 w-4 mr-1.5" />
+							Claim
+						</Button>
 					</div>
 				)}
 			</CardContent>
