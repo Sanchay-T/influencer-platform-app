@@ -13,16 +13,25 @@ import { SocialSharingRejectionEmail } from '@/components/email-templates/social
 import { StripeClient } from '@/lib/billing/stripe-client';
 import { db } from '@/lib/db';
 import {
-	type SocialSharingEvidenceType,
 	type SocialSharingStatus,
+	type SocialSharingSubmission,
 	socialSharingSubmissions,
 	userBilling,
 	users,
 } from '@/lib/db/schema';
 import { sendEmail } from '@/lib/email/email-service';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
+import { getStringProperty, toRecord } from '@/lib/utils/type-guards';
 
 const logger = createCategoryLogger(LogCategory.ADMIN);
+
+/**
+ * Check if a database error is a unique constraint violation (Postgres error code 23505).
+ */
+function isUniqueViolation(err: unknown): boolean {
+	const rec = toRecord(err);
+	return rec !== null && getStringProperty(rec, 'code') === '23505';
+}
 
 const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/jpg'];
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
@@ -139,15 +148,23 @@ export async function submitLink({ userInternalId, url }: SubmitLinkParams) {
 		throw new Error('You already have a pending submission. Please wait for it to be reviewed.');
 	}
 
-	const [submission] = await db
-		.insert(socialSharingSubmissions)
-		.values({
-			userId: userInternalId,
-			evidenceType: 'link',
-			evidenceUrl: url,
-			status: 'pending',
-		})
-		.returning();
+	let submission: SocialSharingSubmission;
+	try {
+		[submission] = await db
+			.insert(socialSharingSubmissions)
+			.values({
+				userId: userInternalId,
+				evidenceType: 'link',
+				evidenceUrl: url,
+				status: 'pending',
+			})
+			.returning();
+	} catch (err) {
+		if (isUniqueViolation(err)) {
+			throw new Error('You already have a pending submission. Please wait for it to be reviewed.');
+		}
+		throw err;
+	}
 
 	logger.info('Social sharing link submitted', {
 		metadata: { submissionId: submission.id, userId: userInternalId },
@@ -193,15 +210,23 @@ export async function submitImage({ userInternalId, file }: SubmitImageParams) {
 		contentType: file.type,
 	});
 
-	const [submission] = await db
-		.insert(socialSharingSubmissions)
-		.values({
-			userId: userInternalId,
-			evidenceType: 'image',
-			evidenceUrl: blob.url,
-			status: 'pending',
-		})
-		.returning();
+	let submission: SocialSharingSubmission;
+	try {
+		[submission] = await db
+			.insert(socialSharingSubmissions)
+			.values({
+				userId: userInternalId,
+				evidenceType: 'image',
+				evidenceUrl: blob.url,
+				status: 'pending',
+			})
+			.returning();
+	} catch (err) {
+		if (isUniqueViolation(err)) {
+			throw new Error('You already have a pending submission. Please wait for it to be reviewed.');
+		}
+		throw err;
+	}
 
 	logger.info('Social sharing image submitted', {
 		metadata: { submissionId: submission.id, userId: userInternalId, blobUrl: blob.url },
@@ -314,8 +339,8 @@ export async function approveSubmission({ submissionId, adminInternalId }: Admin
 		throw new Error('You cannot approve your own submission.');
 	}
 
-	// 3. Update submission status
-	await db
+	// 3. Atomic UPDATE — status='pending' in WHERE prevents double-approval race
+	const [updated] = await db
 		.update(socialSharingSubmissions)
 		.set({
 			status: 'approved',
@@ -323,34 +348,54 @@ export async function approveSubmission({ submissionId, adminInternalId }: Admin
 			approvedAt: new Date(),
 			updatedAt: new Date(),
 		})
-		.where(eq(socialSharingSubmissions.id, submissionId));
+		.where(
+			and(
+				eq(socialSharingSubmissions.id, submissionId),
+				eq(socialSharingSubmissions.status, 'pending')
+			)
+		)
+		.returning({ id: socialSharingSubmissions.id });
+
+	if (!updated) {
+		throw new Error('Submission was already processed by another admin.');
+	}
 
 	// 4. Extend user's subscription by 30 days
 	const extensionResult = await extendSubscription(submission.userId);
 
-	// 5. Send approval email
-	const user = await db
-		.select({ email: users.email, fullName: users.fullName })
-		.from(users)
-		.where(eq(users.id, submission.userId))
-		.limit(1);
+	// 5. Send approval email ONLY if Stripe extension actually succeeded
+	if (extensionResult.extended) {
+		const user = await db
+			.select({ email: users.email, fullName: users.fullName })
+			.from(users)
+			.where(eq(users.id, submission.userId))
+			.limit(1);
 
-	if (user[0]?.email) {
-		await sendEmail(
-			user[0].email,
-			'Your Free Month is Live!',
-			createElement(SocialSharingApprovalEmail, {
-				fullName: user[0].fullName ?? undefined,
-				dashboardUrl: `${SITE_URL}/dashboard`,
-			})
-		).catch((err) => {
-			logger.error(
-				'Failed to send approval email',
-				err instanceof Error ? err : new Error(String(err)),
-				{
-					metadata: { submissionId, userId: submission.userId },
-				}
-			);
+		if (user[0]?.email) {
+			await sendEmail(
+				user[0].email,
+				'Your Free Month is Live!',
+				createElement(SocialSharingApprovalEmail, {
+					fullName: user[0].fullName ?? undefined,
+					dashboardUrl: `${SITE_URL}/dashboard`,
+				})
+			).catch((err) => {
+				logger.error(
+					'Failed to send approval email',
+					err instanceof Error ? err : new Error(String(err)),
+					{
+						metadata: { submissionId, userId: submission.userId },
+					}
+				);
+			});
+		}
+	} else {
+		logger.warn('Submission approved but Stripe extension failed — no email sent', {
+			metadata: {
+				submissionId,
+				userId: submission.userId,
+				extensionResult,
+			},
 		});
 	}
 
@@ -388,8 +433,8 @@ export async function rejectSubmission({
 		throw new Error(`Submission is already ${submission.status}. Cannot reject.`);
 	}
 
-	// 2. Update submission status
-	await db
+	// 2. Atomic UPDATE — status='pending' in WHERE prevents double-rejection race
+	const [updated] = await db
 		.update(socialSharingSubmissions)
 		.set({
 			status: 'rejected',
@@ -398,7 +443,17 @@ export async function rejectSubmission({
 			approvedAt: new Date(),
 			updatedAt: new Date(),
 		})
-		.where(eq(socialSharingSubmissions.id, submissionId));
+		.where(
+			and(
+				eq(socialSharingSubmissions.id, submissionId),
+				eq(socialSharingSubmissions.status, 'pending')
+			)
+		)
+		.returning({ id: socialSharingSubmissions.id });
+
+	if (!updated) {
+		throw new Error('Submission was already processed by another admin.');
+	}
 
 	// 3. Send rejection email
 	const user = await db

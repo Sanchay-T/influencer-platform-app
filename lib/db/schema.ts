@@ -234,10 +234,7 @@ export const users = pgTable(
 		isAdmin: boolean('is_admin').default(false).notNull(),
 		// USE2-79: Resend auto-tagging for broadcast segmentation
 		// Tags stored locally because Resend SDK doesn't support native contact tags
-		resendTags: text('resend_tags')
-			.array()
-			.notNull()
-			.default(sql`ARRAY[]::text[]`),
+		resendTags: text('resend_tags').array().notNull().default(sql`ARRAY[]::text[]`),
 		createdAt: timestamp('created_at').defaultNow().notNull(),
 		updatedAt: timestamp('updated_at').defaultNow().notNull(),
 	},
@@ -862,6 +859,9 @@ export const socialSharingSubmissions = pgTable(
 		statusIdx: index('idx_social_sharing_status').on(table.status),
 		userStatusIdx: index('idx_social_sharing_user_status').on(table.userId, table.status),
 		createdAtIdx: index('idx_social_sharing_created_at').on(table.createdAt),
+		// NOTE: A partial unique index `idx_social_sharing_one_pending_per_user`
+		// exists via migration 0019 to enforce one pending submission per user.
+		// Drizzle doesn't support partial unique indexes in schema builder.
 	})
 );
 
