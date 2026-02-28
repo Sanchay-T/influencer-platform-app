@@ -10,6 +10,7 @@ import { and, desc, eq, ilike, sql } from 'drizzle-orm';
 import { createElement } from 'react';
 import { SocialSharingApprovalEmail } from '@/components/email-templates/social-sharing-approval-email';
 import { SocialSharingRejectionEmail } from '@/components/email-templates/social-sharing-rejection-email';
+import { getPlanConfig, isValidPlan, type PlanKey } from '@/lib/billing/plan-config';
 import { StripeClient } from '@/lib/billing/stripe-client';
 import { db } from '@/lib/db';
 import {
@@ -17,6 +18,7 @@ import {
 	type SocialSharingSubmission,
 	socialSharingSubmissions,
 	userBilling,
+	userSubscriptions,
 	users,
 } from '@/lib/db/schema';
 import { sendEmail } from '@/lib/email/email-service';
@@ -128,6 +130,24 @@ async function hasPendingSubmission(userInternalId: string): Promise<boolean> {
 	return result.length > 0;
 }
 
+/**
+ * Check if user already has an approved submission (lifetime limit: 1 free month).
+ */
+async function hasApprovedSubmission(userInternalId: string): Promise<boolean> {
+	const result = await db
+		.select({ id: socialSharingSubmissions.id })
+		.from(socialSharingSubmissions)
+		.where(
+			and(
+				eq(socialSharingSubmissions.userId, userInternalId),
+				eq(socialSharingSubmissions.status, 'approved')
+			)
+		)
+		.limit(1);
+
+	return result.length > 0;
+}
+
 // ═══════════════════════════════════════════════════════════════
 // USER SUBMISSION
 // ═══════════════════════════════════════════════════════════════
@@ -141,6 +161,11 @@ export async function submitLink({ userInternalId, url }: SubmitLinkParams) {
 		new URL(url);
 	} catch {
 		throw new Error('Invalid URL format');
+	}
+
+	// Lifetime limit: one free month per user
+	if (await hasApprovedSubmission(userInternalId)) {
+		throw new Error('You have already claimed your free month. This offer is one-time only.');
 	}
 
 	// Check for existing pending submission
@@ -196,6 +221,11 @@ export async function submitImage({ userInternalId, file }: SubmitImageParams) {
 	// Validate file size
 	if (file.size > MAX_IMAGE_SIZE_BYTES) {
 		throw new Error('File too large. Maximum size is 5MB.');
+	}
+
+	// Lifetime limit: one free month per user
+	if (await hasApprovedSubmission(userInternalId)) {
+		throw new Error('You have already claimed your free month. This offer is one-time only.');
 	}
 
 	// Check for existing pending submission
@@ -494,23 +524,47 @@ export async function rejectSubmission({
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Extend user's subscription by 30 days via Stripe API.
- * Handles active subscriptions and trialing users.
+ * Extend user's subscription by one free month via Stripe API.
+ *
+ * - Trialing: extends trial_end by 30 days.
+ * - Active: adds a credit equal to the plan's monthly price to the customer
+ *   balance. The credit auto-applies to the next invoice.
+ *   We avoid trial_end (regresses status to 'trialing') and pause_collection
+ *   (doesn't help yearly subs with distant renewals).
+ * - Canceled / past_due / other: not eligible.
+ *
+ * Lifetime limit: one free month per user (enforced as a safety net here,
+ * primary guard is in submitLink/submitImage).
  */
 async function extendSubscription(
 	userInternalId: string
 ): Promise<{ extended: boolean; method: string; details: string }> {
-	// Get the user's Stripe subscription ID
-	const [billing] = await db
+	// Safety net: one free month per lifetime
+	if (await hasApprovedSubmission(userInternalId)) {
+		// This shouldn't normally fire — submitLink/submitImage check first.
+		// But defend against admin calling approveSubmission on a manually
+		// inserted row or an old pending row.
+		return {
+			extended: false,
+			method: 'already_claimed',
+			details: 'User has already received their one-time free month.',
+		};
+	}
+
+	// Get billing info + plan in a single query
+	const [billingInfo] = await db
 		.select({
 			stripeSubscriptionId: userBilling.stripeSubscriptionId,
 			stripeCustomerId: userBilling.stripeCustomerId,
+			currentPlan: userSubscriptions.currentPlan,
 		})
 		.from(userBilling)
+		.innerJoin(users, eq(users.id, userBilling.userId))
+		.leftJoin(userSubscriptions, eq(users.id, userSubscriptions.userId))
 		.where(eq(userBilling.userId, userInternalId))
 		.limit(1);
 
-	if (!billing?.stripeSubscriptionId) {
+	if (!(billingInfo?.stripeSubscriptionId && billingInfo.stripeCustomerId)) {
 		logger.warn('No Stripe subscription found for social sharing extension', {
 			metadata: { userId: userInternalId },
 		});
@@ -522,7 +576,16 @@ async function extendSubscription(
 	}
 
 	// Retrieve the subscription from Stripe
-	const subscription = await StripeClient.retrieveSubscription(billing.stripeSubscriptionId);
+	const subscription = await StripeClient.retrieveSubscription(billingInfo.stripeSubscriptionId);
+
+	// Don't extend subscriptions scheduled for cancellation
+	if (subscription.cancel_at_period_end) {
+		return {
+			extended: false,
+			method: 'canceled_pending',
+			details: 'Subscription is scheduled for cancellation. No extension applied.',
+		};
+	}
 
 	if (subscription.status === 'trialing') {
 		// Extend trial by 30 days
@@ -531,7 +594,7 @@ async function extendSubscription(
 			return { extended: false, method: 'trial', details: 'Trial has no end date set.' };
 		}
 		const newTrialEnd = currentTrialEnd + 30 * 24 * 60 * 60; // +30 days in seconds
-		await StripeClient.updateSubscription(billing.stripeSubscriptionId, {
+		await StripeClient.updateSubscription(billingInfo.stripeSubscriptionId, {
 			trial_end: newTrialEnd,
 		});
 
@@ -543,29 +606,34 @@ async function extendSubscription(
 	}
 
 	if (subscription.status === 'active') {
-		// For active subscriptions, extend by adding 30 days to the current period end
-		// We use `billing_cycle_anchor` approach: pause collection + extend period
-		const currentPeriodEnd = subscription.items.data[0]?.current_period_end;
-		if (!currentPeriodEnd) {
+		// Determine credit amount from the user's plan monthly price
+		const planCandidate = billingInfo.currentPlan ?? '';
+		const planKey: PlanKey | null = isValidPlan(planCandidate) ? planCandidate : null;
+
+		if (!planKey) {
 			return {
 				extended: false,
-				method: 'none',
-				details: 'No billing period end found on subscription item.',
+				method: 'no_plan',
+				details: 'Could not determine user plan for credit calculation.',
 			};
 		}
-		const newPeriodEnd = currentPeriodEnd + 30 * 24 * 60 * 60; // +30 days
 
-		// Set trial_end to push the next billing date forward by 30 days
-		// This effectively gives a 30-day "free" period before next charge
-		await StripeClient.updateSubscription(billing.stripeSubscriptionId, {
-			trial_end: newPeriodEnd,
-			proration_behavior: 'none',
-		});
+		const planConfig = getPlanConfig(planKey);
+		const creditAmountCents = planConfig.monthlyPrice; // e.g. 19900 for $199
 
+		// Add credit to customer balance (negative = credit that reduces next invoice)
+		await StripeClient.createCustomerBalanceTransaction(
+			billingInfo.stripeCustomerId,
+			-creditAmountCents,
+			`Social sharing free month — ${planConfig.name} plan`,
+			{ source: 'social_sharing', userId: userInternalId }
+		);
+
+		const creditDollars = (creditAmountCents / 100).toFixed(2);
 		return {
 			extended: true,
-			method: 'billing_extension',
-			details: `Next billing date extended by 30 days. New date: ${new Date(newPeriodEnd * 1000).toISOString()}`,
+			method: 'billing_credit',
+			details: `$${creditDollars} credit applied to customer balance (${planConfig.name} plan monthly price).`,
 		};
 	}
 

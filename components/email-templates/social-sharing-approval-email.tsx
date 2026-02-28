@@ -26,15 +26,13 @@ export const SocialSharingApprovalEmail = ({
 			<Preview>Your free month on Gemz is live!</Preview>
 			<Container style={container}>
 				<Text style={title}>Your Free Month is Live!</Text>
+				<Text style={paragraph}>{fullName ? `Hey ${fullName},` : 'Hey there,'}</Text>
 				<Text style={paragraph}>
-					{fullName ? `Hey ${fullName},` : 'Hey there,'}
+					Great news — your social sharing submission has been approved! We&apos;ve applied a credit
+					to your Gemz account as a thank you for spreading the word.
 				</Text>
 				<Text style={paragraph}>
-					Great news — your social sharing submission has been approved! We&apos;ve added a
-					free month to your Gemz subscription as a thank you for spreading the word.
-				</Text>
-				<Text style={paragraph}>
-					Your subscription has been extended by 30 days. You can continue discovering
+					The credit will automatically apply to your next invoice. You can continue discovering
 					amazing creators without interruption.
 				</Text>
 				<Section style={buttonContainer}>
@@ -44,8 +42,8 @@ export const SocialSharingApprovalEmail = ({
 				</Section>
 				<Hr style={hr} />
 				<Text style={footer}>
-					Thanks for being a Gemz champion! If you have any questions, reply to this email
-					and we&apos;ll get back to you.
+					Thanks for being a Gemz champion! If you have any questions, reply to this email and
+					we&apos;ll get back to you.
 				</Text>
 			</Container>
 		</Body>
@@ -55,7 +53,8 @@ export const SocialSharingApprovalEmail = ({
 // Styles
 const main: CSSProperties = {
 	backgroundColor: '#f6f9fc',
-	fontFamily: '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Ubuntu,sans-serif',
+	fontFamily:
+		'-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Ubuntu,sans-serif',
 };
 
 const container: CSSProperties = {

@@ -36,7 +36,9 @@ export function SocialSharingBanner() {
 	const fetchStatus = useCallback(async () => {
 		try {
 			const res = await fetch('/api/social-sharing/status');
-			if (!res.ok) return;
+			if (!res.ok) {
+				return;
+			}
 			const data = (await res.json()) as StatusResponse & { data?: StatusResponse };
 			// API spreads response flat (status, submission at top level)
 			const resolved = data.data ?? data;
@@ -88,7 +90,9 @@ export function SocialSharingBanner() {
 
 	const handleSubmitImage = async (e: ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
-		if (!file) return;
+		if (!file) {
+			return;
+		}
 
 		// Client-side validation
 		if (!['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)) {
@@ -146,7 +150,7 @@ export function SocialSharingBanner() {
 						<div>
 							<p className="text-sm font-medium text-emerald-300">Free month applied!</p>
 							<p className="text-xs text-emerald-400/70">
-								Thanks for sharing Gemz. Your subscription has been extended by 30 days.
+								Thanks for sharing Gemz! A credit has been applied to your account.
 							</p>
 						</div>
 					</div>

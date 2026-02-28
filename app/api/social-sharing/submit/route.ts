@@ -33,7 +33,7 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
 			const formData = await req.formData();
 			const file = formData.get('file');
 
-			if (!file || !(file instanceof File)) {
+			if (!(file && file instanceof File)) {
 				return createErrorResponse('No file provided', 400, requestId);
 			}
 
@@ -74,6 +74,7 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
 		// Business logic errors (duplicate pending, invalid URL) → 400
 		if (
 			err.message.includes('already have a pending') ||
+			err.message.includes('already claimed') ||
 			err.message.includes('Invalid URL') ||
 			err.message.includes('Invalid file type') ||
 			err.message.includes('File too large')
