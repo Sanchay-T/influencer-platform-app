@@ -32,6 +32,7 @@ import {
 	scheduleSubscriptionWelcomeEmail,
 	scheduleTrialEmails,
 } from '@/lib/email/trial-email-triggers';
+import { ResendAudienceService } from '@/lib/email/resend-audience-service';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
 import { SentryLogger } from '@/lib/logging/sentry-logger';
 import { billingTracker, sessionTracker } from '@/lib/sentry/feature-tracking';
@@ -335,6 +336,15 @@ export async function handleSubscriptionChange(
 					{ userId: user.userId }
 				);
 			});
+
+			// USE2-79: Tag user as trialing for broadcast segmentation
+			ResendAudienceService.syncTagsFromStatus(user.userId, 'trialing').catch((error) => {
+				logger.error(
+					'Failed to sync Resend tags for trial',
+					error instanceof Error ? error : new Error(String(error)),
+					{ userId: user.userId }
+				);
+			});
 		} else if (subscription.status === 'active') {
 			// Check if this is a trial conversion (user was previously trialing)
 			const wasTrialing = user.subscriptionStatus === 'trialing';
@@ -414,6 +424,15 @@ export async function handleSubscriptionChange(
 					{
 						userId: user.userId,
 					}
+				);
+			});
+
+			// USE2-79: Tag user as customer for broadcast segmentation
+			ResendAudienceService.syncTagsFromStatus(user.userId, 'active').catch((error) => {
+				logger.error(
+					'Failed to sync Resend tags for active subscription',
+					error instanceof Error ? error : new Error(String(error)),
+					{ userId: user.userId }
 				);
 			});
 		}
@@ -530,6 +549,19 @@ export async function handleSubscriptionDeleted(
 			user.userId
 		),
 	]);
+
+	// USE2-79: Tag user as cancelled (distinguish trial vs paid cancellation)
+	ResendAudienceService.syncTagsFromStatus(
+		user.userId,
+		'canceled',
+		user.subscriptionStatus // previous status to determine cancelled_trial vs customer
+	).catch((error) => {
+		logger.error(
+			'Failed to sync Resend tags for subscription deletion',
+			error instanceof Error ? error : new Error(String(error)),
+			{ userId: user.userId }
+		);
+	});
 
 	logger.info('Subscription deleted', {
 		userId: user.userId,

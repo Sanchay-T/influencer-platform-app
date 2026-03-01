@@ -40,20 +40,23 @@ export async function PATCH(req: Request) {
 			metadata: { hasBrandDescription: !!brandDescription?.trim() },
 		});
 
-		// Track onboarding step 2 in LogSnag (fire and forget)
-		getUserProfile(userId)
-			.then((profile) => {
-				return trackServer('onboarding_step_completed', {
-					step: 2,
-					stepName: 'brand',
-					email: profile?.email || '',
-					name: profile?.fullName || '',
-					userId,
+			// Track onboarding step 2 in LogSnag (fire and forget)
+			getUserProfile(userId)
+				.then((profile) => {
+					return trackServer({
+						event: 'onboarding_step_completed',
+						properties: {
+							step: 2,
+							stepName: 'brand',
+							email: profile?.email || '',
+							name: profile?.fullName || '',
+							userId,
+						},
+					});
+				})
+				.catch(() => {
+					// Ignore tracking errors - fire and forget
 				});
-			})
-			.catch(() => {
-				// Ignore tracking errors - fire and forget
-			});
 
 		return NextResponse.json({
 			success: true,

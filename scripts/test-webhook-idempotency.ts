@@ -5,7 +5,10 @@
  * Validates that the Clerk webhook endpoint responds consistently to duplicate ids.
  */
 
-import 'dotenv/config';
+import { loadEnvConfig } from '@next/env';
+
+// Load env the same way Next.js does (.env.local, .env.development, etc.)
+loadEnvConfig(process.cwd());
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3001';
 

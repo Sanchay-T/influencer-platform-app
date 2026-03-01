@@ -31,7 +31,7 @@ export const CampaignFinishedEmail = ({
 			<Preview>Your campaign has finished!</Preview>
 			<Container style={{ maxWidth: '480px', margin: '0 auto', padding: '20px 0 48px' }}>
 				<Img
-					src="https://influencerplatform.vercel.app/static/logo.png"
+					src="https://usegemz.io/logo.png"
 					width="48"
 					height="48"
 					alt="Logo"
@@ -79,7 +79,7 @@ const campaignFinishedPreviewProps: CampaignFinishedEmailProps = {
 	username: 'alanturing',
 	campaignName: 'Summer Campaign',
 	campaignType: 'Influencer',
-	dashboardUrl: 'https://influencerplatform.vercel.app/dashboard',
+	dashboardUrl: 'https://usegemz.io/dashboard',
 };
 
 CampaignFinishedEmail.PreviewProps = campaignFinishedPreviewProps;
@@ -153,7 +153,7 @@ export const CampaignFinishedEmailEn = ({
 			<Preview>Your campaign has finished!</Preview>
 			<Container style={{ maxWidth: '480px', margin: '0 auto', padding: '20px 0 48px' }}>
 				<Img
-					src="https://influencerplatform.vercel.app/static/logo.png"
+					src="https://usegemz.io/logo.png"
 					width="48"
 					height="48"
 					alt="Logo"
@@ -201,7 +201,7 @@ const campaignFinishedPreviewPropsEn: CampaignFinishedEmailProps = {
 	username: 'alanturing',
 	campaignName: 'Summer Campaign',
 	campaignType: 'Influencer',
-	dashboardUrl: 'https://influencerplatform.vercel.app/dashboard',
+	dashboardUrl: 'https://usegemz.io/dashboard',
 };
 
 CampaignFinishedEmailEn.PreviewProps = campaignFinishedPreviewPropsEn;

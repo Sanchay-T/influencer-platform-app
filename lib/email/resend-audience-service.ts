@@ -1,4 +1,7 @@
+import { eq } from 'drizzle-orm';
 import { Resend } from 'resend';
+import { db } from '@/lib/db';
+import { users } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { SentryLogger } from '@/lib/logging/sentry-logger';
 
@@ -7,6 +10,59 @@ const resendApiKey = process.env.RESEND_API_KEY;
 const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
 const AUDIENCE_ID = process.env.RESEND_AUDIENCE_ID;
+
+// =====================================================
+// USE2-79: Resend Auto-Tagging
+// =====================================================
+// Resend SDK does NOT support native contact tags.
+// Tags are stored in our DB (users.resendTags) and used
+// for broadcast targeting/segmentation.
+
+/** Lifecycle tags for Resend audience segmentation */
+export const RESEND_TAGS = {
+	SIGNUP: 'signup',
+	TRIAL: 'trial',
+	CANCELLED_TRIAL: 'cancelled_trial',
+	CUSTOMER: 'customer',
+} as const;
+
+export type ResendTag = (typeof RESEND_TAGS)[keyof typeof RESEND_TAGS];
+
+/**
+ * Derive the correct set of tags from a user's subscription status.
+ * Tags are additive/cumulative — once a user signs up, they always have 'signup'.
+ */
+export function deriveResendTags(
+	subscriptionStatus: string | null | undefined,
+	previousStatus?: string | null
+): ResendTag[] {
+	const tags: ResendTag[] = [RESEND_TAGS.SIGNUP];
+
+	switch (subscriptionStatus) {
+		case 'trialing':
+			tags.push(RESEND_TAGS.TRIAL);
+			break;
+		case 'active':
+			tags.push(RESEND_TAGS.CUSTOMER);
+			break;
+		case 'canceled':
+			// Distinguish between cancelled trial and cancelled paid subscription
+			if (previousStatus === 'trialing') {
+				tags.push(RESEND_TAGS.CANCELLED_TRIAL);
+			} else {
+				// Was a paying customer who cancelled
+				tags.push(RESEND_TAGS.CUSTOMER);
+			}
+			break;
+		case 'past_due':
+		case 'unpaid':
+			tags.push(RESEND_TAGS.CUSTOMER);
+			break;
+		// 'none' or null — just 'signup'
+	}
+
+	return tags;
+}
 
 export interface AddContactResult {
 	success: boolean;
@@ -43,6 +99,14 @@ export class ResendAudienceService {
 		if (!AUDIENCE_ID) {
 			structuredConsole.warn(
 				'⚠️ [RESEND-AUDIENCE] RESEND_AUDIENCE_ID not configured, skipping sync'
+			);
+			SentryLogger.captureException(
+				new Error('RESEND_AUDIENCE_ID not configured — audience sync disabled'),
+				{
+					tags: { feature: 'resend_audience', operation: 'add_contact' },
+					extra: { email },
+					level: 'warning',
+				}
 			);
 			return { success: false, error: 'Audience ID not configured' };
 		}
@@ -150,6 +214,14 @@ export class ResendAudienceService {
 			structuredConsole.warn(
 				'⚠️ [RESEND-AUDIENCE] RESEND_AUDIENCE_ID not configured, skipping update'
 			);
+			SentryLogger.captureException(
+				new Error('RESEND_AUDIENCE_ID not configured — audience sync disabled'),
+				{
+					tags: { feature: 'resend_audience', operation: 'update_contact' },
+					extra: { email },
+					level: 'warning',
+				}
+			);
 			return { success: false, error: 'Audience ID not configured' };
 		}
 
@@ -246,6 +318,14 @@ export class ResendAudienceService {
 		if (!AUDIENCE_ID) {
 			structuredConsole.warn(
 				'⚠️ [RESEND-AUDIENCE] RESEND_AUDIENCE_ID not configured, skipping removal'
+			);
+			SentryLogger.captureException(
+				new Error('RESEND_AUDIENCE_ID not configured — audience sync disabled'),
+				{
+					tags: { feature: 'resend_audience', operation: 'remove_contact' },
+					extra: { email },
+					level: 'warning',
+				}
 			);
 			return { success: false, error: 'Audience ID not configured' };
 		}
@@ -356,5 +436,72 @@ export class ResendAudienceService {
 			const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 			return { success: false, error: errorMessage };
 		}
+	}
+
+	// =====================================================
+	// USE2-79: Tag Management (DB-local, not Resend API)
+	// =====================================================
+
+	/**
+	 * Set lifecycle tags for a user (stored in DB, not Resend).
+	 * Used for broadcast targeting and segmentation.
+	 *
+	 * @param clerkUserId - The Clerk user ID (users.userId)
+	 * @param tags - Array of ResendTag values to set
+	 */
+	static async setContactTags(
+		clerkUserId: string,
+		tags: ResendTag[]
+	): Promise<{ success: boolean; error?: string }> {
+		try {
+			structuredConsole.log('🏷️ [RESEND-TAGS] Setting tags:', {
+				userId: clerkUserId,
+				tags,
+			});
+
+			await db
+				.update(users)
+				.set({
+					resendTags: tags,
+					updatedAt: new Date(),
+				})
+				.where(eq(users.userId, clerkUserId));
+
+			structuredConsole.log('✅ [RESEND-TAGS] Tags set successfully:', {
+				userId: clerkUserId,
+				tags,
+			});
+
+			return { success: true };
+		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+			structuredConsole.error('❌ [RESEND-TAGS] Failed to set tags:', {
+				userId: clerkUserId,
+				tags,
+				error: errorMessage,
+			});
+
+			SentryLogger.captureException(error instanceof Error ? error : new Error(errorMessage), {
+				tags: { feature: 'resend_tags', operation: 'set_contact_tags' },
+				extra: { clerkUserId, resendTags: tags },
+				level: 'warning',
+			});
+
+			return { success: false, error: errorMessage };
+		}
+	}
+
+	/**
+	 * Derive and set tags based on the user's current subscription status.
+	 * Convenience method that combines deriveResendTags + setContactTags.
+	 */
+	static async syncTagsFromStatus(
+		clerkUserId: string,
+		subscriptionStatus: string | null | undefined,
+		previousStatus?: string | null
+	): Promise<{ success: boolean; error?: string }> {
+		const tags = deriveResendTags(subscriptionStatus, previousStatus);
+		return ResendAudienceService.setContactTags(clerkUserId, tags);
 	}
 }

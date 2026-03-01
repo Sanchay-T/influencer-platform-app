@@ -29,6 +29,7 @@ import {
 	resolveAvatarSource,
 	resolveProfileUrl,
 } from '../utils/list-helpers';
+import { EnrichmentStatusBadge } from './EnrichmentStatusBadge';
 
 interface ListViewProps {
 	items: ListItem[];
@@ -50,6 +51,7 @@ export function ListView({ items, bucketOptions, onStatusChange, onTogglePin }: 
 								<TableHead className="text-zinc-400">Followers</TableHead>
 								<TableHead className="text-zinc-400">Category</TableHead>
 								<TableHead className="text-zinc-400">Status</TableHead>
+								<TableHead className="text-zinc-400">Enrichment</TableHead>
 								<TableHead className="text-zinc-400">Pin</TableHead>
 								<TableHead className="text-right text-zinc-400">Actions</TableHead>
 							</TableRow>
@@ -57,7 +59,7 @@ export function ListView({ items, bucketOptions, onStatusChange, onTogglePin }: 
 						<TableBody>
 							{items.length === 0 ? (
 								<TableRow>
-									<TableCell colSpan={7} className="py-10 text-center text-sm text-zinc-500">
+									<TableCell colSpan={8} className="py-10 text-center text-sm text-zinc-500">
 										No creators saved yet. Add creators from search results or campaigns to populate
 										this list.
 									</TableCell>
@@ -138,6 +140,9 @@ function ListViewRow({ item, bucketOptions, onStatusChange, onTogglePin }: ListV
 						))}
 					</SelectContent>
 				</Select>
+			</TableCell>
+			<TableCell>
+				<EnrichmentStatusBadge item={item} />
 			</TableCell>
 			<TableCell className="text-center">
 				<Button

@@ -50,6 +50,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 					? `/api/export/download/${exportJob.id}`
 					: null;
 
+
 			return NextResponse.json({
 				id: exportJob.id,
 				status: exportJob.status,

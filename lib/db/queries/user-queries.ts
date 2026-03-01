@@ -76,6 +76,7 @@ export async function getUserProfile(userId: string): Promise<UserProfileComplet
 			industry: users.industry,
 			onboardingStep: users.onboardingStep,
 			isAdmin: users.isAdmin,
+			resendTags: users.resendTags,
 			createdAt: users.createdAt,
 			updatedAt: users.updatedAt,
 
@@ -143,6 +144,7 @@ export async function getUserProfile(userId: string): Promise<UserProfileComplet
 	const profile: UserProfileComplete = {
 		...userRecord,
 		// Ensure required fields have defaults
+		resendTags: userRecord.resendTags || [],
 		currentPlan: userRecord.currentPlan, // NULL = not onboarded yet
 		subscriptionStatus: userRecord.subscriptionStatus || 'none',
 		// trialStatus removed - derive via deriveTrialStatus()
@@ -197,6 +199,7 @@ export async function createUser(userData: {
 	});
 
 	return db.transaction(async (tx) => {
+		const txStart = Date.now();
 		debug('Starting database transaction for user creation', { userId: userData.userId });
 
 		try {
@@ -213,6 +216,10 @@ export async function createUser(userData: {
 					onboardingStep: userData.onboardingStep || 'pending',
 				})
 				.returning();
+			info('createUser: users INSERT done', {
+				userId: userData.userId,
+				txMs: Date.now() - txStart,
+			});
 
 			// 2. Insert subscription data
 			// Note: currentPlan is NULL until Stripe webhook confirms payment
@@ -227,6 +234,10 @@ export async function createUser(userData: {
 					trialEndDate: userData.trialEndDate,
 				})
 				.returning();
+			info('createUser: user_subscriptions INSERT done', {
+				userId: userData.userId,
+				txMs: Date.now() - txStart,
+			});
 
 			// 3. Insert usage tracking
 			const [newUsage] = await tx
@@ -239,6 +250,10 @@ export async function createUser(userData: {
 					enrichmentsCurrentMonth: 0,
 				})
 				.returning();
+			info('createUser: user_usage INSERT done', {
+				userId: userData.userId,
+				txMs: Date.now() - txStart,
+			});
 
 			// 4. Insert system data
 			const [newSystemData] = await tx
@@ -248,6 +263,10 @@ export async function createUser(userData: {
 					emailScheduleStatus: {},
 				})
 				.returning();
+			info('createUser: user_system_data INSERT done', {
+				userId: userData.userId,
+				txMs: Date.now() - txStart,
+			});
 
 			// Return combined profile
 			const profile: UserProfileComplete = {
@@ -261,6 +280,7 @@ export async function createUser(userData: {
 				industry: newUser.industry,
 				onboardingStep: newUser.onboardingStep,
 				isAdmin: newUser.isAdmin,
+				resendTags: newUser.resendTags ?? [],
 				createdAt: newUser.createdAt,
 				updatedAt: newUser.updatedAt,
 
@@ -317,13 +337,19 @@ export async function createUser(userData: {
 				numericCode === 23505;
 
 			if (duplicate) {
-				warn('User creation detected duplicate userId, returning existing profile', {
+				warn('User creation hit unique constraint — checking for existing profile', {
 					userId: userData.userId,
+					errorMessage: message,
+					errorCode: code ?? String(numericCode),
 				});
 				const existing = await getUserProfile(userData.userId);
 				if (existing) {
 					return existing;
 				}
+				// Concurrent txn rolled back — no user exists yet. Retry once.
+				warn('Duplicate error but no existing profile found — retrying INSERT', {
+					userId: userData.userId,
+				});
 			}
 
 			logError('User creation transaction failed', transactionError, { userId: userData.userId });
@@ -333,61 +359,87 @@ export async function createUser(userData: {
 }
 
 export async function ensureUserProfile(userId: string): Promise<UserProfileComplete> {
-	const existingProfile = await getUserProfile(userId);
-	if (existingProfile) {
-		debug('ensureUserProfile resolved existing record', { userId });
-		return existingProfile;
-	}
+	// Retry up to 3 times — concurrent requests can cause a rolled-back txn
+	// where the duplicate error fires but no committed row exists yet.
+	const MAX_ATTEMPTS = 3;
 
-	info('ensureUserProfile creating normalized profile', { userId });
-
-	// Get user data from Clerk - this is required, no fallback
-	const clerk = await clerkBackendClient();
-	const clerkUser = await clerk.users.getUser(userId);
-	const email = clerkUser.emailAddresses?.[0]?.emailAddress;
-	const fullName = `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || undefined;
-
-	if (!email) {
-		// This should never happen - Clerk users always have email
-		throw new Error(`Clerk user ${userId} has no email address`);
-	}
-
-	try {
-		// Note: currentPlan is intentionally not set here
-		// It will be set by Stripe webhook after user completes payment
-		const createdProfile = await createUser({
-			userId,
-			email,
-			fullName,
-			onboardingStep: 'pending',
-			// currentPlan: null - not set until Stripe confirms payment
-		});
-
-		info('ensureUserProfile created new record', { userId });
-		return createdProfile;
-	} catch (createError: unknown) {
-		const errorRecord = toRecord(createError);
-		const message = errorRecord ? getStringProperty(errorRecord, 'message') : null;
-		const code = errorRecord ? getStringProperty(errorRecord, 'code') : null;
-		const numericCode = errorRecord ? getNumberProperty(errorRecord, 'code') : null;
-		const lowerMessage = message ? message.toLowerCase() : '';
-		const duplicate =
-			lowerMessage.includes('duplicate') ||
-			lowerMessage.includes('unique') ||
-			code === '23505' ||
-			numericCode === 23505;
-
-		if (duplicate) {
-			warn('ensureUserProfile detected concurrent creation, refetching', { userId });
-			const profile = await getUserProfile(userId);
-			if (profile) {
-				return profile;
-			}
+	for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+		const existingProfile = await getUserProfile(userId);
+		if (existingProfile) {
+			debug('ensureUserProfile resolved existing record', { userId, attempt });
+			return existingProfile;
 		}
 
-		logError('ensureUserProfile failed to create user', createError, { userId });
-		throw createError;
+		info('ensureUserProfile creating normalized profile', { userId, attempt });
+
+		// Get user data from Clerk with a timeout to prevent hanging the dashboard
+		const CLERK_TIMEOUT_MS = 8000;
+		const clerk = await clerkBackendClient();
+		const clerkUser = await Promise.race([
+			clerk.users.getUser(userId),
+			new Promise<never>((_, reject) =>
+				setTimeout(
+					() => reject(new Error(`Clerk API timed out after ${CLERK_TIMEOUT_MS}ms for ${userId}`)),
+					CLERK_TIMEOUT_MS
+				)
+			),
+		]);
+		const email = clerkUser.emailAddresses?.[0]?.emailAddress;
+		const fullName = `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || undefined;
+
+		if (!email) {
+			throw new Error(`Clerk user ${userId} has no email address`);
+		}
+
+		try {
+			const createdProfile = await createUser({
+				userId,
+				email,
+				fullName,
+				onboardingStep: 'pending',
+			});
+
+			info('ensureUserProfile created new record', { userId });
+			return createdProfile;
+		} catch (createError: unknown) {
+			const errorRecord = toRecord(createError);
+			const message = errorRecord ? getStringProperty(errorRecord, 'message') : null;
+			const code = errorRecord ? getStringProperty(errorRecord, 'code') : null;
+			const numericCode = errorRecord ? getNumberProperty(errorRecord, 'code') : null;
+			const lowerMessage = message ? message.toLowerCase() : '';
+			const isDuplicate =
+				lowerMessage.includes('duplicate') ||
+				lowerMessage.includes('unique') ||
+				code === '23505' ||
+				numericCode === 23505;
+
+			if (isDuplicate) {
+				// Concurrent txn may have committed — try fetching again
+				warn('ensureUserProfile duplicate error, refetching', { userId, attempt });
+				const profile = await getUserProfile(userId);
+				if (profile) {
+					return profile;
+				}
+				// The concurrent txn rolled back too — retry the whole loop
+				if (attempt < MAX_ATTEMPTS) {
+					warn('ensureUserProfile no profile after duplicate — retrying', { userId, attempt });
+					await new Promise((r) => setTimeout(r, 100 * attempt));
+					continue;
+				}
+			}
+
+			logError('ensureUserProfile failed to create user', createError, {
+				userId,
+				attempt,
+				errorMessage: message,
+				errorCode: code ?? String(numericCode),
+			});
+			throw createError;
+		}
 	}
+
+	// Should never reach here, but TypeScript needs it
+	throw new Error(`ensureUserProfile exhausted ${MAX_ATTEMPTS} attempts for ${userId}`);
 }
 
 /**
@@ -582,7 +634,20 @@ export async function updateUserProfile(
 export async function getUserBilling(
 	userId: string
 ): Promise<(UserBilling & { stripeCustomerId: string }) | null> {
-	const result = await db
+	const result = await buildGetUserBillingQuery(userId);
+
+	const record = result[0];
+	if (!record || typeof record.stripeCustomerId !== 'string') {
+		return null;
+	}
+	return {
+		...record,
+		stripeCustomerId: record.stripeCustomerId,
+	};
+}
+
+export function buildGetUserBillingQuery(userId: string) {
+	return db
 		.select({
 			id: userBilling.id,
 			userId: userBilling.userId,
@@ -600,15 +665,6 @@ export async function getUserBilling(
 				isNotNull(userBilling.stripeCustomerId)
 			)
 		);
-
-	const record = result[0];
-	if (!record || typeof record.stripeCustomerId !== 'string') {
-		return null;
-	}
-	return {
-		...record,
-		stripeCustomerId: record.stripeCustomerId,
-	};
 }
 
 /**
@@ -644,6 +700,7 @@ export async function getUserByStripeCustomerId(
 			industry: users.industry,
 			onboardingStep: users.onboardingStep,
 			isAdmin: users.isAdmin,
+			resendTags: users.resendTags,
 			createdAt: users.createdAt,
 			updatedAt: users.updatedAt,
 
@@ -695,6 +752,7 @@ export async function getUserByStripeCustomerId(
 	const profile: UserProfileComplete = {
 		...userRecord,
 		// Ensure required fields have defaults
+		resendTags: userRecord.resendTags || [],
 		currentPlan: userRecord.currentPlan, // NULL = not onboarded yet
 		subscriptionStatus: userRecord.subscriptionStatus || 'none',
 		// trialStatus removed - derive via deriveTrialStatus()

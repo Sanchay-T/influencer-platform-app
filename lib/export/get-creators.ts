@@ -11,7 +11,7 @@ import { db } from '@/lib/db';
 import { jobCreators, scrapingResults } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { SentryLogger } from '@/lib/sentry';
-import { toRecord } from '@/lib/utils/type-guards';
+import { isRecord } from '@/lib/utils/type-guards';
 
 export interface GetCreatorsResult {
 	creators: unknown[];
@@ -72,24 +72,18 @@ export async function getCreatorsForJobs(jobIds: string[]): Promise<GetCreatorsR
 		const creatorsData = result.creators;
 		if (Array.isArray(creatorsData)) {
 			allCreators = allCreators.concat(creatorsData);
-		} else if (creatorsData && typeof creatorsData === 'object') {
-			const creatorsRecord = toRecord(creatorsData);
-			if (!creatorsRecord) {
-				continue;
-			}
-
-			const results = creatorsRecord.results;
-			if (Array.isArray(results)) {
-				for (const r of results) {
-					const resultRecord = toRecord(r);
+		} else if (isRecord(creatorsData)) {
+			if (Array.isArray(creatorsData.results)) {
+				for (const r of creatorsData.results) {
+					const resultRecord = isRecord(r) ? r : null;
 					const creatorsList = resultRecord ? resultRecord.creators : undefined;
 					if (Array.isArray(creatorsList)) {
 						allCreators = allCreators.concat(creatorsList);
 					}
 				}
 			} else {
-				for (const key of Object.keys(creatorsRecord)) {
-					const value = creatorsRecord[key];
+				for (const key of Object.keys(creatorsData)) {
+					const value = creatorsData[key];
 					if (Array.isArray(value)) {
 						allCreators = allCreators.concat(value);
 					}

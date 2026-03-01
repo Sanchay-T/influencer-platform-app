@@ -40,21 +40,31 @@ function isBot(userAgent: string | null): boolean {
   return BOT_USER_AGENTS.some(bot => ua.includes(bot.toLowerCase()));
 }
 
-const PUBLIC_ROUTE_PATTERNS = [
+const PUBLIC_ROUTE_PATTERNS: RegExp[] = [
   /^\/$/,
+  /^\/blog(\/.*)?$/,
+  /^\/blogs(\/.*)?$/,
+  /^\/sitemap\.xml$/,
+  /^\/robots\.txt$/,
   /^\/sign-in(\/.*)?$/,
   /^\/sign-up(\/.*)?$/,
   /^\/sso-callback(\/.*)?$/,
   /^\/api\/stripe\/webhook$/,
+  /^\/api\/health$/,
+  /^\/api\/status$/,
   /^\/api\/webhooks\/.*$/,
+  /^\/api\/cron\/.*$/,
   /^\/api\/qstash\/.*$/,
   /^\/api\/v2\/worker\/.*$/,
   /^\/api\/proxy\/.*$/,
   /^\/api\/export\/.*$/,
   /^\/api\/email\/send-scheduled$/,
-  // E2E test admin routes (dev only - routes check NODE_ENV internally)
-  /^\/api\/admin\/e2e\/.*$/,
 ];
+
+if (process.env.NODE_ENV !== 'production') {
+  // E2E test admin routes (dev/test only).
+  PUBLIC_ROUTE_PATTERNS.push(/^\/api\/admin\/e2e\/.*$/);
+}
 
 function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTE_PATTERNS.some((pattern) => pattern.test(pathname));
@@ -79,6 +89,19 @@ function hasBypassAuthHeader(request: NextRequest): boolean {
   return false;
 }
 
+function hasBypassAuthCookie(request: NextRequest): boolean {
+  if (process.env.NODE_ENV === 'production') return false;
+
+  const bypassCookieName = process.env.AUTH_BYPASS_COOKIE || '__gemz_dev_auth';
+  const bypassToken = process.env.AUTH_BYPASS_TOKEN || 'dev-bypass';
+  const cookieValue = request.cookies.get(bypassCookieName)?.value;
+  return Boolean(cookieValue && cookieValue === bypassToken);
+}
+
+function hasBypassAuth(request: NextRequest): boolean {
+  return hasBypassAuthHeader(request) || hasBypassAuthCookie(request);
+}
+
 // Wrap clerkMiddleware to intercept bots BEFORE Clerk processes them
 const clerk = clerkMiddleware(async (auth, request) => {
   if (shouldLogMiddleware) {
@@ -89,7 +112,7 @@ const clerk = clerkMiddleware(async (auth, request) => {
     return NextResponse.next();
   }
 
-  if (hasBypassAuthHeader(request)) {
+  if (hasBypassAuth(request)) {
     return NextResponse.next();
   }
 
@@ -105,6 +128,17 @@ export default async function middleware(request: NextRequest, event: NextFetchE
   if (pathname === '/' && isBot(userAgent)) {
     if (shouldLogMiddleware) {
       console.log('[MIDDLEWARE] Bot detected on homepage, bypassing Clerk:', userAgent);
+    }
+    return NextResponse.next();
+  }
+
+  // Critical: Skip Clerk entirely for public routes and trusted dev bypass headers.
+  //
+  // Clerk's dev-browser handshake can return `dev-browser-missing` for non-browser clients
+  // (curl, validation scripts). We still want those calls to hit our public endpoints.
+  if (isPublicRoute(pathname) || hasBypassAuth(request)) {
+    if (shouldLogMiddleware) {
+      console.log('[MIDDLEWARE] Bypassing Clerk for route:', pathname);
     }
     return NextResponse.next();
   }

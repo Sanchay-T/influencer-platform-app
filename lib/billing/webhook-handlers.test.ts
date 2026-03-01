@@ -35,6 +35,7 @@ vi.mock('@/lib/logging', () => ({
 		error: vi.fn(),
 		debug: vi.fn(),
 	})),
+	systemLogger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 	LogCategory: { BILLING: 'billing' },
 }));
 vi.mock('@/lib/logging/sentry-logger', () => ({

@@ -24,7 +24,7 @@ interface ExportReadyEmailProps {
 	expiresAt: string;
 }
 
-const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://usegems.io';
+const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://usegemz.io';
 
 export const ExportReadyEmail = ({
 	downloadUrl,
@@ -72,13 +72,15 @@ export const ExportReadyEmail = ({
 			</Container>
 		</Body>
 	</Html>
-);
+	);
 
-ExportReadyEmail.PreviewProps = {
+const previewProps: ExportReadyEmailProps = {
 	downloadUrl: `${baseUrl}/exports/sample.csv`,
 	creatorCount: 1250,
 	expiresAt: 'January 20, 2026',
 } satisfies ExportReadyEmailProps;
+
+ExportReadyEmail.PreviewProps = previewProps;
 
 export default ExportReadyEmail;
 

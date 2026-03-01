@@ -1,13 +1,17 @@
 /**
  * similar-discovery.ts — Provider for finding similar creators via Influencers Club Discovery API
  *
- * Uses the `similar_to` filter to find creators similar to a given username.
- * Supports Instagram and TikTok platforms.
+ * Enriches the target creator, generates a niche description via AI, then uses the
+ * `ai_search` filter to find creators in the same niche. Supports Instagram and TikTok.
  */
 
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { apiTracker, SentryLogger, searchTracker } from '@/lib/sentry';
-import { type DiscoveryAccount, discoverySearchSimilar } from '@/lib/services/influencers-club';
+import {
+	type DiscoveryAccount,
+	discoverySearchByNiche,
+	enrichCreator,
+} from '@/lib/services/influencers-club';
 import { getRecordProperty, getStringProperty, toError, toRecord } from '@/lib/utils/type-guards';
 import type { SearchJobService } from '../job-service';
 import type {
@@ -18,6 +22,7 @@ import type {
 } from '../types';
 import { computeProgress, sleep } from '../utils';
 import { addCost } from '../utils/cost';
+import { generateNicheDescription } from '../utils/niche-generator';
 
 const DISCOVERY_COST_PER_50_USD = 0.5;
 const MAX_PAGES = 200; // API limit: pages 0-199
@@ -273,6 +278,37 @@ export async function runSimilarDiscoveryProvider(
 		};
 	}
 
+	// Enrich the target creator and generate a niche description for ai_search
+	structuredConsole.log('[SIMILAR-DISCOVERY-PROVIDER] Enriching target creator', {
+		jobId: job.id,
+		username,
+	});
+
+	const enrichedProfile = await apiTracker.trackExternalCall(
+		'influencers_club',
+		'enrich_creator',
+		async () => enrichCreator(username)
+	);
+	metrics.apiCalls += 1;
+	remainingApiBudget -= 1;
+
+	const nicheDescription = await generateNicheDescription(username, enrichedProfile);
+
+	// Compute follower range from enriched profile (same order of magnitude)
+	const followerMin = enrichedProfile?.follower_count
+		? Math.round(enrichedProfile.follower_count * 0.1)
+		: undefined;
+	const followerMax = enrichedProfile?.follower_count
+		? Math.round(enrichedProfile.follower_count * 10)
+		: undefined;
+
+	structuredConsole.log('[SIMILAR-DISCOVERY-PROVIDER] Niche description generated', {
+		jobId: job.id,
+		nicheDescription,
+		followerMin,
+		followerMax,
+	});
+
 	// Fetch pages until we have enough or run out
 	const maxPagesToFetch = Math.ceil(needMore / RESULTS_PER_PAGE);
 	let pagesFetched = 0;
@@ -304,11 +340,13 @@ export async function runSimilarDiscoveryProvider(
 		try {
 			const result = await apiTracker.trackExternalCall(
 				'influencers_club',
-				'discovery_similar',
+				'discovery_niche',
 				async () =>
-					discoverySearchSimilar({
-						similarTo: [username],
+					discoverySearchByNiche({
+						aiSearch: nicheDescription,
 						platform: targetPlatform,
+						followerMin,
+						followerMax,
 						page: currentPage,
 						limit: RESULTS_PER_PAGE,
 					})

@@ -1,4 +1,12 @@
-import { ArrowRight, Calendar, CheckCircle, CreditCard, Sparkles } from 'lucide-react';
+import {
+	AlertTriangle,
+	ArrowRight,
+	Calendar,
+	CheckCircle,
+	CreditCard,
+	RefreshCw,
+	Sparkles,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,7 +39,9 @@ interface Props {
 	sessionData: SessionData | null;
 	isSubmitting: boolean;
 	webhookConfirmed: boolean;
+	verificationFailed?: boolean;
 	onContinue: () => void;
+	onRetry?: () => void;
 }
 
 const formatDate = (timestamp: number) =>
@@ -46,7 +56,9 @@ export function SuccessCard({
 	sessionData,
 	isSubmitting,
 	webhookConfirmed,
+	verificationFailed,
 	onContinue,
+	onRetry,
 }: Props) {
 	if (loading) {
 		return (
@@ -158,13 +170,40 @@ export function SuccessCard({
 							</div>
 						</div>
 
+						{verificationFailed && (
+							<div className="bg-amber-950/30 border border-amber-700/50 rounded-lg p-4 text-sm text-amber-200 flex items-start gap-3">
+								<AlertTriangle className="h-5 w-5 mt-0.5 shrink-0 text-amber-400" />
+								<div>
+									<p className="font-medium mb-1">Taking longer than expected</p>
+									<p className="text-amber-300/80">
+										Your payment is being processed. Please try again or contact{' '}
+										<a href="mailto:support@usegems.io" className="underline">
+											support@usegems.io
+										</a>{' '}
+										if the issue persists.
+									</p>
+									{onRetry && (
+										<Button
+											onClick={onRetry}
+											variant="outline"
+											size="sm"
+											className="mt-3 border-amber-700/50 text-amber-200 hover:bg-amber-900/30"
+										>
+											<RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+											Try again
+										</Button>
+									)}
+								</div>
+							</div>
+						)}
+
 						<Button
 							onClick={onContinue}
 							size="lg"
 							className="w-full h-14 text-lg font-semibold"
 							disabled={buttonDisabled}
 						>
-							{!webhookConfirmed && (
+							{!(webhookConfirmed || verificationFailed) && (
 								<div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
 							)}
 							{buttonText}

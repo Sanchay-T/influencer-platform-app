@@ -2,7 +2,8 @@
  * Unified Analytics Tracking
  *
  * @context Single entry point for all analytics tracking.
- * Sends events to GA4, Meta Pixel, and LogSnag simultaneously.
+ * Client-side: pushes to GTM dataLayer (GTM routes to GA4, Meta, Google Ads).
+ * Server-side: sends to GA4 Measurement Protocol + LogSnag.
  *
  * @why Consolidates tracking to ensure consistent event firing across all platforms.
  * Every event includes email, name, and userId for consistent user identification.
@@ -12,7 +13,8 @@
 
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import type { AnalyticsEvent, EventPropertiesMap } from './events';
-import { trackGA4Event, trackGA4ServerEvent, trackGA4SignUp } from './google-analytics';
+import { trackGA4ServerEvent } from './google-analytics';
+import { pushToDataLayer } from './gtm';
 import {
 	trackCampaignCreated,
 	trackCreatorSaved,
@@ -28,13 +30,13 @@ import {
 	trackUserSignedIn,
 	trackUserSignup,
 } from './logsnag';
-import {
-	trackCompleteRegistration,
-	trackLead,
-	trackMetaEvent,
-	trackPurchase,
-	trackStartTrial,
-} from './meta-pixel';
+
+export type AnalyticsPayload = {
+	[E in AnalyticsEvent]: {
+		event: E;
+		properties: EventPropertiesMap[E];
+	};
+}[AnalyticsEvent];
 
 type TrackArgs = {
 	[E in AnalyticsEvent]: [event: E, properties: EventPropertiesMap[E]];
@@ -47,56 +49,14 @@ type TrackArgs = {
 /**
  * Track an event from the browser (client-side)
  *
- * Use this for events triggered by user interactions in React components.
- * Sends to GA4 and Meta Pixel.
+ * Product analytics events (login, onboarding steps, checkout clicks) are
+ * tracked server-side via LogSnag + GA4 Measurement Protocol.
+ * GTM dataLayer only gets the 3 conversion events: sign_up, begin_trial, purchase.
+ * Use trackLeadClient() and trackPurchaseClient() for those.
  */
-export function trackClient(...args: TrackArgs): void {
-	if (typeof window === 'undefined') {
-		structuredConsole.warn('[Analytics] trackClient called on server; use trackServer instead');
-		return;
-	}
-
-	switch (args[0]) {
-		case 'user_signed_in': {
-			const props = args[1];
-			trackGA4Event('login', {
-				method: 'clerk',
-				user_id: props.userId,
-			});
-			break;
-		}
-
-		case 'onboarding_step_completed': {
-			const props = args[1];
-			trackGA4Event(`onboarding_step_${props.step}`, {
-				step_name: props.stepName,
-			});
-			break;
-		}
-
-		case 'onboarding_completed': {
-			trackGA4Event('complete_registration', { method: 'onboarding' });
-			trackCompleteRegistration();
-			break;
-		}
-
-		case 'upgrade_clicked': {
-			const props = args[1];
-			trackGA4Event('begin_checkout', {
-				source: props.source,
-				current_plan: props.currentPlan,
-				target_plan: props.targetPlan,
-			});
-			trackMetaEvent('InitiateCheckout', {
-				content_name: props.targetPlan,
-				content_category: 'subscription',
-			});
-			break;
-		}
-
-		default:
-			structuredConsole.warn(`[Analytics] Unknown client event: ${args[0]}`);
-	}
+export function trackClient(_payload: AnalyticsPayload): void {
+	// No-op: product analytics events don't need GTM.
+	// Conversion events use trackLeadClient() and trackPurchaseClient() instead.
 }
 
 // ============================================================================
@@ -109,10 +69,10 @@ export function trackClient(...args: TrackArgs): void {
  * Use this for events triggered in API routes or Stripe/Clerk webhooks.
  * Sends to GA4 (Measurement Protocol), and LogSnag.
  */
-export async function trackServer(...args: TrackArgs): Promise<void> {
-	switch (args[0]) {
+export async function trackServer(payload: AnalyticsPayload): Promise<void> {
+	switch (payload.event) {
 		case 'user_signed_up': {
-			const props = args[1];
+			const props = payload.properties;
 			await Promise.all([
 				trackGA4ServerEvent('sign_up', { method: 'clerk' }, props.userId),
 				trackUserSignup({ email: props.email, name: props.name }),
@@ -121,7 +81,7 @@ export async function trackServer(...args: TrackArgs): Promise<void> {
 		}
 
 		case 'user_signed_in': {
-			const props = args[1];
+			const props = payload.properties;
 			await Promise.all([
 				trackGA4ServerEvent('login', { method: 'clerk' }, props.userId),
 				trackUserSignedIn({
@@ -134,7 +94,7 @@ export async function trackServer(...args: TrackArgs): Promise<void> {
 		}
 
 		case 'onboarding_step_completed': {
-			const props = args[1];
+			const props = payload.properties;
 			await Promise.all([
 				trackGA4ServerEvent(
 					`onboarding_step_${props.step}`,
@@ -155,7 +115,7 @@ export async function trackServer(...args: TrackArgs): Promise<void> {
 		}
 
 		case 'trial_started': {
-			const props = args[1];
+			const props = payload.properties;
 			await Promise.all([
 				trackGA4ServerEvent(
 					'begin_trial',
@@ -177,7 +137,7 @@ export async function trackServer(...args: TrackArgs): Promise<void> {
 		}
 
 		case 'trial_converted': {
-			const props = args[1];
+			const props = payload.properties;
 			await Promise.all([
 				trackGA4ServerEvent(
 					'purchase',
@@ -201,7 +161,7 @@ export async function trackServer(...args: TrackArgs): Promise<void> {
 		}
 
 		case 'subscription_created': {
-			const props = args[1];
+			const props = payload.properties;
 			await Promise.all([
 				trackGA4ServerEvent(
 					'purchase',
@@ -225,7 +185,7 @@ export async function trackServer(...args: TrackArgs): Promise<void> {
 		}
 
 		case 'subscription_canceled': {
-			const props = args[1];
+			const props = payload.properties;
 			await Promise.all([
 				trackGA4ServerEvent(
 					'subscription_canceled',
@@ -245,7 +205,7 @@ export async function trackServer(...args: TrackArgs): Promise<void> {
 		}
 
 		case 'campaign_created': {
-			const props = args[1];
+			const props = payload.properties;
 			await Promise.all([
 				trackGA4ServerEvent(
 					'campaign_created',
@@ -265,7 +225,7 @@ export async function trackServer(...args: TrackArgs): Promise<void> {
 		}
 
 		case 'search_started': {
-			const props = args[1];
+			const props = payload.properties;
 			await Promise.all([
 				trackGA4ServerEvent(
 					'search_started',
@@ -289,7 +249,7 @@ export async function trackServer(...args: TrackArgs): Promise<void> {
 		}
 
 		case 'search_completed': {
-			const props = args[1];
+			const props = payload.properties;
 			await Promise.all([
 				trackGA4ServerEvent(
 					'search',
@@ -313,7 +273,7 @@ export async function trackServer(...args: TrackArgs): Promise<void> {
 		}
 
 		case 'list_created': {
-			const props = args[1];
+			const props = payload.properties;
 			await Promise.all([
 				trackGA4ServerEvent(
 					'list_created',
@@ -335,7 +295,7 @@ export async function trackServer(...args: TrackArgs): Promise<void> {
 		}
 
 		case 'creator_saved': {
-			const props = args[1];
+			const props = payload.properties;
 			await Promise.all([
 				trackGA4ServerEvent(
 					'add_to_list',
@@ -357,7 +317,7 @@ export async function trackServer(...args: TrackArgs): Promise<void> {
 		}
 
 		case 'csv_exported': {
-			const props = args[1];
+			const props = payload.properties;
 			await Promise.all([
 				trackGA4ServerEvent(
 					'export',
@@ -380,7 +340,7 @@ export async function trackServer(...args: TrackArgs): Promise<void> {
 		}
 
 		default:
-			structuredConsole.warn(`[Analytics] Unknown server event: ${args[0]}`);
+			structuredConsole.warn(`[Analytics] Unknown server event: ${payload.event}`);
 	}
 }
 
@@ -389,38 +349,35 @@ export async function trackServer(...args: TrackArgs): Promise<void> {
 // ============================================================================
 
 /**
- * Client-side tracking for Lead/SignUp event (new user created, before payment)
- * Call this when a new user is created on the client
- * @why Fires both Meta Pixel "Lead" and GA4 "sign_up" for consistent funnel tracking
+ * Client-side tracking for Signup event (new user created)
+ * @why Fires sign_up via GTM → GA4 + Meta Lead
  */
 export function trackLeadClient(): void {
 	if (typeof window !== 'undefined') {
-		trackLead(); // Meta Pixel "Lead"
-		trackGA4SignUp(); // GA4 "sign_up"
+		pushToDataLayer({ event: 'sign_up', method: 'clerk' });
 	}
 }
 
 /**
- * Client-side tracking for purchase events
+ * Client-side tracking for trial/purchase events
  * Call this on the success page after Stripe checkout
+ * @why Fires begin_trial or purchase via GTM → GA4 + Meta + Google Ads
  */
 export function trackPurchaseClient(value: number, planId: string, isTrial: boolean): void {
-	if (typeof window === 'undefined') {
-		return;
-	}
+	if (typeof window === 'undefined') return;
 
 	if (isTrial) {
-		trackStartTrial(planId);
-		trackGA4Event('begin_trial', {
+		pushToDataLayer({
+			event: 'begin_trial',
 			plan_name: planId,
-			value: value,
+			value,
 			currency: 'USD',
 		});
 	} else {
-		trackPurchase(value, 'USD', planId);
-		trackGA4Event('purchase', {
+		pushToDataLayer({
+			event: 'purchase',
 			plan_name: planId,
-			value: value,
+			value,
 			currency: 'USD',
 			transaction_id: `txn_${Date.now()}`,
 		});

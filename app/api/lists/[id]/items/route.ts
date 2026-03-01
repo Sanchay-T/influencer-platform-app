@@ -4,6 +4,8 @@ import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { addCreatorsToList, removeListItems, updateListItems } from '@/lib/db/queries/list-queries';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { toRecord } from '@/lib/utils/type-guards';
+import { dispatchListEnrichmentBatches, type ListEnrichCreatorPayload } from '@/lib/lists/enrich-list-dispatch';
 import { apiTracker, listTracker, SentryLogger, sessionTracker } from '@/lib/sentry';
 
 function errorToResponse(
@@ -49,6 +51,35 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 		try {
 			const body = await request.json();
 			const result = await addCreatorsToList(userId, id, body.creators ?? []);
+			const addedCreators = Array.isArray(result.addedCreators)
+				? result.addedCreators.filter((item): item is ListEnrichCreatorPayload => {
+					if (!(item && typeof item === 'object')) {
+						return false;
+					}
+					const record = toRecord(item);
+					if (!record) {
+						return false;
+					}
+					return (
+						typeof record.listItemId === 'string' &&
+						typeof record.creatorId === 'string' &&
+						typeof record.handle === 'string' &&
+						typeof record.platform === 'string' &&
+						typeof record.externalId === 'string'
+					);
+				})
+				: [];
+
+			if (addedCreators.length > 0) {
+				// USE2-77: Fan out into parallel batches for faster enrichment
+				dispatchListEnrichmentBatches({ userId, listId: id, addedCreators }).catch((dispatchError) => {
+					structuredConsole.error('[LIST_ITEMS_API] Failed to dispatch auto-enrichment batches', {
+						dispatchError,
+						listId: id,
+						addedCreators: addedCreators.length,
+					});
+				});
+			}
 
 			// Fire-and-forget: Analytics tracking (don't block response)
 			if (result.added > 0) {
@@ -59,23 +90,32 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 					creatorCount: result.added,
 				});
 
-				// GA4 + LogSnag tracking - fire and forget (async HTTP calls)
-				getUserProfile(userId)
-					.then((user) =>
-						trackServer('creator_saved', {
-							userId,
-							listName: id,
-							count: result.added,
-							email: user?.email || 'unknown',
-							userName: user?.fullName || '',
-						})
-					)
-					.catch((err) =>
-						structuredConsole.error('[LIST_ITEMS_API] Analytics tracking failed', err)
-					);
+					// GA4 + LogSnag tracking - fire and forget (async HTTP calls)
+					getUserProfile(userId)
+						.then((user) =>
+							trackServer({
+								event: 'creator_saved',
+								properties: {
+									userId,
+									listName: id,
+									count: result.added,
+									email: user?.email || 'unknown',
+									userName: user?.fullName || '',
+								},
+							})
+						)
+						.catch((err) =>
+							structuredConsole.error('[LIST_ITEMS_API] Analytics tracking failed', err)
+						);
 			}
 
-			return NextResponse.json(result, { status: 201 });
+			return NextResponse.json(
+				{
+					...result,
+					autoEnrichmentQueued: addedCreators.length,
+				},
+				{ status: 201 }
+			);
 		} catch (error) {
 			return errorToResponse(error, { userId, listId: id, action: 'add_creator' });
 		}

@@ -147,16 +147,19 @@ export default function OnboardingModal({
 				sessionId
 			);
 
-			if (!response.ok) {
-				throw new Error(data.error || 'Failed to save information');
-			}
+				if (!response.ok) {
+					throw new Error(data.error || 'Failed to save information');
+				}
 
-			toast.success('Profile information saved!');
-			trackClient('onboarding_step_completed', { step: 1, stepName: 'profile' });
-			setStep(2);
-		} catch (err) {
-			structuredConsole.error('❌ Error saving step 1:', err);
-			const errorMessage = err instanceof Error ? err.message : 'Something went wrong';
+				toast.success('Profile information saved!');
+				trackClient({
+					event: 'onboarding_step_completed',
+					properties: { step: 1, stepName: 'profile' },
+				});
+				setStep(2);
+			} catch (err) {
+				structuredConsole.error('❌ Error saving step 1:', err);
+				const errorMessage = err instanceof Error ? err.message : 'Something went wrong';
 			setError(errorMessage);
 			toast.error(errorMessage);
 		} finally {
@@ -194,16 +197,19 @@ export default function OnboardingModal({
 
 			const data = await response.json();
 
-			if (!response.ok) {
-				throw new Error(data.error || 'Failed to save information');
-			}
+				if (!response.ok) {
+					throw new Error(data.error || 'Failed to save information');
+				}
 
-			toast.success('Brand description saved!');
-			trackClient('onboarding_step_completed', { step: 2, stepName: 'brand' });
-			setStep(3);
-		} catch (err) {
-			structuredConsole.error('❌ Error saving step 2:', err);
-			const errorMessage = err instanceof Error ? err.message : 'Something went wrong';
+				toast.success('Brand description saved!');
+				trackClient({
+					event: 'onboarding_step_completed',
+					properties: { step: 2, stepName: 'brand' },
+				});
+				setStep(3);
+			} catch (err) {
+				structuredConsole.error('❌ Error saving step 2:', err);
+				const errorMessage = err instanceof Error ? err.message : 'Something went wrong';
 			setError(errorMessage);
 			toast.error(errorMessage);
 		} finally {

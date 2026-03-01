@@ -15,6 +15,12 @@ import { getStringArrayProperty, toRecord } from '@/lib/utils/type-guards';
  * POST /api/validate-deployment - Run comprehensive deployment validation
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
+	// This endpoint provides deep environment/config visibility and should never be
+	// callable in production deployments.
+	if (process.env.NODE_ENV === 'production') {
+		return new NextResponse('Not Found', { status: 404 });
+	}
+
 	const startTime = Date.now();
 
 	try {
@@ -100,6 +106,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
  * GET /api/validate-deployment - Get validation status
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
+	// This endpoint provides deep environment/config visibility and should never be
+	// callable in production deployments.
+	if (process.env.NODE_ENV === 'production') {
+		return new NextResponse('Not Found', { status: 404 });
+	}
+
 	const searchParams = request.nextUrl.searchParams;
 	const format = searchParams.get('format') || 'json';
 	const environment = searchParams.get('environment') ?? undefined;

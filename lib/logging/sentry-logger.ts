@@ -324,7 +324,7 @@ export class SentryLogger {
 
 		// If it's an error-level log, capture as exception
 		if (level === 'error' || level === 'fatal') {
-			const error = context?.error instanceof Error ? context.error : new Error(entry.message);
+				const error = context?.error instanceof Error ? context.error : new Error(entry.message);
 
 			// Extract requestId from context if available
 			const requestId = context
@@ -374,7 +374,12 @@ export class SentryLogger {
 	public static withScope<T>(callback: (scope: Sentry.Scope) => T): T {
 		SentryLogger.initialize();
 
-		return Sentry.withScope(callback);
+		if (isSentryEnabled()) {
+			return Sentry.withScope(callback);
+		}
+
+		// Sentry still provides a scope even when DSN isn't configured; it just won't send events.
+		return callback(Sentry.getCurrentScope());
 	}
 }
 

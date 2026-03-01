@@ -52,8 +52,8 @@ if (!globalThis.__loggingServerConsoleBridge__) {
 	if (shouldSuppressAccessLogs) {
 		if (!stdoutFiltered) {
 			stdoutFiltered = true;
-			const originalWrite = process.stdout.write.bind(process.stdout);
-			const accessLogPattern = /^\s*(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+\//;
+				const originalWrite = process.stdout.write.bind(process.stdout);
+				const accessLogPattern = /^\s*(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+\//;
 
 			const overrideWrite = (
 				chunk: string | Uint8Array,

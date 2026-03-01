@@ -24,6 +24,8 @@ const ONBOARDING_EMAIL_TYPES: EmailType[] = [
 	'onboarding_6_final',
 ];
 
+const ONBOARDING_EMAIL_TYPE_SET = new Set<string>(ONBOARDING_EMAIL_TYPES);
+
 const ONBOARDING_SUBJECTS: Record<string, string> = {
 	onboarding_1_welcome: "Welcome to Gemz — here's what you're unlocking",
 	onboarding_2_keyword: 'How to find creators by what they actually talk about',
@@ -186,5 +188,5 @@ export function getOnboardingEmailSubject(emailType: EmailType): string {
  * Check if an email type is part of the onboarding sequence.
  */
 export function isOnboardingEmail(emailType: string): emailType is EmailType {
-	return ONBOARDING_EMAIL_TYPES.some((t) => t === emailType);
+	return ONBOARDING_EMAIL_TYPE_SET.has(emailType);
 }

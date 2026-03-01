@@ -432,13 +432,16 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 			// @why Uses getUserDataForTracking to get fresh data from Clerk if DB has fallback email
 			getUserDataForTracking(userId)
 				.then((userData) => {
-					return trackServer('search_started', {
-						userId,
-						platform: normalizedPlatform,
-						type: 'keyword',
-						targetCount: targetResults,
-						email: userData.email,
-						name: userData.name,
+					return trackServer({
+						event: 'search_started',
+						properties: {
+							userId,
+							platform: normalizedPlatform,
+							type: 'keyword',
+							targetCount: targetResults,
+							email: userData.email,
+							name: userData.name,
+						},
 					});
 				})
 				.catch((err) => {

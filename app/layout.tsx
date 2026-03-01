@@ -2,12 +2,13 @@ import './globals.css';
 
 import { ClerkProvider } from '@clerk/nextjs';
 import { dark } from '@clerk/themes';
+import { GoogleTagManager } from '@next/third-parties/google';
 import type { Metadata } from 'next';
 // Font configuration for app-wide Inter usage.
 import { Inter } from 'next/font/google';
-import Script from 'next/script';
 import type { ComponentProps, ReactNode } from 'react';
-import { GA4UserIdentifier } from './components/analytics/ga4-user-id';
+import { GTMTrialConversion } from './components/analytics/gtm-trial-conversion';
+import { GTMUserIdentifier } from './components/analytics/gtm-user-id';
 import { AuthLogger } from './components/auth/auth-logger';
 import { IntercomProvider } from './components/intercom/intercom-provider';
 import { NavigationLogger } from './components/navigation/navigation-logger';
@@ -152,73 +153,11 @@ export default function RootLayout({ children }: RootLayoutProps) {
 	return (
 		<ClerkProvider appearance={clerkAppearance}>
 			<html lang="en" className="dark">
-				<head>
-					{/* Google Ads + GA4 (gtag.js)
-					- Uses environment variables for GA4 Measurement ID
-					- Dev: G-ZG4F8W3RJD (test property) - set in .env.local
-					- Prod: G-HQL4LR0B0G (clean property) - set in Vercel
-				*/}
-					<Script
-						src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID || 'G-ZG4F8W3RJD'}`}
-						strategy="afterInteractive"
-					/>
-					<Script id="google-gtag" strategy="afterInteractive">
-						{`
-							window.dataLayer = window.dataLayer || [];
-							function gtag(){dataLayer.push(arguments);}
-							gtag('js', new Date());
-
-							var ga4Id = '${process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID || 'G-ZG4F8W3RJD'}';
-							var isProduction = window.location.hostname === 'usegemz.io';
-
-							// Google Ads - only in production
-							if (isProduction) {
-								gtag('config', 'AW-17841436850'); // Analytics/remarketing
-								gtag('config', 'AW-17893774225'); // Ads + conversions
-							}
-
-							// GA4 - always enabled, debug mode for non-production
-							gtag('config', ga4Id, {
-								debug_mode: !isProduction
-							});
-						`}
-					</Script>
-
-					{/* Meta Pixel Code - Uses env var for pixel ID */}
-					<Script id="meta-pixel" strategy="afterInteractive">
-						{`
-							!function(f,b,e,v,n,t,s)
-							{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-							n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-							if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-							n.queue=[];t=b.createElement(e);t.async=!0;
-							t.src=v;s=b.getElementsByTagName(e)[0];
-							s.parentNode.insertBefore(t,s)}(window, document,'script',
-							'https://connect.facebook.net/en_US/fbevents.js');
-
-							// Initialize with environment-specific pixel ID
-							var pixelId = '${process.env.NEXT_PUBLIC_META_PIXEL_ID || ''}';
-							if (pixelId) {
-								fbq('init', pixelId);
-								fbq('track', 'PageView');
-							}
-						`}
-					</Script>
-				</head>
+				<head />
+				{process.env.NEXT_PUBLIC_GTM_ID && (
+					<GoogleTagManager gtmId={process.env.NEXT_PUBLIC_GTM_ID} />
+				)}
 				<body className={`${inter.variable} font-sans bg-background text-foreground antialiased`}>
-					{/* Meta Pixel noscript fallback - Only if pixel ID is configured */}
-					{process.env.NEXT_PUBLIC_META_PIXEL_ID && (
-						<noscript>
-							<img
-								height="1"
-								width="1"
-								style={{ display: 'none' }}
-								src={`https://www.facebook.com/tr?id=${process.env.NEXT_PUBLIC_META_PIXEL_ID}&ev=PageView&noscript=1`}
-								alt=""
-							/>
-						</noscript>
-					)}
-
 					{/* JSON-LD Structured Data for SEO */}
 					<script
 						type="application/ld+json"
@@ -247,7 +186,8 @@ export default function RootLayout({ children }: RootLayoutProps) {
 
 					<ClientConsoleBridge />
 					<AuthLogger />
-					<GA4UserIdentifier />
+					<GTMUserIdentifier />
+					<GTMTrialConversion />
 					<IntercomProvider />
 					<NavigationLogger />
 					<QueryProvider>{children}</QueryProvider>

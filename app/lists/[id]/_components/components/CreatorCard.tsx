@@ -12,9 +12,11 @@ import type { CreatorListItem } from '../types/list-detail';
 import {
 	ensureImageUrl,
 	formatFollowers,
+	getItemEnrichmentStatus,
 	resolveAvatarSource,
 	resolveProfileUrl,
 } from '../utils/list-helpers';
+import { EnrichmentStatusBadge } from './EnrichmentStatusBadge';
 
 interface SortableCardProps {
 	item: CreatorListItem;
@@ -49,9 +51,21 @@ export function CreatorCardContent({ item, onTogglePin }: CreatorCardContentProp
 	const followers = formatFollowers(item.creator.followers ?? 0);
 	const avatarSource = ensureImageUrl(resolveAvatarSource(item.creator));
 	const profileUrl = resolveProfileUrl(item.creator);
+	const enrichmentStatus = getItemEnrichmentStatus(item);
 
 	return (
-		<div className="rounded-xl border border-zinc-800/60 bg-zinc-900/80 p-4 shadow-sm">
+		<div
+			className={clsx(
+				'rounded-xl border bg-zinc-900/80 p-4 shadow-sm transition-colors',
+				enrichmentStatus === 'enriched'
+					? 'border-emerald-500/25'
+					: enrichmentStatus === 'in_progress'
+						? 'border-pink-500/25'
+						: enrichmentStatus === 'failed'
+							? 'border-amber-500/25'
+							: 'border-zinc-800/60'
+			)}
+		>
 			<div className="flex flex-col gap-3">
 				<div className="flex items-start gap-3">
 					<Avatar className="h-10 w-10 flex-shrink-0">
@@ -87,6 +101,7 @@ export function CreatorCardContent({ item, onTogglePin }: CreatorCardContentProp
 					</div>
 				</div>
 				<div className="flex flex-wrap items-center gap-2">
+					<EnrichmentStatusBadge item={item} />
 					{profileUrl ? (
 						<Button
 							variant="ghost"

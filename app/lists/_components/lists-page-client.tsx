@@ -59,8 +59,8 @@ export default function ListsPageClient({ initialLists }: ListsPageClientProps) 
 			setCreateError('Name is required');
 			return;
 		}
-		setCreateError(null);
-		setCreating(true);
+			setCreateError(null);
+			setCreating(true);
 
 		// 1. Create optimistic list with temp ID (partial - will be replaced with real data)
 		const tempId = `temp-${Date.now()}`;
@@ -69,7 +69,7 @@ export default function ListsPageClient({ initialLists }: ListsPageClientProps) 
 			id: tempId,
 			ownerId: '00000000-0000-0000-0000-000000000000',
 			name: form.name,
-			description: form.description,
+			description: form.description || null,
 			type: form.type,
 			privacy: 'private',
 			tags: [],
@@ -308,7 +308,7 @@ export default function ListsPageClient({ initialLists }: ListsPageClientProps) 
 															type="button"
 															onClick={(event) => {
 																event.stopPropagation();
-																handleCancelDelete();
+																handleCancelDelete(event);
 															}}
 															className="rounded-full p-1.5 text-zinc-400 transition hover:bg-zinc-800 hover:text-zinc-200"
 															aria-label="Cancel delete"

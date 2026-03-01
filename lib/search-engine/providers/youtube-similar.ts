@@ -4,7 +4,7 @@ import {
 } from '@/lib/platforms/youtube-similar/api';
 import {
 	extractChannelsFromVideos,
-	extractSearchKeywords,
+	generateSimilarSearchQueries,
 	transformToSimilarChannels,
 } from '@/lib/platforms/youtube-similar/transformer';
 import { apiTracker, SentryLogger, searchTracker } from '@/lib/sentry';
@@ -150,7 +150,7 @@ export async function runYouTubeSimilarProvider(
 		async () => getYouTubeChannelProfile(targetUsername)
 	);
 	channelProfileCalls += 1;
-	const searchKeywords = extractSearchKeywords(targetProfile);
+	const searchKeywords = generateSimilarSearchQueries(targetProfile);
 
 	const keywordsToUse = searchKeywords;
 

@@ -11,6 +11,11 @@ import {
 	toRecord,
 	type UnknownRecord,
 } from '@/lib/utils/type-guards';
+import {
+	resolveListItemEnrichmentStatus,
+	summarizeListEnrichment,
+	type ListItemEnrichmentStatus,
+} from '@/lib/lists/enrichment-status';
 import type { ColumnState, ListItem } from '../types/list-detail';
 import { defaultBucketOrder } from '../types/list-detail';
 
@@ -258,3 +263,19 @@ export function escapeCsv(value: unknown): string {
 	}
 	return stringValue;
 }
+
+export function getItemEnrichmentStatus(item: ListItem): EnrichmentUiStatus {
+	return resolveListItemEnrichmentStatus(item);
+}
+
+export function summarizeEnrichment(items: ListItem[]) {
+	const { total, counts, active, processed } = summarizeListEnrichment(items);
+	return {
+		total,
+		...counts,
+		active,
+		processed,
+	};
+}
+
+export type EnrichmentUiStatus = ListItemEnrichmentStatus;

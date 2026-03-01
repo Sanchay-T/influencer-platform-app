@@ -11,6 +11,8 @@ export interface YouTubeChannelProfile {
 	thumbnail: string;
 	links?: string[];
 	email?: string;
+	tags?: string[];
+	keywords?: string[];
 }
 
 export interface YouTubeVideo {

@@ -55,7 +55,7 @@ export interface BillingStatus {
 	hasFeature: (feature: string) => boolean;
 	hasPlan: (plan: string) => boolean;
 	canAccessFeature: (feature: string) => boolean;
-	refreshBillingData?: () => void;
+	refreshBillingData?: () => Promise<void>;
 	isTrialing: boolean;
 	needsUpgrade: boolean;
 	trialStatus?: 'active' | 'expired' | 'converted' | 'cancelled';
@@ -299,8 +299,9 @@ export function useBilling(): BillingStatus {
 		fetchBillingStatus();
 	}, [fetchBillingStatus, isLoaded, userId]);
 
-	// Add function to force refresh billing data (useful after upgrades)
-	const refreshBillingData = useCallback(() => {
+	// Force refresh billing data (useful after upgrades).
+	// Returns a Promise so callers can await the fresh data.
+	const refreshBillingData = useCallback(async () => {
 		debugLog('🔄 [BILLING-REFRESH] Force refreshing billing data');
 
 		// Clear caches
@@ -314,8 +315,8 @@ export function useBilling(): BillingStatus {
 			// Ignore cache clearing failures.
 		}
 
-		// Trigger a fresh fetch
-		fetchBillingStatus(true);
+		// Trigger a fresh fetch and wait for it to complete
+		await fetchBillingStatus(true);
 	}, [fetchBillingStatus]);
 
 	return {

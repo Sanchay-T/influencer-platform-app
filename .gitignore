@@ -27,6 +27,10 @@ project
 # misc
 .DS_Store
 *.pem
+tmp/
+testing/artifacts/
+backup.tar.gz
+Untitled
 
 # debug
 npm-debug.log*

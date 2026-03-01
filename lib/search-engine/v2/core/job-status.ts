@@ -109,13 +109,16 @@ export async function markJobCompleted(jobId: string): Promise<void> {
 
 		getUserDataForTracking(job.userId)
 			.then((userData) => {
-				return trackServer('search_completed', {
-					userId: job.userId,
-					platform: normalizedPlatform,
-					type: 'keyword',
-					creatorCount: job.creatorsFound ?? 0,
-					email: userData.email,
-					name: userData.name,
+				return trackServer({
+					event: 'search_completed',
+					properties: {
+						userId: job.userId,
+						platform: normalizedPlatform,
+						type: 'keyword',
+						creatorCount: job.creatorsFound ?? 0,
+						email: userData.email,
+						name: userData.name,
+					},
 				});
 			})
 			.catch((err) => {

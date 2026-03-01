@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
 import { getUserProfile } from '@/lib/db/queries/user-queries';
 import { createCategoryLogger, LogCategory } from '@/lib/logging';
+import { structuredConsole } from '@/lib/logging/console-proxy';
 
 const onboardingLogger = createCategoryLogger(LogCategory.ONBOARDING);
 
@@ -26,9 +27,14 @@ export async function GET() {
 		onboardingLogger.error(message, normalized, withContext(extra));
 	};
 
+	structuredConsole.log(`[ONBOARDING-API] start ${reqId}`);
+
 	try {
 		info('Onboarding status request received', { timestamp });
 		const { userId } = await getAuthOrTest();
+		structuredConsole.log(
+			`[ONBOARDING-API] auth done +${Date.now() - startedAt}ms userId=${userId}`
+		);
 
 		if (!userId) {
 			warn('Unauthorized onboarding status request');
@@ -42,6 +48,9 @@ export async function GET() {
 		const profileStart = Date.now();
 		const userProfile = await getUserProfile(userId);
 		const profileDuration = Date.now() - profileStart;
+		structuredConsole.log(
+			`[ONBOARDING-API] getUserProfile done +${Date.now() - startedAt}ms (query=${profileDuration}ms) found=${!!userProfile} step=${userProfile?.onboardingStep}`
+		);
 
 		if (!userProfile) {
 			warn('User profile not found while resolving onboarding status', { userId, profileDuration });

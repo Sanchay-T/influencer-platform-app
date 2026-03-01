@@ -77,18 +77,21 @@ export async function POST(request: Request) {
 				settings: body.settings,
 			});
 
-			// Track list creation (GA4 + LogSnag + Sentry) - fire and forget
-			getUserProfile(userId)
-				.then((user) =>
-					trackServer('list_created', {
-						userId,
-						listName: body.name || 'Untitled List',
-						type: body.type || 'custom',
-						email: user?.email || 'unknown',
-						userName: user?.fullName || '',
-					})
-				)
-				.catch((err) => structuredConsole.error('[ANALYTICS] list_created tracking failed', err));
+				// Track list creation (GA4 + LogSnag + Sentry) - fire and forget
+				getUserProfile(userId)
+					.then((user) =>
+						trackServer({
+							event: 'list_created',
+							properties: {
+								userId,
+								listName: body.name || 'Untitled List',
+								type: body.type || 'custom',
+								email: user?.email || 'unknown',
+								userName: user?.fullName || '',
+							},
+						})
+					)
+					.catch((err) => structuredConsole.error('[ANALYTICS] list_created tracking failed', err));
 
 			// Track list creation in Sentry
 			listTracker.trackOperation('create', { userId, listId: list.id });

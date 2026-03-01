@@ -22,11 +22,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { trackLeadConversion } from '@/lib/analytics/google-ads';
+import { trackPurchaseClient } from '@/lib/analytics/track';
 import { getPlanDisplayConfig, getVisiblePlanConfigs } from '@/lib/billing/plan-display-config';
 import { clearBillingCache, useBilling } from '@/lib/hooks/use-billing';
 import { useStartSubscription } from '@/lib/hooks/use-start-subscription';
 import { structuredConsole } from '@/lib/logging/console-proxy';
+import { SocialSharingBanner } from '@/components/social-sharing/social-sharing-banner';
 import DashboardLayout from '../components/layout/dashboard-layout';
 
 // Plan prices for the modal (includes both new and legacy plans)
@@ -318,8 +319,8 @@ function BillingContent() {
 				structuredConsole.log('[BILLING] Cache clear failed:', e);
 			}
 
-			// Google Ads: Fire lead conversion for successful upgrade
-			trackLeadConversion();
+			// Fire purchase conversion via GTM → GA4 + Meta + Google Ads
+			trackPurchaseClient(1.0, planParam || 'upgrade', false);
 		}
 	}, [upgradeParam, planParam, successParam, upgradedParam]);
 
@@ -335,6 +336,9 @@ function BillingContent() {
 
 			{/* Hero Banner */}
 			<HeroBanner successPlan={successPlan} onOpenStartModal={handleOpenStartModal} />
+
+			{/* Social Sharing CTA */}
+			<SocialSharingBanner />
 
 			{/* Tabbed Content */}
 			<Tabs defaultValue="plans" id="billing-tabs">

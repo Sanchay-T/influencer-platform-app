@@ -87,6 +87,25 @@ export class EnvironmentValidator {
 				recommendation: 'Set NODE_ENV to development, production, or test',
 			});
 		}
+
+		// Check RESEND_AUDIENCE_ID
+		const resendAudienceId = process.env.RESEND_AUDIENCE_ID;
+		if (resendAudienceId) {
+			this.addCheck({
+				name: 'RESEND_AUDIENCE_ID',
+				category: 'environment',
+				status: 'pass',
+				message: 'RESEND_AUDIENCE_ID is configured',
+			});
+		} else {
+			this.addCheck({
+				name: 'RESEND_AUDIENCE_ID',
+				category: 'environment',
+				status: 'warn',
+				message: 'RESEND_AUDIENCE_ID is not set — Resend audience sync will be disabled',
+				recommendation: 'Set RESEND_AUDIENCE_ID to enable marketing email audience sync',
+			});
+		}
 	}
 
 	private addCheck(check: ValidationCheck): void {

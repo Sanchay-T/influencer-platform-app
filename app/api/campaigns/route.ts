@@ -66,14 +66,17 @@ export async function POST(req: Request) {
 				return c;
 			});
 
-			// Track campaign creation (GA4 + LogSnag + Sentry)
-			const user = await getUserProfile(userId);
-			await trackServer('campaign_created', {
-				userId,
-				campaignName: name || 'Untitled Campaign',
-				email: user?.email || 'unknown',
-				userName: user?.fullName || '',
-			});
+				// Track campaign creation (GA4 + LogSnag + Sentry)
+				const user = await getUserProfile(userId);
+				await trackServer({
+					event: 'campaign_created',
+					properties: {
+						userId,
+						campaignName: name || 'Untitled Campaign',
+						email: user?.email || 'unknown',
+						userName: user?.fullName || '',
+					},
+				});
 
 			// Track campaign creation in Sentry
 			campaignTracker.trackCreation({

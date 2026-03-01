@@ -126,17 +126,23 @@ export default function PaymentStep({ sessionId, userId }: PaymentStepProps) {
 					billingCycle,
 				},
 				sessionId
-			);
+				);
 
-			// Track step 3 completion and checkout initiation
-			trackClient('onboarding_step_completed', { step: 3, stepName: 'plan' });
-			trackClient('upgrade_clicked', {
-				userId: userId || '',
-				email: '',
-				currentPlan: undefined,
-				targetPlan: selectedPlan || undefined,
-				source: 'upgrade_modal',
-			});
+				// Track step 3 completion and checkout initiation
+				trackClient({
+					event: 'onboarding_step_completed',
+					properties: { step: 3, stepName: 'plan' },
+				});
+				trackClient({
+					event: 'upgrade_clicked',
+					properties: {
+						userId: userId || '',
+						email: '',
+						currentPlan: undefined,
+						targetPlan: selectedPlan || undefined,
+						source: 'upgrade_modal',
+					},
+				});
 
 			// Redirect to Stripe checkout
 			window.location.href = checkoutData.url;

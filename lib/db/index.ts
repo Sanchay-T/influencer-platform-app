@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import { drizzle, type PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import { systemLogger } from '@/lib/logging';
+import { isRecord } from '@/lib/utils/type-guards';
 import * as schema from './schema';
 
 /**
@@ -147,8 +148,7 @@ export async function withDbRetry<T>(fn: () => Promise<T>, maxRetries = 3): Prom
 		try {
 			return await fn();
 		} catch (error: unknown) {
-			const codeValue = error instanceof Error ? Reflect.get(error, 'code') : undefined;
-			const errorCode = typeof codeValue === 'string' ? codeValue : '';
+			const errorCode = isRecord(error) && typeof error.code === 'string' ? error.code : '';
 			const errorMessage = error instanceof Error ? error.message : String(error);
 
 			const isRetryable =

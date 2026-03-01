@@ -5,7 +5,7 @@
 import type { DragEndEvent } from '@dnd-kit/core';
 import { PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { getStringProperty, toRecord } from '@/lib/utils/type-guards';
@@ -18,6 +18,7 @@ import {
 	findBucketForItem,
 	findItemById,
 	flattenColumnsForDetail,
+	summarizeEnrichment,
 } from '../utils/list-helpers';
 
 interface UseListDetailResult {
@@ -53,6 +54,7 @@ interface UseListDetailResult {
 	handleMetadataSave: () => Promise<void>;
 	handleDelete: () => Promise<void>;
 	handleExport: () => void;
+	refreshDetail: () => Promise<ListDetail | null>;
 }
 
 const isListDetailPayload = (value: unknown): value is ListDetail => {
@@ -65,6 +67,7 @@ const isListDetailPayload = (value: unknown): value is ListDetail => {
 
 export function useListDetail(listId: string, initialDetail: ListDetail): UseListDetailResult {
 	const router = useRouter();
+	const detailAbortRef = useRef<AbortController | null>(null);
 
 	// Core state
 	const [detail, setDetail] = useState<ListDetail | null>(initialDetail ?? null);
@@ -98,13 +101,26 @@ export function useListDetail(listId: string, initialDetail: ListDetail): UseLis
 	}, []);
 
 	// Fetch detail
-	const fetchDetail = useCallback(async () => {
+	const fetchDetail = useCallback(async (opts?: { silent?: boolean }) => {
 		if (!listId) {
 			return null;
 		}
-		setLoading(true);
+
+		const silent = Boolean(opts?.silent);
+		if (!silent) {
+			setLoading(true);
+		}
+
+		detailAbortRef.current?.abort();
+		const controller = new AbortController();
+		detailAbortRef.current = controller;
+
 		try {
-			const res = await fetch(`/api/lists/${listId}`);
+			const res = await fetch(`/api/lists/${listId}`, {
+				method: 'GET',
+				cache: 'no-store',
+				signal: controller.signal,
+			});
 			if (!res.ok) {
 				if (res.status === 404) {
 					toast.error('List not found');
@@ -126,11 +142,16 @@ export function useListDetail(listId: string, initialDetail: ListDetail): UseLis
 			});
 			return data;
 		} catch (error) {
+			if (error instanceof DOMException && error.name === 'AbortError') {
+				return null;
+			}
 			structuredConsole.error(error);
 			toast.error('Something went wrong loading this list.');
 			return null;
 		} finally {
-			setLoading(false);
+			if (!silent) {
+				setLoading(false);
+			}
 		}
 	}, [listId, router]);
 
@@ -145,6 +166,23 @@ export function useListDetail(listId: string, initialDetail: ListDetail): UseLis
 		}
 		fetchDetail();
 	}, [fetchDetail, initialDetail, listId]);
+
+	useEffect(() => {
+		if (!detail) {
+			return;
+		}
+
+		const summary = summarizeEnrichment(detail.items);
+		if (summary.active <= 0) {
+			return;
+		}
+
+		const interval = setInterval(() => {
+			fetchDetail();
+		}, 4000);
+
+		return () => clearInterval(interval);
+	}, [detail, fetchDetail]);
 
 	// Derived state
 	const allBuckets = useMemo(() => {
@@ -425,6 +463,8 @@ export function useListDetail(listId: string, initialDetail: ListDetail): UseLis
 		toast.success('CSV downloaded');
 	}, [detail]);
 
+	const refreshDetail = useCallback(() => fetchDetail({ silent: true }), [fetchDetail]);
+
 	return {
 		// State
 		detail,
@@ -458,5 +498,6 @@ export function useListDetail(listId: string, initialDetail: ListDetail): UseLis
 		handleMetadataSave,
 		handleDelete,
 		handleExport,
+		refreshDetail,
 	};
 }

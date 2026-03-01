@@ -22,7 +22,7 @@ interface SubscriptionWelcomeEmailProps {
 
 const baseUrl = process.env.VERCEL_URL
 	? `https://${process.env.VERCEL_URL}`
-	: 'https://influencerplatform.vercel.app';
+	: 'https://usegemz.io';
 
 export const SubscriptionWelcomeEmail = ({
 	fullName,

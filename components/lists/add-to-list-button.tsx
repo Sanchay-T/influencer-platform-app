@@ -1,6 +1,7 @@
 'use client';
 
 import { Loader2, Plus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 import {
 	type ComponentProps,
@@ -87,6 +88,7 @@ export function AddToListButton({
 	disabled,
 	onAdded,
 }: AddToListButtonProps) {
+	const router = useRouter();
 	const creatorsToAdd = useMemo(() => {
 		if (Array.isArray(creators) && creators.length) {
 			return creators;
@@ -211,9 +213,9 @@ export function AddToListButton({
 		};
 	}, [open, resetPanel]);
 
-	const handleCreateList = async () => {
+	const createListAndSelect = async (): Promise<string | null> => {
 		if (!newListName.trim()) {
-			return;
+			return null;
 		}
 		setCreating(true);
 		try {
@@ -230,17 +232,33 @@ export function AddToListButton({
 			setSelectedList(data.list.id);
 			setNewListName('');
 			toast.success(`Created “${data.list.name}”`);
+			return data.list.id as string;
 		} catch (error) {
 			structuredConsole.error(error);
 			const message = error instanceof Error ? error.message : 'Unable to create list';
 			toast.error(message);
+			return null;
 		} finally {
 			setCreating(false);
 		}
 	};
 
+	const handleCreateList = async () => {
+		await createListAndSelect();
+	};
+
 	const handleAdd = async () => {
-		if (!selectedList) {
+		// Auto-create list if the create form is showing with a name but no list selected
+		let targetList = selectedList;
+		if (!targetList && showCreate && newListName.trim()) {
+			const created = await createListAndSelect();
+			if (!created) {
+				return; // creation failed, error toast already shown
+			}
+			targetList = created;
+		}
+
+		if (!targetList) {
 			toast.error('Select a list first');
 			return;
 		}
@@ -259,7 +277,7 @@ export function AddToListButton({
 				metadata: entry.metadata ?? {},
 			}));
 
-			const res = await fetch(`/api/lists/${selectedList}/items`, {
+			const res = await fetch(`/api/lists/${targetList}/items`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ creators: payload }),
@@ -278,23 +296,57 @@ export function AddToListButton({
 
 			setLists((prev) =>
 				prev.map((list) =>
-					list.id === selectedList
+					list.id === targetList
 						? { ...list, creatorCount: list.creatorCount + addedCount }
 						: list
 				)
 			);
 
-			const successLabel = selectedListSummary?.name;
-			if (addedCount > 0) {
-				if (successLabel) {
-					toast.success(
-						addedCount > 1
-							? `Added ${addedCount} creators to “${successLabel}”`
-							: `Added to “${successLabel}”`
-					);
-				} else {
-					toast.success(addedCount > 1 ? 'Creators saved to list' : 'Creator saved to list');
+			const successLabel =
+				selectedListSummary?.name ??
+				lists.find((l) => l.id === targetList)?.name;
+			const viewList = () => {
+				try {
+					router.push(`/lists/${targetList}`);
+				} catch {
+					window.location.href = `/lists/${targetList}`;
 				}
+			};
+
+			if (addedCount > 0) {
+				const title = successLabel
+					? addedCount > 1
+						? `Saved ${addedCount} to “${successLabel}”`
+						: `Saved to “${successLabel}”`
+					: addedCount > 1
+						? `Saved ${addedCount} creators`
+						: 'Saved creator';
+
+				toast.custom(
+					(t) => (
+						<div className="pointer-events-auto w-full max-w-md rounded-xl border border-zinc-700/60 bg-zinc-950/95 px-4 py-3 text-sm text-zinc-200 shadow-xl">
+							<div className="flex items-start justify-between gap-3">
+								<div className="min-w-0">
+									<p className="font-medium text-zinc-100">{title}</p>
+									<p className="mt-0.5 text-xs text-zinc-400">
+										Auto-enrichment started. You can keep browsing.
+									</p>
+								</div>
+								<Button
+									size="sm"
+									className="h-8 shrink-0 bg-pink-600 text-white hover:bg-pink-500"
+									onClick={() => {
+										toast.dismiss(t.id);
+										viewList();
+									}}
+								>
+									View list
+								</Button>
+							</div>
+						</div>
+					),
+					{ duration: 6500 }
+				);
 			}
 
 			if (skippedCount > 0) {
@@ -305,19 +357,37 @@ export function AddToListButton({
 					.join(', ');
 
 				toast.custom(
-					() => (
-						<div className="rounded-lg border border-zinc-700/60 bg-zinc-950/90 px-4 py-3 text-sm text-zinc-200 shadow-xl">
-							<p className="font-medium text-zinc-100">
-								{skippedCount === attemptedCount
-									? 'All selected creators are already saved in this list.'
-									: `${skippedCount} creator${skippedCount === 1 ? '' : 's'} already saved`}
-							</p>
-							{displayHandles && (
-								<p className="mt-1 text-xs text-zinc-400">
-									{displayHandles}
-									{skippedCount > 3 ? ` +${skippedCount - 3} more` : ''}
-								</p>
-							)}
+					(t) => (
+						<div className="pointer-events-auto w-full max-w-md rounded-xl border border-zinc-700/60 bg-zinc-950/95 px-4 py-3 text-sm text-zinc-200 shadow-xl">
+							<div className="flex items-start justify-between gap-3">
+								<div className="min-w-0">
+									<p className="font-medium text-zinc-100">
+										{skippedCount === attemptedCount
+											? 'Already saved in this list'
+											: `Skipped ${skippedCount} already saved`}
+									</p>
+									<p className="mt-0.5 text-xs text-zinc-400">
+										{successLabel ? `In “${successLabel}”.` : 'Already present in the list.'}
+									</p>
+									{displayHandles && (
+										<p className="mt-1 text-xs text-zinc-500">
+											{displayHandles}
+											{skippedCount > 3 ? ` +${skippedCount - 3} more` : ''}
+										</p>
+									)}
+								</div>
+								<Button
+									size="sm"
+									variant="outline"
+									className="h-8 shrink-0 border-zinc-700/60 bg-zinc-900/40 text-zinc-100 hover:bg-zinc-900/60"
+									onClick={() => {
+										toast.dismiss(t.id);
+										viewList();
+									}}
+								>
+									View list
+								</Button>
+							</div>
 						</div>
 					),
 					{ duration: 5000 }
@@ -325,12 +395,12 @@ export function AddToListButton({
 			}
 
 			structuredConsole.debug('[AddToList] added creators', {
-				listId: selectedList,
+				listId: targetList,
 				added: addedCount,
 				attempted: attemptedCount,
 			});
 
-			onAdded?.(selectedList);
+			onAdded?.(targetList);
 			setOpen(false);
 			resetPanel();
 		} catch (error) {
@@ -499,7 +569,7 @@ export function AddToListButton({
 							>
 								Cancel
 							</Button>
-							<Button size="sm" onClick={handleAdd} disabled={adding || !selectedList}>
+							<Button size="sm" onClick={handleAdd} disabled={adding || creating || (!selectedList && !(showCreate && newListName.trim()))}>
 								{adding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
 								Save
 							</Button>

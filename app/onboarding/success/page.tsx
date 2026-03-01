@@ -2,12 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { trackLeadConversion } from '@/lib/analytics/google-ads';
-import {
-	trackCompleteRegistration,
-	trackPurchase,
-	trackStartTrial,
-} from '@/lib/analytics/meta-pixel';
+import { trackPurchaseClient } from '@/lib/analytics/track';
 import { clearBillingCache } from '@/lib/hooks/use-billing';
 import { structuredConsole } from '@/lib/logging/console-proxy';
 import { type SessionData, SuccessCard } from './success-card';
@@ -23,6 +18,7 @@ function OnboardingSuccessContent() {
 	const [loading, setLoading] = useState(true);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [webhookConfirmed, setWebhookConfirmed] = useState(false);
+	const [verificationFailed, setVerificationFailed] = useState(false);
 	const pollCountRef = useRef(0);
 	const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 	const eventsFiredRef = useRef(false);
@@ -101,15 +97,24 @@ function OnboardingSuccessContent() {
 				}
 			}
 
-			// Stop polling after max attempts
+			// After 30 seconds (15 attempts), try verification one more time
+			if (pollCountRef.current === 15) {
+				const verified = await verifySession();
+				if (verified) {
+					return;
+				}
+			}
+
+			// Stop polling after max attempts — show error instead of auto-confirming
+			// @why Auto-confirming fires false conversion events and lets users through
+			// without a valid subscription if the webhook truly failed
 			if (pollCountRef.current >= MAX_POLL_ATTEMPTS) {
 				if (pollIntervalRef.current) {
 					clearInterval(pollIntervalRef.current);
 					pollIntervalRef.current = null;
 				}
-				// After timeout, allow continue anyway (webhook may have failed but Stripe has the subscription)
-				setWebhookConfirmed(true);
-				structuredConsole.warn('Webhook polling timeout - allowing continue');
+				setVerificationFailed(true);
+				structuredConsole.warn('Webhook polling timeout - verification failed');
 			}
 		}, POLL_INTERVAL_MS);
 	}, [pollForWebhook, verifySession]);
@@ -166,31 +171,20 @@ function OnboardingSuccessContent() {
 		if (webhookConfirmed && sessionData && !eventsFiredRef.current) {
 			eventsFiredRef.current = true;
 
-			// Always fire CompleteRegistration for successful onboarding
-			trackCompleteRegistration();
-
-			// Google Ads: Fire lead conversion
-			trackLeadConversion();
-
-			// Parse price for event values
+			// Parse price for conversion event value
 			const priceStr =
 				sessionData.billing === 'yearly'
 					? sessionData.plan.yearlyPrice
 					: sessionData.plan.monthlyPrice;
 			const value = parseFloat(priceStr.replace(/[^0-9.]/g, ''));
 
-			// Fire StartTrial if this is a trial subscription (Meta Pixel only)
-			// @why GA4 events are tracked server-side via Stripe webhook (more reliable, not blocked by ad blockers)
-			if (sessionData.subscription?.status === 'trialing') {
-				trackStartTrial(sessionData.planId);
-			}
-
-			// Fire Purchase with value (Meta Pixel only)
+			// Fire begin_trial or purchase via GTM → GA4 + Meta + Google Ads
 			if (!Number.isNaN(value)) {
-				trackPurchase(value, 'USD', sessionData.planId);
+				const isTrial = sessionData.subscription?.status === 'trialing';
+				trackPurchaseClient(value, sessionData.planId, isTrial);
 			}
 
-			structuredConsole.info('Conversion events fired (Meta Pixel)', {
+			structuredConsole.info('Conversion events fired (via GTM dataLayer)', {
 				planId: sessionData.planId,
 				billing: sessionData.billing,
 				value,
@@ -208,13 +202,21 @@ function OnboardingSuccessContent() {
 		}
 	};
 
+	const handleRetry = () => {
+		setVerificationFailed(false);
+		pollCountRef.current = 0;
+		startPolling();
+	};
+
 	return (
 		<SuccessCard
 			loading={loading}
 			sessionData={sessionData}
 			isSubmitting={isSubmitting}
 			webhookConfirmed={webhookConfirmed}
+			verificationFailed={verificationFailed}
 			onContinue={handleContinue}
+			onRetry={handleRetry}
 		/>
 	);
 }

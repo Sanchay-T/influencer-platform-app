@@ -7,7 +7,7 @@ import { StartSubscriptionModal } from '@/app/components/billing/start-subscript
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { PLANS, type PlanKey } from '@/lib/billing/plan-config';
+import { isValidPlan, PLANS } from '@/lib/billing/plan-config';
 import { useStartSubscription } from '@/lib/hooks/use-start-subscription';
 
 type Status = {
@@ -27,8 +27,6 @@ type Status = {
 	currentPlan?: string;
 	billingAmount?: number;
 };
-
-const isPlanKey = (value: string): value is PlanKey => Object.hasOwn(PLANS, value);
 
 export default function TrialSidebarCompact() {
 	const [status, setStatus] = useState<Status>({ isLoaded: false, isTrialing: false });
@@ -211,7 +209,9 @@ export default function TrialSidebarCompact() {
 					open={showStartModal}
 					onOpenChange={setShowStartModal}
 					planName={
-						isPlanKey(status.currentPlan) ? PLANS[status.currentPlan].name : status.currentPlan
+						isValidPlan(status.currentPlan)
+							? PLANS[status.currentPlan].name
+							: status.currentPlan
 					}
 					amount={status.billingAmount || 0}
 					onConfirm={async () => {

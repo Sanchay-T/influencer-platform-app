@@ -3,11 +3,16 @@ import { getBillingStatus } from '@/lib/billing';
 import type { DashboardFavoriteInfluencer } from '@/lib/db/queries/dashboard-queries';
 import {
 	getCampaignCountForDashboard,
+	getCampaignStatsForDashboard,
 	getFavoriteInfluencersForDashboard,
+	getPipelineSummaryForDashboard,
+	getPlatformBreakdownForDashboard,
+	getRecentActivityForDashboard,
 	getSearchTelemetryForDashboard,
+	getTopKeywordsForDashboard,
 } from '@/lib/db/queries/dashboard-queries';
 import { getListsForUser } from '@/lib/db/queries/list-queries';
-import { ensureUserProfile } from '@/lib/db/queries/user-queries';
+import { structuredConsole } from '@/lib/logging/console-proxy';
 
 // Breadcrumb: getDashboardOverview -> consumed by RSC dashboard page & REST API -> relies on db/queries + plan validator.
 
@@ -31,10 +36,88 @@ export interface DashboardOverviewMetrics {
 	campaignCount: number;
 }
 
+export type PipelineSummary = {
+	total: number;
+	backlog: number;
+	shortlist: number;
+	contacted: number;
+	booked: number;
+};
+
+export type DeltaStats = {
+	creatorsAddedToday: number;
+	creatorsAddedYesterday: number;
+	pipelineChangeToday: {
+		backlog: number;
+		shortlist: number;
+		contacted: number;
+		booked: number;
+	};
+};
+
+export type PlatformBreakdown = {
+	platform: string;
+	count: number;
+};
+
+export type TopKeyword = {
+	keyword: string;
+	count: number;
+};
+
+export type TopCategory = {
+	category: string;
+	count: number;
+};
+
+export type CampaignStats = {
+	totalCampaigns: number;
+	totalSearches: number;
+	totalCreatorsDiscovered: number;
+};
+
+export type RecentActivity = {
+	id: string;
+	action: string;
+	payload: Record<string, unknown>;
+	listId: string;
+	listName: string;
+	listSlug: string | null;
+	createdAt: Date;
+};
+
+export type IncompleteSearch = {
+	campaignId: string;
+	campaignName: string;
+	keywords: string[];
+	status: string;
+	creatorsFound: number;
+	targetResults: number;
+};
+
+export type TopPerformer = {
+	handle: string;
+	platform: string;
+	engagementRate: number | null;
+};
+
+const EMPTY_DELTAS: DeltaStats = {
+	creatorsAddedToday: 0,
+	creatorsAddedYesterday: 0,
+	pipelineChangeToday: { backlog: 0, shortlist: 0, contacted: 0, booked: 0 },
+};
+
 export interface DashboardOverviewData {
 	favorites: DashboardFavorite[];
 	recentLists: DashboardRecentList[];
 	metrics: DashboardOverviewMetrics;
+	pipeline: PipelineSummary;
+	deltas: DeltaStats;
+	platformBreakdown: PlatformBreakdown[];
+	topKeywords: TopKeyword[];
+	topCategories: TopCategory[];
+	campaignStats: CampaignStats;
+	recentActivity: RecentActivity[];
 }
 
 function normalizeRecentLists(
@@ -60,30 +143,52 @@ export async function getDashboardOverview(clerkUserId: string): Promise<Dashboa
 	noStore();
 	const _overviewStart = Date.now();
 
-	// Ensure normalized profile exists before downstream queries (first dashboard load happens pre-billing).
-	const _ensureStart = Date.now();
-	await ensureUserProfile(clerkUserId);
+	// NOTE: ensureUserProfile is already called by the dashboard page RSC before
+	// getDashboardOverview, so we skip it here to avoid redundant DB + Clerk API calls.
 
 	// Run queries with individual timing
 	const _queryStart = Date.now();
 
-	const [favorites, lists, searchTelemetry, planStatus, campaignCount] = await Promise.all([
-		getFavoriteInfluencersForDashboard(clerkUserId, 10).then((r) => {
-			return r;
-		}),
-		getListsForUser(clerkUserId).then((r) => {
-			return r;
-		}),
-		getSearchTelemetryForDashboard(clerkUserId).then((r) => {
-			return r;
-		}),
-		getBillingStatus(clerkUserId).then((r) => {
-			return r;
-		}),
-		getCampaignCountForDashboard(clerkUserId).then((r) => {
-			return r;
-		}),
+	const results = await Promise.allSettled([
+		getFavoriteInfluencersForDashboard(clerkUserId, 10),
+		getListsForUser(clerkUserId),
+		getSearchTelemetryForDashboard(clerkUserId),
+		getBillingStatus(clerkUserId),
+		getCampaignCountForDashboard(clerkUserId),
+		getPipelineSummaryForDashboard(clerkUserId),
+		getCampaignStatsForDashboard(clerkUserId),
+		getPlatformBreakdownForDashboard(clerkUserId),
+		getTopKeywordsForDashboard(clerkUserId),
+		getRecentActivityForDashboard(clerkUserId),
 	]);
+
+	// Extract values with safe fallbacks — never let a single query crash the page
+	const favorites = results[0].status === 'fulfilled' ? results[0].value : [];
+	const lists = results[1].status === 'fulfilled' ? results[1].value : [];
+	const searchTelemetry =
+		results[2].status === 'fulfilled'
+			? results[2].value
+			: { totalJobs: 0, completedJobs: 0, averageDurationMs: 0 };
+	const planStatus = results[3].status === 'fulfilled' ? results[3].value : null;
+	const campaignCount = results[4].status === 'fulfilled' ? results[4].value : 0;
+	const pipeline =
+		results[5].status === 'fulfilled'
+			? results[5].value
+			: { total: 0, backlog: 0, shortlist: 0, contacted: 0, booked: 0 };
+	const campaignStats =
+		results[6].status === 'fulfilled'
+			? results[6].value
+			: { totalCampaigns: 0, totalSearches: 0, totalCreatorsDiscovered: 0 };
+	const platformBreakdown = results[7].status === 'fulfilled' ? results[7].value : [];
+	const topKeywords = results[8].status === 'fulfilled' ? results[8].value : [];
+	const recentActivity = results[9].status === 'fulfilled' ? results[9].value : [];
+
+	// Log any failures for debugging without crashing
+	for (const [i, r] of results.entries()) {
+		if (r.status === 'rejected') {
+			structuredConsole.error(`[DASHBOARD] Query ${i} failed for ${clerkUserId}:`, r.reason);
+		}
+	}
 
 	const normalizedLists = normalizeRecentLists(lists);
 	const searchLimit = planStatus?.usageInfo?.creatorsLimit ?? null;
@@ -100,5 +205,12 @@ export async function getDashboardOverview(clerkUserId: string): Promise<Dashboa
 			totalFavorites: favorites.length,
 			campaignCount,
 		},
+		pipeline,
+		deltas: EMPTY_DELTAS,
+		platformBreakdown,
+		topKeywords,
+		topCategories: [],
+		campaignStats,
+		recentActivity,
 	};
 }

@@ -42,6 +42,10 @@ vi.mock('@/lib/export/csv-utils', () => ({
 	formatEmailsForCsv: vi.fn(() => ''),
 }));
 
+vi.mock('@/lib/export/csv-encryption', () => ({
+	encryptCsvBytes: vi.fn((buf: Buffer) => buf),
+}));
+
 vi.mock('@/lib/export/get-creators', () => ({
 	getCreatorsForJobs: vi.fn().mockResolvedValue({
 		creators: [
@@ -107,11 +111,11 @@ describe('POST /api/export/csv-worker', () => {
 
 		// Verify blob put was called with correct options
 		expect(mockPut).toHaveBeenCalledWith(
-			expect.stringMatching(/^exports\/campaign-campaign-456-\d+-[a-f0-9-]+\.csv$/),
-			expect.any(String),
+			expect.stringMatching(/^exports\/campaign-campaign-456-\d+-[a-f0-9-]+\.csv\.enc$/),
+			expect.any(Buffer),
 			expect.objectContaining({
 				access: 'public',
-				contentType: 'text/csv',
+				contentType: 'application/octet-stream',
 			})
 		);
 

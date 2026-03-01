@@ -18,7 +18,7 @@ import {
 	isDoneStatus,
 	isSuccessStatus as isSuccessStatusHelper,
 } from '@/lib/types/statuses';
-import { getNumberProperty, getStringProperty, toRecord } from '@/lib/utils/type-guards';
+import { getNumberProperty, getStringProperty, isRecord, toRecord } from '@/lib/utils/type-guards';
 
 // Debug logging helper - enable via: localStorage.setItem('debug_job_status', 'true')
 const debugLog = (tag: string, msg: string, data?: Record<string, unknown>) => {
@@ -157,49 +157,47 @@ function getStatusEndpoint(jobId: string, platform?: string): string {
  * Normalize similar search API response to match JobStatusData interface
  * @why Similar search API returns different shape than v2/status
  */
-function normalizeSimilarResponse(data: Record<string, unknown>): JobStatusData {
-	const statusValue = data.status;
-	const status: JobStatus = isJobStatus(statusValue) ? statusValue : 'pending';
+function coerceJobStatus(value: unknown): JobStatus {
+	switch (value) {
+		case 'pending':
+		case 'dispatching':
+		case 'searching':
+		case 'enriching':
+		case 'processing':
+		case 'completed':
+		case 'partial':
+		case 'error':
+		case 'timeout':
+			return value;
+		default:
+			return 'pending';
+	}
+}
 
-	const processedResults = typeof data.processedResults === 'number' ? data.processedResults : 0;
-	const targetResults = typeof data.targetResults === 'number' ? data.targetResults : 100;
-	const percentComplete = typeof data.progress === 'number' ? data.progress : 0;
-	const totalCreators =
-		typeof data.totalCreators === 'number' ? data.totalCreators : processedResults;
+function normalizeSimilarResponse(raw: unknown): JobStatusData {
+	const data = toRecord(raw);
+	const record = data ?? {};
+
+	const status = coerceJobStatus(record.status);
+	const processedResults = getNumberProperty(record, 'processedResults') ?? 0;
+	const targetResults = getNumberProperty(record, 'targetResults') ?? 100;
+	const percentComplete = getNumberProperty(record, 'progress') ?? 0;
+	const totalCreators = getNumberProperty(record, 'totalCreators') ?? processedResults;
 
 	// Similar search returns results as [{ creators: [...] }] from paginateCreators
 	// Normalize to match v2/status format: [{ id: jobId, creators: [...] }]
-	const resultsValue = data.results;
-	const results: JobStatusData['results'] = Array.isArray(resultsValue)
-		? resultsValue.map((r) => {
-				const record = toRecord(r);
-				const creatorsValue = record?.creators;
-				return {
-					creators: Array.isArray(creatorsValue) ? creatorsValue : [],
-				};
+	const resultsRaw = Array.isArray(record.results) ? record.results : null;
+	const results = resultsRaw
+		? resultsRaw.map((result) => {
+				const resultRecord = toRecord(result);
+				const creators = Array.isArray(resultRecord?.creators) ? resultRecord.creators : [];
+				const id = getStringProperty(resultRecord ?? {}, 'id') ?? undefined;
+				return { id, creators };
 			})
 		: undefined;
 
-	const paginationRecord = toRecord(data.pagination);
-	const pagination: JobStatusData['pagination'] = paginationRecord
-		? (() => {
-				const offset = getNumberProperty(paginationRecord, 'offset');
-				const limit = getNumberProperty(paginationRecord, 'limit');
-				const total = getNumberProperty(paginationRecord, 'total');
-				const nextOffsetValue = Reflect.get(paginationRecord, 'nextOffset');
-				const nextOffset =
-					typeof nextOffsetValue === 'number'
-						? nextOffsetValue
-						: nextOffsetValue === null
-							? null
-							: null;
-
-				if (offset === null || limit === null || total === null) {
-					return undefined;
-				}
-				return { offset, limit, total, nextOffset };
-			})()
-		: undefined;
+	const paginationRecord = isRecord(record.pagination) ? record.pagination : null;
+	const nextOffsetRaw = paginationRecord ? paginationRecord.nextOffset : undefined;
 
 	return {
 		status,
@@ -213,10 +211,19 @@ function normalizeSimilarResponse(data: Record<string, unknown>): JobStatusData 
 		processedResults,
 		totalCreators,
 		targetResults,
-		platform: getStringProperty(data, 'platform') ?? '',
+		platform: getStringProperty(record, 'platform') ?? '',
 		keywords: [],
-		error: getStringProperty(data, 'error') ?? undefined,
-		pagination,
+		error: getStringProperty(record, 'error') ?? undefined,
+		pagination: paginationRecord
+			? {
+					offset: getNumberProperty(paginationRecord, 'offset') ?? 0,
+					limit: getNumberProperty(paginationRecord, 'limit') ?? 0,
+					total: getNumberProperty(paginationRecord, 'total') ?? 0,
+					nextOffset:
+						getNumberProperty(paginationRecord, 'nextOffset') ??
+						(nextOffsetRaw === null ? null : null),
+				}
+			: undefined,
 		results,
 	};
 }
