@@ -77,7 +77,12 @@ export const POST = withApiLogging(async (req: Request, { requestId, logPhase, l
 			err.message.includes('already claimed') ||
 			err.message.includes('Invalid URL') ||
 			err.message.includes('Invalid file type') ||
-			err.message.includes('File too large')
+			err.message.includes('Invalid file content') ||
+			err.message.includes('File too large') ||
+			err.message.includes('Only HTTPS') ||
+			err.message.includes('supported social platform') ||
+			err.message.includes('Please wait') ||
+			err.message.includes('active subscription')
 		) {
 			return createErrorResponse(err.message, 400, requestId);
 		}

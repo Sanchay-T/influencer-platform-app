@@ -21,11 +21,13 @@ type SubmissionData = {
 type StatusResponse = {
 	status: SubmissionStatus;
 	submission: SubmissionData | null;
+	cooldownEndsAt: string | null;
 };
 
 export function SocialSharingBanner() {
 	const [submissionState, setSubmissionState] = useState<SubmissionStatus>('none');
 	const [submission, setSubmission] = useState<SubmissionData | null>(null);
+	const [cooldownEndsAt, setCooldownEndsAt] = useState<string | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [submitting, setSubmitting] = useState(false);
 	const [showForm, setShowForm] = useState(false);
@@ -45,6 +47,7 @@ export function SocialSharingBanner() {
 			if (resolved.status && resolved.status !== 'none') {
 				setSubmissionState(resolved.status as SubmissionStatus);
 				setSubmission(resolved.submission);
+				setCooldownEndsAt(resolved.cooldownEndsAt ?? null);
 			}
 		} catch {
 			// Silently fail — banner is non-critical
@@ -183,8 +186,13 @@ export function SocialSharingBanner() {
 		);
 	}
 
-	// Rejected state — allow re-submission
+	// Rejected state — allow re-submission (with cooldown)
 	if (submissionState === 'rejected') {
+		const inCooldown = cooldownEndsAt && new Date(cooldownEndsAt) > new Date();
+		const cooldownHours = inCooldown
+			? Math.ceil((new Date(cooldownEndsAt).getTime() - Date.now()) / (60 * 60 * 1000))
+			: 0;
+
 		return (
 			<Card className="bg-zinc-900/80 border border-zinc-700/50">
 				<CardContent className="p-4">
@@ -198,12 +206,18 @@ export function SocialSharingBanner() {
 								{submission?.adminNotes && (
 									<p className="text-xs text-zinc-500 mt-0.5">Reason: {submission.adminNotes}</p>
 								)}
+								{inCooldown && (
+									<p className="text-xs text-zinc-500 mt-0.5">
+										You can resubmit in {cooldownHours} hour{cooldownHours === 1 ? '' : 's'}
+									</p>
+								)}
 							</div>
 						</div>
 						<Button
 							size="sm"
 							variant="outline"
 							className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 shrink-0"
+							disabled={!!inCooldown}
 							onClick={() => {
 								setShowForm(true);
 								setSubmissionState('none');

@@ -38,6 +38,117 @@ function isUniqueViolation(err: unknown): boolean {
 const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/jpg'];
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://usegemz.io';
+const REJECTION_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+// PNG: 89 50 4E 47, JPEG: FF D8 FF
+const PNG_MAGIC = [0x89, 0x50, 0x4e, 0x47];
+const JPEG_MAGIC = [0xff, 0xd8, 0xff];
+
+/**
+ * Allowed social media domains for URL submissions.
+ * Matches the domain itself and any subdomain (e.g. mobile.twitter.com).
+ */
+const ALLOWED_SOCIAL_DOMAINS = [
+	'twitter.com',
+	'x.com',
+	'instagram.com',
+	'tiktok.com',
+	'linkedin.com',
+	'facebook.com',
+	'fb.com',
+	'youtube.com',
+	'youtu.be',
+	'threads.net',
+	'reddit.com',
+	'bsky.app',
+];
+
+/**
+ * Validate that a URL is HTTPS and belongs to an allowed social media domain.
+ */
+function validateSocialUrl(url: string): void {
+	let parsed: URL;
+	try {
+		parsed = new URL(url);
+	} catch {
+		throw new Error('Invalid URL format');
+	}
+	if (parsed.protocol !== 'https:') {
+		throw new Error('Only HTTPS links are accepted.');
+	}
+	const hostname = parsed.hostname.toLowerCase();
+	const isAllowed = ALLOWED_SOCIAL_DOMAINS.some(
+		(domain) => hostname === domain || hostname.endsWith(`.${domain}`)
+	);
+	if (!isAllowed) {
+		throw new Error(
+			'Please submit a link from a supported social platform (Twitter/X, Instagram, TikTok, LinkedIn, Facebook, YouTube, Threads, Reddit, or Bluesky).'
+		);
+	}
+}
+
+/**
+ * Validate file magic bytes match PNG or JPEG signatures.
+ * Prevents MIME-type spoofing where the client sets image/* but the file is something else.
+ */
+async function validateImageMagicBytes(file: File): Promise<void> {
+	const buffer = new Uint8Array(await file.slice(0, 4).arrayBuffer());
+	const isPng = PNG_MAGIC.every((b, i) => buffer[i] === b);
+	const isJpeg = JPEG_MAGIC.every((b, i) => buffer[i] === b);
+	if (!(isPng || isJpeg)) {
+		throw new Error(
+			'Invalid file content. The file does not appear to be a valid PNG or JPEG image.'
+		);
+	}
+}
+
+/**
+ * Check if the user has an active or trialing subscription.
+ * Users without a subscription should not be able to submit — the reward can't be applied.
+ */
+async function hasEligibleSubscription(userInternalId: string): Promise<boolean> {
+	const [billing] = await db
+		.select({ subId: userBilling.stripeSubscriptionId })
+		.from(userBilling)
+		.where(eq(userBilling.userId, userInternalId))
+		.limit(1);
+	if (!billing?.subId) {
+		return false;
+	}
+
+	const sub = await StripeClient.retrieveSubscription(billing.subId);
+	return (sub.status === 'active' || sub.status === 'trialing') && !sub.cancel_at_period_end;
+}
+
+/**
+ * Check if user is within the rejection cooldown window (24h after last rejection).
+ * Returns the Date at which the cooldown expires, or null if no cooldown is active.
+ */
+async function getRejectionCooldownEnd(userInternalId: string): Promise<Date | null> {
+	const [latest] = await db
+		.select({
+			status: socialSharingSubmissions.status,
+			updatedAt: socialSharingSubmissions.updatedAt,
+		})
+		.from(socialSharingSubmissions)
+		.where(eq(socialSharingSubmissions.userId, userInternalId))
+		.orderBy(desc(socialSharingSubmissions.updatedAt))
+		.limit(1);
+
+	if (!latest || latest.status !== 'rejected') {
+		return null;
+	}
+
+	const cooldownEnd = new Date(latest.updatedAt.getTime() + REJECTION_COOLDOWN_MS);
+	return cooldownEnd > new Date() ? cooldownEnd : null;
+}
+
+/**
+ * Escape special SQL LIKE pattern characters (%, _) in a search string.
+ */
+function escapeLikePattern(input: string): string {
+	return input.replace(/%/g, '\\%').replace(/_/g, '\\_');
+}
 
 // ═══════════════════════════════════════════════════════════════
 // TYPES
@@ -113,6 +224,40 @@ export async function getUserLatestSubmission(userInternalId: string) {
 }
 
 /**
+ * Get submission status with cooldown and eligibility metadata for the banner.
+ */
+export async function getSubmissionStatus(userInternalId: string) {
+	const submission = await getUserLatestSubmission(userInternalId);
+
+	if (!submission) {
+		return { status: 'none' as const, submission: null, cooldownEndsAt: null, eligible: true };
+	}
+
+	// Include cooldown info for rejected submissions
+	let cooldownEndsAt: string | null = null;
+	if (submission.status === 'rejected') {
+		const cooldownEnd = await getRejectionCooldownEnd(userInternalId);
+		if (cooldownEnd) {
+			cooldownEndsAt = cooldownEnd.toISOString();
+		}
+	}
+
+	return {
+		status: submission.status,
+		submission: {
+			id: submission.id,
+			evidenceType: submission.evidenceType,
+			evidenceUrl: submission.evidenceUrl,
+			status: submission.status,
+			adminNotes: submission.adminNotes,
+			createdAt: submission.createdAt,
+		},
+		cooldownEndsAt,
+		eligible: true,
+	};
+}
+
+/**
  * Check if user has an active pending submission.
  */
 async function hasPendingSubmission(userInternalId: string): Promise<boolean> {
@@ -132,17 +277,25 @@ async function hasPendingSubmission(userInternalId: string): Promise<boolean> {
 
 /**
  * Check if user already has an approved submission (lifetime limit: 1 free month).
+ * Optionally exclude a specific submission ID (used by extendSubscription to
+ * avoid counting the submission that was JUST approved in the same flow).
  */
-async function hasApprovedSubmission(userInternalId: string): Promise<boolean> {
+async function hasApprovedSubmission(
+	userInternalId: string,
+	excludeSubmissionId?: string
+): Promise<boolean> {
+	const conditions = [
+		eq(socialSharingSubmissions.userId, userInternalId),
+		eq(socialSharingSubmissions.status, 'approved'),
+	];
+	if (excludeSubmissionId) {
+		conditions.push(sql`${socialSharingSubmissions.id} != ${excludeSubmissionId}`);
+	}
+
 	const result = await db
 		.select({ id: socialSharingSubmissions.id })
 		.from(socialSharingSubmissions)
-		.where(
-			and(
-				eq(socialSharingSubmissions.userId, userInternalId),
-				eq(socialSharingSubmissions.status, 'approved')
-			)
-		)
+		.where(and(...conditions))
 		.limit(1);
 
 	return result.length > 0;
@@ -156,12 +309,8 @@ async function hasApprovedSubmission(userInternalId: string): Promise<boolean> {
  * Submit a link as evidence of a social media post.
  */
 export async function submitLink({ userInternalId, url }: SubmitLinkParams) {
-	// Validate URL format
-	try {
-		new URL(url);
-	} catch {
-		throw new Error('Invalid URL format');
-	}
+	// Validate URL format + HTTPS + social media domain
+	validateSocialUrl(url);
 
 	// Lifetime limit: one free month per user
 	if (await hasApprovedSubmission(userInternalId)) {
@@ -171,6 +320,22 @@ export async function submitLink({ userInternalId, url }: SubmitLinkParams) {
 	// Check for existing pending submission
 	if (await hasPendingSubmission(userInternalId)) {
 		throw new Error('You already have a pending submission. Please wait for it to be reviewed.');
+	}
+
+	// Enforce 24-hour cooldown after rejection
+	const cooldownEnd = await getRejectionCooldownEnd(userInternalId);
+	if (cooldownEnd) {
+		const hoursLeft = Math.ceil((cooldownEnd.getTime() - Date.now()) / (60 * 60 * 1000));
+		throw new Error(
+			`Please wait ${hoursLeft} hour${hoursLeft === 1 ? '' : 's'} before resubmitting. You can try again after ${cooldownEnd.toLocaleString()}.`
+		);
+	}
+
+	// Must have an active or trialing subscription to claim the reward
+	if (!(await hasEligibleSubscription(userInternalId))) {
+		throw new Error(
+			'You need an active subscription to claim a free month. Please subscribe first.'
+		);
 	}
 
 	let submission: SocialSharingSubmission;
@@ -213,7 +378,7 @@ export async function submitLink({ userInternalId, url }: SubmitLinkParams) {
  * Upload an image as evidence and create a submission.
  */
 export async function submitImage({ userInternalId, file }: SubmitImageParams) {
-	// Validate file type
+	// Validate file type (MIME header)
 	if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
 		throw new Error('Invalid file type. Only PNG and JPG images are accepted.');
 	}
@@ -223,6 +388,9 @@ export async function submitImage({ userInternalId, file }: SubmitImageParams) {
 		throw new Error('File too large. Maximum size is 5MB.');
 	}
 
+	// Validate actual file content matches PNG/JPEG magic bytes
+	await validateImageMagicBytes(file);
+
 	// Lifetime limit: one free month per user
 	if (await hasApprovedSubmission(userInternalId)) {
 		throw new Error('You have already claimed your free month. This offer is one-time only.');
@@ -231,6 +399,22 @@ export async function submitImage({ userInternalId, file }: SubmitImageParams) {
 	// Check for existing pending submission
 	if (await hasPendingSubmission(userInternalId)) {
 		throw new Error('You already have a pending submission. Please wait for it to be reviewed.');
+	}
+
+	// Enforce 24-hour cooldown after rejection
+	const cooldownEnd = await getRejectionCooldownEnd(userInternalId);
+	if (cooldownEnd) {
+		const hoursLeft = Math.ceil((cooldownEnd.getTime() - Date.now()) / (60 * 60 * 1000));
+		throw new Error(
+			`Please wait ${hoursLeft} hour${hoursLeft === 1 ? '' : 's'} before resubmitting. You can try again after ${cooldownEnd.toLocaleString()}.`
+		);
+	}
+
+	// Must have an active or trialing subscription to claim the reward
+	if (!(await hasEligibleSubscription(userInternalId))) {
+		throw new Error(
+			'You need an active subscription to claim a free month. Please subscribe first.'
+		);
 	}
 
 	// Upload to Vercel Blob
@@ -295,7 +479,7 @@ export async function listSubmissions(
 		conditions.push(eq(socialSharingSubmissions.status, status));
 	}
 	if (emailSearch) {
-		conditions.push(ilike(users.email, `%${emailSearch}%`));
+		conditions.push(ilike(users.email, `%${escapeLikePattern(emailSearch)}%`));
 	}
 
 	const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -391,7 +575,8 @@ export async function approveSubmission({ submissionId, adminInternalId }: Admin
 	}
 
 	// 4. Extend user's subscription by 30 days
-	const extensionResult = await extendSubscription(submission.userId);
+	//    Pass submissionId so the safety net excludes the just-approved submission
+	const extensionResult = await extendSubscription(submission.userId, submissionId);
 
 	// 5. Send approval email ONLY if Stripe extension actually succeeded
 	if (extensionResult.extended) {
@@ -537,13 +722,13 @@ export async function rejectSubmission({
  * primary guard is in submitLink/submitImage).
  */
 async function extendSubscription(
-	userInternalId: string
+	userInternalId: string,
+	currentSubmissionId: string
 ): Promise<{ extended: boolean; method: string; details: string }> {
-	// Safety net: one free month per lifetime
-	if (await hasApprovedSubmission(userInternalId)) {
-		// This shouldn't normally fire — submitLink/submitImage check first.
-		// But defend against admin calling approveSubmission on a manually
-		// inserted row or an old pending row.
+	// Safety net: one free month per lifetime.
+	// Exclude currentSubmissionId — it was just marked 'approved' moments ago
+	// in the same flow, so we only want to detect PRIOR approved submissions.
+	if (await hasApprovedSubmission(userInternalId, currentSubmissionId)) {
 		return {
 			extended: false,
 			method: 'already_claimed',

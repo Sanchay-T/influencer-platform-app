@@ -6,7 +6,7 @@ import {
 	createErrorResponse,
 	withApiLogging,
 } from '@/lib/middleware/api-logger';
-import { getUserLatestSubmission } from '@/lib/services/social-sharing';
+import { getSubmissionStatus } from '@/lib/services/social-sharing';
 
 export const GET = withApiLogging(async (_req: Request, { requestId, logPhase }) => {
 	logPhase('auth');
@@ -23,25 +23,6 @@ export const GET = withApiLogging(async (_req: Request, { requestId, logPhase })
 	}
 
 	logPhase('database');
-	const submission = await getUserLatestSubmission(profile.id);
-
-	if (!submission) {
-		return createApiResponse({ status: 'none', submission: null }, 200, requestId);
-	}
-
-	return createApiResponse(
-		{
-			status: submission.status,
-			submission: {
-				id: submission.id,
-				evidenceType: submission.evidenceType,
-				evidenceUrl: submission.evidenceUrl,
-				status: submission.status,
-				adminNotes: submission.adminNotes,
-				createdAt: submission.createdAt,
-			},
-		},
-		200,
-		requestId
-	);
+	const result = await getSubmissionStatus(profile.id);
+	return createApiResponse(result, 200, requestId);
 }, LogCategory.API);
