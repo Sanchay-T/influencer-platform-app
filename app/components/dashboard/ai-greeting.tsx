@@ -2,9 +2,43 @@
 
 import { motion } from 'framer-motion';
 import { Sparkles, X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { TypewriterText } from './typewriter-text';
+
+function WordReveal({
+	text,
+	onComplete,
+	className,
+}: {
+	text: string;
+	onComplete?: () => void;
+	className?: string;
+}) {
+	const words = text.split(' ');
+	const totalDuration = words.length * 0.03 + 0.3;
+
+	useEffect(() => {
+		if (!onComplete) return;
+		const timer = setTimeout(onComplete, totalDuration * 1000);
+		return () => clearTimeout(timer);
+	}, [onComplete, totalDuration]);
+
+	return (
+		<span className={className}>
+			{words.map((word, i) => (
+				<motion.span
+					key={i}
+					initial={{ opacity: 0, y: 4 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ delay: i * 0.03, duration: 0.3, ease: 'easeOut' }}
+					className="inline-block mr-[0.25em]"
+				>
+					{word}
+				</motion.span>
+			))}
+		</span>
+	);
+}
 
 interface AIGreetingProps {
 	greeting: string;
@@ -74,9 +108,8 @@ export function AIGreeting({
 				{/* Content */}
 				<div className="relative px-6 py-5 pl-12">
 					<div className="text-sm text-zinc-300 leading-relaxed max-w-3xl">
-						<TypewriterText
+						<WordReveal
 							text={greeting}
-							speed={25}
 							onComplete={() => setIsTypingComplete(true)}
 							className="text-zinc-200"
 						/>
