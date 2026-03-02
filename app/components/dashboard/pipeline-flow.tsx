@@ -24,9 +24,9 @@ export function PipelineFlow({ pipeline, deltas }: PipelineFlowProps) {
 	const isInView = useInView(ref, { once: true, margin: '-50px' });
 
 	// Calculate drop-off percentages between stages
-	const getDropOff = (fromKey: string, toKey: string) => {
-		const fromValue = pipeline[fromKey as keyof PipelineSummary] as number;
-		const toValue = pipeline[toKey as keyof PipelineSummary] as number;
+	const getDropOff = (fromKey: keyof PipelineSummary, toKey: keyof PipelineSummary) => {
+		const fromValue = Number(pipeline[fromKey]) || 0;
+		const toValue = Number(pipeline[toKey]) || 0;
 		if (fromValue === 0) {
 			return null;
 		}

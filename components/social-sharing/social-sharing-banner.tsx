@@ -3,10 +3,10 @@
 import { CheckCircle, Clock, ExternalLink, Gift, Loader2, Upload, XCircle } from 'lucide-react';
 import { type ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { isRecord, toRecord } from '@/lib/utils/type-guards';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { isRecord, toRecord } from '@/lib/utils/type-guards';
 
 type SubmissionStatus = 'none' | 'pending' | 'approved' | 'rejected';
 
@@ -48,9 +48,19 @@ export function SocialSharingBanner() {
 			// API spreads response flat (status, submission at top level)
 			const resolved = toRecord(record.data) ?? record;
 			const status = typeof resolved.status === 'string' ? resolved.status : '';
-			if (status && status !== 'none') {
-				setSubmissionState(status as SubmissionStatus);
-				setSubmission(resolved.submission);
+			if (status === 'pending' || status === 'approved' || status === 'rejected') {
+				setSubmissionState(status);
+				const sub = isRecord(resolved.submission) ? resolved.submission : null;
+				if (sub) {
+					setSubmission({
+						id: typeof sub.id === 'string' ? sub.id : '',
+						evidenceType: typeof sub.evidenceType === 'string' ? sub.evidenceType : '',
+						evidenceUrl: typeof sub.evidenceUrl === 'string' ? sub.evidenceUrl : '',
+						status: typeof sub.status === 'string' ? sub.status : '',
+						adminNotes: typeof sub.adminNotes === 'string' ? sub.adminNotes : null,
+						createdAt: typeof sub.createdAt === 'string' ? sub.createdAt : '',
+					});
+				}
 			}
 		} catch {
 			// Silently fail — banner is non-critical
