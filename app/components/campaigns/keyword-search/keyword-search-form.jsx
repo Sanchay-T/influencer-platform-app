@@ -89,9 +89,9 @@ export default function KeywordSearchForm({ onSubmit }) {
 			}
 
 			setCreatorsCount(value);
-			},
-			[isTrialUser, planDisplayName]
-		);
+		},
+		[isTrialUser, planDisplayName]
+	);
 
 	if (!(isLoaded && user)) {
 		return (

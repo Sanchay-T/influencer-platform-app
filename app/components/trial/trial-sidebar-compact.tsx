@@ -204,21 +204,21 @@ export default function TrialSidebarCompact() {
 				</Link>
 			</div>
 
-				{status.currentPlan && (
-					<StartSubscriptionModal
-						open={showStartModal}
-						onOpenChange={setShowStartModal}
-						planName={
-							isValidPlan(status.currentPlan)
-								? PLANS[status.currentPlan].name
-								: status.currentPlan
+			{status.currentPlan && (
+				<StartSubscriptionModal
+					open={showStartModal}
+					onOpenChange={setShowStartModal}
+					planName={
+						isValidPlan(status.currentPlan)
+							? PLANS[status.currentPlan].name
+							: status.currentPlan
+					}
+					amount={status.billingAmount || 0}
+					onConfirm={async () => {
+						const result = await startSubscription();
+						if (result.success) {
+							setShowStartModal(false);
 						}
-						amount={status.billingAmount || 0}
-						onConfirm={async () => {
-							const result = await startSubscription();
-							if (result.success) {
-								setShowStartModal(false);
-							}
 					}}
 					isLoading={isStarting}
 				/>

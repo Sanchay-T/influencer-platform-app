@@ -55,16 +55,16 @@ if (!globalThis.__loggingServerConsoleBridge__) {
 				const originalWrite = process.stdout.write.bind(process.stdout);
 				const accessLogPattern = /^\s*(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+\//;
 
-				const overrideWrite = (
-					chunk: string | Uint8Array,
-					encodingOrCallback?: BufferEncoding | ((err?: Error | null) => void),
-					callback?: (err?: Error | null) => void
-				): boolean => {
-					const encoding = typeof encodingOrCallback === 'string' ? encodingOrCallback : undefined;
-					const resolvedCallback =
-						typeof encodingOrCallback === 'function' ? encodingOrCallback : callback;
-					const text =
-						typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString(encoding ?? 'utf8');
+			const overrideWrite = (
+				chunk: string | Uint8Array,
+				encodingOrCallback?: BufferEncoding | ((err?: Error | null) => void),
+				callback?: (err?: Error | null) => void
+			): boolean => {
+				const encoding = typeof encodingOrCallback === 'string' ? encodingOrCallback : undefined;
+				const resolvedCallback =
+					typeof encodingOrCallback === 'function' ? encodingOrCallback : callback;
+				const text =
+					typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString(encoding ?? 'utf8');
 
 				if (text && accessLogPattern.test(text)) {
 					if (resolvedCallback) {

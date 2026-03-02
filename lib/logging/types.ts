@@ -61,6 +61,7 @@ export enum LogCategory {
 	UI = 'UI',
 	WEBHOOK = 'WEBHOOK',
 	JOB = 'JOB',
+	LIST = 'LIST',
 }
 
 /**

@@ -62,29 +62,29 @@ export default function ListsPageClient({ initialLists }: ListsPageClientProps) 
 			setCreateError(null);
 			setCreating(true);
 
-			// 1. Create optimistic list with temp ID (partial - will be replaced with real data)
-			const tempId = `temp-${Date.now()}`;
-			const now = new Date();
-			const optimisticList: ListSummary = {
-				id: tempId,
-				ownerId: '',
-				name: form.name,
-				description: form.description || null,
-				type: form.type,
-				privacy: 'private',
-				creatorCount: 0,
-				followerSum: 0,
-				collaboratorCount: 0,
-				tags: [],
-				settings: {},
-				stats: {},
-				isArchived: false,
-				slug: null,
-				createdAt: now,
-				updatedAt: now,
-				lastSharedAt: null,
-				viewerRole: 'owner',
-			};
+		// 1. Create optimistic list with temp ID (partial - will be replaced with real data)
+		const tempId = `temp-${Date.now()}`;
+		const now = new Date();
+		const optimisticList: ListSummary = {
+			id: tempId,
+			ownerId: '00000000-0000-0000-0000-000000000000',
+			name: form.name,
+			description: form.description || null,
+			type: form.type,
+			privacy: 'private',
+			tags: [],
+			settings: {},
+			stats: {},
+			isArchived: false,
+			slug: null,
+			createdAt: now,
+			updatedAt: now,
+			lastSharedAt: null,
+			creatorCount: 0,
+			followerSum: 0,
+			collaboratorCount: 0,
+			viewerRole: 'owner',
+		};
 
 		// 2. Optimistic update
 		setLists((prev) => [optimisticList, ...prev]);
@@ -133,8 +133,8 @@ export default function ListsPageClient({ initialLists }: ListsPageClientProps) 
 		[deletingId]
 	);
 
-	const handleCancelDelete = useCallback((event: MouseEvent) => {
-		event.stopPropagation();
+	const handleCancelDelete = useCallback((event?: MouseEvent) => {
+		event?.stopPropagation();
 		setConfirmDeleteId(null);
 	}, []);
 

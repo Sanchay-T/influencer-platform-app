@@ -4,7 +4,7 @@ import { isAdminUser } from '@/lib/auth/admin-utils';
 import { db } from '@/lib/db';
 import { getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
 import { subscriptionPlans } from '@/lib/db/schema';
-import { structuredConsole } from '@/lib/logging/console-proxy';
+import { logger } from '@/lib/logging';
 
 export async function POST(req: NextRequest) {
 	try {
@@ -28,21 +28,19 @@ export async function POST(req: NextRequest) {
 			return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
 		}
 
-		// Update user's plan and snapshot limits
+		// Update user's plan and grant access
+		// Note: planCampaignsLimit/planCreatorsLimit are deprecated — limits are read
+		// from plan-config.ts at runtime by access-validation.ts
 		await updateUserProfile(userId, {
 			currentPlan: plan.planKey,
 			subscriptionStatus: 'active',
-			// Access validation requires onboardingStep === 'completed'
 			onboardingStep: 'completed',
-			planCampaignsLimit: plan.campaignsLimit,
-			planCreatorsLimit: plan.creatorsLimit,
-			planFeatures: plan.features,
 		});
 
 		const updated = await getUserProfile(userId);
 		return NextResponse.json({ success: true, user: updated });
 	} catch (err) {
-		structuredConsole.error('[ADMIN-SET-PLAN] error', err);
+		logger.error('[ADMIN-SET-PLAN] error', err instanceof Error ? err : undefined);
 		return NextResponse.json({ error: 'Failed to set user plan' }, { status: 500 });
 	}
 }

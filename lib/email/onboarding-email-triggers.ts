@@ -60,16 +60,16 @@ export async function scheduleOnboardingEmails(
 	try {
 		// Get user email from Clerk
 		const userEmail = await getUserEmailFromClerk(userId);
-			if (!userEmail) {
-				structuredConsole.error('❌ [ONBOARDING-EMAILS] Could not retrieve email for user:', userId);
-				return {
-					success: false,
-					scheduled: [],
-					skipped: [],
-					failed: ONBOARDING_EMAIL_TYPES,
-					error: 'Could not retrieve user email',
-				};
-			}
+		if (!userEmail) {
+			structuredConsole.error('❌ [ONBOARDING-EMAILS] Could not retrieve email for user:', userId);
+			return {
+				success: false,
+				scheduled: [],
+				skipped: [],
+				failed: ONBOARDING_EMAIL_TYPES,
+				error: 'Could not retrieve user email',
+			};
+		}
 
 		// Build template props with UTM tracking
 		// Note: dashboardUrl goes to /dashboard which shows the onboarding modal
@@ -126,15 +126,15 @@ export async function scheduleOnboardingEmails(
 			level: 'error',
 		});
 
-			return {
-				success: false,
-				scheduled,
-				skipped,
-				failed: ONBOARDING_EMAIL_TYPES.filter((t) => !(scheduled.includes(t) || skipped.includes(t))),
-				error: error instanceof Error ? error.message : 'Unknown error',
-			};
-		}
+		return {
+			success: false,
+			scheduled,
+			skipped,
+			failed: ONBOARDING_EMAIL_TYPES.filter((t) => !(scheduled.includes(t) || skipped.includes(t))),
+			error: error instanceof Error ? error.message : 'Unknown error',
+		};
 	}
+}
 
 /**
  * Cancel all pending onboarding emails for a user.

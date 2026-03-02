@@ -26,6 +26,7 @@ export interface CreatorTableViewProps {
 	// Trial blur props
 	isTrialUser?: boolean;
 	trialClearLimit?: number;
+	startIndex?: number;
 	// Callbacks
 	onSelectPage: (selected: boolean) => void;
 	toggleSelection: (rowId: string, snapshot: unknown) => void;
@@ -64,6 +65,7 @@ export function CreatorTableView({
 	viewMode,
 	isTrialUser = false,
 	trialClearLimit = 25,
+	startIndex = 0,
 	onSelectPage,
 	toggleSelection,
 	renderProfileLink,
@@ -76,7 +78,9 @@ export function CreatorTableView({
 	setBioEmailConfirmDialog,
 }: CreatorTableViewProps) {
 	// Limit visible rows for trial users: show clear rows + limited blurred rows
-	const visibleRows = isTrialUser ? rows.slice(0, trialClearLimit + BLURRED_ROWS_TO_SHOW) : rows;
+	const visibleRows = isTrialUser
+		? rows.slice(0, Math.max(0, trialClearLimit + BLURRED_ROWS_TO_SHOW - startIndex))
+		: rows;
 
 	return (
 		<div className={cn('w-full', viewMode === 'table' ? 'block' : 'hidden')}>
@@ -95,7 +99,7 @@ export function CreatorTableView({
 								isSelected={!!selectedCreators[row.id]}
 								platformNormalized={platformNormalized}
 								bioLoading={bioLoading}
-								isBlurred={isTrialUser && index >= trialClearLimit}
+								isBlurred={isTrialUser && startIndex + index >= trialClearLimit}
 								toggleSelection={toggleSelection}
 								renderProfileLink={renderProfileLink}
 								getBioDataForCreator={getBioDataForCreator}

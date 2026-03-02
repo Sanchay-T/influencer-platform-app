@@ -48,20 +48,20 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 				return NextResponse.json({ error: 'Export not ready' }, { status: 404 });
 			}
 
-				const blobResponse = await fetch(exportJob.downloadUrl, { cache: 'no-store' });
-				if (!blobResponse.ok) {
-					return NextResponse.json({ error: 'Failed to fetch export blob' }, { status: 500 });
-				}
+			const blobResponse = await fetch(exportJob.downloadUrl, { cache: 'no-store' });
+			if (!blobResponse.ok) {
+				return NextResponse.json({ error: 'Failed to fetch export blob' }, { status: 500 });
+			}
 
-				const encryptedBytes = Buffer.from(await blobResponse.arrayBuffer());
-				const csvBytes = decryptCsvBytes(encryptedBytes);
-				const csvText = csvBytes.toString('utf8');
+			const encryptedBytes = Buffer.from(await blobResponse.arrayBuffer());
+			const csvBytes = decryptCsvBytes(encryptedBytes);
+			const csvText = csvBytes.toString('utf8');
 
-				return new NextResponse(csvText, {
-					headers: {
-						'Content-Type': 'text/csv; charset=utf-8',
-						'Content-Disposition': `attachment; filename=\"gemz-export-${exportJob.id}.csv\"`,
-						'Cache-Control': 'no-store',
+			return new NextResponse(csvText, {
+				headers: {
+					'Content-Type': 'text/csv; charset=utf-8',
+					'Content-Disposition': `attachment; filename=\"gemz-export-${exportJob.id}.csv\"`,
+					'Cache-Control': 'no-store',
 					'X-Content-Type-Options': 'nosniff',
 				},
 			});

@@ -260,6 +260,9 @@ export const userSubscriptions = pgTable('user_subscriptions', {
 	trialStartDate: timestamp('trial_start_date'),
 	trialEndDate: timestamp('trial_end_date'),
 	subscriptionCancelDate: timestamp('subscription_cancel_date'),
+	// Stripe billing interval and period end — used for billing UI instead of hardcoded values
+	billingInterval: varchar('billing_interval', { length: 10 }), // 'month' | 'year'
+	currentPeriodEnd: timestamp('current_period_end'),
 	// Removed: trialConversionDate, subscriptionRenewalDate (never used)
 	billingSyncStatus: varchar('billing_sync_status', { length: 20 }).default('pending').notNull(),
 	createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -956,6 +959,8 @@ export type UserProfileComplete = {
 	trialStartDate?: Date | null;
 	trialEndDate?: Date | null;
 	subscriptionCancelDate?: Date | null;
+	billingInterval?: string | null;
+	currentPeriodEnd?: Date | null;
 	billingSyncStatus: string;
 
 	// Billing data (minimal - Stripe Portal handles card/address)

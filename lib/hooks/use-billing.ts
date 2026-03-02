@@ -331,7 +331,6 @@ export function clearBillingCache() {
 		// Clear all billing-related caches
 		localStorage.removeItem(BILLING_CACHE_KEY); // gemz_entitlements_v1
 		localStorage.removeItem('gemz_trial_status_v1'); // trial-sidebar-compact.tsx
-		localStorage.removeItem('gemz_trial_status_cache'); // use-trial-status.ts (blur overlay)
 	} catch {
 		// Ignore localStorage access issues.
 	}

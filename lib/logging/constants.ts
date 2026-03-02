@@ -204,6 +204,7 @@ const FILE_PATTERNS: Record<LogCategory | 'default', string> = {
 	[LogCategory.UI]: 'ui-%DATE%.log',
 	[LogCategory.WEBHOOK]: 'webhook-%DATE%.log',
 	[LogCategory.JOB]: 'job-%DATE%.log',
+	[LogCategory.LIST]: 'list-%DATE%.log',
 	default: 'application-%DATE%.log',
 };
 
@@ -358,6 +359,7 @@ const CATEGORY_ICONS: Record<LogCategory | 'default', string> = {
 	[LogCategory.UI]: '🧩',
 	[LogCategory.WEBHOOK]: '🔗',
 	[LogCategory.JOB]: '🧪',
+	[LogCategory.LIST]: '📋',
 	default: '📝',
 };
 

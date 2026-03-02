@@ -1,4 +1,5 @@
 import { isAdminUser } from '@/lib/auth/admin-utils';
+import type { SocialSharingStatus } from '@/lib/db/schema';
 import { LogCategory } from '@/lib/logging';
 import {
 	createApiResponse,
@@ -6,7 +7,6 @@ import {
 	withApiLogging,
 } from '@/lib/middleware/api-logger';
 import { listSubmissions } from '@/lib/services/social-sharing';
-import type { SocialSharingStatus } from '@/lib/db/schema';
 import { toError } from '@/lib/utils/type-guards';
 
 const VALID_STATUSES: SocialSharingStatus[] = ['pending', 'approved', 'rejected'];
@@ -31,14 +31,15 @@ export const GET = withApiLogging(async (req: Request, { requestId, logPhase, lo
 	// Validate status filter
 	let status: SocialSharingStatus | undefined;
 	if (statusParam) {
-		if (!VALID_STATUSES.includes(statusParam as SocialSharingStatus)) {
+		const validStatus = VALID_STATUSES.find((s) => s === statusParam);
+		if (!validStatus) {
 			return createErrorResponse(
 				`Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}`,
 				400,
 				requestId
 			);
 		}
-		status = statusParam as SocialSharingStatus;
+		status = validStatus;
 	}
 
 	logPhase('database');

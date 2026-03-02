@@ -101,8 +101,20 @@ export async function GET(req: Request) {
 	const cached = await cacheGet<StatusResponse>(cacheKey);
 
 	if (cached) {
-		// Verify ownership from cached data or do a quick DB check
-		// For now, we trust the cache since jobId is unique per user
+		// Verify ownership before returning cached data
+		const jobOwner = await db
+			.select({ userId: scrapingJobs.userId })
+			.from(scrapingJobs)
+			.where(eq(scrapingJobs.id, jobId))
+			.limit(1);
+
+		if (!jobOwner[0]) {
+			return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+		}
+		if (jobOwner[0].userId !== userId) {
+			return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+		}
+
 		logger.info(
 			`[v2-status] CACHE HIT for ${jobId} (${Date.now() - startTime}ms)`,
 			{},
@@ -211,15 +223,15 @@ export async function GET(req: Request) {
 		.limit(limit)
 		.offset(offset);
 
-		// Extract creator data from rows, injecting keyword into each creator object
-		// @context USE2-17: Frontend expects keyword field on creator for filtering/display
-		const paginatedCreators = paginatedRows.map((row) => {
-			const creatorData = isRecord(row.creatorData) ? row.creatorData : {};
-			return {
-				...creatorData,
-				keyword: row.keyword || null,
-			};
-		});
+	// Extract creator data from rows, injecting keyword into each creator object
+	// @context USE2-17: Frontend expects keyword field on creator for filtering/display
+	const paginatedCreators = paginatedRows.map((row) => {
+		const creatorData = toRecord(row.creatorData) ?? {};
+		return {
+			...creatorData,
+			keyword: row.keyword || null,
+		};
+	});
 
 	// DEBUG: Log first creator's enrichment data to diagnose bio/email display issues
 	if (enableStatusDebug && paginatedCreators.length > 0) {

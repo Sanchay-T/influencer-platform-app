@@ -38,6 +38,10 @@ export type AnalyticsPayload = {
 	};
 }[AnalyticsEvent];
 
+type TrackArgs = {
+	[E in AnalyticsEvent]: [event: E, properties: EventPropertiesMap[E]];
+}[AnalyticsEvent];
+
 // ============================================================================
 // Client-side tracking (browser only)
 // ============================================================================

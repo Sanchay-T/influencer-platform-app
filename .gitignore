@@ -58,6 +58,7 @@ sorzproject-main/
 
 # database dumps (large files)
 *.sql
+!supabase/migrations/**/*.sql
 data/*.sql
 
 # User session logs (local debugging)

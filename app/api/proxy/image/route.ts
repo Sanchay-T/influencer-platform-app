@@ -391,6 +391,7 @@ export async function GET(request: Request) {
 			});
 		}
 
+
 		// Check if this is a blob URL (which shouldn't be proxied)
 		if (imageUrl.includes('blob.vercel-storage.com')) {
 			logger.warn(

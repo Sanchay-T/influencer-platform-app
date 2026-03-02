@@ -50,20 +50,21 @@ export async function POST(req: Request) {
 			const normalizedSearchType =
 				searchType === 'similar' ? 'similar' : searchType === 'keyword' ? 'keyword' : 'keyword';
 
-			// Create campaign in database
-			const [campaign] = await db
-				.insert(campaigns)
-				.values({
-					userId: userId,
-					name,
-					description,
-					searchType: normalizedSearchType,
-					status: 'draft',
-				})
-				.returning();
-
-			// Increment usage counter
-			await incrementCampaignCount(userId);
+			// Create campaign + increment counter atomically
+			const campaign = await db.transaction(async (tx) => {
+				const [c] = await tx
+					.insert(campaigns)
+					.values({
+						userId: userId,
+						name,
+						description,
+						searchType: normalizedSearchType,
+						status: 'draft',
+					})
+					.returning();
+				await incrementCampaignCount(userId, tx);
+				return c;
+			});
 
 				// Track campaign creation (GA4 + LogSnag + Sentry)
 				const user = await getUserProfile(userId);

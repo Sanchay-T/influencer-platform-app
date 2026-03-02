@@ -6,6 +6,7 @@ import { toast } from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { isRecord, toRecord } from '@/lib/utils/type-guards';
 
 type SubmissionStatus = 'none' | 'pending' | 'approved' | 'rejected';
 
@@ -39,12 +40,27 @@ export function SocialSharingBanner() {
 			if (!res.ok) {
 				return;
 			}
-			const data = (await res.json()) as StatusResponse & { data?: StatusResponse };
+			const raw: unknown = await res.json();
+			const record = toRecord(raw);
+			if (!record) {
+				return;
+			}
 			// API spreads response flat (status, submission at top level)
-			const resolved = data.data ?? data;
-			if (resolved.status && resolved.status !== 'none') {
-				setSubmissionState(resolved.status as SubmissionStatus);
-				setSubmission(resolved.submission);
+			const resolved = toRecord(record.data) ?? record;
+			const status = typeof resolved.status === 'string' ? resolved.status : '';
+			if (status === 'pending' || status === 'approved' || status === 'rejected') {
+				setSubmissionState(status);
+				const sub = isRecord(resolved.submission) ? resolved.submission : null;
+				if (sub) {
+					setSubmission({
+						id: typeof sub.id === 'string' ? sub.id : '',
+						evidenceType: typeof sub.evidenceType === 'string' ? sub.evidenceType : '',
+						evidenceUrl: typeof sub.evidenceUrl === 'string' ? sub.evidenceUrl : '',
+						status: typeof sub.status === 'string' ? sub.status : '',
+						adminNotes: typeof sub.adminNotes === 'string' ? sub.adminNotes : null,
+						createdAt: typeof sub.createdAt === 'string' ? sub.createdAt : '',
+					});
+				}
 			}
 		} catch {
 			// Silently fail — banner is non-critical

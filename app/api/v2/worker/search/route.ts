@@ -121,10 +121,41 @@ export async function POST(req: Request) {
 			LogCategory.JOB
 		);
 
-		// Return 200 even on error to prevent QStash retries for expected failures
+		// Classify error: transient errors get 503 so QStash retries
+		const transientPatterns = [
+			'timeout',
+			'ECONNRESET',
+			'ECONNREFUSED',
+			'ETIMEDOUT',
+			'rate limit',
+			'socket hang up',
+			'network',
+			'429',
+			'503',
+			'502',
+			'EPIPE',
+			'EAI_AGAIN',
+		];
+		const errorLower = result.error.toLowerCase();
+		const isTransient = transientPatterns.some((p) => errorLower.includes(p.toLowerCase()));
+
+		if (isTransient) {
+			logger.info(
+				'[v2-search-worker-route] Transient error, returning 503 for QStash retry',
+				{ jobId: message.jobId, keyword: message.keyword, error: result.error },
+				LogCategory.JOB
+			);
+			return NextResponse.json(
+				{ success: false, error: result.error, transient: true, ...result },
+				{ status: 503 }
+			);
+		}
+
+		// Permanent error - return 200 to prevent QStash retries
 		return NextResponse.json({
 			success: false,
 			error: result.error,
+			transient: false,
 			...result,
 		});
 	}

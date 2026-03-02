@@ -90,24 +90,24 @@ export async function POST(req: Request) {
 					where: eq(scrapingJobs.campaignId, campaignId),
 					columns: { id: true, keywords: true },
 				});
-					jobIds = jobs.map((j) => j.id);
-					jobs.forEach((job) => {
-						const jobKeywords = toStringArray(job.keywords);
-						if (jobKeywords) {
-							keywords = keywords.concat(jobKeywords);
-						}
-					});
-					keywords = [...new Set(keywords)];
-				} else if (jobId) {
-					jobIds = [jobId];
-					const job = await db.query.scrapingJobs.findFirst({
-						where: eq(scrapingJobs.id, jobId),
-						columns: { keywords: true },
-					});
-					if (job) {
-						keywords = toStringArray(job.keywords) ?? [];
+				jobIds = jobs.map((j) => j.id);
+				jobs.forEach((job) => {
+					const jobKeywords = toStringArray(job.keywords);
+					if (jobKeywords) {
+						keywords = keywords.concat(jobKeywords);
 					}
+				});
+				keywords = [...new Set(keywords)];
+			} else if (jobId) {
+				jobIds = [jobId];
+				const job = await db.query.scrapingJobs.findFirst({
+					where: eq(scrapingJobs.id, jobId),
+					columns: { keywords: true },
+				});
+				if (job) {
+					keywords = toStringArray(job.keywords) ?? [];
 				}
+			}
 
 			if (jobIds.length === 0) {
 				throw new Error('No jobs found for export');
@@ -145,9 +145,14 @@ export async function POST(req: Request) {
 			const encryptedBytes = encryptCsvBytes(Buffer.from(csvContent, 'utf8'));
 
 			// Upload to Vercel Blob
+			// Vercel Blob only supports access: 'public'. To protect exports:
+			// 1. Filenames include a random UUID token to make URLs unguessable
+			// 2. Raw blob URLs are never exposed to clients — downloads go through
+			//    /api/export/download/[id] which requires auth + ownership verification
+			const token = crypto.randomUUID();
 			const filename = campaignId
-				? `exports/campaign-${campaignId}-${Date.now()}.csv.enc`
-				: `exports/job-${jobId}-${Date.now()}.csv.enc`;
+				? `exports/campaign-${campaignId}-${Date.now()}-${token}.csv.enc`
+				: `exports/job-${jobId}-${Date.now()}-${token}.csv.enc`;
 
 			SentryLogger.addBreadcrumb({
 				category: 'export',
@@ -185,10 +190,11 @@ export async function POST(req: Request) {
 
 			// Skip email - frontend polls for status and auto-downloads
 
+			// Response to QStash — omit raw blob URL to prevent leaks via
+			// dead letter queues, observability tools, or debug calls
 			return NextResponse.json({
 				success: true,
 				exportId,
-				downloadUrl: blob.url,
 				totalCreators: creators.length,
 			});
 		} catch (error) {
@@ -299,53 +305,53 @@ export async function POST(req: Request) {
 
 		let csv = `${headers.join(',')}\n`;
 
-			for (const item of creators) {
-				const creator = isRecord(item.creator) ? item.creator : {};
-				const video = isRecord(item.video) ? item.video : {};
-				const stats = isRecord(video.statistics) ? video.statistics : {};
-				const hashtagList = Array.isArray(item.hashtags)
-					? item.hashtags.filter((tag): tag is string => typeof tag === 'string')
-					: [];
-				const hashtags = hashtagList.length > 0 ? hashtagList.join(';') : '';
-				const platform = readString(item.platform) ?? 'Unknown';
-				const emailCell = formatEmailsForCsv([item, creator]);
+		for (const item of creators) {
+			const creator = isRecord(item.creator) ? item.creator : {};
+			const video = isRecord(item.video) ? item.video : {};
+			const stats = isRecord(video.statistics) ? video.statistics : {};
+			const hashtagList = Array.isArray(item.hashtags)
+				? item.hashtags.filter((tag): tag is string => typeof tag === 'string')
+				: [];
+			const hashtags = hashtagList.length > 0 ? hashtagList.join(';') : '';
+			const platform = readString(item.platform) ?? 'Unknown';
+			const emailCell = formatEmailsForCsv([item, creator]);
 
-				let dateStr = '';
-				if (platform === 'YouTube') {
-					dateStr = toIsoDate(item.publishedTime) ?? '';
-				} else {
-					const createTime = readNumber(item.createTime);
-					if (createTime !== undefined) {
-						dateStr = toIsoDate(createTime * 1000) ?? '';
-					}
+			let dateStr = '';
+			if (platform === 'YouTube') {
+				dateStr = toIsoDate(item.publishedTime) ?? '';
+			} else {
+				const createTime = readNumber(item.createTime);
+				if (createTime !== undefined) {
+					dateStr = toIsoDate(createTime * 1000) ?? '';
 				}
+			}
 
-				const creatorName = readString(creator.name) ?? '';
-				const followers = readNumber(creator.followers) ?? 0;
-				const videoUrl = readString(video.url) ?? '';
-				const description = readString(video.description) ?? '';
-				const views = readNumber(stats.views) ?? 0;
-				const likes = readNumber(stats.likes) ?? 0;
-				const comments = readNumber(stats.comments) ?? 0;
-				const shares = readNumber(stats.shares) ?? 0;
-				const lengthSeconds = readNumber(item.lengthSeconds) ?? 0;
+			const creatorName = readString(creator.name) ?? '';
+			const followers = readNumber(creator.followers) ?? 0;
+			const videoUrl = readString(video.url) ?? '';
+			const description = readString(video.description) ?? '';
+			const views = readNumber(stats.views) ?? 0;
+			const likes = readNumber(stats.likes) ?? 0;
+			const comments = readNumber(stats.comments) ?? 0;
+			const shares = readNumber(stats.shares) ?? 0;
+			const lengthSeconds = readNumber(item.lengthSeconds) ?? 0;
 
-				const row = [
-					`"${platform}"`,
-					`"${escapeCSV(creatorName)}"`,
-					`"${followers}"`,
-					`"${videoUrl}"`,
-					`"${escapeCSV(description)}"`,
-					`"${views}"`,
-					`"${likes}"`,
-					`"${comments}"`,
-					`"${shares}"`,
-					`"${lengthSeconds}"`,
-					`"${hashtags}"`,
-					`"${dateStr}"`,
-					`"${keywordsStr}"`,
-					`"${emailCell}"`,
-				];
+			const row = [
+				`"${platform}"`,
+				`"${escapeCSV(creatorName)}"`,
+				`"${followers}"`,
+				`"${videoUrl}"`,
+				`"${escapeCSV(description)}"`,
+				`"${views}"`,
+				`"${likes}"`,
+				`"${comments}"`,
+				`"${shares}"`,
+				`"${lengthSeconds}"`,
+				`"${hashtags}"`,
+				`"${dateStr}"`,
+				`"${keywordsStr}"`,
+				`"${emailCell}"`,
+			];
 			csv += `${row.join(',')}\n`;
 		}
 
@@ -382,26 +388,26 @@ export async function POST(req: Request) {
 						? `https://www.tiktok.com/@${username}`
 						: `https://instagram.com/${username}`;
 
-				const fullName =
-					readString(creator.full_name) ?? readString(creator.displayName) ?? '';
-				const followerCount = readNumber(creator.followerCount) ?? readNumber(creator.followers) ?? 0;
-				const isVerified =
-					creator.is_verified === true || creator.verified === true ? 'Yes' : 'No';
-				const isPrivate =
-					creator.is_private === true || creator.isPrivate === true ? 'Yes' : 'No';
+			const fullName =
+				readString(creator.full_name) ?? readString(creator.displayName) ?? '';
+			const followerCount = readNumber(creator.followerCount) ?? readNumber(creator.followers) ?? 0;
+			const isVerified =
+				creator.is_verified === true || creator.verified === true ? 'Yes' : 'No';
+			const isPrivate =
+				creator.is_private === true || creator.isPrivate === true ? 'Yes' : 'No';
 
-				const row = [
-					`"${username}"`,
-					`"${escapeCSV(fullName)}"`,
-					`"${followerCount}"`,
-					`"${emailCell}"`,
-					`"${isVerified}"`,
-					`"${isPrivate}"`,
-					`"${platform}"`,
-					`"${profileUrl}"`,
-				];
-				csv += `${row.join(',')}\n`;
-			}
+			const row = [
+				`"${username}"`,
+				`"${escapeCSV(fullName)}"`,
+				`"${followerCount}"`,
+				`"${emailCell}"`,
+				`"${isVerified}"`,
+				`"${isPrivate}"`,
+				`"${platform}"`,
+				`"${profileUrl}"`,
+			];
+			csv += `${row.join(',')}\n`;
+		}
 
 		return csv;
 	}

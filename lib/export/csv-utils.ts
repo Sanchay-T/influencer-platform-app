@@ -1,9 +1,6 @@
 import type { DedupeOptions } from '@/lib/utils/dedupe-creators';
 import { dedupeCreators as sharedDedupeCreators } from '@/lib/utils/dedupe-creators';
-import {
-	getStringProperty,
-	toRecord,
-} from '@/lib/utils/type-guards';
+import { getStringProperty, toRecord } from '@/lib/utils/type-guards';
 
 export type { DedupeOptions } from '@/lib/utils/dedupe-creators';
 
@@ -56,8 +53,7 @@ export const dedupeByCreator = (creators: CreatorRecord[]): CreatorRecord[] => {
 			continue;
 		}
 
-		const platform =
-			getStringProperty(item, 'platform') ?? 'unknown';
+		const platform = getStringProperty(item, 'platform') ?? 'unknown';
 		const key = `${platform.toLowerCase()}|${username.toLowerCase()}`;
 
 		const existing = grouped.get(key);

@@ -82,7 +82,7 @@ export async function dispatchListEnrichmentBatches(
 			},
 			retries: 3,
 			// Stagger batches slightly to avoid thundering herd on enrichment APIs
-			delay: index > 0 ? (`${index * 2}s` as `${bigint}s`) : undefined,
+			delay: index > 0 ? index * 2 : undefined,
 		})
 	);
 

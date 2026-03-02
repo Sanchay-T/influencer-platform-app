@@ -144,12 +144,12 @@ if (createdNewClient && process.env.NODE_ENV !== 'production') {
 export async function withDbRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
 	const retryableErrors = ['ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT', 'connection_refused'];
 
-		for (let attempt = 0; attempt < maxRetries; attempt++) {
-			try {
-				return await fn();
-			} catch (error: unknown) {
-				const errorCode = isRecord(error) && typeof error.code === 'string' ? error.code : '';
-				const errorMessage = error instanceof Error ? error.message : String(error);
+	for (let attempt = 0; attempt < maxRetries; attempt++) {
+		try {
+			return await fn();
+		} catch (error: unknown) {
+			const errorCode = isRecord(error) && typeof error.code === 'string' ? error.code : '';
+			const errorMessage = error instanceof Error ? error.message : String(error);
 
 			const isRetryable =
 				retryableErrors.some((code) => errorCode === code) ||

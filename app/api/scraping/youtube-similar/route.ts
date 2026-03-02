@@ -1,9 +1,9 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { trackSearchStarted } from '@/lib/analytics/logsnag';
 import { getUserDataForTracking } from '@/lib/analytics/track-server-utils';
 import { getAuthOrTest } from '@/lib/auth/get-auth-or-test';
-import { validateCreatorSearch } from '@/lib/billing';
+import { validateCreatorSearch, validateTrialSearchLimit } from '@/lib/billing';
 import { db } from '@/lib/db';
 import { campaigns, scrapingJobs } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
@@ -76,29 +76,55 @@ export async function POST(req: Request) {
 
 		const targetResults = 100;
 
-		const [job] = await db
-			.insert(scrapingJobs)
-			.values({
-				userId,
-				campaignId,
-				targetUsername: target,
-				platform: 'YouTube',
-				status: 'pending',
-				processedRuns: 0,
-				processedResults: 0,
-				targetResults,
-				cursor: 0,
-				progress: '0',
-				timeoutAt: new Date(Date.now() + TIMEOUT_MINUTES * 60 * 1000),
-				createdAt: new Date(),
-				updatedAt: new Date(),
-				searchParams: {
-					runner: 'search-engine',
-					platform: 'youtube_similar',
-					targetUsername: target,
-				},
-			})
-			.returning();
+		// Atomic trial validation + job creation to prevent concurrent limit bypass.
+		// FOR UPDATE lock serializes concurrent requests for the same user.
+		let job: typeof scrapingJobs.$inferSelect;
+		try {
+			job = await db.transaction(async (tx) => {
+				await tx.execute(
+					sql`SELECT 1 FROM ${scrapingJobs} WHERE ${scrapingJobs.userId} = ${userId} LIMIT 1 FOR UPDATE`
+				);
+
+				const trialCheck = await validateTrialSearchLimit(userId);
+				if (!trialCheck.allowed) {
+					throw new Error(`TRIAL_LIMIT:${trialCheck.reason}`);
+				}
+
+				const [newJob] = await tx
+					.insert(scrapingJobs)
+					.values({
+						userId,
+						campaignId,
+						targetUsername: target,
+						platform: 'YouTube',
+						status: 'pending',
+						processedRuns: 0,
+						processedResults: 0,
+						targetResults,
+						cursor: 0,
+						progress: '0',
+						timeoutAt: new Date(Date.now() + TIMEOUT_MINUTES * 60 * 1000),
+						createdAt: new Date(),
+						updatedAt: new Date(),
+						searchParams: {
+							runner: 'search-engine',
+							platform: 'youtube_similar',
+							targetUsername: target,
+						},
+					})
+					.returning();
+				return newJob;
+			});
+		} catch (txError) {
+			const msg = txError instanceof Error ? txError.message : String(txError);
+			if (msg.startsWith('TRIAL_LIMIT:')) {
+				return NextResponse.json(
+					{ error: msg.slice('TRIAL_LIMIT:'.length), upgrade: true },
+					{ status: 403 }
+				);
+			}
+			throw txError;
+		}
 
 		// Track search started in LogSnag
 		// @why Uses getUserDataForTracking to get fresh data from Clerk if DB has fallback email

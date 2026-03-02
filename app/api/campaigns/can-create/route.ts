@@ -28,14 +28,14 @@ export async function GET() {
 	} catch (err) {
 		// Log the error with full context for debugging
 		logger.error(
-			'Campaign creation validation failed - failing open',
+			'Campaign creation validation failed - denying request',
 			err instanceof Error ? err : new Error(String(err)),
 			{
 				errorType: err instanceof Error ? err.constructor.name : typeof err,
 				message: err instanceof Error ? err.message : String(err),
 				stack: err instanceof Error ? err.stack : undefined,
-				failureMode: 'fail-open',
-				securityNote: 'Failing open allows campaign creation despite validation failure',
+				failureMode: 'fail-closed',
+				securityNote: 'Validation failure prevents campaign creation as a safety measure',
 			}
 		);
 

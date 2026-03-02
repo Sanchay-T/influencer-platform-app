@@ -78,7 +78,7 @@ const previewProps: ExportReadyEmailProps = {
 	downloadUrl: `${baseUrl}/exports/sample.csv`,
 	creatorCount: 1250,
 	expiresAt: 'January 20, 2026',
-};
+} satisfies ExportReadyEmailProps;
 
 ExportReadyEmail.PreviewProps = previewProps;
 

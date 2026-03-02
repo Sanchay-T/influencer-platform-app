@@ -163,6 +163,11 @@ const SearchResults = ({ searchData }) => {
 		shouldShowEmailOverlay,
 	} = useEmailFilter(localCreators, platformNormalized);
 
+	// Reset to page 1 when email filter changes
+	useEffect(() => {
+		setPage(1);
+	}, [setPage, showEmailOnly]);
+
 	// Sync creators from hook to local state
 	useEffect(() => {
 		if (creators && creators.length > 0) {
@@ -417,6 +422,7 @@ const SearchResults = ({ searchData }) => {
 						viewMode={viewMode}
 						isTrialUser={isTrialUser}
 						trialClearLimit={TRIAL_CLEAR_LIMIT}
+						startIndex={startIndex}
 						onSelectPage={handleSelectPage}
 						toggleSelection={toggleSelection}
 						renderProfileLink={renderProfileLink}

@@ -40,6 +40,23 @@ export type JobStatus =
 	| 'error'
 	| 'timeout';
 
+const isJobStatus = (value: unknown): value is JobStatus => {
+	if (typeof value !== 'string') {
+		return false;
+	}
+	return (
+		value === 'pending' ||
+		value === 'dispatching' ||
+		value === 'searching' ||
+		value === 'enriching' ||
+		value === 'processing' ||
+		value === 'completed' ||
+		value === 'partial' ||
+		value === 'error' ||
+		value === 'timeout'
+	);
+};
+
 export interface JobStatusData {
 	status: JobStatus;
 	progress: {
@@ -164,7 +181,7 @@ function normalizeSimilarResponse(raw: unknown): JobStatusData {
 	const status = coerceJobStatus(record.status);
 	const processedResults = getNumberProperty(record, 'processedResults') ?? 0;
 	const targetResults = getNumberProperty(record, 'targetResults') ?? 100;
-	const progress = getNumberProperty(record, 'progress') ?? 0;
+	const percentComplete = getNumberProperty(record, 'progress') ?? 0;
 	const totalCreators = getNumberProperty(record, 'totalCreators') ?? processedResults;
 
 	// Similar search returns results as [{ creators: [...] }] from paginateCreators
@@ -189,7 +206,7 @@ function normalizeSimilarResponse(raw: unknown): JobStatusData {
 			keywordsCompleted: 0,
 			creatorsFound: totalCreators,
 			creatorsEnriched: totalCreators,
-			percentComplete: progress,
+			percentComplete,
 		},
 		processedResults,
 		totalCreators,

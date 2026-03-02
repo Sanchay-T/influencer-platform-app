@@ -119,10 +119,10 @@ export async function POST(request: Request) {
 			const { getUserProfile } = await import('@/lib/db/queries/user-queries');
 				const userProfile = await getUserProfile(userId);
 
-				if (userProfile?.emailScheduleStatus) {
-					const emailStatusRaw = userProfile.emailScheduleStatus;
-					const perEmailStatus = isRecord(emailStatusRaw) ? emailStatusRaw[emailType] : null;
-					const thisEmailStatus = isRecord(perEmailStatus) ? readString(perEmailStatus.status) : undefined;
+			if (userProfile?.emailScheduleStatus) {
+				const emailStatusRaw = userProfile.emailScheduleStatus;
+				const perEmailStatus = isRecord(emailStatusRaw) ? emailStatusRaw[emailType] : null;
+				const thisEmailStatus = isRecord(perEmailStatus) ? readString(perEmailStatus.status) : undefined;
 
 					if (thisEmailStatus === 'cancelled' || thisEmailStatus === 'cancelled_subscription') {
 						logger.info(

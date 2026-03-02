@@ -8,12 +8,13 @@
  * 4. Returns jobId immediately
  */
 
-import { eq } from 'drizzle-orm';
+import { and, eq, gte, sql } from 'drizzle-orm';
 import { trackServer } from '@/lib/analytics/track';
 import { getUserDataForTracking } from '@/lib/analytics/track-server-utils';
-import { validateCreatorSearch, validateTrialSearchLimit } from '@/lib/billing';
+import { TRIAL_SEARCH_LIMIT, validateCreatorSearch } from '@/lib/billing';
+import { deriveTrialStatus } from '@/lib/billing/trial-status';
 import { db } from '@/lib/db';
-import { campaigns, scrapingJobs } from '@/lib/db/schema';
+import { campaigns, scrapingJobs, userSubscriptions, users } from '@/lib/db/schema';
 import { LogCategory, logger } from '@/lib/logging';
 import { SentryLogger } from '@/lib/logging/sentry-logger';
 import { getDeadLetterQueueUrl, qstash } from '@/lib/queue/qstash';
@@ -302,26 +303,101 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 			}
 
 			// ============================================================================
-			// Step 2.5: Validate Trial Search Limit
+			// Step 2.5 + 3: Validate Trial Limit + Create Job (Atomic)
 			// ============================================================================
 
-			const trialValidation = await validateTrialSearchLimit(userId);
-			if (!trialValidation.allowed) {
-				logger.warn(
-					`${LOG_PREFIX} Search blocked by trial limit`,
-					{
-						userId,
-						reason: trialValidation.reason,
-						trialSearchesUsed: trialValidation.trialSearchesUsed,
-					},
-					LogCategory.BILLING
+			let jobId: string;
+			try {
+				const txResult = await SentryLogger.startSpanAsync(
+					{ name: 'dispatch.trial_validate_and_create_job', op: 'db' },
+					async () =>
+						db.transaction(async (tx) => {
+							// Serialize concurrent dispatch calls for the same user.
+							// Lock a stable row (users) so even a user's *first* search is protected.
+							await tx.execute(
+								sql`SELECT 1 FROM ${users} WHERE ${users.userId} = ${userId} LIMIT 1 FOR UPDATE`
+							);
+
+							// Validate trial search limit within transaction.
+							// IMPORTANT: Must only use `tx` inside this transaction to avoid deadlocking
+							// when the DB pool is configured with a single connection (common with PgBouncer).
+							const [trialProfile] = await tx
+								.select({
+									createdAt: users.createdAt,
+									subscriptionStatus: userSubscriptions.subscriptionStatus,
+									trialStartDate: userSubscriptions.trialStartDate,
+									trialEndDate: userSubscriptions.trialEndDate,
+								})
+								.from(users)
+								.leftJoin(userSubscriptions, eq(users.id, userSubscriptions.userId))
+								.where(eq(users.userId, userId))
+								.limit(1);
+
+							if (!trialProfile) {
+								throw new Error('USER_NOT_FOUND');
+							}
+
+							const effectiveTrialStatus = deriveTrialStatus(
+								trialProfile.subscriptionStatus,
+								trialProfile.trialEndDate ?? null
+							);
+
+							if (effectiveTrialStatus === 'active') {
+								const trialStartDate = trialProfile.trialStartDate ?? trialProfile.createdAt;
+								const [jobCountRow] = await tx
+									.select({ count: sql<number>`count(*)` })
+									.from(scrapingJobs)
+									.where(
+										and(
+											eq(scrapingJobs.userId, userId),
+											gte(scrapingJobs.createdAt, trialStartDate)
+										)
+									);
+
+								const trialJobCount = Number(jobCountRow?.count ?? 0);
+								if (trialJobCount >= TRIAL_SEARCH_LIMIT) {
+									throw new Error(
+										`TRIAL_LIMIT:You've used all ${TRIAL_SEARCH_LIMIT} trial searches. Upgrade to continue searching.`
+									);
+								}
+							}
+
+							// Create job within the same transaction
+							const jId = await createV2Job(
+								{
+									userId,
+									campaignId,
+									platform,
+									keywords,
+									targetResults,
+								},
+								tx
+							);
+
+							return { jobId: jId };
+						})
 				);
 
-				return {
-					success: false,
-					error: trialValidation.reason || 'Trial search limit exceeded',
-					statusCode: 403,
-				};
+				jobId = txResult.jobId;
+			} catch (txError) {
+				const errorMessage = txError instanceof Error ? txError.message : String(txError);
+				if (errorMessage.startsWith('TRIAL_LIMIT:')) {
+					const reason = errorMessage.slice('TRIAL_LIMIT:'.length);
+					logger.warn(
+						`${LOG_PREFIX} Search blocked by trial limit (atomic)`,
+						{
+							userId,
+							reason,
+						},
+						LogCategory.BILLING
+					);
+					return {
+						success: false,
+						error: reason,
+						statusCode: 403,
+					};
+				}
+				throw txError; // Re-throw non-trial errors
 			}
 
 			// Add breadcrumb for state transition
@@ -331,22 +407,6 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 				level: 'info',
 				data: { userId },
 			});
-
-			// ============================================================================
-			// Step 3: Create Job in Database (with Sentry span)
-			// ============================================================================
-
-			const jobId = await SentryLogger.startSpanAsync(
-				{ name: 'dispatch.create_job', op: 'db' },
-				async () =>
-					createV2Job({
-						userId,
-						campaignId,
-						platform,
-						keywords,
-						targetResults,
-					})
-			);
 
 			// Add breadcrumb for state transition
 			SentryLogger.addBreadcrumb({
@@ -360,33 +420,33 @@ export async function dispatch(options: DispatchOptions): Promise<DispatchResult
 			// Step 3.5: Track search_started in LogSnag (fire and forget)
 			// ============================================================================
 
-				const normalizedPlatform: 'tiktok' | 'instagram' | 'youtube' = platform
-					.toLowerCase()
-					.includes('instagram')
-					? 'instagram'
-					: platform.toLowerCase().includes('youtube')
-						? 'youtube'
-						: 'tiktok';
+			const normalizedPlatform: 'tiktok' | 'instagram' | 'youtube' = platform
+				.toLowerCase()
+				.includes('instagram')
+				? 'instagram'
+				: platform.toLowerCase().includes('youtube')
+					? 'youtube'
+					: 'tiktok';
 
 			// Get user data for tracking (don't block on this)
 			// @why Uses getUserDataForTracking to get fresh data from Clerk if DB has fallback email
-				getUserDataForTracking(userId)
-					.then((userData) => {
-						return trackServer({
-							event: 'search_started',
-							properties: {
-								userId,
-								platform: normalizedPlatform,
-								type: 'keyword',
-								targetCount: targetResults,
-								email: userData.email,
-								name: userData.name,
-							},
-						});
-					})
-					.catch((err) => {
-						logger.warn(
-							`${LOG_PREFIX} Failed to track search_started`,
+			getUserDataForTracking(userId)
+				.then((userData) => {
+					return trackServer({
+						event: 'search_started',
+						properties: {
+							userId,
+							platform: normalizedPlatform,
+							type: 'keyword',
+							targetCount: targetResults,
+							email: userData.email,
+							name: userData.name,
+						},
+					});
+				})
+				.catch((err) => {
+					logger.warn(
+						`${LOG_PREFIX} Failed to track search_started`,
 						{ error: String(err) },
 						LogCategory.JOB
 					);

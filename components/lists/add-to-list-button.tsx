@@ -232,7 +232,7 @@ export function AddToListButton({
 			setSelectedList(data.list.id);
 			setNewListName('');
 			toast.success(`Created “${data.list.name}”`);
-			return data.list.id as string;
+			return String(data.list.id);
 		} catch (error) {
 			structuredConsole.error(error);
 			const message = error instanceof Error ? error.message : 'Unable to create list';
@@ -296,15 +296,12 @@ export function AddToListButton({
 
 			setLists((prev) =>
 				prev.map((list) =>
-					list.id === targetList
-						? { ...list, creatorCount: list.creatorCount + addedCount }
-						: list
+					list.id === targetList ? { ...list, creatorCount: list.creatorCount + addedCount } : list
 				)
 			);
 
 			const successLabel =
-				selectedListSummary?.name ??
-				lists.find((l) => l.id === targetList)?.name;
+				selectedListSummary?.name ?? lists.find((l) => l.id === targetList)?.name;
 			const viewList = () => {
 				try {
 					router.push(`/lists/${targetList}`);
@@ -569,7 +566,13 @@ export function AddToListButton({
 							>
 								Cancel
 							</Button>
-							<Button size="sm" onClick={handleAdd} disabled={adding || creating || (!selectedList && !(showCreate && newListName.trim()))}>
+							<Button
+								size="sm"
+								onClick={handleAdd}
+								disabled={
+									adding || creating || !(selectedList || (showCreate && newListName.trim()))
+								}
+							>
 								{adding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
 								Save
 							</Button>

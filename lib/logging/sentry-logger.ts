@@ -326,8 +326,10 @@ export class SentryLogger {
 		if (level === 'error' || level === 'fatal') {
 				const error = context?.error instanceof Error ? context.error : new Error(entry.message);
 
-				// Extract requestId from context if available
-				const requestId = context ? getStringProperty(context, 'requestId') ?? undefined : undefined;
+			// Extract requestId from context if available
+			const requestId = context
+				? (getStringProperty(context, 'requestId') ?? undefined)
+				: undefined;
 
 			Sentry.captureException(error, {
 				level,

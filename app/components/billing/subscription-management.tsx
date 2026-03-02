@@ -183,7 +183,7 @@ function SubscriptionCard() {
 									<p>Campaigns</p>
 									<Progress
 										value={
-											usageInfo.campaignsLimit === -1
+											usageInfo.campaignsLimit === -1 || usageInfo.campaignsLimit === 0
 												? 0
 												: (usageInfo.campaignsUsed / usageInfo.campaignsLimit) * 100
 										}
@@ -194,7 +194,7 @@ function SubscriptionCard() {
 									<p>Creators</p>
 									<Progress
 										value={
-											usageInfo.creatorsLimit === -1
+											usageInfo.creatorsLimit === -1 || usageInfo.creatorsLimit === 0
 												? 0
 												: (usageInfo.creatorsUsed / usageInfo.creatorsLimit) * 100
 										}

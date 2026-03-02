@@ -6,7 +6,7 @@ import { db } from '@/lib/db';
 import { updateUserProfile } from '@/lib/db/queries/user-queries';
 import { campaigns, scrapingJobs, scrapingResults } from '@/lib/db/schema';
 import { structuredConsole } from '@/lib/logging/console-proxy';
-import { isRecord } from '@/lib/utils/type-guards';
+import { getStringProperty, toRecord } from '@/lib/utils/type-guards';
 
 export async function GET(request: Request) {
 	return POST(request);
@@ -28,16 +28,15 @@ export async function POST(request: Request) {
 
 		// Get target user ID from query params or body
 		const url = new URL(request.url);
-			let targetUserId = url.searchParams.get('userId');
-			if (!targetUserId && request.method !== 'GET') {
-				const body = await request.json().catch(() => null);
-				if (isRecord(body) && 'userId' in body) {
-					const userIdValue = body.userId;
-					if (typeof userIdValue === 'string') {
-						targetUserId = userIdValue;
-					}
-				}
+		let targetUserId = url.searchParams.get('userId');
+		if (!targetUserId && request.method !== 'GET') {
+			const body = await request.json().catch(() => null);
+			const bodyRecord = toRecord(body);
+			const userIdValue = bodyRecord ? getStringProperty(bodyRecord, 'userId') : null;
+			if (userIdValue) {
+				targetUserId = userIdValue;
 			}
+		}
 
 		if (!targetUserId) {
 			return NextResponse.json({ error: 'userId is required' }, { status: 400 });

@@ -59,7 +59,7 @@ const PLAN_NAMES: Record<string, string> = {
 
 function HeroBanner({
 	successPlan,
-	onOpenStartModal,
+	onOpenStartModal: _onOpenStartModal,
 }: {
 	successPlan: string | null;
 	onOpenStartModal: () => void;
@@ -72,8 +72,6 @@ function HeroBanner({
 		trialProgressPercentage,
 		trialEndDate,
 		daysRemaining,
-		trialStatus,
-		subscriptionStatus,
 	} = useBilling();
 
 	if (!isLoaded) {
@@ -221,11 +219,8 @@ function HeroBanner({
 function BillingContent() {
 	const {
 		currentPlan,
-		needsUpgrade,
 		isTrialing,
-		isLoaded,
 		usageInfo,
-		hasActiveSubscription,
 		canManageSubscription,
 		refreshBillingData,
 		subscriptionStatus,
@@ -574,7 +569,9 @@ function BillingContent() {
 							currentPlan !== 'free' &&
 							(() => {
 								const planConfig = getPlanDisplayConfig(currentPlan);
-								if (!planConfig) return null;
+								if (!planConfig) {
+									return null;
+								}
 								const PlanIcon =
 									currentPlan === 'growth' ? Rocket : currentPlan === 'scale' ? TrendingUp : Crown;
 								return (

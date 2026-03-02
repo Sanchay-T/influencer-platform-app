@@ -41,6 +41,26 @@ import type { WebhookResult } from './subscription-types';
 
 const logger = createCategoryLogger(LogCategory.BILLING);
 
+type StripeSubscriptionLike = {
+	id: string;
+	status: Stripe.Subscription.Status;
+	customer: Stripe.Subscription['customer'];
+	metadata?: Record<string, string>;
+	items: {
+		data: Array<{
+			price?: {
+				id?: string | null;
+				recurring?: { interval?: Stripe.Price.Recurring.Interval | null } | null;
+			} | null;
+			current_period_end?: number | null;
+		}>;
+	};
+	trial_end?: number | null;
+	trial_start?: number | null;
+	cancel_at_period_end?: boolean | null;
+	cancel_at?: number | null;
+};
+
 const resolveCustomerId = (customer: Stripe.Subscription['customer']): string | null => {
 	if (typeof customer === 'string') {
 		return customer;
@@ -87,7 +107,7 @@ export const mapStripeSubscriptionStatus = (
  * This is IDEMPOTENT - calling multiple times produces same result.
  */
 export async function handleSubscriptionChange(
-	subscription: Stripe.Subscription,
+	subscription: StripeSubscriptionLike,
 	eventType: string
 ): Promise<WebhookResult> {
 	const handlerId = `wh_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
@@ -160,29 +180,9 @@ export async function handleSubscriptionChange(
 			subscriptionStatus: user.subscriptionStatus || undefined,
 		});
 
-		// Check if already processed (idempotent - prevents duplicate events)
-		const expectedStatus = mapStripeSubscriptionStatus(subscription.status);
-		if (
-			user.stripeSubscriptionId === subscription.id &&
-			user.subscriptionStatus === expectedStatus
-		) {
-			logger.info(`[${handlerId}] Subscription state already matches, skipping processing`, {
-				metadata: {
-					subscriptionId: subscription.id,
-					status: subscription.status,
-					source: eventType,
-				},
-			});
-
-			return {
-				success: true,
-				action: 'already_current',
-				details: { eventType, subscriptionId: subscription.id },
-			};
-		}
-
-		// 2. Extract plan from Stripe subscription
-		const priceId = subscription.items.data[0]?.price?.id;
+		// 2. Extract plan from Stripe subscription (must happen before idempotency check
+		// so we can detect plan upgrades/downgrades where subscription ID and status stay the same)
+		const priceId = subscription.items.data[0]?.price?.id ?? undefined;
 		const planKey = getPlanKeyByPriceId(priceId);
 
 		// CRITICAL: All users must be on a paid plan
@@ -198,6 +198,31 @@ export async function handleSubscriptionChange(
 					subscriptionId: subscription.id,
 					error: 'Price ID does not map to any known plan',
 				},
+			};
+		}
+
+		// Check if already processed (idempotent - prevents duplicate events)
+		// Includes planKey check to detect plan upgrades/downgrades via Stripe Portal
+		// where subscription ID stays the same and status remains 'active' → 'active'
+		const expectedStatus = mapStripeSubscriptionStatus(subscription.status);
+		if (
+			user.stripeSubscriptionId === subscription.id &&
+			user.subscriptionStatus === expectedStatus &&
+			user.currentPlan === planKey
+		) {
+			logger.info(`[${handlerId}] Subscription state already matches, skipping processing`, {
+				metadata: {
+					subscriptionId: subscription.id,
+					status: subscription.status,
+					currentPlan: planKey,
+					source: eventType,
+				},
+			});
+
+			return {
+				success: true,
+				action: 'already_current',
+				details: { eventType, subscriptionId: subscription.id },
 			};
 		}
 
@@ -226,9 +251,14 @@ export async function handleSubscriptionChange(
 			trialStartDate: trialStart ? new Date(trialStart) : undefined,
 			trialEndDate: trialEnd ? new Date(trialEnd) : undefined,
 
-			// Plan limits
-			planCampaignsLimit: planConfig.limits.campaigns,
-			planCreatorsLimit: planConfig.limits.creatorsPerMonth,
+			// Note: planCampaignsLimit/planCreatorsLimit removed — deprecated DB columns.
+			// Limits are read from plan-config.ts at runtime by access-validation.ts.
+
+			// Billing interval and period end from Stripe (for billing UI)
+			billingInterval: subscription.items.data[0]?.price?.recurring?.interval ?? 'month',
+			currentPeriodEnd: subscription.items.data[0]?.current_period_end
+				? new Date(subscription.items.data[0].current_period_end * 1000)
+				: undefined,
 
 			// Mark onboarding complete
 			onboardingStep: 'completed',
@@ -454,7 +484,7 @@ export async function handleSubscriptionChange(
  * Access is controlled by subscriptionStatus, not currentPlan.
  */
 export async function handleSubscriptionDeleted(
-	subscription: Stripe.Subscription
+	subscription: StripeSubscriptionLike
 ): Promise<WebhookResult> {
 	// Add breadcrumb for subscription deletion
 	SentryLogger.addBreadcrumb({
