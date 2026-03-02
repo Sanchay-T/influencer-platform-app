@@ -23,7 +23,7 @@ jobs:
       - name: Run Claude Code Review
         uses: anthropics/claude-code-action@beta
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           review_comment_prefix: "claude"
           direct_prompt: |
             Review this PR as a senior engineer. Focus on:
