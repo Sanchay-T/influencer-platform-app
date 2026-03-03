@@ -13,7 +13,6 @@
  */
 
 import type Stripe from 'stripe';
-import { trackGA4ServerEvent } from '@/lib/analytics/google-analytics';
 import {
 	trackPaidCustomer,
 	trackSubscriptionCanceled,
@@ -294,20 +293,13 @@ export async function handleSubscriptionChange(
 				},
 			});
 
-			// Track trial start in both LogSnag and GA4
-			await Promise.all([
-				trackTrialStarted({
-					email: userEmail,
-					name: userName,
-					userId: user.userId,
-					plan: planName,
-				}),
-				trackGA4ServerEvent(
-					'begin_trial',
-					{ plan_name: planName, value: monthlyPrice, currency: 'USD' },
-					user.userId
-				),
-			]);
+			// Track trial start in LogSnag
+			await trackTrialStarted({
+				email: userEmail,
+				name: userName,
+				userId: user.userId,
+				plan: planName,
+			});
 			// Track in Sentry for billing funnel visibility
 			billingTracker.trackTrialEvent('started', {
 				userId: user.userId,
@@ -368,48 +360,23 @@ export async function handleSubscriptionChange(
 					);
 				});
 
-				// Track trial conversion in both LogSnag and GA4
-				await Promise.all([
-					trackTrialConverted({
-						email: userEmail,
-						name: userName,
-						userId: user.userId,
-						plan: planName,
-						value: monthlyPrice,
-					}),
-					trackGA4ServerEvent(
-						'purchase',
-						{
-							plan_name: planName,
-							value: monthlyPrice,
-							currency: 'USD',
-							transaction_id: `trial_conv_${subscription.id}`,
-							is_trial_conversion: true,
-						},
-						user.userId
-					),
-				]);
+				// Track trial conversion in LogSnag
+				await trackTrialConverted({
+					email: userEmail,
+					name: userName,
+					userId: user.userId,
+					plan: planName,
+					value: monthlyPrice,
+				});
 			} else {
-				// Track new paid customer in both LogSnag and GA4
-				await Promise.all([
-					trackPaidCustomer({
-						email: userEmail,
-						name: userName,
-						userId: user.userId,
-						plan: planName,
-						value: monthlyPrice,
-					}),
-					trackGA4ServerEvent(
-						'purchase',
-						{
-							plan_name: planName,
-							value: monthlyPrice,
-							currency: 'USD',
-							transaction_id: `sub_${subscription.id}`,
-						},
-						user.userId
-					),
-				]);
+				// Track new paid customer in LogSnag
+				await trackPaidCustomer({
+					email: userEmail,
+					name: userName,
+					userId: user.userId,
+					plan: planName,
+					value: monthlyPrice,
+				});
 			}
 
 			// Send subscription welcome email for all new active subscriptions
@@ -535,20 +502,13 @@ export async function handleSubscriptionDeleted(
 		},
 	});
 
-	// Track cancellation in LogSnag AND GA4
-	await Promise.all([
-		trackSubscriptionCanceled({
-			email: user.email || 'unknown',
-			name: user.fullName || 'Unknown',
-			userId: user.userId,
-			plan: user.currentPlan || 'unknown',
-		}),
-		trackGA4ServerEvent(
-			'subscription_canceled',
-			{ plan_name: user.currentPlan || 'unknown' },
-			user.userId
-		),
-	]);
+	// Track cancellation in LogSnag
+	await trackSubscriptionCanceled({
+		email: user.email || 'unknown',
+		name: user.fullName || 'Unknown',
+		userId: user.userId,
+		plan: user.currentPlan || 'unknown',
+	});
 
 	// USE2-79: Tag user as cancelled (distinguish trial vs paid cancellation)
 	ResendAudienceService.syncTagsFromStatus(

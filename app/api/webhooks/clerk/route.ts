@@ -1,7 +1,6 @@
 import { headers } from 'next/headers';
 import { type NextRequest, NextResponse } from 'next/server';
 import { Webhook } from 'svix';
-import { trackGA4ServerSignup } from '@/lib/analytics/google-analytics';
 import { trackUserSignup } from '@/lib/analytics/logsnag';
 import { createUser, getUserProfile, updateUserProfile } from '@/lib/db/queries/user-queries';
 import { ResendAudienceService } from '@/lib/email/resend-audience-service';
@@ -489,9 +488,8 @@ async function handleUserCreated(userData: unknown, requestId: string) {
 			`✅ [CLERK-WEBHOOK] User profile created for ${userId} (trial pending payment)`
 		);
 
-		// Track signup events in LogSnag and GA4
+		// Track signup event in LogSnag
 		await trackUserSignup({ email: email || 'unknown', name: fullName || '' });
-		await trackGA4ServerSignup(userId);
 
 		// Sync to Resend audience (fire-and-forget, don't block user creation)
 		if (email) {

@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
 // Mock dependencies
-vi.mock('@/lib/analytics/google-analytics', () => ({
-	trackGA4ServerEvent: vi.fn().mockResolvedValue(undefined),
-}));
 vi.mock('@/lib/analytics/logsnag', () => ({
 	trackPaidCustomer: vi.fn().mockResolvedValue(undefined),
 	trackSubscriptionCanceled: vi.fn().mockResolvedValue(undefined),
