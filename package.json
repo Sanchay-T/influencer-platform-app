@@ -9,7 +9,7 @@
 		"dev:local": "next dev -p 3002 --turbo",
 		"dev:wt2": "LOCAL_PORT=3002 node scripts/dev-with-port.js",
 		"ngrok:stop": "node scripts/stop-ngrok.js",
-		"build": "npx drizzle-kit migrate && next build",
+		"build": "drizzle-kit migrate && next build",
 		"start": "NODE_ENV=development next dev",
 		"start:prod": "next start",
 		"lint": "next lint",
